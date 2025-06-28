@@ -8,13 +8,6 @@ import {
   Grid,
   Card,
   CardContent,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Slider,
-  Divider,
   Alert,
   Stepper,
   Step,
@@ -27,7 +20,7 @@ import {
   FileUpload,
   Settings,
   Image as ImageIcon,
-  GetApp
+  Palette
 } from '@mui/icons-material';
 import Papa from 'papaparse';
 import FieldPositioner from './components/FieldPositioner';
@@ -40,24 +33,10 @@ function App() {
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [backgroundImage, setBackgroundImage] = useState(null);
   const [fieldPositions, setFieldPositions] = useState({});
-  const [selectedFont, setSelectedFont] = useState('Arial');
-  const [fontSize, setFontSize] = useState(24);
+  const [fieldStyles, setFieldStyles] = useState({});
   
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
-
-  const fonts = [
-    'Arial',
-    'Helvetica',
-    'Times New Roman',
-    'Georgia',
-    'Verdana',
-    'Courier New',
-    'Impact',
-    'Comic Sans MS',
-    'Roboto',
-    'Open Sans'
-  ];
 
   const steps = [
     {
@@ -69,12 +48,8 @@ function App() {
       description: 'Carregue a imagem de fundo PNG/JPG'
     },
     {
-      label: 'Configurar Fonte',
-      description: 'Escolha a fonte e tamanho do texto'
-    },
-    {
-      label: 'Posicionar Campos',
-      description: 'Posicione os campos do CSV na imagem'
+      label: 'Posicionar e Formatar',
+      description: 'Posicione os campos e configure a formatação'
     },
     {
       label: 'Gerar Imagens',
@@ -97,14 +72,37 @@ function App() {
             
             // Inicializar posições dos campos
             const initialPositions = {};
+            const initialStyles = {};
+            
             headers.forEach((header, index) => {
               initialPositions[header] = {
-                x: 20 + (index % 3) * 30,
-                y: 20 + Math.floor(index / 3) * 15,
+                x: 10 + (index % 3) * 30,
+                y: 10 + Math.floor(index / 3) * 25,
+                width: 25,
+                height: 15,
                 visible: true
               };
+              
+              initialStyles[header] = {
+                fontFamily: 'Arial',
+                fontSize: 24,
+                fontWeight: 'normal',
+                fontStyle: 'normal',
+                textDecoration: 'none',
+                color: '#000000',
+                textStroke: false,
+                strokeColor: '#ffffff',
+                strokeWidth: 2,
+                textShadow: false,
+                shadowColor: '#000000',
+                shadowBlur: 4,
+                shadowOffsetX: 2,
+                shadowOffsetY: 2
+              };
             });
+            
             setFieldPositions(initialPositions);
+            setFieldStyles(initialStyles);
             
             if (activeStep === 0) setActiveStep(1);
           }
@@ -142,24 +140,34 @@ function App() {
     switch (step) {
       case 1: return csvData.length > 0;
       case 2: return backgroundImage !== null;
-      case 3: return true; // Configuração de fonte é opcional
-      case 4: return true; // Posicionamento é opcional
+      case 3: return true; // Posicionamento e formatação são opcionais
       default: return true;
     }
   };
+
+  // Calcular estatísticas dos campos
+  const getFieldStats = () => {
+    const visibleFields = Object.values(fieldPositions).filter(pos => pos.visible).length;
+    const totalFields = csvHeaders.length;
+    const styledFields = Object.keys(fieldStyles).length;
+    
+    return { visibleFields, totalFields, styledFields };
+  };
+
+  const { visibleFields, totalFields, styledFields } = getFieldStats();
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
         <Typography variant="h3" component="h1" gutterBottom align="center" color="primary">
-          Gerador de Imagens CSV
+          Midiator - Editor Avançado
         </Typography>
         <Typography variant="h6" align="center" color="textSecondary" sx={{ mb: 4 }}>
-          Transforme dados CSV em imagens personalizadas com facilidade
+          Crie imagens personalizadas com controles de formatação individual
         </Typography>
         
         {/* Indicadores de status */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4, flexWrap: 'wrap' }}>
           <Chip 
             icon={<FileUpload />}
             label={`${csvData.length} registros`}
@@ -174,8 +182,14 @@ function App() {
           />
           <Chip 
             icon={<Settings />}
-            label={`${selectedFont} ${fontSize}px`}
-            color="info"
+            label={`${visibleFields}/${totalFields} campos`}
+            color={visibleFields > 0 ? 'info' : 'default'}
+            variant="filled"
+          />
+          <Chip 
+            icon={<Palette />}
+            label={`${styledFields} estilos`}
+            color={styledFields > 0 ? 'secondary' : 'default'}
             variant="filled"
           />
         </Box>
@@ -309,93 +323,26 @@ function App() {
             </Card>
           )}
 
-          {/* Passo 3: Configuração de Fonte */}
+          {/* Passo 3: Posicionamento e Formatação */}
           {activeStep === 2 && (
-            <Card>
-              <CardContent>
-                <Typography variant="h5" gutterBottom>
-                  <Settings sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  Configuração da Fonte
-                </Typography>
-                
-                <Grid container spacing={3} sx={{ mt: 2 }}>
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>Família da Fonte</InputLabel>
-                      <Select
-                        value={selectedFont}
-                        label="Família da Fonte"
-                        onChange={(e) => setSelectedFont(e.target.value)}
-                      >
-                        {fonts.map(font => (
-                          <MenuItem key={font} value={font} style={{ fontFamily: font }}>
-                            {font}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  
-                  <Grid item xs={12} md={6}>
-                    <Typography gutterBottom>
-                      Tamanho da Fonte: {fontSize}px
-                    </Typography>
-                    <Slider
-                      value={fontSize}
-                      onChange={(e, value) => setFontSize(value)}
-                      min={12}
-                      max={72}
-                      valueLabelDisplay="auto"
-                      marks={[
-                        { value: 12, label: '12px' },
-                        { value: 24, label: '24px' },
-                        { value: 48, label: '48px' },
-                        { value: 72, label: '72px' }
-                      ]}
-                    />
-                  </Grid>
-                </Grid>
-                
-                {/* Preview da fonte */}
-                <Box sx={{ mt: 3, p: 3, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Preview da Fonte:
-                  </Typography>
-                  <Typography
-                    style={{
-                      fontFamily: selectedFont,
-                      fontSize: `${fontSize}px`,
-                      lineHeight: 1.2
-                    }}
-                  >
-                    Exemplo de texto com a fonte selecionada
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Passo 4: Posicionamento */}
-          {activeStep === 3 && (
             <FieldPositioner
               backgroundImage={backgroundImage}
               csvHeaders={csvHeaders}
               fieldPositions={fieldPositions}
               setFieldPositions={setFieldPositions}
-              selectedFont={selectedFont}
-              fontSize={fontSize}
+              fieldStyles={fieldStyles}
+              setFieldStyles={setFieldStyles}
               csvData={csvData}
             />
           )}
 
-          {/* Passo 5: Geração */}
-          {activeStep === 4 && (
+          {/* Passo 4: Geração */}
+          {activeStep === 3 && (
             <ImageGenerator
               csvData={csvData}
               backgroundImage={backgroundImage}
               fieldPositions={fieldPositions}
-              selectedFont={selectedFont}
-              fontSize={fontSize}
+              fieldStyles={fieldStyles}
             />
           )}
 

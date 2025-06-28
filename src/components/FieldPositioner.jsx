@@ -4,31 +4,27 @@ import {
   Typography,
   Card,
   CardContent,
-  Switch,
-  FormControlLabel,
-  TextField,
   Grid,
-  Chip,
-  IconButton,
-  Tooltip
+  Button,
+  Alert
 } from '@mui/material';
 import {
-  DragIndicator,
-  Visibility,
-  VisibilityOff,
+  Add,
   CenterFocusStrong
 } from '@mui/icons-material';
+import TextBox from './TextBox';
+import FormattingPanel from './FormattingPanel';
 
 const FieldPositioner = ({ 
   backgroundImage, 
   csvHeaders, 
   fieldPositions, 
   setFieldPositions, 
-  selectedFont, 
-  fontSize,
+  fieldStyles,
+  setFieldStyles,
   csvData 
 }) => {
-  const [draggedField, setDraggedField] = useState(null);
+  const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef(null);
 
@@ -50,62 +46,110 @@ const FieldPositioner = ({
     }
   }, [backgroundImage]);
 
-  const handleDragStart = (e, field) => {
-    setDraggedField(field);
-    e.dataTransfer.effectAllowed = 'move';
+  // Inicializar posições e estilos padrão se não existirem
+  useEffect(() => {
+    if (csvHeaders.length > 0) {
+      const newPositions = {};
+      const newStyles = {};
+      
+      csvHeaders.forEach((header, index) => {
+        if (!fieldPositions[header]) {
+          newPositions[header] = {
+            x: 10 + (index % 3) * 30,
+            y: 10 + Math.floor(index / 3) * 25,
+            width: 25,
+            height: 15,
+            visible: true
+          };
+        }
+        
+        if (!fieldStyles[header]) {
+          newStyles[header] = {
+            fontFamily: 'Arial',
+            fontSize: 24,
+            fontWeight: 'normal',
+            fontStyle: 'normal',
+            textDecoration: 'none',
+            color: '#000000',
+            textStroke: false,
+            strokeColor: '#ffffff',
+            strokeWidth: 2,
+            textShadow: false,
+            shadowColor: '#000000',
+            shadowBlur: 4,
+            shadowOffsetX: 2,
+            shadowOffsetY: 2
+          };
+        }
+      });
+      
+      if (Object.keys(newPositions).length > 0) {
+        setFieldPositions(prev => ({ ...prev, ...newPositions }));
+      }
+      
+      if (Object.keys(newStyles).length > 0) {
+        setFieldStyles(prev => ({ ...prev, ...newStyles }));
+      }
+    }
+  }, [csvHeaders]);
+
+  const handleFieldSelect = (field) => {
+    setSelectedField(field);
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    if (!draggedField) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-
-    updateFieldPosition(draggedField, x, y);
-    setDraggedField(null);
-  };
-
-  const updateFieldPosition = (field, x, y) => {
+  const handlePositionChange = (field, newPosition) => {
     setFieldPositions(prev => ({
       ...prev,
       [field]: {
         ...prev[field],
-        x: Math.max(0, Math.min(95, x)),
-        y: Math.max(0, Math.min(95, y))
+        ...newPosition
       }
     }));
   };
 
-  const toggleFieldVisibility = (field) => {
+  const handleSizeChange = (field, newSize) => {
     setFieldPositions(prev => ({
       ...prev,
       [field]: {
         ...prev[field],
-        visible: !prev[field].visible
+        ...newSize
       }
     }));
   };
 
-  const centerField = (field) => {
-    updateFieldPosition(field, 50, 50);
+  const centerAllFields = () => {
+    const newPositions = {};
+    csvHeaders.forEach((header, index) => {
+      newPositions[header] = {
+        ...fieldPositions[header],
+        x: 50 - 12.5, // Centralizar considerando largura padrão
+        y: 20 + index * 20
+      };
+    });
+    setFieldPositions(prev => ({ ...prev, ...newPositions }));
   };
 
-  const updateFieldCoordinates = (field, coordinate, value) => {
-    const numValue = parseFloat(value) || 0;
-    setFieldPositions(prev => ({
-      ...prev,
-      [field]: {
-        ...prev[field],
-        [coordinate]: Math.max(0, Math.min(100, numValue))
-      }
-    }));
+  const autoArrangeFields = () => {
+    const newPositions = {};
+    const cols = 2;
+    const fieldWidth = 40;
+    const fieldHeight = 15;
+    const spacing = 5;
+    
+    csvHeaders.forEach((header, index) => {
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      
+      newPositions[header] = {
+        ...fieldPositions[header],
+        x: 10 + col * (fieldWidth + spacing),
+        y: 10 + row * (fieldHeight + spacing),
+        width: fieldWidth,
+        height: fieldHeight
+      };
+    });
+    
+    setFieldPositions(prev => ({ ...prev, ...newPositions }));
   };
 
   if (!backgroundImage) {
@@ -129,158 +173,121 @@ const FieldPositioner = ({
   }
 
   return (
-    <Box>
-      {/* Área de posicionamento */}
-      <Box
-        ref={containerRef}
-        sx={{
-          position: 'relative',
-          border: '2px solid #ddd',
-          borderRadius: 2,
-          overflow: 'hidden',
-          mb: 3,
-          backgroundColor: '#fff'
-        }}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
-        <img
-          src={backgroundImage}
-          alt="Background"
-          style={{
-            width: '100%',
-            height: 'auto',
-            display: 'block'
-          }}
-        />
-        
-        {/* Campos posicionáveis */}
-        {csvHeaders.map(header => {
-          const position = fieldPositions[header];
-          if (!position || !position.visible) return null;
-
-          const sampleData = csvData[0] ? csvData[0][header] : header;
-          
-          return (
-            <Box
-              key={header}
-              sx={{
-                position: 'absolute',
-                left: `${position.x}%`,
-                top: `${position.y}%`,
-                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                padding: '6px 12px',
-                borderRadius: 1,
-                cursor: 'move',
-                border: '2px solid #2196f3',
-                fontFamily: selectedFont,
-                fontSize: `${Math.max(10, fontSize * 0.7)}px`,
-                maxWidth: '200px',
-                wordWrap: 'break-word',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                transform: 'translate(-50%, -50%)',
-                userSelect: 'none'
-              }}
-              draggable
-              onDragStart={(e) => handleDragStart(e, header)}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                <DragIndicator sx={{ fontSize: 14, mr: 0.5, color: '#666' }} />
-                <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#2196f3' }}>
-                  {header}
-                </Typography>
+    <Grid container spacing={3}>
+      {/* Área de edição */}
+      <Grid item xs={12} lg={8}>
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">
+                Editor de Campos
+              </Typography>
+              <Box>
+                <Button
+                  size="small"
+                  onClick={centerAllFields}
+                  startIcon={<CenterFocusStrong />}
+                  sx={{ mr: 1 }}
+                >
+                  Centralizar
+                </Button>
+                <Button
+                  size="small"
+                  onClick={autoArrangeFields}
+                  startIcon={<Add />}
+                >
+                  Auto Organizar
+                </Button>
               </Box>
-              <Typography variant="body2" sx={{ color: '#333' }}>
-                {sampleData}
+            </Box>
+
+            {csvData.length === 0 && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                Carregue um arquivo CSV para ver o preview dos dados
+              </Alert>
+            )}
+
+            {/* Container da imagem com campos */}
+            <Box
+              ref={containerRef}
+              className="text-container"
+              sx={{
+                position: 'relative',
+                border: '2px solid #ddd',
+                borderRadius: 2,
+                overflow: 'hidden',
+                backgroundColor: '#fff',
+                cursor: 'default'
+              }}
+              onClick={() => setSelectedField(null)}
+            >
+              <img
+                src={backgroundImage}
+                alt="Background"
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  display: 'block'
+                }}
+                draggable={false}
+              />
+              
+              {/* Campos de texto */}
+              {csvHeaders.map(header => {
+                const position = fieldPositions[header];
+                const style = fieldStyles[header];
+                
+                if (!position || !position.visible) return null;
+
+                const sampleData = csvData[0] ? csvData[0][header] : `[${header}]`;
+                
+                return (
+                  <TextBox
+                    key={header}
+                    field={header}
+                    position={position}
+                    style={style}
+                    content={sampleData}
+                    isSelected={selectedField === header}
+                    onSelect={handleFieldSelect}
+                    onPositionChange={handlePositionChange}
+                    onSizeChange={handleSizeChange}
+                    containerSize={imageSize}
+                  />
+                );
+              })}
+            </Box>
+
+            {/* Instruções */}
+            <Box sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+              <Typography variant="body2" color="textSecondary">
+                <strong>Instruções:</strong>
+                <br />
+                • Clique em um campo para selecioná-lo e editar suas propriedades
+                <br />
+                • Arraste o círculo central para mover o campo
+                <br />
+                • Arraste os pontos nas bordas para redimensionar
+                <br />
+                • Use o painel lateral para configurar fonte, cor e efeitos
               </Typography>
             </Box>
-          );
-        })}
-      </Box>
+          </CardContent>
+        </Card>
+      </Grid>
 
-      {/* Controles dos campos */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Controles dos Campos
-          </Typography>
-          
-          <Grid container spacing={2}>
-            {csvHeaders.map(header => {
-              const position = fieldPositions[header] || { x: 50, y: 50, visible: true };
-              
-              return (
-                <Grid item xs={12} sm={6} md={4} key={header}>
-                  <Card variant="outlined" sx={{ p: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <Chip 
-                        label={header} 
-                        size="small" 
-                        color="primary" 
-                        sx={{ mr: 1, maxWidth: '120px' }}
-                      />
-                      <Tooltip title="Centralizar">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => centerField(header)}
-                        >
-                          <CenterFocusStrong />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                    
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={position.visible}
-                          onChange={() => toggleFieldVisibility(header)}
-                          size="small"
-                        />
-                      }
-                      label={
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          {position.visible ? <Visibility /> : <VisibilityOff />}
-                          <Typography variant="caption" sx={{ ml: 0.5 }}>
-                            {position.visible ? 'Visível' : 'Oculto'}
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                    
-                    {position.visible && (
-                      <Box sx={{ mt: 1 }}>
-                        <Grid container spacing={1}>
-                          <Grid item xs={6}>
-                            <TextField
-                              label="X (%)"
-                              type="number"
-                              size="small"
-                              value={position.x.toFixed(1)}
-                              onChange={(e) => updateFieldCoordinates(header, 'x', e.target.value)}
-                              inputProps={{ min: 0, max: 100, step: 0.1 }}
-                            />
-                          </Grid>
-                          <Grid item xs={6}>
-                            <TextField
-                              label="Y (%)"
-                              type="number"
-                              size="small"
-                              value={position.y.toFixed(1)}
-                              onChange={(e) => updateFieldCoordinates(header, 'y', e.target.value)}
-                              inputProps={{ min: 0, max: 100, step: 0.1 }}
-                            />
-                          </Grid>
-                        </Grid>
-                      </Box>
-                    )}
-                  </Card>
-                </Grid>
-              );
-            })}
-          </Grid>
-        </CardContent>
-      </Card>
-    </Box>
+      {/* Painel de formatação */}
+      <Grid item xs={12} lg={4}>
+        <FormattingPanel
+          selectedField={selectedField}
+          fieldStyles={fieldStyles}
+          setFieldStyles={setFieldStyles}
+          fieldPositions={fieldPositions}
+          setFieldPositions={setFieldPositions}
+          csvHeaders={csvHeaders}
+        />
+      </Grid>
+    </Grid>
   );
 };
 

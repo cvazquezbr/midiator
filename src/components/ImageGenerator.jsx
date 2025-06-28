@@ -8,54 +8,43 @@ import {
   Grid,
   LinearProgress,
   Alert,
-  Chip,
   IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  TextField,
-  Slider
+  Chip
 } from '@mui/material';
 import {
   Download,
   Visibility,
   Close,
   GetApp,
-  Palette,
-  FormatSize
+  Image as ImageIcon
 } from '@mui/icons-material';
 
 const ImageGenerator = ({ 
   csvData, 
   backgroundImage, 
   fieldPositions, 
-  selectedFont, 
-  fontSize 
+  fieldStyles
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPreview, setSelectedPreview] = useState(null);
-  const [textColor, setTextColor] = useState('#000000');
-  const [textStroke, setTextStroke] = useState(false);
-  const [strokeColor, setStrokeColor] = useState('#ffffff');
-  const [strokeWidth, setStrokeWidth] = useState(2);
-  const [textShadow, setTextShadow] = useState(false);
-  const [shadowColor, setShadowColor] = useState('#000000');
-  const [shadowBlur, setShadowBlur] = useState(4);
-  const [shadowOffsetX, setShadowOffsetX] = useState(2);
-  const [shadowOffsetY, setShadowOffsetY] = useState(2);
 
   const canvasRef = useRef(null);
 
-  // Função para quebrar texto em linhas
-  const wrapText = (ctx, text, maxWidth) => {
-    if (!text) return [''];
+  // Função para quebrar texto em linhas dentro de uma área retangular
+  const wrapTextInArea = (ctx, text, x, y, maxWidth, maxHeight, style) => {
+    if (!text) return [];
+    
+    const fontSize = style.fontSize || 24;
+    const lineHeight = fontSize * 1.2;
+    const maxLines = Math.floor(maxHeight / lineHeight);
+    
+    ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${fontSize}px ${style.fontFamily || 'Arial'}`;
     
     const words = text.toString().split(' ');
     const lines = [];
@@ -68,28 +57,33 @@ const ImageGenerator = ({
       
       if (metrics.width > maxWidth && currentLine !== '') {
         lines.push(currentLine);
+        if (lines.length >= maxLines) break;
         currentLine = word;
       } else {
         currentLine = testLine;
       }
     }
-    lines.push(currentLine);
+    
+    if (lines.length < maxLines && currentLine) {
+      lines.push(currentLine);
+    }
+    
     return lines;
   };
 
   // Função para aplicar efeitos de texto
-  const applyTextEffects = (ctx) => {
-    ctx.fillStyle = textColor;
-    ctx.font = `${fontSize}px ${selectedFont}`;
+  const applyTextEffects = (ctx, style) => {
+    ctx.fillStyle = style.color || '#000000';
+    ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${style.fontSize || 24}px ${style.fontFamily || 'Arial'}`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
     // Configurar sombra
-    if (textShadow) {
-      ctx.shadowColor = shadowColor;
-      ctx.shadowBlur = shadowBlur;
-      ctx.shadowOffsetX = shadowOffsetX;
-      ctx.shadowOffsetY = shadowOffsetY;
+    if (style.textShadow) {
+      ctx.shadowColor = style.shadowColor || '#000000';
+      ctx.shadowBlur = style.shadowBlur || 4;
+      ctx.shadowOffsetX = style.shadowOffsetX || 2;
+      ctx.shadowOffsetY = style.shadowOffsetY || 2;
     } else {
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
@@ -98,15 +92,15 @@ const ImageGenerator = ({
     }
 
     // Configurar contorno
-    if (textStroke) {
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = strokeWidth;
+    if (style.textStroke) {
+      ctx.strokeStyle = style.strokeColor || '#ffffff';
+      ctx.lineWidth = style.strokeWidth || 2;
     }
   };
 
   // Função para desenhar texto com efeitos
-  const drawText = (ctx, text, x, y) => {
-    if (textStroke) {
+  const drawTextWithEffects = (ctx, text, x, y, style) => {
+    if (style.textStroke) {
       ctx.strokeText(text, x, y);
     }
     ctx.fillText(text, x, y);
@@ -144,13 +138,12 @@ const ImageGenerator = ({
         // Desenhar imagem de fundo
         ctx.drawImage(img, 0, 0);
         
-        // Aplicar configurações de texto
-        applyTextEffects(ctx);
-        
-        // Desenhar campos do CSV
+        // Desenhar campos do CSV com estilos individuais
         Object.keys(record).forEach(field => {
           const position = fieldPositions[field];
-          if (!position || !position.visible) return;
+          const style = fieldStyles[field];
+          
+          if (!position || !position.visible || !style) return;
           
           const text = record[field] || '';
           if (!text) return;
@@ -158,17 +151,20 @@ const ImageGenerator = ({
           // Converter posições percentuais para pixels
           const x = (position.x / 100) * canvas.width;
           const y = (position.y / 100) * canvas.height;
+          const width = (position.width / 100) * canvas.width;
+          const height = (position.height / 100) * canvas.height;
           
-          // Calcular largura máxima (80% da largura restante)
-          const maxWidth = (canvas.width - x) * 0.8;
+          // Aplicar configurações de texto
+          applyTextEffects(ctx, style);
           
-          // Quebrar texto em linhas
-          const lines = wrapText(ctx, text, maxWidth);
+          // Quebrar texto em linhas dentro da área definida
+          const lines = wrapTextInArea(ctx, text, x, y, width, height, style);
           
           // Desenhar cada linha
+          const lineHeight = (style.fontSize || 24) * 1.2;
           lines.forEach((line, lineIndex) => {
-            const lineY = y + (lineIndex * (fontSize + 5));
-            drawText(ctx, line, x, lineY);
+            const lineY = y + (lineIndex * lineHeight);
+            drawTextWithEffects(ctx, line, x, lineY, style);
           });
         });
         
@@ -182,7 +178,7 @@ const ImageGenerator = ({
           url: URL.createObjectURL(blob),
           record: record,
           index: i,
-          filename: `imagem_${String(i + 1).padStart(3, '0')}.png`
+          filename: `midiator_${String(i + 1).padStart(3, '0')}.png`
         };
         
         images.push(imageData);
@@ -212,7 +208,7 @@ const ImageGenerator = ({
     generatedImages.forEach((image, index) => {
       setTimeout(() => {
         downloadImage(image);
-      }, index * 100); // Pequeno delay entre downloads
+      }, index * 200); // Delay entre downloads
     });
   };
 
@@ -222,131 +218,55 @@ const ImageGenerator = ({
     setPreviewOpen(true);
   };
 
+  // Calcular estatísticas
+  const visibleFields = Object.values(fieldPositions).filter(pos => pos.visible).length;
+  const totalFields = Object.keys(fieldPositions).length;
+
   return (
     <Card>
       <CardContent>
-        <Typography variant="h6" gutterBottom>
+        <Typography variant="h5" gutterBottom>
+          <ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
           Geração de Imagens
         </Typography>
         
-        {/* Configurações de texto */}
-        <Card variant="outlined" sx={{ mb: 3, p: 2 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            <Palette sx={{ mr: 1, verticalAlign: 'middle' }} />
-            Configurações de Texto
-          </Typography>
-          
+        {/* Informações do projeto */}
+        <Box sx={{ mb: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6} md={3}>
-              <TextField
-                label="Cor do Texto"
-                type="color"
-                value={textColor}
-                onChange={(e) => setTextColor(e.target.value)}
-                fullWidth
-                size="small"
-              />
+              <Typography variant="body2" color="textSecondary">
+                Registros CSV
+              </Typography>
+              <Typography variant="h6">
+                {csvData.length}
+              </Typography>
             </Grid>
-            
             <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Contorno</InputLabel>
-                <Select
-                  value={textStroke}
-                  label="Contorno"
-                  onChange={(e) => setTextStroke(e.target.value)}
-                >
-                  <MenuItem value={false}>Sem contorno</MenuItem>
-                  <MenuItem value={true}>Com contorno</MenuItem>
-                </Select>
-              </FormControl>
+              <Typography variant="body2" color="textSecondary">
+                Campos Visíveis
+              </Typography>
+              <Typography variant="h6">
+                {visibleFields}/{totalFields}
+              </Typography>
             </Grid>
-            
-            {textStroke && (
-              <>
-                <Grid item xs={12} sm={6} md={3}>
-                  <TextField
-                    label="Cor do Contorno"
-                    type="color"
-                    value={strokeColor}
-                    onChange={(e) => setStrokeColor(e.target.value)}
-                    fullWidth
-                    size="small"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Typography gutterBottom>Espessura: {strokeWidth}px</Typography>
-                  <Slider
-                    value={strokeWidth}
-                    onChange={(e, value) => setStrokeWidth(value)}
-                    min={1}
-                    max={10}
-                    size="small"
-                  />
-                </Grid>
-              </>
-            )}
-            
             <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth size="small">
-                <InputLabel>Sombra</InputLabel>
-                <Select
-                  value={textShadow}
-                  label="Sombra"
-                  onChange={(e) => setTextShadow(e.target.value)}
-                >
-                  <MenuItem value={false}>Sem sombra</MenuItem>
-                  <MenuItem value={true}>Com sombra</MenuItem>
-                </Select>
-              </FormControl>
+              <Typography variant="body2" color="textSecondary">
+                Estilos Configurados
+              </Typography>
+              <Typography variant="h6">
+                {Object.keys(fieldStyles).length}
+              </Typography>
             </Grid>
-            
-            {textShadow && (
-              <>
-                <Grid item xs={12} sm={6} md={3}>
-                  <TextField
-                    label="Cor da Sombra"
-                    type="color"
-                    value={shadowColor}
-                    onChange={(e) => setShadowColor(e.target.value)}
-                    fullWidth
-                    size="small"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4} md={2}>
-                  <Typography gutterBottom>Desfoque: {shadowBlur}px</Typography>
-                  <Slider
-                    value={shadowBlur}
-                    onChange={(e, value) => setShadowBlur(value)}
-                    min={0}
-                    max={20}
-                    size="small"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4} md={2}>
-                  <Typography gutterBottom>Offset X: {shadowOffsetX}px</Typography>
-                  <Slider
-                    value={shadowOffsetX}
-                    onChange={(e, value) => setShadowOffsetX(value)}
-                    min={-10}
-                    max={10}
-                    size="small"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4} md={2}>
-                  <Typography gutterBottom>Offset Y: {shadowOffsetY}px</Typography>
-                  <Slider
-                    value={shadowOffsetY}
-                    onChange={(e, value) => setShadowOffsetY(value)}
-                    min={-10}
-                    max={10}
-                    size="small"
-                  />
-                </Grid>
-              </>
-            )}
+            <Grid item xs={12} sm={6} md={3}>
+              <Typography variant="body2" color="textSecondary">
+                Imagens a Gerar
+              </Typography>
+              <Typography variant="h6" color="primary">
+                {csvData.length}
+              </Typography>
+            </Grid>
           </Grid>
-        </Card>
+        </Box>
 
         {/* Botões de ação */}
         <Box sx={{ mb: 3 }}>
@@ -354,7 +274,7 @@ const ImageGenerator = ({
             variant="contained"
             size="large"
             onClick={generateImages}
-            disabled={!backgroundImage || csvData.length === 0 || isGenerating}
+            disabled={!backgroundImage || csvData.length === 0 || isGenerating || visibleFields === 0}
             startIcon={<Visibility />}
             sx={{ mr: 2 }}
           >
@@ -373,12 +293,31 @@ const ImageGenerator = ({
           )}
         </Box>
 
+        {/* Validações */}
+        {visibleFields === 0 && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Nenhum campo está visível. Configure pelo menos um campo na etapa anterior.
+          </Alert>
+        )}
+
+        {csvData.length === 0 && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Carregue um arquivo CSV para gerar as imagens.
+          </Alert>
+        )}
+
+        {!backgroundImage && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Carregue uma imagem de fundo para gerar as imagens.
+          </Alert>
+        )}
+
         {/* Barra de progresso */}
         {isGenerating && (
           <Box sx={{ mb: 3 }}>
             <LinearProgress />
             <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-              Gerando imagens... Isso pode levar alguns momentos.
+              Gerando imagens com formatação individual... Isso pode levar alguns momentos.
             </Typography>
           </Box>
         )}
@@ -387,7 +326,7 @@ const ImageGenerator = ({
         {generatedImages.length > 0 && (
           <Box>
             <Alert severity="success" sx={{ mb: 2 }}>
-              {generatedImages.length} imagens geradas com sucesso!
+              🎉 {generatedImages.length} imagens geradas com sucesso!
             </Alert>
             
             <Typography variant="h6" gutterBottom>
@@ -402,8 +341,10 @@ const ImageGenerator = ({
                       sx={{
                         position: 'relative',
                         paddingTop: '75%', // Aspect ratio 4:3
-                        overflow: 'hidden'
+                        overflow: 'hidden',
+                        cursor: 'pointer'
                       }}
+                      onClick={() => openPreview(image)}
                     >
                       <img
                         src={image.url}
@@ -414,10 +355,8 @@ const ImageGenerator = ({
                           left: 0,
                           width: '100%',
                           height: '100%',
-                          objectFit: 'contain',
-                          cursor: 'pointer'
+                          objectFit: 'contain'
                         }}
-                        onClick={() => openPreview(image)}
                       />
                     </Box>
                     <CardContent sx={{ p: 2 }}>
