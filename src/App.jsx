@@ -24,7 +24,7 @@ import {
 } from '@mui/icons-material';
 import Papa from 'papaparse';
 import FieldPositioner from './components/FieldPositioner';
-import ImageGenerator from './components/ImageGenerator';
+import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
 import './App.css';
 
 function App() {
@@ -338,7 +338,7 @@ function App() {
 
           {/* Passo 4: Geração */}
           {activeStep === 3 && (
-            <ImageGenerator
+            <ImageGeneratorFrontendOnly
               csvData={csvData}
               backgroundImage={backgroundImage}
               fieldPositions={fieldPositions}
