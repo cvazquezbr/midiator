@@ -30,13 +30,13 @@ import {
   VisibilityOff
 } from '@mui/icons-material';
 
-const FormattingPanel = ({ 
-  selectedField, 
-  fieldStyles, 
-  setFieldStyles, 
+const FormattingPanel = ({
+  selectedField,
+  fieldStyles,
+  setFieldStyles,
   fieldPositions,
   setFieldPositions,
-  csvHeaders 
+  csvHeaders
 }) => {
   const fonts = [
     'Arial',
@@ -53,8 +53,18 @@ const FormattingPanel = ({
     'Lato',
     'Poppins',
     'Inter',
-    'Source Sans Pro'
+    'Source Sans Pro',
+    'Anton',
+    'Bebas Neue',
+    'Caveat',
+    'Courgette',
+    'Dancing Script',
+    'Lora',
+    'Merriweather',
+    'Playfair Display',
+    'Raleway'
   ];
+
 
   const updateFieldStyle = (field, property, value) => {
     setFieldStyles(prev => ({
@@ -114,7 +124,7 @@ const FormattingPanel = ({
       shadowOffsetX: 2,
       shadowOffsetY: 2
     };
-    
+
     setFieldStyles(prev => ({
       ...prev,
       [field]: defaultStyle
@@ -140,9 +150,9 @@ const FormattingPanel = ({
     <Card>
       <CardContent>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Chip 
-            label={selectedField} 
-            color="primary" 
+          <Chip
+            label={selectedField}
+            color="primary"
             sx={{ mr: 2 }}
           />
           <FormControlLabel
@@ -364,7 +374,7 @@ const FormattingPanel = ({
                   }
                   label="Contorno"
                 />
-                
+
                 {style.textStroke && (
                   <Grid container spacing={2} sx={{ mt: 1 }}>
                     <Grid item xs={6}>
@@ -403,7 +413,7 @@ const FormattingPanel = ({
                   }
                   label="Sombra"
                 />
-                
+
                 {style.textShadow && (
                   <Grid container spacing={2} sx={{ mt: 1 }}>
                     <Grid item xs={6}>

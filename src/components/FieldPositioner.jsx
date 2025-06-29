@@ -15,43 +15,41 @@ import {
 import TextBox from './TextBox';
 import FormattingPanel from './FormattingPanel';
 
-const FieldPositioner = ({ 
-  backgroundImage, 
-  csvHeaders, 
-  fieldPositions, 
-  setFieldPositions, 
+const FieldPositioner = ({
+  backgroundImage,
+  csvHeaders,
+  fieldPositions,
+  setFieldPositions,
   fieldStyles,
   setFieldStyles,
-  csvData 
+  csvData
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef(null);
 
   useEffect(() => {
-    if (backgroundImage && containerRef.current) {
-      const img = new Image();
-      img.onload = () => {
-        const container = containerRef.current;
-        const containerWidth = container.clientWidth;
-        const aspectRatio = img.height / img.width;
-        const displayHeight = containerWidth * aspectRatio;
-        
-        setImageSize({
-          width: containerWidth,
-          height: displayHeight
-        });
-      };
-      img.src = backgroundImage;
-    }
-  }, [backgroundImage]);
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        const { width, height } = entry.contentRect;
+        setImageSize({ width, height });
+      }
+    });
+
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
 
   // Inicializar posições e estilos padrão se não existirem
   useEffect(() => {
     if (csvHeaders.length > 0) {
       const newPositions = {};
       const newStyles = {};
-      
+
       csvHeaders.forEach((header, index) => {
         if (!fieldPositions[header]) {
           newPositions[header] = {
@@ -62,7 +60,7 @@ const FieldPositioner = ({
             visible: true
           };
         }
-        
+
         if (!fieldStyles[header]) {
           newStyles[header] = {
             fontFamily: 'Arial',
@@ -82,11 +80,11 @@ const FieldPositioner = ({
           };
         }
       });
-      
+
       if (Object.keys(newPositions).length > 0) {
         setFieldPositions(prev => ({ ...prev, ...newPositions }));
       }
-      
+
       if (Object.keys(newStyles).length > 0) {
         setFieldStyles(prev => ({ ...prev, ...newStyles }));
       }
@@ -135,11 +133,11 @@ const FieldPositioner = ({
     const fieldWidth = 40;
     const fieldHeight = 15;
     const spacing = 5;
-    
+
     csvHeaders.forEach((header, index) => {
       const col = index % cols;
       const row = Math.floor(index / cols);
-      
+
       newPositions[header] = {
         ...fieldPositions[header],
         x: 10 + col * (fieldWidth + spacing),
@@ -148,7 +146,7 @@ const FieldPositioner = ({
         height: fieldHeight
       };
     });
-    
+
     setFieldPositions(prev => ({ ...prev, ...newPositions }));
   };
 
@@ -219,8 +217,11 @@ const FieldPositioner = ({
                 backgroundColor: '#fff',
                 cursor: 'default'
               }}
-              onClick={() => setSelectedField(null)}
-            >
+              onMouseDown={(e) => {
+                // Evita desmarcar ao clicar dentro de um TextBox
+                if (e.target.classList.contains('text-box')) return;
+                setSelectedField(null);
+              }}            >
               <img
                 src={backgroundImage}
                 alt="Background"
@@ -231,16 +232,16 @@ const FieldPositioner = ({
                 }}
                 draggable={false}
               />
-              
+
               {/* Campos de texto */}
               {csvHeaders.map(header => {
                 const position = fieldPositions[header];
                 const style = fieldStyles[header];
-                
+
                 if (!position || !position.visible) return null;
 
                 const sampleData = csvData[0] ? csvData[0][header] : `[${header}]`;
-                
+
                 return (
                   <TextBox
                     key={header}
