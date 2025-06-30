@@ -160,7 +160,7 @@ function App() {
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
         <Typography variant="h3" component="h1" gutterBottom align="center" color="primary">
-          Midiator - Editor Avançado
+          Midiator - Mesclar conteúdo
         </Typography>
         <Typography variant="h6" align="center" color="textSecondary" sx={{ mb: 4 }}>
           Crie imagens personalizadas com controles de formatação individual
