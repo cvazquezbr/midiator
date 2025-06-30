@@ -24,6 +24,17 @@ import {
 } from '@mui/icons-material';
 import googleDriveAPI from '../utils/googleDriveAPI';
 
+function getErrorMessage(err) {
+  if (typeof err === 'string') return err;
+  if (err instanceof Error) return err.message;
+  if (err?.error?.message) return err.error.message;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return 'Erro desconhecido';
+  }
+}
+
 const GoogleAuthSetup = ({ onAuthSuccess, onAuthError }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [apiKey, setApiKey] = useState('');
