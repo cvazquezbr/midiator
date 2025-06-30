@@ -37,7 +37,8 @@ const ImageGeneratorFrontendOnly = ({
   csvData,
   backgroundImage,
   fieldPositions,
-  fieldStyles
+  fieldStyles,
+  displayedImageSize
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState([]);
@@ -203,36 +204,51 @@ const ImageGeneratorFrontendOnly = ({
         // Desenhar imagem de fundo
         ctx.drawImage(img, 0, 0);
 
-        // Desenhar campos do CSV com estilos individuais
-        Object.keys(record).forEach(field => {
-          const position = fieldPositions[field];
-          const style = fieldStyles[field];
+          // Calcular fator de escala baseado no tamanho da imagem exibida na edição
+          const scaleX = img.width / displayedImageSize.width;
+          const scaleY = img.height / displayedImageSize.height;
 
-          if (!position || !position.visible || !style) return;
+          // Desenhar campos do CSV com estilos individuais
+          Object.keys(record).forEach(field => {
+            const position = fieldPositions[field];
+            const style = fieldStyles[field];
 
-          const text = record[field] || '';
-          if (!text) return;
+            if (!position || !position.visible || !style) return;
 
-          // Calcular posições precisas
-          const pos = calculatePrecisePosition(position, canvas.width, canvas.height);
+            const text = record[field] || "";
+            if (!text) return;
 
-          // Aplicar configurações de texto
-          applyTextEffects(ctx, style);
+            // Calcular posições precisas e aplicar escala
+            const scaledPos = {
+              x: Math.round((position.x / 100) * img.width),
+              y: Math.round((position.y / 100) * img.height),
+              width: Math.round((position.width / 100) * img.width),
+              height: Math.round((position.height / 100) * img.height)
+            };
 
-          // Quebrar texto em linhas dentro da área definida
-          const lines = wrapTextInArea(ctx, text, pos.x, pos.y, pos.width, pos.height, style);
+            // Escalar o tamanho da fonte
+            const scaledFontSize = style.fontSize * Math.min(scaleX, scaleY);
 
-          // Desenhar cada linha
-          const lineHeight = (style.fontSize || 24) * (style.lineHeightMultiplier || 1.2);
-          lines.forEach((line, lineIndex) => {
-            const lineY = pos.y + (lineIndex * lineHeight);
+            // Aplicar configurações de texto com a fonte escalada
+            ctx.fillStyle = style.color || "#000000";
+            ctx.font = `${style.fontWeight || "normal"} ${style.fontStyle || "normal"} ${scaledFontSize}px ${style.fontFamily || "Arial"}`;
+            ctx.textAlign = style.textAlign || "left";
+            ctx.textBaseline = style.textBaseline || "top";
 
-            // Aplicar efeitos novamente para cada linha (necessário para alguns navegadores)
-            applyTextEffects(ctx, style);
+            // Quebrar texto em linhas dentro da área definida
+            const lines = wrapTextInArea(ctx, text, scaledPos.x, scaledPos.y, scaledPos.width, scaledPos.height, { ...style, fontSize: scaledFontSize });
 
-            drawTextWithEffects(ctx, line, pos.x, lineY, style);
+            // Desenhar cada linha
+            const lineHeight = scaledFontSize * (style.lineHeightMultiplier || 1.2);
+            lines.forEach((line, lineIndex) => {
+              const lineY = scaledPos.y + (lineIndex * lineHeight);
+
+              // Aplicar efeitos novamente para cada linha (necessário para alguns navegadores)
+              applyTextEffects(ctx, { ...style, fontSize: scaledFontSize });
+
+              drawTextWithEffects(ctx, line, scaledPos.x, lineY, { ...style, fontSize: scaledFontSize });
+            });
           });
-        });
 
         // Converter canvas para blob com alta qualidade
         const blob = await new Promise(resolve => {

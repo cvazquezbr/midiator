@@ -22,7 +22,8 @@ const FieldPositioner = ({
   setFieldPositions,
   fieldStyles,
   setFieldStyles,
-  csvData
+  csvData,
+  onImageDisplayedSizeChange
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -36,6 +37,9 @@ const FieldPositioner = ({
       for (let entry of entries) {
         const { width, height } = entry.contentRect;
         setImageSize({ width, height });
+        if (onImageDisplayedSizeChange) {
+          onImageDisplayedSizeChange({ width, height });
+        }
       }
     });
 

@@ -34,6 +34,7 @@ function App() {
   const [backgroundImage, setBackgroundImage] = useState(null);
   const [fieldPositions, setFieldPositions] = useState({});
   const [fieldStyles, setFieldStyles] = useState({});
+  const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
   
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -333,6 +334,7 @@ function App() {
               fieldStyles={fieldStyles}
               setFieldStyles={setFieldStyles}
               csvData={csvData}
+              onImageDisplayedSizeChange={setDisplayedImageSize}
             />
           )}
 
@@ -343,6 +345,7 @@ function App() {
               backgroundImage={backgroundImage}
               fieldPositions={fieldPositions}
               fieldStyles={fieldStyles}
+              displayedImageSize={displayedImageSize}
             />
           )}
 
