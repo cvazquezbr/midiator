@@ -312,13 +312,21 @@ const ImageGeneratorFrontendOnly = ({
     setDriveResult(null);
 
     try {
-      // 1. Criar pasta do projeto
+      // 1. Criar pasta principal do projeto
       const folder = await googleDriveAPI.createFolder(projectName);
+
+      // 2. Criar subpasta para as imagens (agora vamos usar essa para tudo)
+      const contentFolder = await googleDriveAPI.createFolder('Conteúdo', folder.id);
 
       const uploadResults = [];
       const sheetData = [];
 
-      // 2. Upload de cada imagem e preparar dados para a planilha
+      // Obter todos os cabeçalhos únicos de todas as linhas do CSV
+      const allHeaders = Array.from(new Set(
+        generatedImages.flatMap(img => Object.keys(img.record))
+      ));
+
+      // 3. Upload de cada imagem para a pasta de conteúdo
       for (let i = 0; i < generatedImages.length; i++) {
         const imageData = generatedImages[i];
 
@@ -326,22 +334,22 @@ const ImageGeneratorFrontendOnly = ({
           const result = await googleDriveAPI.uploadFile(
             imageData.blob,
             imageData.filename,
-            folder.id
+            contentFolder.id // Enviando para a pasta de conteúdo
           );
 
-          // Adiciona à lista de resultados
           uploadResults.push({
             filename: imageData.filename,
             success: true,
             fileId: result.id
           });
 
-          // Prepara linha para a planilha
+          // Preparar dados para a planilha
           const row = [
-            i + 1, // Coluna A: Número sequencial
-            `https://drive.google.com/file/d/${result.id}/view`, // Coluna B: Link
-            ...Object.values(imageData.record) // Colunas C em diante: Dados do CSV
+            i + 1,
+            `https://drive.google.com/file/d/${result.id}/view?usp=sharing`,
+            ...allHeaders.map(header => imageData.record[header] || '')
           ];
+
           sheetData.push(row);
 
         } catch (error) {
@@ -353,32 +361,30 @@ const ImageGeneratorFrontendOnly = ({
         }
       }
 
-      // 3. Criar planilha Google Sheets
+      // 4. Criar planilha na MESMA pasta das imagens
       if (sheetData.length > 0) {
-        // Cabeçalhos da planilha
         const headers = [
-          'Nº', // Coluna A
-          'Link do Arquivo', // Coluna B
-          ...Object.keys(generatedImages[0].record) // Colunas C em diante
+          'Nº',
+          'Link do Arquivo',
+          ...allHeaders
         ];
 
-        // Cria a planilha
-        const spreadsheet = await googleDriveAPI.createSpreadsheet(
-          `${projectName} - Relação de Arquivos`,
+        // Agora criando na pasta de conteúdo
+        await googleDriveAPI.createSpreadsheet(
+          `Relação de Arquivos - ${projectName}`,
           [headers, ...sheetData],
-          folder.id
+          contentFolder.id // <-- Aqui está a mudança principal
         );
-
-        console.log('Planilha criada:', spreadsheet);
       }
 
-      // 4. Atualizar estado com resultados
+      // 5. Atualizar estado com resultados
       setDriveResult({
         folderId: folder.id,
         folderName: projectName,
         uploads: uploadResults,
         successCount: uploadResults.filter(r => r.success).length,
-        totalCount: uploadResults.length
+        totalCount: uploadResults.length,
+        contentFolderId: contentFolder.id // Adicionando para referência
       });
 
     } catch (error) {
@@ -388,7 +394,6 @@ const ImageGeneratorFrontendOnly = ({
       setIsUploadingToDrive(false);
     }
   };
-
   // Callback para quando a autenticação for bem-sucedida
   const handleAuthSuccess = () => {
     setAuthConfigured(true);
