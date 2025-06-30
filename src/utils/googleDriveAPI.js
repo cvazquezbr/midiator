@@ -4,8 +4,8 @@
  */
 
 // Configurações da API
-const API_KEY = 'YOUR_API_KEY'; // Será configurado pelo usuário
-const CLIENT_ID = 'YOUR_CLIENT_ID'; // Será configurado pelo usuário
+const API_KEY = 'AIzaSyBKslgV4Hs6zDESQTEbGsytk-dLr9Cx05g'; // Será configurado pelo usuário
+const CLIENT_ID = '827147073459-7f4inu61qqt761gm2pojuhgreul177mj.apps.googleusercontent.com'; // Será configurado pelo usuário
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
 const SHEETS_DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/sheets/v4/rest';
 const SCOPES = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets';
@@ -64,7 +64,7 @@ class GoogleDriveAPI {
 
       resolve(true);
     } catch (error) {
-      reject(error);
+      reject(error instanceof Error ? error : new Error(String(error)));
     }
   }
 

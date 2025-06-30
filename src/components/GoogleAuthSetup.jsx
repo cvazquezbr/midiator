@@ -66,7 +66,7 @@ const GoogleAuthSetup = ({ onAuthSuccess, onAuthError }) => {
       setAuthStatus('configured');
       setActiveStep(1);
     } catch (err) {
-      setError(`Erro ao inicializar: ${err.message}`);
+      setError(`Erro ao inicializar: ${err?.message || String(err)}`);
       if (onAuthError) {
         onAuthError(err);
       }
