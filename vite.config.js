@@ -1,8 +1,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    hmr: {
+      clientPort: 5173,  // Adicione esta linha
+      protocol: 'ws',
+      host: 'localhost'
+    }
+  },
+  headers: {
+    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ws://localhost:5173 wss://localhost:5173 http://localhost:5173; style-src 'self' 'unsafe-inline'"
+  }
 })
-

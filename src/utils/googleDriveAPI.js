@@ -1,388 +1,351 @@
 /**
- * Utilitário para integração com Google Drive API diretamente no frontend
- * Usa a Google API JavaScript Client Library (gapi)
+ * Utilitário para integração com Google Drive API
+ * Usa a nova Google Identity Services (GIS) em vez da biblioteca gapi.auth2
  */
-
-// Configurações da API
-const API_KEY = 'AIzaSyBKslgV4Hs6zDESQTEbGsytk-dLr9Cx05g'; // Será configurado pelo usuário
-const CLIENT_ID = '827147073459-7f4inu61qqt761gm2pojuhgreul177mj.apps.googleusercontent.com'; // Será configurado pelo usuário
-const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
-const SHEETS_DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/sheets/v4/rest';
-const SCOPES = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets';
 
 class GoogleDriveAPI {
   constructor() {
-    this.gapi = null;
+    this.tokenClient = null;
+    this.gapiClient = null;
     this.isInitialized = false;
     this.isSignedIn = false;
     this.accessToken = null;
+    this.initPromise = null;
   }
 
   /**
-   * Inicializa a Google API
+   * Inicializa a API Google
    */
   async initialize(apiKey, clientId) {
-    return new Promise((resolve, reject) => {
-      if (this.isInitialized) {
-        resolve(true);
-        return;
-      }
+    if (this.initPromise) {
+      return this.initPromise;
+    }
 
-      // Carregar a biblioteca gapi
-      if (!window.gapi) {
+    if (this.isInitialized) {
+      return Promise.resolve(true);
+    }
+
+    this.initPromise = this._performInitialization(apiKey, clientId);
+
+    try {
+      const result = await this.initPromise;
+      this.initPromise = null;
+      return result;
+    } catch (error) {
+      this.initPromise = null;
+      throw error;
+    }
+  }
+
+  async _performInitialization(apiKey, clientId) {
+    return new Promise((resolve, reject) => {
+      // 1. Carrega a biblioteca GIS se necessário
+      if (!window.google || !window.google.accounts) {
         const script = document.createElement('script');
-        script.src = 'https://apis.google.com/js/api.js';
-        script.onload = () => {
-          this.loadGapi(apiKey, clientId, resolve, reject);
-        };
-        script.onerror = () => reject(new Error('Falha ao carregar Google API'));
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => this._initializeGIS(clientId, apiKey, resolve, reject);
+        script.onerror = () => reject(new Error('Falha ao carregar Google Identity Services'));
         document.head.appendChild(script);
       } else {
-        this.loadGapi(apiKey, clientId, resolve, reject);
+        this._initializeGIS(clientId, apiKey, resolve, reject);
       }
     });
   }
 
-  async loadGapi(apiKey, clientId, resolve, reject) {
+  async _initializeGIS(clientId, apiKey, resolve, reject) {
     try {
-      await new Promise((res) => window.gapi.load('client:auth2', res));
-      
-      await window.gapi.client.init({
-        apiKey: apiKey,
-        clientId: clientId,
-        discoveryDocs: [DISCOVERY_DOC, SHEETS_DISCOVERY_DOC],
-        scope: SCOPES
+      // 2. Configura o Token Client para autenticação
+      this.tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets',
+        callback: (response) => {
+          if (response.error) {
+            reject(new Error(`Erro de autenticação: ${response.error}`));
+            return;
+          }
+          this.accessToken = response.access_token;
+          this.isSignedIn = true;
+          resolve(true);
+        },
+        error_callback: (error) => {
+          reject(new Error(`Erro no cliente de token: ${error}`));
+        }
       });
 
-      this.gapi = window.gapi;
+      // 3. Carrega o cliente gapi para chamadas à API
+      await this._loadGapiClient(apiKey);
       this.isInitialized = true;
-      this.isSignedIn = this.gapi.auth2.getAuthInstance().isSignedIn.get();
-      
-      if (this.isSignedIn) {
-        this.accessToken = this.gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
-      }
-
       resolve(true);
     } catch (error) {
-      reject(error instanceof Error ? error : new Error(String(error)));
+      reject(error);
     }
+  }
+
+  async _loadGapiClient(apiKey) {
+    return new Promise((resolve, reject) => {
+      if (!window.gapi) {
+        const script = document.createElement('script');
+        script.src = 'https://apis.google.com/js/api.js';
+        script.onload = () => {
+          gapi.load('client', {
+            callback: () => {
+              gapi.client.init({
+                apiKey: apiKey,
+                discoveryDocs: [
+                  'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+                  'https://www.googleapis.com/discovery/v1/apis/sheets/v4/rest'
+                ]
+              }).then(resolve, reject);
+            },
+            onerror: () => reject(new Error('Falha ao carregar gapi.client'))
+          });
+        };
+        script.onerror = () => reject(new Error('Falha ao carregar Google API'));
+        document.head.appendChild(script);
+      } else {
+        gapi.load('client', {
+          callback: () => {
+            gapi.client.init({
+              apiKey: apiKey,
+              discoveryDocs: [
+                'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+                'https://www.googleapis.com/discovery/v1/apis/sheets/v4/rest'
+              ]
+            }).then(resolve, reject);
+          },
+          onerror: () => reject(new Error('Falha ao carregar gapi.client'))
+        });
+      }
+    });
   }
 
   /**
    * Faz login do usuário
    */
   async signIn() {
-    if (!this.isInitialized) {
-      throw new Error('API não inicializada');
+    if (!this.tokenClient) {
+      throw new Error('API não inicializada. Chame initialize() primeiro.');
     }
-
-    try {
-      const authInstance = this.gapi.auth2.getAuthInstance();
-      const user = await authInstance.signIn();
-      this.isSignedIn = true;
-      this.accessToken = user.getAuthResponse().access_token;
-      return user;
-    } catch (error) {
-      throw new Error(`Erro no login: ${error.message}`);
-    }
+    this.tokenClient.requestAccessToken();
   }
 
   /**
    * Faz logout do usuário
    */
   async signOut() {
-    if (!this.isInitialized) return;
-
-    try {
-      await this.gapi.auth2.getAuthInstance().signOut();
-      this.isSignedIn = false;
-      this.accessToken = null;
-    } catch (error) {
-      console.error('Erro no logout:', error);
+    if (this.accessToken) {
+      google.accounts.oauth2.revoke(this.accessToken);
     }
+    this.accessToken = null;
+    this.isSignedIn = false;
+  }
+
+  /**
+   * Verifica se o usuário está logado
+   */
+  isUserSignedIn() {
+    return this.isSignedIn;
   }
 
   /**
    * Cria uma pasta no Google Drive
    */
-  async createFolder(folderName, parentId = null) {
-    if (!this.isSignedIn) {
+  async createFolder(name, parentId = null) {
+    if (!this.isInitialized || !this.isSignedIn) {
       throw new Error('Usuário não está logado');
     }
 
-    const metadata = {
-      name: folderName,
-      mimeType: 'application/vnd.google-apps.folder'
-    };
-
-    if (parentId) {
-      metadata.parents = [parentId];
-    }
-
     try {
-      const response = await this.gapi.client.drive.files.create({
-        resource: metadata,
-        fields: 'id'
-      });
+      const metadata = {
+        name: name,
+        mimeType: 'application/vnd.google-apps.folder'
+      };
 
-      return response.result.id;
-    } catch (error) {
-      throw new Error(`Erro ao criar pasta: ${error.message}`);
-    }
-  }
+      if (parentId) {
+        metadata.parents = [parentId];
+      }
 
-  /**
-   * Faz upload de uma imagem para o Google Drive
-   */
-  async uploadImage(imageBlob, fileName, folderId) {
-    if (!this.isSignedIn) {
-      throw new Error('Usuário não está logado');
-    }
-
-    const metadata = {
-      name: fileName,
-      parents: [folderId]
-    };
-
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
-    form.append('file', imageBlob);
-
-    try {
-      const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      const response = await fetch('https://www.googleapis.com/drive/v3/files', {
         method: 'POST',
-        headers: new Headers({
-          'Authorization': `Bearer ${this.accessToken}`
-        }),
-        body: form
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(metadata)
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const result = await response.json();
-      return result.id;
+      return await response.json();
     } catch (error) {
-      throw new Error(`Erro ao fazer upload: ${error.message}`);
+      throw new Error(`Erro ao criar pasta: ${error.message || error}`);
     }
   }
 
   /**
-   * Torna um arquivo público e retorna o link
+   * Faz upload de um arquivo para o Google Drive
    */
-  async makeFilePublic(fileId) {
-    if (!this.isSignedIn) {
+  async uploadFile(file, fileName, folderId = null) {
+    if (!this.isInitialized || !this.isSignedIn) {
       throw new Error('Usuário não está logado');
     }
 
     try {
-      // Tornar o arquivo público
-      await this.gapi.client.drive.permissions.create({
-        fileId: fileId,
-        resource: {
-          role: 'reader',
-          type: 'anyone'
-        }
+      const metadata = {
+        name: fileName
+      };
+
+      if (folderId) {
+        metadata.parents = [folderId];
+      }
+
+      const base64Data = await this._fileToBase64(file);
+
+      const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'multipart/related; boundary="foo_bar_baz"'
+        },
+        body: this._createMultipartBody(metadata, base64Data, file.type)
       });
 
-      // Retornar link de visualização
-      return `https://drive.google.com/file/d/${fileId}/view`;
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
     } catch (error) {
-      throw new Error(`Erro ao tornar arquivo público: ${error.message}`);
+      throw new Error(`Erro no upload: ${error.message || error}`);
     }
   }
 
   /**
-   * Cria uma planilha no Google Sheets
+   * Converte arquivo para base64
    */
-  async createSpreadsheet(title, folderId = null) {
-    if (!this.isSignedIn) {
+  _fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /**
+   * Cria o corpo multipart para upload
+   */
+  _createMultipartBody(metadata, data, mimeType) {
+    const delimiter = 'foo_bar_baz';
+    const close_delim = `\r\n--${delimiter}--`;
+
+    let body = `--${delimiter}\r\n`;
+    body += 'Content-Type: application/json\r\n\r\n';
+    body += JSON.stringify(metadata) + '\r\n';
+    body += `--${delimiter}\r\n`;
+    body += `Content-Type: ${mimeType}\r\n`;
+    body += 'Content-Transfer-Encoding: base64\r\n\r\n';
+    body += data;
+    body += close_delim;
+
+    return body;
+  }
+  /**
+   * Cria uma nova planilha Google Sheets com os dados fornecidos
+   */
+  async createSpreadsheet(title, data, folderId = null) {
+    if (!this.isInitialized || !this.isSignedIn) {
       throw new Error('Usuário não está logado');
     }
 
     try {
-      const response = await this.gapi.client.sheets.spreadsheets.create({
-        resource: {
+      // 1. Cria a planilha vazia
+      const metadata = {
+        name: title,
+        mimeType: 'application/vnd.google-apps.spreadsheet'
+      };
+
+      if (folderId) {
+        metadata.parents = [folderId];
+      }
+
+      // 2. Insere os dados na planilha
+      const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           properties: {
             title: title
-          }
-        }
-      });
-
-      const spreadsheetId = response.result.spreadsheetId;
-
-      // Mover para pasta específica se fornecida
-      if (folderId) {
-        await this.gapi.client.drive.files.update({
-          fileId: spreadsheetId,
-          addParents: folderId,
-          fields: 'id,parents'
-        });
-      }
-
-      return spreadsheetId;
-    } catch (error) {
-      throw new Error(`Erro ao criar planilha: ${error.message}`);
-    }
-  }
-
-  /**
-   * Popula a planilha com dados
-   */
-  async populateSpreadsheet(spreadsheetId, csvData, imageLinks) {
-    if (!this.isSignedIn) {
-      throw new Error('Usuário não está logado');
-    }
-
-    if (!csvData || csvData.length === 0) {
-      throw new Error('Nenhum dado CSV fornecido');
-    }
-
-    try {
-      // Preparar cabeçalhos
-      const headers = ['Sequencial', 'Link_Imagem', ...Object.keys(csvData[0])];
-      
-      // Preparar dados
-      const values = [headers];
-      
-      csvData.forEach((record, index) => {
-        const imageLink = imageLinks[index] || '';
-        const row = [index + 1, imageLink, ...Object.values(record)];
-        values.push(row);
-      });
-
-      // Atualizar planilha
-      await this.gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: spreadsheetId,
-        range: 'A1',
-        valueInputOption: 'RAW',
-        resource: {
-          values: values
-        }
-      });
-
-      // Formatar cabeçalhos (negrito)
-      await this.formatHeaders(spreadsheetId, headers.length);
-
-      return true;
-    } catch (error) {
-      throw new Error(`Erro ao popular planilha: ${error.message}`);
-    }
-  }
-
-  /**
-   * Formata os cabeçalhos da planilha
-   */
-  async formatHeaders(spreadsheetId, numColumns) {
-    try {
-      await this.gapi.client.sheets.spreadsheets.batchUpdate({
-        spreadsheetId: spreadsheetId,
-        resource: {
-          requests: [{
-            repeatCell: {
-              range: {
-                sheetId: 0,
-                startRowIndex: 0,
-                endRowIndex: 1,
-                startColumnIndex: 0,
-                endColumnIndex: numColumns
-              },
-              cell: {
-                userEnteredFormat: {
-                  textFormat: {
-                    bold: true
+          },
+          sheets: [{
+            data: [{
+              rowData: data.map((row, rowIndex) => ({
+                values: row.map((cell, colIndex) => ({
+                  userEnteredValue: {
+                    stringValue: String(cell)
+                  },
+                  userEnteredFormat: {
+                    textFormat: {
+                      bold: rowIndex === 0 // Cabeçalho em negrito
+                    }
                   }
-                }
-              },
-              fields: 'userEnteredFormat.textFormat.bold'
-            }
+                }))
+              }))
+            }]
           }]
-        }
+        })
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
     } catch (error) {
-      console.error('Erro ao formatar cabeçalhos:', error);
+      throw new Error(`Erro ao criar planilha: ${error.message || error}`);
     }
   }
-
   /**
-   * Retorna a URL da planilha
+   * Lista arquivos em uma pasta
    */
-  getSpreadsheetUrl(spreadsheetId) {
-    return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
-  }
-
-  /**
-   * Retorna a URL da pasta
-   */
-  getFolderUrl(folderId) {
-    return `https://drive.google.com/drive/folders/${folderId}`;
-  }
-
-  /**
-   * Processa todas as imagens e cria a estrutura no Google Drive
-   */
-  async processImages(projectName, csvData, imageBlobs) {
-    if (!this.isSignedIn) {
+  async listFiles(folderId = null, pageSize = 10) {
+    if (!this.isInitialized || !this.isSignedIn) {
       throw new Error('Usuário não está logado');
     }
 
     try {
-      // 1. Criar pasta
-      const folderId = await this.createFolder(projectName);
-      
-      // 2. Upload das imagens
-      const imageLinks = [];
-      const uploadedFiles = [];
-
-      for (let i = 0; i < imageBlobs.length; i++) {
-        const fileName = `midiator_${String(i + 1).padStart(3, '0')}.png`;
-        
-        try {
-          const fileId = await this.uploadImage(imageBlobs[i], fileName, folderId);
-          const link = await this.makeFilePublic(fileId);
-          
-          imageLinks.push(link);
-          uploadedFiles.push({
-            fileName,
-            fileId,
-            link
-          });
-        } catch (error) {
-          console.error(`Erro no upload da imagem ${fileName}:`, error);
-          imageLinks.push('');
-        }
+      let query = "trashed=false";
+      if (folderId) {
+        query += ` and '${folderId}' in parents`;
       }
 
-      // 3. Criar planilha
-      const spreadsheetTitle = `${projectName}_Dados`;
-      const spreadsheetId = await this.createSpreadsheet(spreadsheetTitle, folderId);
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=${pageSize}`, {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`
+        }
+      });
 
-      // 4. Popular planilha
-      await this.populateSpreadsheet(spreadsheetId, csvData, imageLinks);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
-      return {
-        success: true,
-        folderId,
-        folderUrl: this.getFolderUrl(folderId),
-        spreadsheetId,
-        spreadsheetUrl: this.getSpreadsheetUrl(spreadsheetId),
-        uploadedFiles,
-        totalImages: uploadedFiles.length,
-        totalRecords: csvData.length
-      };
-
+      return await response.json();
     } catch (error) {
-      return {
-        success: false,
-        error: error.message
-      };
+      throw new Error(`Erro ao listar arquivos: ${error.message || error}`);
     }
   }
 }
 
-// Instância singleton
+// Exporta uma instância única (singleton)
 const googleDriveAPI = new GoogleDriveAPI();
-
 export default googleDriveAPI;
-

@@ -13,14 +13,16 @@ import {
   StepContent,
   Link,
   Chip,
-  Divider
+  Divider,
+  CircularProgress
 } from '@mui/material';
 import {
   Google,
   Settings,
   CheckCircle,
-  Error,
-  OpenInNew
+  Error as ErrorIcon,
+  OpenInNew,
+  Warning
 } from '@mui/icons-material';
 import googleDriveAPI from '../utils/googleDriveAPI';
 
@@ -28,6 +30,7 @@ function getErrorMessage(err) {
   if (typeof err === 'string') return err;
   if (err instanceof Error) return err.message;
   if (err?.error?.message) return err.error.message;
+  if (err?.details) return err.details;
   try {
     return JSON.stringify(err);
   } catch {
@@ -41,31 +44,36 @@ const GoogleAuthSetup = ({ onAuthSuccess, onAuthError }) => {
   const [clientId, setClientId] = useState('');
   const [isInitializing, setIsInitializing] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const [authStatus, setAuthStatus] = useState('not_configured'); // not_configured, configured, signed_in
+  const [authStatus, setAuthStatus] = useState('not_configured');
   const [error, setError] = useState('');
-  const [userInfo, setUserInfo] = useState(null);
+  const [initializationAttempts, setInitializationAttempts] = useState(0);
 
   useEffect(() => {
-    // Verificar se já está configurado e logado
     checkAuthStatus();
   }, []);
 
-  const checkAuthStatus = () => {
-    if (googleDriveAPI.isInitialized && googleDriveAPI.isSignedIn) {
-      setAuthStatus('signed_in');
-      setActiveStep(2);
-      if (onAuthSuccess) {
-        onAuthSuccess();
+  const checkAuthStatus = async () => {
+    try {
+      if (googleDriveAPI.isInitialized) {
+        setAuthStatus('configured');
+        setActiveStep(1);
+
+        if (googleDriveAPI.isUserSignedIn()) {
+          setAuthStatus('signed_in');
+          setActiveStep(2);
+          if (onAuthSuccess) {
+            onAuthSuccess();
+          }
+        }
       }
-    } else if (googleDriveAPI.isInitialized) {
-      setAuthStatus('configured');
-      setActiveStep(1);
+    } catch (error) {
+      console.error('Erro ao verificar status de autenticação:', error);
     }
   };
 
   const handleInitialize = async () => {
     if (!apiKey.trim() || !clientId.trim()) {
-      setError('Por favor, preencha API Key e Client ID');
+      setError('Por favor, preencha a API Key e Client ID');
       return;
     }
 
@@ -73,14 +81,18 @@ const GoogleAuthSetup = ({ onAuthSuccess, onAuthError }) => {
     setError('');
 
     try {
-      await googleDriveAPI.initialize(apiKey.trim(), clientId.trim());
+      await googleDriveAPI.initialize(apiKey, clientId);
       setAuthStatus('configured');
       setActiveStep(1);
-    } catch (err) {
-      setError(`Erro ao inicializar: ${getErrorMessage(err)}`);
-
+      setError('');
+      setInitializationAttempts(0);
+    } catch (error) {
+      console.error('Erro na inicialização:', error);
+      const errorMessage = getErrorMessage(error);
+      setError(`Erro na inicialização: ${errorMessage}`);
+      setInitializationAttempts(prev => prev + 1);
       if (onAuthError) {
-        onAuthError(err);
+        onAuthError(error);
       }
     } finally {
       setIsInitializing(false);
@@ -92,25 +104,20 @@ const GoogleAuthSetup = ({ onAuthSuccess, onAuthError }) => {
     setError('');
 
     try {
-      const user = await googleDriveAPI.signIn();
-      const profile = user.getBasicProfile();
-      
-      setUserInfo({
-        name: profile.getName(),
-        email: profile.getEmail(),
-        imageUrl: profile.getImageUrl()
-      });
-      
+      await googleDriveAPI.signIn();
       setAuthStatus('signed_in');
       setActiveStep(2);
-      
+
       if (onAuthSuccess) {
         onAuthSuccess();
       }
-    } catch (err) {
-      setError(`Erro no login: ${err.message}`);
+    } catch (error) {
+      console.error('Erro no login:', error);
+      const errorMessage = getErrorMessage(error);
+      setError(`Erro no login: ${errorMessage}`);
+
       if (onAuthError) {
-        onAuthError(err);
+        onAuthError(error);
       }
     } finally {
       setIsSigningIn(false);
@@ -122,16 +129,25 @@ const GoogleAuthSetup = ({ onAuthSuccess, onAuthError }) => {
       await googleDriveAPI.signOut();
       setAuthStatus('configured');
       setActiveStep(1);
-      setUserInfo(null);
-    } catch (err) {
-      setError(`Erro no logout: ${err.message}`);
+    } catch (error) {
+      console.error('Erro no logout:', error);
+      setError(`Erro no logout: ${getErrorMessage(error)}`);
     }
+  };
+
+  const resetConfiguration = () => {
+    setAuthStatus('not_configured');
+    setActiveStep(0);
+    setApiKey('');
+    setClientId('');
+    setError('');
+    setInitializationAttempts(0);
   };
 
   const steps = [
     {
       label: 'Configurar Credenciais',
-      description: 'Configure API Key e Client ID do Google Cloud'
+      description: 'Configure sua API Key e Client ID do Google Cloud Console'
     },
     {
       label: 'Fazer Login',
@@ -144,165 +160,197 @@ const GoogleAuthSetup = ({ onAuthSuccess, onAuthError }) => {
   ];
 
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h5" gutterBottom>
-          <Google sx={{ mr: 1, verticalAlign: 'middle' }} />
-          Configuração do Google Drive
-        </Typography>
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        <Google sx={{ mr: 1, verticalAlign: 'middle' }} />
+        Configuração da Integração Google Drive
+      </Typography>
 
-        <Stepper activeStep={activeStep} orientation="vertical">
-          {/* Passo 1: Configurar Credenciais */}
-          <Step>
-            <StepLabel>
-              {steps[0].label}
-              {authStatus !== 'not_configured' && <CheckCircle color="success" sx={{ ml: 1 }} />}
-            </StepLabel>
-            <StepContent>
-              <Typography variant="body2" color="textSecondary" gutterBottom>
-                {steps[0].description}
+      <Stepper activeStep={activeStep} orientation="vertical">
+        <Step>
+          <StepLabel>
+            {steps[0].label}
+            {authStatus !== 'not_configured' && <CheckCircle color="success" sx={{ ml: 1 }} />}
+          </StepLabel>
+          <StepContent>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              {steps[0].description}
+            </Typography>
+
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                Para usar a integração com Google Drive, você precisa:
               </Typography>
+              <ol style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                <li>Criar um projeto no Google Cloud Console</li>
+                <li>Ativar a API do Google Drive</li>
+                <li>Criar credenciais (API Key e OAuth 2.0 Client ID)</li>
+                <li>Configurar domínios autorizados</li>
+              </ol>
+              <Link
+                href="https://console.cloud.google.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{ display: 'inline-flex', alignItems: 'center', mt: 1 }}
+              >
+                Abrir Google Cloud Console <OpenInNew sx={{ ml: 0.5, fontSize: 16 }} />
+              </Link>
+            </Alert>
 
-              <Alert severity="info" sx={{ mb: 2 }}>
-                <Typography variant="body2">
-                  <strong>Como obter as credenciais:</strong><br />
-                  1. Acesse o <Link href="https://console.cloud.google.com/" target="_blank" rel="noopener">
-                    Google Cloud Console <OpenInNew fontSize="small" />
-                  </Link><br />
-                  2. Crie um projeto ou selecione um existente<br />
-                  3. Ative as APIs: Google Drive API e Google Sheets API<br />
-                  4. Vá em "Credenciais" e crie uma API Key<br />
-                  5. Crie um OAuth 2.0 Client ID (Aplicação Web)<br />
-                  6. Adicione sua URL como origem autorizada
+            <TextField
+              fullWidth
+              label="API Key"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="AIzaSy..."
+              sx={{ mb: 2 }}
+              disabled={authStatus !== 'not_configured'}
+            />
+
+            <TextField
+              fullWidth
+              label="Client ID"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              placeholder="123456789-abc...apps.googleusercontent.com"
+              sx={{ mb: 2 }}
+              disabled={authStatus !== 'not_configured'}
+            />
+
+            {error && initializationAttempts > 0 && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  {error}
                 </Typography>
+                {initializationAttempts > 1 && (
+                  <Typography variant="body2" color="text.secondary">
+                    <strong>Dicas para resolver:</strong>
+                    <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                      <li>Verifique se a API Key e Client ID estão corretos</li>
+                      <li>Confirme se a API do Google Drive está ativada no seu projeto</li>
+                      <li>Verifique se o domínio atual está autorizado nas configurações OAuth</li>
+                      <li>Aguarde alguns minutos se acabou de criar as credenciais</li>
+                    </ul>
+                  </Typography>
+                )}
               </Alert>
+            )}
 
-              <Box sx={{ mb: 2 }}>
-                <TextField
-                  fullWidth
-                  label="API Key"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="AIzaSy..."
-                  sx={{ mb: 2 }}
-                  disabled={authStatus !== 'not_configured'}
-                />
-                <TextField
-                  fullWidth
-                  label="Client ID"
-                  value={clientId}
-                  onChange={(e) => setClientId(e.target.value)}
-                  placeholder="123456789-abc.apps.googleusercontent.com"
-                  disabled={authStatus !== 'not_configured'}
-                />
-              </Box>
-
-              {authStatus === 'not_configured' && (
+            <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+              {authStatus === 'not_configured' ? (
                 <Button
                   variant="contained"
                   onClick={handleInitialize}
-                  disabled={isInitializing}
+                  disabled={isInitializing || !apiKey.trim() || !clientId.trim()}
+                  startIcon={isInitializing ? <CircularProgress size={16} /> : <Settings />}
+                >
+                  {isInitializing ? 'Inicializando...' : 'Configurar'}
+                </Button>
+              ) : (
+                <Button
+                  variant="outlined"
+                  onClick={resetConfiguration}
                   startIcon={<Settings />}
                 >
-                  {isInitializing ? 'Configurando...' : 'Configurar'}
+                  Reconfigurar
                 </Button>
               )}
+            </Box>
+          </StepContent>
+        </Step>
 
-              {authStatus !== 'not_configured' && (
-                <Chip 
-                  icon={<CheckCircle />} 
-                  label="Configurado" 
-                  color="success" 
-                  variant="filled" 
-                />
-              )}
-            </StepContent>
-          </Step>
+        <Step>
+          <StepLabel>
+            {steps[1].label}
+            {authStatus === 'signed_in' && <CheckCircle color="success" sx={{ ml: 1 }} />}
+          </StepLabel>
+          <StepContent>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              {steps[1].description}
+            </Typography>
 
-          {/* Passo 2: Fazer Login */}
-          <Step>
-            <StepLabel>
-              {steps[1].label}
-              {authStatus === 'signed_in' && <CheckCircle color="success" sx={{ ml: 1 }} />}
-            </StepLabel>
-            <StepContent>
-              <Typography variant="body2" color="textSecondary" gutterBottom>
-                {steps[1].description}
-              </Typography>
+            {authStatus === 'configured' && (
+              <>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Clique no botão abaixo para fazer login com sua conta Google e autorizar o acesso ao Google Drive.
+                </Alert>
 
-              {authStatus === 'configured' && (
+                {error && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {error}
+                  </Alert>
+                )}
+
                 <Button
                   variant="contained"
+                  color="primary"
                   onClick={handleSignIn}
                   disabled={isSigningIn}
-                  startIcon={<Google />}
-                  color="primary"
+                  startIcon={isSigningIn ? <CircularProgress size={16} /> : <Google />}
                 >
-                  {isSigningIn ? 'Fazendo login...' : 'Login com Google'}
+                  {isSigningIn ? 'Fazendo login...' : 'Fazer Login com Google'}
                 </Button>
-              )}
+              </>
+            )}
 
-              {authStatus === 'signed_in' && userInfo && (
-                <Box>
-                  <Alert severity="success" sx={{ mb: 2 }}>
-                    <Typography variant="body2">
-                      <strong>Logado como:</strong> {userInfo.name} ({userInfo.email})
-                    </Typography>
-                  </Alert>
-                  <Button
-                    variant="outlined"
-                    onClick={handleSignOut}
-                    size="small"
-                  >
-                    Fazer Logout
-                  </Button>
-                </Box>
-              )}
-            </StepContent>
-          </Step>
-
-          {/* Passo 3: Pronto */}
-          <Step>
-            <StepLabel>
-              {steps[2].label}
-              {authStatus === 'signed_in' && <CheckCircle color="success" sx={{ ml: 1 }} />}
-            </StepLabel>
-            <StepContent>
-              <Typography variant="body2" color="textSecondary" gutterBottom>
-                {steps[2].description}
-              </Typography>
-
-              {authStatus === 'signed_in' && (
-                <Alert severity="success">
-                  <Typography variant="body2">
-                    🎉 Integração com Google Drive configurada com sucesso!<br />
-                    Agora você pode gerar imagens e enviá-las automaticamente para seu Google Drive.
-                  </Typography>
+            {authStatus === 'signed_in' && (
+              <>
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  Login realizado com sucesso!
                 </Alert>
-              )}
-            </StepContent>
-          </Step>
-        </Stepper>
 
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            <Typography variant="body2">
-              <Error sx={{ mr: 1, verticalAlign: 'middle' }} />
-              {error}
+                <Button
+                  variant="outlined"
+                  onClick={handleSignOut}
+                  startIcon={<Google />}
+                >
+                  Fazer Logout
+                </Button>
+              </>
+            )}
+          </StepContent>
+        </Step>
+
+        <Step>
+          <StepLabel>
+            {steps[2].label}
+            {authStatus === 'signed_in' && <CheckCircle color="success" sx={{ ml: 1 }} />}
+          </StepLabel>
+          <StepContent>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              {steps[2].description}
             </Typography>
-          </Alert>
-        )}
 
-        <Divider sx={{ my: 3 }} />
+            {authStatus === 'signed_in' && (
+              <Alert severity="success">
+                A integração com Google Drive está configurada e pronta para uso!
+              </Alert>
+            )}
+          </StepContent>
+        </Step>
+      </Stepper>
 
-        <Typography variant="body2" color="textSecondary">
-          <strong>Nota:</strong> Suas credenciais são usadas apenas localmente no seu navegador. 
-          Nenhuma informação é enviada para servidores externos além das APIs oficiais do Google.
+      <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+        <Typography variant="subtitle2" gutterBottom>
+          Status Atual:
         </Typography>
-      </CardContent>
-    </Card>
+        <Chip
+          icon={
+            authStatus === 'signed_in' ? <CheckCircle /> :
+              authStatus === 'configured' ? <Warning /> : <ErrorIcon />
+          }
+          label={
+            authStatus === 'signed_in' ? 'Conectado e Pronto' :
+              authStatus === 'configured' ? 'Configurado - Faça Login' : 'Não Configurado'
+          }
+          color={
+            authStatus === 'signed_in' ? 'success' :
+              authStatus === 'configured' ? 'warning' : 'error'
+          }
+        />
+      </Box>
+    </Box>
   );
 };
 
 export default GoogleAuthSetup;
-

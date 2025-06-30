@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -33,17 +33,17 @@ import {
 import GoogleAuthSetup from './GoogleAuthSetup';
 import googleDriveAPI from '../utils/googleDriveAPI';
 
-const ImageGeneratorFrontendOnly = ({ 
-  csvData, 
-  backgroundImage, 
-  fieldPositions, 
+const ImageGeneratorFrontendOnly = ({
+  csvData,
+  backgroundImage,
+  fieldPositions,
   fieldStyles
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPreview, setSelectedPreview] = useState(null);
-  
+
   // Estados para integração Google Drive
   const [driveIntegration, setDriveIntegration] = useState(false);
   const [projectName, setProjectName] = useState('');
@@ -54,16 +54,38 @@ const ImageGeneratorFrontendOnly = ({
 
   const canvasRef = useRef(null);
 
+  // Estado para controle de fontes carregadas
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  // Efeito para garantir que as fontes estejam carregadas
+  useEffect(() => {
+    const loadFonts = async () => {
+      try {
+        // Aguarda todas as fontes do documento estarem carregadas
+        if (document.fonts && document.fonts.ready) {
+          await document.fonts.ready;
+        }
+        setFontsLoaded(true);
+      } catch (error) {
+        console.warn('Erro ao carregar fontes:', error);
+        setFontsLoaded(true); // Continua mesmo com erro
+      }
+    };
+
+    loadFonts();
+  }, []);
+
   // Função para quebrar texto em linhas dentro de uma área retangular
   const wrapTextInArea = (ctx, text, x, y, maxWidth, maxHeight, style) => {
     if (!text) return [];
-    
+
     const fontSize = style.fontSize || 24;
-    const lineHeight = fontSize * 1.2;
+    const lineHeight = fontSize * (style.lineHeightMultiplier || 1.2);
     const maxLines = Math.floor(maxHeight / lineHeight);
-    
+
+    // Aplica a fonte antes de medir o texto
     ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${fontSize}px ${style.fontFamily || 'Arial'}`;
-    
+
     const words = text.toString().split(' ');
     const lines = [];
     let currentLine = words[0] || '';
@@ -72,7 +94,7 @@ const ImageGeneratorFrontendOnly = ({
       const word = words[i];
       const testLine = currentLine + ' ' + word;
       const metrics = ctx.measureText(testLine);
-      
+
       if (metrics.width > maxWidth && currentLine !== '') {
         lines.push(currentLine);
         if (lines.length >= maxLines) break;
@@ -81,11 +103,11 @@ const ImageGeneratorFrontendOnly = ({
         currentLine = testLine;
       }
     }
-    
+
     if (lines.length < maxLines && currentLine) {
       lines.push(currentLine);
     }
-    
+
     return lines;
   };
 
@@ -93,8 +115,8 @@ const ImageGeneratorFrontendOnly = ({
   const applyTextEffects = (ctx, style) => {
     ctx.fillStyle = style.color || '#000000';
     ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${style.fontSize || 24}px ${style.fontFamily || 'Arial'}`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
+    ctx.textAlign = style.textAlign || 'left';
+    ctx.textBaseline = style.textBaseline || 'top';
 
     // Configurar sombra
     if (style.textShadow) {
@@ -113,21 +135,40 @@ const ImageGeneratorFrontendOnly = ({
     if (style.textStroke) {
       ctx.strokeStyle = style.strokeColor || '#ffffff';
       ctx.lineWidth = style.strokeWidth || 2;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
     }
   };
 
   // Função para desenhar texto com efeitos
   const drawTextWithEffects = (ctx, text, x, y, style) => {
+    // Desenha o contorno primeiro (se habilitado)
     if (style.textStroke) {
       ctx.strokeText(text, x, y);
     }
+    // Desenha o texto preenchido por cima
     ctx.fillText(text, x, y);
+  };
+
+  // Função para calcular posições precisas
+  const calculatePrecisePosition = (position, canvasWidth, canvasHeight) => {
+    return {
+      x: Math.round((position.x / 100) * canvasWidth),
+      y: Math.round((position.y / 100) * canvasHeight),
+      width: Math.round((position.width / 100) * canvasWidth),
+      height: Math.round((position.height / 100) * canvasHeight)
+    };
   };
 
   // Função principal para gerar imagens
   const generateImages = async () => {
     if (!backgroundImage || csvData.length === 0) {
       alert('Por favor, carregue um arquivo CSV e uma imagem de fundo.');
+      return;
+    }
+
+    if (!fontsLoaded) {
+      alert('Aguardando carregamento das fontes. Tente novamente em alguns segundos.');
       return;
     }
 
@@ -145,52 +186,59 @@ const ImageGeneratorFrontendOnly = ({
 
       for (let i = 0; i < csvData.length; i++) {
         const record = csvData[i];
-        
+
         // Criar canvas para cada registro
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        
+
+        // Configurar canvas com alta qualidade
         canvas.width = img.width;
         canvas.height = img.height;
-        
+
+        // Melhorar qualidade de renderização
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.textRenderingOptimization = 'optimizeQuality';
+
         // Desenhar imagem de fundo
         ctx.drawImage(img, 0, 0);
-        
+
         // Desenhar campos do CSV com estilos individuais
         Object.keys(record).forEach(field => {
           const position = fieldPositions[field];
           const style = fieldStyles[field];
-          
+
           if (!position || !position.visible || !style) return;
-          
+
           const text = record[field] || '';
           if (!text) return;
-          
-          // Converter posições percentuais para pixels
-          const x = (position.x / 100) * canvas.width;
-          const y = (position.y / 100) * canvas.height;
-          const width = (position.width / 100) * canvas.width;
-          const height = (position.height / 100) * canvas.height;
-          
+
+          // Calcular posições precisas
+          const pos = calculatePrecisePosition(position, canvas.width, canvas.height);
+
           // Aplicar configurações de texto
           applyTextEffects(ctx, style);
-          
+
           // Quebrar texto em linhas dentro da área definida
-          const lines = wrapTextInArea(ctx, text, x, y, width, height, style);
-          
+          const lines = wrapTextInArea(ctx, text, pos.x, pos.y, pos.width, pos.height, style);
+
           // Desenhar cada linha
-          const lineHeight = (style.fontSize || 24) * 1.2;
+          const lineHeight = (style.fontSize || 24) * (style.lineHeightMultiplier || 1.2);
           lines.forEach((line, lineIndex) => {
-            const lineY = y + (lineIndex * lineHeight);
-            drawTextWithEffects(ctx, line, x, lineY, style);
+            const lineY = pos.y + (lineIndex * lineHeight);
+
+            // Aplicar efeitos novamente para cada linha (necessário para alguns navegadores)
+            applyTextEffects(ctx, style);
+
+            drawTextWithEffects(ctx, line, pos.x, lineY, style);
           });
         });
-        
-        // Converter canvas para blob
+
+        // Converter canvas para blob com alta qualidade
         const blob = await new Promise(resolve => {
           canvas.toBlob(resolve, 'image/png', 1.0);
         });
-        
+
         const imageData = {
           blob: blob,
           url: URL.createObjectURL(blob),
@@ -198,40 +246,65 @@ const ImageGeneratorFrontendOnly = ({
           index: i,
           filename: `midiator_${String(i + 1).padStart(3, '0')}.png`
         };
-        
+
         images.push(imageData);
       }
 
       setGeneratedImages(images);
-      
-      // Se integração com Drive estiver habilitada, fazer upload automaticamente
-      if (driveIntegration && projectName.trim() && authConfigured) {
-        await uploadToDrive(images);
-      }
-      
+
     } catch (error) {
-      console.error('Erro ao gerar imagens:', error);
-      alert('Erro ao gerar imagens. Verifique os dados e tente novamente.');
+      console.error('Erro na geração de imagens:', error);
+      alert(`Erro na geração de imagens: ${error.message}`);
     } finally {
       setIsGenerating(false);
     }
   };
 
+  // Função para fazer download de uma imagem
+  const downloadImage = (imageData) => {
+    const link = document.createElement('a');
+    link.href = imageData.url;
+    link.download = imageData.filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Função para fazer download de todas as imagens
+  const downloadAllImages = () => {
+    generatedImages.forEach((imageData, index) => {
+      setTimeout(() => {
+        downloadImage(imageData);
+      }, index * 100); // Pequeno delay entre downloads
+    });
+  };
+
+  // Função para abrir preview
+  const openPreview = (imageData) => {
+    setSelectedPreview(imageData);
+    setPreviewOpen(true);
+  };
+
+  // Função para fechar preview
+  const closePreview = () => {
+    setPreviewOpen(false);
+    setSelectedPreview(null);
+  };
+
   // Função para upload para Google Drive
-  const uploadToDrive = async (images = generatedImages) => {
-    if (!images.length) {
-      alert('Nenhuma imagem para enviar.');
+  const uploadToGoogleDrive = async () => {
+    if (!authConfigured) {
+      setShowAuthSetup(true);
       return;
     }
 
     if (!projectName.trim()) {
-      alert('Por favor, defina um nome para o projeto.');
+      alert('Por favor, digite um nome para o projeto.');
       return;
     }
 
-    if (!authConfigured) {
-      alert('Por favor, configure a autenticação com Google primeiro.');
-      setShowAuthSetup(true);
+    if (generatedImages.length === 0) {
+      alert('Nenhuma imagem foi gerada ainda.');
       return;
     }
 
@@ -239,454 +312,344 @@ const ImageGeneratorFrontendOnly = ({
     setDriveResult(null);
 
     try {
-      // Extrair blobs das imagens
-      const imageBlobs = images.map(img => img.blob);
-      
-      // Processar com Google Drive API
-      const result = await googleDriveAPI.processImages(projectName, csvData, imageBlobs);
-      
-      if (result.success) {
-        setDriveResult(result);
-        alert('Upload para Google Drive concluído com sucesso!');
-      } else {
-        throw new Error(result.error || 'Erro desconhecido');
+      // 1. Criar pasta do projeto
+      const folder = await googleDriveAPI.createFolder(projectName);
+
+      const uploadResults = [];
+      const sheetData = [];
+
+      // 2. Upload de cada imagem e preparar dados para a planilha
+      for (let i = 0; i < generatedImages.length; i++) {
+        const imageData = generatedImages[i];
+
+        try {
+          const result = await googleDriveAPI.uploadFile(
+            imageData.blob,
+            imageData.filename,
+            folder.id
+          );
+
+          // Adiciona à lista de resultados
+          uploadResults.push({
+            filename: imageData.filename,
+            success: true,
+            fileId: result.id
+          });
+
+          // Prepara linha para a planilha
+          const row = [
+            i + 1, // Coluna A: Número sequencial
+            `https://drive.google.com/file/d/${result.id}/view`, // Coluna B: Link
+            ...Object.values(imageData.record) // Colunas C em diante: Dados do CSV
+          ];
+          sheetData.push(row);
+
+        } catch (error) {
+          uploadResults.push({
+            filename: imageData.filename,
+            success: false,
+            error: error.message
+          });
+        }
       }
 
+      // 3. Criar planilha Google Sheets
+      if (sheetData.length > 0) {
+        // Cabeçalhos da planilha
+        const headers = [
+          'Nº', // Coluna A
+          'Link do Arquivo', // Coluna B
+          ...Object.keys(generatedImages[0].record) // Colunas C em diante
+        ];
+
+        // Cria a planilha
+        const spreadsheet = await googleDriveAPI.createSpreadsheet(
+          `${projectName} - Relação de Arquivos`,
+          [headers, ...sheetData],
+          folder.id
+        );
+
+        console.log('Planilha criada:', spreadsheet);
+      }
+
+      // 4. Atualizar estado com resultados
+      setDriveResult({
+        folderId: folder.id,
+        folderName: projectName,
+        uploads: uploadResults,
+        successCount: uploadResults.filter(r => r.success).length,
+        totalCount: uploadResults.length
+      });
+
     } catch (error) {
-      console.error('Erro ao fazer upload para Drive:', error);
-      alert(`Erro ao fazer upload para Google Drive: ${error.message}`);
+      console.error('Erro no upload para Google Drive:', error);
+      alert(`Erro no upload: ${error.message}`);
     } finally {
       setIsUploadingToDrive(false);
     }
   };
 
-  // Função para download individual
-  const downloadImage = (image) => {
-    const link = document.createElement('a');
-    link.href = image.url;
-    link.download = image.filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Função para download de todas as imagens
-  const downloadAllImages = () => {
-    generatedImages.forEach((image, index) => {
-      setTimeout(() => {
-        downloadImage(image);
-      }, index * 200); // Delay entre downloads
-    });
-  };
-
-  // Função para abrir preview
-  const openPreview = (image) => {
-    setSelectedPreview(image);
-    setPreviewOpen(true);
-  };
-
-  // Handlers para autenticação
+  // Callback para quando a autenticação for bem-sucedida
   const handleAuthSuccess = () => {
     setAuthConfigured(true);
     setShowAuthSetup(false);
   };
 
+  // Callback para quando houver erro na autenticação
   const handleAuthError = (error) => {
     console.error('Erro na autenticação:', error);
     setAuthConfigured(false);
   };
 
-  // Calcular estatísticas
-  const visibleFields = Object.values(fieldPositions).filter(pos => pos.visible).length;
-  const totalFields = Object.keys(fieldPositions).length;
-
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h5" gutterBottom>
-          <ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-          Geração de Imagens com Google Drive (Frontend Only)
-        </Typography>
-        
-        {/* Informações do projeto */}
-        <Box sx={{ mb: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Typography variant="body2" color="textSecondary">
-                Registros CSV
-              </Typography>
-              <Typography variant="h6">
-                {csvData.length}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Typography variant="body2" color="textSecondary">
-                Campos Visíveis
-              </Typography>
-              <Typography variant="h6">
-                {visibleFields}/{totalFields}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Typography variant="body2" color="textSecondary">
-                Estilos Configurados
-              </Typography>
-              <Typography variant="h6">
-                {Object.keys(fieldStyles).length}
-              </Typography>
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Typography variant="body2" color="textSecondary">
-                Imagens a Gerar
-              </Typography>
-              <Typography variant="h6" color="primary">
-                {csvData.length}
-              </Typography>
-            </Grid>
-          </Grid>
-        </Box>
+    <Box sx={{ mt: 3 }}>
+      <Card>
+        <CardContent>
+          <Typography variant="h5" gutterBottom>
+            <ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+            Geração de Imagens
+          </Typography>
 
-        {/* Configurações do Google Drive */}
-        <Card sx={{ mb: 3, border: '1px solid #e0e0e0' }}>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              <Google sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Integração com Google Drive
-            </Typography>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={driveIntegration}
-                    onChange={(e) => setDriveIntegration(e.target.checked)}
+          {!fontsLoaded && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Carregando fontes... Aguarde antes de gerar as imagens.
+            </Alert>
+          )}
+
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={generateImages}
+                disabled={isGenerating || !fontsLoaded}
+                startIcon={<ImageIcon />}
+                fullWidth
+              >
+                {isGenerating ? 'Gerando...' : 'Gerar Imagens'}
+              </Button>
+            </Grid>
+
+            {generatedImages.length > 0 && (
+              <Grid item xs={12} md={6}>
+                <Button
+                  variant="outlined"
+                  onClick={downloadAllImages}
+                  startIcon={<Download />}
+                  fullWidth
+                >
+                  Download Todas ({generatedImages.length})
+                </Button>
+              </Grid>
+            )}
+          </Grid>
+
+          {isGenerating && (
+            <Box sx={{ mt: 2 }}>
+              <LinearProgress />
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Gerando imagens...
+              </Typography>
+            </Box>
+          )}
+
+          {/* Integração Google Drive */}
+          {generatedImages.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Divider sx={{ mb: 2 }} />
+              <Typography variant="h6" gutterBottom>
+                <Google sx={{ mr: 1, verticalAlign: 'middle' }} />
+                Integração Google Drive
+              </Typography>
+
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12} md={6}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={driveIntegration}
+                        onChange={(e) => setDriveIntegration(e.target.checked)}
+                      />
+                    }
+                    label="Ativar integração com Google Drive"
                   />
-                }
-                label="Enviar automaticamente para Google Drive após gerar imagens"
-              />
-              
-              {authConfigured ? (
-                <Chip 
-                  icon={<Google />} 
-                  label="Autenticado" 
-                  color="success" 
-                  size="small"
-                  sx={{ ml: 2 }}
-                />
-              ) : (
-                <Chip 
-                  icon={<Google />} 
-                  label="Não configurado" 
-                  color="default" 
-                  size="small"
-                  sx={{ ml: 2 }}
-                />
+                </Grid>
+
+                {driveIntegration && (
+                  <>
+                    <Grid item xs={12} md={6}>
+                      <TextField
+                        fullWidth
+                        label="Nome do Projeto"
+                        value={projectName}
+                        onChange={(e) => setProjectName(e.target.value)}
+                        placeholder="Ex: Certificados 2024"
+                      />
+                    </Grid>
+
+                    <Grid item xs={12}>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        onClick={uploadToGoogleDrive}
+                        disabled={isUploadingToDrive}
+                        startIcon={<CloudUpload />}
+                        fullWidth
+                      >
+                        {isUploadingToDrive ? 'Enviando...' : 'Enviar para Google Drive'}
+                      </Button>
+                    </Grid>
+                  </>
+                )}
+              </Grid>
+
+              {isUploadingToDrive && (
+                <Box sx={{ mt: 2 }}>
+                  <LinearProgress />
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    Enviando para Google Drive...
+                  </Typography>
+                </Box>
+              )}
+
+              {driveResult && (
+                <Alert
+                  severity={driveResult.successCount === driveResult.totalCount ? "success" : "warning"}
+                  sx={{ mt: 2 }}
+                >
+                  Upload concluído: {driveResult.successCount}/{driveResult.totalCount} arquivos enviados com sucesso.
+                  {driveResult.successCount < driveResult.totalCount && (
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      Alguns arquivos falharam no upload. Verifique sua conexão e tente novamente.
+                    </Typography>
+                  )}
+                </Alert>
               )}
             </Box>
-            
-            {driveIntegration && (
-              <Box sx={{ mt: 2 }}>
-                <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      label="Nome do Projeto"
-                      value={projectName}
-                      onChange={(e) => setProjectName(e.target.value)}
-                      placeholder="Ex: Certificados_2024"
-                      helperText="Nome da pasta que será criada no Google Drive"
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Button
-                      variant={authConfigured ? "outlined" : "contained"}
-                      onClick={() => setShowAuthSetup(true)}
-                      startIcon={<Google />}
-                      fullWidth
-                      sx={{ height: '56px' }}
-                      color={authConfigured ? "success" : "primary"}
-                    >
-                      {authConfigured ? 'Reconfigurar Google' : 'Configurar Google Drive'}
-                    </Button>
-                  </Grid>
-                </Grid>
-                
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  <Typography variant="body2">
-                    <strong>Autenticação 100% Frontend:</strong><br />
-                    • Suas credenciais ficam apenas no seu navegador<br />
-                    • Login direto com sua conta Google pessoal<br />
-                    • Acesso ao seu Google Drive pessoal<br />
-                    • Nenhum servidor intermediário
-                  </Typography>
-                </Alert>
-              </Box>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Botões de ação */}
-        <Box sx={{ mb: 3 }}>
-          <Button
-            variant="contained"
-            size="large"
-            onClick={generateImages}
-            disabled={!backgroundImage || csvData.length === 0 || isGenerating || visibleFields === 0}
-            startIcon={<Visibility />}
-            sx={{ mr: 2 }}
-          >
-            {isGenerating ? 'Gerando...' : `Gerar ${csvData.length} Imagens`}
-          </Button>
-          
-          {generatedImages.length > 0 && (
-            <>
-              <Button
-                variant="outlined"
-                size="large"
-                onClick={downloadAllImages}
-                startIcon={<GetApp />}
-                sx={{ mr: 2 }}
-              >
-                Download Todas ({generatedImages.length})
-              </Button>
-              
-              {!driveIntegration && (
-                <Button
-                  variant="outlined"
-                  size="large"
-                  onClick={() => uploadToDrive()}
-                  disabled={isUploadingToDrive || !projectName.trim() || !authConfigured}
-                  startIcon={<CloudUpload />}
-                  color="secondary"
-                >
-                  {isUploadingToDrive ? 'Enviando...' : 'Enviar para Drive'}
-                </Button>
-              )}
-            </>
           )}
-        </Box>
 
-        {/* Validações */}
-        {visibleFields === 0 && (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            Nenhum campo está visível. Configure pelo menos um campo na etapa anterior.
-          </Alert>
-        )}
+          {/* Lista de imagens geradas */}
+          {generatedImages.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Divider sx={{ mb: 2 }} />
+              <Typography variant="h6" gutterBottom>
+                Imagens Geradas ({generatedImages.length})
+              </Typography>
 
-        {csvData.length === 0 && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Carregue um arquivo CSV para gerar as imagens.
-          </Alert>
-        )}
+              <Grid container spacing={2}>
+                {generatedImages.map((imageData, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={index}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <Chip
+                            label={`#${index + 1}`}
+                            size="small"
+                            color="primary"
+                            sx={{ mr: 1 }}
+                          />
+                          <Typography variant="body2" noWrap>
+                            {imageData.filename}
+                          </Typography>
+                        </Box>
 
-        {!backgroundImage && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Carregue uma imagem de fundo para gerar as imagens.
-          </Alert>
-        )}
-
-        {/* Barra de progresso */}
-        {(isGenerating || isUploadingToDrive) && (
-          <Box sx={{ mb: 3 }}>
-            <LinearProgress />
-            <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-              {isGenerating && 'Gerando imagens com formatação individual...'}
-              {isUploadingToDrive && 'Enviando para Google Drive...'}
-            </Typography>
-          </Box>
-        )}
-
-        {/* Resultado do Google Drive */}
-        {driveResult && (
-          <Alert severity="success" sx={{ mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              🎉 Upload para Google Drive concluído!
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Button
-                  variant="outlined"
-                  startIcon={<FolderOpen />}
-                  href={driveResult.folderUrl}
-                  target="_blank"
-                  fullWidth
-                >
-                  Abrir Pasta no Drive
-                </Button>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Button
-                  variant="outlined"
-                  startIcon={<TableChart />}
-                  href={driveResult.spreadsheetUrl}
-                  target="_blank"
-                  fullWidth
-                >
-                  Abrir Planilha
-                </Button>
-              </Grid>
-            </Grid>
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              {driveResult.totalImages} imagens enviadas • {driveResult.totalRecords} registros processados
-            </Typography>
-          </Alert>
-        )}
-
-        {/* Resultado das imagens geradas */}
-        {generatedImages.length > 0 && (
-          <Box>
-            <Alert severity="success" sx={{ mb: 2 }}>
-              🎉 {generatedImages.length} imagens geradas com sucesso!
-            </Alert>
-            
-            <Typography variant="h6" gutterBottom>
-              Imagens Geradas
-            </Typography>
-            
-            <Grid container spacing={2}>
-              {generatedImages.map((image, index) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
-                  <Card>
-                    <Box
-                      sx={{
-                        position: 'relative',
-                        paddingTop: '75%', // Aspect ratio 4:3
-                        overflow: 'hidden',
-                        cursor: 'pointer'
-                      }}
-                      onClick={() => openPreview(image)}
-                    >
-                      <img
-                        src={image.url}
-                        alt={`Imagem ${index + 1}`}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'contain'
-                        }}
-                      />
-                    </Box>
-                    <CardContent sx={{ p: 2 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="caption">
-                          {image.filename}
-                        </Typography>
-                        <Box>
-                          <IconButton 
-                            size="small" 
-                            onClick={() => openPreview(image)}
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => openPreview(imageData)}
                             title="Visualizar"
                           >
                             <Visibility />
                           </IconButton>
-                          <IconButton 
-                            size="small" 
-                            onClick={() => downloadImage(image)}
+
+                          <IconButton
+                            size="small"
+                            onClick={() => downloadImage(imageData)}
                             title="Download"
                           >
                             <Download />
                           </IconButton>
                         </Box>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-        )}
-
-        {/* Dialog de configuração do Google */}
-        <Dialog
-          open={showAuthSetup}
-          onClose={() => setShowAuthSetup(false)}
-          maxWidth="md"
-          fullWidth
-        >
-          <DialogTitle>
-            Configuração do Google Drive
-          </DialogTitle>
-          <DialogContent>
-            <GoogleAuthSetup
-              onAuthSuccess={handleAuthSuccess}
-              onAuthError={handleAuthError}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setShowAuthSetup(false)}>
-              Fechar
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Dialog de preview */}
-        <Dialog
-          open={previewOpen}
-          onClose={() => setPreviewOpen(false)}
-          maxWidth="lg"
-          fullWidth
-        >
-          <DialogTitle>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h6">
-                {selectedPreview?.filename}
-              </Typography>
-              <IconButton onClick={() => setPreviewOpen(false)}>
-                <Close />
-              </IconButton>
-            </Box>
-          </DialogTitle>
-          <DialogContent>
-            {selectedPreview && (
-              <Box sx={{ textAlign: 'center' }}>
-                <img
-                  src={selectedPreview.url}
-                  alt="Preview"
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '70vh',
-                    objectFit: 'contain'
-                  }}
-                />
-                <Box sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Dados do Registro:
-                  </Typography>
-                  <Grid container spacing={1}>
-                    {Object.entries(selectedPreview.record).map(([key, value]) => (
-                      <Grid item xs={12} sm={6} key={key}>
-                        <Chip 
-                          label={`${key}: ${value}`} 
-                          size="small" 
-                          variant="outlined"
-                          sx={{ maxWidth: '100%' }}
-                        />
-                      </Grid>
-                    ))}
+                      </CardContent>
+                    </Card>
                   </Grid>
-                </Box>
-              </Box>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button 
-              onClick={() => selectedPreview && downloadImage(selectedPreview)}
-              startIcon={<Download />}
-            >
-              Download
-            </Button>
-            <Button onClick={() => setPreviewOpen(false)}>
-              Fechar
-            </Button>
-          </DialogActions>
-        </Dialog>
+                ))}
+              </Grid>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
 
-        <canvas ref={canvasRef} style={{ display: 'none' }} />
-      </CardContent>
-    </Card>
+      {/* Dialog de Preview */}
+      <Dialog
+        open={previewOpen}
+        onClose={closePreview}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          Preview - {selectedPreview?.filename}
+          <IconButton
+            onClick={closePreview}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent>
+          {selectedPreview && (
+            <Box sx={{ textAlign: 'center' }}>
+              <img
+                src={selectedPreview.url}
+                alt={selectedPreview.filename}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '70vh',
+                  objectFit: 'contain'
+                }}
+              />
+            </Box>
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => downloadImage(selectedPreview)} startIcon={<Download />}>
+            Download
+          </Button>
+          <Button onClick={closePreview}>
+            Fechar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog de Configuração de Autenticação */}
+      <Dialog
+        open={showAuthSetup}
+        onClose={() => setShowAuthSetup(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Configuração Google Drive
+          <IconButton
+            onClick={() => setShowAuthSetup(false)}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+
+        <DialogContent>
+          <GoogleAuthSetup
+            onAuthSuccess={handleAuthSuccess}
+            onAuthError={handleAuthError}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+    </Box>
   );
 };
 
