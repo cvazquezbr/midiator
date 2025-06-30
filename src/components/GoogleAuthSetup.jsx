@@ -49,6 +49,10 @@ const GoogleAuthSetup = ({ onAuthSuccess, onAuthError }) => {
   const [initializationAttempts, setInitializationAttempts] = useState(0);
 
   useEffect(() => {
+    const storedApiKey = localStorage.getItem("google_api_key");
+    const storedClientId = localStorage.getItem("google_client_id");
+    if (storedApiKey) setApiKey(storedApiKey);
+    if (storedClientId) setClientId(storedClientId);
     checkAuthStatus();
   }, []);
 
@@ -82,10 +86,12 @@ const GoogleAuthSetup = ({ onAuthSuccess, onAuthError }) => {
 
     try {
       await googleDriveAPI.initialize(apiKey, clientId);
-      setAuthStatus('configured');
+      setAuthStatus("configured");
       setActiveStep(1);
-      setError('');
+      setError("");
       setInitializationAttempts(0);
+      localStorage.setItem("google_api_key", apiKey);
+      localStorage.setItem("google_client_id", clientId);
     } catch (error) {
       console.error('Erro na inicialização:', error);
       const errorMessage = getErrorMessage(error);
