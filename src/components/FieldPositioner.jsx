@@ -80,7 +80,9 @@ const FieldPositioner = ({
             shadowColor: '#000000',
             shadowBlur: 4,
             shadowOffsetX: 2,
-            shadowOffsetY: 2
+            shadowOffsetY: 2,
+            textAlign: 'left',
+            verticalAlign: 'top'
           };
         }
       });

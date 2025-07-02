@@ -348,6 +348,34 @@ const FormattingPanel = ({
                   size="small"
                 />
               </Grid>
+              <Grid item xs={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Alinhamento Horizontal</InputLabel>
+                  <Select
+                    value={style.textAlign || 'left'}
+                    label="Alinhamento Horizontal"
+                    onChange={(e) => updateFieldStyle(selectedField, 'textAlign', e.target.value)}
+                  >
+                    <MenuItem value="left">Esquerda</MenuItem>
+                    <MenuItem value="center">Centro</MenuItem>
+                    <MenuItem value="right">Direita</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Alinhamento Vertical</InputLabel>
+                  <Select
+                    value={style.verticalAlign || 'top'}
+                    label="Alinhamento Vertical"
+                    onChange={(e) => updateFieldStyle(selectedField, 'verticalAlign', e.target.value)}
+                  >
+                    <MenuItem value="top">Topo</MenuItem>
+                    <MenuItem value="middle">Meio</MenuItem>
+                    <MenuItem value="bottom">Base</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
             </Grid>
           </AccordionDetails>
         </Accordion>

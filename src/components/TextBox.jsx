@@ -188,6 +188,9 @@ const TextBox = ({
         boxSizing: 'border-box',
         overflow: 'hidden',
         zIndex: 2,
+        display: 'flex',
+        justifyContent: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
+        alignItems: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
         '&:hover': {
           border: '2px solid #2196f3',
           backgroundColor: 'rgba(33, 150, 243, 0.05)'
