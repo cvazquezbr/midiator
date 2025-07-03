@@ -227,26 +227,47 @@ const ImageGeneratorFrontendOnly = ({
             };
 
             // Escalar o tamanho da fonte
-            const scaledFontSize = style.fontSize * Math.min(scaleX, scaleY);
+            const scaledFontSize = style.fontSize * Math.min(scaleX, scaleY); // Mantém a escala da fonte original
 
             // Aplicar configurações de texto com a fonte escalada
-            ctx.fillStyle = style.color || "#000000";
-            ctx.font = `${style.fontWeight || "normal"} ${style.fontStyle || "normal"} ${scaledFontSize}px ${style.fontFamily || "Arial"}`;
-            ctx.textAlign = style.textAlign || "left";
-            ctx.textBaseline = style.textBaseline || "top";
+            applyTextEffects(ctx, { ...style, fontSize: scaledFontSize }); // Passa a fonte escalada para applyTextEffects
 
             // Quebrar texto em linhas dentro da área definida
+            // Passa scaledFontSize para wrapTextInArea para cálculo correto de lineHeight e maxLines
             const lines = wrapTextInArea(ctx, text, scaledPos.x, scaledPos.y, scaledPos.width, scaledPos.height, { ...style, fontSize: scaledFontSize });
 
             // Desenhar cada linha
             const lineHeight = scaledFontSize * (style.lineHeightMultiplier || 1.2);
+            let startY = scaledPos.y; // Posição Y inicial
+
+            // Ajustar startY com base no alinhamento vertical
+            if (style.verticalAlign === 'middle') {
+              const totalTextHeight = lines.length * lineHeight;
+              startY += (scaledPos.height - totalTextHeight) / 2;
+            } else if (style.verticalAlign === 'bottom') {
+              const totalTextHeight = lines.length * lineHeight;
+              startY += scaledPos.height - totalTextHeight;
+            }
+            // 'top' já é o padrão
+
             lines.forEach((line, lineIndex) => {
-              const lineY = scaledPos.y + (lineIndex * lineHeight);
+              let lineX = scaledPos.x; // Posição X inicial para a linha
 
-              // Aplicar efeitos novamente para cada linha (necessário para alguns navegadores)
-              applyTextEffects(ctx, { ...style, fontSize: scaledFontSize });
+              // Ajustar lineX com base no alinhamento horizontal
+              if (style.textAlign === 'center') {
+                const textWidth = ctx.measureText(line).width;
+                lineX += (scaledPos.width - textWidth) / 2;
+              } else if (style.textAlign === 'right') {
+                const textWidth = ctx.measureText(line).width;
+                lineX += scaledPos.width - textWidth;
+              }
+              // 'left' já é o padrão
 
-              drawTextWithEffects(ctx, line, scaledPos.x, lineY, { ...style, fontSize: scaledFontSize });
+              const lineY = startY + (lineIndex * lineHeight);
+
+              // Não é necessário chamar applyTextEffects novamente aqui se já foi chamado antes do loop de linhas
+              // e se os estilos de sombra/contorno não mudam por linha.
+              drawTextWithEffects(ctx, line, lineX, lineY, { ...style, fontSize: scaledFontSize });
             });
           });
 
@@ -675,4 +696,3 @@ const ImageGeneratorFrontendOnly = ({
 };
 
 export default ImageGeneratorFrontendOnly;
-
