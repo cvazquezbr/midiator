@@ -27,8 +27,15 @@ import {
   Style,
   ContentCopy,
   Visibility,
-  VisibilityOff
+  VisibilityOff,
+  FormatAlignLeft,
+  FormatAlignCenter,
+  FormatAlignRight,
+  VerticalAlignTop,
+  VerticalAlignCenter,
+  VerticalAlignBottom
 } from '@mui/icons-material';
+import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
 const FormattingPanel = ({
   selectedField,
@@ -227,6 +234,53 @@ const FormattingPanel = ({
                   fullWidth
                 />
               </Grid>
+              <Grid item xs={12} sx={{ mt: 1 }}>
+                <Typography variant="caption" display="block" gutterBottom>
+                  Alinhamento do Texto na Caixa
+                </Typography>
+                <ToggleButtonGroup
+                  value={style.textAlign || 'left'}
+                  exclusive
+                  onChange={(e, newAlignment) => {
+                    if (newAlignment) updateFieldStyle(selectedField, 'textAlign', newAlignment);
+                  }}
+                  aria-label="text alignment"
+                  size="small"
+                  fullWidth
+                >
+                  <ToggleButton value="left" aria-label="left aligned">
+                    <FormatAlignLeft />
+                  </ToggleButton>
+                  <ToggleButton value="center" aria-label="centered">
+                    <FormatAlignCenter />
+                  </ToggleButton>
+                  <ToggleButton value="right" aria-label="right aligned">
+                    <FormatAlignRight />
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Grid>
+              <Grid item xs={12} sx={{ mt: 1 }}>
+                 <ToggleButtonGroup
+                    value={style.verticalAlign || 'top'}
+                    exclusive
+                    onChange={(e, newAlignment) => {
+                      if (newAlignment) updateFieldStyle(selectedField, 'verticalAlign', newAlignment);
+                    }}
+                    aria-label="vertical alignment"
+                    size="small"
+                    fullWidth
+                  >
+                    <ToggleButton value="top" aria-label="top aligned">
+                      <VerticalAlignTop />
+                    </ToggleButton>
+                    <ToggleButton value="middle" aria-label="middle aligned">
+                      <VerticalAlignCenter />
+                    </ToggleButton>
+                    <ToggleButton value="bottom" aria-label="bottom aligned">
+                      <VerticalAlignBottom />
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+              </Grid>
             </Grid>
           </AccordionDetails>
         </Accordion>
@@ -347,34 +401,6 @@ const FormattingPanel = ({
                   fullWidth
                   size="small"
                 />
-              </Grid>
-              <Grid item xs={6}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Alinhamento Horizontal</InputLabel>
-                  <Select
-                    value={style.textAlign || 'left'}
-                    label="Alinhamento Horizontal"
-                    onChange={(e) => updateFieldStyle(selectedField, 'textAlign', e.target.value)}
-                  >
-                    <MenuItem value="left">Esquerda</MenuItem>
-                    <MenuItem value="center">Centro</MenuItem>
-                    <MenuItem value="right">Direita</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={6}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Alinhamento Vertical</InputLabel>
-                  <Select
-                    value={style.verticalAlign || 'top'}
-                    label="Alinhamento Vertical"
-                    onChange={(e) => updateFieldStyle(selectedField, 'verticalAlign', e.target.value)}
-                  >
-                    <MenuItem value="top">Topo</MenuItem>
-                    <MenuItem value="middle">Meio</MenuItem>
-                    <MenuItem value="bottom">Base</MenuItem>
-                  </Select>
-                </FormControl>
               </Grid>
             </Grid>
           </AccordionDetails>

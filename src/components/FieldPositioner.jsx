@@ -23,7 +23,8 @@ const FieldPositioner = ({
   fieldStyles,
   setFieldStyles,
   csvData,
-  onImageDisplayedSizeChange
+  onImageDisplayedSizeChange,
+  colorPalette
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -156,6 +157,18 @@ const FieldPositioner = ({
     setFieldPositions(prev => ({ ...prev, ...newPositions }));
   };
 
+  const handleColorCircleClick = (color) => {
+    if (selectedField) {
+      setFieldStyles(prev => ({
+        ...prev,
+        [selectedField]: {
+          ...prev[selectedField],
+          color: color
+        }
+      }));
+    }
+  };
+
   if (!backgroundImage) {
     return (
       <Box
@@ -264,6 +277,26 @@ const FieldPositioner = ({
                 );
               })}
             </Box>
+            {/* Color Palette */}
+            {colorPalette && colorPalette.length > 0 && (
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
+                {colorPalette.map((color, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: '50%',
+                      backgroundColor: color,
+                      cursor: 'pointer',
+                      border: '2px solid #fff',
+                      boxShadow: '0 0 5px rgba(0,0,0,0.2)'
+                    }}
+                    onClick={() => handleColorCircleClick(color)}
+                  />
+                ))}
+              </Box>
+            )}
 
             {/* Instruções */}
             <Box sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
