@@ -23,6 +23,7 @@ import {
   Palette
 } from '@mui/icons-material';
 import Papa from 'papaparse';
+import ColorThief from 'colorthief';
 import FieldPositioner from './components/FieldPositioner';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
 import './App.css';
@@ -32,6 +33,7 @@ function App() {
   const [csvData, setCsvData] = useState([]);
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [backgroundImage, setBackgroundImage] = useState(null);
+  const [colorPalette, setColorPalette] = useState([]);
   const [fieldPositions, setFieldPositions] = useState({});
   const [fieldStyles, setFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
@@ -122,7 +124,18 @@ function App() {
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        setBackgroundImage(e.target.result);
+        const imageUrl = e.target.result;
+        setBackgroundImage(imageUrl);
+
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+          const colorThief = new ColorThief();
+          const palette = colorThief.getPalette(img, 5); // Extrai 5 cores
+          setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`));
+        };
+        img.src = imageUrl;
+
         if (activeStep === 1) setActiveStep(2);
       };
       reader.readAsDataURL(file);
@@ -335,6 +348,7 @@ function App() {
               setFieldStyles={setFieldStyles}
               csvData={csvData}
               onImageDisplayedSizeChange={setDisplayedImageSize}
+              colorPalette={colorPalette}
             />
           )}
 
