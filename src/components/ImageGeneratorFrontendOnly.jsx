@@ -28,7 +28,9 @@ import {
   CloudUpload,
   FolderOpen,
   TableChart,
-  Google
+  Google,
+  Edit,
+  SwapHoriz
 } from '@mui/icons-material';
 import GoogleAuthSetup from './GoogleAuthSetup';
 import googleDriveAPI from '../utils/googleDriveAPI';
@@ -44,6 +46,8 @@ const ImageGeneratorFrontendOnly = ({
   const [generatedImages, setGeneratedImages] = useState([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPreview, setSelectedPreview] = useState(null);
+  const [editingImage, setEditingImage] = useState(null);
+  const [editedFields, setEditedFields] = useState({});
 
   // Estados para integração Google Drive
   const [driveIntegration, setDriveIntegration] = useState(false);
@@ -52,8 +56,10 @@ const ImageGeneratorFrontendOnly = ({
   const [driveResult, setDriveResult] = useState(null);
   const [authConfigured, setAuthConfigured] = useState(false);
   const [showAuthSetup, setShowAuthSetup] = useState(false);
+  const [replacingImageIndex, setReplacingImageIndex] = useState(null);
 
   const canvasRef = useRef(null);
+  const individualImageInputRef = useRef(null);
 
   // Estado para controle de fontes carregadas
   const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -328,6 +334,147 @@ const ImageGeneratorFrontendOnly = ({
     setSelectedPreview(null);
   };
 
+  const handleEdit = (imageData) => {
+    setEditingImage(imageData);
+    setEditedFields(imageData.record);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingImage) return;
+
+    const updatedImages = generatedImages.map(img =>
+      img.index === editingImage.index ? { ...img, record: editedFields } : img
+    );
+    setGeneratedImages(updatedImages);
+    regenerateSingleImage(editingImage.index, editedFields, editingImage.backgroundImage || backgroundImage);
+    setEditingImage(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingImage(null);
+    setEditedFields({});
+  };
+
+  const handleFieldChange = (fieldName, value) => {
+    setEditedFields(prev => ({ ...prev, [fieldName]: value }));
+  };
+
+  const regenerateSingleImage = async (index, record, currentBackgroundImage) => {
+    if (!currentBackgroundImage || !record) {
+      console.error('Background image or record not found for regeneration.');
+      return;
+    }
+
+    if (!fontsLoaded) {
+      alert('Aguardando carregamento das fontes. Tente novamente em alguns segundos.');
+      return;
+    }
+
+    try {
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = currentBackgroundImage;
+      });
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.textRenderingOptimization = 'optimizeQuality';
+      ctx.drawImage(img, 0, 0);
+
+      const scaleX = img.width / displayedImageSize.width;
+      const scaleY = img.height / displayedImageSize.height;
+
+      Object.keys(record).forEach(field => {
+        const position = fieldPositions[field];
+        const style = fieldStyles[field];
+        if (!position || !position.visible || !style) return;
+        const text = record[field] || "";
+        if (!text) return;
+
+        const scaledPos = {
+          x: Math.round((position.x / 100) * img.width),
+          y: Math.round((position.y / 100) * img.height),
+          width: Math.round((position.width / 100) * img.width),
+          height: Math.round((position.height / 100) * img.height)
+        };
+        const scaledFontSize = style.fontSize * Math.min(scaleX, scaleY);
+        applyTextEffects(ctx, { ...style, fontSize: scaledFontSize });
+        const lines = wrapTextInArea(ctx, text, scaledPos.x, scaledPos.y, scaledPos.width, scaledPos.height, { ...style, fontSize: scaledFontSize });
+        const lineHeight = scaledFontSize * (style.lineHeightMultiplier || 1.2);
+        let startY = scaledPos.y;
+        if (style.verticalAlign === 'middle') {
+          const totalTextHeight = lines.length * lineHeight;
+          startY += (scaledPos.height - totalTextHeight) / 2;
+        } else if (style.verticalAlign === 'bottom') {
+          const totalTextHeight = lines.length * lineHeight;
+          startY += scaledPos.height - totalTextHeight;
+        }
+        lines.forEach((line, lineIndex) => {
+          let lineX = scaledPos.x;
+          if (style.textAlign === 'center') {
+            const textWidth = ctx.measureText(line).width;
+            lineX += (scaledPos.width - textWidth) / 2;
+          } else if (style.textAlign === 'right') {
+            const textWidth = ctx.measureText(line).width;
+            lineX += scaledPos.width - textWidth;
+          }
+          const lineY = startY + (lineIndex * lineHeight);
+          drawTextWithEffects(ctx, line, lineX, lineY, { ...style, fontSize: scaledFontSize });
+        });
+      });
+
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+      const newImageData = {
+        blob: blob,
+        url: URL.createObjectURL(blob),
+        record: record,
+        index: index,
+        filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+        backgroundImage: currentBackgroundImage // Store the background image used for this specific image
+      };
+
+      setGeneratedImages(prevImages =>
+        prevImages.map(img => (img.index === index ? newImageData : img))
+      );
+
+    } catch (error) {
+      console.error('Erro na regeneração da imagem:', error);
+      alert(`Erro na regeneração da imagem: ${error.message}`);
+    }
+  };
+
+  const handleReplaceImageClick = (index) => {
+    setReplacingImageIndex(index);
+    individualImageInputRef.current.click();
+  };
+
+  const handleIndividualImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file && replacingImageIndex !== null) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const newBgUrl = e.target.result;
+        const imageToUpdate = generatedImages.find(img => img.index === replacingImageIndex);
+        if (imageToUpdate) {
+          regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset the input value to allow uploading the same file again if needed
+    if (individualImageInputRef.current) {
+      individualImageInputRef.current.value = "";
+    }
+    setReplacingImageIndex(null); // Reset after upload attempt
+  };
+
+
   // Função para upload para Google Drive
   const uploadToGoogleDrive = async () => {
     if (!authConfigured) {
@@ -590,12 +737,51 @@ const ImageGeneratorFrontendOnly = ({
                             color="primary"
                             sx={{ mr: 1 }}
                           />
-                          <Typography variant="body2" noWrap>
+                          <Typography variant="body2" noWrap sx={{ flexGrow: 1 }}>
                             {imageData.filename}
                           </Typography>
                         </Box>
 
-                        <Box sx={{ display: 'flex', gap: 1 }}>
+<Box sx={{
+                          width: 'auto', // Permitir que a largura se ajuste ao conteúdo + padding
+                          maxWidth: '100%', // Não exceder o contêiner do card
+                          height: 'auto', // Permitir que a altura se ajuste
+                          maxHeight: '180px', // Altura máxima total (incluindo padding da borda)
+                          display: 'inline-flex', // Para que o Box se ajuste ao tamanho da imagem + padding
+                          flexDirection: 'column', // Para centralizar se necessário
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          padding: '10px', // Espaçamento para a "borda branca" da foto
+                          backgroundColor: 'white', // Cor da borda da foto
+                          borderRadius: '4px', // Leve arredondamento nas bordas externas
+                          mb: 1,
+                          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2), 0 6px 20px rgba(0, 0, 0, 0.19)', // Efeito de sombra
+                          '&:hover img': {
+                            transform: 'scale(1.03)', // Zoom um pouco mais sutil na imagem interna
+                          },
+                          '&:hover': { // Sutil levantamento do card no hover
+                            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.25), 0 10px 25px rgba(0, 0, 0, 0.22)',
+                            transform: 'translateY(-2px)',
+                          },
+                          transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out', // Transição suave para o hover do Box
+                        }}>
+                          <img 
+                            src={imageData.url} 
+                            alt={`Preview ${index + 1}`} 
+                            style={{ 
+                              display: 'block', 
+                              maxWidth: '100%', 
+                              maxHeight: '150px', // Altura máxima da imagem em si, para caber no padding
+                              width: 'auto', 
+                              height: 'auto', 
+                              objectFit: 'contain', 
+                              transition: 'transform 0.3s ease-in-out',
+                              // Adicionar uma pequena sombra interna na imagem para separá-la da borda branca
+                              boxShadow: 'inset 0 0 2px rgba(0,0,0,0.1)', 
+                            }} 
+                          />
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
                           <IconButton
                             size="small"
                             onClick={() => openPreview(imageData)}
@@ -603,7 +789,20 @@ const ImageGeneratorFrontendOnly = ({
                           >
                             <Visibility />
                           </IconButton>
-
+                          <IconButton
+                            size="small"
+                            onClick={() => handleEdit(imageData)}
+                            title="Editar"
+                          >
+                            <Edit />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleReplaceImageClick(imageData.index)}
+                            title="Substituir Imagem"
+                          >
+                            <SwapHoriz />
+                          </IconButton>
                           <IconButton
                             size="small"
                             onClick={() => downloadImage(imageData)}
@@ -691,6 +890,36 @@ const ImageGeneratorFrontendOnly = ({
       </Dialog>
 
       <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+      {/* Dialog de Edição */}
+      <Dialog open={!!editingImage} onClose={handleCancelEdit} maxWidth="sm" fullWidth>
+        <DialogTitle>Editar Campos da Imagem</DialogTitle>
+        <DialogContent>
+          {editingImage && Object.keys(editingImage.record).map(fieldName => (
+            <TextField
+              key={fieldName}
+              fullWidth
+              margin="dense"
+              label={fieldName}
+              value={editedFields[fieldName] || ''}
+              onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+            />
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelEdit}>Cancelar</Button>
+          <Button onClick={handleSaveEdit} color="primary">Salvar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Hidden file input for individual image replacement */}
+      <input
+        type="file"
+        accept="image/png, image/jpeg"
+        style={{ display: 'none' }}
+        ref={individualImageInputRef}
+        onChange={handleIndividualImageUpload}
+      />
     </Box>
   );
 };
