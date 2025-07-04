@@ -69,43 +69,59 @@ function App() {
         skipEmptyLines: true,
         complete: (results) => {
           if (results.data && results.data.length > 0) {
-            setCsvData(results.data);
-            const headers = Object.keys(results.data[0] || {});
-            setCsvHeaders(headers);
+            const newCsvData = results.data;
+            const newHeaders = Object.keys(newCsvData[0] || {});
             
-            // Inicializar posições dos campos
-            const initialPositions = {};
-            const initialStyles = {};
+            setCsvData(newCsvData);
+            setCsvHeaders(newHeaders);
             
-            headers.forEach((header, index) => {
-              initialPositions[header] = {
-                x: 10 + (index % 3) * 30,
-                y: 10 + Math.floor(index / 3) * 25,
-                width: 25,
-                height: 15,
-                visible: true
-              };
+            // Adaptar fieldPositions e fieldStyles existentes
+            const updatedFieldPositions = {};
+            const updatedFieldStyles = {};
+
+            const defaultStylesBase = {
+              fontFamily: 'Arial',
+              fontSize: 24,
+              fontWeight: 'normal',
+              fontStyle: 'normal',
+              textDecoration: 'none',
+              color: '#000000',
+              textStroke: false,
+              strokeColor: '#ffffff',
+              strokeWidth: 2,
+              textShadow: false,
+              shadowColor: '#000000',
+              shadowBlur: 4,
+              shadowOffsetX: 2,
+              shadowOffsetY: 2,
+              textAlign: 'left', // Adicionado para consistência com defaults iniciais
+              verticalAlign: 'top' // Adicionado para consistência
+            };
+            
+            newHeaders.forEach((header, index) => {
+              // Posições
+              if (fieldPositions[header]) {
+                updatedFieldPositions[header] = fieldPositions[header];
+              } else {
+                updatedFieldPositions[header] = {
+                  x: 10 + (index % 5) * 18, // Ajustado para caber mais campos inicialmente
+                  y: 10 + Math.floor(index / 5) * 12,
+                  width: 15, // Ligeiramente menor para caber mais
+                  height: 10,
+                  visible: true
+                };
+              }
               
-              initialStyles[header] = {
-                fontFamily: 'Arial',
-                fontSize: 24,
-                fontWeight: 'normal',
-                fontStyle: 'normal',
-                textDecoration: 'none',
-                color: '#000000',
-                textStroke: false,
-                strokeColor: '#ffffff',
-                strokeWidth: 2,
-                textShadow: false,
-                shadowColor: '#000000',
-                shadowBlur: 4,
-                shadowOffsetX: 2,
-                shadowOffsetY: 2
-              };
+              // Estilos
+              if (fieldStyles[header]) {
+                updatedFieldStyles[header] = fieldStyles[header];
+              } else {
+                updatedFieldStyles[header] = { ...defaultStylesBase };
+              }
             });
             
-            setFieldPositions(initialPositions);
-            setFieldStyles(initialStyles);
+            setFieldPositions(updatedFieldPositions);
+            setFieldStyles(updatedFieldStyles);
             
             if (activeStep === 0) setActiveStep(1);
           }
@@ -170,6 +186,110 @@ function App() {
 
   const { visibleFields, totalFields, styledFields } = getFieldStats();
 
+  // Função para salvar o estado do template
+  const handleSaveState = () => {
+    const stateToSave = {
+      version: "1.0",
+      backgroundImageUrl: backgroundImage,
+      fieldPositions: fieldPositions,
+      fieldStyles: fieldStyles,
+      csvHeaders: csvHeaders,
+      colorPalette: colorPalette, 
+      csvData: csvData, // <-- ADICIONADO: Salvar os dados do CSV
+    };
+
+    const jsonString = JSON.stringify(stateToSave, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "template_config.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    alert("Configuração do template salva como template_config.json!");
+  };
+
+  // Função para carregar o estado do template de um arquivo
+  const handleLoadStateFromFile = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const loadedState = JSON.parse(e.target.result);
+
+          if (loadedState.version === "1.0" &&
+              loadedState.backgroundImageUrl !== undefined && // Checar undefined para permitir null
+              loadedState.fieldPositions &&
+              loadedState.fieldStyles &&
+              loadedState.csvHeaders) {
+
+            setBackgroundImage(loadedState.backgroundImageUrl);
+            setFieldPositions(loadedState.fieldPositions);
+            setFieldStyles(loadedState.fieldStyles);
+            setCsvHeaders(loadedState.csvHeaders);
+            
+            if (loadedState.colorPalette) {
+              setColorPalette(loadedState.colorPalette);
+            } else {
+              // Fallback se a paleta não estiver no JSON (templates antigos)
+              // Poderia tentar extrair da imagem carregada se backgroundImage existir
+              if (loadedState.backgroundImageUrl) {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                  const colorThief = new ColorThief();
+                  try {
+                    const palette = colorThief.getPalette(img, 5);
+                    setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`));
+                  } catch (error) {
+                    console.warn("Não foi possível extrair paleta da imagem carregada no JSON.", error);
+                    setColorPalette([]); // Reset ou paleta padrão
+                  }
+                };
+                img.src = loadedState.backgroundImageUrl;
+              } else {
+                setColorPalette([]); // Reset ou paleta padrão
+              }
+            }
+            
+            if (loadedState.csvData) {
+              setCsvData(loadedState.csvData);
+              // Se csvHeaders não vierem explicitamente ou forem inconsistentes,
+              // poderíamos derivá-los de loadedState.csvData[0] aqui,
+              // mas como loadedState.csvHeaders é obrigatório, confiamos nele.
+            } else {
+              setCsvData([]); 
+            }
+            
+            // setActiveStep para o início ou para o passo de posicionamento?
+            // setActiveStep(0); // Volta para o upload do CSV
+            // ou
+            if (loadedState.backgroundImageUrl && loadedState.csvHeaders.length > 0) {
+              setActiveStep(2); // Vai para posicionar/formatar se BG e Headers existem
+            } else if (loadedState.csvHeaders.length > 0) {
+              setActiveStep(1); // Vai para upload da imagem se só headers existem
+            } else {
+              setActiveStep(0);
+            }
+
+
+            alert("Configuração do template carregada com sucesso!");
+          } else {
+            alert("Arquivo JSON inválido, formato incorreto ou versão incompatível.");
+          }
+        } catch (error) {
+          console.error("Erro ao carregar o arquivo JSON:", error);
+          alert("Erro ao ler o arquivo JSON.");
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = null; 
+    }
+  };
+
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
@@ -206,6 +326,17 @@ function App() {
             color={styledFields > 0 ? 'secondary' : 'default'}
             variant="filled"
           />
+        </Box>
+
+        {/* Botões Salvar/Carregar Configuração */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4 }}>
+          <Button variant="contained" onClick={handleSaveState} color="info">
+            Salvar Config. Template
+          </Button>
+          <Button variant="contained" component="label" color="info">
+            Carregar Config. Template
+            <input type="file" hidden accept=".json" onChange={handleLoadStateFromFile} />
+          </Button>
         </Box>
       </Paper>
 
@@ -360,6 +491,8 @@ function App() {
               fieldPositions={fieldPositions}
               fieldStyles={fieldStyles}
               displayedImageSize={displayedImageSize}
+              csvHeaders={csvHeaders} // <-- ADICIONADO
+              colorPalette={colorPalette} // <-- ADICIONADO
             />
           )}
 

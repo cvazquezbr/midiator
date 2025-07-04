@@ -33,21 +33,33 @@ import {
   SwapHoriz
 } from '@mui/icons-material';
 import GoogleAuthSetup from './GoogleAuthSetup';
+import GeneratedImageEditor from './GeneratedImageEditor'; // Importar o novo editor
 import googleDriveAPI from '../utils/googleDriveAPI';
 
 const ImageGeneratorFrontendOnly = ({
   csvData,
-  backgroundImage,
-  fieldPositions,
-  fieldStyles,
-  displayedImageSize
+  backgroundImage, // Imagem de fundo global/template
+  fieldPositions, // Posições globais/template
+  fieldStyles, // Estilos globais/template
+  displayedImageSize, // Tamanho da imagem exibida no editor principal
+  csvHeaders, // Todos os cabeçalhos CSV possíveis (para GeneratedImageEditor)
+  colorPalette // Paleta de cores global (para GeneratedImageEditor)
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImages, setGeneratedImages] = useState([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPreview, setSelectedPreview] = useState(null);
-  const [editingImage, setEditingImage] = useState(null);
-  const [editedFields, setEditedFields] = useState({});
+  
+  // Estados para edição de texto CSV (antigo) - pode ser removido ou adaptado se necessário
+  const [editingImageTextData, setEditingImageTextData] = useState(null); // Renomeado para clareza
+  const [editedCsvFields, setEditedCsvFields] = useState({});       // Renomeado para clareza
+
+  // Novos estados para o editor WYSIWYG de imagens geradas
+  const [editingGeneratedImageIndex, setEditingGeneratedImageIndex] = useState(null);
+  const [individualFieldPositions, setIndividualFieldPositions] = useState({});
+  const [individualFieldStyles, setIndividualFieldStyles] = useState({});
+  const [showGeneratedImageEditor, setShowGeneratedImageEditor] = useState(false);
+
 
   // Estados para integração Google Drive
   const [driveIntegration, setDriveIntegration] = useState(false);
@@ -210,72 +222,98 @@ const ImageGeneratorFrontendOnly = ({
         // Desenhar imagem de fundo
         ctx.drawImage(img, 0, 0);
 
-        // Calcular fator de escala baseado no tamanho da imagem exibida na edição
-        const scaleX = img.width / displayedImageSize.width;
-        const scaleY = img.height / displayedImageSize.height;
+          // Calcular fator de escala baseado no tamanho da imagem exibida na edição
+          // Garantir que displayedImageSize não seja zero para evitar divisão por zero
+          const safeDisplayedWidth = displayedImageSize.width > 0 ? displayedImageSize.width : img.width;
+          const safeDisplayedHeight = displayedImageSize.height > 0 ? displayedImageSize.height : img.height;
 
-        // Desenhar campos do CSV com estilos individuais
-        Object.keys(record).forEach(field => {
-          const position = fieldPositions[field];
-          const style = fieldStyles[field];
+          const scaleX = img.width / safeDisplayedWidth;
+          const scaleY = img.height / safeDisplayedHeight;
 
-          if (!position || !position.visible || !style) return;
+          // Desenhar campos do CSV com estilos individuais
+          Object.keys(record).forEach(field => {
+            const position = fieldPositions[field];
+            const style = fieldStyles[field];
 
-          const text = record[field] || "";
-          if (!text) return;
+            if (!position || !position.visible || !style) return;
 
-          // Calcular posições precisas e aplicar escala
-          const scaledPos = {
-            x: Math.round((position.x / 100) * img.width),
-            y: Math.round((position.y / 100) * img.height),
-            width: Math.round((position.width / 100) * img.width),
-            height: Math.round((position.height / 100) * img.height)
-          };
+            const text = record[field] || "";
+            if (!text) return;
 
-          // Escalar o tamanho da fonte
-          const scaledFontSize = style.fontSize * Math.min(scaleX, scaleY); // Mantém a escala da fonte original
+            // Calcular posições precisas da caixa de texto na imagem final
+            const scaledPos = {
+              x: Math.round((position.x / 100) * img.width),
+              y: Math.round((position.y / 100) * img.height),
+              width: Math.round((position.width / 100) * img.width),
+              height: Math.round((position.height / 100) * img.height)
+            };
 
-          // Aplicar configurações de texto com a fonte escalada
-          applyTextEffects(ctx, { ...style, fontSize: scaledFontSize }); // Passa a fonte escalada para applyTextEffects
+            // Escalar o tamanho da fonte
+            const scaledFontSize = style.fontSize * Math.min(scaleX, scaleY);
 
-          // Quebrar texto em linhas dentro da área definida
-          // Passa scaledFontSize para wrapTextInArea para cálculo correto de lineHeight e maxLines
-          const lines = wrapTextInArea(ctx, text, scaledPos.x, scaledPos.y, scaledPos.width, scaledPos.height, { ...style, fontSize: scaledFontSize });
+            // Aplicar configurações de texto (será usado por drawTextWithEffects)
+            // É importante definir a fonte no contexto ANTES de medir texto ou desenhar.
+            applyTextEffects(ctx, { ...style, fontSize: scaledFontSize });
 
-          // Desenhar cada linha
-          const lineHeight = scaledFontSize * (style.lineHeightMultiplier || 1.2);
-          let startY = scaledPos.y; // Posição Y inicial
+            // Calcular padding escalado (baseado no padding de 8px do TextBox.jsx)
+            const editorPadding = 8;
+            const scaledPaddingX = editorPadding * scaleX;
+            const scaledPaddingY = editorPadding * scaleY;
 
-          // Ajustar startY com base no alinhamento vertical
-          if (style.verticalAlign === 'middle') {
-            const totalTextHeight = lines.length * lineHeight;
-            startY += (scaledPos.height - totalTextHeight) / 2;
-          } else if (style.verticalAlign === 'bottom') {
-            const totalTextHeight = lines.length * lineHeight;
-            startY += scaledPos.height - totalTextHeight;
-          }
-          // 'top' já é o padrão
+            // Área efetiva para o texto dentro da caixa (considerando o padding)
+            const effectiveTextWidth = Math.max(0, scaledPos.width - (2 * scaledPaddingX));
+            const effectiveTextHeight = Math.max(0, scaledPos.height - (2 * scaledPaddingY));
 
-          lines.forEach((line, lineIndex) => {
-            let lineX = scaledPos.x; // Posição X inicial para a linha
+            // Posição inicial do conteúdo do texto (canto superior esquerdo da área de texto, após padding)
+            const textContentStartX = scaledPos.x + scaledPaddingX;
+            const textContentStartY = scaledPos.y + scaledPaddingY;
 
-            // Ajustar lineX com base no alinhamento horizontal
-            if (style.textAlign === 'center') {
-              const textWidth = ctx.measureText(line).width;
-              lineX += (scaledPos.width - textWidth) / 2;
-            } else if (style.textAlign === 'right') {
-              const textWidth = ctx.measureText(line).width;
-              lineX += scaledPos.width - textWidth;
+            // Quebrar texto em linhas dentro da ÁREA EFETIVA
+            // Os argumentos x e y para wrapTextInArea não são usados em sua implementação atual,
+            // mas passamos 0,0 por clareza, já que a quebra é relativa à effectiveTextWidth/Height.
+            const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: scaledFontSize });
+
+            // Desenhar cada linha
+            const lineHeight = scaledFontSize * (style.lineHeightMultiplier || 1.2); // Use scaledFontSize
+            let currentLineRenderY = textContentStartY; // Posição Y inicial para renderizar a primeira linha de texto
+
+            // Ajustar currentLineRenderY com base no alinhamento vertical DENTRO da área de texto efetiva
+            if (style.verticalAlign === 'middle') {
+              const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - scaledFontSize) : 0); // Altura real do bloco de texto
+              currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
+            } else if (style.verticalAlign === 'bottom') {
+              const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - scaledFontSize) : 0);
+              currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
             }
-            // 'left' já é o padrão
+            // 'top' já é o padrão (começa em textContentStartY)
 
-            const lineY = startY + (lineIndex * lineHeight);
+            lines.forEach((line, lineIndex) => {
+              let currentLineRenderX = textContentStartX; // Posição X inicial para renderizar a linha (após padding esquerdo)
 
-            // Não é necessário chamar applyTextEffects novamente aqui se já foi chamado antes do loop de linhas
-            // e se os estilos de sombra/contorno não mudam por linha.
-            drawTextWithEffects(ctx, line, lineX, lineY, { ...style, fontSize: scaledFontSize });
+              // Ajustar currentLineRenderX com base no alinhamento horizontal DENTRO da área de texto efetiva
+              // Certifique-se de que ctx.font está definido com scaledFontSize antes de measureText
+              ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${scaledFontSize}px ${style.fontFamily || 'Arial'}`;
+              const textMetrics = ctx.measureText(line);
+              const currentTextWidth = textMetrics.width;
+
+
+              if (style.textAlign === 'center') {
+                currentLineRenderX += (effectiveTextWidth - currentTextWidth) / 2;
+              } else if (style.textAlign === 'right') {
+                currentLineRenderX += effectiveTextWidth - currentTextWidth;
+              }
+              // 'left' já é o padrão (começa em textContentStartX)
+
+              // A posição Y da linha atual para renderização
+              // Adiciona o offset da linha atual ao Y inicial do bloco de texto
+              const finalLineY = currentLineRenderY + (lineIndex * lineHeight);
+
+              // applyTextEffects já foi chamado antes do loop, configurando cor, sombra, etc.
+              // Precisamos garantir que a fonte está correta para strokeText e fillText.
+              // A cor e efeitos já estão no contexto (ctx).
+              drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: scaledFontSize });
+            });
           });
-        });
 
         // Converter canvas para blob com alta qualidade
         const blob = await new Promise(resolve => {
@@ -334,34 +372,105 @@ const ImageGeneratorFrontendOnly = ({
     setSelectedPreview(null);
   };
 
-  const handleEdit = (imageData) => {
-    setEditingImage(imageData);
-    setEditedFields(imageData.record);
+  // Antiga função handleEdit - agora focada em edição de texto CSV se mantida
+  const handleEditTextCsv = (imageData) => {
+    setEditingImageTextData(imageData);
+    setEditedCsvFields(imageData.record);
   };
 
-  const handleSaveEdit = () => {
-    if (!editingImage) return;
+  const handleSaveTextCsvEdit = () => {
+    if (!editingImageTextData) return;
 
     const updatedImages = generatedImages.map(img =>
-      img.index === editingImage.index ? { ...img, record: editedFields } : img
+      img.index === editingImageTextData.index ? { ...img, record: editedCsvFields } : img
     );
     setGeneratedImages(updatedImages);
-    regenerateSingleImage(editingImage.index, editedFields, editingImage.backgroundImage || backgroundImage);
-    setEditingImage(null);
+    // Regerar a imagem específica com os dados CSV atualizados,
+    // usando suas posições/estilos atuais (sejam globais ou customizados)
+    const imageToRegenerate = updatedImages.find(im => im.index === editingImageTextData.index);
+    if (imageToRegenerate) {
+      regenerateSingleImage(
+        editingImageTextData.index,
+        editedCsvFields, // Novos dados CSV
+        imageToRegenerate.backgroundImage || backgroundImage, // BG atual da imagem
+        imageToRegenerate.customFieldPositions || fieldPositions, // Posições atuais
+        imageToRegenerate.customFieldStyles || fieldStyles // Estilos atuais
+      );
+    }
+    setEditingImageTextData(null);
   };
 
-  const handleCancelEdit = () => {
-    setEditingImage(null);
-    setEditedFields({});
+  const handleCancelTextCsvEdit = () => {
+    setEditingImageTextData(null);
+    setEditedCsvFields({});
   };
 
-  const handleFieldChange = (fieldName, value) => {
-    setEditedFields(prev => ({ ...prev, [fieldName]: value }));
+  const handleCsvFieldChange = (fieldName, value) => {
+    setEditedCsvFields(prev => ({ ...prev, [fieldName]: value }));
   };
 
-  const regenerateSingleImage = async (index, record, currentBackgroundImage) => {
+  // Novas funções para o editor WYSIWYG de imagem gerada
+  const handleOpenGeneratedImageEditor = (imageToEdit, index) => {
+    setEditingGeneratedImageIndex(index);
+
+    // Usa as customizações da imagem se existirem, senão fallback para globais
+    const currentPositions = imageToEdit.customFieldPositions || fieldPositions;
+    const currentStyles = imageToEdit.customFieldStyles || fieldStyles;
+
+    setIndividualFieldPositions(JSON.parse(JSON.stringify(currentPositions)));
+    setIndividualFieldStyles(JSON.parse(JSON.stringify(currentStyles)));
+    setShowGeneratedImageEditor(true);
+  };
+
+  const handleCloseGeneratedImageEditor = () => {
+    setShowGeneratedImageEditor(false);
+    setEditingGeneratedImageIndex(null);
+    setIndividualFieldPositions({});
+    setIndividualFieldStyles({});
+  };
+
+  const handleSaveIndividualModifications = (modifiedImageData) => {
+    // modifiedImageData contém: index, record, fieldPositions (editados), fieldStyles (editados)
+    // e potencialmente backgroundImage se o editor suportar mudança de BG individual no futuro.
+
+    const { index: imageIndex, record: csvRecord, fieldPositions: newPositions, fieldStyles: newStyles } = modifiedImageData;
+
+    // Atualizar a imagem em generatedImages com as novas posições/estilos customizados
+    const updatedImages = generatedImages.map(img => {
+      if (img.index === imageIndex) {
+        return {
+          ...img,
+          customFieldPositions: newPositions,
+          customFieldStyles: newStyles,
+          // Manter o 'record' original, a menos que o editor WYSIWYG também modifique dados CSV
+        };
+      }
+      return img;
+    });
+    setGeneratedImages(updatedImages);
+
+    // Regerar a imagem específica com as novas posições/estilos
+    const imageToRegenerate = updatedImages.find(im => im.index === imageIndex);
+    if (imageToRegenerate) {
+      regenerateSingleImage(
+        imageIndex,
+        csvRecord, // Dados CSV originais da imagem
+        imageToRegenerate.backgroundImage || backgroundImage, // BG atual da imagem
+        newPositions, // Novas posições
+        newStyles // Novos estilos
+      );
+    }
+    handleCloseGeneratedImageEditor(); // Fecha o editor
+  };
+
+
+  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse) => {
     if (!currentBackgroundImage || !record) {
       console.error('Background image or record not found for regeneration.');
+      return;
+    }
+    if (!positionsToUse || !stylesToUse) {
+      console.error('Field positions or styles not provided for regeneration.');
       return;
     }
 
@@ -387,12 +496,17 @@ const ImageGeneratorFrontendOnly = ({
       ctx.textRenderingOptimization = 'optimizeQuality';
       ctx.drawImage(img, 0, 0);
 
-      const scaleX = img.width / displayedImageSize.width;
-      const scaleY = img.height / displayedImageSize.height;
+      // Garantir que displayedImageSize não seja zero para evitar divisão por zero
+      const safeDisplayedWidth = displayedImageSize.width > 0 ? displayedImageSize.width : img.width;
+      const safeDisplayedHeight = displayedImageSize.height > 0 ? displayedImageSize.height : img.height;
+
+      const scaleX = img.width / safeDisplayedWidth;
+      const scaleY = img.height / safeDisplayedHeight;
 
       Object.keys(record).forEach(field => {
-        const position = fieldPositions[field];
-        const style = fieldStyles[field];
+        // Usar as posições e estilos passados como argumento, não os globais
+        const position = positionsToUse[field];
+        const style = stylesToUse[field];
         if (!position || !position.visible || !style) return;
         const text = record[field] || "";
         if (!text) return;
@@ -404,28 +518,47 @@ const ImageGeneratorFrontendOnly = ({
           height: Math.round((position.height / 100) * img.height)
         };
         const scaledFontSize = style.fontSize * Math.min(scaleX, scaleY);
+        
         applyTextEffects(ctx, { ...style, fontSize: scaledFontSize });
-        const lines = wrapTextInArea(ctx, text, scaledPos.x, scaledPos.y, scaledPos.width, scaledPos.height, { ...style, fontSize: scaledFontSize });
+
+        const editorPadding = 8;
+        const scaledPaddingX = editorPadding * scaleX;
+        const scaledPaddingY = editorPadding * scaleY;
+
+        const effectiveTextWidth = Math.max(0, scaledPos.width - (2 * scaledPaddingX));
+        const effectiveTextHeight = Math.max(0, scaledPos.height - (2 * scaledPaddingY));
+
+        const textContentStartX = scaledPos.x + scaledPaddingX;
+        const textContentStartY = scaledPos.y + scaledPaddingY;
+
+        const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: scaledFontSize });
+        
         const lineHeight = scaledFontSize * (style.lineHeightMultiplier || 1.2);
-        let startY = scaledPos.y;
+        let currentLineRenderY = textContentStartY;
+
         if (style.verticalAlign === 'middle') {
-          const totalTextHeight = lines.length * lineHeight;
-          startY += (scaledPos.height - totalTextHeight) / 2;
+          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - scaledFontSize) : 0);
+          currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
         } else if (style.verticalAlign === 'bottom') {
-          const totalTextHeight = lines.length * lineHeight;
-          startY += scaledPos.height - totalTextHeight;
+          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - scaledFontSize) : 0);
+          currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
         }
+
         lines.forEach((line, lineIndex) => {
-          let lineX = scaledPos.x;
+          let currentLineRenderX = textContentStartX;
+          
+          ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${scaledFontSize}px ${style.fontFamily || 'Arial'}`;
+          const textMetrics = ctx.measureText(line);
+          const currentTextWidth = textMetrics.width;
+
           if (style.textAlign === 'center') {
-            const textWidth = ctx.measureText(line).width;
-            lineX += (scaledPos.width - textWidth) / 2;
+            currentLineRenderX += (effectiveTextWidth - currentTextWidth) / 2;
           } else if (style.textAlign === 'right') {
-            const textWidth = ctx.measureText(line).width;
-            lineX += scaledPos.width - textWidth;
+            currentLineRenderX += effectiveTextWidth - currentTextWidth;
           }
-          const lineY = startY + (lineIndex * lineHeight);
-          drawTextWithEffects(ctx, line, lineX, lineY, { ...style, fontSize: scaledFontSize });
+          
+          const finalLineY = currentLineRenderY + (lineIndex * lineHeight);
+          drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: scaledFontSize });
         });
       });
 
@@ -742,7 +875,7 @@ const ImageGeneratorFrontendOnly = ({
                           </Typography>
                         </Box>
 
-                        <Box sx={{
+<Box sx={{
                           width: 'auto', // Permitir que a largura se ajuste ao conteúdo + padding
                           maxWidth: '100%', // Não exceder o contêiner do card
                           height: 'auto', // Permitir que a altura se ajuste
@@ -765,41 +898,37 @@ const ImageGeneratorFrontendOnly = ({
                           },
                           transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out', // Transição suave para o hover do Box
                         }}>
-                          <img
-                            src={imageData.url}
-                            alt={`Preview ${index + 1}`}
-                            style={{
-                              display: 'block',
-                              maxWidth: '100%',
+                          <img 
+                            src={imageData.url} 
+                            alt={`Preview ${index + 1}`} 
+                            style={{ 
+                              display: 'block', 
+                              maxWidth: '100%', 
                               maxHeight: '150px', // Altura máxima da imagem em si, para caber no padding
-                              width: 'auto',
-                              height: 'auto',
-                              objectFit: 'contain',
+                              width: 'auto', 
+                              height: 'auto', 
+                              objectFit: 'contain', 
                               transition: 'transform 0.3s ease-in-out',
                               // Adicionar uma pequena sombra interna na imagem para separá-la da borda branca
-                              boxShadow: 'inset 0 0 2px rgba(0,0,0,0.1)',
-                            }}
+                              boxShadow: 'inset 0 0 2px rgba(0,0,0,0.1)', 
+                            }} 
                           />
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+                          {/* O IconButton de Visualizar foi removido assumindo que o clique na imagem já chama openPreview,
+                               ou para resolver a questão de "duas opções de visualizar". 
+                               Se o clique na imagem não abre o preview, este botão deveria ser restaurado. */}
                           <IconButton
                             size="small"
-                            onClick={() => openPreview(imageData)}
-                            title="Visualizar"
-                          >
-                            <Visibility />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleEdit(imageData)}
-                            title="Editar"
+                            onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
+                            title="Editar Posições/Estilos"
                           >
                             <Edit />
                           </IconButton>
                           <IconButton
                             size="small"
                             onClick={() => handleReplaceImageClick(imageData.index)}
-                            title="Substituir Imagem"
+                            title="Substituir Imagem de Fundo"
                           >
                             <SwapHoriz />
                           </IconButton>
@@ -822,95 +951,76 @@ const ImageGeneratorFrontendOnly = ({
       </Card>
 
       {/* Dialog de Preview */}
-      <Dialog
-        open={previewOpen}
-        onClose={closePreview}
-        maxWidth="lg"
-        fullWidth
-      >
+      <Dialog open={previewOpen} onClose={closePreview} maxWidth="lg" fullWidth>
         <DialogTitle>
           Preview - {selectedPreview?.filename}
-          <IconButton
-            onClick={closePreview}
-            sx={{ position: 'absolute', right: 8, top: 8 }}
-          >
+          <IconButton onClick={closePreview} sx={{ position: 'absolute', right: 8, top: 8 }}>
             <Close />
           </IconButton>
         </DialogTitle>
-
         <DialogContent>
           {selectedPreview && (
             <Box sx={{ textAlign: 'center' }}>
-              <img
-                src={selectedPreview.url}
-                alt={selectedPreview.filename}
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '70vh',
-                  objectFit: 'contain'
-                }}
-              />
+              <img src={selectedPreview.url} alt={selectedPreview.filename} style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }} />
             </Box>
           )}
         </DialogContent>
-
         <DialogActions>
-          <Button onClick={() => downloadImage(selectedPreview)} startIcon={<Download />}>
-            Download
-          </Button>
-          <Button onClick={closePreview}>
-            Fechar
-          </Button>
+          <Button onClick={() => downloadImage(selectedPreview)} startIcon={<Download />}>Download</Button>
+          <Button onClick={closePreview}>Fechar</Button>
         </DialogActions>
       </Dialog>
 
       {/* Dialog de Configuração de Autenticação */}
-      <Dialog
-        open={showAuthSetup}
-        onClose={() => setShowAuthSetup(false)}
-        maxWidth="md"
-        fullWidth
-      >
+      <Dialog open={showAuthSetup} onClose={() => setShowAuthSetup(false)} maxWidth="md" fullWidth>
         <DialogTitle>
           Configuração Google Drive
-          <IconButton
-            onClick={() => setShowAuthSetup(false)}
-            sx={{ position: 'absolute', right: 8, top: 8 }}
-          >
+          <IconButton onClick={() => setShowAuthSetup(false)} sx={{ position: 'absolute', right: 8, top: 8 }}>
             <Close />
           </IconButton>
         </DialogTitle>
-
         <DialogContent>
-          <GoogleAuthSetup
-            onAuthSuccess={handleAuthSuccess}
-            onAuthError={handleAuthError}
-          />
+          <GoogleAuthSetup onAuthSuccess={handleAuthSuccess} onAuthError={handleAuthError} />
         </DialogContent>
       </Dialog>
 
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-      {/* Dialog de Edição */}
-      <Dialog open={!!editingImage} onClose={handleCancelEdit} maxWidth="sm" fullWidth>
-        <DialogTitle>Editar Campos da Imagem</DialogTitle>
+      {/* Dialog de Edição de Texto CSV (Antigo/Opcional) */}
+      <Dialog open={!!editingImageTextData} onClose={handleCancelTextCsvEdit} maxWidth="sm" fullWidth>
+        <DialogTitle>Editar Dados CSV da Imagem</DialogTitle>
         <DialogContent>
-          {editingImage && Object.keys(editingImage.record).map(fieldName => (
+          {editingImageTextData && Object.keys(editingImageTextData.record).map(fieldName => (
             <TextField
               key={fieldName}
               fullWidth
               margin="dense"
               label={fieldName}
-              value={editedFields[fieldName] || ''}
-              onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+              value={editedCsvFields[fieldName] || ''}
+              onChange={(e) => handleCsvFieldChange(fieldName, e.target.value)}
             />
           ))}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCancelEdit}>Cancelar</Button>
-          <Button onClick={handleSaveEdit} color="primary">Salvar</Button>
+          <Button onClick={handleCancelTextCsvEdit}>Cancelar</Button>
+          <Button onClick={handleSaveTextCsvEdit} color="primary">Salvar Dados CSV</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Editor WYSIWYG para Imagem Gerada Individual */}
+      {showGeneratedImageEditor && editingGeneratedImageIndex !== null && (
+        <GeneratedImageEditor
+          open={showGeneratedImageEditor}
+          onClose={handleCloseGeneratedImageEditor}
+          imageData={generatedImages.find(img => img.index === editingGeneratedImageIndex)}
+          globalCsvHeaders={csvHeaders} // Passar todos os headers CSV possíveis
+          initialFieldPositions={individualFieldPositions}
+          initialFieldStyles={individualFieldStyles}
+          onSave={handleSaveIndividualModifications}
+          colorPalette={colorPalette} // Passar a paleta de cores
+          globalBackgroundImage={backgroundImage} // Passar o BG global como fallback
+        />
+      )}
 
       {/* Hidden file input for individual image replacement */}
       <input

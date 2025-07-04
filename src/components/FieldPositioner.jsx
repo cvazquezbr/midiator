@@ -24,11 +24,19 @@ const FieldPositioner = ({
   setFieldStyles,
   csvData,
   onImageDisplayedSizeChange,
-  colorPalette
+  colorPalette,
+  onSelectFieldExternal // Nova prop callback
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef(null);
+
+  const handleFieldSelectInternal = (field) => {
+    setSelectedField(field);
+    if (onSelectFieldExternal) {
+      onSelectFieldExternal(field);
+    }
+  };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -98,9 +106,10 @@ const FieldPositioner = ({
     }
   }, [csvHeaders]);
 
-  const handleFieldSelect = (field) => {
-    setSelectedField(field);
-  };
+  // handleFieldSelect não é usada, handleFieldSelectInternal é usada em seu lugar.
+  // const handleFieldSelect = (field) => {
+  //   setSelectedField(field);
+  // };
 
   const handlePositionChange = (field, newPosition) => {
     setFieldPositions(prev => ({
@@ -253,29 +262,32 @@ const FieldPositioner = ({
               />
 
               {/* Campos de texto */}
-              {csvHeaders.map(header => {
-                const position = fieldPositions[header];
-                const style = fieldStyles[header];
+              {csvHeaders && csvHeaders.length > 0
+                ? csvHeaders.map(header => {
+                  const position = fieldPositions[header];
+                  const style = fieldStyles[header];
 
-                if (!position || !position.visible) return null;
+                  if (!position || !position.visible) return null;
 
-                const sampleData = csvData[0] ? csvData[0][header] : `[${header}]`;
+                  const sampleData = csvData[0] ? csvData[0][header] : `[${header}]`;
 
-                return (
-                  <TextBox
-                    key={header}
-                    field={header}
-                    position={position}
-                    style={style}
-                    content={sampleData}
-                    isSelected={selectedField === header}
-                    onSelect={handleFieldSelect}
-                    onPositionChange={handlePositionChange}
-                    onSizeChange={handleSizeChange}
-                    containerSize={imageSize}
-                  />
-                );
-              })}
+                  return (
+                    <TextBox
+                      key={header}
+                      field={header}
+                      position={position}
+                      style={style}
+                      content={sampleData}
+                      isSelected={selectedField === header}
+                      onSelect={handleFieldSelectInternal} // Usar o wrapper
+                      onPositionChange={handlePositionChange}
+                      onSizeChange={handleSizeChange}
+                      containerSize={imageSize}
+                    />
+                  ) // Ponto e vírgula já havia sido intencionalmente removido em pensamento anterior
+                })
+                : null // Fallback explícito para o ternário
+              }
             </Box>
             {/* Color Palette */}
             {colorPalette && colorPalette.length > 0 && (
