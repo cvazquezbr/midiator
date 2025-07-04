@@ -210,72 +210,72 @@ const ImageGeneratorFrontendOnly = ({
         // Desenhar imagem de fundo
         ctx.drawImage(img, 0, 0);
 
-          // Calcular fator de escala baseado no tamanho da imagem exibida na edição
-          const scaleX = img.width / displayedImageSize.width;
-          const scaleY = img.height / displayedImageSize.height;
+        // Calcular fator de escala baseado no tamanho da imagem exibida na edição
+        const scaleX = img.width / displayedImageSize.width;
+        const scaleY = img.height / displayedImageSize.height;
 
-          // Desenhar campos do CSV com estilos individuais
-          Object.keys(record).forEach(field => {
-            const position = fieldPositions[field];
-            const style = fieldStyles[field];
+        // Desenhar campos do CSV com estilos individuais
+        Object.keys(record).forEach(field => {
+          const position = fieldPositions[field];
+          const style = fieldStyles[field];
 
-            if (!position || !position.visible || !style) return;
+          if (!position || !position.visible || !style) return;
 
-            const text = record[field] || "";
-            if (!text) return;
+          const text = record[field] || "";
+          if (!text) return;
 
-            // Calcular posições precisas e aplicar escala
-            const scaledPos = {
-              x: Math.round((position.x / 100) * img.width),
-              y: Math.round((position.y / 100) * img.height),
-              width: Math.round((position.width / 100) * img.width),
-              height: Math.round((position.height / 100) * img.height)
-            };
+          // Calcular posições precisas e aplicar escala
+          const scaledPos = {
+            x: Math.round((position.x / 100) * img.width),
+            y: Math.round((position.y / 100) * img.height),
+            width: Math.round((position.width / 100) * img.width),
+            height: Math.round((position.height / 100) * img.height)
+          };
 
-            // Escalar o tamanho da fonte
-            const scaledFontSize = style.fontSize * Math.min(scaleX, scaleY); // Mantém a escala da fonte original
+          // Escalar o tamanho da fonte
+          const scaledFontSize = style.fontSize * Math.min(scaleX, scaleY); // Mantém a escala da fonte original
 
-            // Aplicar configurações de texto com a fonte escalada
-            applyTextEffects(ctx, { ...style, fontSize: scaledFontSize }); // Passa a fonte escalada para applyTextEffects
+          // Aplicar configurações de texto com a fonte escalada
+          applyTextEffects(ctx, { ...style, fontSize: scaledFontSize }); // Passa a fonte escalada para applyTextEffects
 
-            // Quebrar texto em linhas dentro da área definida
-            // Passa scaledFontSize para wrapTextInArea para cálculo correto de lineHeight e maxLines
-            const lines = wrapTextInArea(ctx, text, scaledPos.x, scaledPos.y, scaledPos.width, scaledPos.height, { ...style, fontSize: scaledFontSize });
+          // Quebrar texto em linhas dentro da área definida
+          // Passa scaledFontSize para wrapTextInArea para cálculo correto de lineHeight e maxLines
+          const lines = wrapTextInArea(ctx, text, scaledPos.x, scaledPos.y, scaledPos.width, scaledPos.height, { ...style, fontSize: scaledFontSize });
 
-            // Desenhar cada linha
-            const lineHeight = scaledFontSize * (style.lineHeightMultiplier || 1.2);
-            let startY = scaledPos.y; // Posição Y inicial
+          // Desenhar cada linha
+          const lineHeight = scaledFontSize * (style.lineHeightMultiplier || 1.2);
+          let startY = scaledPos.y; // Posição Y inicial
 
-            // Ajustar startY com base no alinhamento vertical
-            if (style.verticalAlign === 'middle') {
-              const totalTextHeight = lines.length * lineHeight;
-              startY += (scaledPos.height - totalTextHeight) / 2;
-            } else if (style.verticalAlign === 'bottom') {
-              const totalTextHeight = lines.length * lineHeight;
-              startY += scaledPos.height - totalTextHeight;
+          // Ajustar startY com base no alinhamento vertical
+          if (style.verticalAlign === 'middle') {
+            const totalTextHeight = lines.length * lineHeight;
+            startY += (scaledPos.height - totalTextHeight) / 2;
+          } else if (style.verticalAlign === 'bottom') {
+            const totalTextHeight = lines.length * lineHeight;
+            startY += scaledPos.height - totalTextHeight;
+          }
+          // 'top' já é o padrão
+
+          lines.forEach((line, lineIndex) => {
+            let lineX = scaledPos.x; // Posição X inicial para a linha
+
+            // Ajustar lineX com base no alinhamento horizontal
+            if (style.textAlign === 'center') {
+              const textWidth = ctx.measureText(line).width;
+              lineX += (scaledPos.width - textWidth) / 2;
+            } else if (style.textAlign === 'right') {
+              const textWidth = ctx.measureText(line).width;
+              lineX += scaledPos.width - textWidth;
             }
-            // 'top' já é o padrão
+            // 'left' já é o padrão
 
-            lines.forEach((line, lineIndex) => {
-              let lineX = scaledPos.x; // Posição X inicial para a linha
+            const lineY = startY + (lineIndex * lineHeight);
 
-              // Ajustar lineX com base no alinhamento horizontal
-              if (style.textAlign === 'center') {
-                const textWidth = ctx.measureText(line).width;
-                lineX += (scaledPos.width - textWidth) / 2;
-              } else if (style.textAlign === 'right') {
-                const textWidth = ctx.measureText(line).width;
-                lineX += scaledPos.width - textWidth;
-              }
-              // 'left' já é o padrão
-
-              const lineY = startY + (lineIndex * lineHeight);
-
-              // Não é necessário chamar applyTextEffects novamente aqui se já foi chamado antes do loop de linhas
-              // e se os estilos de sombra/contorno não mudam por linha.
-              drawTextWithEffects(ctx, line, lineX, lineY, { ...style, fontSize: scaledFontSize });
-            });
+            // Não é necessário chamar applyTextEffects novamente aqui se já foi chamado antes do loop de linhas
+            // e se os estilos de sombra/contorno não mudam por linha.
+            drawTextWithEffects(ctx, line, lineX, lineY, { ...style, fontSize: scaledFontSize });
           });
+        });
 
         // Converter canvas para blob com alta qualidade
         const blob = await new Promise(resolve => {
@@ -742,7 +742,7 @@ const ImageGeneratorFrontendOnly = ({
                           </Typography>
                         </Box>
 
-<Box sx={{
+                        <Box sx={{
                           width: 'auto', // Permitir que a largura se ajuste ao conteúdo + padding
                           maxWidth: '100%', // Não exceder o contêiner do card
                           height: 'auto', // Permitir que a altura se ajuste
@@ -765,20 +765,20 @@ const ImageGeneratorFrontendOnly = ({
                           },
                           transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out', // Transição suave para o hover do Box
                         }}>
-                          <img 
-                            src={imageData.url} 
-                            alt={`Preview ${index + 1}`} 
-                            style={{ 
-                              display: 'block', 
-                              maxWidth: '100%', 
+                          <img
+                            src={imageData.url}
+                            alt={`Preview ${index + 1}`}
+                            style={{
+                              display: 'block',
+                              maxWidth: '100%',
                               maxHeight: '150px', // Altura máxima da imagem em si, para caber no padding
-                              width: 'auto', 
-                              height: 'auto', 
-                              objectFit: 'contain', 
+                              width: 'auto',
+                              height: 'auto',
+                              objectFit: 'contain',
                               transition: 'transform 0.3s ease-in-out',
                               // Adicionar uma pequena sombra interna na imagem para separá-la da borda branca
-                              boxShadow: 'inset 0 0 2px rgba(0,0,0,0.1)', 
-                            }} 
+                              boxShadow: 'inset 0 0 2px rgba(0,0,0,0.1)',
+                            }}
                           />
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
