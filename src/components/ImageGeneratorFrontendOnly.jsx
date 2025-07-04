@@ -413,9 +413,13 @@ const ImageGeneratorFrontendOnly = ({
   const handleOpenGeneratedImageEditor = (imageToEdit, index) => {
     setEditingGeneratedImageIndex(index);
 
-    // Usa as customizações da imagem se existirem, senão fallback para globais
-    const currentPositions = imageToEdit.customFieldPositions || fieldPositions;
-    const currentStyles = imageToEdit.customFieldStyles || fieldStyles;
+    // Usa as customizações da imagem se existirem e tiverem conteúdo, senão fallback para globais
+    const currentPositions = (imageToEdit.customFieldPositions && Object.keys(imageToEdit.customFieldPositions).length > 0)
+      ? imageToEdit.customFieldPositions
+      : fieldPositions;
+    const currentStyles = (imageToEdit.customFieldStyles && Object.keys(imageToEdit.customFieldStyles).length > 0)
+      ? imageToEdit.customFieldStyles
+      : fieldStyles;
 
     setIndividualFieldPositions(JSON.parse(JSON.stringify(currentPositions)));
     setIndividualFieldStyles(JSON.parse(JSON.stringify(currentStyles)));

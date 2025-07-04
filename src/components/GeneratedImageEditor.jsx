@@ -88,6 +88,7 @@ const GeneratedImageEditor = ({
                 onImageDisplayedSizeChange={setDisplayedEditorImageSize} // Para o editor interno
                 colorPalette={colorPalette}
                 onSelectFieldExternal={setSelectedFieldInternal} // Atualizar o estado interno
+                showFormattingPanel={false} // Adicionado para não duplicar o painel
               />
             </Grid>
             <Grid item xs={12} md={4}>

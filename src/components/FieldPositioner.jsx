@@ -25,7 +25,8 @@ const FieldPositioner = ({
   csvData,
   onImageDisplayedSizeChange,
   colorPalette,
-  onSelectFieldExternal // Nova prop callback
+  onSelectFieldExternal, // Nova prop callback
+  showFormattingPanel = true // Nova prop com valor padrão
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -329,16 +330,18 @@ const FieldPositioner = ({
       </Grid>
 
       {/* Painel de formatação */}
-      <Grid item xs={12} lg={4}>
-        <FormattingPanel
-          selectedField={selectedField}
-          fieldStyles={fieldStyles}
-          setFieldStyles={setFieldStyles}
-          fieldPositions={fieldPositions}
-          setFieldPositions={setFieldPositions}
-          csvHeaders={csvHeaders}
-        />
-      </Grid>
+      {showFormattingPanel && (
+        <Grid item xs={12} lg={4}>
+          <FormattingPanel
+            selectedField={selectedField}
+            fieldStyles={fieldStyles}
+            setFieldStyles={setFieldStyles}
+            fieldPositions={fieldPositions}
+            setFieldPositions={setFieldPositions}
+            csvHeaders={csvHeaders}
+          />
+        </Grid>
+      )}
     </Grid>
   );
 };
