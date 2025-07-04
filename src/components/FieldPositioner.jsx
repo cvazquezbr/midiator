@@ -105,7 +105,7 @@ const FieldPositioner = ({
         setFieldStyles(prev => ({ ...prev, ...newStyles }));
       }
     }
-  }, [csvHeaders]);
+  }, [csvHeaders, fieldPositions, fieldStyles, setFieldPositions, setFieldStyles]);
 
   // handleFieldSelect não é usada, handleFieldSelectInternal é usada em seu lugar.
   // const handleFieldSelect = (field) => {
