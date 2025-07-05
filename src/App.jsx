@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useIsMobile } from './hooks/use-mobile'; // Importa o hook
 import {
   Container,
   Paper,
@@ -94,7 +95,8 @@ function App() {
   const [fieldStyles, setFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
   const [generatedImagesData, setGeneratedImagesData] = useState([]); // Para armazenar dados de ImageGeneratorFrontendOnly
-  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+  const isMobile = useIsMobile(); // Usa o hook para determinar se é mobile
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(isMobile); // Inicializa colapsado em mobile
   const [anchorElMenu, setAnchorElMenu] = useState(null); // Para o menu de ações
 
   const fileInputRef = useRef(null);
@@ -103,6 +105,12 @@ function App() {
 
   // Efeito para lidar com o scroll e colapsar o header
   useEffect(() => {
+    // Se for mobile, o header começa colapsado e não muda com o scroll
+    if (isMobile) {
+      setIsHeaderCollapsed(true);
+      return;
+    }
+
     const handleScroll = () => {
       if (window.scrollY > 50) { // Colapsa após 50px de scroll
         setIsHeaderCollapsed(true);
@@ -115,7 +123,7 @@ function App() {
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
-  }, []);
+  }, [isMobile]); // Adiciona isMobile como dependência
 
   // Efeito para salvar a preferência do tema no localStorage
   useEffect(() => {
@@ -464,18 +472,18 @@ function App() {
   return (
     <ThemeProvider theme={currentTheme}>
       <CssBaseline /> {/* Adiciona normalização e cor de fundo do tema */}
-      <Container maxWidth="xl" sx={{ pt: isHeaderCollapsed ? '80px' : '280px', transition: 'padding-top 0.3s ease-in-out' }}>
+      <Container maxWidth="xl" sx={{ pt: isHeaderCollapsed || isMobile ? '80px' : '280px', transition: 'padding-top 0.3s ease-in-out' }}>
         <Paper 
           elevation={3} 
           sx={{ 
-          p: isHeaderCollapsed ? 2 : 4, 
+          p: isHeaderCollapsed || isMobile ? 2 : 4, 
           mb: 4, 
           position: 'fixed', // Para fixar o header no topo
           top: 0,
           left: 0,
           right: 0,
           zIndex: 1100, // Acima do conteúdo e dos botões de navegação laterais
-          height: isHeaderCollapsed ? '60px' : 'auto', // Altura dinâmica
+          height: isHeaderCollapsed || isMobile ? '60px' : 'auto', // Altura dinâmica
           minHeight: '60px', // Altura mínima quando colapsado
           overflow: 'hidden', // Para esconder conteúdo que transborda durante a transição
           transition: 'height 0.3s ease-in-out, padding 0.3s ease-in-out',
@@ -487,15 +495,15 @@ function App() {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <Box>
             <Typography 
-              variant={isHeaderCollapsed ? 'h5' : 'h3'} 
+              variant={isHeaderCollapsed || isMobile ? 'h5' : 'h3'} 
               component="h1" 
               color="primary"
-              sx={{ transition: 'font-size 0.3s ease-in-out', m:0, p:0, lineHeight: isHeaderCollapsed ? 'normal': 'inherit' }} // Ajuste para remover margem/padding do Typography
+              sx={{ transition: 'font-size 0.3s ease-in-out', m:0, p:0, lineHeight: isHeaderCollapsed || isMobile ? 'normal': 'inherit' }} // Ajuste para remover margem/padding do Typography
             >
               Midiator - Mesclar conteúdo
             </Typography>
-            {!isHeaderCollapsed && (
-              <Typography variant="h6" color="textSecondary" sx={{ mb: 0, transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out', opacity: isHeaderCollapsed ? 0 : 1, height: isHeaderCollapsed ? 0 : 'auto' }}>
+            {!(isHeaderCollapsed || isMobile) && (
+              <Typography variant="h6" color="textSecondary" sx={{ mb: 0, transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out', opacity: isHeaderCollapsed || isMobile ? 0 : 1, height: isHeaderCollapsed || isMobile ? 0 : 'auto' }}>
                 Crie imagens personalizadas com controles de formatação individual
               </Typography>
             )}
@@ -538,10 +546,10 @@ function App() {
           </Box>
         </Box>
         
-        {!isHeaderCollapsed && (
+        {!(isHeaderCollapsed || isMobile) && (
           <>
             {/* Indicadores de status */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2, mb: 2, flexWrap: 'wrap', transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out', opacity: isHeaderCollapsed ? 0 : 1, height: isHeaderCollapsed ? 0 : 'auto' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2, mb: 2, flexWrap: 'wrap', transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out', opacity: isHeaderCollapsed || isMobile ? 0 : 1, height: isHeaderCollapsed || isMobile ? 0 : 'auto' }}>
               <Chip 
                 icon={<FileUpload />}
                 label={`${csvData.length} registros`}
