@@ -496,7 +496,7 @@ function App() {
           <Box>
             <Typography 
               variant={isHeaderCollapsed || isMobile ? 'h5' : 'h3'} 
-              component="h1" 
+              component="h3" 
               color="primary"
               sx={{ transition: 'font-size 0.3s ease-in-out', m:0, p:0, lineHeight: isHeaderCollapsed || isMobile ? 'normal': 'inherit' }} // Ajuste para remover margem/padding do Typography
             >
@@ -615,10 +615,7 @@ function App() {
 
         {/* Conteúdo principal */}
         <Grid item xs={12} md={9} 
-           sx={{ touchAction: 'none' }}
-    
-          
-          >
+           >
           
           {/* Passo 1: Upload CSV */}
           {activeStep === 0 && (
