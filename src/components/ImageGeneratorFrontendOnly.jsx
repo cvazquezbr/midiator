@@ -653,14 +653,30 @@ const ImageGeneratorFrontendOnly = ({
       return;
     }
 
+  // Salvaguarda adicional contra execuções concorrentes
+  if (isUploadingToDrive) {
+    console.warn(`[${new Date().toISOString()}] uploadToGoogleDrive: Tentativa de iniciar upload enquanto já está em progresso. Abortando.`);
+    return;
+  }
+
     setIsUploadingToDrive(true);
+  console.log(`[${new Date().toISOString()}] uploadToGoogleDrive: Iniciando upload. Project: ${projectName}. isUploadingToDrive set to TRUE.`);
     setDriveResult(null);
 
     try {
-      // 1. Criar pasta principal do projeto
-      const folder = await googleDriveAPI.createFolder(projectName);
+    // 1. Criar pasta principal do projeto (ou obter existente)
+    console.log(`[${new Date().toISOString()}] Tentando criar/obter pasta do projeto: ${projectName}`);
+    const folder = await googleDriveAPI.createFolder(projectName); // createFolder agora é idempotente por nome na raiz
+    console.log(`[${new Date().toISOString()}] Pasta do projeto obtida/criada ID: ${folder.id}`);
 
       // 2. Criar subpasta para as imagens (agora vamos usar essa para tudo)
+    // Para a subpasta, queremos que ela seja sempre criada dentro da pasta do projeto,
+    // mesmo que uma com nome 'Conteúdo' já exista em outro projeto.
+    // A versão atual de createFolder em googleDriveAPI.js já lida com parentId.
+    // Se quisermos que a subpasta 'Conteúdo' também seja idempotente *dentro* da pasta do projeto:
+    console.log(`[${new Date().toISOString()}] Tentando criar/obter subpasta 'Conteúdo' dentro de ${folder.id}`);
+    const contentFolder = await googleDriveAPI.createFolder('Conteúdo', folder.id); // Passando folder.id como parentId
+    console.log(`[${new Date().toISOString()}] Subpasta 'Conteúdo' obtida/criada ID: ${contentFolder.id}`);
       const contentFolder = await googleDriveAPI.createFolder('Conteúdo', folder.id);
 
       const uploadResults = [];

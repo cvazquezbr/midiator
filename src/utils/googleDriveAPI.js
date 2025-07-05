@@ -310,11 +310,63 @@ class GoogleDriveAPI {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      return await response.json();
+      const createdSpreadsheet = await response.json();
+
+      // PASSO ADICIONADO: Mover a planilha para o folderId, se folderId for fornecido.
+      if (folderId && createdSpreadsheet.spreadsheetId) {
+        try {
+          await this.moveFileToFolder(createdSpreadsheet.spreadsheetId, folderId);
+        } catch (moveError) {
+          // Logar o erro de movimentação, mas não necessariamente falhar a criação da planilha.
+          // A planilha foi criada, apenas não movida.
+          console.warn(`Planilha criada com ID ${createdSpreadsheet.spreadsheetId} mas falhou ao mover para a pasta ${folderId}: ${moveError.message}`);
+        }
+      }
+
+      return createdSpreadsheet;
+
     } catch (error) {
-      throw new Error(`Erro ao criar planilha: ${error.message || error}`);
+      const errorMessage = error.message || (error.result && error.result.error && error.result.error.message) || JSON.stringify(error);
+      throw new Error(`Erro ao criar planilha: ${errorMessage}`);
     }
   }
+
+  /**
+   * Move um arquivo para uma pasta específica no Google Drive.
+   * Remove o arquivo de outras pastas, incluindo a raiz, para garantir que ele esteja apenas no destino.
+   */
+  async moveFileToFolder(fileId, folderId) {
+    if (!this.isInitialized || !this.isSignedIn) {
+      throw new Error('Usuário não está logado para mover arquivo.');
+    }
+    if (!gapi || !gapi.client || !gapi.client.drive) {
+        throw new Error('Cliente GAPI Drive não está pronto para mover arquivo.');
+    }
+
+    try {
+      // Obter os pais atuais do arquivo para removê-lo da raiz ou de outras pastas.
+      const file = await gapi.client.drive.files.get({
+        fileId: fileId,
+        fields: 'parents'
+      });
+
+      const previousParents = file.result.parents ? file.result.parents.join(',') : '';
+
+      const response = await gapi.client.drive.files.update({
+        fileId: fileId,
+        addParents: folderId,
+        removeParents: previousParents, // Garante que o arquivo seja movido e não copiado.
+        fields: 'id, parents' // Campos a serem retornados na resposta.
+      });
+
+      return response.result;
+    } catch (error) {
+      const errorMessage = error.message || (error.result && error.result.error && error.result.error.message) || JSON.stringify(error);
+      // Lançar o erro para que o chamador possa decidir como lidar com falhas na movimentação.
+      throw new Error(`Erro ao mover arquivo ${fileId} para pasta ${folderId}: ${errorMessage}`);
+    }
+  }
+
   /**
    * Lista arquivos em uma pasta
    */
