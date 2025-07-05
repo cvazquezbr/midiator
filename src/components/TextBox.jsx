@@ -28,6 +28,11 @@ const TextBox = ({
     height: (position.height / 100) * containerSize.height
   };
 
+  // Detectar se é dispositivo móvel
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                   ('ontouchstart' in window) || 
+                   (navigator.maxTouchPoints > 0);
+
   const resizeHandles = [
     { name: 'nw', cursor: 'nw-resize', x: 0, y: 0 },
     { name: 'n', cursor: 'n-resize', x: 0.5, y: 0 },
@@ -59,8 +64,13 @@ const TextBox = ({
   };
 
   const handleTouchStart = (e, type, handle = null) => {
-    e.preventDefault(); // Prevent scrolling and other default touch behaviors
+    // Prevenir comportamento padrão IMEDIATAMENTE
+    e.preventDefault();
     e.stopPropagation();
+
+    // Desabilitar scroll do body durante a interação
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
 
     onSelect(field);
 
@@ -146,7 +156,10 @@ const TextBox = ({
 
   const handleTouchMove = (e) => {
     if (!isDragging && !isResizing) return;
-    e.preventDefault(); // Prevent scrolling during drag/resize
+    
+    // Prevenir scroll SEMPRE durante drag/resize
+    e.preventDefault();
+    e.stopPropagation();
 
     const touch = e.touches[0];
     const deltaX = touch.clientX - dragStart.x;
@@ -219,6 +232,10 @@ const TextBox = ({
   };
 
   const handleTouchEnd = () => {
+    // Restaurar scroll do body
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+    
     setIsDragging(false);
     setIsResizing(false);
     setResizeHandle(null);
@@ -226,15 +243,23 @@ const TextBox = ({
 
   useEffect(() => {
     if (isDragging || isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('touchmove', handleTouchMove, { passive: false });
-      document.addEventListener('touchend', handleTouchEnd);
+      // Configurar event listeners com opções adequadas para mobile
+      const options = { passive: false, capture: true };
+      
+      document.addEventListener('mousemove', handleMouseMove, options);
+      document.addEventListener('mouseup', handleMouseUp, options);
+      document.addEventListener('touchmove', handleTouchMove, options);
+      document.addEventListener('touchend', handleTouchEnd, options);
+      
       return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.removeEventListener('touchmove', handleTouchMove);
-        document.removeEventListener('touchend', handleTouchEnd);
+        document.removeEventListener('mousemove', handleMouseMove, options);
+        document.removeEventListener('mouseup', handleMouseUp, options);
+        document.removeEventListener('touchmove', handleTouchMove, options);
+        document.removeEventListener('touchend', handleTouchEnd, options);
+        
+        // Garantir que o scroll seja restaurado
+        document.body.style.overflow = '';
+        document.body.style.touchAction = '';
       };
     }
   }, [isDragging, isResizing, dragStart, initialPosition, initialSize]);
@@ -267,6 +292,9 @@ const TextBox = ({
   const textLines = wrapText(content, pixelPosition.width - 16);
   const lineHeight = (style.fontSize || 16) * 1.2;
 
+  // Tamanho dos handles baseado no dispositivo
+  const handleSize = isMobile ? 16 : 8;
+
   return (
     <Box
       ref={textBoxRef}
@@ -289,6 +317,10 @@ const TextBox = ({
         display: 'flex',
         justifyContent: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
         alignItems: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
+        // CSS para prevenir scroll em mobile
+        touchAction: 'none',
+        WebkitTouchCallout: 'none',
+        WebkitUserSelect: 'none',
         '&:hover': {
           border: '2px solid #2196f3',
           backgroundColor: 'rgba(33, 150, 243, 0.05)'
@@ -296,7 +328,7 @@ const TextBox = ({
       }}
       onMouseDown={(e) => handleMouseDown(e, 'drag')}
       onTouchStart={(e) => handleTouchStart(e, 'drag')}
-       onClick={() => onSelect(field)} // <-- adicionado aqui
+      onClick={() => onSelect(field)}
     >
       <Box
         sx={{
@@ -330,15 +362,24 @@ const TextBox = ({
             position: 'absolute',
             left: `${handle.x * 100}%`,
             top: `${handle.y * 100}%`,
-            width: '8px',
-            height: '8px',
+            width: `${handleSize}px`,
+            height: `${handleSize}px`,
             backgroundColor: '#2196f3',
-            border: '1px solid #ffffff',
+            border: '2px solid #ffffff',
             borderRadius: '50%',
             cursor: handle.cursor,
             pointerEvents: 'auto',
             transform: 'translate(-50%, -50%)',
-            zIndex: 10
+            zIndex: 10,
+            // Melhor área de toque para mobile
+            minWidth: isMobile ? '20px' : '8px',
+            minHeight: isMobile ? '20px' : '8px',
+            touchAction: 'none',
+            // Feedback visual melhorado para mobile
+            '&:active': {
+              backgroundColor: '#1976d2',
+              transform: 'translate(-50%, -50%) scale(1.2)'
+            }
           }}
           onMouseDown={(e) => handleMouseDown(e, 'resize', handle)}
           onTouchStart={(e) => handleTouchStart(e, 'resize', handle)}
@@ -349,3 +390,4 @@ const TextBox = ({
 };
 
 export default TextBox;
+
