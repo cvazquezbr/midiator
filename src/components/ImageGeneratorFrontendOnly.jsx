@@ -76,6 +76,7 @@ const ImageGeneratorFrontendOnly = ({
 
   const canvasRef = useRef(null);
   const individualImageInputRef = useRef(null);
+  const uploadLock = useRef(false); // Lock síncrono para prevenir dupla execução
 
   // Estado para controle de fontes carregadas
   const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -653,17 +654,25 @@ const ImageGeneratorFrontendOnly = ({
       return;
     }
 
-  // Salvaguarda adicional contra execuções concorrentes
+  // Lock síncrono com useRef para prevenir dupla execução imediata
+  if (uploadLock.current) {
+    console.warn(`[${new Date().toISOString()}] uploadToGoogleDrive: Upload já em progresso (detectado pelo uploadLock). Abortando.`);
+    return;
+  }
+  uploadLock.current = true; // Define o lock imediatamente
+
+  // Salvaguarda original com useState (ainda útil para desabilitar UI e como fallback)
   if (isUploadingToDrive) {
-    console.warn(`[${new Date().toISOString()}] uploadToGoogleDrive: Tentativa de iniciar upload enquanto já está em progresso. Abortando.`);
+    console.warn(`[${new Date().toISOString()}] uploadToGoogleDrive: Upload já em progresso (detectado pelo isUploadingToDrive). Abortando. (uploadLock deveria ter pego isso)`);
+    uploadLock.current = false; // Resetar o lock se esta guarda pegar (improvável se o lock funcionar)
     return;
   }
 
-    setIsUploadingToDrive(true);
-  console.log(`[${new Date().toISOString()}] uploadToGoogleDrive: Iniciando upload. Project: ${projectName}. isUploadingToDrive set to TRUE.`);
-    setDriveResult(null);
+  setIsUploadingToDrive(true); // Para desabilitar UI e lógica dependente de estado
+  console.log(`[${new Date().toISOString()}] uploadToGoogleDrive: Iniciando upload. Project: ${projectName}. isUploadingToDrive set to TRUE. uploadLock set to TRUE.`);
+  setDriveResult(null);
 
-    try {
+  try {
     // 1. Criar pasta principal do projeto (ou obter existente)
     console.log(`[${new Date().toISOString()}] Tentando criar/obter pasta do projeto: ${projectName}`);
     const folder = await googleDriveAPI.createFolder(projectName); // createFolder agora é idempotente por nome na raiz
@@ -677,7 +686,7 @@ const ImageGeneratorFrontendOnly = ({
     console.log(`[${new Date().toISOString()}] Tentando criar/obter subpasta 'Conteúdo' dentro de ${folder.id}`);
     const contentFolder = await googleDriveAPI.createFolder('Conteúdo', folder.id); // Passando folder.id como parentId
     console.log(`[${new Date().toISOString()}] Subpasta 'Conteúdo' obtida/criada ID: ${contentFolder.id}`);
-      const contentFolder = await googleDriveAPI.createFolder('Conteúdo', folder.id);
+    // A linha duplicada "const contentFolder = await googleDriveAPI.createFolder('Conteúdo', folder.id);" foi removida.
 
       const uploadResults = [];
       const sheetData = [];
@@ -749,10 +758,12 @@ const ImageGeneratorFrontendOnly = ({
       });
 
     } catch (error) {
-      console.error('Erro no upload para Google Drive:', error);
+      console.error(`[${new Date().toISOString()}] Erro no upload para Google Drive:`, error);
       alert(`Erro no upload: ${error.message}`);
     } finally {
-      setIsUploadingToDrive(false);
+      console.log(`[${new Date().toISOString()}] FINALLY block: Resetando uploadLock e isUploadingToDrive.`);
+      uploadLock.current = false; // Libera o lock síncrono
+      setIsUploadingToDrive(false); // Libera o estado da UI
     }
   };
   // Callback para quando a autenticação for bem-sucedida

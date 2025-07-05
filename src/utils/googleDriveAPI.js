@@ -154,9 +154,19 @@ class GoogleDriveAPI {
    */
   async createFolder(name, parentId = null) {
     if (!this.isInitialized || !this.isSignedIn) {
-      throw new Error('Usuário não está logado');
+      throw new Error('Usuário não está logado para criar pasta.');
     }
 
+    // Verificar se a pasta já existe com este nome e pai (se fornecido)
+    // console.log(`Buscando por pasta existente: Nome='${name}', ParentID='${parentId || 'raiz'}'`);
+    const existingFolder = await this.findFolderByName(name, parentId);
+    if (existingFolder) {
+      console.warn(`Pasta '${name}' ${parentId ? `dentro de '${parentId}'` : 'na raiz'} já existe com ID: ${existingFolder.id}. Usando a existente.`);
+      return existingFolder; // Retorna a pasta existente
+    }
+    // console.log(`Pasta '${name}' não encontrada. Criando uma nova.`);
+
+    // Se não existir, cria uma nova
     try {
       const metadata = {
         name: name,
@@ -177,14 +187,68 @@ class GoogleDriveAPI {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorBody = await response.text();
+        throw new Error(`HTTP ${response.status}: ${response.statusText}. Detalhes: ${errorBody} ao criar pasta.`);
       }
-
       return await response.json();
     } catch (error) {
-      throw new Error(`Erro ao criar pasta: ${error.message || error}`);
+      throw new Error(`Erro ao criar nova pasta '${name}': ${error.message || error}`);
     }
   }
+
+
+  /**
+   * Procura por uma pasta com um nome específico dentro de uma pasta pai (opcional).
+   * Retorna a primeira pasta encontrada ou null.
+   */
+  async findFolderByName(name, parentId = null) {
+    if (!this.isInitialized || !this.isSignedIn) {
+      // Não lançar erro aqui, pois pode ser chamado antes de um login completo em alguns fluxos,
+      // ou o chamador (createFolder) já faz essa verificação.
+      // Retornar null ou uma promessa rejeitada se for crítico. Para este uso,
+      // createFolder já verifica o login.
+      console.warn("findFolderByName chamado sem usuário logado ou API não inicializada.");
+      return null;
+    }
+
+    let query = `mimeType='application/vnd.google-apps.folder' and name='${name.replace(/'/g, "\\'")}' and trashed=false`;
+    if (parentId) {
+      query += ` and '${parentId}' in parents`;
+    } else {
+      // Se parentId não for fornecido, assume-se que a busca é na raiz do Drive do usuário.
+      // Para pastas de projeto, isso é um comportamento comum.
+      // A API do Drive considera arquivos sem 'parents' explícitos como estando na raiz.
+      // No entanto, para ser mais explícito na busca pela raiz:
+      query += ` and 'root' in parents`;
+    }
+    // console.log("Query para findFolderByName:", query);
+
+    try {
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,parents)&orderBy=createdTime desc`, {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`
+        }
+      });
+
+      if (!response.ok) {
+        // Não tratar como erro fatal aqui, apenas logar e retornar null.
+        // A falha na busca não deve impedir a tentativa de criação, a menos que a API esteja totalmente indisponível.
+        console.error(`HTTP ${response.status}: ${response.statusText} ao buscar pasta '${name}'. A criação prosseguirá.`);
+        return null;
+      }
+      const result = await response.json();
+      if (result.files && result.files.length > 0) {
+        // console.log(`Pasta(s) '${name}' encontrada(s):`, result.files);
+        return result.files[0]; // Retorna a mais recente se houver múltiplas com mesmo nome/pai.
+      }
+      // console.log(`Nenhuma pasta '${name}' encontrada com os critérios.`);
+      return null;
+    } catch (error) {
+      console.error(`Erro na API ao buscar pasta '${name}': ${error.message}. A criação prosseguirá se possível.`);
+      return null; // Retorna null para permitir que a criação prossiga
+    }
+  }
+
 
   /**
    * Faz upload de um arquivo para o Google Drive
