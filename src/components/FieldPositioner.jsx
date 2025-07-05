@@ -25,12 +25,18 @@ const FieldPositioner = ({
   csvData,
   onImageDisplayedSizeChange,
   colorPalette,
-  onSelectFieldExternal, // Nova prop callback
-  showFormattingPanel = true // Nova prop com valor padrão
+  onSelectFieldExternal,
+  showFormattingPanel = true
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
+
+  // Detectar se é dispositivo móvel
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                   ('ontouchstart' in window) || 
+                   (navigator.maxTouchPoints > 0);
 
   const handleFieldSelectInternal = (field) => {
     setSelectedField(field);
@@ -93,7 +99,7 @@ const FieldPositioner = ({
             shadowOffsetY: 2,
             textAlign: 'left',
             verticalAlign: 'top',
-            lineHeightMultiplier: 1.2 // Added for consistency
+            lineHeightMultiplier: 1.2
           };
         }
       });
@@ -107,11 +113,6 @@ const FieldPositioner = ({
       }
     }
   }, [csvHeaders, fieldPositions, fieldStyles, setFieldPositions, setFieldStyles]);
-
-  // handleFieldSelect não é usada, handleFieldSelectInternal é usada em seu lugar.
-  // const handleFieldSelect = (field) => {
-  //   setSelectedField(field);
-  // };
 
   const handlePositionChange = (field, newPosition) => {
     setFieldPositions(prev => ({
@@ -138,7 +139,7 @@ const FieldPositioner = ({
     csvHeaders.forEach((header, index) => {
       newPositions[header] = {
         ...fieldPositions[header],
-        x: 50 - 12.5, // Centralizar considerando largura padrão
+        x: 50 - 12.5,
         y: 20 + index * 20
       };
     });
@@ -179,6 +180,32 @@ const FieldPositioner = ({
       }));
     }
   };
+
+  // Handler para prevenir scroll durante interações
+  const handleContainerTouchStart = (e) => {
+    // Só prevenir se não estiver clicando em um TextBox
+    if (!e.target.closest('.text-box')) {
+      setIsInteracting(true);
+    }
+  };
+
+  const handleContainerTouchEnd = (e) => {
+    setIsInteracting(false);
+  };
+
+  // Efeito para gerenciar scroll durante interações
+  useEffect(() => {
+    if (isInteracting && isMobile) {
+      // Prevenir scroll apenas durante interações ativas
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      
+      return () => {
+        document.body.style.overflow = '';
+        document.body.style.touchAction = '';
+      };
+    }
+  }, [isInteracting, isMobile]);
 
   if (!backgroundImage) {
     return (
@@ -235,6 +262,14 @@ const FieldPositioner = ({
               </Alert>
             )}
 
+            {/* Instruções específicas para mobile */}
+            {isMobile && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <strong>Modo Mobile:</strong> Toque e arraste para mover campos. 
+                Use os pontos azuis para redimensionar. O scroll será desabilitado durante a edição.
+              </Alert>
+            )}
+
             {/* Container da imagem com campos */}
             <Box
               ref={containerRef}
@@ -245,20 +280,34 @@ const FieldPositioner = ({
                 borderRadius: 2,
                 overflow: 'hidden',
                 backgroundColor: '#fff',
-                cursor: 'default'
+                cursor: 'default',
+                // CSS específico para mobile
+                touchAction: isMobile ? 'pan-x pan-y' : 'auto',
+                WebkitOverflowScrolling: 'touch',
+                // Melhor suporte para touch em mobile
+                '&.interacting': {
+                  touchAction: 'none'
+                }
               }}
               onMouseDown={(e) => {
                 // Evita desmarcar ao clicar dentro de um TextBox
                 if (e.target.classList.contains('text-box')) return;
                 setSelectedField(null);
-              }}            >
+              }}
+              onTouchStart={handleContainerTouchStart}
+              onTouchEnd={handleContainerTouchEnd}
+            >
               <img
                 src={backgroundImage}
                 alt="Background"
                 style={{
                   width: '100%',
                   height: 'auto',
-                  display: 'block'
+                  display: 'block',
+                  // Prevenir drag da imagem
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                  WebkitUserDrag: 'none'
                 }}
                 draggable={false}
               />
@@ -281,16 +330,17 @@ const FieldPositioner = ({
                       style={style}
                       content={sampleData}
                       isSelected={selectedField === header}
-                      onSelect={handleFieldSelectInternal} // Usar o wrapper
+                      onSelect={handleFieldSelectInternal}
                       onPositionChange={handlePositionChange}
                       onSizeChange={handleSizeChange}
                       containerSize={imageSize}
                     />
-                  ) // Ponto e vírgula já havia sido intencionalmente removido em pensamento anterior
+                  );
                 })
-                : null // Fallback explícito para o ternário
+                : null
               }
             </Box>
+
             {/* Color Palette */}
             {colorPalette && colorPalette.length > 0 && (
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
@@ -298,13 +348,17 @@ const FieldPositioner = ({
                   <Box
                     key={index}
                     sx={{
-                      width: 30,
-                      height: 30,
+                      width: isMobile ? 40 : 30,
+                      height: isMobile ? 40 : 30,
                       borderRadius: '50%',
                       backgroundColor: color,
                       cursor: 'pointer',
                       border: '2px solid #fff',
-                      boxShadow: '0 0 5px rgba(0,0,0,0.2)'
+                      boxShadow: '0 0 5px rgba(0,0,0,0.2)',
+                      touchAction: 'manipulation',
+                      '&:active': {
+                        transform: 'scale(0.95)'
+                      }
                     }}
                     onClick={() => handleColorCircleClick(color)}
                   />
@@ -324,6 +378,12 @@ const FieldPositioner = ({
                 • Arraste os pontos nas bordas para redimensionar
                 <br />
                 • Use o painel lateral para configurar fonte, cor e efeitos
+                {isMobile && (
+                  <>
+                    <br />
+                    <strong>Mobile:</strong> O scroll será temporariamente desabilitado durante a edição dos campos
+                  </>
+                )}
               </Typography>
             </Box>
           </CardContent>
