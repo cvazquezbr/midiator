@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Container,
   Paper,
@@ -24,16 +24,68 @@ import {
   Image as ImageIcon,
   Palette,
   ArrowBackIosNew, // Ícone para voltar
-  ArrowForwardIos // Ícone para próximo
+  ArrowForwardIos, // Ícone para próximo
+  MoreVert, // Ícone para o menu de ações
+  Brightness4, // Ícone para modo dark
+  Brightness7 // Ícone para modo light
 } from '@mui/icons-material';
 import Papa from 'papaparse';
 import ColorThief from 'colorthief';
+// Adicionar Menu e MenuItem para o menu de ações
+import { Menu, MenuItem } from '@mui/material';
+// Imports para Theming
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline'; // Normaliza estilos e aplica cor de fundo do tema
+
 import FieldPositioner from './components/FieldPositioner';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
 import './App.css';
 
+// Definição dos temas light e dark
+const lightTheme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#1976d2', // Azul padrão do MUI
+    },
+    secondary: {
+      main: '#dc004e', // Rosa padrão do MUI
+    },
+    background: {
+      default: '#f4f6f8', // Um cinza claro para o fundo
+      paper: '#ffffff',   // Branco para os Papers
+    },
+  },
+});
+
+const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#90caf9', // Um azul mais claro para contraste no modo escuro
+    },
+    secondary: {
+      main: '#f48fb1', // Um rosa mais claro
+    },
+    background: {
+      default: '#121212', // Padrão do Material Design para fundo escuro
+      paper: '#1e1e1e',   // Um pouco mais claro para Papers no modo escuro
+    },
+    text: {
+      primary: '#ffffff',
+      secondary: 'rgba(255, 255, 255, 0.7)',
+    }
+  },
+});
+
+
 function App() {
   const [activeStep, setActiveStep] = useState(0);
+  // Inicializa darkMode a partir do localStorage ou default para false (light mode)
+  const [darkMode, setDarkMode] = useState(() => {
+    const savedMode = localStorage.getItem('darkMode');
+    return savedMode ? JSON.parse(savedMode) : false;
+  });
   const [csvData, setCsvData] = useState([]);
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [backgroundImage, setBackgroundImage] = useState(null);
@@ -42,9 +94,33 @@ function App() {
   const [fieldStyles, setFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
   const [generatedImagesData, setGeneratedImagesData] = useState([]); // Para armazenar dados de ImageGeneratorFrontendOnly
-  
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+  const [anchorElMenu, setAnchorElMenu] = useState(null); // Para o menu de ações
+
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
+  const loadStateInputRef = useRef(null); // Ref para o input de carregar estado
+
+  // Efeito para lidar com o scroll e colapsar o header
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50) { // Colapsa após 50px de scroll
+        setIsHeaderCollapsed(true);
+      } else {
+        setIsHeaderCollapsed(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  // Efeito para salvar a preferência do tema no localStorage
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+  }, [darkMode]);
 
   const steps = [
     {
@@ -361,57 +437,146 @@ function App() {
     }
   };
 
-  return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
-        <Typography variant="h3" component="h1" gutterBottom align="center" color="primary">
-          Midiator - Mesclar conteúdo
-        </Typography>
-        <Typography variant="h6" align="center" color="textSecondary" sx={{ mb: 4 }}>
-          Crie imagens personalizadas com controles de formatação individual
-        </Typography>
-        
-        {/* Indicadores de status */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4, flexWrap: 'wrap' }}>
-          <Chip 
-            icon={<FileUpload />}
-            label={`${csvData.length} registros`}
-            color={csvData.length > 0 ? 'success' : 'default'}
-            variant={csvData.length > 0 ? 'filled' : 'outlined'}
-          />
-          <Chip 
-            icon={<ImageIcon />}
-            label="Imagem de fundo"
-            color={backgroundImage ? 'success' : 'default'}
-            variant={backgroundImage ? 'filled' : 'outlined'}
-          />
-          <Chip 
-            icon={<Settings />}
-            label={`${visibleFields}/${totalFields} campos`}
-            color={visibleFields > 0 ? 'info' : 'default'}
-            variant="filled"
-          />
-          <Chip 
-            icon={<Palette />}
-            label={`${styledFields} estilos`}
-            color={styledFields > 0 ? 'secondary' : 'default'}
-            variant="filled"
-          />
-        </Box>
+  const handleMenuOpen = (event) => {
+    setAnchorElMenu(event.currentTarget);
+  };
 
-        {/* Botões Salvar/Carregar Configuração */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 4 }}>
-          <Button variant="contained" onClick={handleSaveState} color="info">
-            Salvar Config. Template
-          </Button>
-          <Button variant="contained" component="label" color="info">
-            Carregar Config. Template
-            <input type="file" hidden accept=".json" onChange={handleLoadStateFromFile} />
-          </Button>
+  const handleMenuClose = () => {
+    setAnchorElMenu(null);
+  };
+
+  const handleLoadTemplateClick = () => {
+    handleMenuClose();
+    // Acionar o clique no input de arquivo escondido
+    if (loadStateInputRef.current) {
+      loadStateInputRef.current.click();
+    }
+  };
+
+  const handleSaveTemplateClick = () => {
+    handleMenuClose();
+    handleSaveState();
+  };
+
+
+  const currentTheme = darkMode ? darkTheme : lightTheme;
+
+  return (
+    <ThemeProvider theme={currentTheme}>
+      <CssBaseline /> {/* Adiciona normalização e cor de fundo do tema */}
+      <Container maxWidth="xl" sx={{ pt: isHeaderCollapsed ? '80px' : '280px', transition: 'padding-top 0.3s ease-in-out' }}>
+        <Paper 
+          elevation={3} 
+          sx={{ 
+          p: isHeaderCollapsed ? 2 : 4, 
+          mb: 4, 
+          position: 'fixed', // Para fixar o header no topo
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1100, // Acima do conteúdo e dos botões de navegação laterais
+          height: isHeaderCollapsed ? '60px' : 'auto', // Altura dinâmica
+          minHeight: '60px', // Altura mínima quando colapsado
+          overflow: 'hidden', // Para esconder conteúdo que transborda durante a transição
+          transition: 'height 0.3s ease-in-out, padding 0.3s ease-in-out',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center', // Centraliza conteúdo verticalmente quando colapsado
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <Box>
+            <Typography 
+              variant={isHeaderCollapsed ? 'h5' : 'h3'} 
+              component="h1" 
+              color="primary"
+              sx={{ transition: 'font-size 0.3s ease-in-out', m:0, p:0, lineHeight: isHeaderCollapsed ? 'normal': 'inherit' }} // Ajuste para remover margem/padding do Typography
+            >
+              Midiator - Mesclar conteúdo
+            </Typography>
+            {!isHeaderCollapsed && (
+              <Typography variant="h6" color="textSecondary" sx={{ mb: 0, transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out', opacity: isHeaderCollapsed ? 0 : 1, height: isHeaderCollapsed ? 0 : 'auto' }}>
+                Crie imagens personalizadas com controles de formatação individual
+              </Typography>
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}> {/* Container para os ícones do lado direito */}
+            <Tooltip title={darkMode ? "Alternar para modo claro" : "Alternar para modo escuro"}>
+              <IconButton onClick={() => setDarkMode(!darkMode)} color="inherit">
+                {darkMode ? <Brightness7 /> : <Brightness4 />}
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Mais ações">
+              <IconButton
+                aria-label="Mais ações"
+                aria-controls="actions-menu"
+                aria-haspopup="true"
+                onClick={handleMenuOpen}
+                color="inherit"
+              >
+                <MoreVert />
+              </IconButton>
+            </Tooltip>
+            <Menu
+              id="actions-menu"
+              anchorEl={anchorElMenu}
+              keepMounted
+              open={Boolean(anchorElMenu)}
+              onClose={handleMenuClose}
+            >
+              <MenuItem onClick={handleSaveTemplateClick}>Salvar Config. Template</MenuItem>
+              <MenuItem onClick={handleLoadTemplateClick}>Carregar Config. Template</MenuItem>
+            </Menu>
+            {/* Input de arquivo escondido para carregar template */}
+            <input 
+              type="file" 
+              hidden 
+              accept=".json" 
+              onChange={handleLoadStateFromFile} 
+              ref={loadStateInputRef} 
+            />
+          </Box>
         </Box>
+        
+        {!isHeaderCollapsed && (
+          <>
+            {/* Indicadores de status */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2, mb: 2, flexWrap: 'wrap', transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out', opacity: isHeaderCollapsed ? 0 : 1, height: isHeaderCollapsed ? 0 : 'auto' }}>
+              <Chip 
+                icon={<FileUpload />}
+                label={`${csvData.length} registros`}
+                color={csvData.length > 0 ? 'success' : 'default'}
+                variant={csvData.length > 0 ? 'filled' : 'outlined'}
+                size={isHeaderCollapsed ? 'small' : 'medium'}
+              />
+              <Chip 
+                icon={<ImageIcon />}
+                label="Imagem de fundo"
+                color={backgroundImage ? 'success' : 'default'}
+                variant={backgroundImage ? 'filled' : 'outlined'}
+                size={isHeaderCollapsed ? 'small' : 'medium'}
+              />
+              <Chip 
+                icon={<Settings />}
+                label={`${visibleFields}/${totalFields} campos`}
+                color={visibleFields > 0 ? 'info' : 'default'}
+                variant="filled"
+                size={isHeaderCollapsed ? 'small' : 'medium'}
+              />
+              <Chip 
+                icon={<Palette />}
+                label={`${styledFields} estilos`}
+                color={styledFields > 0 ? 'secondary' : 'default'}
+                variant="filled"
+                size={isHeaderCollapsed ? 'small' : 'medium'}
+              />
+            </Box>
+            {/* Botões Salvar/Carregar Configuração foram movidos para o Menu */}
+          </>
+        )}
       </Paper>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={3} sx={{ mt: 0 }}> {/* mt:0 porque o padding do container já cuida do espaço */}
         {/* Stepper lateral */}
         <Grid item xs={12} md={3}>
           <Card>
@@ -640,6 +805,7 @@ function App() {
         </Tooltip>
       </Box>
     </Container>
+    </ThemeProvider>
   );
 }
 
