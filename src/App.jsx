@@ -37,6 +37,7 @@ function App() {
   const [fieldPositions, setFieldPositions] = useState({});
   const [fieldStyles, setFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
+  const [generatedImagesData, setGeneratedImagesData] = useState([]); // Para armazenar dados de ImageGeneratorFrontendOnly
   
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -187,15 +188,48 @@ function App() {
   const { visibleFields, totalFields, styledFields } = getFieldStats();
 
   // Função para salvar o estado do template
-  const handleSaveState = () => {
+  const handleSaveState = async () => {
+    // Função auxiliar para converter Blob para Base64
+    const blobToBase64 = (blob) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    };
+
+    // Mapear generatedImagesData para um formato serializável
+    const serializableGeneratedImages = await Promise.all(
+      generatedImagesData.map(async (img) => {
+        let imageBase64 = null;
+        if (img.blob) {
+          try {
+            imageBase64 = await blobToBase64(img.blob);
+          } catch (error) {
+            console.error("Erro ao converter blob para Base64:", error);
+            // Continuar mesmo se um blob falhar, para não impedir o salvamento do resto
+          }
+        }
+        return {
+          ...img,
+          blob: undefined, // Remover o blob original
+          url: undefined, // Remover o objectURL temporário
+          imageBase64: imageBase64, // Adicionar a string base64
+          // Manter: record, filename, customFieldPositions, customFieldStyles, backgroundImage (se individual)
+        };
+      })
+    );
+
     const stateToSave = {
-      version: "1.0",
-      backgroundImageUrl: backgroundImage,
+      version: "1.1", // Incrementar versão para refletir a nova estrutura
+      backgroundImageUrl: backgroundImage, // Este é o BG global/template, já é uma string (dataURL ou URL externa)
       fieldPositions: fieldPositions,
       fieldStyles: fieldStyles,
       csvHeaders: csvHeaders,
-      colorPalette: colorPalette, 
-      csvData: csvData, // <-- ADICIONADO: Salvar os dados do CSV
+      colorPalette: colorPalette,
+      csvData: csvData,
+      generatedImages: serializableGeneratedImages, // Salvar os dados das imagens geradas
     };
 
     const jsonString = JSON.stringify(stateToSave, null, 2);
@@ -216,12 +250,20 @@ function App() {
     const file = event.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => { // Tornar async para aguardar conversões
         try {
           const loadedState = JSON.parse(e.target.result);
 
-          if (loadedState.version === "1.0" &&
-              loadedState.backgroundImageUrl !== undefined && // Checar undefined para permitir null
+          // Função auxiliar para converter Base64 para Blob
+          const base64ToBlob = async (base64, type = 'image/png') => {
+            const res = await fetch(base64);
+            const blob = await res.blob();
+            return blob;
+          };
+
+          // Verificar versão e campos essenciais
+          if (loadedState.version && (loadedState.version === "1.0" || loadedState.version === "1.1") &&
+              loadedState.backgroundImageUrl !== undefined &&
               loadedState.fieldPositions &&
               loadedState.fieldStyles &&
               loadedState.csvHeaders) {
@@ -261,24 +303,49 @@ function App() {
               // poderíamos derivá-los de loadedState.csvData[0] aqui,
               // mas como loadedState.csvHeaders é obrigatório, confiamos nele.
             } else {
-              setCsvData([]); 
+              setCsvData([]);
+            }
+
+            // Restaurar generatedImages se presentes (versão 1.1+)
+            if (loadedState.version === "1.1" && loadedState.generatedImages) {
+              const restoredGeneratedImages = await Promise.all(
+                loadedState.generatedImages.map(async (imgData) => {
+                  let blob = null;
+                  let url = null;
+                  if (imgData.imageBase64) {
+                    try {
+                      blob = await base64ToBlob(imgData.imageBase64);
+                      url = URL.createObjectURL(blob);
+                    } catch (error) {
+                      console.error("Erro ao converter base64 para blob ao carregar:", error);
+                    }
+                  }
+                  return {
+                    ...imgData,
+                    blob: blob,
+                    url: url,
+                    imageBase64: undefined, // Remover para não manter em memória desnecessariamente
+                  };
+                })
+              );
+              setGeneratedImagesData(restoredGeneratedImages);
+            } else {
+              setGeneratedImagesData([]); // Limpar se não houver dados ou for versão antiga
             }
             
-            // setActiveStep para o início ou para o passo de posicionamento?
-            // setActiveStep(0); // Volta para o upload do CSV
-            // ou
+            // Navegação de passo
             if (loadedState.backgroundImageUrl && loadedState.csvHeaders.length > 0) {
-              setActiveStep(2); // Vai para posicionar/formatar se BG e Headers existem
+              setActiveStep(2); 
             } else if (loadedState.csvHeaders.length > 0) {
-              setActiveStep(1); // Vai para upload da imagem se só headers existem
+              setActiveStep(1); 
             } else {
               setActiveStep(0);
             }
 
-
             alert("Configuração do template carregada com sucesso!");
           } else {
             alert("Arquivo JSON inválido, formato incorreto ou versão incompatível.");
+            console.log("Loaded state:", loadedState); // Adicionar log para depuração
           }
         } catch (error) {
           console.error("Erro ao carregar o arquivo JSON:", error);
@@ -492,7 +559,11 @@ function App() {
               fieldStyles={fieldStyles}
               displayedImageSize={displayedImageSize}
               csvHeaders={csvHeaders} // <-- ADICIONADO
-              colorPalette={colorPalette} // <-- ADICIONADO
+              colorPalette={colorPalette}
+              // Passar o setter para que ImageGeneratorFrontendOnly possa atualizar App.jsx
+              setGeneratedImagesData={setGeneratedImagesData} 
+              // Passar os dados existentes, caso o ImageGeneratorFrontendOnly precise deles ao iniciar
+              initialGeneratedImagesData={generatedImagesData}
             />
           )}
 

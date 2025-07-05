@@ -43,10 +43,14 @@ const ImageGeneratorFrontendOnly = ({
   fieldStyles, // Estilos globais/template
   displayedImageSize, // Tamanho da imagem exibida no editor principal
   csvHeaders, // Todos os cabeçalhos CSV possíveis (para GeneratedImageEditor)
-  colorPalette // Paleta de cores global (para GeneratedImageEditor)
+  colorPalette, // Paleta de cores global (para GeneratedImageEditor)
+  setGeneratedImagesData, // Setter para atualizar o estado em App.jsx
+  initialGeneratedImagesData // Dados iniciais carregados do JSON
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedImages, setGeneratedImages] = useState([]);
+  // O estado local `generatedImages` será inicializado com `initialGeneratedImagesData`
+  // e depois atualizado. Ele também chamará `setGeneratedImagesData` para sincronizar com App.jsx.
+  const [generatedImages, setGeneratedImages] = useState(initialGeneratedImagesData || []);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPreview, setSelectedPreview] = useState(null);
   
@@ -93,6 +97,25 @@ const ImageGeneratorFrontendOnly = ({
 
     loadFonts();
   }, []);
+
+  // Efeito para atualizar o estado pai (App.jsx) quando generatedImages local mudar
+  useEffect(() => {
+    if (setGeneratedImagesData) {
+      setGeneratedImagesData(generatedImages);
+    }
+  }, [generatedImages, setGeneratedImagesData]);
+
+  // Efeito para sincronizar com initialGeneratedImagesData se ele mudar externamente
+  // Isso é útil se o usuário carregar um novo arquivo JSON enquanto este componente já está montado.
+  useEffect(() => {
+    if (initialGeneratedImagesData) {
+      // Apenas atualiza se os dados iniciais forem diferentes dos atuais para evitar loops
+      // É importante uma comparação mais robusta se os objetos puderem ser complexos e mutáveis
+      if (JSON.stringify(initialGeneratedImagesData) !== JSON.stringify(generatedImages)) {
+        setGeneratedImages(initialGeneratedImagesData);
+      }
+    }
+  }, [initialGeneratedImagesData]);
 
   // Função para quebrar texto em linhas dentro de uma área retangular
   const wrapTextInArea = (ctx, text, x, y, maxWidth, maxHeight, style) => {
