@@ -282,7 +282,29 @@ class GoogleDriveAPI {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      return await response.json();
+      const uploadedFile = await response.json();
+
+      // Define as permissões do arquivo para "qualquer pessoa com o link pode visualizar"
+      if (uploadedFile && uploadedFile.id) {
+        try {
+          await fetch(`https://www.googleapis.com/drive/v3/files/${uploadedFile.id}/permissions`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${this.accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              role: 'reader',
+              type: 'anyone'
+            })
+          });
+        } catch (permissionError) {
+          // Logar o erro de permissão, mas não falhar o upload principal
+          console.warn(`Arquivo ${uploadedFile.id} enviado, mas falha ao definir permissões: ${permissionError.message}`);
+        }
+      }
+
+      return uploadedFile;
     } catch (error) {
       throw new Error(`Erro no upload: ${error.message || error}`);
     }
@@ -330,60 +352,85 @@ class GoogleDriveAPI {
     }
 
     try {
-      // 1. Cria a planilha vazia
-      const metadata = {
-        name: title,
-        mimeType: 'application/vnd.google-apps.spreadsheet'
+      // 1. Define os dados para as abas
+      const sheetsData = [
+        { // Primeira aba (dados do CSV)
+          properties: { title: 'Dados CSV' }, // Nome opcional para a primeira aba
+          data: [{
+            rowData: data.map((row, rowIndex) => ({
+              values: row.map((cell) => ({
+                userEnteredValue: { stringValue: String(cell) },
+                userEnteredFormat: { textFormat: { bold: rowIndex === 0 } }
+              }))
+            }))
+          }]
+        },
+        { // Segunda aba (controle)
+          properties: { title: 'Controle' }, // Nome para a segunda aba
+          data: [{
+            rowData: [
+              { // Primeira linha da segunda aba
+                values: [
+                  { userEnteredValue: { stringValue: "campo" } },
+                  { userEnteredValue: { stringValue: "valor" } }
+                ]
+              },
+              { // Segunda linha da segunda aba
+                values: [
+                  { userEnteredValue: { stringValue: "controle" } },
+                  { userEnteredValue: { numberValue: 0 } } // Usando numberValue para o 0
+                ]
+              }
+            ]
+          }]
+        }
+      ];
+
+      // 2. Cria a planilha com as duas abas
+      const spreadsheetRequestBody = {
+        properties: { title: title },
+        sheets: sheetsData
       };
 
-      if (folderId) {
-        metadata.parents = [folderId];
-      }
-
-      // 2. Insere os dados na planilha
       const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.accessToken}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          properties: {
-            title: title
-          },
-          sheets: [{
-            data: [{
-              rowData: data.map((row, rowIndex) => ({
-                values: row.map((cell, colIndex) => ({
-                  userEnteredValue: {
-                    stringValue: String(cell)
-                  },
-                  userEnteredFormat: {
-                    textFormat: {
-                      bold: rowIndex === 0 // Cabeçalho em negrito
-                    }
-                  }
-                }))
-              }))
-            }]
-          }]
-        })
+        body: JSON.stringify(spreadsheetRequestBody)
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorBody = await response.json();
+        const errorMessageDetail = errorBody.error && errorBody.error.message ? errorBody.error.message : response.statusText;
+        throw new Error(`HTTP ${response.status}: ${errorMessageDetail}`);
       }
 
       const createdSpreadsheet = await response.json();
+      const spreadsheetId = createdSpreadsheet.spreadsheetId;
 
-      // PASSO ADICIONADO: Mover a planilha para o folderId, se folderId for fornecido.
-      if (folderId && createdSpreadsheet.spreadsheetId) {
+      // 3. Define as permissões do arquivo para "qualquer pessoa com o link pode visualizar"
+      if (spreadsheetId) {
+        await fetch(`https://www.googleapis.com/drive/v3/files/${spreadsheetId}/permissions`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            role: 'reader',
+            type: 'anyone'
+          })
+        });
+      }
+
+      // 4. Mover a planilha para o folderId, se folderId for fornecido.
+      if (folderId && spreadsheetId) {
         try {
-          await this.moveFileToFolder(createdSpreadsheet.spreadsheetId, folderId);
+          await this.moveFileToFolder(spreadsheetId, folderId);
         } catch (moveError) {
-          // Logar o erro de movimentação, mas não necessariamente falhar a criação da planilha.
-          // A planilha foi criada, apenas não movida.
-          console.warn(`Planilha criada com ID ${createdSpreadsheet.spreadsheetId} mas falhou ao mover para a pasta ${folderId}: ${moveError.message}`);
+          console.warn(`Planilha criada com ID ${spreadsheetId} mas falhou ao mover para a pasta ${folderId}: ${moveError.message}`);
         }
       }
 

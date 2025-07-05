@@ -13,14 +13,18 @@ import {
   Step,
   StepLabel,
   StepContent,
-  Chip
+  Chip,
+  IconButton, // Adicionado para botões de ícone
+  Tooltip // Adicionado para dicas de ferramenta
 } from '@mui/material';
 import {
   CloudUpload,
   FileUpload,
   Settings,
   Image as ImageIcon,
-  Palette
+  Palette,
+  ArrowBackIosNew, // Ícone para voltar
+  ArrowForwardIos // Ícone para próximo
 } from '@mui/icons-material';
 import Papa from 'papaparse';
 import ColorThief from 'colorthief';
@@ -567,26 +571,74 @@ function App() {
             />
           )}
 
-          {/* Botões de navegação */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
-            <Button
-              disabled={activeStep === 0}
-              onClick={handleBack}
-              variant="outlined"
-            >
-              Voltar
-            </Button>
-            
-            <Button
-              variant="contained"
-              onClick={handleNext}
-              disabled={activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)}
-            >
-              {activeStep === steps.length - 1 ? 'Finalizar' : 'Próximo'}
-            </Button>
-          </Box>
+          {/* Botões de navegação não estão mais aqui */}
         </Grid>
       </Grid>
+
+      {/* Botões de Navegação Circulares Flutuantes */}
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: '50%', // Centraliza verticalmente
+          left: '20px', // Distância da esquerda
+          transform: 'translateY(50%)', // Ajuste fino para centralização vertical
+          zIndex: 1000, // Para garantir que fiquem acima de outros elementos
+        }}
+      >
+        <Tooltip title="Anterior" placement="right">
+          <span> {/* Span para habilitar tooltip em botão desabilitado */}
+            <IconButton
+              aria-label="anterior"
+              onClick={handleBack}
+              disabled={activeStep === 0}
+              sx={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                },
+                '&.Mui-disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                }
+              }}
+            >
+              <ArrowBackIosNew />
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Box>
+
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: '50%', // Centraliza verticalmente
+          right: '20px', // Distância da direita
+          transform: 'translateY(50%)', // Ajuste fino para centralização vertical
+          zIndex: 1000, // Para garantir que fiquem acima de outros elementos
+        }}
+      >
+        <Tooltip title={activeStep === steps.length - 1 ? 'Finalizar' : 'Próximo'} placement="left">
+          <span> {/* Span para habilitar tooltip em botão desabilitado */}
+            <IconButton
+              aria-label="próximo"
+              onClick={handleNext}
+              disabled={activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)}
+              sx={{
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                },
+                '&.Mui-disabled': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                }
+              }}
+            >
+              <ArrowForwardIos />
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Box>
     </Container>
   );
 }
