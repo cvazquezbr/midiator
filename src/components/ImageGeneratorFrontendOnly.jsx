@@ -417,12 +417,13 @@ const ImageGeneratorFrontendOnly = ({
     const currentPositions = (imageToEdit.customFieldPositions && Object.keys(imageToEdit.customFieldPositions).length > 0)
       ? imageToEdit.customFieldPositions
       : fieldPositions;
+
     const currentStyles = (imageToEdit.customFieldStyles && Object.keys(imageToEdit.customFieldStyles).length > 0)
       ? imageToEdit.customFieldStyles
       : fieldStyles;
-
+    
     setIndividualFieldPositions(JSON.parse(JSON.stringify(currentPositions)));
-    setIndividualFieldStyles(JSON.parse(JSON.stringify(currentStyles)));
+    setIndividualFieldStyles(JSON.parse(JSON.stringify(currentStyles))); // This will be initialFieldStyles in GeneratedImageEditor
     setShowGeneratedImageEditor(true);
   };
 

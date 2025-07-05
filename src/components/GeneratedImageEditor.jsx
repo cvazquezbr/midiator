@@ -14,6 +14,29 @@ import { Close } from '@mui/icons-material';
 import FieldPositioner from './FieldPositioner'; // Reutilizar o FieldPositioner
 import FormattingPanel from './FormattingPanel'; // Reutilizar o FormattingPanel
 
+// Define a comprehensive default style object
+const COMPLETE_DEFAULT_STYLE = {
+  fontFamily: 'Arial',
+  fontSize: 24,
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  textDecoration: 'none',
+  color: '#000000',
+  textAlign: 'left',
+  verticalAlign: 'top',
+  lineHeightMultiplier: 1.2, // Consistent with rendering logic in ImageGeneratorFrontendOnly
+  textStroke: false,
+  strokeColor: '#ffffff',
+  strokeWidth: 2,
+  textShadow: false,
+  shadowColor: '#000000',
+  shadowBlur: 4,
+  shadowOffsetX: 2,
+  shadowOffsetY: 2,
+  // Ensure all properties from FormattingPanel's controls and rendering logic are here.
+  // These are based on inspection of FormattingPanel.jsx and common text style properties.
+};
+
 const GeneratedImageEditor = ({
   open,
   onClose,
@@ -29,17 +52,35 @@ const GeneratedImageEditor = ({
   const [editedStyles, setEditedStyles] = useState({});
   const [displayedEditorImageSize, setDisplayedEditorImageSize] = useState({ width: 0, height: 0 });
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null); // Estado para o campo selecionado internamente
+  const [stylesAreInitialized, setStylesAreInitialized] = useState(false); // New state for initialization tracking
 
   useEffect(() => {
-    if (imageData) {
+    if (imageData && initialFieldPositions && initialFieldStyles) { // Added null checks for robustness
       setSelectedFieldInternal(null); // Reseta o campo selecionado ao abrir/mudar imagem
-      // Deep copy para evitar mutações diretas do estado pai
+      // Deep copy for positions
       setEditedPositions(JSON.parse(JSON.stringify(initialFieldPositions)));
-      setEditedStyles(JSON.parse(JSON.stringify(initialFieldStyles)));
+
+      // Initialize editedStyles by merging initialFieldStyles with COMPLETE_DEFAULT_STYLE
+      const newEditedStyles = {};
+      const fieldsToStyle = Object.keys(initialFieldPositions); // Fields present in the current image layout
+
+      fieldsToStyle.forEach(field => {
+        newEditedStyles[field] = {
+          ...COMPLETE_DEFAULT_STYLE, // Start with all defaults
+          ...(initialFieldStyles[field] || {}), // Override with any specific styles for this field
+        };
+      });
+      setEditedStyles(newEditedStyles);
+      setStylesAreInitialized(true); // Mark styles as initialized and ready for rendering children
+    } else {
+      // If essential data is missing, ensure we are not in an initialized state.
+      setStylesAreInitialized(false); 
     }
   }, [imageData, initialFieldPositions, initialFieldStyles]);
 
-  if (!imageData) return null;
+  if (!imageData) {
+    return null;
+  }
 
   const handleSave = () => {
     onSave({
@@ -74,7 +115,14 @@ const GeneratedImageEditor = ({
         </IconButton>
       </DialogTitle>
       <DialogContent dividers>
-        {currentBackgroundImageForEditor ? (
+        {!stylesAreInitialized ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+            <Typography>Carregando estilos...</Typography>
+            {/* Optionally, add a CircularProgress MUI component here */}
+          </Box>
+        ) : !currentBackgroundImageForEditor ? (
+          <Typography>Imagem de fundo não disponível para edição.</Typography>
+        ) : (
           <Grid container spacing={2}>
             <Grid item xs={12} md={8}>
               <FieldPositioner
@@ -102,8 +150,6 @@ const GeneratedImageEditor = ({
               />
             </Grid>
           </Grid>
-        ) : (
-          <Typography>Imagem de fundo não disponível para edição.</Typography>
         )}
       </DialogContent>
       <DialogActions>

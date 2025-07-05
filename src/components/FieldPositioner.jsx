@@ -92,7 +92,8 @@ const FieldPositioner = ({
             shadowOffsetX: 2,
             shadowOffsetY: 2,
             textAlign: 'left',
-            verticalAlign: 'top'
+            verticalAlign: 'top',
+            lineHeightMultiplier: 1.2 // Added for consistency
           };
         }
       });
