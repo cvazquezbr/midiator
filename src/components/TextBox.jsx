@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box } from '@mui/material';
 
-const TextBox = ({
+const TextBox = ({ 
   field,
   position,
   style,
