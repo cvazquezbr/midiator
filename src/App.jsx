@@ -614,7 +614,12 @@ function App() {
         </Grid>
 
         {/* Conteúdo principal */}
-        <Grid item xs={12} md={9}>
+        <Grid item xs={12} md={9} 
+           sx={{ touchAction: 'none' }}
+    
+          
+          >
+          
           {/* Passo 1: Upload CSV */}
           {activeStep === 0 && (
             <Card>
