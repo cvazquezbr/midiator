@@ -58,11 +58,99 @@ const TextBox = ({
     }
   };
 
+  const handleTouchStart = (e, type, handle = null) => {
+    e.preventDefault(); // Prevent scrolling and other default touch behaviors
+    e.stopPropagation();
+
+    onSelect(field);
+
+    const touch = e.touches[0];
+    setDragStart({ x: touch.clientX, y: touch.clientY });
+
+    if (type === 'drag') {
+      setIsDragging(true);
+      setInitialPosition({ x: position.x, y: position.y });
+    } else if (type === 'resize') {
+      setIsResizing(true);
+      setResizeHandle(handle);
+      setInitialPosition({ x: position.x, y: position.y });
+      setInitialSize({ width: position.width, height: position.height });
+    }
+  };
+
   const handleMouseMove = (e) => {
     if (!isDragging && !isResizing) return;
 
     const deltaX = e.clientX - dragStart.x;
     const deltaY = e.clientY - dragStart.y;
+
+    const deltaXPercent = (deltaX / containerSize.width) * 100;
+    const deltaYPercent = (deltaY / containerSize.height) * 100;
+
+    if (isDragging) {
+      const newX = Math.max(0, Math.min(100 - position.width, initialPosition.x + deltaXPercent));
+      const newY = Math.max(0, Math.min(100 - position.height, initialPosition.y + deltaYPercent));
+      onPositionChange(field, { x: newX, y: newY });
+    } else if (isResizing && resizeHandle) {
+      let newX = initialPosition.x;
+      let newY = initialPosition.y;
+      let newWidth = initialSize.width;
+      let newHeight = initialSize.height;
+
+      switch (resizeHandle.name) {
+        case 'nw':
+          newX += deltaXPercent;
+          newY += deltaYPercent;
+          newWidth -= deltaXPercent;
+          newHeight -= deltaYPercent;
+          break;
+        case 'n':
+          newY += deltaYPercent;
+          newHeight -= deltaYPercent;
+          break;
+        case 'ne':
+          newY += deltaYPercent;
+          newWidth += deltaXPercent;
+          newHeight -= deltaYPercent;
+          break;
+        case 'e':
+          newWidth += deltaXPercent;
+          break;
+        case 'se':
+          newWidth += deltaXPercent;
+          newHeight += deltaYPercent;
+          break;
+        case 's':
+          newHeight += deltaYPercent;
+          break;
+        case 'sw':
+          newX += deltaXPercent;
+          newWidth -= deltaXPercent;
+          newHeight += deltaYPercent;
+          break;
+        case 'w':
+          newX += deltaXPercent;
+          newWidth -= deltaXPercent;
+          break;
+      }
+
+      newWidth = Math.max(5, Math.min(100 - newX, newWidth));
+      newHeight = Math.max(3, Math.min(100 - newY, newHeight));
+      newX = Math.max(0, Math.min(100 - newWidth, newX));
+      newY = Math.max(0, Math.min(100 - newHeight, newY));
+
+      onPositionChange(field, { x: newX, y: newY });
+      onSizeChange(field, { width: newWidth, height: newHeight });
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging && !isResizing) return;
+    e.preventDefault(); // Prevent scrolling during drag/resize
+
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - dragStart.x;
+    const deltaY = touch.clientY - dragStart.y;
 
     const deltaXPercent = (deltaX / containerSize.width) * 100;
     const deltaYPercent = (deltaY / containerSize.height) * 100;
@@ -130,13 +218,23 @@ const TextBox = ({
     setResizeHandle(null);
   };
 
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    setIsResizing(false);
+    setResizeHandle(null);
+  };
+
   useEffect(() => {
     if (isDragging || isResizing) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd);
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
       };
     }
   }, [isDragging, isResizing, dragStart, initialPosition, initialSize]);
@@ -197,6 +295,7 @@ const TextBox = ({
         }
       }}
       onMouseDown={(e) => handleMouseDown(e, 'drag')}
+      onTouchStart={(e) => handleTouchStart(e, 'drag')}
        onClick={() => onSelect(field)} // <-- adicionado aqui
     >
       <Box
@@ -242,6 +341,7 @@ const TextBox = ({
             zIndex: 10
           }}
           onMouseDown={(e) => handleMouseDown(e, 'resize', handle)}
+          onTouchStart={(e) => handleTouchStart(e, 'resize', handle)}
         />
       ))}
     </Box>
