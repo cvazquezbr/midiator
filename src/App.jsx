@@ -34,7 +34,7 @@ import {
 import Papa from 'papaparse';
 import ColorThief from 'colorthief';
 // import React, { useState, useRef, useEffect, useCallback } from 'react'; // Removido, pois já está no topo
-import { useIsMobile } from './hooks/use-mobile'; // Importa o hook
+// import { useIsMobile } from './hooks/use-mobile'; // Removendo a duplicata - useIsMobile já é importado na linha 2
 // ... (outros imports)
 // Adicionar Menu e MenuItem para o menu de ações
 import { Menu, MenuItem } from '@mui/material';
