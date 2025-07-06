@@ -51,7 +51,7 @@ import FieldPositioner from './components/FieldPositioner';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
 import GerenciadorRegistros from '../GerenciadorRegistros/GerenciadorRegistros'; // Importar o GerenciadorRegistros
 import DeepSeekAuthSetup from './components/DeepSeekAuthSetup'; // Importar o componente de configuração da API DeepSeek
-import { getDeepSeekApiKey } from '../utils/deepSeekCredentials'; // Importar utilitário para verificar a chave
+import { getDeepSeekApiKey } from './utils/deepSeekCredentials'; // Caminho corrigido
 import VpnKeyIcon from '@mui/icons-material/VpnKey'; // Ícone para a chave da API
 import './App.css';
 
