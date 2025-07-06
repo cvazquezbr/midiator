@@ -127,14 +127,18 @@ const GerenciadorRegistros = ({
     };
 
     const handleConfirmarExclusao = () => {
-        let novosRegistros = registros;
         if (registroSelecionado && registroSelecionado.id !== undefined) {
-            novosRegistros = registros.filter(reg => String(reg.id) !== String(registroSelecionado.id));
-            setRegistros(novosRegistros);
-        }
+            const registrosAposExclusao = registros.filter(
+                reg => String(reg.id) !== String(registroSelecionado.id)
+            );
+            setRegistros(registrosAposExclusao);
 
-        if (onDadosAlterados) {
-            onDadosAlterados(JSON.parse(JSON.stringify(novosRegistros)), [...colunas]);
+            if (onDadosAlterados) {
+                onDadosAlterados(
+                    JSON.parse(JSON.stringify(registrosAposExclusao)),
+                    [...colunas]
+                );
+            }
         }
         handleFecharModal();
     };
