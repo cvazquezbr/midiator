@@ -52,6 +52,7 @@ import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly'
 import GerenciadorRegistros from '../GerenciadorRegistros/GerenciadorRegistros'; // Importar o GerenciadorRegistros
 import DeepSeekAuthSetup from './components/DeepSeekAuthSetup'; // Importar o componente de configuração da API DeepSeek
 import { getDeepSeekApiKey } from './utils/deepSeekCredentials'; // Caminho corrigido
+import { callDeepSeekApi } from './utils/deepSeekAPI'; // Importar a função da API
 import VpnKeyIcon from '@mui/icons-material/VpnKey'; // Ícone para a chave da API
 import './App.css';
 
@@ -622,28 +623,123 @@ Cada elemento deve conter:
     console.log("Prompt para DeepSeek:", finalPrompt);
     console.log("Número de Registros para Gerar:", promptNumRecords);
 
-    // Simulação de chamada à API
+    // console.log("Prompt para DeepSeek:", finalPrompt); // Manter para depuração se necessário
+    // console.log("Número de Registros para Gerar:", promptNumRecords);
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simula delay da API
-      console.log("Simulação de resposta da API DeepSeek recebida.");
-      // TODO: Processar a resposta da API e definir csvData e csvHeaders
-      // Exemplo:
-      // const mockIAData = [
-      //   { "Título": "✨ Título Gerado 1", "Texto Principal": "Texto principal gerado 1...", "Ponte para o Próximo": "➡️ Próximo: Incrível!" },
-      //   { "Título": "🚀 Título Gerado 2", "Texto Principal": "Texto principal gerado 2...", "Ponte para o Próximo": "👇 Continue!" },
-      // ];
-      // const mockIAHeaders = ["Título", "Texto Principal", "Ponte para o Próximo"];
-      // setCsvData(mockIAData);
-      // setCsvHeaders(mockIAHeaders);
-      // setActiveStep(1); // Avança para a etapa de edição após gerar dados
-      alert("Conteúdo gerado (simulado)! Verifique o console. A integração real da API e o parsing da resposta são os próximos passos.");
+      const iaResponseText = await callDeepSeekApi(finalPrompt, apiKey);
+      console.log('Resposta da API DeepSeek (bruta):', iaResponseText);
+
+      // TODO: Implementar parseIaResponseToCsvData(iaResponseText, promptNumRecords)
+      // e atualizar setCsvData, setCsvHeaders, fieldPositions, fieldStyles, setActiveStep(1)
+
+      // Por enquanto, apenas um alerta com a resposta bruta para visualização
+      alert(`Resposta da IA recebida (ver console para detalhes). Próximo passo é implementar o parsing.\n\nInício da Resposta:\n${iaResponseText.substring(0, 200)}...`);
+
+      // Exemplo de como seria após o parsing (a ser implementado no próximo passo do plano)
+      // const parsedResult = parseIaResponseToCsvData(iaResponseText, promptNumRecords);
+      // if (parsedResult && parsedResult.data && parsedResult.data.length > 0) {
+      //   setCsvData(parsedResult.data);
+      //   setCsvHeaders(parsedResult.headers);
+      //   // Atualizar fieldPositions e fieldStyles aqui como em handleCSVUpload
+      //   setActiveStep(1);
+      // } else {
+      //   alert('Não foi possível processar a resposta da IA para o formato de tabela.');
+      // }
 
     } catch (error) {
-      console.error("Erro ao simular chamada da API DeepSeek:", error);
-      alert("Ocorreu um erro ao tentar gerar o conteúdo com IA.");
+      console.error("Erro ao chamar ou processar API DeepSeek:", error);
+      alert(`Erro ao gerar conteúdo com IA: ${error.message}`);
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const parseIaResponseToCsvData = (responseText, numRecords) => {
+    const headers = ["Título", "Texto Principal", "Ponte para o Próximo"];
+    const data = [];
+
+    if (!responseText || typeof responseText !== 'string') {
+        console.error("Resposta da IA inválida ou vazia para parsing.");
+        return { data: [], headers };
+    }
+
+    // Tenta dividir a resposta em elementos. Isso é altamente dependente do formato da IA.
+    // Uma suposição inicial: cada elemento começa com algo como "Elemento X:" ou um padrão numérico.
+    // Ou, se a IA for bem comportada, poderíamos tentar um split mais genérico por blocos de texto.
+    // Por agora, vamos tentar uma abordagem bem simples baseada nos campos esperados.
+
+    // Regex para encontrar "Título:", "Texto Principal:", "Ponte para o Próximo:"
+    // Esta é uma regex muito básica e pode precisar de muitos ajustes.
+    const elementoRegex = /Título\s*:(.*?)(?:Texto Principal\s*:|\n\n|$)/gis;
+    let match;
+    let currentMatchIndex = 0;
+
+    // Este loop tenta encontrar blocos que começam com "Título:"
+    // e depois extrai os outros campos a partir daí.
+    // É uma heurística e pode falhar facilmente dependendo da formatação da IA.
+
+    // Uma abordagem mais robusta seria se a IA usasse delimitadores claros, ex: "---ELEMENTO---"
+    // Por enquanto, vamos tentar uma abordagem mais direta de extração de campos.
+
+    const lines = responseText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    let currentRecord = {};
+    let fieldOrderIndex = 0; // 0: Título, 1: Texto Principal, 2: Ponte
+
+    for (const line of lines) {
+        if (line.toLowerCase().startsWith("título:") || line.toLowerCase().startsWith("titulo:")) {
+            if (Object.keys(currentRecord).length > 0 && data.length < numRecords) {
+                 // Antes de começar um novo título, se o registro anterior tem algo, adicione-o
+                 // e preencha campos faltantes se necessário
+                if (!currentRecord["Título"]) currentRecord["Título"] = "";
+                if (!currentRecord["Texto Principal"]) currentRecord["Texto Principal"] = "";
+                if (!currentRecord["Ponte para o Próximo"]) currentRecord["Ponte para o Próximo"] = "";
+                data.push(currentRecord);
+            }
+            currentRecord = {}; // Começa novo registro
+            currentRecord["Título"] = line.substring(line.indexOf(':') + 1).trim();
+            fieldOrderIndex = 1;
+        } else if (line.toLowerCase().startsWith("texto principal:")) {
+            currentRecord["Texto Principal"] = line.substring(line.indexOf(':') + 1).trim();
+            fieldOrderIndex = 2;
+        } else if (line.toLowerCase().startsWith("ponte para o próximo:") || line.toLowerCase().startsWith("ponte:")) {
+            currentRecord["Ponte para o Próximo"] = line.substring(line.indexOf(':') + 1).trim();
+            fieldOrderIndex = 0; // Reset para próximo título
+             if (Object.keys(currentRecord).length >= 1 && data.length < numRecords) { // Garante que tem pelo menos um título
+                if (!currentRecord["Título"]) currentRecord["Título"] = "Título não encontrado"; // Fallback
+                if (!currentRecord["Texto Principal"]) currentRecord["Texto Principal"] = "";
+                if (!currentRecord["Ponte para o Próximo"]) currentRecord["Ponte para o Próximo"] = "";
+                data.push(currentRecord);
+                currentRecord = {};
+            }
+        } else {
+            // Se a linha não é um header de campo conhecido, tenta anexar ao último campo detectado
+            // Isso é muito propenso a erros e depende da IA não colocar texto extra entre os campos.
+            if (fieldOrderIndex === 1 && currentRecord["Título"] && !currentRecord["Texto Principal"]) {
+                 // Assume que é continuação do Título ou início do Texto Principal se Texto Principal estiver vazio
+                currentRecord["Texto Principal"] = (currentRecord["Texto Principal"] || "") + " " + line;
+                currentRecord["Texto Principal"] = currentRecord["Texto Principal"].trim();
+            } else if (fieldOrderIndex === 2 && currentRecord["Texto Principal"] && !currentRecord["Ponte para o Próximo"]) {
+                // Assume que é continuação do Texto Principal ou início da Ponte
+                 currentRecord["Ponte para o Próximo"] = (currentRecord["Ponte para o Próximo"] || "") + " " + line;
+                 currentRecord["Ponte para o Próximo"] = currentRecord["Ponte para o Próximo"].trim();
+            }
+        }
+    }
+    // Adicionar o último registro se ele existir e não tiver sido adicionado
+    if (Object.keys(currentRecord).length > 0 && data.length < numRecords && currentRecord["Título"]) {
+        if (!currentRecord["Texto Principal"]) currentRecord["Texto Principal"] = "";
+        if (!currentRecord["Ponte para o Próximo"]) currentRecord["Ponte para o Próximo"] = "";
+        data.push(currentRecord);
+    }
+
+    // Se gerou menos registros que o solicitado, preenche com vazios até numRecords
+    // while(data.length < numRecords && data.length > 0) { // Apenas se já começou a gerar algo
+    //   data.push({ "Título": `Elemento ${data.length + 1} (placeholder)`, "Texto Principal": "", "Ponte para o Próximo": "" });
+    // }
+
+    console.log("[parseIaResponseToCsvData] Dados Parseados:", data);
+    return { data, headers };
   };
 
 
