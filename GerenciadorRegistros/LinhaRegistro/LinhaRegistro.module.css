@@ -58,14 +58,10 @@
     color: #121212; /* Texto escuro para contraste */
     border-color: #ff7979;
 }
-
-
 .actionsCell { /* Para alinhar os botões na célula de ações */
     white-space: nowrap; /* Impede que os botões quebrem linha se a célula for estreita */
     text-align: center; /* Centraliza os botões na célula de ações */
 }
 
 /* Estilos para a linha (tr) no modo escuro, se necessário, mas geralmente o TabelaRegistros já cuida do fundo da linha */
-.darkMode /* tr.darkMode */ {
-    /* Se precisar de estilos específicos para a linha inteira no modo escuro */
-}
+/* .darkMode {} - Ruleset vazio removido para corrigir aviso de lint */
