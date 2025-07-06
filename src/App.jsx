@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react'; // Correção: Restaurar importação completa
 import { useIsMobile } from './hooks/use-mobile'; // Importa o hook
 import {
   Container,
@@ -16,7 +16,12 @@ import {
   StepContent,
   Chip,
   IconButton, // Adicionado para botões de ícone
-  Tooltip // Adicionado para dicas de ferramenta
+  Tooltip, // Adicionado para dicas de ferramenta
+  ToggleButton,
+  ToggleButtonGroup,
+  TextField,
+  CircularProgress,
+  Link as MuiLink
 } from '@mui/material';
 import {
   CloudUpload,
@@ -28,10 +33,14 @@ import {
   ArrowForwardIos, // Ícone para próximo
   MoreVert, // Ícone para o menu de ações
   Brightness4, // Ícone para modo dark
-  Brightness7 // Ícone para modo light
+  Brightness7, // Ícone para modo light
+  Edit // Ícone para editar registros
 } from '@mui/icons-material';
 import Papa from 'papaparse';
 import ColorThief from 'colorthief';
+// import React, { useState, useRef, useEffect, useCallback } from 'react'; // Removido, pois já está no topo
+// import { useIsMobile } from './hooks/use-mobile'; // Removendo a duplicata - useIsMobile já é importado na linha 2
+// ... (outros imports)
 // Adicionar Menu e MenuItem para o menu de ações
 import { Menu, MenuItem } from '@mui/material';
 // Imports para Theming
@@ -40,6 +49,10 @@ import CssBaseline from '@mui/material/CssBaseline'; // Normaliza estilos e apli
 
 import FieldPositioner from './components/FieldPositioner';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
+import GerenciadorRegistros from '../GerenciadorRegistros/GerenciadorRegistros'; // Importar o GerenciadorRegistros
+import DeepSeekAuthSetup from './components/DeepSeekAuthSetup'; // Importar o componente de configuração da API DeepSeek
+import { getDeepSeekApiKey } from '../utils/deepSeekCredentials'; // Importar utilitário para verificar a chave
+import VpnKeyIcon from '@mui/icons-material/VpnKey'; // Ícone para a chave da API
 import './App.css';
 
 // Definição dos temas light e dark
@@ -96,34 +109,43 @@ function App() {
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
   const [generatedImagesData, setGeneratedImagesData] = useState([]); // Para armazenar dados de ImageGeneratorFrontendOnly
   const isMobile = useIsMobile(); // Usa o hook para determinar se é mobile
-  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(isMobile); // Inicializa colapsado em mobile
+  // const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(isMobile); // Removido ou ajustado
   const [anchorElMenu, setAnchorElMenu] = useState(null); // Para o menu de ações
+  const [isHeaderHovered, setIsHeaderHovered] = useState(false); // Novo estado para hover no cabeçalho
+  const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false); // Estado para o modal da chave DeepSeek
+
+  // Estados para a Geração com IA
+  const [inputMethod, setInputMethod] = useState('csv'); // 'csv' ou 'ia'
+  const [promptNumRecords, setPromptNumRecords] = useState(10); // Default 10, conforme sugerido
+  const [promptText, setPromptText] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false); // Para feedback de carregamento da IA
+
 
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const loadStateInputRef = useRef(null); // Ref para o input de carregar estado
 
-  // Efeito para lidar com o scroll e colapsar o header
-  useEffect(() => {
-    // Se for mobile, o header começa colapsado e não muda com o scroll
-    if (isMobile) {
-      setIsHeaderCollapsed(true);
-      return;
-    }
+  // Efeito para lidar com o scroll e colapsar o header - REMOVIDO
+  // useEffect(() => {
+  //   // Se for mobile, o header começa colapsado e não muda com o scroll
+  //   if (isMobile) {
+  //     // setIsHeaderCollapsed(true); // isHeaderCollapsed foi removido ou seu uso mudou
+  //     return;
+  //   }
 
-    const handleScroll = () => {
-      if (window.scrollY > 50) { // Colapsa após 50px de scroll
-        setIsHeaderCollapsed(true);
-      } else {
-        setIsHeaderCollapsed(false);
-      }
-    };
+  //   const handleScroll = () => {
+  //     if (window.scrollY > 50) {
+  //       // setIsHeaderCollapsed(true);
+  //     } else {
+  //       // setIsHeaderCollapsed(false);
+  //     }
+  //   };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [isMobile]); // Adiciona isMobile como dependência
+  //   window.addEventListener('scroll', handleScroll);
+  //   return () => {
+  //     window.removeEventListener('scroll', handleScroll);
+  //   };
+  // }, [isMobile]);
 
   // Efeito para salvar a preferência do tema no localStorage
   useEffect(() => {
@@ -132,20 +154,24 @@ function App() {
 
   const steps = [
     {
-      label: 'Upload do CSV',
-      description: 'Carregue o arquivo CSV com os dados'
+      label: 'Definir Dados Iniciais',
+      description: 'Carregue um CSV ou prepare para adicionar dados manualmente.'
+    },
+    {
+      label: 'Editar Dados',
+      description: 'Adicione, edite ou remova registros conforme necessário.'
     },
     {
       label: 'Upload da Imagem',
-      description: 'Carregue a imagem de fundo PNG/JPG'
+      description: 'Carregue a imagem de fundo PNG/JPG.'
     },
     {
       label: 'Posicionar e Formatar',
-      description: 'Posicione os campos e configure a formatação'
+      description: 'Posicione os campos e configure a formatação.'
     },
     {
       label: 'Gerar Imagens',
-      description: 'Gere as imagens finais'
+      description: 'Gere as imagens finais.'
     }
   ];
 
@@ -212,7 +238,8 @@ function App() {
             setFieldPositions(updatedFieldPositions);
             setFieldStyles(updatedFieldStyles);
             
-            if (activeStep === 0) setActiveStep(1);
+            setActiveStep(1); // Avança para a etapa de Edição de Dados (índice 1)
+            // alert(`${newCsvData.length} registros carregados do CSV com sucesso! Clique em 'Próximo' para editar ou continuar.`); // Removido
           }
         },
         error: (error) => {
@@ -241,7 +268,18 @@ function App() {
         };
         img.src = imageUrl;
 
-        if (activeStep === 1) setActiveStep(2);
+        // setActiveStep(2) -> Se Upload da Imagem é a etapa 2, a próxima é a 3 (Posicionar e Formatar)
+        // O array de steps é 0-indexed:
+        // 0: Definir Dados Iniciais
+        // 1: Editar Dados
+        // 2: Upload da Imagem
+        // 3: Posicionar e Formatar
+        // 4: Gerar Imagens
+        const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar');
+        if (etapaPosicionarFormatarIndex !== -1) {
+            setActiveStep(etapaPosicionarFormatarIndex);
+        }
+        // alert("Imagem de fundo carregada com sucesso! Clique em 'Próximo' para continuar."); // Removido
       };
       reader.readAsDataURL(file);
     }
@@ -255,12 +293,20 @@ function App() {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
   };
 
-  const canProceedToStep = (step) => {
-    switch (step) {
-      case 1: return csvData.length > 0;
-      case 2: return backgroundImage !== null;
-      case 3: return true; // Posicionamento e formatação são opcionais
-      default: return true;
+  const canProceedToStep = (nextStepIndex) => {
+    // `nextStepIndex` é o índice do passo PARA o qual queremos ir.
+    // `activeStep` é o passo atual.
+    switch (activeStep) {
+      case 0: // Saindo de 'Definir Dados Iniciais' para 'Editar Dados' (nextStepIndex === 1)
+        return true; // Sempre pode ir para a edição, mesmo que não haja dados CSV carregados.
+      case 1: // Saindo de 'Editar Dados' para 'Upload da Imagem' (nextStepIndex === 2)
+        return csvData.length > 0; // Precisa ter dados para prosseguir para a imagem.
+      case 2: // Saindo de 'Upload da Imagem' para 'Posicionar e Formatar' (nextStepIndex === 3)
+        return backgroundImage !== null; // Precisa ter imagem de fundo.
+      case 3: // Saindo de 'Posicionar e Formatar' para 'Gerar Imagens' (nextStepIndex === 4)
+        return true; // Posicionamento é opcional para gerar.
+      default:
+        return true; // Permite avançar de outros passos por padrão (ex: de Gerar para um futuro Resumo)
     }
   };
 
@@ -466,44 +512,213 @@ function App() {
     handleSaveState();
   };
 
+  const handleOpenGerenciadorRegistros = () => {
+    // setShowGerenciadorRegistros(true); // Removido
+    setActiveStep(1); // Avança para a etapa de edição
+    handleMenuClose(); // Fechar o menu de ações se estiver aberto
+  };
+
+  // Renomeado de handleConcluirEdicaoRegistros para handleDadosAlterados
+  const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
+    // console.log('[App] handleDadosAlterados Recebeu Registros:', JSON.parse(JSON.stringify(novosRegistros)), 'Colunas:', novasColunas);
+    setCsvData(novosRegistros);
+    setCsvHeaders(novasColunas);
+
+    // Atualizar fieldPositions e fieldStyles com base nas novas colunas
+    const updatedFieldPositions = {};
+    const updatedFieldStyles = {};
+    const defaultStylesBase = {
+      fontFamily: 'Arial',
+      fontSize: 24,
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+      textDecoration: 'none',
+      color: darkMode ? '#FFFFFF' : '#000000', // Ajustar cor padrão com base no tema
+      textStroke: false,
+      strokeColor: darkMode ? '#000000' : '#FFFFFF',
+      strokeWidth: 2,
+      textShadow: false,
+      shadowColor: '#000000',
+      shadowBlur: 4,
+      shadowOffsetX: 2,
+      shadowOffsetY: 2,
+      textAlign: 'left',
+      verticalAlign: 'top'
+    };
+
+    novasColunas.forEach((header, index) => {
+      updatedFieldPositions[header] = fieldPositions[header] || {
+        x: 10 + (index % 5) * 18,
+        y: 10 + Math.floor(index / 5) * 12,
+        width: 15,
+        height: 10,
+        visible: true
+      };
+      updatedFieldStyles[header] = fieldStyles[header] || { ...defaultStylesBase };
+    });
+
+    setFieldPositions(updatedFieldPositions);
+    setFieldStyles(updatedFieldStyles);
+
+    // setShowGerenciadorRegistros(false); // Removido
+    // A lógica de avançar o passo foi removida daqui, será controlada pelos botões globais Next/Back
+    // e pela lógica em canProceedToStep.
+  }, [darkMode, fieldPositions, fieldStyles, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles]);
+
+  const handleGenerateIAContent = async () => {
+    setIsGenerating(true);
+    const apiKey = getDeepSeekApiKey();
+
+    if (!apiKey) {
+      alert('Por favor, configure sua chave da API DeepSeek primeiro.\nVocê pode fazer isso no menu "Mais ações" (ícone de três pontos) no cabeçalho.');
+      setIsGenerating(false);
+      return;
+    }
+
+    if (!promptText.trim()) {
+      alert('Por favor, forneça um texto descritivo para o prompt.');
+      setIsGenerating(false);
+      return;
+    }
+
+    if (promptNumRecords <= 0) {
+        alert('A quantidade de registros a gerar deve ser maior que zero.');
+        setIsGenerating(false);
+        return;
+    }
+
+    const finalPrompt = `Elabore um carrossel para Instagram com ${promptNumRecords} elementos baseado no texto abaixo. Ajuste o prompt para que o retorno permita o preenchimento equivalente ao do csv:
+${promptText}
+Cada elemento deve conter:
+### Requisitos para cada elemento:
+1. **Título** (até 4 palavras):
+   - Impactante e curto
+   - Use emojis relevantes no início
+   - Exemplo: "✨ Segredo Revelado"
+
+2. **Texto Principal** (120-180 caracteres):
+   - Fragmento do texto base adaptado para o elemento
+   - Linguagem direta e conversacional
+   - Incluir 1 pergunta retórica
+   - Exemplo: "Sabia que 80% dos negócios falham nisso? Descubra como evitar esse erro..."
+
+3. **Ponte para o Próximo** (até 40 caracteres):
+   - Criar curiosidade para o próximo elemento
+   - Usar fórmula: Emoji + Chamada + Dica do próximo
+   - Exemplos:
+     → "Próximo: O passo que muda tudo!"
+     → "Siga para o segredo nº3 👇"
+
+### Estrutura de Progressão:
+- Elemento 1: Dado impactante + pergunta instigante
+- Elementos 2-${promptNumRecords > 1 ? promptNumRecords -1 : 1}: Conteúdo principal dividido em passos (ajustar se promptNumRecords for 1 ou 2)
+- Elemento ${promptNumRecords}: CTA claro + bônus surpresa (ou Case de sucesso/resumo se for o penúltimo e CTA no último, ajustar para ${promptNumRecords})
+
+### Tom de Voz:
+- Empático e motivacional (use "você" e "vamos")
+- Urgência controlada ("Agora você pode...")
+- Toque de storytelling`;
+
+    console.log("Prompt para DeepSeek:", finalPrompt);
+    console.log("Número de Registros para Gerar:", promptNumRecords);
+
+    // Simulação de chamada à API
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simula delay da API
+      console.log("Simulação de resposta da API DeepSeek recebida.");
+      // TODO: Processar a resposta da API e definir csvData e csvHeaders
+      // Exemplo:
+      // const mockIAData = [
+      //   { "Título": "✨ Título Gerado 1", "Texto Principal": "Texto principal gerado 1...", "Ponte para o Próximo": "➡️ Próximo: Incrível!" },
+      //   { "Título": "🚀 Título Gerado 2", "Texto Principal": "Texto principal gerado 2...", "Ponte para o Próximo": "👇 Continue!" },
+      // ];
+      // const mockIAHeaders = ["Título", "Texto Principal", "Ponte para o Próximo"];
+      // setCsvData(mockIAData);
+      // setCsvHeaders(mockIAHeaders);
+      // setActiveStep(1); // Avança para a etapa de edição após gerar dados
+      alert("Conteúdo gerado (simulado)! Verifique o console. A integração real da API e o parsing da resposta são os próximos passos.");
+
+    } catch (error) {
+      console.error("Erro ao simular chamada da API DeepSeek:", error);
+      alert("Ocorreu um erro ao tentar gerar o conteúdo com IA.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
 
   const currentTheme = darkMode ? darkTheme : lightTheme;
+
+  // Removida a renderização condicional do GerenciadorRegistros aqui,
+  // ele será renderizado como parte do conteúdo da etapa.
+
+  // Efeito temporário para logar csvData após atualização (para depuração da exclusão)
+  // useEffect(() => {
+  //   console.log('[App] Estado csvData atualizado (dentro do useEffect):', JSON.parse(JSON.stringify(csvData)));
+  // }, [csvData]);
+
+  const headerExpandedHeight = '280px'; // Altura do header quando expandido
+  const headerCollapsedHeight = '80px'; // Altura do header quando colapsado (para padding do container)
+  const headerPaperHeightCollapsed = '60px'; // Altura do Paper do header quando colapsado
 
   return (
     <ThemeProvider theme={currentTheme}>
       <CssBaseline /> {/* Adiciona normalização e cor de fundo do tema */}
-      <Container maxWidth="xl" sx={{ pt: isHeaderCollapsed || isMobile ? '80px' : '280px', transition: 'padding-top 0.3s ease-in-out' }}>
+      {/* Ajustar pt (padding-top) do Container com base em isMobile ou isHeaderHovered */}
+      <Container
+        maxWidth="xl"
+        sx={{
+          pt: isMobile ? headerCollapsedHeight : (isHeaderHovered ? headerExpandedHeight : headerCollapsedHeight),
+          transition: 'padding-top 0.3s ease-in-out'
+        }}
+      >
         <Paper 
           elevation={3} 
+          onMouseEnter={() => !isMobile && setIsHeaderHovered(true)}
+          onMouseLeave={() => !isMobile && setIsHeaderHovered(false)}
           sx={{ 
-          p: isHeaderCollapsed || isMobile ? 2 : 4, 
-          mb: 4, 
-          position: 'fixed', // Para fixar o header no topo
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1100, // Acima do conteúdo e dos botões de navegação laterais
-          height: isHeaderCollapsed || isMobile ? '60px' : 'auto', // Altura dinâmica
-          minHeight: '60px', // Altura mínima quando colapsado
-          overflow: 'hidden', // Para esconder conteúdo que transborda durante a transição
-          transition: 'height 0.3s ease-in-out, padding 0.3s ease-in-out',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center', // Centraliza conteúdo verticalmente quando colapsado
+            p: isMobile ? 2 : (isHeaderHovered ? 4 : 2),
+            mb: 4,
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1100,
+            height: isMobile ? headerPaperHeightCollapsed : (isHeaderHovered ? 'auto' : headerPaperHeightCollapsed),
+            minHeight: headerPaperHeightCollapsed,
+            overflow: 'hidden',
+            transition: 'height 0.3s ease-in-out, padding 0.3s ease-in-out',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
         }}
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <Box>
             <Typography 
-              variant={isHeaderCollapsed || isMobile ? 'h5' : 'h3'} 
+              variant={isMobile || !isHeaderHovered ? 'h5' : 'h3'}
               component="h3" 
               color="primary"
-              sx={{ transition: 'font-size 0.3s ease-in-out', m:0, p:0, lineHeight: isHeaderCollapsed || isMobile ? 'normal': 'inherit' }} // Ajuste para remover margem/padding do Typography
+              sx={{
+                transition: 'font-size 0.3s ease-in-out',
+                m:0, p:0,
+                lineHeight: isMobile || !isHeaderHovered ? 'normal': 'inherit'
+              }}
             >
               Midiator - Mesclar conteúdo
             </Typography>
-            {!(isHeaderCollapsed || isMobile) && (
-              <Typography variant="h6" color="textSecondary" sx={{ mb: 0, transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out', opacity: isHeaderCollapsed || isMobile ? 0 : 1, height: isHeaderCollapsed || isMobile ? 0 : 'auto' }}>
+            {/* Mostrar subtítulo apenas se não for mobile E o header estiver expandido (hover) */}
+            {!isMobile && isHeaderHovered && (
+              <Typography
+                variant="h6"
+                color="textSecondary"
+                sx={{
+                  mb: 0,
+                  transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out',
+                  opacity: isHeaderHovered ? 1 : 0,
+                  height: isHeaderHovered ? 'auto' : 0
+                }}
+              >
                 Crie imagens personalizadas com controles de formatação individual
               </Typography>
             )}
@@ -532,6 +747,18 @@ function App() {
               open={Boolean(anchorElMenu)}
               onClose={handleMenuClose}
             >
+              {/* <MenuItem onClick={handleOpenGerenciadorRegistros}> // Removido - Edição agora é uma etapa
+                <Edit sx={{ mr: 1 }} />
+                Editar Registros
+              </MenuItem> */}
+              <MenuItem onClick={() => setActiveStep(1)}> {/* Atalho para ir para Etapa de Edição */}
+                <Edit sx={{ mr: 1 }} />
+                Ir para Edição de Dados
+              </MenuItem>
+              <MenuItem onClick={() => { setShowDeepSeekAuthModal(true); handleMenuClose(); }}>
+                <VpnKeyIcon sx={{ mr: 1 }} />
+                Configurar API DeepSeek
+              </MenuItem>
               <MenuItem onClick={handleSaveTemplateClick}>Salvar Config. Template</MenuItem>
               <MenuItem onClick={handleLoadTemplateClick}>Carregar Config. Template</MenuItem>
             </Menu>
@@ -546,37 +773,38 @@ function App() {
           </Box>
         </Box>
         
-        {!(isHeaderCollapsed || isMobile) && (
+        {/* Mostrar indicadores de status apenas se não for mobile E o header estiver expandido (hover) */}
+        {!isMobile && isHeaderHovered && (
           <>
             {/* Indicadores de status */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2, mb: 2, flexWrap: 'wrap', transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out', opacity: isHeaderCollapsed || isMobile ? 0 : 1, height: isHeaderCollapsed || isMobile ? 0 : 'auto' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2, mb: 2, flexWrap: 'wrap', transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out', opacity: isHeaderHovered ? 1 : 0, height: isHeaderHovered ? 'auto' : 0 }}>
               <Chip 
                 icon={<FileUpload />}
                 label={`${csvData.length} registros`}
                 color={csvData.length > 0 ? 'success' : 'default'}
                 variant={csvData.length > 0 ? 'filled' : 'outlined'}
-                size={isHeaderCollapsed ? 'small' : 'medium'}
+                size={!isHeaderHovered ? 'small' : 'medium'}
               />
               <Chip 
                 icon={<ImageIcon />}
                 label="Imagem de fundo"
                 color={backgroundImage ? 'success' : 'default'}
                 variant={backgroundImage ? 'filled' : 'outlined'}
-                size={isHeaderCollapsed ? 'small' : 'medium'}
+                size={!isHeaderHovered ? 'small' : 'medium'}
               />
               <Chip 
                 icon={<Settings />}
                 label={`${visibleFields}/${totalFields} campos`}
                 color={visibleFields > 0 ? 'info' : 'default'}
                 variant="filled"
-                size={isHeaderCollapsed ? 'small' : 'medium'}
+                size={!isHeaderHovered ? 'small' : 'medium'}
               />
               <Chip 
                 icon={<Palette />}
                 label={`${styledFields} estilos`}
                 color={styledFields > 0 ? 'secondary' : 'default'}
                 variant="filled"
-                size={isHeaderCollapsed ? 'small' : 'medium'}
+                size={!isHeaderHovered ? 'small' : 'medium'}
               />
             </Box>
             {/* Botões Salvar/Carregar Configuração foram movidos para o Menu */}
@@ -617,56 +845,162 @@ function App() {
         <Grid item xs={12} md={9} 
            >
           
-          {/* Passo 1: Upload CSV */}
+          {/* Passo 0: Definir Dados Iniciais (Upload CSV ou Manual) */}
           {activeStep === 0 && (
             <Card>
               <CardContent>
                 <Typography variant="h5" gutterBottom>
                   <FileUpload sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  Upload do Arquivo CSV
+                  {steps[0].label}
                 </Typography>
-                
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Button
-                    variant="contained"
-                    component="label"
-                    size="large"
-                    startIcon={<FileUpload />}
-                    sx={{ mb: 2 }}
+
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+                  <ToggleButtonGroup
+                    color="primary"
+                    value={inputMethod}
+                    exclusive
+                    onChange={(event, newInputMethod) => {
+                      if (newInputMethod !== null) {
+                        setInputMethod(newInputMethod);
+                      }
+                    }}
+                    aria-label="Método de entrada de dados"
                   >
-                    Selecionar Arquivo CSV
-                    <input
-                      type="file"
-                      accept=".csv"
-                      hidden
-                      ref={fileInputRef}
-                      onChange={handleCSVUpload}
-                    />
-                  </Button>
-                  
-                  <Typography variant="body2" color="textSecondary">
-                    Selecione um arquivo CSV com os dados que deseja usar nas imagens
-                  </Typography>
-                  
-                  {csvData.length > 0 && (
-                    <Alert severity="success" sx={{ mt: 2 }}>
-                      ✅ {csvData.length} registros carregados com sucesso!
-                      <br />
-                      Campos encontrados: {csvHeaders.join(', ')}
-                    </Alert>
-                  )}
+                    <ToggleButton value="csv">Carregar CSV</ToggleButton>
+                    <ToggleButton value="ia">Gerar com IA</ToggleButton>
+                  </ToggleButtonGroup>
                 </Box>
+
+                {inputMethod === 'csv' && (
+                  <Box sx={{ textAlign: 'center', py: 2 }}>
+                    <Button
+                      variant="contained"
+                      component="label"
+                      size="large"
+                      startIcon={<FileUpload />}
+                      sx={{ mb: 2 }}
+                    >
+                      Selecionar Arquivo CSV
+                      <input
+                        type="file"
+                        accept=".csv"
+                        hidden
+                        ref={fileInputRef}
+                        onChange={handleCSVUpload}
+                      />
+                    </Button>
+                    <Typography variant="body2" color="textSecondary" sx={{mt:1}}>
+                      Carregue um arquivo CSV para definir os dados.
+                    </Typography>
+                    {csvData.length > 0 && (
+                      <Alert severity="success" sx={{ mt: 2 }}>
+                        ✅ {csvData.length} registros carregados. Campos: {csvHeaders.join(', ')}.
+                        <br/>Clique em "Próximo" para editar.
+                      </Alert>
+                    )}
+                     {csvData.length === 0 && activeStep === 0 && (
+                       <Alert severity="info" sx={{mt: 2,  maxWidth: '60%', margin: '10px auto' } }>
+                          Nenhum dado CSV carregado.
+                       </Alert>
+                    )}
+                  </Box>
+                )}
+
+                {inputMethod === 'ia' && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', py: 2 }}>
+                    {!getDeepSeekApiKey() && (
+                      <Alert severity="warning" sx={{ mb: 2, width: '100%', maxWidth: '500px' }}>
+                        Chave da API DeepSeek não configurada.
+                        <MuiLink component="button" variant="body2" onClick={() => setShowDeepSeekAuthModal(true)} sx={{ml:1}}>
+                          Configurar Chave Agora
+                        </MuiLink>
+                         para habilitar a geração com IA.
+                      </Alert>
+                    )}
+                    <TextField
+                      label="Quantidade de Elementos/Registros"
+                      type="number"
+                      value={promptNumRecords}
+                      onChange={(e) => setPromptNumRecords(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      inputProps={{ min: 1 }}
+                      variant="outlined"
+                      sx={{ width: '100%', maxWidth: '500px' }}
+                    />
+                    <TextField
+                      label="Texto Descritivo do Prompt (Objetivo)"
+                      multiline
+                      rows={4}
+                      value={promptText}
+                      onChange={(e) => setPromptText(e.target.value)}
+                      variant="outlined"
+                      sx={{ width: '100%', maxWidth: '500px' }}
+                      placeholder="Ex: Um carrossel sobre os benefícios da meditação para reduzir o estresse, focado em dicas práticas para iniciantes."
+                    />
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      size="large"
+                      onClick={handleGenerateIAContent} // Associar a função aqui
+                      disabled={isGenerating || !getDeepSeekApiKey() || !promptText.trim()}
+                      sx={{ mt: 1, position: 'relative' }}
+                    >
+                      {isGenerating && (
+                        <CircularProgress
+                          size={24}
+                          sx={{
+                            color: 'primary.contrastText',
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            marginTop: '-12px',
+                            marginLeft: '-12px',
+                          }}
+                        />
+                      )}
+                      {isGenerating ? 'Gerando...' : 'Gerar Conteúdo com IA'}
+                    </Button>
+                     <Typography variant="body2" color="textSecondary" sx={{mt:1}}>
+                        Após gerar, os dados aparecerão abaixo. Clique em "Próximo" para editá-los.
+                    </Typography>
+                     {csvData.length > 0 && ( // Mostrar dados gerados se houver
+                      <Alert severity="success" sx={{ mt: 2 }}>
+                        ✅ {csvData.length} registros gerados/carregados. Campos: {csvHeaders.join(', ')}.
+                        <br/>Clique em "Próximo" para editar.
+                      </Alert>
+                    )}
+                  </Box>
+                )}
+
+                {/* Mensagem genérica para quando não há dados e está na Etapa 0, para o modo IA */}
+                {inputMethod === 'ia' && csvData.length === 0 && !isGenerating && (
+                   <Alert severity="info" sx={{mt: 2, maxWidth: '70%', margin: '20px auto' } }>
+                      Preencha os campos acima e clique em "Gerar Conteúdo com IA" para iniciar. Alternativamente, selecione "Carregar CSV" para usar um arquivo.
+                   </Alert>
+                )}
+                {/* O Box que engloba os conteúdos de 'csv' ou 'ia' já foi fechado dentro de suas respectivas condições.
+                    Não há um </Box> extra necessário aqui antes de </CardContent>
+                */}
               </CardContent>
             </Card>
           )}
 
-          {/* Passo 2: Upload Imagem */}
+          {/* Passo 1: Editar Dados */}
           {activeStep === 1 && (
+            <GerenciadorRegistros
+              registrosIniciais={csvData}
+              colunasIniciais={csvHeaders}
+              onDadosAlterados={handleDadosAlterados} // Nome da prop atualizado
+              darkMode={darkMode}
+            />
+          )}
+
+          {/* Passo 2: Upload Imagem */}
+          {activeStep === 2 && (
             <Card>
               <CardContent>
                 <Typography variant="h5" gutterBottom>
                   <CloudUpload sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  Upload da Imagem de Fundo
+                  {steps[2].label}
                 </Typography>
                 
                 <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -715,7 +1049,7 @@ function App() {
           )}
 
           {/* Passo 3: Posicionamento e Formatação */}
-          {activeStep === 2 && (
+          {activeStep === 3 && (
             <FieldPositioner
               backgroundImage={backgroundImage}
               csvHeaders={csvHeaders}
@@ -730,7 +1064,7 @@ function App() {
           )}
 
           {/* Passo 4: Geração */}
-          {activeStep === 3 && (
+          {activeStep === 4 && (
             <ImageGeneratorFrontendOnly
               csvData={csvData}
               backgroundImage={backgroundImage}
@@ -747,8 +1081,8 @@ function App() {
           )}
 
           {/* Botões de navegação não estão mais aqui */}
-        </Grid>
-      </Grid>
+        </Grid> {/* Fecha Grid item xs={12} md={9} do conteúdo principal */}
+      </Grid> {/* Fecha Grid container spacing={3} */}
 
       {/* Botões de Navegação Circulares Flutuantes */}
       <Box
@@ -814,6 +1148,12 @@ function App() {
           </span>
         </Tooltip>
       </Box>
+
+      {/* Modal de Configuração da Chave API DeepSeek */}
+      <DeepSeekAuthSetup
+        open={showDeepSeekAuthModal}
+        onClose={() => setShowDeepSeekAuthModal(false)}
+      />
     </Container>
     </ThemeProvider>
   );

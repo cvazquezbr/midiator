@@ -3,13 +3,14 @@ import styles from './GerenciadorRegistros.module.css';
 import TabelaRegistros from './TabelaRegistros/TabelaRegistros';
 import ModalRegistro from './ModalRegistro/ModalRegistro';
 import ModalConfirmacao from './ModalConfirmacao/ModalConfirmacao';
-import CarregadorCSV from './CarregadorCSV/CarregadorCSV';
+// import CarregadorCSV from './CarregadorCSV/CarregadorCSV'; // Removido
 // Assumindo que PapaParse será importado em CarregadorCSV ou globalmente
 
 const GerenciadorRegistros = ({
     registrosIniciais = [],
     colunasIniciais = [],
-    onConcluirEdicao
+    onDadosAlterados, // Renomeado de onConcluirEdicao
+    darkMode = false
 }) => {
     const [registros, setRegistros] = useState([]);
     const [colunas, setColunas] = useState([]);
@@ -17,45 +18,58 @@ const GerenciadorRegistros = ({
     const [registroSelecionado, setRegistroSelecionado] = useState(null); // Para edição ou exclusão
     const [proximoId, setProximoId] = useState(1);
 
-    // Função para gerar IDs únicos para novos registros
-    const gerarIdUnico = useCallback(() => {
-        const novoId = proximoId;
+    // Renomeado para indicar que é para um único novo registro.
+    const gerarIdParaNovoRegistroSingular = useCallback(() => {
+        const novoIdValor = proximoId;
         setProximoId(prevId => prevId + 1);
-        return `reg-${novoId}`; // Adiciona um prefixo para evitar conflitos com IDs numéricos puros
+        return `reg-${novoIdValor}`;
     }, [proximoId]);
 
     // Inicialização e sincronização com props externas
     useEffect(() => {
-        // console.log("Efeito de inicialização disparado. Registros Iniciais:", registrosIniciais, "Colunas Iniciais:", colunasIniciais);
-        let maxId = 0;
+        let maxIdCalculado = 0;
+        registrosIniciais.forEach(reg => {
+            if (reg.id !== undefined && reg.id !== null) {
+                const numIdMatch = String(reg.id).match(/\d+$/);
+                if (numIdMatch) {
+                    const numId = parseInt(numIdMatch[0], 10);
+                    if (numId > maxIdCalculado) {
+                        maxIdCalculado = numId;
+                    }
+                }
+            }
+        });
+
+        let idCounterParaLote = maxIdCalculado + 1;
+
         const dadosProcessados = registrosIniciais.map(reg => {
             const idOriginal = reg.id;
-            let idFinal = (idOriginal !== undefined && idOriginal !== null) ? String(idOriginal) : gerarIdUnico();
-
-            const numIdMatch = String(idFinal).match(/\d+$/);
-            if (numIdMatch) {
-                const numId = parseInt(numIdMatch[0], 10);
-                if (numId >= maxId) { // Ajusta maxId para o cálculo do próximoId
-                    maxId = numId;
-                }
+            let idFinal;
+            if (idOriginal !== undefined && idOriginal !== null) {
+                idFinal = String(idOriginal);
+            } else {
+                idFinal = `reg-${idCounterParaLote}`;
+                idCounterParaLote++;
             }
             return { ...reg, id: idFinal };
         });
 
         setRegistros(dadosProcessados);
-        // Define proximoId para ser um a mais que o maior ID numérico encontrado, ou 1 se nenhum ID numérico foi encontrado.
-        setProximoId(maxId + 1);
+        setProximoId(idCounterParaLote); // Atualiza o proximoId global com base no último ID gerado em lote
 
-
+        let currentCols;
         if (colunasIniciais && colunasIniciais.length > 0) {
-            setColunas([...new Set(colunasIniciais)]);
-        } else if (dadosProcessados.length > 0) {
-            setColunas(Object.keys(dadosProcessados[0]).filter(k => k !== 'id'));
+            currentCols = [...new Set(colunasIniciais)];
+        } else if (dadosProcessados.length > 0 && dadosProcessados[0]) {
+            currentCols = Object.keys(dadosProcessados[0]).filter(k => k !== 'id');
         } else {
-            setColunas([]);
+            currentCols = [];
         }
-    }, [registrosIniciais, colunasIniciais, gerarIdUnico]);
+        setColunas(currentCols);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [registrosIniciais, colunasIniciais, proximoId]); // proximoId é necessário como dependência porque é lido para inicializar idCounterParaLote.
+                                                      // A lógica de maxIdCalculado e idCounterParaLote garante que os IDs sejam únicos por lote.
 
     // Handlers para abrir modais
     const handleAbrirModalAdicionar = () => {
@@ -80,79 +94,116 @@ const GerenciadorRegistros = ({
 
     // Handlers para CRUD
     const handleSalvarRegistro = (dadosFormulario, idRegistroExistente) => {
+        let novosRegistros;
+        let novasColunas = colunas; // Preserva as colunas atuais por padrão
+
         if (idRegistroExistente !== null && idRegistroExistente !== undefined) {
-            setRegistros(prevRegistros =>
-                prevRegistros.map(reg =>
-                    String(reg.id) === String(idRegistroExistente) ? { ...reg, ...dadosFormulario } : reg
-                )
+            novosRegistros = registros.map(reg =>
+                String(reg.id) === String(idRegistroExistente) ? { ...reg, ...dadosFormulario } : reg
             );
+            setRegistros(novosRegistros);
         } else {
             if (dadosFormulario._novasColunas) {
                 const { _novasColunas, ...primeiroRegistroData } = dadosFormulario;
-                const novasColunasUnicas = [...new Set(_novasColunas.filter(Boolean))]; // Filtra vazias e garante unicidade
-                setColunas(novasColunasUnicas);
-                setRegistros([{ id: gerarIdUnico(), ...primeiroRegistroData }]);
+                novasColunas = [...new Set(_novasColunas.filter(Boolean))];
+                setColunas(novasColunas);
+                novosRegistros = [{ id: gerarIdParaNovoRegistroSingular(), ...primeiroRegistroData }];
+                setRegistros(novosRegistros);
             } else {
-                setRegistros(prevRegistros => [
-                    ...prevRegistros,
-                    { id: gerarIdUnico(), ...dadosFormulario },
-                ]);
+                novosRegistros = [
+                    ...registros,
+                    { id: gerarIdParaNovoRegistroSingular(), ...dadosFormulario },
+                ];
+                setRegistros(novosRegistros);
             }
+        }
+
+        if (onDadosAlterados) {
+            onDadosAlterados(JSON.parse(JSON.stringify(novosRegistros)), [...novasColunas]);
         }
         handleFecharModal();
     };
 
     const handleConfirmarExclusao = () => {
+        // console.log('[GR] handleConfirmarExclusao - Início. Registro Selecionado:', JSON.parse(JSON.stringify(registroSelecionado)));
+        // console.log('[GR] handleConfirmarExclusao - Todos os Registros ANTES:', JSON.parse(JSON.stringify(registros)));
+
         if (registroSelecionado && registroSelecionado.id !== undefined) {
-            setRegistros(prevRegistros =>
-                prevRegistros.filter(reg => String(reg.id) !== String(registroSelecionado.id))
-            );
+            const idParaExcluir = String(registroSelecionado.id);
+            // console.log('[GR] ID para excluir:', idParaExcluir);
+
+            const registrosAposExclusao = registros.filter(reg => {
+                const idAtual = String(reg.id);
+                return idAtual !== idParaExcluir;
+            });
+
+            // console.log('[GR] Registros APÓS filtrar:', JSON.parse(JSON.stringify(registrosAposExclusao)));
+
+            setRegistros(registrosAposExclusao);
+
+            if (onDadosAlterados) {
+                // console.log('[GR] Chamando onDadosAlterados com Registros:', JSON.parse(JSON.stringify(registrosAposExclusao)), 'Colunas:', [...colunas]);
+                onDadosAlterados(
+                    JSON.parse(JSON.stringify(registrosAposExclusao)),
+                    [...colunas]
+                );
+            }
+        } else {
+            // console.warn('[GR] Tentativa de exclusão sem registro selecionado ou ID indefinido.');
         }
         handleFecharModal();
     };
 
-    // Handler para CSV
-    const handleCSVProcessado = (dadosCSV, colunasCSV) => {
-        const colunasUnicasCSV = [...new Set(colunasCSV.filter(Boolean))];
-        setColunas(colunasUnicasCSV);
+    // // Handler para CSV Removido
+    // const handleCSVProcessado = (dadosCSV, colunasCSV) => {
+    //     const colunasUnicasCSV = [...new Set(colunasCSV.filter(Boolean))];
+    //     setColunas(colunasUnicasCSV);
 
-        let currentMaxId = proximoId -1; // Pega o último ID usado antes de processar o CSV
+    //     let currentMaxId = proximoId -1;
 
-        const novosRegistros = dadosCSV.map(item => {
-            currentMaxId++;
-            const novoRegistro = { id: `reg-${currentMaxId}` };
-            colunasUnicasCSV.forEach(coluna => {
-                novoRegistro[coluna] = item[coluna] !== undefined && item[coluna] !== null ? String(item[coluna]) : '';
-            });
-            return novoRegistro;
-        });
-        setProximoId(currentMaxId + 1); // Atualiza proximoId globalmente
-        setRegistros(novosRegistros);
+    //     const novosRegistros = dadosCSV.map(item => {
+    //         currentMaxId++;
+    //         const novoRegistro = { id: `reg-${currentMaxId}` };
+    //         colunasUnicasCSV.forEach(coluna => {
+    //             novoRegistro[coluna] = item[coluna] !== undefined && item[coluna] !== null ? String(item[coluna]) : '';
+    //         });
+    //         return novoRegistro;
+    //     });
+    //     setProximoId(currentMaxId + 1);
+    //     setRegistros(novosRegistros);
 
-        console.log("CSV Processado. Colunas:", colunasUnicasCSV, "Registros:", novosRegistros);
-        alert(`${novosRegistros.length} registros carregados do CSV!`);
-        if (modalAberto === 'ADICIONAR' && (registros.length === 0 && colunas.length === 0) ) { // Se o modal de primeiro add estava aberto
-            handleFecharModal();
-        }
-    };
+    //     console.log("CSV Processado. Colunas:", colunasUnicasCSV, "Registros:", novosRegistros);
+    //     alert(`${novosRegistros.length} registros carregados do CSV!`);
+    //     if (modalAberto === 'ADICIONAR' && (registros.length === 0 && colunas.length === 0) ) {
+    //         handleFecharModal();
+    //     }
+    // };
 
-    const handleConcluir = () => {
-        if (onConcluirEdicao) {
-            onConcluirEdicao(JSON.parse(JSON.stringify(registros)), [...colunas]);
-        }
-        // console.log('Concluir Edição. Dados atuais:', registros, colunas);
-        // alert('Dados prontos para serem salvos pela aplicação principal. Ver console.');
-    };
+    // Efeito para chamar onDadosAlterados quando registros ou colunas mudam
+    // Removido para evitar loops. onDadosAlterados será chamado diretamente.
+    // useEffect(() => {
+    //     if (onDadosAlterados) {
+    //         onDadosAlterados(JSON.parse(JSON.stringify(registros)), [...colunas]);
+    //     }
+    // }, [registros, colunas, onDadosAlterados]);
+
+    // const handleConcluir = () => { // Removido - botão de concluir foi removido
+    //     if (onConcluirEdicao) { // Agora onDadosAlterados
+    //         onConcluirEdicao(JSON.parse(JSON.stringify(registros)), [...colunas]);
+    //     }
+    // };
+
+  const containerClasses = `${styles.container} ${darkMode ? styles.darkMode : ''}`;
 
     return (
-        <div className={styles.container}>
+    <div className={containerClasses}>
             <div className={styles.header}>
                 <h1>Gerenciar Registros</h1>
                 <div className={styles.actionsContainer}>
                     <button onClick={handleAbrirModalAdicionar} className={`${styles.btn} ${styles.btnPrimary}`}>
                         &#43; Adicionar Novo
                     </button>
-                    <CarregadorCSV onCSVProcessado={handleCSVProcessado} />
+                    {/* <CarregadorCSV onCSVProcessado={handleCSVProcessado} darkMode={darkMode} /> Removido */}
                 </div>
             </div>
 
@@ -161,6 +212,7 @@ const GerenciadorRegistros = ({
                 colunas={colunas}
                 onEditar={handleAbrirModalEditar}
                 onExcluir={handleAbrirModalExcluir}
+        darkMode={darkMode}
             />
 
             {modalAberto === 'ADICIONAR' && (
@@ -173,6 +225,7 @@ const GerenciadorRegistros = ({
                     // Passa true se não houver colunas E não houver registros,
                     // indicando que o formulário deve permitir definir colunas.
                     isPrimeiroRegistro={colunas.length === 0 && registros.length === 0}
+          darkMode={darkMode}
                 />
             )}
 
@@ -185,6 +238,7 @@ const GerenciadorRegistros = ({
                     colunasExistentes={colunas}
                     tituloModal="Editar Registro"
                     isPrimeiroRegistro={false}
+          darkMode={darkMode}
                 />
             )}
 
@@ -195,16 +249,16 @@ const GerenciadorRegistros = ({
                     onConfirmar={handleConfirmarExclusao}
                     titulo="Confirmar Exclusão"
                     mensagem={`Você tem certeza que deseja excluir o registro? (ID: ${registroSelecionado.id})`}
+          darkMode={darkMode}
                 />
             )}
 
-            { registros.length > 0 && (
-                <div className={styles.actionsFooter}>
-                    <button onClick={handleConcluir} className={`${styles.btn} ${styles.btnSuccess}`}>
-                        Concluir Edição e Retornar Dados
-                    </button>
-                </div>
-            )}
+      {/* Botão de concluir edição removido, pois a navegação é feita pelo App.jsx */}
+      {/* <div className={styles.actionsFooter}>
+        <button onClick={handleConcluir} className={`${styles.btn} ${styles.btnSuccess}`}>
+          Concluir Edição e Retornar Dados
+        </button>
+      </div> */}
         </div>
     );
 };

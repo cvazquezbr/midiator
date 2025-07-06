@@ -6,34 +6,64 @@
     border-radius: 4px; /* Bordas mais arredondadas */
     border: 1px solid #ccc;
     background-color: #f8f9fa; /* Fundo claro */
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out;
+    color: #333; /* Cor de texto padrão para botões em modo claro */
+}
+/* Estilos de botões no modo escuro */
+.darkMode .btnAction {
+    background-color: #4a4a4a; /* Fundo mais escuro para botões */
+    border-color: #666;
+    color: #ddd; /* Texto claro para botões */
 }
 
 .btnAction:hover {
     background-color: #e9ecef;
     border-color: #adb5bd;
 }
+.darkMode .btnAction:hover {
+    background-color: #5a5a5a;
+    border-color: #777;
+}
 
 .btnEdit {
     color: #007bff; /* Azul para editar */
-    /* border-color: #007bff; */ /* Removido para usar a borda padrão do .btnAction inicialmente */
+}
+.darkMode .btnEdit {
+    color: #63a4ff; /* Azul mais claro para modo escuro */
 }
 .btnEdit:hover {
     background-color: #007bff;
     color: white;
     border-color: #007bff;
 }
+.darkMode .btnEdit:hover {
+    background-color: #63a4ff;
+    color: #121212; /* Texto escuro para contraste */
+    border-color: #63a4ff;
+}
 
 .btnDelete {
     color: #dc3545; /* Vermelho para excluir */
-    /* border-color: #dc3545; */ /* Removido para usar a borda padrão do .btnAction inicialmente */
+}
+.darkMode .btnDelete {
+    color: #ff7979; /* Vermelho mais claro para modo escuro */
 }
 .btnDelete:hover {
     background-color: #dc3545;
     color: white;
     border-color: #dc3545;
 }
+.darkMode .btnDelete:hover {
+    background-color: #ff7979;
+    color: #121212; /* Texto escuro para contraste */
+    border-color: #ff7979;
+}
+
 
 .actionsCell { /* Para alinhar os botões na célula de ações */
     white-space: nowrap; /* Impede que os botões quebrem linha se a célula for estreita */
+    text-align: center; /* Centraliza os botões na célula de ações */
 }
+
+/* Estilos para a linha (tr) no modo escuro, se necessário, mas geralmente o TabelaRegistros já cuida do fundo da linha */
+/* .darkMode {} - Ruleset vazio removido para corrigir aviso de lint */
