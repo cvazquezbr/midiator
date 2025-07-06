@@ -59,14 +59,10 @@ const GerenciadorRegistros = ({
             setColunas(currentCols);
         }
 
-        if (onDadosAlterados) {
-            // Assegurar que onDadosAlterados seja chamado após o estado ser realmente definido.
-            // No entanto, como setColunas e setRegistros são assíncronos,
-            // os valores de colunas e registros podem não estar atualizados aqui imediatamente.
-            // A chamada a onDadosAlterados aqui é para sincronizar o estado inicial.
-            onDadosAlterados(JSON.parse(JSON.stringify(dadosProcessados)), [...currentCols]);
-        }
-    }, [registrosIniciais, colunasIniciais, gerarIdUnico, onDadosAlterados]);
+        // if (onDadosAlterados) { // Removida a chamada de onDadosAlterados daqui
+        //     onDadosAlterados(JSON.parse(JSON.stringify(dadosProcessados)), [...currentCols]);
+        // }
+    }, [registrosIniciais, colunasIniciais, gerarIdUnico]); // Removido onDadosAlterados das dependências aqui
 
 
     // Handlers para abrir modais
