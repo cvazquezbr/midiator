@@ -100,7 +100,7 @@ function App() {
   const isMobile = useIsMobile(); // Usa o hook para determinar se é mobile
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(isMobile); // Inicializa colapsado em mobile
   const [anchorElMenu, setAnchorElMenu] = useState(null); // Para o menu de ações
-  const [showGerenciadorRegistros, setShowGerenciadorRegistros] = useState(false); // Estado para controlar a exibição do GerenciadorRegistros
+  // const [showGerenciadorRegistros, setShowGerenciadorRegistros] = useState(false); // Removido - Gerenciador será uma etapa
 
 
   const fileInputRef = useRef(null);
@@ -136,20 +136,24 @@ function App() {
 
   const steps = [
     {
-      label: 'Upload do CSV',
-      description: 'Carregue o arquivo CSV com os dados'
+      label: 'Definir Dados Iniciais',
+      description: 'Carregue um CSV ou prepare para adicionar dados manualmente.'
+    },
+    {
+      label: 'Editar Dados',
+      description: 'Adicione, edite ou remova registros conforme necessário.'
     },
     {
       label: 'Upload da Imagem',
-      description: 'Carregue a imagem de fundo PNG/JPG'
+      description: 'Carregue a imagem de fundo PNG/JPG.'
     },
     {
       label: 'Posicionar e Formatar',
-      description: 'Posicione os campos e configure a formatação'
+      description: 'Posicione os campos e configure a formatação.'
     },
     {
       label: 'Gerar Imagens',
-      description: 'Gere as imagens finais'
+      description: 'Gere as imagens finais.'
     }
   ];
 
@@ -216,7 +220,9 @@ function App() {
             setFieldPositions(updatedFieldPositions);
             setFieldStyles(updatedFieldStyles);
             
-            if (activeStep === 0) setActiveStep(1);
+            // if (activeStep === 0) setActiveStep(1); // Removido - avanço de etapa será manual via botão Próximo
+            // Apenas alerta sobre o sucesso do carregamento.
+            alert(`${newCsvData.length} registros carregados do CSV com sucesso! Clique em 'Próximo' para editar ou continuar.`);
           }
         },
         error: (error) => {
@@ -245,7 +251,8 @@ function App() {
         };
         img.src = imageUrl;
 
-        if (activeStep === 1) setActiveStep(2);
+        // if (activeStep === 1) setActiveStep(2); // Removido - avanço de etapa será manual via botão Próximo
+        alert("Imagem de fundo carregada com sucesso! Clique em 'Próximo' para continuar.");
       };
       reader.readAsDataURL(file);
     }
@@ -259,12 +266,20 @@ function App() {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
   };
 
-  const canProceedToStep = (step) => {
-    switch (step) {
-      case 1: return csvData.length > 0;
-      case 2: return backgroundImage !== null;
-      case 3: return true; // Posicionamento e formatação são opcionais
-      default: return true;
+  const canProceedToStep = (nextStepIndex) => {
+    // `nextStepIndex` é o índice do passo PARA o qual queremos ir.
+    // `activeStep` é o passo atual.
+    switch (activeStep) {
+      case 0: // Saindo de 'Definir Dados Iniciais' para 'Editar Dados' (nextStepIndex === 1)
+        return true; // Sempre pode ir para a edição, mesmo que não haja dados CSV carregados.
+      case 1: // Saindo de 'Editar Dados' para 'Upload da Imagem' (nextStepIndex === 2)
+        return csvData.length > 0; // Precisa ter dados para prosseguir para a imagem.
+      case 2: // Saindo de 'Upload da Imagem' para 'Posicionar e Formatar' (nextStepIndex === 3)
+        return backgroundImage !== null; // Precisa ter imagem de fundo.
+      case 3: // Saindo de 'Posicionar e Formatar' para 'Gerar Imagens' (nextStepIndex === 4)
+        return true; // Posicionamento é opcional para gerar.
+      default:
+        return true; // Permite avançar de outros passos por padrão (ex: de Gerar para um futuro Resumo)
     }
   };
 
@@ -471,11 +486,13 @@ function App() {
   };
 
   const handleOpenGerenciadorRegistros = () => {
-    setShowGerenciadorRegistros(true);
+    // setShowGerenciadorRegistros(true); // Removido
+    setActiveStep(1); // Avança para a etapa de edição
     handleMenuClose(); // Fechar o menu de ações se estiver aberto
   };
 
-  const handleConcluirEdicaoRegistros = (novosRegistros, novasColunas) => {
+  // Renomeado de handleConcluirEdicaoRegistros para handleDadosAlterados
+  const handleDadosAlterados = (novosRegistros, novasColunas) => {
     setCsvData(novosRegistros);
     setCsvHeaders(novasColunas);
 
@@ -515,34 +532,16 @@ function App() {
     setFieldPositions(updatedFieldPositions);
     setFieldStyles(updatedFieldStyles);
 
-    setShowGerenciadorRegistros(false);
-    // Se não houver dados, e agora temos, avançar para o próximo passo relevante
-    // Ou se o passo ativo era o 0 (Upload CSV), e agora temos dados, podemos avançar.
-    if (activeStep === 0 && novosRegistros.length > 0) {
-      setActiveStep(1); // Avança para Upload da Imagem se os dados foram adicionados/editados
-    } else if (novosRegistros.length === 0 && activeStep > 0) {
-      // Se todos os registros foram removidos, talvez voltar ao passo 0
-      setActiveStep(0);
-    }
+    // setShowGerenciadorRegistros(false); // Removido
+    // A lógica de avançar o passo foi removida daqui, será controlada pelos botões globais Next/Back
+    // e pela lógica em canProceedToStep.
   };
 
 
   const currentTheme = darkMode ? darkTheme : lightTheme;
 
-  if (showGerenciadorRegistros) {
-    return (
-      <ThemeProvider theme={currentTheme}>
-        <CssBaseline />
-        <GerenciadorRegistros
-          registrosIniciais={csvData}
-          colunasIniciais={csvHeaders}
-          onConcluirEdicao={handleConcluirEdicaoRegistros}
-          // Passar darkMode para que GerenciadorRegistros possa adaptar seus estilos
-          darkMode={darkMode}
-        />
-      </ThemeProvider>
-    );
-  }
+  // Removida a renderização condicional do GerenciadorRegistros aqui,
+  // ele será renderizado como parte do conteúdo da etapa.
 
   return (
     <ThemeProvider theme={currentTheme}>
@@ -607,9 +606,13 @@ function App() {
               open={Boolean(anchorElMenu)}
               onClose={handleMenuClose}
             >
-              <MenuItem onClick={handleOpenGerenciadorRegistros}>
+              {/* <MenuItem onClick={handleOpenGerenciadorRegistros}> // Removido - Edição agora é uma etapa
                 <Edit sx={{ mr: 1 }} />
                 Editar Registros
+              </MenuItem> */}
+              <MenuItem onClick={() => setActiveStep(1)}> {/* Atalho para ir para Etapa de Edição */}
+                <Edit sx={{ mr: 1 }} />
+                Ir para Edição de Dados
               </MenuItem>
               <MenuItem onClick={handleSaveTemplateClick}>Salvar Config. Template</MenuItem>
               <MenuItem onClick={handleLoadTemplateClick}>Carregar Config. Template</MenuItem>
@@ -696,13 +699,13 @@ function App() {
         <Grid item xs={12} md={9} 
            >
           
-          {/* Passo 1: Upload CSV */}
+          {/* Passo 0: Definir Dados Iniciais (Upload CSV ou Manual) */}
           {activeStep === 0 && (
             <Card>
               <CardContent>
                 <Typography variant="h5" gutterBottom>
                   <FileUpload sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  Upload do Arquivo CSV
+                  {steps[0].label}
                 </Typography>
                 
                 <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -727,25 +730,25 @@ function App() {
                     size="large"
                     startIcon={<Edit />}
                     sx={{ mb: 2, ml: 2 }}
-                    onClick={handleOpenGerenciadorRegistros}
+                    // onClick={handleOpenGerenciadorRegistros} // Removido - A navegação para edição é via botão "Próximo"
+                    onClick={() => setActiveStep(1)} // Alternativamente, um botão dedicado para ir para edição
                   >
-                    Adicionar/Editar Registros Manualmente
+                    Revisar/Editar Dados
                   </Button>
                   
                   <Typography variant="body2" color="textSecondary">
-                    Carregue um arquivo CSV ou adicione/edite os dados manualmente.
+                    {steps[0].description}
                   </Typography>
                   
                   {csvData.length > 0 && (
                     <Alert severity="success" sx={{ mt: 2 }}>
-                      ✅ {csvData.length} registros carregados.
-                      <br />
-                      Campos: {csvHeaders.join(', ')}
+                      ✅ {csvData.length} registros carregados. Campos: {csvHeaders.join(', ')}.
+                      Clique em "Próximo" para editar ou prosseguir.
                     </Alert>
                   )}
                   {csvData.length === 0 && (
                      <Alert severity="info" sx={{mt: 2}}>
-                        Nenhum dado carregado. Você pode adicionar registros manualmente ou carregar um CSV.
+                        Nenhum dado carregado. Carregue um CSV ou clique em "Próximo" para adicionar dados manualmente na etapa de edição.
                      </Alert>
                   )}
                 </Box>
@@ -753,13 +756,23 @@ function App() {
             </Card>
           )}
 
-          {/* Passo 2: Upload Imagem */}
+          {/* Passo 1: Editar Dados */}
           {activeStep === 1 && (
+            <GerenciadorRegistros
+              registrosIniciais={csvData}
+              colunasIniciais={csvHeaders}
+              onDadosAlterados={handleDadosAlterados} // Nome da prop atualizado
+              darkMode={darkMode}
+            />
+          )}
+
+          {/* Passo 2: Upload Imagem */}
+          {activeStep === 2 && (
             <Card>
               <CardContent>
                 <Typography variant="h5" gutterBottom>
                   <CloudUpload sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  Upload da Imagem de Fundo
+                  {steps[2].label}
                 </Typography>
                 
                 <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -808,7 +821,7 @@ function App() {
           )}
 
           {/* Passo 3: Posicionamento e Formatação */}
-          {activeStep === 2 && (
+          {activeStep === 3 && (
             <FieldPositioner
               backgroundImage={backgroundImage}
               csvHeaders={csvHeaders}
@@ -823,7 +836,7 @@ function App() {
           )}
 
           {/* Passo 4: Geração */}
-          {activeStep === 3 && (
+          {activeStep === 4 && (
             <ImageGeneratorFrontendOnly
               csvData={csvData}
               backgroundImage={backgroundImage}

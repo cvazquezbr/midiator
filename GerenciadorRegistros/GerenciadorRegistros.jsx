@@ -9,8 +9,8 @@ import ModalConfirmacao from './ModalConfirmacao/ModalConfirmacao';
 const GerenciadorRegistros = ({
     registrosIniciais = [],
     colunasIniciais = [],
-    onConcluirEdicao,
-    darkMode = false // Nova prop para modo escuro
+    onDadosAlterados, // Renomeado de onConcluirEdicao
+    darkMode = false
 }) => {
     const [registros, setRegistros] = useState([]);
     const [colunas, setColunas] = useState([]);
@@ -137,13 +137,18 @@ const GerenciadorRegistros = ({
     //     }
     // };
 
-    const handleConcluir = () => {
-        if (onConcluirEdicao) {
-            onConcluirEdicao(JSON.parse(JSON.stringify(registros)), [...colunas]);
+    // Efeito para chamar onDadosAlterados quando registros ou colunas mudam
+    useEffect(() => {
+        if (onDadosAlterados) {
+            onDadosAlterados(JSON.parse(JSON.stringify(registros)), [...colunas]);
         }
-        // console.log('Concluir Edição. Dados atuais:', registros, colunas);
-        // alert('Dados prontos para serem salvos pela aplicação principal. Ver console.');
-    };
+    }, [registros, colunas, onDadosAlterados]);
+
+    // const handleConcluir = () => { // Removido - botão de concluir foi removido
+    //     if (onConcluirEdicao) { // Agora onDadosAlterados
+    //         onConcluirEdicao(JSON.parse(JSON.stringify(registros)), [...colunas]);
+    //     }
+    // };
 
   const containerClasses = `${styles.container} ${darkMode ? styles.darkMode : ''}`;
 
@@ -205,12 +210,12 @@ const GerenciadorRegistros = ({
                 />
             )}
 
-      {/* Botão de concluir edição sempre visível para permitir sair mesmo sem registros */}
-      <div className={styles.actionsFooter}>
+      {/* Botão de concluir edição removido, pois a navegação é feita pelo App.jsx */}
+      {/* <div className={styles.actionsFooter}>
         <button onClick={handleConcluir} className={`${styles.btn} ${styles.btnSuccess}`}>
           Concluir Edição e Retornar Dados
         </button>
-      </div>
+      </div> */}
         </div>
     );
 };
