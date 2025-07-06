@@ -3,7 +3,7 @@ import styles from './GerenciadorRegistros.module.css';
 import TabelaRegistros from './TabelaRegistros/TabelaRegistros';
 import ModalRegistro from './ModalRegistro/ModalRegistro';
 import ModalConfirmacao from './ModalConfirmacao/ModalConfirmacao';
-import CarregadorCSV from './CarregadorCSV/CarregadorCSV';
+// import CarregadorCSV from './CarregadorCSV/CarregadorCSV'; // Removido
 // Assumindo que PapaParse será importado em CarregadorCSV ou globalmente
 
 const GerenciadorRegistros = ({
@@ -112,30 +112,30 @@ const GerenciadorRegistros = ({
         handleFecharModal();
     };
 
-    // Handler para CSV
-    const handleCSVProcessado = (dadosCSV, colunasCSV) => {
-        const colunasUnicasCSV = [...new Set(colunasCSV.filter(Boolean))];
-        setColunas(colunasUnicasCSV);
+    // // Handler para CSV Removido
+    // const handleCSVProcessado = (dadosCSV, colunasCSV) => {
+    //     const colunasUnicasCSV = [...new Set(colunasCSV.filter(Boolean))];
+    //     setColunas(colunasUnicasCSV);
 
-        let currentMaxId = proximoId -1; // Pega o último ID usado antes de processar o CSV
+    //     let currentMaxId = proximoId -1;
 
-        const novosRegistros = dadosCSV.map(item => {
-            currentMaxId++;
-            const novoRegistro = { id: `reg-${currentMaxId}` };
-            colunasUnicasCSV.forEach(coluna => {
-                novoRegistro[coluna] = item[coluna] !== undefined && item[coluna] !== null ? String(item[coluna]) : '';
-            });
-            return novoRegistro;
-        });
-        setProximoId(currentMaxId + 1); // Atualiza proximoId globalmente
-        setRegistros(novosRegistros);
+    //     const novosRegistros = dadosCSV.map(item => {
+    //         currentMaxId++;
+    //         const novoRegistro = { id: `reg-${currentMaxId}` };
+    //         colunasUnicasCSV.forEach(coluna => {
+    //             novoRegistro[coluna] = item[coluna] !== undefined && item[coluna] !== null ? String(item[coluna]) : '';
+    //         });
+    //         return novoRegistro;
+    //     });
+    //     setProximoId(currentMaxId + 1);
+    //     setRegistros(novosRegistros);
 
-        console.log("CSV Processado. Colunas:", colunasUnicasCSV, "Registros:", novosRegistros);
-        alert(`${novosRegistros.length} registros carregados do CSV!`);
-        if (modalAberto === 'ADICIONAR' && (registros.length === 0 && colunas.length === 0) ) { // Se o modal de primeiro add estava aberto
-            handleFecharModal();
-        }
-    };
+    //     console.log("CSV Processado. Colunas:", colunasUnicasCSV, "Registros:", novosRegistros);
+    //     alert(`${novosRegistros.length} registros carregados do CSV!`);
+    //     if (modalAberto === 'ADICIONAR' && (registros.length === 0 && colunas.length === 0) ) {
+    //         handleFecharModal();
+    //     }
+    // };
 
     const handleConcluir = () => {
         if (onConcluirEdicao) {
@@ -155,7 +155,7 @@ const GerenciadorRegistros = ({
                     <button onClick={handleAbrirModalAdicionar} className={`${styles.btn} ${styles.btnPrimary}`}>
                         &#43; Adicionar Novo
                     </button>
-                    <CarregadorCSV onCSVProcessado={handleCSVProcessado} darkMode={darkMode} />
+                    {/* <CarregadorCSV onCSVProcessado={handleCSVProcessado} darkMode={darkMode} /> Removido */}
                 </div>
             </div>
 
