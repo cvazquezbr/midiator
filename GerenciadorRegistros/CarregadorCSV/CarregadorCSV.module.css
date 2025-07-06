@@ -1,0 +1,18 @@
+.container {
+    display: inline-block;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: 1px solid #6c757d; /* Cor de borda do btn-secondary */
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #6c757d; /* Cor de fundo do btn-secondary */
+    color: white; /* Cor de texto do btn-secondary */
+    font-size: 1em;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+.btn:hover {
+    background-color: #5a6268; /* Cor de hover do btn-secondary */
+    border-color: #545b62;
+}

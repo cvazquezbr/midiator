@@ -1,0 +1,118 @@
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Espaço entre grupos de formulário */
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.formGroup label {
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 0.9em;
+    color: #333;
+}
+
+.formGroup input[type="text"] {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+}
+.formGroup input[type="text"]:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    outline: none;
+}
+
+.formActions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+}
+
+.btnPrimary {
+    background-color: #007bff;
+    color: white;
+}
+.btnPrimary:hover {
+    background-color: #0056b3;
+}
+
+.btnSecondary {
+    background-color: #6c757d;
+    color: white;
+}
+.btnSecondary:hover {
+    background-color: #545b62;
+}
+
+.infoText {
+    font-style: italic;
+    color: #555;
+    margin-bottom: 15px;
+    font-size: 0.9em;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-left: 3px solid #007bff;
+}
+
+.novaColunaGroup {
+    display: flex;
+    flex-wrap: wrap; /* Permite quebrar linha em telas menores */
+    gap: 10px; /* Espaço entre nome da coluna, valor e botão de remover */
+    align-items: flex-end; /* Alinha o botão de remover com a base dos inputs */
+    padding-bottom: 15px; /* Aumenta espaço abaixo */
+    margin-bottom: 10px; /* Espaço antes da borda */
+    border-bottom: 1px dashed #eee; /* Separador visual leve */
+}
+.novaColunaGroup:last-of-type {
+    border-bottom: none; /* Remove borda do último grupo */
+    margin-bottom: 0;
+}
+
+
+.novaColunaGroup .formGroup {
+    flex: 1; /* Permite que os inputs de nome e valor cresçam */
+    min-width: 150px; /* Largura mínima para cada campo antes de quebrar */
+}
+
+.btnAddField, .btnRemoveField {
+    padding: 8px 12px;
+    font-size: 0.9em;
+    margin-left: 5px;
+    height: 40px; /* Altura consistente com inputs */
+    line-height: 1.5; /* Alinhamento vertical do texto */
+}
+.btnAddField {
+    background-color: #28a745;
+    color: white;
+    align-self: flex-start;
+    margin-top: 10px; /* Espaço acima do botão de adicionar */
+    margin-bottom: 10px; /* Espaço abaixo do botão de adicionar */
+}
+.btnAddField:hover {
+    background-color: #218838;
+}
+
+.btnRemoveField {
+    background-color: #dc3545;
+    color: white;
+    /* height: fit-content;  Removido para usar altura fixa */
+}
+.btnRemoveField:hover {
+    background-color: #c82333;
+}

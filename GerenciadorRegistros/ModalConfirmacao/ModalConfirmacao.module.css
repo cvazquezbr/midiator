@@ -1,0 +1,62 @@
+.modalOverlay { /* Similar ao ModalRegistro.module.css */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modalContent { /* Similar ao ModalRegistro.module.css */
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 400px;
+    position: relative;
+    text-align: center;
+}
+
+.closeButton { /* Similar ao ModalRegistro.module.css */
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.btn { /* Estilos de botão */
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.btnConfirm {
+    background-color: #e74c3c; /* Vermelho para perigo/confirmação de exclusão */
+    color: white;
+}
+.btnConfirm:hover {
+    background-color: #c0392b;
+}
+
+.btnCancel {
+    background-color: #bdc3c7; /* Cinza */
+}
+.btnCancel:hover {
+    background-color: #95a5a6;
+}

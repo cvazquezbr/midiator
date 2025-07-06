@@ -1,0 +1,39 @@
+.btnAction {
+    margin-right: 5px;
+    padding: 6px 10px; /* Ajuste de padding */
+    font-size: 0.9em;
+    cursor: pointer;
+    border-radius: 4px; /* Bordas mais arredondadas */
+    border: 1px solid #ccc;
+    background-color: #f8f9fa; /* Fundo claro */
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+.btnAction:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.btnEdit {
+    color: #007bff; /* Azul para editar */
+    /* border-color: #007bff; */ /* Removido para usar a borda padrão do .btnAction inicialmente */
+}
+.btnEdit:hover {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.btnDelete {
+    color: #dc3545; /* Vermelho para excluir */
+    /* border-color: #dc3545; */ /* Removido para usar a borda padrão do .btnAction inicialmente */
+}
+.btnDelete:hover {
+    background-color: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.actionsCell { /* Para alinhar os botões na célula de ações */
+    white-space: nowrap; /* Impede que os botões quebrem linha se a célula for estreita */
+}
