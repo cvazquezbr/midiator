@@ -18,45 +18,44 @@ const GerenciadorRegistros = ({
     const [registroSelecionado, setRegistroSelecionado] = useState(null); // Para edição ou exclusão
     const [proximoId, setProximoId] = useState(1);
 
-    // Função para gerar IDs únicos para novos registros
-    const gerarIdUnico = useCallback(() => {
-        const novoId = proximoId;
+    // Renomeado para indicar que é para um único novo registro.
+    const gerarIdParaNovoRegistroSingular = useCallback(() => {
+        const novoIdValor = proximoId;
         setProximoId(prevId => prevId + 1);
-        return `reg-${novoId}`; // Adiciona um prefixo para evitar conflitos com IDs numéricos puros
+        return `reg-${novoIdValor}`;
     }, [proximoId]);
 
     // Inicialização e sincronização com props externas
-
-    // Efeito para definir o ponto de partida de proximoId, baseado apenas em registrosIniciais
     useEffect(() => {
-        let maxId = 0;
+        let maxIdCalculado = 0;
         registrosIniciais.forEach(reg => {
-            const idOriginal = reg.id;
-            if (idOriginal !== undefined && idOriginal !== null) {
-                const numIdMatch = String(idOriginal).match(/\d+$/);
+            if (reg.id !== undefined && reg.id !== null) {
+                const numIdMatch = String(reg.id).match(/\d+$/);
                 if (numIdMatch) {
                     const numId = parseInt(numIdMatch[0], 10);
-                    if (numId > maxId) {
-                        maxId = numId;
+                    if (numId > maxIdCalculado) {
+                        maxIdCalculado = numId;
                     }
                 }
             }
         });
-        // Define proximoId para ser maxId + 1.
-        // Usar a forma funcional de setProximoId para garantir que estamos usando o valor mais recente se houver múltiplas chamadas rápidas,
-        // e para evitar que proximoId precise ser uma dependência deste useEffect específico.
-        setProximoId(currentInternalPId => Math.max(currentInternalPId, maxId + 1));
-    }, [registrosIniciais]); // Depende apenas de registrosIniciais
 
-    // Efeito para processar os dados (registros) e definir colunas
-    useEffect(() => {
+        let idCounterParaLote = maxIdCalculado + 1;
+
         const dadosProcessados = registrosIniciais.map(reg => {
             const idOriginal = reg.id;
-            // gerarIdUnico é chamado aqui se necessário. Ele usa o estado 'proximoId' e o atualiza.
-            let idFinal = (idOriginal !== undefined && idOriginal !== null) ? String(idOriginal) : gerarIdUnico();
+            let idFinal;
+            if (idOriginal !== undefined && idOriginal !== null) {
+                idFinal = String(idOriginal);
+            } else {
+                idFinal = `reg-${idCounterParaLote}`;
+                idCounterParaLote++;
+            }
             return { ...reg, id: idFinal };
         });
+
         setRegistros(dadosProcessados);
+        setProximoId(idCounterParaLote); // Atualiza o proximoId global com base no último ID gerado em lote
 
         let currentCols;
         if (colunasIniciais && colunasIniciais.length > 0) {
@@ -69,9 +68,8 @@ const GerenciadorRegistros = ({
         setColunas(currentCols);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [registrosIniciais, colunasIniciais]); // Não incluir gerarIdUnico ou proximoId aqui.
-                                            // A chamada a gerarIdUnico dentro deste efeito usará a versão mais recente
-                                            // da função memoizada, que por sua vez usa o estado proximoId mais recente.
+    }, [registrosIniciais, colunasIniciais, proximoId]); // proximoId é necessário como dependência porque é lido para inicializar idCounterParaLote.
+                                                      // A lógica de maxIdCalculado e idCounterParaLote garante que os IDs sejam únicos por lote.
 
     // Handlers para abrir modais
     const handleAbrirModalAdicionar = () => {
@@ -109,12 +107,12 @@ const GerenciadorRegistros = ({
                 const { _novasColunas, ...primeiroRegistroData } = dadosFormulario;
                 novasColunas = [...new Set(_novasColunas.filter(Boolean))];
                 setColunas(novasColunas);
-                novosRegistros = [{ id: gerarIdUnico(), ...primeiroRegistroData }];
+                novosRegistros = [{ id: gerarIdParaNovoRegistroSingular(), ...primeiroRegistroData }];
                 setRegistros(novosRegistros);
             } else {
                 novosRegistros = [
                     ...registros,
-                    { id: gerarIdUnico(), ...dadosFormulario },
+                    { id: gerarIdParaNovoRegistroSingular(), ...dadosFormulario },
                 ];
                 setRegistros(novosRegistros);
             }
@@ -127,28 +125,31 @@ const GerenciadorRegistros = ({
     };
 
     const handleConfirmarExclusao = () => {
-        console.log('[GR] handleConfirmarExclusao - Início. Registro Selecionado ID:', registroSelecionado?.id);
-        // Usar uma cópia superficial para garantir que estamos filtrando a partir de um estado conhecido no momento da chamada
-        const currentRegistros = [...registros];
-        console.log('[GR] handleConfirmarExclusao - Registros (cópia) ANTES de filtrar:', JSON.parse(JSON.stringify(currentRegistros)));
+        // console.log('[GR] handleConfirmarExclusao - Início. Registro Selecionado:', JSON.parse(JSON.stringify(registroSelecionado)));
+        // console.log('[GR] handleConfirmarExclusao - Todos os Registros ANTES:', JSON.parse(JSON.stringify(registros)));
 
         if (registroSelecionado && registroSelecionado.id !== undefined) {
-            const registrosAposExclusao = currentRegistros.filter( // Filtrar a partir da cópia
-                reg => String(reg.id) !== String(registroSelecionado.id)
-            );
-            console.log('[GR] handleConfirmarExclusao - Registros APÓS filtrar:', JSON.parse(JSON.stringify(registrosAposExclusao)));
+            const idParaExcluir = String(registroSelecionado.id);
+            // console.log('[GR] ID para excluir:', idParaExcluir);
+
+            const registrosAposExclusao = registros.filter(reg => {
+                const idAtual = String(reg.id);
+                return idAtual !== idParaExcluir;
+            });
+
+            // console.log('[GR] Registros APÓS filtrar:', JSON.parse(JSON.stringify(registrosAposExclusao)));
 
             setRegistros(registrosAposExclusao);
 
             if (onDadosAlterados) {
-                console.log('[GR] handleConfirmarExclusao - Chamando onDadosAlterados com Registros:', JSON.parse(JSON.stringify(registrosAposExclusao)), 'Colunas:', [...colunas]);
+                // console.log('[GR] Chamando onDadosAlterados com Registros:', JSON.parse(JSON.stringify(registrosAposExclusao)), 'Colunas:', [...colunas]);
                 onDadosAlterados(
                     JSON.parse(JSON.stringify(registrosAposExclusao)),
                     [...colunas]
                 );
             }
         } else {
-            console.warn('[GR] handleConfirmarExclusao - Tentativa de exclusão sem registro selecionado ou ID indefinido.');
+            // console.warn('[GR] Tentativa de exclusão sem registro selecionado ou ID indefinido.');
         }
         handleFecharModal();
     };
