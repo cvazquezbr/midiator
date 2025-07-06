@@ -728,16 +728,7 @@ function App() {
                       onChange={handleCSVUpload}
                     />
                   </Button>
-                  <Button
-                    variant="outlined"
-                    size="large"
-                    startIcon={<Edit />}
-                    sx={{ mb: 2, ml: 2 }}
-                    // onClick={handleOpenGerenciadorRegistros} // Removido - A navegação para edição é via botão "Próximo"
-                    onClick={() => setActiveStep(1)} // Alternativamente, um botão dedicado para ir para edição
-                  >
-                    Revisar/Editar Dados
-                  </Button>
+                  {/* Botão "Revisar/Editar Dados" removido. A navegação para a próxima etapa (edição) será feita pelo botão "Próximo" global. */}
                   
                   <Typography variant="body2" color="textSecondary">
                     {steps[0].description}

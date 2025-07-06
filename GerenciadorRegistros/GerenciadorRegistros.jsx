@@ -47,15 +47,26 @@ const GerenciadorRegistros = ({
         // Define proximoId para ser um a mais que o maior ID numérico encontrado, ou 1 se nenhum ID numérico foi encontrado.
         setProximoId(maxId + 1);
 
-
+        let currentCols; // Declarar currentCols
         if (colunasIniciais && colunasIniciais.length > 0) {
-            setColunas([...new Set(colunasIniciais)]);
+            currentCols = [...new Set(colunasIniciais)];
+            setColunas(currentCols);
         } else if (dadosProcessados.length > 0) {
-            setColunas(Object.keys(dadosProcessados[0]).filter(k => k !== 'id'));
+            currentCols = Object.keys(dadosProcessados[0]).filter(k => k !== 'id');
+            setColunas(currentCols);
         } else {
-            setColunas([]);
+            currentCols = [];
+            setColunas(currentCols);
         }
-    }, [registrosIniciais, colunasIniciais, gerarIdUnico]);
+
+        if (onDadosAlterados) {
+            // Assegurar que onDadosAlterados seja chamado após o estado ser realmente definido.
+            // No entanto, como setColunas e setRegistros são assíncronos,
+            // os valores de colunas e registros podem não estar atualizados aqui imediatamente.
+            // A chamada a onDadosAlterados aqui é para sincronizar o estado inicial.
+            onDadosAlterados(JSON.parse(JSON.stringify(dadosProcessados)), [...currentCols]);
+        }
+    }, [registrosIniciais, colunasIniciais, gerarIdUnico, onDadosAlterados]);
 
 
     // Handlers para abrir modais
@@ -81,33 +92,45 @@ const GerenciadorRegistros = ({
 
     // Handlers para CRUD
     const handleSalvarRegistro = (dadosFormulario, idRegistroExistente) => {
+        let novosRegistros;
+        let novasColunas = colunas; // Preserva as colunas atuais por padrão
+
         if (idRegistroExistente !== null && idRegistroExistente !== undefined) {
-            setRegistros(prevRegistros =>
-                prevRegistros.map(reg =>
-                    String(reg.id) === String(idRegistroExistente) ? { ...reg, ...dadosFormulario } : reg
-                )
+            novosRegistros = registros.map(reg =>
+                String(reg.id) === String(idRegistroExistente) ? { ...reg, ...dadosFormulario } : reg
             );
+            setRegistros(novosRegistros);
         } else {
             if (dadosFormulario._novasColunas) {
                 const { _novasColunas, ...primeiroRegistroData } = dadosFormulario;
-                const novasColunasUnicas = [...new Set(_novasColunas.filter(Boolean))]; // Filtra vazias e garante unicidade
-                setColunas(novasColunasUnicas);
-                setRegistros([{ id: gerarIdUnico(), ...primeiroRegistroData }]);
+                novasColunas = [...new Set(_novasColunas.filter(Boolean))];
+                setColunas(novasColunas);
+                novosRegistros = [{ id: gerarIdUnico(), ...primeiroRegistroData }];
+                setRegistros(novosRegistros);
             } else {
-                setRegistros(prevRegistros => [
-                    ...prevRegistros,
+                novosRegistros = [
+                    ...registros,
                     { id: gerarIdUnico(), ...dadosFormulario },
-                ]);
+                ];
+                setRegistros(novosRegistros);
             }
+        }
+
+        if (onDadosAlterados) {
+            onDadosAlterados(JSON.parse(JSON.stringify(novosRegistros)), [...novasColunas]);
         }
         handleFecharModal();
     };
 
     const handleConfirmarExclusao = () => {
+        let novosRegistros = registros;
         if (registroSelecionado && registroSelecionado.id !== undefined) {
-            setRegistros(prevRegistros =>
-                prevRegistros.filter(reg => String(reg.id) !== String(registroSelecionado.id))
-            );
+            novosRegistros = registros.filter(reg => String(reg.id) !== String(registroSelecionado.id));
+            setRegistros(novosRegistros);
+        }
+
+        if (onDadosAlterados) {
+            onDadosAlterados(JSON.parse(JSON.stringify(novosRegistros)), [...colunas]);
         }
         handleFecharModal();
     };
@@ -138,11 +161,12 @@ const GerenciadorRegistros = ({
     // };
 
     // Efeito para chamar onDadosAlterados quando registros ou colunas mudam
-    useEffect(() => {
-        if (onDadosAlterados) {
-            onDadosAlterados(JSON.parse(JSON.stringify(registros)), [...colunas]);
-        }
-    }, [registros, colunas, onDadosAlterados]);
+    // Removido para evitar loops. onDadosAlterados será chamado diretamente.
+    // useEffect(() => {
+    //     if (onDadosAlterados) {
+    //         onDadosAlterados(JSON.parse(JSON.stringify(registros)), [...colunas]);
+    //     }
+    // }, [registros, colunas, onDadosAlterados]);
 
     // const handleConcluir = () => { // Removido - botão de concluir foi removido
     //     if (onConcluirEdicao) { // Agora onDadosAlterados
