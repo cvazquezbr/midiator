@@ -495,7 +495,7 @@ function App() {
 
   // Renomeado de handleConcluirEdicaoRegistros para handleDadosAlterados
   const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
-    console.log('[App] handleDadosAlterados Recebeu Registros:', JSON.parse(JSON.stringify(novosRegistros)), 'Colunas:', novasColunas);
+    // console.log('[App] handleDadosAlterados Recebeu Registros:', JSON.parse(JSON.stringify(novosRegistros)), 'Colunas:', novasColunas);
     setCsvData(novosRegistros);
     setCsvHeaders(novasColunas);
 
