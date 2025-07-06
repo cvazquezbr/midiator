@@ -9,7 +9,8 @@ const ModalRegistro = ({
     registroParaEditar,
     colunasExistentes, // Renomeado para clareza
     tituloModal,
-    isPrimeiroRegistro // Passar esta prop
+    isPrimeiroRegistro, // Passar esta prop
+    darkMode = false // Nova prop
 }) => {
     if (!aberto) return null;
 
@@ -17,9 +18,10 @@ const ModalRegistro = ({
     // Se for o primeiro registro, FormularioRegistro lida com a definição de colunas, então passamos array vazio.
     // Caso contrário, passamos as colunas existentes.
     const colunasParaFormulario = isPrimeiroRegistro ? [] : colunasExistentes;
+    const overlayClasses = `${styles.modalOverlay} ${darkMode ? styles.darkMode : ''}`;
 
     return (
-        <div className={styles.modalOverlay} onClick={onFechar}> {/* Fechar ao clicar no overlay */}
+        <div className={overlayClasses} onClick={onFechar}> {/* Fechar ao clicar no overlay */}
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}> {/* Impede fechar ao clicar no conteúdo */}
                 <button onClick={onFechar} className={styles.closeButton} title="Fechar">&times;</button>
                 <h2>{tituloModal}</h2>
@@ -32,6 +34,7 @@ const ModalRegistro = ({
                     }}
                     onCancelar={onFechar}
                     isPrimeiroRegistro={isPrimeiroRegistro}
+                    darkMode={darkMode} // Passar darkMode para o formulário
                 />
             </div>
         </div>

@@ -9,7 +9,8 @@ import CarregadorCSV from './CarregadorCSV/CarregadorCSV';
 const GerenciadorRegistros = ({
     registrosIniciais = [],
     colunasIniciais = [],
-    onConcluirEdicao
+    onConcluirEdicao,
+    darkMode = false // Nova prop para modo escuro
 }) => {
     const [registros, setRegistros] = useState([]);
     const [colunas, setColunas] = useState([]);
@@ -144,15 +145,17 @@ const GerenciadorRegistros = ({
         // alert('Dados prontos para serem salvos pela aplicação principal. Ver console.');
     };
 
+  const containerClasses = `${styles.container} ${darkMode ? styles.darkMode : ''}`;
+
     return (
-        <div className={styles.container}>
+    <div className={containerClasses}>
             <div className={styles.header}>
                 <h1>Gerenciar Registros</h1>
                 <div className={styles.actionsContainer}>
                     <button onClick={handleAbrirModalAdicionar} className={`${styles.btn} ${styles.btnPrimary}`}>
                         &#43; Adicionar Novo
                     </button>
-                    <CarregadorCSV onCSVProcessado={handleCSVProcessado} />
+                    <CarregadorCSV onCSVProcessado={handleCSVProcessado} darkMode={darkMode} />
                 </div>
             </div>
 
@@ -161,6 +164,7 @@ const GerenciadorRegistros = ({
                 colunas={colunas}
                 onEditar={handleAbrirModalEditar}
                 onExcluir={handleAbrirModalExcluir}
+        darkMode={darkMode}
             />
 
             {modalAberto === 'ADICIONAR' && (
@@ -173,6 +177,7 @@ const GerenciadorRegistros = ({
                     // Passa true se não houver colunas E não houver registros,
                     // indicando que o formulário deve permitir definir colunas.
                     isPrimeiroRegistro={colunas.length === 0 && registros.length === 0}
+          darkMode={darkMode}
                 />
             )}
 
@@ -185,6 +190,7 @@ const GerenciadorRegistros = ({
                     colunasExistentes={colunas}
                     tituloModal="Editar Registro"
                     isPrimeiroRegistro={false}
+          darkMode={darkMode}
                 />
             )}
 
@@ -195,16 +201,16 @@ const GerenciadorRegistros = ({
                     onConfirmar={handleConfirmarExclusao}
                     titulo="Confirmar Exclusão"
                     mensagem={`Você tem certeza que deseja excluir o registro? (ID: ${registroSelecionado.id})`}
+          darkMode={darkMode}
                 />
             )}
 
-            { registros.length > 0 && (
-                <div className={styles.actionsFooter}>
-                    <button onClick={handleConcluir} className={`${styles.btn} ${styles.btnSuccess}`}>
-                        Concluir Edição e Retornar Dados
-                    </button>
-                </div>
-            )}
+      {/* Botão de concluir edição sempre visível para permitir sair mesmo sem registros */}
+      <div className={styles.actionsFooter}>
+        <button onClick={handleConcluir} className={`${styles.btn} ${styles.btnSuccess}`}>
+          Concluir Edição e Retornar Dados
+        </button>
+      </div>
         </div>
     );
 };

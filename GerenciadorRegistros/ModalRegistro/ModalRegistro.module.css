@@ -36,6 +36,12 @@
     cursor: pointer;
     line-height: 1;
 }
+.modalOverlay.darkMode .closeButton {
+    color: #bbb;
+}
 .closeButton:hover {
     color: #555;
+}
+.modalOverlay.darkMode .closeButton:hover {
+    color: #fff;
 }
