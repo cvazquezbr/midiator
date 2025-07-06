@@ -6,11 +6,21 @@ const FormularioRegistro = ({
     dadosIniciais = null, // Pode ser null para adição
     onSubmit,
     onCancelar,
-    isPrimeiroRegistro = false // Nova prop para controlar a lógica de definir colunas
+    isPrimeiroRegistro = false, // Nova prop para controlar a lógica de definir colunas
+    darkMode = false // Nova prop para modo escuro
 }) => {
     const [formData, setFormData] = useState({});
     // Para o primeiro registro, precisamos de estado para os nomes e valores das novas colunas
-    const [novasColunas, setNovasColunas] = useState([{ nome: '', valor: '' }]);
+    const [novasColunas, setNovasColunas] = useState(
+        isPrimeiroRegistro
+        ? [
+            { nome: 'titulo', valor: '' },
+            { nome: 'mensagem', valor: '' },
+            { nome: 'descrição', valor: '' },
+            { nome: 'hashtags', valor: '' }
+          ]
+        : [{ nome: '', valor: '' }]
+    );
 
     useEffect(() => {
         if (!isPrimeiroRegistro && dadosIniciais) {
@@ -29,6 +39,13 @@ const FormularioRegistro = ({
         } else {
             // Reseta o estado de novasColunas se for o primeiro registro
             setNovasColunas([{ nome: '', valor: '' }]);
+            // Reseta o estado de novasColunas se for o primeiro registro, preenchendo com os defaults
+            setNovasColunas([
+                { nome: 'titulo', valor: '' },
+                { nome: 'mensagem', valor: '' },
+                { nome: 'descrição', valor: '' },
+                { nome: 'hashtags', valor: '' }
+            ]);
             setFormData({}); // Limpa formData, pois será preenchido por novasColunas
         }
     }, [dadosIniciais, colunas, isPrimeiroRegistro]);
@@ -101,9 +118,11 @@ const FormularioRegistro = ({
         }
     };
 
+    const formClasses = `${styles.form} ${darkMode ? styles.darkMode : ''}`;
+
     if (isPrimeiroRegistro) {
         return (
-            <form onSubmit={handleSubmit} className={styles.form}>
+            <form onSubmit={handleSubmit} className={formClasses}>
                 <p className={styles.infoText}>Como este é o primeiro registro, você definirá as colunas e seus valores iniciais.</p>
                 {novasColunas.map((nc, index) => (
                     <div key={index} className={styles.novaColunaGroup}>
@@ -141,7 +160,7 @@ const FormularioRegistro = ({
     }
 
     return (
-        <form onSubmit={handleSubmit} className={styles.form}>
+        <form onSubmit={handleSubmit} className={formClasses}>
             {colunas.map(col => (
                 <div key={col} className={styles.formGroup}>
                     <label htmlFor={`campo-${col.replace(/\s+/g, '-')}`}>{col}:</label>

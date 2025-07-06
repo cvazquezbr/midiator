@@ -28,7 +28,8 @@ import {
   ArrowForwardIos, // Ícone para próximo
   MoreVert, // Ícone para o menu de ações
   Brightness4, // Ícone para modo dark
-  Brightness7 // Ícone para modo light
+  Brightness7, // Ícone para modo light
+  Edit // Ícone para editar registros
 } from '@mui/icons-material';
 import Papa from 'papaparse';
 import ColorThief from 'colorthief';
@@ -40,6 +41,7 @@ import CssBaseline from '@mui/material/CssBaseline'; // Normaliza estilos e apli
 
 import FieldPositioner from './components/FieldPositioner';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
+import GerenciadorRegistros from '../GerenciadorRegistros/GerenciadorRegistros'; // Importar o GerenciadorRegistros
 import './App.css';
 
 // Definição dos temas light e dark
@@ -98,6 +100,8 @@ function App() {
   const isMobile = useIsMobile(); // Usa o hook para determinar se é mobile
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(isMobile); // Inicializa colapsado em mobile
   const [anchorElMenu, setAnchorElMenu] = useState(null); // Para o menu de ações
+  const [showGerenciadorRegistros, setShowGerenciadorRegistros] = useState(false); // Estado para controlar a exibição do GerenciadorRegistros
+
 
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -466,8 +470,79 @@ function App() {
     handleSaveState();
   };
 
+  const handleOpenGerenciadorRegistros = () => {
+    setShowGerenciadorRegistros(true);
+    handleMenuClose(); // Fechar o menu de ações se estiver aberto
+  };
+
+  const handleConcluirEdicaoRegistros = (novosRegistros, novasColunas) => {
+    setCsvData(novosRegistros);
+    setCsvHeaders(novasColunas);
+
+    // Atualizar fieldPositions e fieldStyles com base nas novas colunas
+    const updatedFieldPositions = {};
+    const updatedFieldStyles = {};
+    const defaultStylesBase = {
+      fontFamily: 'Arial',
+      fontSize: 24,
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+      textDecoration: 'none',
+      color: darkMode ? '#FFFFFF' : '#000000', // Ajustar cor padrão com base no tema
+      textStroke: false,
+      strokeColor: darkMode ? '#000000' : '#FFFFFF',
+      strokeWidth: 2,
+      textShadow: false,
+      shadowColor: '#000000',
+      shadowBlur: 4,
+      shadowOffsetX: 2,
+      shadowOffsetY: 2,
+      textAlign: 'left',
+      verticalAlign: 'top'
+    };
+
+    novasColunas.forEach((header, index) => {
+      updatedFieldPositions[header] = fieldPositions[header] || {
+        x: 10 + (index % 5) * 18,
+        y: 10 + Math.floor(index / 5) * 12,
+        width: 15,
+        height: 10,
+        visible: true
+      };
+      updatedFieldStyles[header] = fieldStyles[header] || { ...defaultStylesBase };
+    });
+
+    setFieldPositions(updatedFieldPositions);
+    setFieldStyles(updatedFieldStyles);
+
+    setShowGerenciadorRegistros(false);
+    // Se não houver dados, e agora temos, avançar para o próximo passo relevante
+    // Ou se o passo ativo era o 0 (Upload CSV), e agora temos dados, podemos avançar.
+    if (activeStep === 0 && novosRegistros.length > 0) {
+      setActiveStep(1); // Avança para Upload da Imagem se os dados foram adicionados/editados
+    } else if (novosRegistros.length === 0 && activeStep > 0) {
+      // Se todos os registros foram removidos, talvez voltar ao passo 0
+      setActiveStep(0);
+    }
+  };
+
 
   const currentTheme = darkMode ? darkTheme : lightTheme;
+
+  if (showGerenciadorRegistros) {
+    return (
+      <ThemeProvider theme={currentTheme}>
+        <CssBaseline />
+        <GerenciadorRegistros
+          registrosIniciais={csvData}
+          colunasIniciais={csvHeaders}
+          onConcluirEdicao={handleConcluirEdicaoRegistros}
+          // Passar darkMode para que GerenciadorRegistros possa adaptar seus estilos
+          darkMode={darkMode}
+        />
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider theme={currentTheme}>
@@ -532,6 +607,10 @@ function App() {
               open={Boolean(anchorElMenu)}
               onClose={handleMenuClose}
             >
+              <MenuItem onClick={handleOpenGerenciadorRegistros}>
+                <Edit sx={{ mr: 1 }} />
+                Editar Registros
+              </MenuItem>
               <MenuItem onClick={handleSaveTemplateClick}>Salvar Config. Template</MenuItem>
               <MenuItem onClick={handleLoadTemplateClick}>Carregar Config. Template</MenuItem>
             </Menu>
@@ -634,7 +713,7 @@ function App() {
                     startIcon={<FileUpload />}
                     sx={{ mb: 2 }}
                   >
-                    Selecionar Arquivo CSV
+                    Selecionar Arquivo CSV (Opcional)
                     <input
                       type="file"
                       accept=".csv"
@@ -643,17 +722,31 @@ function App() {
                       onChange={handleCSVUpload}
                     />
                   </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
+                    startIcon={<Edit />}
+                    sx={{ mb: 2, ml: 2 }}
+                    onClick={handleOpenGerenciadorRegistros}
+                  >
+                    Adicionar/Editar Registros Manualmente
+                  </Button>
                   
                   <Typography variant="body2" color="textSecondary">
-                    Selecione um arquivo CSV com os dados que deseja usar nas imagens
+                    Carregue um arquivo CSV ou adicione/edite os dados manualmente.
                   </Typography>
                   
                   {csvData.length > 0 && (
                     <Alert severity="success" sx={{ mt: 2 }}>
-                      ✅ {csvData.length} registros carregados com sucesso!
+                      ✅ {csvData.length} registros carregados.
                       <br />
-                      Campos encontrados: {csvHeaders.join(', ')}
+                      Campos: {csvHeaders.join(', ')}
                     </Alert>
+                  )}
+                  {csvData.length === 0 && (
+                     <Alert severity="info" sx={{mt: 2}}>
+                        Nenhum dado carregado. Você pode adicionar registros manualmente ou carregar um CSV.
+                     </Alert>
                   )}
                 </Box>
               </CardContent>

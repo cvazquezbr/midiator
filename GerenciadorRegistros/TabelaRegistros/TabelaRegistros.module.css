@@ -15,6 +15,14 @@
     vertical-align: top; /* Alinha conteúdo no topo da célula */
 }
 
+.tabela.darkMode th, .tabela.darkMode td {
+    border: 1px solid #444; /* Borda mais escura para modo escuro */
+}
+.tabela.darkMode td {
+    color: #ccc; /* Texto das células em modo escuro */
+}
+
+
 .tabela th {
     background-color: #f8f9fa; /* Fundo do cabeçalho mais claro */
     color: #495057; /* Cor de texto do cabeçalho */
@@ -23,13 +31,27 @@
     top: 0;
     z-index: 10; /* Garante que o cabeçalho fique sobre o conteúdo rolável */
 }
+.tabela.darkMode th {
+    background-color: #3a3a3a; /* Fundo do cabeçalho escuro */
+    color: #e0e0e0; /* Texto do cabeçalho claro */
+}
+.actionsHeader { /* Estilo para centralizar o texto do cabeçalho de ações se necessário */
+    text-align: center;
+}
 
 .tabela tbody tr:nth-child(even) {
     background-color: #f8f9fa; /* Cor de fundo para linhas pares (zebrado) */
 }
+.tabela.darkMode tbody tr:nth-child(even) {
+    background-color: #313131; /* Zebrado mais escuro */
+}
+
 
 .tabela tbody tr:hover {
     background-color: #e9ecef; /* Cor de fundo ao passar o mouse */
+}
+.tabela.darkMode tbody tr:hover {
+    background-color: #4a4a4a; /* Hover mais escuro */
 }
 
 .noDataCell {
@@ -37,4 +59,7 @@
     padding: 20px;
     font-style: italic;
     color: #6c757d;
+}
+.tabela.darkMode .noDataCell {
+    color: #aaa; /* Mensagem "sem dados" mais clara */
 }

@@ -10,9 +10,20 @@
     background-color: #6c757d; /* Cor de fundo do btn-secondary */
     color: white; /* Cor de texto do btn-secondary */
     font-size: 1em;
-    transition: background-color 0.3s ease, border-color 0.3s ease;
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 .btn:hover {
     background-color: #5a6268; /* Cor de hover do btn-secondary */
     border-color: #545b62;
+}
+
+/* Modo escuro para o botão do CarregadorCSV */
+.container.darkMode .btn {
+    background-color: #545b62; /* Baseado no .btnSecondary do GerenciadorRegistros.module.css darkMode */
+    color: #e0e0e0;
+    border-color: #434a50; /* Um pouco mais escuro que o fundo */
+}
+.container.darkMode .btn:hover {
+    background-color: #434a50;
+    border-color: #373b3e;
 }

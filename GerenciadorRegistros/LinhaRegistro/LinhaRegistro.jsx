@@ -1,14 +1,10 @@
 import React from 'react';
 import styles from './LinhaRegistro.module.css';
 
-const LinhaRegistro = ({ registro, colunas, onEditar, onExcluir }) => {
+const LinhaRegistro = ({ registro, colunas, onEditar, onExcluir, darkMode }) => {
+    const trClasses = `${darkMode ? styles.darkMode : ''}`;
     return (
-        <tr>
-            {colunas.map(colunaNome => (
-                <td key={`${registro.id}-${colunaNome}`}>
-                    {registro[colunaNome] !== undefined && registro[colunaNome] !== null ? String(registro[colunaNome]) : ''}
-                </td>
-            ))}
+        <tr className={trClasses}>
             <td className={styles.actionsCell}>
                 <button
                     onClick={() => onEditar(registro)}
@@ -25,6 +21,11 @@ const LinhaRegistro = ({ registro, colunas, onEditar, onExcluir }) => {
                     &#128465; {/* Ícone de lixeira */}
                 </button>
             </td>
+            {colunas.map(colunaNome => (
+                <td key={`${registro.id}-${colunaNome}`}>
+                    {registro[colunaNome] !== undefined && registro[colunaNome] !== null ? String(registro[colunaNome]) : ''}
+                </td>
+            ))}
         </tr>
     );
 };
