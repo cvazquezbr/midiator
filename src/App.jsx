@@ -16,7 +16,12 @@ import {
   StepContent,
   Chip,
   IconButton, // Adicionado para botões de ícone
-  Tooltip // Adicionado para dicas de ferramenta
+  Tooltip, // Adicionado para dicas de ferramenta
+  ToggleButton,
+  ToggleButtonGroup,
+  TextField,
+  CircularProgress,
+  Link as MuiLink
 } from '@mui/material';
 import {
   CloudUpload,
@@ -45,6 +50,9 @@ import CssBaseline from '@mui/material/CssBaseline'; // Normaliza estilos e apli
 import FieldPositioner from './components/FieldPositioner';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
 import GerenciadorRegistros from '../GerenciadorRegistros/GerenciadorRegistros'; // Importar o GerenciadorRegistros
+import DeepSeekAuthSetup from './components/DeepSeekAuthSetup'; // Importar o componente de configuração da API DeepSeek
+import { getDeepSeekApiKey } from '../utils/deepSeekCredentials'; // Importar utilitário para verificar a chave
+import VpnKeyIcon from '@mui/icons-material/VpnKey'; // Ícone para a chave da API
 import './App.css';
 
 // Definição dos temas light e dark
@@ -104,6 +112,13 @@ function App() {
   // const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(isMobile); // Removido ou ajustado
   const [anchorElMenu, setAnchorElMenu] = useState(null); // Para o menu de ações
   const [isHeaderHovered, setIsHeaderHovered] = useState(false); // Novo estado para hover no cabeçalho
+  const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false); // Estado para o modal da chave DeepSeek
+
+  // Estados para a Geração com IA
+  const [inputMethod, setInputMethod] = useState('csv'); // 'csv' ou 'ia'
+  const [promptNumRecords, setPromptNumRecords] = useState(10); // Default 10, conforme sugerido
+  const [promptText, setPromptText] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false); // Para feedback de carregamento da IA
 
 
   const fileInputRef = useRef(null);
@@ -550,6 +565,87 @@ function App() {
     // e pela lógica em canProceedToStep.
   }, [darkMode, fieldPositions, fieldStyles, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles]);
 
+  const handleGenerateIAContent = async () => {
+    setIsGenerating(true);
+    const apiKey = getDeepSeekApiKey();
+
+    if (!apiKey) {
+      alert('Por favor, configure sua chave da API DeepSeek primeiro.\nVocê pode fazer isso no menu "Mais ações" (ícone de três pontos) no cabeçalho.');
+      setIsGenerating(false);
+      return;
+    }
+
+    if (!promptText.trim()) {
+      alert('Por favor, forneça um texto descritivo para o prompt.');
+      setIsGenerating(false);
+      return;
+    }
+
+    if (promptNumRecords <= 0) {
+        alert('A quantidade de registros a gerar deve ser maior que zero.');
+        setIsGenerating(false);
+        return;
+    }
+
+    const finalPrompt = `Elabore um carrossel para Instagram com ${promptNumRecords} elementos baseado no texto abaixo. Ajuste o prompt para que o retorno permita o preenchimento equivalente ao do csv:
+${promptText}
+Cada elemento deve conter:
+### Requisitos para cada elemento:
+1. **Título** (até 4 palavras):
+   - Impactante e curto
+   - Use emojis relevantes no início
+   - Exemplo: "✨ Segredo Revelado"
+
+2. **Texto Principal** (120-180 caracteres):
+   - Fragmento do texto base adaptado para o elemento
+   - Linguagem direta e conversacional
+   - Incluir 1 pergunta retórica
+   - Exemplo: "Sabia que 80% dos negócios falham nisso? Descubra como evitar esse erro..."
+
+3. **Ponte para o Próximo** (até 40 caracteres):
+   - Criar curiosidade para o próximo elemento
+   - Usar fórmula: Emoji + Chamada + Dica do próximo
+   - Exemplos:
+     → "Próximo: O passo que muda tudo!"
+     → "Siga para o segredo nº3 👇"
+
+### Estrutura de Progressão:
+- Elemento 1: Dado impactante + pergunta instigante
+- Elementos 2-${promptNumRecords > 1 ? promptNumRecords -1 : 1}: Conteúdo principal dividido em passos (ajustar se promptNumRecords for 1 ou 2)
+- Elemento ${promptNumRecords}: CTA claro + bônus surpresa (ou Case de sucesso/resumo se for o penúltimo e CTA no último, ajustar para ${promptNumRecords})
+
+### Tom de Voz:
+- Empático e motivacional (use "você" e "vamos")
+- Urgência controlada ("Agora você pode...")
+- Toque de storytelling`;
+
+    console.log("Prompt para DeepSeek:", finalPrompt);
+    console.log("Número de Registros para Gerar:", promptNumRecords);
+
+    // Simulação de chamada à API
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simula delay da API
+      console.log("Simulação de resposta da API DeepSeek recebida.");
+      // TODO: Processar a resposta da API e definir csvData e csvHeaders
+      // Exemplo:
+      // const mockIAData = [
+      //   { "Título": "✨ Título Gerado 1", "Texto Principal": "Texto principal gerado 1...", "Ponte para o Próximo": "➡️ Próximo: Incrível!" },
+      //   { "Título": "🚀 Título Gerado 2", "Texto Principal": "Texto principal gerado 2...", "Ponte para o Próximo": "👇 Continue!" },
+      // ];
+      // const mockIAHeaders = ["Título", "Texto Principal", "Ponte para o Próximo"];
+      // setCsvData(mockIAData);
+      // setCsvHeaders(mockIAHeaders);
+      // setActiveStep(1); // Avança para a etapa de edição após gerar dados
+      alert("Conteúdo gerado (simulado)! Verifique o console. A integração real da API e o parsing da resposta são os próximos passos.");
+
+    } catch (error) {
+      console.error("Erro ao simular chamada da API DeepSeek:", error);
+      alert("Ocorreu um erro ao tentar gerar o conteúdo com IA.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
 
   const currentTheme = darkMode ? darkTheme : lightTheme;
 
@@ -659,6 +755,10 @@ function App() {
                 <Edit sx={{ mr: 1 }} />
                 Ir para Edição de Dados
               </MenuItem>
+              <MenuItem onClick={() => { setShowDeepSeekAuthModal(true); handleMenuClose(); }}>
+                <VpnKeyIcon sx={{ mr: 1 }} />
+                Configurar API DeepSeek
+              </MenuItem>
               <MenuItem onClick={handleSaveTemplateClick}>Salvar Config. Template</MenuItem>
               <MenuItem onClick={handleLoadTemplateClick}>Carregar Config. Template</MenuItem>
             </Menu>
@@ -753,41 +853,131 @@ function App() {
                   <FileUpload sx={{ mr: 1, verticalAlign: 'middle' }} />
                   {steps[0].label}
                 </Typography>
-                
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Button
-                    variant="contained"
-                    component="label"
-                    size="large"
-                    startIcon={<FileUpload />}
-                    sx={{ mb: 2 }}
+
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+                  <ToggleButtonGroup
+                    color="primary"
+                    value={inputMethod}
+                    exclusive
+                    onChange={(event, newInputMethod) => {
+                      if (newInputMethod !== null) {
+                        setInputMethod(newInputMethod);
+                      }
+                    }}
+                    aria-label="Método de entrada de dados"
                   >
-                    Selecionar Arquivo CSV (Opcional)
-                    <input
-                      type="file"
-                      accept=".csv"
-                      hidden
-                      ref={fileInputRef}
-                      onChange={handleCSVUpload}
+                    <ToggleButton value="csv">Carregar CSV</ToggleButton>
+                    <ToggleButton value="ia">Gerar com IA</ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+
+                {inputMethod === 'csv' && (
+                  <Box sx={{ textAlign: 'center', py: 2 }}>
+                    <Button
+                      variant="contained"
+                      component="label"
+                      size="large"
+                      startIcon={<FileUpload />}
+                      sx={{ mb: 2 }}
+                    >
+                      Selecionar Arquivo CSV
+                      <input
+                        type="file"
+                        accept=".csv"
+                        hidden
+                        ref={fileInputRef}
+                        onChange={handleCSVUpload}
+                      />
+                    </Button>
+                    <Typography variant="body2" color="textSecondary" sx={{mt:1}}>
+                      Carregue um arquivo CSV para definir os dados.
+                    </Typography>
+                    {csvData.length > 0 && (
+                      <Alert severity="success" sx={{ mt: 2 }}>
+                        ✅ {csvData.length} registros carregados. Campos: {csvHeaders.join(', ')}.
+                        <br/>Clique em "Próximo" para editar.
+                      </Alert>
+                    )}
+                     {csvData.length === 0 && activeStep === 0 && (
+                       <Alert severity="info" sx={{mt: 2,  maxWidth: '60%', margin: '10px auto' } }>
+                          Nenhum dado CSV carregado.
+                       </Alert>
+                    )}
+                  </Box>
+                )}
+
+                {inputMethod === 'ia' && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', py: 2 }}>
+                    {!getDeepSeekApiKey() && (
+                      <Alert severity="warning" sx={{ mb: 2, width: '100%', maxWidth: '500px' }}>
+                        Chave da API DeepSeek não configurada.
+                        <MuiLink component="button" variant="body2" onClick={() => setShowDeepSeekAuthModal(true)} sx={{ml:1}}>
+                          Configurar Chave Agora
+                        </MuiLink>
+                         para habilitar a geração com IA.
+                      </Alert>
+                    )}
+                    <TextField
+                      label="Quantidade de Elementos/Registros"
+                      type="number"
+                      value={promptNumRecords}
+                      onChange={(e) => setPromptNumRecords(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      inputProps={{ min: 1 }}
+                      variant="outlined"
+                      sx={{ width: '100%', maxWidth: '500px' }}
                     />
-                  </Button>
-                  {/* Botão "Revisar/Editar Dados" removido. A navegação para a próxima etapa (edição) será feita pelo botão "Próximo" global. */}
-                  
-                  <Typography variant="body2" color="textSecondary">
-                    {steps[0].description}
-                  </Typography>
-                  
-                  {csvData.length > 0 && (
-                    <Alert severity="success" sx={{ mt: 2 }}>
-                      ✅ {csvData.length} registros carregados. Campos: {csvHeaders.join(', ')}.
-                      Clique em "Próximo" para editar ou prosseguir.
-                    </Alert>
-                  )}
-                  {csvData.length === 0 && (
-                     <Alert severity="info" sx={{mt: 2}}>
-                        Nenhum dado carregado. Carregue um CSV ou clique em "Próximo" para adicionar dados manualmente na etapa de edição.
-                     </Alert>
-                  )}
+                    <TextField
+                      label="Texto Descritivo do Prompt (Objetivo)"
+                      multiline
+                      rows={4}
+                      value={promptText}
+                      onChange={(e) => setPromptText(e.target.value)}
+                      variant="outlined"
+                      sx={{ width: '100%', maxWidth: '500px' }}
+                      placeholder="Ex: Um carrossel sobre os benefícios da meditação para reduzir o estresse, focado em dicas práticas para iniciantes."
+                    />
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      size="large"
+                      onClick={handleGenerateIAContent} // Associar a função aqui
+                      disabled={isGenerating || !getDeepSeekApiKey() || !promptText.trim()}
+                      sx={{ mt: 1, position: 'relative' }}
+                    >
+                      {isGenerating && (
+                        <CircularProgress
+                          size={24}
+                          sx={{
+                            color: 'primary.contrastText',
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            marginTop: '-12px',
+                            marginLeft: '-12px',
+                          }}
+                        />
+                      )}
+                      {isGenerating ? 'Gerando...' : 'Gerar Conteúdo com IA'}
+                    </Button>
+                     <Typography variant="body2" color="textSecondary" sx={{mt:1}}>
+                        Após gerar, os dados aparecerão abaixo. Clique em "Próximo" para editá-los.
+                    </Typography>
+                     {csvData.length > 0 && ( // Mostrar dados gerados se houver
+                      <Alert severity="success" sx={{ mt: 2 }}>
+                        ✅ {csvData.length} registros gerados/carregados. Campos: {csvHeaders.join(', ')}.
+                        <br/>Clique em "Próximo" para editar.
+                      </Alert>
+                    )}
+                  </Box>
+                )}
+
+                {/* Mensagem genérica para quando não há dados e está na Etapa 0, após seleção de método */}
+                {inputMethod === 'ia' && csvData.length === 0 && (
+                   <Alert severity="info" sx={{mt: 2, maxWidth: '60%', margin: '10px auto'}}>
+                      Preencha os campos acima e clique em "Gerar Conteúdo com IA", ou alterne para "Carregar CSV".
+                   </Alert>
+                )}
+
                 </Box>
               </CardContent>
             </Card>
@@ -957,6 +1147,12 @@ function App() {
           </span>
         </Tooltip>
       </Box>
+
+      {/* Modal de Configuração da Chave API DeepSeek */}
+      <DeepSeekAuthSetup
+        open={showDeepSeekAuthModal}
+        onClose={() => setShowDeepSeekAuthModal(false)}
+      />
     </Container>
     </ThemeProvider>
   );
