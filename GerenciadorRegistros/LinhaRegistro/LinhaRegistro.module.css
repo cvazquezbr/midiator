@@ -58,6 +58,8 @@
     color: #121212; /* Texto escuro para contraste */
     border-color: #ff7979;
 }
+
+
 .actionsCell { /* Para alinhar os botões na célula de ações */
     white-space: nowrap; /* Impede que os botões quebrem linha se a célula for estreita */
     text-align: center; /* Centraliza os botões na célula de ações */
