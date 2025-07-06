@@ -127,18 +127,28 @@ const GerenciadorRegistros = ({
     };
 
     const handleConfirmarExclusao = () => {
+        console.log('[GR] handleConfirmarExclusao - Início. Registro Selecionado ID:', registroSelecionado?.id);
+        // Usar uma cópia superficial para garantir que estamos filtrando a partir de um estado conhecido no momento da chamada
+        const currentRegistros = [...registros];
+        console.log('[GR] handleConfirmarExclusao - Registros (cópia) ANTES de filtrar:', JSON.parse(JSON.stringify(currentRegistros)));
+
         if (registroSelecionado && registroSelecionado.id !== undefined) {
-            const registrosAposExclusao = registros.filter(
+            const registrosAposExclusao = currentRegistros.filter( // Filtrar a partir da cópia
                 reg => String(reg.id) !== String(registroSelecionado.id)
             );
+            console.log('[GR] handleConfirmarExclusao - Registros APÓS filtrar:', JSON.parse(JSON.stringify(registrosAposExclusao)));
+
             setRegistros(registrosAposExclusao);
 
             if (onDadosAlterados) {
+                console.log('[GR] handleConfirmarExclusao - Chamando onDadosAlterados com Registros:', JSON.parse(JSON.stringify(registrosAposExclusao)), 'Colunas:', [...colunas]);
                 onDadosAlterados(
                     JSON.parse(JSON.stringify(registrosAposExclusao)),
                     [...colunas]
                 );
             }
+        } else {
+            console.warn('[GR] handleConfirmarExclusao - Tentativa de exclusão sem registro selecionado ou ID indefinido.');
         }
         handleFecharModal();
     };

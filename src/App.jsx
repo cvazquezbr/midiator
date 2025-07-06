@@ -223,9 +223,8 @@ function App() {
             setFieldPositions(updatedFieldPositions);
             setFieldStyles(updatedFieldStyles);
             
-            // if (activeStep === 0) setActiveStep(1); // Removido - avanço de etapa será manual via botão Próximo
-            // Apenas alerta sobre o sucesso do carregamento.
-            alert(`${newCsvData.length} registros carregados do CSV com sucesso! Clique em 'Próximo' para editar ou continuar.`);
+            setActiveStep(1); // Avança para a etapa de Edição de Dados (índice 1)
+            // alert(`${newCsvData.length} registros carregados do CSV com sucesso! Clique em 'Próximo' para editar ou continuar.`); // Removido
           }
         },
         error: (error) => {
@@ -496,6 +495,7 @@ function App() {
 
   // Renomeado de handleConcluirEdicaoRegistros para handleDadosAlterados
   const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
+    console.log('[App] handleDadosAlterados Recebeu Registros:', JSON.parse(JSON.stringify(novosRegistros)), 'Colunas:', novasColunas);
     setCsvData(novosRegistros);
     setCsvHeaders(novasColunas);
 
@@ -545,6 +545,11 @@ function App() {
 
   // Removida a renderização condicional do GerenciadorRegistros aqui,
   // ele será renderizado como parte do conteúdo da etapa.
+
+  // Efeito temporário para logar csvData após atualização (para depuração da exclusão)
+  // useEffect(() => {
+  //   console.log('[App] Estado csvData atualizado (dentro do useEffect):', JSON.parse(JSON.stringify(csvData)));
+  // }, [csvData]);
 
   return (
     <ThemeProvider theme={currentTheme}>
