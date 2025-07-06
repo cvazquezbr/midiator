@@ -101,36 +101,36 @@ function App() {
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
   const [generatedImagesData, setGeneratedImagesData] = useState([]); // Para armazenar dados de ImageGeneratorFrontendOnly
   const isMobile = useIsMobile(); // Usa o hook para determinar se é mobile
-  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(isMobile); // Inicializa colapsado em mobile
+  // const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(isMobile); // Removido ou ajustado
   const [anchorElMenu, setAnchorElMenu] = useState(null); // Para o menu de ações
-  // const [showGerenciadorRegistros, setShowGerenciadorRegistros] = useState(false); // Removido - Gerenciador será uma etapa
+  const [isHeaderHovered, setIsHeaderHovered] = useState(false); // Novo estado para hover no cabeçalho
 
 
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const loadStateInputRef = useRef(null); // Ref para o input de carregar estado
 
-  // Efeito para lidar com o scroll e colapsar o header
-  useEffect(() => {
-    // Se for mobile, o header começa colapsado e não muda com o scroll
-    if (isMobile) {
-      setIsHeaderCollapsed(true);
-      return;
-    }
+  // Efeito para lidar com o scroll e colapsar o header - REMOVIDO
+  // useEffect(() => {
+  //   // Se for mobile, o header começa colapsado e não muda com o scroll
+  //   if (isMobile) {
+  //     // setIsHeaderCollapsed(true); // isHeaderCollapsed foi removido ou seu uso mudou
+  //     return;
+  //   }
 
-    const handleScroll = () => {
-      if (window.scrollY > 50) { // Colapsa após 50px de scroll
-        setIsHeaderCollapsed(true);
-      } else {
-        setIsHeaderCollapsed(false);
-      }
-    };
+  //   const handleScroll = () => {
+  //     if (window.scrollY > 50) {
+  //       // setIsHeaderCollapsed(true);
+  //     } else {
+  //       // setIsHeaderCollapsed(false);
+  //     }
+  //   };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [isMobile]); // Adiciona isMobile como dependência
+  //   window.addEventListener('scroll', handleScroll);
+  //   return () => {
+  //     window.removeEventListener('scroll', handleScroll);
+  //   };
+  // }, [isMobile]);
 
   // Efeito para salvar a preferência do tema no localStorage
   useEffect(() => {
@@ -253,8 +253,18 @@ function App() {
         };
         img.src = imageUrl;
 
-        // if (activeStep === 1) setActiveStep(2); // Removido - avanço de etapa será manual via botão Próximo
-        alert("Imagem de fundo carregada com sucesso! Clique em 'Próximo' para continuar.");
+        // setActiveStep(2) -> Se Upload da Imagem é a etapa 2, a próxima é a 3 (Posicionar e Formatar)
+        // O array de steps é 0-indexed:
+        // 0: Definir Dados Iniciais
+        // 1: Editar Dados
+        // 2: Upload da Imagem
+        // 3: Posicionar e Formatar
+        // 4: Gerar Imagens
+        const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar');
+        if (etapaPosicionarFormatarIndex !== -1) {
+            setActiveStep(etapaPosicionarFormatarIndex);
+        }
+        // alert("Imagem de fundo carregada com sucesso! Clique em 'Próximo' para continuar."); // Removido
       };
       reader.readAsDataURL(file);
     }
@@ -551,41 +561,68 @@ function App() {
   //   console.log('[App] Estado csvData atualizado (dentro do useEffect):', JSON.parse(JSON.stringify(csvData)));
   // }, [csvData]);
 
+  const headerExpandedHeight = '280px'; // Altura do header quando expandido
+  const headerCollapsedHeight = '80px'; // Altura do header quando colapsado (para padding do container)
+  const headerPaperHeightCollapsed = '60px'; // Altura do Paper do header quando colapsado
+
   return (
     <ThemeProvider theme={currentTheme}>
       <CssBaseline /> {/* Adiciona normalização e cor de fundo do tema */}
-      <Container maxWidth="xl" sx={{ pt: isHeaderCollapsed || isMobile ? '80px' : '280px', transition: 'padding-top 0.3s ease-in-out' }}>
+      {/* Ajustar pt (padding-top) do Container com base em isMobile ou isHeaderHovered */}
+      <Container
+        maxWidth="xl"
+        sx={{
+          pt: isMobile ? headerCollapsedHeight : (isHeaderHovered ? headerExpandedHeight : headerCollapsedHeight),
+          transition: 'padding-top 0.3s ease-in-out'
+        }}
+      >
         <Paper 
           elevation={3} 
+          onMouseEnter={() => !isMobile && setIsHeaderHovered(true)}
+          onMouseLeave={() => !isMobile && setIsHeaderHovered(false)}
           sx={{ 
-          p: isHeaderCollapsed || isMobile ? 2 : 4, 
-          mb: 4, 
-          position: 'fixed', // Para fixar o header no topo
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1100, // Acima do conteúdo e dos botões de navegação laterais
-          height: isHeaderCollapsed || isMobile ? '60px' : 'auto', // Altura dinâmica
-          minHeight: '60px', // Altura mínima quando colapsado
-          overflow: 'hidden', // Para esconder conteúdo que transborda durante a transição
-          transition: 'height 0.3s ease-in-out, padding 0.3s ease-in-out',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center', // Centraliza conteúdo verticalmente quando colapsado
+            p: isMobile ? 2 : (isHeaderHovered ? 4 : 2),
+            mb: 4,
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1100,
+            height: isMobile ? headerPaperHeightCollapsed : (isHeaderHovered ? 'auto' : headerPaperHeightCollapsed),
+            minHeight: headerPaperHeightCollapsed,
+            overflow: 'hidden',
+            transition: 'height 0.3s ease-in-out, padding 0.3s ease-in-out',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
         }}
       >
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <Box>
             <Typography 
-              variant={isHeaderCollapsed || isMobile ? 'h5' : 'h3'} 
+              variant={isMobile || !isHeaderHovered ? 'h5' : 'h3'}
               component="h3" 
               color="primary"
-              sx={{ transition: 'font-size 0.3s ease-in-out', m:0, p:0, lineHeight: isHeaderCollapsed || isMobile ? 'normal': 'inherit' }} // Ajuste para remover margem/padding do Typography
+              sx={{
+                transition: 'font-size 0.3s ease-in-out',
+                m:0, p:0,
+                lineHeight: isMobile || !isHeaderHovered ? 'normal': 'inherit'
+              }}
             >
               Midiator - Mesclar conteúdo
             </Typography>
-            {!(isHeaderCollapsed || isMobile) && (
-              <Typography variant="h6" color="textSecondary" sx={{ mb: 0, transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out', opacity: isHeaderCollapsed || isMobile ? 0 : 1, height: isHeaderCollapsed || isMobile ? 0 : 'auto' }}>
+            {/* Mostrar subtítulo apenas se não for mobile E o header estiver expandido (hover) */}
+            {!isMobile && isHeaderHovered && (
+              <Typography
+                variant="h6"
+                color="textSecondary"
+                sx={{
+                  mb: 0,
+                  transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out',
+                  opacity: isHeaderHovered ? 1 : 0,
+                  height: isHeaderHovered ? 'auto' : 0
+                }}
+              >
                 Crie imagens personalizadas com controles de formatação individual
               </Typography>
             )}
@@ -636,37 +673,38 @@ function App() {
           </Box>
         </Box>
         
-        {!(isHeaderCollapsed || isMobile) && (
+        {/* Mostrar indicadores de status apenas se não for mobile E o header estiver expandido (hover) */}
+        {!isMobile && isHeaderHovered && (
           <>
             {/* Indicadores de status */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2, mb: 2, flexWrap: 'wrap', transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out', opacity: isHeaderCollapsed || isMobile ? 0 : 1, height: isHeaderCollapsed || isMobile ? 0 : 'auto' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2, mb: 2, flexWrap: 'wrap', transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out', opacity: isHeaderHovered ? 1 : 0, height: isHeaderHovered ? 'auto' : 0 }}>
               <Chip 
                 icon={<FileUpload />}
                 label={`${csvData.length} registros`}
                 color={csvData.length > 0 ? 'success' : 'default'}
                 variant={csvData.length > 0 ? 'filled' : 'outlined'}
-                size={isHeaderCollapsed ? 'small' : 'medium'}
+                size={!isHeaderHovered ? 'small' : 'medium'}
               />
               <Chip 
                 icon={<ImageIcon />}
                 label="Imagem de fundo"
                 color={backgroundImage ? 'success' : 'default'}
                 variant={backgroundImage ? 'filled' : 'outlined'}
-                size={isHeaderCollapsed ? 'small' : 'medium'}
+                size={!isHeaderHovered ? 'small' : 'medium'}
               />
               <Chip 
                 icon={<Settings />}
                 label={`${visibleFields}/${totalFields} campos`}
                 color={visibleFields > 0 ? 'info' : 'default'}
                 variant="filled"
-                size={isHeaderCollapsed ? 'small' : 'medium'}
+                size={!isHeaderHovered ? 'small' : 'medium'}
               />
               <Chip 
                 icon={<Palette />}
                 label={`${styledFields} estilos`}
                 color={styledFields > 0 ? 'secondary' : 'default'}
                 variant="filled"
-                size={isHeaderCollapsed ? 'small' : 'medium'}
+                size={!isHeaderHovered ? 'small' : 'medium'}
               />
             </Box>
             {/* Botões Salvar/Carregar Configuração foram movidos para o Menu */}
