@@ -26,44 +26,52 @@ const GerenciadorRegistros = ({
     }, [proximoId]);
 
     // Inicialização e sincronização com props externas
-    useEffect(() => {
-        // console.log("Efeito de inicialização disparado. Registros Iniciais:", registrosIniciais, "Colunas Iniciais:", colunasIniciais);
-        let maxId = 0;
-        const dadosProcessados = registrosIniciais.map(reg => {
-            const idOriginal = reg.id;
-            let idFinal = (idOriginal !== undefined && idOriginal !== null) ? String(idOriginal) : gerarIdUnico();
 
-            const numIdMatch = String(idFinal).match(/\d+$/);
-            if (numIdMatch) {
-                const numId = parseInt(numIdMatch[0], 10);
-                if (numId >= maxId) { // Ajusta maxId para o cálculo do próximoId
-                    maxId = numId;
+    // Efeito para definir o ponto de partida de proximoId, baseado apenas em registrosIniciais
+    useEffect(() => {
+        let maxId = 0;
+        registrosIniciais.forEach(reg => {
+            const idOriginal = reg.id;
+            if (idOriginal !== undefined && idOriginal !== null) {
+                const numIdMatch = String(idOriginal).match(/\d+$/);
+                if (numIdMatch) {
+                    const numId = parseInt(numIdMatch[0], 10);
+                    if (numId > maxId) {
+                        maxId = numId;
+                    }
                 }
             }
+        });
+        // Define proximoId para ser maxId + 1.
+        // Usar a forma funcional de setProximoId para garantir que estamos usando o valor mais recente se houver múltiplas chamadas rápidas,
+        // e para evitar que proximoId precise ser uma dependência deste useEffect específico.
+        setProximoId(currentInternalPId => Math.max(currentInternalPId, maxId + 1));
+    }, [registrosIniciais]); // Depende apenas de registrosIniciais
+
+    // Efeito para processar os dados (registros) e definir colunas
+    useEffect(() => {
+        const dadosProcessados = registrosIniciais.map(reg => {
+            const idOriginal = reg.id;
+            // gerarIdUnico é chamado aqui se necessário. Ele usa o estado 'proximoId' e o atualiza.
+            let idFinal = (idOriginal !== undefined && idOriginal !== null) ? String(idOriginal) : gerarIdUnico();
             return { ...reg, id: idFinal };
         });
-
         setRegistros(dadosProcessados);
-        // Define proximoId para ser um a mais que o maior ID numérico encontrado, ou 1 se nenhum ID numérico foi encontrado.
-        setProximoId(maxId + 1);
 
-        let currentCols; // Declarar currentCols
+        let currentCols;
         if (colunasIniciais && colunasIniciais.length > 0) {
             currentCols = [...new Set(colunasIniciais)];
-            setColunas(currentCols);
-        } else if (dadosProcessados.length > 0) {
+        } else if (dadosProcessados.length > 0 && dadosProcessados[0]) {
             currentCols = Object.keys(dadosProcessados[0]).filter(k => k !== 'id');
-            setColunas(currentCols);
         } else {
             currentCols = [];
-            setColunas(currentCols);
         }
+        setColunas(currentCols);
 
-        // if (onDadosAlterados) { // Removida a chamada de onDadosAlterados daqui
-        //     onDadosAlterados(JSON.parse(JSON.stringify(dadosProcessados)), [...currentCols]);
-        // }
-    }, [registrosIniciais, colunasIniciais, gerarIdUnico]); // Removido onDadosAlterados das dependências aqui
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [registrosIniciais, colunasIniciais]); // Não incluir gerarIdUnico ou proximoId aqui.
+                                            // A chamada a gerarIdUnico dentro deste efeito usará a versão mais recente
+                                            // da função memoizada, que por sua vez usa o estado proximoId mais recente.
 
     // Handlers para abrir modais
     const handleAbrirModalAdicionar = () => {
