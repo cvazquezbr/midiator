@@ -1,0 +1,40 @@
+.tableContainer {
+    overflow-x: auto; /* Permite rolagem horizontal se a tabela for muito larga */
+    margin-top: 15px; /* Adiciona um pouco de espaço acima da tabela */
+}
+
+.tabela {
+    width: 100%;
+    border-collapse: collapse; /* Remove espaços entre bordas de células */
+}
+
+.tabela th, .tabela td {
+    border: 1px solid #dee2e6; /* Cor de borda mais suave */
+    padding: 0.75rem; /* Espaçamento interno das células (rem é bom para acessibilidade) */
+    text-align: left;
+    vertical-align: top; /* Alinha conteúdo no topo da célula */
+}
+
+.tabela th {
+    background-color: #f8f9fa; /* Fundo do cabeçalho mais claro */
+    color: #495057; /* Cor de texto do cabeçalho */
+    font-weight: 600; /* Fonte um pouco mais forte para cabeçalhos */
+    position: sticky; /* Mantém o cabeçalho fixo no topo durante a rolagem vertical */
+    top: 0;
+    z-index: 10; /* Garante que o cabeçalho fique sobre o conteúdo rolável */
+}
+
+.tabela tbody tr:nth-child(even) {
+    background-color: #f8f9fa; /* Cor de fundo para linhas pares (zebrado) */
+}
+
+.tabela tbody tr:hover {
+    background-color: #e9ecef; /* Cor de fundo ao passar o mouse */
+}
+
+.noDataCell {
+    text-align: center;
+    padding: 20px;
+    font-style: italic;
+    color: #6c757d;
+}

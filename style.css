@@ -1,0 +1,219 @@
+body {
+    font-family: sans-serif;
+    margin: 0;
+    background-color: #f4f7f6;
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2 {
+    color: #2c3e50;
+}
+
+.actions-container {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.csv-loader {
+    display: inline-block;
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.3s ease;
+}
+
+.btn-primary {
+    background-color: #3498db;
+    color: white;
+}
+.btn-primary:hover {
+    background-color: #2980b9;
+}
+
+.btn-secondary {
+    background-color: #bdc3c7;
+    color: #2c3e50;
+}
+.btn-secondary:hover {
+    background-color: #95a5a6;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    color: white;
+}
+.btn-danger:hover {
+    background-color: #c0392b;
+}
+
+.btn-success {
+    background-color: #2ecc71;
+    color: white;
+}
+.btn-success:hover {
+    background-color: #27ae60;
+}
+
+
+.table-container {
+    overflow-x: auto; /* Para tabelas largas em telas pequenas */
+}
+
+#tabelaRegistros {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+#tabelaRegistros th, #tabelaRegistros td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: left;
+}
+
+#tabelaRegistros th {
+    background-color: #ecf0f1;
+    color: #2c3e50;
+    position: sticky; /* Para cabeçalho fixo */
+    top: 0; /* Necessário para sticky header */
+    z-index: 10;
+}
+
+#tabelaRegistros tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+#tabelaRegistros tbody tr:hover {
+    background-color: #f1c40f; /* Amarelo para hover */
+    color: #333;
+}
+
+#tabelaRegistros .btn-editar, #tabelaRegistros .btn-excluir {
+    margin-right: 5px;
+    padding: 5px 8px;
+    font-size: 0.9em;
+}
+
+
+.actions-footer {
+    margin-top: 20px;
+    text-align: right;
+}
+
+
+/* Estilos para Modais */
+.modal {
+    display: none; /* Oculto por padrão */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5); /* Fundo escurecido */
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 25px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.close-button {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="date"],
+.form-group select {
+    width: calc(100% - 22px); /* Ajuste para padding e borda */
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.form-actions {
+    margin-top: 20px;
+    text-align: right;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+#contadorRegistros {
+    margin-bottom: 10px;
+    font-style: italic;
+    color: #555;
+}
+
+/* Responsividade básica */
+@media (max-width: 768px) {
+    .actions-container {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .btn {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    .actions-container .btn { /* Evitar que botões dentro de actions-container ocupem 100% */
+        width: auto;
+    }
+    .csv-loader label.btn{
+         width: auto; /* Para o botão de carregar CSV não ocupar 100% */
+    }
+
+
+    .modal-content {
+        width: 95%;
+        margin: 20% auto;
+    }
+}
