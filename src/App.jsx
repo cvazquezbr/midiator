@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react'; // Correção: Restaurar importação completa
 import { useIsMobile } from './hooks/use-mobile'; // Importa o hook
 import {
   Container,
@@ -33,6 +33,9 @@ import {
 } from '@mui/icons-material';
 import Papa from 'papaparse';
 import ColorThief from 'colorthief';
+// import React, { useState, useRef, useEffect, useCallback } from 'react'; // Removido, pois já está no topo
+// import { useIsMobile } from './hooks/use-mobile'; // Removendo a duplicata - useIsMobile já é importado na linha 2
+// ... (outros imports)
 // Adicionar Menu e MenuItem para o menu de ações
 import { Menu, MenuItem } from '@mui/material';
 // Imports para Theming
@@ -492,7 +495,7 @@ function App() {
   };
 
   // Renomeado de handleConcluirEdicaoRegistros para handleDadosAlterados
-  const handleDadosAlterados = (novosRegistros, novasColunas) => {
+  const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
     setCsvData(novosRegistros);
     setCsvHeaders(novasColunas);
 
@@ -535,7 +538,7 @@ function App() {
     // setShowGerenciadorRegistros(false); // Removido
     // A lógica de avançar o passo foi removida daqui, será controlada pelos botões globais Next/Back
     // e pela lógica em canProceedToStep.
-  };
+  }, [darkMode, fieldPositions, fieldStyles, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles]);
 
 
   const currentTheme = darkMode ? darkTheme : lightTheme;
