@@ -971,6 +971,114 @@ Cada elemento deve conter:
                   </Box>
                 )}
 
+                {/* Mensagem genérica para quando não há dados e está na Etapa 0, após seleção de método */}
+                {inputMethod === 'ia' && csvData.length === 0 && (
+                   <Alert severity="info" sx={{mt: 2, maxWidth: '60%', margin: '10px auto'}}>
+                      Preencha os campos acima e clique em "Gerar Conteúdo com IA", ou alterne para "Carregar CSV".
+                   </Alert>
+                )}
+                </Box>
+
+                {inputMethod === 'csv' && (
+                  <Box sx={{ textAlign: 'center', py: 2 }}>
+                    <Button
+                      variant="contained"
+                      component="label"
+                      size="large"
+                      startIcon={<FileUpload />}
+                      sx={{ mb: 2 }}
+                    >
+                      Selecionar Arquivo CSV
+                      <input
+                        type="file"
+                        accept=".csv"
+                        hidden
+                        ref={fileInputRef}
+                        onChange={handleCSVUpload}
+                      />
+                    </Button>
+                    <Typography variant="body2" color="textSecondary" sx={{mt:1}}>
+                      Carregue um arquivo CSV para definir os dados.
+                    </Typography>
+                    {csvData.length > 0 && (
+                      <Alert severity="success" sx={{ mt: 2 }}>
+                        ✅ {csvData.length} registros carregados. Campos: {csvHeaders.join(', ')}.
+                        <br/>Clique em "Próximo" para editar.
+                      </Alert>
+                    )}
+                     {csvData.length === 0 && activeStep === 0 && (
+                       <Alert severity="info" sx={{mt: 2,  maxWidth: '60%', margin: '10px auto' } }>
+                          Nenhum dado CSV carregado.
+                       </Alert>
+                    )}
+                  </Box>
+                )}
+
+                {inputMethod === 'ia' && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', py: 2 }}>
+                    {!getDeepSeekApiKey() && (
+                      <Alert severity="warning" sx={{ mb: 2, width: '100%', maxWidth: '500px' }}>
+                        Chave da API DeepSeek não configurada.
+                        <MuiLink component="button" variant="body2" onClick={() => setShowDeepSeekAuthModal(true)} sx={{ml:1}}>
+                          Configurar Chave Agora
+                        </MuiLink>
+                         para habilitar a geração com IA.
+                      </Alert>
+                    )}
+                    <TextField
+                      label="Quantidade de Elementos/Registros"
+                      type="number"
+                      value={promptNumRecords}
+                      onChange={(e) => setPromptNumRecords(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      inputProps={{ min: 1 }}
+                      variant="outlined"
+                      sx={{ width: '100%', maxWidth: '500px' }}
+                    />
+                    <TextField
+                      label="Texto Descritivo do Prompt (Objetivo)"
+                      multiline
+                      rows={4}
+                      value={promptText}
+                      onChange={(e) => setPromptText(e.target.value)}
+                      variant="outlined"
+                      sx={{ width: '100%', maxWidth: '500px' }}
+                      placeholder="Ex: Um carrossel sobre os benefícios da meditação para reduzir o estresse, focado em dicas práticas para iniciantes."
+                    />
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      size="large"
+                      onClick={handleGenerateIAContent} // Associar a função aqui
+                      disabled={isGenerating || !getDeepSeekApiKey() || !promptText.trim()}
+                      sx={{ mt: 1, position: 'relative' }}
+                    >
+                      {isGenerating && (
+                        <CircularProgress
+                          size={24}
+                          sx={{
+                            color: 'primary.contrastText',
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            marginTop: '-12px',
+                            marginLeft: '-12px',
+                          }}
+                        />
+                      )}
+                      {isGenerating ? 'Gerando...' : 'Gerar Conteúdo com IA'}
+                    </Button>
+                     <Typography variant="body2" color="textSecondary" sx={{mt:1}}>
+                        Após gerar, os dados aparecerão abaixo. Clique em "Próximo" para editá-los.
+                    </Typography>
+                     {csvData.length > 0 && ( // Mostrar dados gerados se houver
+                      <Alert severity="success" sx={{ mt: 2 }}>
+                        ✅ {csvData.length} registros gerados/carregados. Campos: {csvHeaders.join(', ')}.
+                        <br/>Clique em "Próximo" para editar.
+                      </Alert>
+                    )}
+                  </Box>
+                )}
+
                 {/* Mensagem genérica para quando não há dados e está na Etapa 0, para o modo IA */}
                 {inputMethod === 'ia' && csvData.length === 0 && !isGenerating && (
                    <Alert severity="info" sx={{mt: 2, maxWidth: '70%', margin: '20px auto' } }>
