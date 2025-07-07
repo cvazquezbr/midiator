@@ -611,39 +611,59 @@ function App() {
         return;
     }
 
-    const finalPrompt = `Elabore um carrossel para Instagram com ${promptNumRecords} elementos baseado no texto abaixo. Ajuste o prompt para que o retorno permita o preenchimento equivalente ao do csv:
+    const finalPrompt = `A partir do TEXTO BASE fornecido abaixo, gere conteúdo para um carrossel de Instagram com ${promptNumRecords} elementos.
+
+TEXTO BASE:
 ${promptText}
-Cada elemento deve conter:
-### Requisitos para cada elemento:
-1. **Título** (até 4 palavras):
-   - Impactante e curto
-   - Use emojis relevantes no início
+
+INSTRUÇÕES DE FORMATAÇÃO DA SAÍDA (MUITO IMPORTANTE):
+A SUA RESPOSTA DEVE CONTER *APENAS E SOMENTE* UM BLOCO DE TEXTO FORMATADO COMO CSV, SEM NENHUM TEXTO ADICIONAL ANTES OU DEPOIS DO BLOCO CSV.
+O BLOCO CSV DEVE SER DELIMITADO EXATAMENTE POR TRÊS CRASE SEGUIDAS E A PALAVRA "csv" (\`\`\`csv) NO INÍCIO, E TRÊS CRASE SEGUIDAS (\`\`\`) NO FINAL.
+DENTRO DO BLOCO CSV:
+- A primeira linha DEVE SER o cabeçalho: Titulo;Texto Principal;Ponte para o Próximo
+- As linhas subsequentes DEVERÃO ser os dados de cada elemento, com os campos separados por PONTO E VÍRGULA (;).
+- NÃO inclua números de elemento ou qualquer outra coluna além de "Titulo", "Texto Principal", e "Ponte para o Próximo".
+- NÃO inclua explicações, introduções, ou qualquer texto fora do bloco \`\`\`csv ... \`\`\`.
+
+REQUISITOS PARA O CONTEÚDO DE CADA ELEMENTO (LINHA DO CSV):
+1. **Titulo** (Coluna 1):
+   - Máximo de 4 palavras.
+   - Deve começar com um emoji relevante.
+   - Precisa ser curto e impactante.
    - Exemplo: "✨ Segredo Revelado"
-
-2. **Texto Principal** (120-180 caracteres):
-   - Fragmento do texto base adaptado para o elemento
-   - Linguagem direta e conversacional
-   - Incluir 1 pergunta retórica
+2. **Texto Principal** (Coluna 2):
+   - Entre 120 e 180 caracteres.
+   - Adaptado do TEXTO BASE, com linguagem conversacional e direta.
+   - Deve conter 1 pergunta retórica para engajamento.
    - Exemplo: "Sabia que 80% dos negócios falham nisso? Descubra como evitar esse erro..."
-
-3. **Ponte para o Próximo** (até 40 caracteres):
-   - Criar curiosidade para o próximo elemento
-   - Usar fórmula: Emoji + Chamada + Dica do próximo
+3. **Ponte para o Próximo** (Coluna 3):
+   - Máximo de 40 caracteres.
+   - Criar curiosidade para o próximo elemento.
+   - Usar fórmula: Emoji + Chamada + Dica do próximo.
+   - No último elemento, substitua por uma Chamada para Ação (CTA) final.
    - Exemplos:
      → "Próximo: O passo que muda tudo!"
      → "Siga para o segredo nº3 👇"
 
-### Estrutura de Progressão:
-- Elemento 1: Dado impactante + pergunta instigante
-- Elementos 2-${promptNumRecords > 1 ? promptNumRecords -1 : 1}: Conteúdo principal dividido em passos (ajustar se promptNumRecords for 1 ou 2)
-- Elemento ${promptNumRecords}: CTA claro + bônus surpresa (ou Case de sucesso/resumo se for o penúltimo e CTA no último, ajustar para ${promptNumRecords})
+ESTRUTURA NARRATIVA SUGERIDA:
+- Elemento 1: Dado impactante ou pergunta instigante extraída do início do TEXTO BASE.
+- Elementos intermediários: Desenvolver os pontos principais do TEXTO BASE.
+- Último Elemento: CTA claro ou resumo conclusivo.
 
-### Tom de Voz:
-- Empático e motivacional (use "você" e "vamos")
-- Urgência controlada ("Agora você pode...")
-- Toque de storytelling`;
+TOM DE VOZ:
+- Empático e motivacional (use "você" e "vamos").
+- Urgência controlada ("Agora você pode...").
+- Toque de storytelling.
 
-    console.log("Prompt para DeepSeek:", finalPrompt);
+Exemplo de como o BLOCO CSV deve se parecer na sua resposta (não inclua este exemplo na sua resposta final, apenas o bloco gerado):
+\`\`\`csv
+Titulo;Texto Principal;Ponte para o Próximo
+✨ Grande Novidade;Descubra algo incrível que vai mudar seu dia! Você está pronto para a surpresa?;➡️ Veja o próximo!
+🎉 Outra Dica;Continuando nossa jornada com mais um segredo. Já se perguntou como isso é possível?;CTA Final Aqui!
+\`\`\`
+Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` com os dados.`;
+
+    console.log("Prompt para Gemini/DeepSeek:", finalPrompt); // Log atualizado para ser genérico
     console.log("Número de Registros para Gerar:", promptNumRecords);
 
     // console.log("Prompt para DeepSeek:", finalPrompt); // Manter para depuração se necessário
