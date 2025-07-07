@@ -639,7 +639,8 @@ const ImageGeneratorFrontendOnly = ({
         return updatedImages;
       });
 
-    } catch (error)      // console.error('[regenerateSingleImage] Error during image regeneration process for index ' + index + ':', error);
+    } catch (error) {
+      // console.error('[regenerateSingleImage] Error during image regeneration process for index ' + index + ':', error);
       alert(`Erro na regeneração da imagem (índice ${index}): ${error.message}`);
     }
   };
