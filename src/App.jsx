@@ -50,10 +50,14 @@ import CssBaseline from '@mui/material/CssBaseline'; // Normaliza estilos e apli
 import FieldPositioner from './components/FieldPositioner';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
 import GerenciadorRegistros from '../GerenciadorRegistros/GerenciadorRegistros'; // Importar o GerenciadorRegistros
-import DeepSeekAuthSetup from './components/DeepSeekAuthSetup'; // Importar o componente de configuração da API DeepSeek
-import { getDeepSeekApiKey } from './utils/deepSeekCredentials'; // Caminho corrigido
-import { callDeepSeekApi } from './utils/deepSeekAPI'; // Importar a função da API
-import VpnKeyIcon from '@mui/icons-material/VpnKey'; // Ícone para a chave da API
+import DeepSeekAuthSetup from './components/DeepSeekAuthSetup';
+import GeminiAuthSetup from './components/GeminiAuthSetup'; // Importar GeminiAuthSetup
+import { getDeepSeekApiKey } from './utils/deepSeekCredentials';
+import { getGeminiApiKey } from './utils/geminiCredentials'; // Importar getGeminiApiKey
+import { callDeepSeekApi } from './utils/deepSeekAPI';
+import { callGeminiApi } from './utils/geminiAPI'; // Importar callGeminiApi
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import GoogleIcon from '@mui/icons-material/Google'; // Ícone para Gemini (exemplo)
 import './App.css';
 
 // Definição dos temas light e dark
@@ -114,9 +118,11 @@ function App() {
   const [anchorElMenu, setAnchorElMenu] = useState(null); // Para o menu de ações
   const [isHeaderHovered, setIsHeaderHovered] = useState(false); // Novo estado para hover no cabeçalho
   const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false); // Estado para o modal da chave DeepSeek
+  const [showGeminiAuthModal, setShowGeminiAuthModal] = useState(false); // Estado para o modal da chave Gemini
 
   // Estados para a Geração com IA
   const [inputMethod, setInputMethod] = useState('csv'); // 'csv' ou 'ia'
+  const [selectedApiModel, setSelectedApiModel] = useState('deepseek'); // 'deepseek' ou 'gemini'
   const [promptNumRecords, setPromptNumRecords] = useState(10); // Default 10, conforme sugerido
   const [promptText, setPromptText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false); // Para feedback de carregamento da IA
@@ -568,10 +574,27 @@ function App() {
 
   const handleGenerateIAContent = async () => {
     setIsGenerating(true);
-    const apiKey = getDeepSeekApiKey();
+
+    let apiKey;
+    let apiToCall;
+    let apiName = "";
+
+    if (selectedApiModel === 'deepseek') {
+      apiKey = getDeepSeekApiKey();
+      apiToCall = callDeepSeekApi;
+      apiName = "DeepSeek";
+    } else if (selectedApiModel === 'gemini') {
+      apiKey = getGeminiApiKey();
+      apiToCall = callGeminiApi;
+      apiName = "Gemini";
+    } else {
+      alert('Modelo de IA não selecionado ou inválido.');
+      setIsGenerating(false);
+      return;
+    }
 
     if (!apiKey) {
-      alert('Por favor, configure sua chave da API DeepSeek primeiro.\nVocê pode fazer isso no menu "Mais ações" (ícone de três pontos) no cabeçalho.');
+      alert(`Por favor, configure sua chave da API ${apiName} primeiro.\nVocê pode fazer isso no menu "Mais ações" (ícone de três pontos) no cabeçalho.`);
       setIsGenerating(false);
       return;
     }
@@ -627,29 +650,49 @@ Cada elemento deve conter:
     // console.log("Número de Registros para Gerar:", promptNumRecords);
 
     try {
-      const iaResponseText = await callDeepSeekApi(finalPrompt, apiKey);
-      console.log('Resposta da API DeepSeek (bruta):', iaResponseText);
+      let iaResponseText = "";
+      if (apiToCall) { // Verifica se apiToCall está definida
+        iaResponseText = await apiToCall(finalPrompt, apiKey);
+        console.log(`Resposta da API ${apiName} (bruta):`, iaResponseText);
+      } else {
+        throw new Error("Nenhuma função de API válida foi selecionada.");
+      }
 
-      // TODO: Implementar parseIaResponseToCsvData(iaResponseText, promptNumRecords)
-      // e atualizar setCsvData, setCsvHeaders, fieldPositions, fieldStyles, setActiveStep(1)
+      const parsedResult = parseIaResponseToCsvData(iaResponseText, promptNumRecords);
 
-      // Por enquanto, apenas um alerta com a resposta bruta para visualização
-      alert(`Resposta da IA recebida (ver console para detalhes). Próximo passo é implementar o parsing.\n\nInício da Resposta:\n${iaResponseText.substring(0, 200)}...`);
+      if (parsedResult && parsedResult.data && parsedResult.data.length > 0) {
+        setCsvData(parsedResult.data);
+        setCsvHeaders(parsedResult.headers);
 
-      // Exemplo de como seria após o parsing (a ser implementado no próximo passo do plano)
-      // const parsedResult = parseIaResponseToCsvData(iaResponseText, promptNumRecords);
-      // if (parsedResult && parsedResult.data && parsedResult.data.length > 0) {
-      //   setCsvData(parsedResult.data);
-      //   setCsvHeaders(parsedResult.headers);
-      //   // Atualizar fieldPositions e fieldStyles aqui como em handleCSVUpload
-      //   setActiveStep(1);
-      // } else {
-      //   alert('Não foi possível processar a resposta da IA para o formato de tabela.');
-      // }
+        const updatedFieldPositions = {};
+        const updatedFieldStyles = {};
+        const defaultStylesBase = {
+          fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
+          textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
+          strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
+          shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
+          textAlign: 'left', verticalAlign: 'top'
+        };
+
+        parsedResult.headers.forEach((header, index) => {
+          updatedFieldPositions[header] = {
+            x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12,
+            width: 15, height: 10, visible: true
+          };
+          updatedFieldStyles[header] = { ...defaultStylesBase };
+        });
+        setFieldPositions(updatedFieldPositions);
+        setFieldStyles(updatedFieldStyles);
+
+        setActiveStep(1); // Avança para Edição de Dados
+      } else {
+        alert('Não foi possível processar a resposta da IA para o formato de tabela. Verifique o console para a resposta bruta da IA e a saída do parser.');
+        console.log(`[App] Falha no parsing ou dados vazios. Resposta da API ${apiName}:`, iaResponseText, "Resultado do Parser:", parsedResult);
+      }
 
     } catch (error) {
-      console.error("Erro ao chamar ou processar API DeepSeek:", error);
-      alert(`Erro ao gerar conteúdo com IA: ${error.message}`);
+      console.error(`Erro ao chamar ou processar API ${apiName}:`, error);
+      alert(`Erro ao gerar conteúdo com IA via ${apiName}: ${error.message}`);
     } finally {
       setIsGenerating(false);
     }
@@ -852,8 +895,12 @@ Cada elemento deve conter:
                 Ir para Edição de Dados
               </MenuItem>
               <MenuItem onClick={() => { setShowDeepSeekAuthModal(true); handleMenuClose(); }}>
-                <VpnKeyIcon sx={{ mr: 1 }} />
+                <VpnKeyIcon sx={{ mr: 1 }} /> {/* Considerar um ícone específico para DeepSeek se houver */}
                 Configurar API DeepSeek
+              </MenuItem>
+              <MenuItem onClick={() => { setShowGeminiAuthModal(true); handleMenuClose(); }}>
+                <GoogleIcon sx={{ mr: 1 }} /> {/* Exemplo de ícone para Gemini */}
+                Configurar API Gemini
               </MenuItem>
               <MenuItem onClick={handleSaveTemplateClick}>Salvar Config. Template</MenuItem>
               <MenuItem onClick={handleLoadTemplateClick}>Carregar Config. Template</MenuItem>
@@ -1004,15 +1051,39 @@ Cada elemento deve conter:
 
                 {inputMethod === 'ia' && (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', py: 2 }}>
-                    {!getDeepSeekApiKey() && (
+                    <ToggleButtonGroup
+                      color="secondary"
+                      value={selectedApiModel}
+                      exclusive
+                      onChange={(event, newModel) => {
+                        if (newModel !== null) {
+                          setSelectedApiModel(newModel);
+                        }
+                      }}
+                      aria-label="Selecionar Modelo de IA"
+                      sx={{ mb: 2 }}
+                    >
+                      <ToggleButton value="deepseek">DeepSeek</ToggleButton>
+                      <ToggleButton value="gemini">Gemini</ToggleButton>
+                    </ToggleButtonGroup>
+
+                    {selectedApiModel === 'deepseek' && !getDeepSeekApiKey() && (
                       <Alert severity="warning" sx={{ mb: 2, width: '100%', maxWidth: '500px' }}>
                         Chave da API DeepSeek não configurada.
                         <MuiLink component="button" variant="body2" onClick={() => setShowDeepSeekAuthModal(true)} sx={{ml:1}}>
-                          Configurar Chave Agora
+                          Configurar Chave DeepSeek
                         </MuiLink>
-                         para habilitar a geração com IA.
                       </Alert>
                     )}
+                    {selectedApiModel === 'gemini' && !getGeminiApiKey() && (
+                      <Alert severity="warning" sx={{ mb: 2, width: '100%', maxWidth: '500px' }}>
+                        Chave da API Gemini não configurada.
+                        <MuiLink component="button" variant="body2" onClick={() => setShowGeminiAuthModal(true)} sx={{ml:1}}>
+                          Configurar Chave Gemini
+                        </MuiLink>
+                      </Alert>
+                    )}
+
                     <TextField
                       label="Quantidade de Elementos/Registros"
                       type="number"
@@ -1036,8 +1107,13 @@ Cada elemento deve conter:
                       variant="contained"
                       color="secondary"
                       size="large"
-                      onClick={handleGenerateIAContent} // Associar a função aqui
-                      disabled={isGenerating || !getDeepSeekApiKey() || !promptText.trim()}
+                      onClick={handleGenerateIAContent}
+                      disabled={
+                        isGenerating ||
+                        !promptText.trim() ||
+                        (selectedApiModel === 'deepseek' && !getDeepSeekApiKey()) ||
+                        (selectedApiModel === 'gemini' && !getGeminiApiKey())
+                      }
                       sx={{ mt: 1, position: 'relative' }}
                     >
                       {isGenerating && (
@@ -1249,6 +1325,12 @@ Cada elemento deve conter:
       <DeepSeekAuthSetup
         open={showDeepSeekAuthModal}
         onClose={() => setShowDeepSeekAuthModal(false)}
+      />
+
+      {/* Modal de Configuração da Chave API Gemini */}
+      <GeminiAuthSetup
+        open={showGeminiAuthModal}
+        onClose={() => setShowGeminiAuthModal(false)}
       />
     </Container>
     </ThemeProvider>
