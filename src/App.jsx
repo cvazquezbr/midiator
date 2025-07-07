@@ -34,7 +34,8 @@ import {
   MoreVert, // Ícone para o menu de ações
   Brightness4, // Ícone para modo dark
   Brightness7, // Ícone para modo light
-  Edit // Ícone para editar registros
+  Edit, // Ícone para editar registros
+  Download as DownloadIcon // Ícone para exportar CSV
 } from '@mui/icons-material';
 import Papa from 'papaparse';
 import ColorThief from 'colorthief';
@@ -519,6 +520,36 @@ function App() {
     handleSaveState();
   };
 
+  const handleExportCSV = () => {
+    if (csvData.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    // Papa.unparse espera um array de objetos ou um array de arrays.
+    // Se csvHeaders for usado, ele garante a ordem das colunas.
+    // Se csvData já for um array de objetos com as chaves corretas,
+    // Papa.unparse(csvData) pode ser suficiente, mas usar 'fields' garante a ordem.
+    const config = {
+      quotes: true, // Adiciona aspas em todos os campos
+      delimiter: ";", // Usa ponto e vírgula como delimitador
+      header: true, // Inclui a linha de cabeçalho
+      fields: csvHeaders // Garante a ordem das colunas e quais incluir
+    };
+    const csvString = Papa.unparse(csvData, config);
+
+    const blob = new Blob([`\uFEFF${csvString}`], { type: "text/csv;charset=utf-8;" }); // Adiciona BOM para UTF-8 Excel
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "dados_exportados.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    handleMenuClose(); // Fechar o menu após a ação
+  };
+
   const handleOpenGerenciadorRegistros = () => {
     // setShowGerenciadorRegistros(true); // Removido
     setActiveStep(1); // Avança para a etapa de edição
@@ -951,6 +982,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               </MenuItem>
               <MenuItem onClick={handleSaveTemplateClick}>Salvar Config. Template</MenuItem>
               <MenuItem onClick={handleLoadTemplateClick}>Carregar Config. Template</MenuItem>
+              <MenuItem onClick={handleExportCSV} disabled={csvData.length === 0}>
+                <DownloadIcon sx={{ mr: 1 }} />
+                Exportar CSV
+              </MenuItem>
             </Menu>
             {/* Input de arquivo escondido para carregar template */}
             <input 
