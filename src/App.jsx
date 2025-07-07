@@ -708,40 +708,40 @@ Cada elemento deve conter:
       return { data: [], headers: finalHeaders };
     }
 
+    console.log("[parseIaResponseToCsvData] Resposta bruta recebida para parsing:", responseText);
+
     // 1. Extrair o bloco CSV
-    const csvBlockRegex = /```csv\s*([\s\S]*?)\s*```/;
+    // Regex ajustada para ser mais flexível com espaços e capturar o conteúdo entre ```csv e ```
+    const csvBlockRegex = /```csv\s*([\s\S]+?)\s*```/;
     const csvMatch = responseText.match(csvBlockRegex);
 
-    console.log("[parseIaResponseToCsvData] Tentando extrair bloco CSV. Resposta bruta:", responseText);
+    console.log("[parseIaResponseToCsvData] Resultado do match da regex (csvMatch):", csvMatch);
 
-    if (!csvMatch || !csvMatch[1]) {
-      console.error("[parseIaResponseToCsvData] Bloco CSV não encontrado na resposta da IA. csvMatch:", csvMatch);
+    if (!csvMatch || csvMatch.length < 2 || !csvMatch[1] || csvMatch[1].trim() === "") {
+      console.error("[parseIaResponseToCsvData] Bloco CSV não encontrado ou vazio na resposta da IA. Detalhes do csvMatch:", csvMatch);
       // Fallback para o parser antigo (DeepSeek)
       const fallbackLines = responseText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
       let currentRecord = {};
       for (const line of fallbackLines) {
         if (line.toLowerCase().startsWith("título:") || line.toLowerCase().startsWith("titulo:")) {
-          if (Object.keys(currentRecord).length > 0 && currentRecord["Título"]) data.push(currentRecord); // Adiciona registro anterior se válido
+          if (Object.keys(currentRecord).length > 0 && currentRecord["Título"]) data.push(currentRecord);
           currentRecord = { "Título": line.substring(line.indexOf(':') + 1).trim() };
         } else if (line.toLowerCase().startsWith("texto principal:")) {
           currentRecord["Texto Principal"] = line.substring(line.indexOf(':') + 1).trim();
         } else if (line.toLowerCase().startsWith("ponte para o próximo:") || line.toLowerCase().startsWith("ponte:")) {
           currentRecord["Ponte para o Próximo"] = line.substring(line.indexOf(':') + 1).trim();
-          if (currentRecord["Título"]) data.push(currentRecord); // Adiciona registro atual ao encontrar a ponte
-          currentRecord = {}; // Prepara para o próximo registro
+          if (currentRecord["Título"]) data.push(currentRecord);
+          currentRecord = {};
         }
       }
       if (Object.keys(currentRecord).length > 0 && currentRecord["Título"]) data.push(currentRecord);
 
       if (data.length > 0) {
-        console.log("[parseIaResponseToCsvData] Parseado como fallback (formato DeepSeek):", data);
-        // Garantir que todos os registros tenham todos os cabeçalhos finais
+        console.log("[parseIaResponseToCsvData] Parseado como fallback (formato DeepSeek):", JSON.parse(JSON.stringify(data)));
         const processedData = data.map(record => ({
             "Título": record["Título"] || "",
             "Texto Principal": record["Texto Principal"] || "",
             "Ponte para o Próximo": record["Ponte para o Próximo"] || "",
-            // Gerar um ID se não vier da IA (o GerenciadorRegistros também faz isso, mas podemos adiantar)
-            // id: record.id || `generated-${Math.random().toString(36).substr(2, 9)}`
         }));
         return { data: processedData, headers: finalHeaders };
       } else {
@@ -750,21 +750,19 @@ Cada elemento deve conter:
       }
     }
 
+    // Se chegou aqui, csvMatch[1] deve ter o conteúdo CSV
     const csvContent = csvMatch[1].trim();
-    console.log("[parseIaResponseToCsvData] Conteúdo CSV extraído (csvMatch[1]):", csvMatch[1]);
+    console.log("[parseIaResponseToCsvData] Conteúdo CSV bruto extraído (csvMatch[1]):", csvMatch[1]);
     console.log("[parseIaResponseToCsvData] Conteúdo CSV após trim (csvContent):", csvContent);
 
-    // Usar regex para split para lidar com \r\n e \n
     const lines = csvContent.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
-    console.log("[parseIaResponseToCsvData] Linhas após split e trim:", lines);
+    console.log("[parseIaResponseToCsvData] Linhas do CSV (após split, trim e filter):", lines);
 
-
-    if (lines.length < 2) { // Precisa de cabeçalho + pelo menos uma linha de dados
-      console.error("[parseIaResponseToCsvData] Conteúdo CSV extraído está incompleto (linhas < 2). Linhas encontradas:", lines.length);
+    if (lines.length < 2) {
+      console.error("[parseIaResponseToCsvData] Conteúdo CSV extraído tem menos de 2 linhas (cabeçalho + dados). Linhas:", lines);
       return { data: [], headers: finalHeaders };
     }
 
-    // 2. Processar o cabeçalho do CSV extraído
     const extractedHeaders = lines[0].split(';').map(h => h.trim());
     console.log("[parseIaResponseToCsvData] Cabeçalhos extraídos do CSV:", extractedHeaders);
     const headerMap = {}; // Mapeia do cabeçalho da IA para o nosso cabeçalho final
