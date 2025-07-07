@@ -54,7 +54,7 @@ import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly'
 import GerenciadorRegistros from '../GerenciadorRegistros/GerenciadorRegistros'; // Importar o GerenciadorRegistros
 import DeepSeekAuthSetup from './components/DeepSeekAuthSetup';
 import GeminiAuthSetup from './components/GeminiAuthSetup'; // Importar GeminiAuthSetup
-import GoogleAuthSetup from './components/GoogleAuthSetup'; // Importar GoogleAuthSetup
+import GoogleDriveAuthModal from './components/GoogleDriveAuthModal'; // Importar GoogleDriveAuthModal
 import { getDeepSeekApiKey } from './utils/deepSeekCredentials';
 import { getGeminiApiKey } from './utils/geminiCredentials'; // Importar getGeminiApiKey
 import { callDeepSeekApi } from './utils/deepSeekAPI';
@@ -122,7 +122,7 @@ function App() {
   const [isHeaderHovered, setIsHeaderHovered] = useState(false); // Novo estado para hover no cabeçalho
   const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false); // Estado para o modal da chave DeepSeek
   const [showGeminiAuthModal, setShowGeminiAuthModal] = useState(false); // Estado para o modal da chave Gemini
-  const [showGoogleAuthModal, setShowGoogleAuthModal] = useState(false); // Estado para o modal da chave Google Drive
+  const [showGoogleDriveAuthModal, setShowGoogleDriveAuthModal] = useState(false); // Estado para o modal do Google Drive
 
   // Estados para a Geração com IA
   const [inputMethod, setInputMethod] = useState('csv'); // 'csv' ou 'ia'
@@ -983,7 +983,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                 <GoogleIcon sx={{ mr: 1 }} /> {/* Exemplo de ícone para Gemini */}
                 Configurar API Gemini
               </MenuItem>
-              <MenuItem onClick={() => { setShowGoogleAuthModal(true); handleMenuClose(); }}>
+              <MenuItem onClick={() => { setShowGoogleDriveAuthModal(true); handleMenuClose(); }}>
                 <CloudQueue sx={{ mr: 1 }} />
                 Configurar API Google Drive
               </MenuItem>
@@ -1423,11 +1423,9 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
       />
 
       {/* Modal de Configuração da API Google Drive */}
-      <GoogleAuthSetup
-        open={showGoogleAuthModal}
-        onClose={() => setShowGoogleAuthModal(false)}
-        // onAuthSuccess={() => console.log("Google Drive Auth Success")} // Opcional: callback de sucesso
-        // onAuthError={(err) => console.error("Google Drive Auth Error:", err)} // Opcional: callback de erro
+      <GoogleDriveAuthModal
+        open={showGoogleDriveAuthModal}
+        onClose={() => setShowGoogleDriveAuthModal(false)}
       />
     </Container>
     </ThemeProvider>
