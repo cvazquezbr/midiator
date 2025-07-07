@@ -10,16 +10,27 @@ const TextBox = ({
   onSelect,
   onPositionChange,
   onSizeChange,
-  containerSize
+  containerSize,
+  onContentChange // New prop for content updates
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false); // State for edit mode
+  const [editedContent, setEditedContent] = useState(content); // State for temporary edited content
   const [resizeHandle, setResizeHandle] = useState(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [initialPosition, setInitialPosition] = useState({ x: 0, y: 0 });
   const [initialSize, setInitialSize] = useState({ width: 0, height: 0 });
 
   const textBoxRef = useRef(null);
+  const textareaRef = useRef(null); // Ref for the textarea
+
+  // Update editedContent if the external content prop changes while not editing
+  useEffect(() => {
+    if (!isEditing) {
+      setEditedContent(content);
+    }
+  }, [content, isEditing]);
 
   const pixelPosition = {
     x: (position.x / 100) * containerSize.width,
@@ -241,6 +252,56 @@ const TextBox = ({
     setResizeHandle(null);
   };
 
+  const handleDoubleClick = () => {
+    if (isSelected) {
+      setIsEditing(true);
+      // Focus the textarea after a short delay to ensure it's rendered
+      setTimeout(() => {
+        textareaRef.current?.focus();
+        textareaRef.current?.select();
+      }, 0);
+    }
+  };
+
+  const handleTextareaChange = (e) => {
+    setEditedContent(e.target.value);
+  };
+
+  const handleTextareaBlur = () => {
+    setIsEditing(false);
+    if (onContentChange && content !== editedContent) {
+      onContentChange(field, editedContent);
+    }
+  };
+
+  // Prevent drag/resize when editing text
+  const effectiveHandleMouseDown = (e, type, handle = null) => {
+    if (isEditing) {
+      // If clicking inside textarea, let the default behavior happen
+      if (e.target === textareaRef.current) {
+        return;
+      }
+      // If clicking outside textarea but still in edit mode (e.g. on a resize handle by mistake), blur textarea
+      textareaRef.current?.blur();
+      e.stopPropagation(); // Stop propagation to prevent selection or other parent handlers
+      return;
+    }
+    handleMouseDown(e, type, handle);
+  };
+
+  const effectiveHandleTouchStart = (e, type, handle = null) => {
+    if (isEditing) {
+       if (e.target === textareaRef.current) {
+        return;
+      }
+      textareaRef.current?.blur();
+      e.stopPropagation();
+      return;
+    }
+    handleTouchStart(e, type, handle);
+  };
+
+
   useEffect(() => {
     if (isDragging || isResizing) {
       // Configurar event listeners com opções adequadas para mobile
@@ -262,7 +323,7 @@ const TextBox = ({
         document.body.style.touchAction = '';
       };
     }
-  }, [isDragging, isResizing, dragStart, initialPosition, initialSize]);
+  }, [isDragging, isResizing, dragStart, initialPosition, initialSize, handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]); // Added dependencies
 
   const wrapText = (text, maxWidth) => {
     if (!text) return [''];
@@ -326,13 +387,56 @@ const TextBox = ({
           backgroundColor: 'rgba(33, 150, 243, 0.05)'
         }
       }}
-      onMouseDown={(e) => handleMouseDown(e, 'drag')}
-      onTouchStart={(e) => handleTouchStart(e, 'drag')}
-      onClick={() => onSelect(field)}
+      onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
+      onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
+      onClick={(e) => {
+        if (isEditing && e.target === textareaRef.current) {
+           // Allow click inside textarea without deselecting
+          return;
+        }
+        if (!isEditing) onSelect(field);
+      }}
+      onDoubleClick={handleDoubleClick}
     >
-      <Box
-        sx={{
-          fontFamily: style.fontFamily || 'Arial',
+      {isEditing && isSelected ? (
+        <textarea
+          ref={textareaRef}
+          value={editedContent}
+          onChange={handleTextareaChange}
+          onBlur={handleTextareaBlur}
+          onKeyDown={(e) => { // Optional: submit on Enter, new line on Shift+Enter
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              textareaRef.current?.blur();
+            }
+          }}
+          style={{
+            width: '100%',
+            height: '100%',
+            fontFamily: style.fontFamily || 'Arial',
+            fontSize: `${style.fontSize || 16}px`,
+            fontWeight: style.fontWeight || 'normal',
+            fontStyle: style.fontStyle || 'normal',
+            color: style.color || '#000000',
+            lineHeight: `${lineHeight}px`, // Use calculated lineHeight
+            textDecoration: style.textDecoration || 'none',
+            // Apply shadow and stroke if possible, though complex for textarea
+            // textShadow: style.textShadow ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}` : 'none',
+            // WebkitTextStroke is not directly applicable to textarea value, but border can simulate stroke
+            border: 'none', // Or style to match text stroke if desired
+            outline: 'none',
+            backgroundColor: 'transparent',
+            resize: 'none',
+            overflow: 'hidden', // Or 'auto' if content might exceed box
+            padding: '0', // Padding is handled by the outer Box
+            boxSizing: 'border-box',
+            textAlign: style.textAlign || 'left', // Apply text alignment
+          }}
+        />
+      ) : (
+        <Box
+          sx={{
+            fontFamily: style.fontFamily || 'Arial',
           fontSize: `${style.fontSize || 16}px`,
           fontWeight: style.fontWeight || 'normal',
           fontStyle: style.fontStyle || 'normal',
@@ -355,7 +459,7 @@ const TextBox = ({
         ))}
       </Box>
 
-      {isSelected && resizeHandles.map((handle) => (
+      {isSelected && !isEditing && resizeHandles.map((handle) => ( // Hide handles when editing
         <Box
           key={handle.name}
           sx={{
@@ -381,8 +485,8 @@ const TextBox = ({
               transform: 'translate(-50%, -50%) scale(1.2)'
             }
           }}
-          onMouseDown={(e) => handleMouseDown(e, 'resize', handle)}
-          onTouchStart={(e) => handleTouchStart(e, 'resize', handle)}
+          onMouseDown={(e) => effectiveHandleMouseDown(e, 'resize', handle)}
+          onTouchStart={(e) => effectiveHandleTouchStart(e, 'resize', handle)}
         />
       ))}
     </Box>

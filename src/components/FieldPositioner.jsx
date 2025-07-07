@@ -32,7 +32,8 @@ const FieldPositioner = ({
   onImageDisplayedSizeChange,
   colorPalette,
   onSelectFieldExternal,
-  showFormattingPanel = true
+  showFormattingPanel = true,
+  onCsvDataUpdate // New prop to notify App.jsx of changes
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -200,6 +201,28 @@ const FieldPositioner = ({
     setIsInteracting(false);
   };
 
+  const handleContentChange = (field, newText) => {
+    if (!csvData || csvData.length === 0) return;
+
+    const updatedCsvData = csvData.map((row, index) => {
+      if (index === currentPreviewIndex) {
+        return {
+          ...row,
+          [field]: newText,
+        };
+      }
+      return row;
+    });
+
+    // If FieldPositioner is responsible for its own state:
+    // setCsvData(updatedCsvData); // Assuming csvData is also a state here, if not passed down directly
+
+    // Propagate change upwards
+    if (onCsvDataUpdate) {
+      onCsvDataUpdate(updatedCsvData);
+    }
+  };
+
   // Navigation handlers
   const handleNextPreview = () => {
     setCurrentPreviewIndex(prevIndex => Math.min(prevIndex + 1, csvData.length - 1));
@@ -360,6 +383,7 @@ const FieldPositioner = ({
                       onPositionChange={handlePositionChange}
                       onSizeChange={handleSizeChange}
                       containerSize={imageSize}
+                      onContentChange={handleContentChange} // Pass the handler to TextBox
                     />
                   );
                 })
