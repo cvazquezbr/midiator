@@ -1004,6 +1004,7 @@ const ImageGeneratorFrontendOnly = ({
                           borderRadius: '4px', // Leve arredondamento nas bordas externas
                           mb: 1,
                           boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2), 0 6px 20px rgba(0, 0, 0, 0.19)', // Efeito de sombra
+                          cursor: 'pointer', // Add cursor pointer to indicate it's clickable
                           '&:hover img': {
                             transform: 'scale(1.03)', // Zoom um pouco mais sutil na imagem interna
                           },
@@ -1012,7 +1013,9 @@ const ImageGeneratorFrontendOnly = ({
                             transform: 'translateY(-2px)',
                           },
                           transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out', // Transição suave para o hover do Box
-                        }}>
+                        }}
+                        onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)} // Add onClick handler here
+                        >
                           <img
                             key={imageData.url} // Força a recriação da tag img quando a URL muda
                             src={imageData.url}
