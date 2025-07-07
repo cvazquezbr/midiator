@@ -640,7 +640,6 @@ const ImageGeneratorFrontendOnly = ({
       });
 
     } catch (error) {
-      // console.error('[regenerateSingleImage] Error during image regeneration process for index ' + index + ':', error);
       alert(`Erro na regeneração da imagem (índice ${index}): ${error.message}`);
     }
   };
@@ -1014,21 +1013,21 @@ const ImageGeneratorFrontendOnly = ({
                           },
                           transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out', // Transição suave para o hover do Box
                         }}>
-                          <img 
+                          <img
                             key={imageData.url} // Força a recriação da tag img quando a URL muda
-                            src={imageData.url} 
-                            alt={`Preview ${index + 1}`} 
-                            style={{ 
-                              display: 'block', 
-                              maxWidth: '100%', 
+                            src={imageData.url}
+                            alt={`Preview ${index + 1}`}
+                            style={{
+                              display: 'block',
+                              maxWidth: '100%',
                               maxHeight: '150px', // Altura máxima da imagem em si, para caber no padding
-                              width: 'auto', 
-                              height: 'auto', 
-                              objectFit: 'contain', 
+                              width: 'auto',
+                              height: 'auto',
+                              objectFit: 'contain',
                               transition: 'transform 0.3s ease-in-out',
                               // Adicionar uma pequena sombra interna na imagem para separá-la da borda branca
-                              boxShadow: 'inset 0 0 2px rgba(0,0,0,0.1)', 
-                            }} 
+                              boxShadow: 'inset 0 0 2px rgba(0,0,0,0.1)',
+                            }}
                           />
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
