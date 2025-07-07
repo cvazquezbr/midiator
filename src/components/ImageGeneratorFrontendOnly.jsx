@@ -446,6 +446,7 @@ const ImageGeneratorFrontendOnly = ({
       ? imageToEdit.customFieldStyles
       : fieldStyles;
     
+    // console.log('[handleOpenGeneratedImageEditor] imageToEdit.backgroundImage:', imageToEdit.backgroundImage ? imageToEdit.backgroundImage.substring(0, 100) + '...' : 'undefined');
     setIndividualFieldPositions(JSON.parse(JSON.stringify(currentPositions)));
     setIndividualFieldStyles(JSON.parse(JSON.stringify(currentStyles))); // This will be initialFieldStyles in GeneratedImageEditor
     setShowGeneratedImageEditor(true);
@@ -481,10 +482,14 @@ const ImageGeneratorFrontendOnly = ({
     // Regerar a imagem específica com as novas posições/estilos
     const imageToRegenerate = updatedImages.find(im => im.index === imageIndex);
     if (imageToRegenerate) {
+      const bgToUse = imageToRegenerate.backgroundImage || backgroundImage;
+      // console.log('[handleSaveIndividualModifications] imageToRegenerate.backgroundImage:', imageToRegenerate.backgroundImage ? imageToRegenerate.backgroundImage.substring(0, 100) + '...' : 'undefined');
+      // console.log('[handleSaveIndividualModifications] backgroundImage (global):', backgroundImage ? backgroundImage.substring(0, 100) + '...' : 'undefined');
+      // console.log('[handleSaveIndividualModifications] bgToUse for regenerateSingleImage:', bgToUse ? bgToUse.substring(0, 100) + '...' : 'undefined');
       regenerateSingleImage(
         imageIndex,
         csvRecord, // Dados CSV originais da imagem
-        imageToRegenerate.backgroundImage || backgroundImage, // BG atual da imagem
+        bgToUse, // BG atual da imagem
         newPositions, // Novas posições
         newStyles // Novos estilos
       );
@@ -600,10 +605,17 @@ const ImageGeneratorFrontendOnly = ({
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
         backgroundImage: currentBackgroundImage // Store the background image used for this specific image
       };
+      // console.log('[regenerateSingleImage] newImageData.backgroundImage:', newImageData.backgroundImage ? newImageData.backgroundImage.substring(0, 100) + '...' : 'undefined'); // Log a snippet
 
-      setGeneratedImages(prevImages =>
-        prevImages.map(img => (img.index === index ? newImageData : img))
-      );
+      setGeneratedImages(prevImages => {
+        const updatedImages = prevImages.map(img => (img.index === index ? newImageData : img));
+        // Log para verificar a imagem específica após a atualização do estado
+        // const updatedImageForLog = updatedImages.find(img => img.index === index);
+        // if (updatedImageForLog) {
+        //   console.log(`[regenerateSingleImage - setGeneratedImages callback] Image index ${index} updated. backgroundImage:`, updatedImageForLog.backgroundImage ? updatedImageForLog.backgroundImage.substring(0,100) + '...' : 'undefined');
+        // }
+        return updatedImages;
+      });
 
     } catch (error) {
       console.error('Erro na regeneração da imagem:', error);

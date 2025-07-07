@@ -56,6 +56,8 @@ const GeneratedImageEditor = ({
 
   useEffect(() => {
     if (imageData && initialFieldPositions && initialFieldStyles) { // Added null checks for robustness
+      // console.log('[GeneratedImageEditor useEffect] imageData.backgroundImage:', imageData.backgroundImage ? imageData.backgroundImage.substring(0, 100) + '...' : 'undefined');
+      // console.log('[GeneratedImageEditor useEffect] globalBackgroundImage:', globalBackgroundImage ? globalBackgroundImage.substring(0, 100) + '...' : 'undefined');
       setSelectedFieldInternal(null); // Reseta o campo selecionado ao abrir/mudar imagem
       // Deep copy for positions
       setEditedPositions(JSON.parse(JSON.stringify(initialFieldPositions)));
@@ -96,6 +98,7 @@ const GeneratedImageEditor = ({
   // Prioriza uma imagem de fundo específica da imageData (se existir, ex: após substituição individual)
   // Caso contrário, usa a imagem de fundo global.
   const currentBackgroundImageForEditor = imageData.backgroundImage || globalBackgroundImage;
+  // console.log('[GeneratedImageEditor render] currentBackgroundImageForEditor:', currentBackgroundImageForEditor ? currentBackgroundImageForEditor.substring(0, 100) + '...' : 'undefined');
 
   // Os cabeçalhos CSV para este editor devem ser os da linha específica sendo editada.
   // FieldPositioner e FormattingPanel esperam uma lista de todos os cabeçalhos para popular seletores, etc.
