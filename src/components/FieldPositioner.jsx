@@ -6,11 +6,17 @@ import {
   CardContent,
   Grid,
   Button,
-  Alert
+  Alert,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import {
   Add,
-  CenterFocusStrong
+  CenterFocusStrong,
+  SkipPrevious,
+  ArrowLeft,
+  ArrowRight,
+  SkipNext
 } from '@mui/icons-material';
 import TextBox from './TextBox';
 import FormattingPanel from './FormattingPanel';
@@ -32,6 +38,7 @@ const FieldPositioner = ({
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
 
   // Detectar se é dispositivo móvel
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
@@ -193,6 +200,23 @@ const FieldPositioner = ({
     setIsInteracting(false);
   };
 
+  // Navigation handlers
+  const handleNextPreview = () => {
+    setCurrentPreviewIndex(prevIndex => Math.min(prevIndex + 1, csvData.length - 1));
+  };
+
+  const handlePreviousPreview = () => {
+    setCurrentPreviewIndex(prevIndex => Math.max(prevIndex - 1, 0));
+  };
+
+  const handleFirstPreview = () => {
+    setCurrentPreviewIndex(0);
+  };
+
+  const handleLastPreview = () => {
+    setCurrentPreviewIndex(csvData.length - 1);
+  };
+
   // Efeito para gerenciar scroll durante interações
   useEffect(() => {
     if (isInteracting && isMobile) {
@@ -320,7 +344,9 @@ const FieldPositioner = ({
 
                   if (!position || !position.visible) return null;
 
-                  const sampleData = csvData[0] ? csvData[0][header] : `[${header}]`;
+                  const record = csvData[currentPreviewIndex] || (csvData.length > 0 ? csvData[0] : {});
+                  const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
+
 
                   return (
                     <TextBox
@@ -340,6 +366,43 @@ const FieldPositioner = ({
                 : null
               }
             </Box>
+
+            {/* CSV Data Navigation */}
+            {csvData && csvData.length > 1 && (
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+                <Tooltip title="Primeiro Registro">
+                  <span>
+                    <IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small">
+                      <SkipPrevious />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Registro Anterior">
+                  <span>
+                    <IconButton onClick={handlePreviousPreview} disabled={currentPreviewIndex === 0} size="small">
+                      <ArrowLeft />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Typography variant="body2" sx={{minWidth: '100px', textAlign: 'center'}}>
+                  Registro: {currentPreviewIndex + 1} / {csvData.length}
+                </Typography>
+                <Tooltip title="Próximo Registro">
+                  <span>
+                    <IconButton onClick={handleNextPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small">
+                      <ArrowRight />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Último Registro">
+                  <span>
+                    <IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small">
+                      <SkipNext />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Box>
+            )}
 
             {/* Color Palette */}
             {colorPalette && colorPalette.length > 0 && (
