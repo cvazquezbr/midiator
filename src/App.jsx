@@ -699,92 +699,128 @@ Cada elemento deve conter:
   };
 
   const parseIaResponseToCsvData = (responseText, numRecords) => {
-    const headers = ["Título", "Texto Principal", "Ponte para o Próximo"];
+    // Definição dos cabeçalhos esperados pelo GerenciadorRegistros
+    const finalHeaders = ["Título", "Texto Principal", "Ponte para o Próximo"];
     const data = [];
 
     if (!responseText || typeof responseText !== 'string') {
-        console.error("Resposta da IA inválida ou vazia para parsing.");
-        return { data: [], headers };
+      console.error("[parseIaResponseToCsvData] Resposta da IA inválida ou vazia.");
+      return { data: [], headers: finalHeaders };
     }
 
-    // Tenta dividir a resposta em elementos. Isso é altamente dependente do formato da IA.
-    // Uma suposição inicial: cada elemento começa com algo como "Elemento X:" ou um padrão numérico.
-    // Ou, se a IA for bem comportada, poderíamos tentar um split mais genérico por blocos de texto.
-    // Por agora, vamos tentar uma abordagem bem simples baseada nos campos esperados.
+    // 1. Extrair o bloco CSV
+    const csvBlockRegex = /```csv\s*([\s\S]*?)\s*```/;
+    const csvMatch = responseText.match(csvBlockRegex);
 
-    // Regex para encontrar "Título:", "Texto Principal:", "Ponte para o Próximo:"
-    // Esta é uma regex muito básica e pode precisar de muitos ajustes.
-    const elementoRegex = /Título\s*:(.*?)(?:Texto Principal\s*:|\n\n|$)/gis;
-    let match;
-    let currentMatchIndex = 0;
+    console.log("[parseIaResponseToCsvData] Tentando extrair bloco CSV. Resposta bruta:", responseText);
 
-    // Este loop tenta encontrar blocos que começam com "Título:"
-    // e depois extrai os outros campos a partir daí.
-    // É uma heurística e pode falhar facilmente dependendo da formatação da IA.
-
-    // Uma abordagem mais robusta seria se a IA usasse delimitadores claros, ex: "---ELEMENTO---"
-    // Por enquanto, vamos tentar uma abordagem mais direta de extração de campos.
-
-    const lines = responseText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-    let currentRecord = {};
-    let fieldOrderIndex = 0; // 0: Título, 1: Texto Principal, 2: Ponte
-
-    for (const line of lines) {
+    if (!csvMatch || !csvMatch[1]) {
+      console.error("[parseIaResponseToCsvData] Bloco CSV não encontrado na resposta da IA. csvMatch:", csvMatch);
+      // Fallback para o parser antigo (DeepSeek)
+      const fallbackLines = responseText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+      let currentRecord = {};
+      for (const line of fallbackLines) {
         if (line.toLowerCase().startsWith("título:") || line.toLowerCase().startsWith("titulo:")) {
-            if (Object.keys(currentRecord).length > 0 && data.length < numRecords) {
-                 // Antes de começar um novo título, se o registro anterior tem algo, adicione-o
-                 // e preencha campos faltantes se necessário
-                if (!currentRecord["Título"]) currentRecord["Título"] = "";
-                if (!currentRecord["Texto Principal"]) currentRecord["Texto Principal"] = "";
-                if (!currentRecord["Ponte para o Próximo"]) currentRecord["Ponte para o Próximo"] = "";
-                data.push(currentRecord);
-            }
-            currentRecord = {}; // Começa novo registro
-            currentRecord["Título"] = line.substring(line.indexOf(':') + 1).trim();
-            fieldOrderIndex = 1;
+          if (Object.keys(currentRecord).length > 0 && currentRecord["Título"]) data.push(currentRecord); // Adiciona registro anterior se válido
+          currentRecord = { "Título": line.substring(line.indexOf(':') + 1).trim() };
         } else if (line.toLowerCase().startsWith("texto principal:")) {
-            currentRecord["Texto Principal"] = line.substring(line.indexOf(':') + 1).trim();
-            fieldOrderIndex = 2;
+          currentRecord["Texto Principal"] = line.substring(line.indexOf(':') + 1).trim();
         } else if (line.toLowerCase().startsWith("ponte para o próximo:") || line.toLowerCase().startsWith("ponte:")) {
-            currentRecord["Ponte para o Próximo"] = line.substring(line.indexOf(':') + 1).trim();
-            fieldOrderIndex = 0; // Reset para próximo título
-             if (Object.keys(currentRecord).length >= 1 && data.length < numRecords) { // Garante que tem pelo menos um título
-                if (!currentRecord["Título"]) currentRecord["Título"] = "Título não encontrado"; // Fallback
-                if (!currentRecord["Texto Principal"]) currentRecord["Texto Principal"] = "";
-                if (!currentRecord["Ponte para o Próximo"]) currentRecord["Ponte para o Próximo"] = "";
-                data.push(currentRecord);
-                currentRecord = {};
-            }
-        } else {
-            // Se a linha não é um header de campo conhecido, tenta anexar ao último campo detectado
-            // Isso é muito propenso a erros e depende da IA não colocar texto extra entre os campos.
-            if (fieldOrderIndex === 1 && currentRecord["Título"] && !currentRecord["Texto Principal"]) {
-                 // Assume que é continuação do Título ou início do Texto Principal se Texto Principal estiver vazio
-                currentRecord["Texto Principal"] = (currentRecord["Texto Principal"] || "") + " " + line;
-                currentRecord["Texto Principal"] = currentRecord["Texto Principal"].trim();
-            } else if (fieldOrderIndex === 2 && currentRecord["Texto Principal"] && !currentRecord["Ponte para o Próximo"]) {
-                // Assume que é continuação do Texto Principal ou início da Ponte
-                 currentRecord["Ponte para o Próximo"] = (currentRecord["Ponte para o Próximo"] || "") + " " + line;
-                 currentRecord["Ponte para o Próximo"] = currentRecord["Ponte para o Próximo"].trim();
-            }
+          currentRecord["Ponte para o Próximo"] = line.substring(line.indexOf(':') + 1).trim();
+          if (currentRecord["Título"]) data.push(currentRecord); // Adiciona registro atual ao encontrar a ponte
+          currentRecord = {}; // Prepara para o próximo registro
         }
-    }
-    // Adicionar o último registro se ele existir e não tiver sido adicionado
-    if (Object.keys(currentRecord).length > 0 && data.length < numRecords && currentRecord["Título"]) {
-        if (!currentRecord["Texto Principal"]) currentRecord["Texto Principal"] = "";
-        if (!currentRecord["Ponte para o Próximo"]) currentRecord["Ponte para o Próximo"] = "";
-        data.push(currentRecord);
+      }
+      if (Object.keys(currentRecord).length > 0 && currentRecord["Título"]) data.push(currentRecord);
+
+      if (data.length > 0) {
+        console.log("[parseIaResponseToCsvData] Parseado como fallback (formato DeepSeek):", data);
+        // Garantir que todos os registros tenham todos os cabeçalhos finais
+        const processedData = data.map(record => ({
+            "Título": record["Título"] || "",
+            "Texto Principal": record["Texto Principal"] || "",
+            "Ponte para o Próximo": record["Ponte para o Próximo"] || "",
+            // Gerar um ID se não vier da IA (o GerenciadorRegistros também faz isso, mas podemos adiantar)
+            // id: record.id || `generated-${Math.random().toString(36).substr(2, 9)}`
+        }));
+        return { data: processedData, headers: finalHeaders };
+      } else {
+        console.error("[parseIaResponseToCsvData] Fallback também não encontrou dados estruturados.");
+        return { data: [], headers: finalHeaders };
+      }
     }
 
-    // Se gerou menos registros que o solicitado, preenche com vazios até numRecords
-    // while(data.length < numRecords && data.length > 0) { // Apenas se já começou a gerar algo
-    //   data.push({ "Título": `Elemento ${data.length + 1} (placeholder)`, "Texto Principal": "", "Ponte para o Próximo": "" });
-    // }
+    const csvContent = csvMatch[1].trim();
+    console.log("[parseIaResponseToCsvData] Conteúdo CSV extraído (csvMatch[1]):", csvMatch[1]);
+    console.log("[parseIaResponseToCsvData] Conteúdo CSV após trim (csvContent):", csvContent);
 
-    console.log("[parseIaResponseToCsvData] Dados Parseados:", data);
-    return { data, headers };
+    // Usar regex para split para lidar com \r\n e \n
+    const lines = csvContent.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
+    console.log("[parseIaResponseToCsvData] Linhas após split e trim:", lines);
+
+
+    if (lines.length < 2) { // Precisa de cabeçalho + pelo menos uma linha de dados
+      console.error("[parseIaResponseToCsvData] Conteúdo CSV extraído está incompleto (linhas < 2). Linhas encontradas:", lines.length);
+      return { data: [], headers: finalHeaders };
+    }
+
+    // 2. Processar o cabeçalho do CSV extraído
+    const extractedHeaders = lines[0].split(';').map(h => h.trim());
+    console.log("[parseIaResponseToCsvData] Cabeçalhos extraídos do CSV:", extractedHeaders);
+    const headerMap = {}; // Mapeia do cabeçalho da IA para o nosso cabeçalho final
+
+    // Mapeamento flexível dos cabeçalhos da IA para os nossos
+    // Isso permite que a IA use "Titulo" ou "Título", etc.
+    extractedHeaders.forEach(h => {
+        const hLower = h.toLowerCase();
+        if (hLower.includes('titulo') || hLower.includes('título')) headerMap[h] = "Título";
+        else if (hLower.includes('texto_principal') || hLower.includes('texto principal')) headerMap[h] = "Texto Principal";
+        else if (hLower.includes('ponte_proximo') || hLower.includes('ponte para o próximo')) headerMap[h] = "Ponte para o Próximo";
+        else if (hLower.includes('id_elemento') || hLower.includes('id')) headerMap[h] = "id"; // Captura o ID também
+        // Adicionar outros mapeamentos se necessário
+    });
+
+    // 3. Processar as linhas de dados
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(';');
+      const record = {};
+      let hasRequiredData = false;
+
+      extractedHeaders.forEach((headerKey, index) => {
+        const targetHeader = headerMap[headerKey];
+        if (targetHeader) { // Se o cabeçalho extraído tem um mapeamento para o nosso
+          record[targetHeader] = values[index] ? values[index].trim() : "";
+          if (targetHeader === "Título" && record[targetHeader]) {
+            hasRequiredData = true; // Consideramos válido se tiver pelo menos um título
+          }
+        }
+      });
+
+      // Adiciona o registro apenas se tiver dados relevantes (ex: um título)
+      // e se tiver um ID da IA (ou geramos um se não tiver)
+      if (hasRequiredData) {
+        if (!record.id) {
+          // Se a IA não forneceu um ID_Elemento, podemos gerar um simples aqui,
+          // mas o GerenciadorRegistros já tem lógica para IDs únicos se 'id' estiver ausente.
+          // Para consistência e para usar o ID da IA se disponível:
+          // delete record.id; // Deixa o GerenciadorRegistros cuidar se 'id' não veio ou não foi mapeado.
+        }
+        // Garantir que todos os campos finais existam, mesmo que vazios
+        finalHeaders.forEach(fh => {
+            if (!record[fh]) record[fh] = "";
+        });
+        data.push(record);
+      }
+    }
+
+    // Remove a coluna 'id' dos headers que serão usados para fieldPositions/Styles,
+    // pois 'id' é metadado e não um campo exibível/editável da mesma forma.
+    // Mantemos os `finalHeaders` como ["Título", "Texto Principal", "Ponte para o Próximo"]
+    // para consistência com o que GerenciadorRegistros e FieldPositioner esperam para exibição.
+
+    console.log("[parseIaResponseToCsvData] Dados Parseados (Gemini CSV):", data);
+    return { data, headers: finalHeaders }; // Retorna os cabeçalhos finais esperados
   };
-
 
   const currentTheme = darkMode ? darkTheme : lightTheme;
 
