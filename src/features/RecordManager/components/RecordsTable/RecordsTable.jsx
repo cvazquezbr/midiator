@@ -1,10 +1,20 @@
 import React from 'react';
-import styles from './TabelaRegistros.module.css';
-import LinhaRegistro from '../LinhaRegistro/LinhaRegistro'; // Importar o componente LinhaRegistro
+import PropTypes from 'prop-types';
+import styles from './RecordsTable.module.css';
+import RecordRow from '../RecordRow/RecordRow';
 
-const TabelaRegistros = ({ registros = [], colunas = [], onEditar, onExcluir, darkMode }) => {
-    // Se não há colunas definidas, mas há registros, tenta inferir as colunas do primeiro registro.
-    // Esta lógica é mais um fallback; idealmente, GerenciadorRegistros sempre fornecerá colunas.
+/**
+ * Componente para exibir uma tabela de registros.
+ * Utiliza RecordRow para renderizar cada linha.
+ *
+ * @param {Object} props - Propriedades do componente.
+ * @param {Object[]} [props.registros=[]] - Array de objetos de registro.
+ * @param {string[]} [props.colunas=[]] - Array com os nomes das colunas.
+ * @param {Function} props.onEditar - Callback para ação de editar.
+ * @param {Function} props.onExcluir - Callback para ação de excluir.
+ * @param {boolean} [props.darkMode=false] - Flag para habilitar o modo escuro.
+ */
+const RecordsTable = ({ registros = [], colunas = [], onEditar, onExcluir, darkMode = false }) => {
     const colunasVisiveis = colunas.length > 0 ? colunas :
                            (registros.length > 0 ? Object.keys(registros[0] || {}).filter(k => k !== 'id') : []);
 
@@ -15,7 +25,6 @@ const TabelaRegistros = ({ registros = [], colunas = [], onEditar, onExcluir, da
             <table className={tableClasses}>
                 <thead>
                     <tr>
-                        {/* Coluna de Ações primeiro */}
                         {(colunasVisiveis.length > 0 || registros.length === 0) && <th className={styles.actionsHeader}>Ações</th>}
                         {colunasVisiveis.length === 0 && registros.length === 0 && !<th>Nenhuma coluna definida</th>}
                         {colunasVisiveis.length === 0 && registros.length > 0 && <th className={styles.actionsHeader}>Ações</th>}
@@ -28,8 +37,8 @@ const TabelaRegistros = ({ registros = [], colunas = [], onEditar, onExcluir, da
                 <tbody>
                     {registros.length > 0 ? (
                         registros.map(reg => (
-                            <LinhaRegistro
-                                key={reg.id !== undefined ? reg.id : JSON.stringify(reg)} // Fallback de key se id não existir
+                            <RecordRow
+                                key={reg.id !== undefined ? reg.id : JSON.stringify(reg)}
                                 registro={reg}
                                 colunas={colunasVisiveis}
                                 onEditar={onEditar}
@@ -50,4 +59,18 @@ const TabelaRegistros = ({ registros = [], colunas = [], onEditar, onExcluir, da
     );
 };
 
-export default TabelaRegistros;
+RecordsTable.propTypes = {
+    registros: PropTypes.arrayOf(PropTypes.object),
+    colunas: PropTypes.arrayOf(PropTypes.string),
+    onEditar: PropTypes.func.isRequired,
+    onExcluir: PropTypes.func.isRequired,
+    darkMode: PropTypes.bool,
+};
+
+RecordsTable.defaultProps = {
+    registros: [],
+    colunas: [],
+    darkMode: false,
+};
+
+export default RecordsTable;

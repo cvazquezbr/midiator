@@ -1,15 +1,59 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import styles from './GerenciadorRegistros.module.css';
-import TabelaRegistros from './TabelaRegistros/TabelaRegistros';
-import ModalRegistro from './ModalRegistro/ModalRegistro';
-import ModalConfirmacao from './ModalConfirmacao/ModalConfirmacao';
-// import CarregadorCSV from './CarregadorCSV/CarregadorCSV'; // Removido
-// Assumindo que PapaParse será importado em CarregadorCSV ou globalmente
+import PropTypes from 'prop-types'; // Adicionado para consistência e boas práticas
+import styles from './RecordManager.module.css';
+import RecordsTable from './components/RecordsTable/RecordsTable';
+import RecordModal from './components/RecordModal/RecordModal';
+import ConfirmationModal from '../../components/ui/ConfirmationModal/ConfirmationModal';
+// PapaParse não é mais usado diretamente aqui, apenas em App.jsx
 
-const GerenciadorRegistros = ({
+/**
+ * @typedef {Object} Registro
+ * @property {string|number} id - Identificador único do registro. (Gerado internamente se não fornecido)
+ * @property {Object.<string, any>} [outrasChaves] - Pares chave-valor correspondentes às colunas.
+ * @example
+ * // Se colunas = ['Nome', 'Email', 'Idade']
+ * const registroExemplo = {
+ *   id: 'reg-1',
+ *   Nome: 'João Silva',
+ *   Email: 'joao.silva@example.com',
+ *   Idade: 30
+ * };
+ */
+
+/**
+ * Componente `RecordManager` (anteriormente GerenciadorRegistros).
+ *
+ * Fornece uma interface completa para visualizar, adicionar, editar e excluir registros de dados.
+ * Opera inteiramente no lado do cliente, gerenciando os dados em memória durante a sessão de edição.
+ * A funcionalidade de carregar dados de um CSV foi movida para o componente pai (`App.jsx`),
+ * que então passa os dados para este componente através das props `registrosIniciais` e `colunasIniciais`.
+ *
+ * Funcionalidades Principais:
+ * - **Visualização em Tabela:** Exibe os registros em uma tabela.
+ * - **Adicionar Registro:** Permite adicionar novos registros através de um modal.
+ *   - **Primeiro Registro:** Se a tabela estiver vazia e sem colunas definidas, o modal de adição
+ *     permitirá ao usuário definir dinamicamente os nomes das colunas e seus valores para o primeiro registro.
+ * - **Editar Registro:** Permite editar registros existentes através de um modal.
+ * - **Excluir Registro:** Permite excluir registros com uma etapa de confirmação em um modal.
+ * - **Gerenciamento de Estado Client-Side:** Todas as modificações são mantidas em memória (estado do componente React).
+ * - **Retorno de Dados:** Ao concluir qualquer operação que altere os dados (salvar, excluir),
+ *   os dados e colunas atualizados são retornados à aplicação pai através da callback `onDadosAlterados`.
+ *
+ * @param {Object} props - Propriedades do componente.
+ * @param {Registro[]} [props.registrosIniciais=[]] - Um array de objetos representando os dados iniciais para popular a tabela.
+ *                                                  Cada objeto deve idealmente ter uma propriedade `id` única.
+ *                                                  Se não, um ID interno será gerado.
+ * @param {string[]} [props.colunasIniciais=[]] - Um array de strings definindo os nomes e a ordem das colunas.
+ *                                               Se omitido e `registrosIniciais` for fornecido,
+ *                                               as colunas são inferidas do primeiro registro (excluindo `id`).
+ * @param {(registros: Registro[], colunas: string[]) => void} props.onDadosAlterados - Função callback chamada sempre que os registros ou colunas são alterados.
+ *                                                                                  Recebe o array atualizado de registros e o array de colunas.
+ * @param {boolean} [props.darkMode=false] - Flag para habilitar o modo escuro.
+ */
+const RecordManager = ({
     registrosIniciais = [],
     colunasIniciais = [],
-    onDadosAlterados, // Renomeado de onConcluirEdicao
+    onDadosAlterados,
     darkMode = false
 }) => {
     const [registros, setRegistros] = useState([]);
@@ -154,31 +198,6 @@ const GerenciadorRegistros = ({
         handleFecharModal();
     };
 
-    // // Handler para CSV Removido
-    // const handleCSVProcessado = (dadosCSV, colunasCSV) => {
-    //     const colunasUnicasCSV = [...new Set(colunasCSV.filter(Boolean))];
-    //     setColunas(colunasUnicasCSV);
-
-    //     let currentMaxId = proximoId -1;
-
-    //     const novosRegistros = dadosCSV.map(item => {
-    //         currentMaxId++;
-    //         const novoRegistro = { id: `reg-${currentMaxId}` };
-    //         colunasUnicasCSV.forEach(coluna => {
-    //             novoRegistro[coluna] = item[coluna] !== undefined && item[coluna] !== null ? String(item[coluna]) : '';
-    //         });
-    //         return novoRegistro;
-    //     });
-    //     setProximoId(currentMaxId + 1);
-    //     setRegistros(novosRegistros);
-
-    //     console.log("CSV Processado. Colunas:", colunasUnicasCSV, "Registros:", novosRegistros);
-    //     alert(`${novosRegistros.length} registros carregados do CSV!`);
-    //     if (modalAberto === 'ADICIONAR' && (registros.length === 0 && colunas.length === 0) ) {
-    //         handleFecharModal();
-    //     }
-    // };
-
     // Efeito para chamar onDadosAlterados quando registros ou colunas mudam
     // Removido para evitar loops. onDadosAlterados será chamado diretamente.
     // useEffect(() => {
@@ -203,20 +222,20 @@ const GerenciadorRegistros = ({
                     <button onClick={handleAbrirModalAdicionar} className={`${styles.btn} ${styles.btnPrimary}`}>
                         &#43; Adicionar Novo
                     </button>
-                    {/* <CarregadorCSV onCSVProcessado={handleCSVProcessado} darkMode={darkMode} /> Removido */}
+                    {/* O carregamento de CSV agora é tratado pelo App.jsx na etapa inicial */}
                 </div>
             </div>
 
-            <TabelaRegistros
+            <RecordsTable
                 registros={registros}
                 colunas={colunas}
                 onEditar={handleAbrirModalEditar}
                 onExcluir={handleAbrirModalExcluir}
-        darkMode={darkMode}
+                darkMode={darkMode}
             />
 
             {modalAberto === 'ADICIONAR' && (
-                <ModalRegistro
+                <RecordModal
                     aberto={true}
                     onFechar={handleFecharModal}
                     onSalvar={handleSalvarRegistro}
@@ -225,12 +244,12 @@ const GerenciadorRegistros = ({
                     // Passa true se não houver colunas E não houver registros,
                     // indicando que o formulário deve permitir definir colunas.
                     isPrimeiroRegistro={colunas.length === 0 && registros.length === 0}
-          darkMode={darkMode}
+                    darkMode={darkMode}
                 />
             )}
 
             {modalAberto === 'EDITAR' && registroSelecionado && (
-                <ModalRegistro
+                <RecordModal
                     aberto={true}
                     onFechar={handleFecharModal}
                     onSalvar={handleSalvarRegistro}
@@ -238,18 +257,18 @@ const GerenciadorRegistros = ({
                     colunasExistentes={colunas}
                     tituloModal="Editar Registro"
                     isPrimeiroRegistro={false}
-          darkMode={darkMode}
+                    darkMode={darkMode}
                 />
             )}
 
             {modalAberto === 'EXCLUIR' && registroSelecionado && (
-                <ModalConfirmacao
+                <ConfirmationModal
                     aberto={true}
                     onFechar={handleFecharModal}
                     onConfirmar={handleConfirmarExclusao}
                     titulo="Confirmar Exclusão"
                     mensagem={`Você tem certeza que deseja excluir o registro? (ID: ${registroSelecionado.id})`}
-          darkMode={darkMode}
+                    darkMode={darkMode}
                 />
             )}
 
@@ -263,4 +282,17 @@ const GerenciadorRegistros = ({
     );
 };
 
-export default GerenciadorRegistros;
+RecordManager.propTypes = {
+    registrosIniciais: PropTypes.arrayOf(PropTypes.object),
+    colunasIniciais: PropTypes.arrayOf(PropTypes.string),
+    onDadosAlterados: PropTypes.func.isRequired,
+    darkMode: PropTypes.bool,
+};
+
+RecordManager.defaultProps = {
+    registrosIniciais: [],
+    colunasIniciais: [],
+    darkMode: false,
+};
+
+export default RecordManager;
