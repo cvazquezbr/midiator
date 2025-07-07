@@ -778,65 +778,90 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
     const lines = csvContent.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
     console.log("[parseIaResponseToCsvData] Linhas do CSV (após split, trim e filter):", lines);
 
-    if (lines.length < 2) {
-      console.error("[parseIaResponseToCsvData] Conteúdo CSV extraído tem menos de 2 linhas (cabeçalho + dados). Linhas:", lines);
+    if (lines.length === 0) { // Alterado para verificar se há alguma linha
+      console.error("[parseIaResponseToCsvData] Conteúdo CSV extraído não contém linhas válidas.");
       return { data: [], headers: finalHeaders };
     }
 
-    const extractedHeaders = lines[0].split(';').map(h => h.trim());
-    console.log("[parseIaResponseToCsvData] Cabeçalhos extraídos do CSV:", extractedHeaders);
-    const headerMap = {}; // Mapeia do cabeçalho da IA para o nosso cabeçalho final
-
-    // Mapeamento flexível dos cabeçalhos da IA para os nossos
-    // Isso permite que a IA use "Titulo" ou "Título", etc.
-    extractedHeaders.forEach(h => {
-        const hLower = h.toLowerCase();
-        if (hLower.includes('titulo') || hLower.includes('título')) headerMap[h] = "Título";
-        else if (hLower.includes('texto_principal') || hLower.includes('texto principal')) headerMap[h] = "Texto Principal";
-        else if (hLower.includes('ponte_proximo') || hLower.includes('ponte para o próximo')) headerMap[h] = "Ponte para o Próximo";
-        else if (hLower.includes('id_elemento') || hLower.includes('id')) headerMap[h] = "id"; // Captura o ID também
-        // Adicionar outros mapeamentos se necessário
+    // Usar PapaParse para processar o csvContent, detectando o delimitador (vírgula ou ponto e vírgula)
+    // Papa.parse requer uma string, então vamos juntar as linhas de volta se necessário,
+    // mas csvContent já é a string completa do bloco.
+    const parseResult = Papa.parse(csvContent, {
+        header: true, // A primeira linha são os cabeçalhos
+        skipEmptyLines: true,
+        dynamicTyping: true, // Converte números e booleanos automaticamente
+        // delimiter: ",", // Forçar vírgula, já que a IA usou isso. Ou deixar em branco para auto-detect.
     });
 
-    // 3. Processar as linhas de dados
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(';');
-      const record = {};
-      let hasRequiredData = false;
+    console.log("[parseIaResponseToCsvData] Resultado do Papa.parse:", parseResult);
 
-      extractedHeaders.forEach((headerKey, index) => {
-        const targetHeader = headerMap[headerKey];
-        if (targetHeader) { // Se o cabeçalho extraído tem um mapeamento para o nosso
-          record[targetHeader] = values[index] ? values[index].trim() : "";
-          if (targetHeader === "Título" && record[targetHeader]) {
-            hasRequiredData = true; // Consideramos válido se tiver pelo menos um título
-          }
-        }
-      });
-
-      // Adiciona o registro apenas se tiver dados relevantes (ex: um título)
-      // e se tiver um ID da IA (ou geramos um se não tiver)
-      if (hasRequiredData) {
-        if (!record.id) {
-          // Se a IA não forneceu um ID_Elemento, podemos gerar um simples aqui,
-          // mas o GerenciadorRegistros já tem lógica para IDs únicos se 'id' estiver ausente.
-          // Para consistência e para usar o ID da IA se disponível:
-          // delete record.id; // Deixa o GerenciadorRegistros cuidar se 'id' não veio ou não foi mapeado.
-        }
-        // Garantir que todos os campos finais existam, mesmo que vazios
-        finalHeaders.forEach(fh => {
-            if (!record[fh]) record[fh] = "";
-        });
-        data.push(record);
-      }
+    if (parseResult.errors && parseResult.errors.length > 0) {
+        console.error("[parseIaResponseToCsvData] Erros durante o parsing com PapaParse:", parseResult.errors.map(err => ({ ...err, input: undefined }))); // Evitar logar input longo
     }
 
-    // Remove a coluna 'id' dos headers que serão usados para fieldPositions/Styles,
-    // pois 'id' é metadado e não um campo exibível/editável da mesma forma.
-    // Mantemos os `finalHeaders` como ["Título", "Texto Principal", "Ponte para o Próximo"]
-    // para consistência com o que GerenciadorRegistros e FieldPositioner esperam para exibição.
+    if (!parseResult.data || parseResult.data.length === 0) {
+        console.error("[parseIaResponseToCsvData] PapaParse não retornou dados ou dados vazios.");
+        return { data: [], headers: finalHeaders };
+    }
 
-    console.log("[parseIaResponseToCsvData] Dados Parseados (Gemini CSV):", data);
+    const parsedDataFromLibrary = parseResult.data;
+    // Os cabeçalhos reais detectados por PapaParse estão em parseResult.meta.fields
+    const actualHeadersFromIA = parseResult.meta.fields || [];
+    console.log("[parseIaResponseToCsvData] Cabeçalhos reais detectados pela IA (via PapaParse):", actualHeadersFromIA);
+
+    // Agora, construímos o mapa usando os cabeçalhos reais da IA
+    const headerMap = {};
+    actualHeadersFromIA.forEach(iaHeader => {
+        const iaHeaderTrimmed = iaHeader.trim();
+        const iaHeaderLower = iaHeaderTrimmed.toLowerCase();
+
+        if (iaHeaderLower.includes('titulo') || iaHeaderLower.includes('título')) {
+            headerMap[iaHeaderTrimmed] = "Título";
+        } else if (iaHeaderLower.includes('texto_principal') || iaHeaderLower.includes('texto principal')) {
+            headerMap[iaHeaderTrimmed] = "Texto Principal";
+        } else if (iaHeaderLower.includes('ponte_proximo') || iaHeaderLower.includes('ponte para o próximo')) {
+            headerMap[iaHeaderTrimmed] = "Ponte para o Próximo";
+        } else if (iaHeaderLower.includes('id_elemento') || iaHeaderLower.includes('id') || iaHeaderLower.includes('num_slide') || iaHeaderLower.includes('elemento')) {
+             // 'elemento' foi visto na resposta da IA que deu tabela markdown
+            headerMap[iaHeaderTrimmed] = "id";
+        }
+        // Outras colunas da IA (como 'tipo_slide', 'Sugestão de Imagem') serão ignoradas se não mapeadas aqui
+    });
+
+    console.log("[parseIaResponseToCsvData] Mapa de Cabeçalhos construído:", headerMap);
+
+    parsedDataFromLibrary.forEach(rawRecord => {
+        const record = {};
+        let hasTitle = false; // Usaremos isso para determinar se o registro é válido
+
+        // Iterar sobre as chaves do headerMap para garantir que estamos procurando pelos cabeçalhos da IA
+        for (const iaHeaderMapped in headerMap) {
+            const targetAppHeader = headerMap[iaHeaderMapped]; // "Título", "Texto Principal", etc. ou "id"
+
+            if (rawRecord.hasOwnProperty(iaHeaderMapped)) { // Verificar se o rawRecord realmente tem essa chave
+                 let value = rawRecord[iaHeaderMapped];
+                 record[targetAppHeader] = value !== null && value !== undefined ? String(value).trim() : "";
+                if (targetAppHeader === "Título" && record[targetAppHeader]) {
+                    hasTitle = true;
+                }
+            }
+        }
+
+        // Adicionar o registro apenas se tiver um título (indicando que é um registro de dados válido)
+        if (hasTitle) {
+            // Garantir que todos os cabeçalhos FINAIS da aplicação (Título, Texto Principal, Ponte) existam no registro
+            finalHeaders.forEach(appFinalHeader => {
+                if (!record[appFinalHeader]) {
+                    record[appFinalHeader] = ""; // Preenche com string vazia se não foi mapeado
+                }
+            });
+            data.push(record);
+        } else {
+            console.warn("[parseIaResponseToCsvData] Registro ignorado por não ter um 'Título' mapeado:", rawRecord);
+        }
+    });
+
+    console.log("[parseIaResponseToCsvData] Dados Parseados Final (após mapeamento com PapaParse):", data);
     return { data, headers: finalHeaders }; // Retorna os cabeçalhos finais esperados
   };
 
