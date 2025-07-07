@@ -268,10 +268,30 @@ const TextBox = ({
     setEditedContent(e.target.value);
   };
 
-  const handleTextareaBlur = () => {
-    setIsEditing(false);
-    if (onContentChange && content !== editedContent) {
+  const commitChanges = () => {
+    // Only call onContentChange if the content has actually changed
+    if (isEditing && onContentChange && content !== editedContent) {
       onContentChange(field, editedContent);
+    }
+    setIsEditing(false); // Ensure isEditing is set to false after committing
+                         // This should happen regardless of content change to exit edit mode.
+  };
+
+  const handleTextareaBlur = () => {
+    commitChanges();
+  };
+
+  const handleTextareaKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      commitChanges();
+      // Explicitly blur after committing via Enter key to ensure focus shifts correctly.
+      textareaRef.current?.blur();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setEditedContent(content); // Revert to original prop content
+      setIsEditing(false);
+      textareaRef.current?.blur(); // Ensure blur on escape too
     }
   };
 
@@ -411,12 +431,7 @@ const TextBox = ({
           value={editedContent}
           onChange={handleTextareaChange}
           onBlur={handleTextareaBlur}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              textareaRef.current?.blur();
-            }
-          }}
+          onKeyDown={handleTextareaKeyDown} // Use the dedicated handler
           style={{ // Inline styles for the textarea
             width: '100%',
             height: '100%',
