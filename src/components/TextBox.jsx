@@ -467,10 +467,11 @@ const TextBox = ({
       )}
       {/* End of ternary for editing/displaying text */}
 
+      {/* Resize handles directly rendered if condition is met, without Fragment wrapper */}
       {isSelected && !isEditing && resizeHandles.map((handle) => (
         <Box
           key={handle.name}
-          className={`resize-handle-${handle.name}`} // Added class for easier debugging if needed
+          className={`resize-handle-${handle.name}`}
           sx={{
             position: 'absolute',
             left: `${handle.x * 100}%`,
@@ -489,14 +490,13 @@ const TextBox = ({
             touchAction: 'none',
             '&:active': {
               backgroundColor: '#1976d2',
-              transform: 'translate(-50%, -50%) scale(1.2)'
-            }
+              transform: 'translate(-50%, -50%) scale(1.2)',
+            },
           }}
           onMouseDown={(e) => effectiveHandleMouseDown(e, 'resize', handle)}
           onTouchStart={(e) => effectiveHandleTouchStart(e, 'resize', handle)}
         />
       ))}
-    </>
   </Box>
   );
 };
