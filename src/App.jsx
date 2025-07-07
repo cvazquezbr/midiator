@@ -606,6 +606,13 @@ function App() {
     // e pela lógica em canProceedToStep.
   }, [darkMode, fieldPositions, fieldStyles, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles]);
 
+
+  // Callback for FieldPositioner to update csvData when text is edited in-place
+  const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
+    setCsvData(newCsvData);
+    // No need to update headers or fieldPositions/Styles here, as only content changes.
+  }, [setCsvData]);
+
   const handleGenerateIAContent = async () => {
     setIsGenerating(true);
 
@@ -1321,6 +1328,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               csvData={csvData}
               onImageDisplayedSizeChange={setDisplayedImageSize}
               colorPalette={colorPalette}
+              onCsvDataUpdate={handleCsvRecordContentUpdate} // Pass the callback here
             />
           )}
 

@@ -50,19 +50,19 @@ const GeneratedImageEditor = ({
 }) => {
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
+  const [editedRecord, setEditedRecord] = useState(null); // State for the CSV record being edited
   const [displayedEditorImageSize, setDisplayedEditorImageSize] = useState({ width: 0, height: 0 });
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null); // Estado para o campo selecionado internamente
   const [stylesAreInitialized, setStylesAreInitialized] = useState(false); // New state for initialization tracking
 
-  useEffect(() => {
-    if (imageData && initialFieldPositions && initialFieldStyles) { // Added null checks for robustness
-      // console.log('[GeneratedImageEditor useEffect] imageData.backgroundImage:', imageData.backgroundImage ? imageData.backgroundImage.substring(0, 100) + '...' : 'undefined');
-      // console.log('[GeneratedImageEditor useEffect] globalBackgroundImage:', globalBackgroundImage ? globalBackgroundImage.substring(0, 100) + '...' : 'undefined');
-      setSelectedFieldInternal(null); // Reseta o campo selecionado ao abrir/mudar imagem
-      // Deep copy for positions
-      setEditedPositions(JSON.parse(JSON.stringify(initialFieldPositions)));
 
-      // Initialize editedStyles by merging initialFieldStyles with COMPLETE_DEFAULT_STYLE
+  useEffect(() => {
+    if (imageData && initialFieldPositions && initialFieldStyles) {
+      setSelectedFieldInternal(null);
+      setEditedPositions(JSON.parse(JSON.stringify(initialFieldPositions)));
+      setEditedRecord(JSON.parse(JSON.stringify(imageData.record))); // Initialize editedRecord
+
+      // Initialize editedStyles
       const newEditedStyles = {};
       const fieldsToStyle = Object.keys(initialFieldPositions); // Fields present in the current image layout
 
@@ -86,12 +86,22 @@ const GeneratedImageEditor = ({
 
   const handleSave = () => {
     onSave({
-      ...imageData, // Mantém outros dados da imagem original (index, record, etc.)
-      fieldPositions: editedPositions, // Posições atualizadas
-      fieldStyles: editedStyles, // Estilos atualizados
-      // Se a imagem de fundo foi alterada DENTRO deste editor (funcionalidade futura), atualizar aqui também
+      ...imageData, // Mantém outros dados da imagem original (index etc.)
+      record: editedRecord, // Passa o record atualizado
+      fieldPositions: editedPositions,
+      fieldStyles: editedStyles,
     });
     onClose();
+  };
+
+  const handleContentChangeInEditor = (field, newText) => {
+    setEditedRecord(prevRecord => ({
+      ...prevRecord,
+      [field]: newText
+    }));
+    // Note: Unlike FieldPositioner, we don't need to call a prop like onCsvDataUpdate here.
+    // The changes to editedRecord are local to GeneratedImageEditor until 'Save' is clicked.
+    // The parent (ImageGeneratorFrontendOnly) will receive the updated record via onSave.
   };
 
   // Determina a imagem de fundo a ser usada no editor
@@ -104,7 +114,9 @@ const GeneratedImageEditor = ({
   // FieldPositioner e FormattingPanel esperam uma lista de todos os cabeçalhos para popular seletores, etc.
   // mas o preview de dados em FieldPositioner usará o imageData.record
   const editorCsvHeaders = globalCsvHeaders;
-  const editorCsvData = [imageData.record]; // FieldPositioner espera um array de dados
+  // Use editedRecord for the preview data if it's available
+  const editorCsvData = editedRecord ? [editedRecord] : (imageData ? [imageData.record] : []);
+
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="body">
@@ -140,6 +152,14 @@ const GeneratedImageEditor = ({
                 colorPalette={colorPalette}
                 onSelectFieldExternal={setSelectedFieldInternal} // Atualizar o estado interno
                 showFormattingPanel={false} // Adicionado para não duplicar o painel
+                // Pass the content change handler to FieldPositioner, which will pass it to TextBox
+                onCsvDataUpdate={(updatedDataArray) => {
+                  // FieldPositioner's onCsvDataUpdate gives the whole array.
+                  // We only care about the first (and only) record in this context.
+                  if (updatedDataArray && updatedDataArray.length > 0) {
+                    setEditedRecord(updatedDataArray[0]);
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} md={4}>
