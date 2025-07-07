@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react'; // Import useCallback
 import {
   Dialog,
   DialogTitle,
@@ -55,6 +55,15 @@ const GeneratedImageEditor = ({
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null); // Estado para o campo selecionado internamente
   const [stylesAreInitialized, setStylesAreInitialized] = useState(false); // New state for initialization tracking
 
+  const handleInternalFieldSelection = useCallback((fieldToSelect) => {
+    setSelectedFieldInternal(fieldToSelect);
+  }, []); // setSelectedFieldInternal is stable
+
+  const handleFieldPositionerCsvDataUpdate = useCallback((updatedDataArray) => {
+    if (updatedDataArray && updatedDataArray.length > 0) {
+      setEditedRecord(updatedDataArray[0]);
+    }
+  }, []); // setEditedRecord is stable
 
   useEffect(() => {
     if (imageData && initialFieldPositions && initialFieldStyles) {
@@ -150,16 +159,9 @@ const GeneratedImageEditor = ({
                 csvData={editorCsvData} // Dados CSV desta imagem para preview
                 onImageDisplayedSizeChange={setDisplayedEditorImageSize} // Para o editor interno
                 colorPalette={colorPalette}
-                onSelectFieldExternal={setSelectedFieldInternal} // Atualizar o estado interno
+                onSelectFieldExternal={handleInternalFieldSelection} // Use memoized handler
                 showFormattingPanel={false} // Adicionado para não duplicar o painel
-                // Pass the content change handler to FieldPositioner, which will pass it to TextBox
-                onCsvDataUpdate={(updatedDataArray) => {
-                  // FieldPositioner's onCsvDataUpdate gives the whole array.
-                  // We only care about the first (and only) record in this context.
-                  if (updatedDataArray && updatedDataArray.length > 0) {
-                    setEditedRecord(updatedDataArray[0]);
-                  }
-                }}
+                onCsvDataUpdate={handleFieldPositionerCsvDataUpdate} // Use memoized handler
               />
             </Grid>
             <Grid item xs={12} md={4}>

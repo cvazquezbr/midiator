@@ -46,12 +46,12 @@ const FieldPositioner = ({
                    ('ontouchstart' in window) || 
                    (navigator.maxTouchPoints > 0);
 
-  const handleFieldSelectInternal = (field) => {
-    setSelectedField(field);
+  const handleFieldSelectInternal = useCallback((fieldToSelect) => {
+    setSelectedField(fieldToSelect);
     if (onSelectFieldExternal) {
-      onSelectFieldExternal(field);
+      onSelectFieldExternal(fieldToSelect);
     }
-  };
+  }, [onSelectFieldExternal]); // setSelectedField is stable
 
   useEffect(() => {
     const container = containerRef.current;
@@ -201,7 +201,7 @@ const FieldPositioner = ({
     setIsInteracting(false);
   };
 
-  const handleContentChange = (field, newText) => {
+  const handleContentChange = useCallback((field, newText) => {
     if (!csvData || csvData.length === 0) return;
 
     const updatedCsvData = csvData.map((row, index) => {
@@ -221,7 +221,7 @@ const FieldPositioner = ({
     if (onCsvDataUpdate) {
       onCsvDataUpdate(updatedCsvData);
     }
-  };
+  }, [csvData, currentPreviewIndex, onCsvDataUpdate]);
 
   // Navigation handlers
   const handleNextPreview = () => {
