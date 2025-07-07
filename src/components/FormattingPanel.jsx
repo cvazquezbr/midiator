@@ -33,7 +33,10 @@ import {
   FormatAlignRight,
   VerticalAlignTop,
   VerticalAlignCenter,
-  VerticalAlignBottom
+  VerticalAlignBottom,
+  FormatBold,
+  FormatItalic,
+  FormatUnderlined
 } from '@mui/icons-material';
 import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
@@ -295,22 +298,22 @@ const FormattingPanel = ({
           </AccordionDetails>
         </Accordion>
 
-        {/* Fonte */}
-        <Accordion>
+        {/* Fonte e Estilo Rápido */}
+        <Accordion defaultExpanded>
           <AccordionSummary expandIcon={<ExpandMore />}>
             <Typography variant="subtitle1">
               <FormatSize sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Fonte
+              Fonte e Estilo
             </Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Família da Fonte</InputLabel>
+                  <InputLabel>Fonte</InputLabel>
                   <Select
                     value={style.fontFamily || 'Arial'}
-                    label="Família da Fonte"
+                    label="Fonte"
                     onChange={(e) => updateFieldStyle(selectedField, 'fontFamily', e.target.value)}
                   >
                     {fonts.map(font => (
@@ -321,8 +324,43 @@ const FormattingPanel = ({
                   </Select>
                 </FormControl>
               </Grid>
+
+              <Grid item xs={12} sx={{mt: 1}}>
+                 <ToggleButtonGroup
+                    value={[]} // Este value não é diretamente usado para controlar os botões, mas é necessário
+                    aria-label="text formatting"
+                    size="small"
+                    fullWidth
+                  >
+                    <ToggleButton
+                      value="bold"
+                      aria-label="bold"
+                      selected={style.fontWeight === 'bold'}
+                      onClick={() => updateFieldStyle(selectedField, 'fontWeight', style.fontWeight === 'bold' ? 'normal' : 'bold')}
+                    >
+                      <FormatBold />
+                    </ToggleButton>
+                    <ToggleButton
+                      value="italic"
+                      aria-label="italic"
+                      selected={style.fontStyle === 'italic'}
+                      onClick={() => updateFieldStyle(selectedField, 'fontStyle', style.fontStyle === 'italic' ? 'normal' : 'italic')}
+                    >
+                      <FormatItalic />
+                    </ToggleButton>
+                    <ToggleButton
+                      value="underline"
+                      aria-label="underline"
+                      selected={style.textDecoration === 'underline'}
+                      onClick={() => updateFieldStyle(selectedField, 'textDecoration', style.textDecoration === 'underline' ? 'none' : 'underline')}
+                    >
+                      <FormatUnderlined />
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+              </Grid>
+
               <Grid item xs={12}>
-                <Typography gutterBottom>
+                <Typography gutterBottom sx={{mt:1}}>
                   Tamanho: {style.fontSize || 24}px
                 </Typography>
                 <Slider
@@ -343,22 +381,22 @@ const FormattingPanel = ({
           </AccordionDetails>
         </Accordion>
 
-        {/* Estilo */}
+        {/* Detalhes de Estilo (Peso, Estilo, Decoração - Avançado) */}
         <Accordion>
           <AccordionSummary expandIcon={<ExpandMore />}>
             <Typography variant="subtitle1">
               <Style sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Estilo
+              Ajustes Finos de Estilo
             </Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Grid container spacing={2}>
               <Grid item xs={6}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Peso</InputLabel>
+                  <InputLabel>Peso da Fonte</InputLabel>
                   <Select
                     value={style.fontWeight || 'normal'}
-                    label="Peso"
+                    label="Peso da Fonte"
                     onChange={(e) => updateFieldStyle(selectedField, 'fontWeight', e.target.value)}
                   >
                     <MenuItem value="100">Thin (100)</MenuItem>
@@ -375,10 +413,10 @@ const FormattingPanel = ({
               </Grid>
               <Grid item xs={6}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Estilo</InputLabel>
+                  <InputLabel>Estilo da Fonte</InputLabel>
                   <Select
                     value={style.fontStyle || 'normal'}
-                    label="Estilo"
+                    label="Estilo da Fonte"
                     onChange={(e) => updateFieldStyle(selectedField, 'fontStyle', e.target.value)}
                   >
                     <MenuItem value="normal">Normal</MenuItem>
@@ -389,10 +427,10 @@ const FormattingPanel = ({
               </Grid>
               <Grid item xs={6}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Decoração</InputLabel>
+                  <InputLabel>Decoração do Texto</InputLabel>
                   <Select
                     value={style.textDecoration || 'none'}
-                    label="Decoração"
+                    label="Decoração do Texto"
                     onChange={(e) => updateFieldStyle(selectedField, 'textDecoration', e.target.value)}
                   >
                     <MenuItem value="none">Nenhuma</MenuItem>
