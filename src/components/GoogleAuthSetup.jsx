@@ -49,8 +49,8 @@ const GoogleAuthSetup = ({ onAuthSuccess, onAuthError }) => {
   const [initializationAttempts, setInitializationAttempts] = useState(0);
 
   useEffect(() => {
-    const storedApiKey = localStorage.getItem("google_api_key");
-    const storedClientId = localStorage.getItem("google_client_id");
+    const storedApiKey = localStorage.getItem("google_drive_api_key"); // Alterado para chave canônica
+    const storedClientId = localStorage.getItem("google_drive_client_id"); // Alterado para chave canônica
     if (storedApiKey) setApiKey(storedApiKey);
     if (storedClientId) setClientId(storedClientId);
     checkAuthStatus();
@@ -90,8 +90,8 @@ const GoogleAuthSetup = ({ onAuthSuccess, onAuthError }) => {
       setActiveStep(1);
       setError("");
       setInitializationAttempts(0);
-      localStorage.setItem("google_api_key", apiKey);
-      localStorage.setItem("google_client_id", clientId);
+      localStorage.setItem("google_drive_api_key", apiKey); // Alterado para chave canônica
+      localStorage.setItem("google_drive_client_id", clientId); // Alterado para chave canônica
     } catch (error) {
       console.error('Erro na inicialização:', error);
       const errorMessage = getErrorMessage(error);
