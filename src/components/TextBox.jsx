@@ -55,7 +55,8 @@ const TextBox = ({
     { name: 'w', cursor: 'w-resize', x: 0, y: 0.5 }
   ];
 
-  const handleMouseDown = (e, type, handle = null) => {
+  // Original handleMouseDown and handleTouchStart are kept for internal logic
+  const doHandleMouseDown = (e, type, handle = null) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -286,7 +287,7 @@ const TextBox = ({
       e.stopPropagation(); // Stop propagation to prevent selection or other parent handlers
       return;
     }
-    handleMouseDown(e, type, handle);
+    doHandleMouseDown(e, type, handle); // Corrected to doHandleMouseDown
   };
 
   const effectiveHandleTouchStart = (e, type, handle = null) => {
@@ -323,7 +324,14 @@ const TextBox = ({
         document.body.style.touchAction = '';
       };
     }
-  }, [isDragging, isResizing, dragStart, initialPosition, initialSize, handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]); // Added dependencies
+  // Reverting dependencies to the version from feat/field-editor-enhancements
+  // as a debugging step for the "Expected )" build error.
+  // The functions handleMouseMove, etc., are defined in the component scope
+  // and will be fresh on each render. If they don't rely on props/state
+  // that aren't already in this array, not listing them is okay,
+  // but using useCallback for them and then listing them would be better.
+  // For now, this revert is to isolate the build error.
+  }, [isDragging, isResizing, dragStart, initialPosition, initialSize]);
 
   const wrapText = (text, maxWidth) => {
     if (!text) return [''];
@@ -352,10 +360,9 @@ const TextBox = ({
 
   const textLines = wrapText(content, pixelPosition.width - 16);
   const lineHeight = (style.fontSize || 16) * 1.2;
-
-  // Tamanho dos handles baseado no dispositivo
   const handleSize = isMobile ? 16 : 8;
 
+  // Re-typing the return statement carefully to avoid hidden syntax errors.
   return (
     <Box
       ref={textBoxRef}
@@ -366,35 +373,35 @@ const TextBox = ({
         top: `${position.y}%`,
         width: `${position.width}%`,
         height: `${position.height}%`,
-        cursor: isDragging ? 'grabbing' : 'grab',
+        cursor: isDragging ? 'grabbing' : (isEditing ? 'text' : 'grab'),
         userSelect: 'none',
         border: isSelected ? '2px solid #2196f3' : '2px solid transparent',
         borderRadius: 1,
         backgroundColor: isSelected ? 'rgba(33, 150, 243, 0.1)' : 'transparent',
-        padding: '8px',
+        padding: '8px', // This padding applies to the main Box
         boxSizing: 'border-box',
         overflow: 'hidden',
         zIndex: 2,
-        display: 'flex',
+        display: 'flex', // Used for text alignment
         justifyContent: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
         alignItems: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
-        // CSS para prevenir scroll em mobile
         touchAction: 'none',
         WebkitTouchCallout: 'none',
         WebkitUserSelect: 'none',
         '&:hover': {
-          border: '2px solid #2196f3',
-          backgroundColor: 'rgba(33, 150, 243, 0.05)'
-        }
+          border: isSelected ? '2px solid #2196f3' : '2px solid #a0cfff', // Slightly different hover if not selected
+          backgroundColor: isSelected ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
+        },
       }}
       onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
       onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
       onClick={(e) => {
         if (isEditing && e.target === textareaRef.current) {
-           // Allow click inside textarea without deselecting
-          return;
+          return; // Allow clicks inside textarea
         }
-        if (!isEditing) onSelect(field);
+        if (!isEditing) {
+          onSelect(field);
+        }
       }}
       onDoubleClick={handleDoubleClick}
     >
@@ -404,13 +411,13 @@ const TextBox = ({
           value={editedContent}
           onChange={handleTextareaChange}
           onBlur={handleTextareaBlur}
-          onKeyDown={(e) => { // Optional: submit on Enter, new line on Shift+Enter
+          onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               textareaRef.current?.blur();
             }
           }}
-          style={{
+          style={{ // Inline styles for the textarea
             width: '100%',
             height: '100%',
             fontFamily: style.fontFamily || 'Arial',
@@ -418,50 +425,52 @@ const TextBox = ({
             fontWeight: style.fontWeight || 'normal',
             fontStyle: style.fontStyle || 'normal',
             color: style.color || '#000000',
-            lineHeight: `${lineHeight}px`, // Use calculated lineHeight
+            lineHeight: `${lineHeight}px`,
             textDecoration: style.textDecoration || 'none',
-            // Apply shadow and stroke if possible, though complex for textarea
-            // textShadow: style.textShadow ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}` : 'none',
-            // WebkitTextStroke is not directly applicable to textarea value, but border can simulate stroke
-            border: 'none', // Or style to match text stroke if desired
+            border: 'none',
             outline: 'none',
-            backgroundColor: 'transparent',
+            backgroundColor: 'transparent', // Crucial for blending
             resize: 'none',
-            overflow: 'hidden', // Or 'auto' if content might exceed box
-            padding: '0', // Padding is handled by the outer Box
+            overflow: 'hidden', // Or 'auto' if content might exceed box and scroll is desired
+            padding: 0, // Padding is on the parent Box
             boxSizing: 'border-box',
-            textAlign: style.textAlign || 'left', // Apply text alignment
+            textAlign: style.textAlign || 'left',
           }}
         />
       ) : (
-        <Box
+        <Box // This Box is for displaying static text
           sx={{
+            // Styles for static text are inherited or applied here
+            // Pointer events none to ensure drag/clicks go to parent unless editing
+            pointerEvents: 'none', // Text itself should not capture mouse events meant for the draggable box
             fontFamily: style.fontFamily || 'Arial',
-          fontSize: `${style.fontSize || 16}px`,
-          fontWeight: style.fontWeight || 'normal',
-          fontStyle: style.fontStyle || 'normal',
-          color: style.color || '#000000',
-          textDecoration: style.textDecoration || 'none',
-          lineHeight: `${lineHeight}px`,
-          textShadow: style.textShadow
-            ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}`
-            : 'none',
-          WebkitTextStroke: style.textStroke
-            ? `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}`
-            : 'none',
-          pointerEvents: 'none'
-        }}
-      >
-        {textLines.map((line, index) => (
-          <div key={index} style={{ marginBottom: index < textLines.length - 1 ? '2px' : 0 }}>
-            {line}
-          </div>
-        ))}
-      </Box>
+            fontSize: `${style.fontSize || 16}px`,
+            fontWeight: style.fontWeight || 'normal',
+            fontStyle: style.fontStyle || 'normal',
+            color: style.color || '#000000',
+            textDecoration: style.textDecoration || 'none',
+            lineHeight: `${lineHeight}px`,
+            textShadow: style.textShadow
+              ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}`
+              : 'none',
+            WebkitTextStroke: style.textStroke // Corrected from 'WebkitTextStroke:' to 'WebkitTextStroke:'
+              ? `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}`
+              : 'none',
+          }}
+        >
+          {textLines.map((line, index) => (
+            <div key={index} style={{ marginBottom: index < textLines.length - 1 ? '2px' : 0 }}>
+              {line}
+            </div>
+          ))}
+        </Box>
+      )}
+      {/* End of ternary for editing/displaying text */}
 
-      {isSelected && !isEditing && resizeHandles.map((handle) => ( // Hide handles when editing
+      {isSelected && !isEditing && resizeHandles.map((handle) => (
         <Box
           key={handle.name}
+          className={`resize-handle-${handle.name}`} // Added class for easier debugging if needed
           sx={{
             position: 'absolute',
             left: `${handle.x * 100}%`,
@@ -475,11 +484,9 @@ const TextBox = ({
             pointerEvents: 'auto',
             transform: 'translate(-50%, -50%)',
             zIndex: 10,
-            // Melhor área de toque para mobile
             minWidth: isMobile ? '20px' : '8px',
             minHeight: isMobile ? '20px' : '8px',
             touchAction: 'none',
-            // Feedback visual melhorado para mobile
             '&:active': {
               backgroundColor: '#1976d2',
               transform: 'translate(-50%, -50%) scale(1.2)'
@@ -489,7 +496,8 @@ const TextBox = ({
           onTouchStart={(e) => effectiveHandleTouchStart(e, 'resize', handle)}
         />
       ))}
-    </Box>
+    </>
+  </Box>
   );
 };
 
