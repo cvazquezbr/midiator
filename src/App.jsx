@@ -642,39 +642,59 @@ function App() {
         return;
     }
 
-    const finalPrompt = `Elabore um carrossel para Instagram com ${promptNumRecords} elementos baseado no texto abaixo. Ajuste o prompt para que o retorno permita o preenchimento equivalente ao do csv:
+    const finalPrompt = `A partir do TEXTO BASE fornecido abaixo, gere conteúdo para um carrossel de Instagram com ${promptNumRecords} elementos.
+
+TEXTO BASE:
 ${promptText}
-Cada elemento deve conter:
-### Requisitos para cada elemento:
-1. **Título** (até 4 palavras):
-   - Impactante e curto
-   - Use emojis relevantes no início
+
+INSTRUÇÕES DE FORMATAÇÃO DA SAÍDA (MUITO IMPORTANTE):
+A SUA RESPOSTA DEVE CONTER *APENAS E SOMENTE* UM BLOCO DE TEXTO FORMATADO COMO CSV, SEM NENHUM TEXTO ADICIONAL ANTES OU DEPOIS DO BLOCO CSV.
+O BLOCO CSV DEVE SER DELIMITADO EXATAMENTE POR TRÊS CRASE SEGUIDAS E A PALAVRA "csv" (\`\`\`csv) NO INÍCIO, E TRÊS CRASE SEGUIDAS (\`\`\`) NO FINAL.
+DENTRO DO BLOCO CSV:
+- A primeira linha DEVE SER o cabeçalho: Titulo;Texto Principal;Ponte para o Próximo
+- As linhas subsequentes DEVERÃO ser os dados de cada elemento, com os campos separados por PONTO E VÍRGULA (;).
+- NÃO inclua números de elemento ou qualquer outra coluna além de "Titulo", "Texto Principal", e "Ponte para o Próximo".
+- NÃO inclua explicações, introduções, ou qualquer texto fora do bloco \`\`\`csv ... \`\`\`.
+
+REQUISITOS PARA O CONTEÚDO DE CADA ELEMENTO (LINHA DO CSV):
+1. **Titulo** (Coluna 1):
+   - Máximo de 4 palavras.
+   - Deve começar com um emoji relevante.
+   - Precisa ser curto e impactante.
    - Exemplo: "✨ Segredo Revelado"
-
-2. **Texto Principal** (120-180 caracteres):
-   - Fragmento do texto base adaptado para o elemento
-   - Linguagem direta e conversacional
-   - Incluir 1 pergunta retórica
+2. **Texto Principal** (Coluna 2):
+   - Entre 120 e 180 caracteres.
+   - Adaptado do TEXTO BASE, com linguagem conversacional e direta.
+   - Deve conter 1 pergunta retórica para engajamento.
    - Exemplo: "Sabia que 80% dos negócios falham nisso? Descubra como evitar esse erro..."
-
-3. **Ponte para o Próximo** (até 40 caracteres):
-   - Criar curiosidade para o próximo elemento
-   - Usar fórmula: Emoji + Chamada + Dica do próximo
+3. **Ponte para o Próximo** (Coluna 3):
+   - Máximo de 40 caracteres.
+   - Criar curiosidade para o próximo elemento.
+   - Usar fórmula: Emoji + Chamada + Dica do próximo.
+   - No último elemento, substitua por uma Chamada para Ação (CTA) final.
    - Exemplos:
      → "Próximo: O passo que muda tudo!"
      → "Siga para o segredo nº3 👇"
 
-### Estrutura de Progressão:
-- Elemento 1: Dado impactante + pergunta instigante
-- Elementos 2-${promptNumRecords > 1 ? promptNumRecords -1 : 1}: Conteúdo principal dividido em passos (ajustar se promptNumRecords for 1 ou 2)
-- Elemento ${promptNumRecords}: CTA claro + bônus surpresa (ou Case de sucesso/resumo se for o penúltimo e CTA no último, ajustar para ${promptNumRecords})
+ESTRUTURA NARRATIVA SUGERIDA:
+- Elemento 1: Dado impactante ou pergunta instigante extraída do início do TEXTO BASE.
+- Elementos intermediários: Desenvolver os pontos principais do TEXTO BASE.
+- Último Elemento: CTA claro ou resumo conclusivo.
 
-### Tom de Voz:
-- Empático e motivacional (use "você" e "vamos")
-- Urgência controlada ("Agora você pode...")
-- Toque de storytelling`;
+TOM DE VOZ:
+- Empático e motivacional (use "você" e "vamos").
+- Urgência controlada ("Agora você pode...").
+- Toque de storytelling.
 
-    console.log("Prompt para DeepSeek:", finalPrompt);
+Exemplo de como o BLOCO CSV deve se parecer na sua resposta (não inclua este exemplo na sua resposta final, apenas o bloco gerado):
+\`\`\`csv
+Titulo;Texto Principal;Ponte para o Próximo
+✨ Grande Novidade;Descubra algo incrível que vai mudar seu dia! Você está pronto para a surpresa?;➡️ Veja o próximo!
+🎉 Outra Dica;Continuando nossa jornada com mais um segredo. Já se perguntou como isso é possível?;CTA Final Aqui!
+\`\`\`
+Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` com os dados.`;
+
+    console.log("Prompt para Gemini/DeepSeek:", finalPrompt); // Log atualizado para ser genérico
     console.log("Número de Registros para Gerar:", promptNumRecords);
 
     // console.log("Prompt para DeepSeek:", finalPrompt); // Manter para depuração se necessário
@@ -742,112 +762,105 @@ Cada elemento deve conter:
     console.log("[parseIaResponseToCsvData] Resposta bruta recebida para parsing:", responseText);
 
     // 1. Extrair o bloco CSV
-    // Regex ajustada para ser mais flexível com espaços e capturar o conteúdo entre ```csv e ```
     const csvBlockRegex = /```csv\s*([\s\S]+?)\s*```/;
     const csvMatch = responseText.match(csvBlockRegex);
-
     console.log("[parseIaResponseToCsvData] Resultado do match da regex (csvMatch):", csvMatch);
 
-    if (!csvMatch || csvMatch.length < 2 || !csvMatch[1] || csvMatch[1].trim() === "") {
-      console.error("[parseIaResponseToCsvData] Bloco CSV não encontrado ou vazio na resposta da IA. Detalhes do csvMatch:", csvMatch);
-      // Fallback para o parser antigo (DeepSeek)
-      const fallbackLines = responseText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-      let currentRecord = {};
-      for (const line of fallbackLines) {
-        if (line.toLowerCase().startsWith("título:") || line.toLowerCase().startsWith("titulo:")) {
-          if (Object.keys(currentRecord).length > 0 && currentRecord["Título"]) data.push(currentRecord);
-          currentRecord = { "Título": line.substring(line.indexOf(':') + 1).trim() };
-        } else if (line.toLowerCase().startsWith("texto principal:")) {
-          currentRecord["Texto Principal"] = line.substring(line.indexOf(':') + 1).trim();
-        } else if (line.toLowerCase().startsWith("ponte para o próximo:") || line.toLowerCase().startsWith("ponte:")) {
-          currentRecord["Ponte para o Próximo"] = line.substring(line.indexOf(':') + 1).trim();
-          if (currentRecord["Título"]) data.push(currentRecord);
-          currentRecord = {};
-        }
-      }
-      if (Object.keys(currentRecord).length > 0 && currentRecord["Título"]) data.push(currentRecord);
+    if (csvMatch && csvMatch[1] && csvMatch[1].trim() !== "") {
+        const csvContent = csvMatch[1].trim();
+        console.log("[parseIaResponseToCsvData] Conteúdo CSV bruto extraído (csvMatch[1]):", csvMatch[1]);
+        console.log("[parseIaResponseToCsvData] Conteúdo CSV após trim (csvContent):", csvContent);
 
-      if (data.length > 0) {
-        console.log("[parseIaResponseToCsvData] Parseado como fallback (formato DeepSeek):", JSON.parse(JSON.stringify(data)));
-        const processedData = data.map(record => ({
+        const parseResult = Papa.parse(csvContent, {
+            header: true,
+            skipEmptyLines: true,
+            dynamicTyping: true,
+        });
+
+        console.log("[parseIaResponseToCsvData] Resultado do Papa.parse:", parseResult);
+
+        if (parseResult.errors && parseResult.errors.length > 0) {
+            console.error("[parseIaResponseToCsvData] Erros durante o parsing com PapaParse:", parseResult.errors.map(err => ({ ...err, input: undefined })));
+        }
+
+        if (parseResult.data && parseResult.data.length > 0) {
+            const actualHeadersFromIA = parseResult.meta.fields || [];
+            console.log("[parseIaResponseToCsvData] Cabeçalhos reais detectados pela IA (via PapaParse):", actualHeadersFromIA);
+
+            const headerMap = {};
+            actualHeadersFromIA.forEach(iaHeader => {
+                const iaHeaderTrimmed = iaHeader.trim();
+                const iaHeaderLower = iaHeaderTrimmed.toLowerCase();
+                if (iaHeaderLower.includes('titulo') || iaHeaderLower.includes('título')) headerMap[iaHeaderTrimmed] = "Título";
+                else if (iaHeaderLower.includes('texto_principal') || iaHeaderLower.includes('texto principal')) headerMap[iaHeaderTrimmed] = "Texto Principal";
+                else if (iaHeaderLower.includes('ponte_proximo') || iaHeaderLower.includes('ponte para o próximo')) headerMap[iaHeaderTrimmed] = "Ponte para o Próximo";
+                else if (iaHeaderLower.includes('id_elemento') || iaHeaderLower.includes('id') || iaHeaderLower.includes('num_slide') || iaHeaderLower.includes('elemento')) headerMap[iaHeaderTrimmed] = "id";
+            });
+            console.log("[parseIaResponseToCsvData] Mapa de Cabeçalhos construído:", headerMap);
+
+            parseResult.data.forEach(rawRecord => {
+                const record = {};
+                let hasTitle = false;
+                for (const iaHeaderMapped in headerMap) {
+                    const targetAppHeader = headerMap[iaHeaderMapped];
+                    if (rawRecord.hasOwnProperty(iaHeaderMapped)) {
+                        let value = rawRecord[iaHeaderMapped];
+                        record[targetAppHeader] = value !== null && value !== undefined ? String(value).trim() : "";
+                        if (targetAppHeader === "Título" && record[targetAppHeader]) {
+                            hasTitle = true;
+                        }
+                    }
+                }
+                if (hasTitle) {
+                    finalHeaders.forEach(appFinalHeader => {
+                        if (!record[appFinalHeader]) record[appFinalHeader] = "";
+                    });
+                    data.push(record);
+                } else {
+                    console.warn("[parseIaResponseToCsvData] Registro ignorado por não ter um 'Título' mapeado:", rawRecord);
+                }
+            });
+            console.log("[parseIaResponseToCsvData] Dados Parseados com Sucesso (Gemini CSV via PapaParse):", data);
+            return { data, headers: finalHeaders };
+        } else {
+            console.error("[parseIaResponseToCsvData] PapaParse não retornou dados ou dados eram vazios, mesmo após encontrar bloco CSV.");
+        }
+    } else {
+      console.error("[parseIaResponseToCsvData] Bloco CSV não encontrado ou vazio na resposta da IA. Detalhes do csvMatch:", csvMatch);
+    }
+
+    // Se chegou aqui, o parsing do bloco CSV falhou ou não havia bloco CSV. Tentar fallback.
+    console.log("[parseIaResponseToCsvData] Tentando parser de fallback (formato DeepSeek).");
+    const fallbackLines = responseText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    let currentRecord = {};
+    const fallbackData = []; // Usar um novo array para o fallback
+
+    for (const line of fallbackLines) {
+        if (line.toLowerCase().startsWith("título:") || line.toLowerCase().startsWith("titulo:")) {
+            if (Object.keys(currentRecord).length > 0 && currentRecord["Título"]) fallbackData.push(currentRecord);
+            currentRecord = { "Título": line.substring(line.indexOf(':') + 1).trim() };
+        } else if (line.toLowerCase().startsWith("texto principal:")) {
+            currentRecord["Texto Principal"] = line.substring(line.indexOf(':') + 1).trim();
+        } else if (line.toLowerCase().startsWith("ponte para o próximo:") || line.toLowerCase().startsWith("ponte:")) {
+            currentRecord["Ponte para o Próximo"] = line.substring(line.indexOf(':') + 1).trim();
+            if (currentRecord["Título"]) fallbackData.push(currentRecord);
+            currentRecord = {};
+        }
+    }
+    if (Object.keys(currentRecord).length > 0 && currentRecord["Título"]) fallbackData.push(currentRecord);
+
+    if (fallbackData.length > 0) {
+        console.log("[parseIaResponseToCsvData] Parseado como fallback (formato DeepSeek):", JSON.parse(JSON.stringify(fallbackData)));
+        const processedData = fallbackData.map(record => ({
             "Título": record["Título"] || "",
             "Texto Principal": record["Texto Principal"] || "",
             "Ponte para o Próximo": record["Ponte para o Próximo"] || "",
         }));
         return { data: processedData, headers: finalHeaders };
-      } else {
+    } else {
         console.error("[parseIaResponseToCsvData] Fallback também não encontrou dados estruturados.");
-        return { data: [], headers: finalHeaders };
-      }
+        return { data: [], headers: finalHeaders }; // Retorna data vazia se tudo falhar
     }
-
-    // Se chegou aqui, csvMatch[1] deve ter o conteúdo CSV
-    const csvContent = csvMatch[1].trim();
-    console.log("[parseIaResponseToCsvData] Conteúdo CSV bruto extraído (csvMatch[1]):", csvMatch[1]);
-    console.log("[parseIaResponseToCsvData] Conteúdo CSV após trim (csvContent):", csvContent);
-
-    const lines = csvContent.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
-    console.log("[parseIaResponseToCsvData] Linhas do CSV (após split, trim e filter):", lines);
-
-    if (lines.length < 2) {
-      console.error("[parseIaResponseToCsvData] Conteúdo CSV extraído tem menos de 2 linhas (cabeçalho + dados). Linhas:", lines);
-      return { data: [], headers: finalHeaders };
-    }
-
-    const extractedHeaders = lines[0].split(';').map(h => h.trim());
-    console.log("[parseIaResponseToCsvData] Cabeçalhos extraídos do CSV:", extractedHeaders);
-    const headerMap = {}; // Mapeia do cabeçalho da IA para o nosso cabeçalho final
-
-    // Mapeamento flexível dos cabeçalhos da IA para os nossos
-    // Isso permite que a IA use "Titulo" ou "Título", etc.
-    extractedHeaders.forEach(h => {
-        const hLower = h.toLowerCase();
-        if (hLower.includes('titulo') || hLower.includes('título')) headerMap[h] = "Título";
-        else if (hLower.includes('texto_principal') || hLower.includes('texto principal')) headerMap[h] = "Texto Principal";
-        else if (hLower.includes('ponte_proximo') || hLower.includes('ponte para o próximo')) headerMap[h] = "Ponte para o Próximo";
-        else if (hLower.includes('id_elemento') || hLower.includes('id')) headerMap[h] = "id"; // Captura o ID também
-        // Adicionar outros mapeamentos se necessário
-    });
-
-    // 3. Processar as linhas de dados
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(';');
-      const record = {};
-      let hasRequiredData = false;
-
-      extractedHeaders.forEach((headerKey, index) => {
-        const targetHeader = headerMap[headerKey];
-        if (targetHeader) { // Se o cabeçalho extraído tem um mapeamento para o nosso
-          record[targetHeader] = values[index] ? values[index].trim() : "";
-          if (targetHeader === "Título" && record[targetHeader]) {
-            hasRequiredData = true; // Consideramos válido se tiver pelo menos um título
-          }
-        }
-      });
-
-      // Adiciona o registro apenas se tiver dados relevantes (ex: um título)
-      // e se tiver um ID da IA (ou geramos um se não tiver)
-      if (hasRequiredData) {
-        if (!record.id) {
-          // Se a IA não forneceu um ID_Elemento, podemos gerar um simples aqui,
-          // mas o GerenciadorRegistros já tem lógica para IDs únicos se 'id' estiver ausente.
-          // Para consistência e para usar o ID da IA se disponível:
-          // delete record.id; // Deixa o GerenciadorRegistros cuidar se 'id' não veio ou não foi mapeado.
-        }
-        // Garantir que todos os campos finais existam, mesmo que vazios
-        finalHeaders.forEach(fh => {
-            if (!record[fh]) record[fh] = "";
-        });
-        data.push(record);
-      }
-    }
-
-    // Remove a coluna 'id' dos headers que serão usados para fieldPositions/Styles,
-    // pois 'id' é metadado e não um campo exibível/editável da mesma forma.
-    // Mantemos os `finalHeaders` como ["Título", "Texto Principal", "Ponte para o Próximo"]
-    // para consistência com o que GerenciadorRegistros e FieldPositioner esperam para exibição.
-
-    console.log("[parseIaResponseToCsvData] Dados Parseados (Gemini CSV):", data);
     return { data, headers: finalHeaders }; // Retorna os cabeçalhos finais esperados
   };
 

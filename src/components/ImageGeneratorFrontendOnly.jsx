@@ -640,8 +640,6 @@ const ImageGeneratorFrontendOnly = ({
       });
 
     } catch (error) {
-      // console.error('[regenerateSingleImage] Error during image regeneration process for index ' + index + ':', error);
-      // Adicionando chaves para corrigir o erro de build.
       alert(`Erro na regeneração da imagem (índice ${index}): ${error.message}`);
     }
   };
