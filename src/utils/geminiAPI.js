@@ -1,7 +1,7 @@
 // TODO: Confirmar o endpoint exato e o nome do modelo para a API gratuita do Gemini.
 // O exemplo abaixo usa um endpoint comum para gemini-pro.
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-const GEMINI_MODEL = 'gemini-2.5-pro'; // Atualizado conforme input do usuário, verificar disponibilidade.
+const GEMINI_MODEL = 'gemini-2.5-pro'; // Ou outro modelo gratuito disponível, ex: 'gemini-1.0-pro'
 
 /**
  * Chama a API Gemini (Google Generative Language).
