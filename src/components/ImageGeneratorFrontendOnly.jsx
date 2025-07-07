@@ -499,25 +499,38 @@ const ImageGeneratorFrontendOnly = ({
 
 
   const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse) => {
+    // console.log('[regenerateSingleImage] Called for index:', index,
+    //             'currentBackgroundImage (first 100 chars):', currentBackgroundImage ? currentBackgroundImage.substring(0, 100) : 'null',
+    //             'record:', record);
+
+
     if (!currentBackgroundImage || !record) {
-      console.error('Background image or record not found for regeneration.');
+      // console.error('[regenerateSingleImage] Background image or record not found for regeneration.');
       return;
     }
     if (!positionsToUse || !stylesToUse) {
-      console.error('Field positions or styles not provided for regeneration.');
+      // console.error('[regenerateSingleImage] Field positions or styles not provided for regeneration.');
       return;
     }
 
     if (!fontsLoaded) {
       alert('Aguardando carregamento das fontes. Tente novamente em alguns segundos.');
+      // console.warn('[regenerateSingleImage] Fonts not loaded, aborting.');
       return;
     }
 
     try {
       const img = new Image();
+      // console.log('[regenerateSingleImage] Attempting to load currentBackgroundImage:', currentBackgroundImage ? currentBackgroundImage.substring(0,100) + "..." : "null");
       await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
+        img.onload = () => {
+          // console.log('[regenerateSingleImage] currentBackgroundImage loaded successfully. Dimensions:', img.width, 'x', img.height);
+          resolve();
+        };
+        img.onerror = (err) => {
+          // console.error('[regenerateSingleImage] Error loading currentBackgroundImage:', err, 'src:', currentBackgroundImage ? currentBackgroundImage.substring(0,100) + "..." : "null");
+          reject(err);
+        };
         img.src = currentBackgroundImage;
       });
 
@@ -597,50 +610,85 @@ const ImageGeneratorFrontendOnly = ({
       });
 
       const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+      // console.log('[regenerateSingleImage] Blob created. Size:', blob ? blob.size : 'null', 'Type:', blob ? blob.type : 'null');
+      const newImageUrl = URL.createObjectURL(blob);
+      // console.log('[regenerateSingleImage] New object URL created:', newImageUrl);
+
       const newImageData = {
         blob: blob,
-        url: URL.createObjectURL(blob),
+        url: newImageUrl,
         record: record,
         index: index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
         backgroundImage: currentBackgroundImage // Store the background image used for this specific image
       };
-      // console.log('[regenerateSingleImage] newImageData.backgroundImage:', newImageData.backgroundImage ? newImageData.backgroundImage.substring(0, 100) + '...' : 'undefined'); // Log a snippet
 
       setGeneratedImages(prevImages => {
-        const updatedImages = prevImages.map(img => (img.index === index ? newImageData : img));
-        // Log para verificar a imagem específica após a atualização do estado
-        // const updatedImageForLog = updatedImages.find(img => img.index === index);
-        // if (updatedImageForLog) {
-        //   console.log(`[regenerateSingleImage - setGeneratedImages callback] Image index ${index} updated. backgroundImage:`, updatedImageForLog.backgroundImage ? updatedImageForLog.backgroundImage.substring(0,100) + '...' : 'undefined');
-        // }
+        const updatedImages = prevImages.map(img => {
+          if (img.index === index) {
+            if (img.url && img.url !== newImageUrl) { // Avoid revoking if it's somehow the same URL
+              // console.log(`[regenerateSingleImage setGeneratedImages] Revoking old object URL for index ${index}: ${img.url}`);
+              URL.revokeObjectURL(img.url);
+            }
+            return newImageData;
+          }
+          return img;
+        });
+        // const finalUpdatedImg = updatedImages.find(im => im.index === index);
+        // console.log(`[regenerateSingleImage setGeneratedImages callback] Image index ${index} in new state. URL: ${finalUpdatedImg ? finalUpdatedImg.url : 'not found'}, BG: ${finalUpdatedImg && finalUpdatedImg.backgroundImage ? finalUpdatedImg.backgroundImage.substring(0,100) + '...' : 'undefined'}`);
         return updatedImages;
       });
 
-    } catch (error) {
-      console.error('Erro na regeneração da imagem:', error);
-      alert(`Erro na regeneração da imagem: ${error.message}`);
+    } catch (error)      // console.error('[regenerateSingleImage] Error during image regeneration process for index ' + index + ':', error);
+      alert(`Erro na regeneração da imagem (índice ${index}): ${error.message}`);
     }
   };
 
   const handleReplaceImageClick = (index) => {
+    // console.log('[handleReplaceImageClick] Called with index:', index);
     setReplacingImageIndex(index);
-    individualImageInputRef.current.click();
+    if (individualImageInputRef.current) {
+      individualImageInputRef.current.click();
+    } else {
+      // console.error('[handleReplaceImageClick] individualImageInputRef.current is null');
+    }
   };
 
   const handleIndividualImageUpload = (event) => {
     const file = event.target.files[0];
+    // console.log('[handleIndividualImageUpload] Called. File:', file ? file.name : 'No file', 'replacingImageIndex:', replacingImageIndex);
+
     if (file && replacingImageIndex !== null) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const newBgUrl = e.target.result;
+        // console.log('[handleIndividualImageUpload reader.onload] newBgUrl (first 100 chars):', newBgUrl ? newBgUrl.substring(0, 100) : 'null');
+
         const imageToUpdate = generatedImages.find(img => img.index === replacingImageIndex);
+        // console.log('[handleIndividualImageUpload reader.onload] imageToUpdate (found by index ' + replacingImageIndex + '):', imageToUpdate ? `Index: ${imageToUpdate.index}, Filename: ${imageToUpdate.filename}`: 'null');
+
         if (imageToUpdate) {
-          regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl);
+          // console.log('[handleIndividualImageUpload reader.onload] Calling regenerateSingleImage for index:', replacingImageIndex);
+          // Passar as posições e estilos corretos (customizados da imagem ou globais)
+          regenerateSingleImage(
+            replacingImageIndex,
+            imageToUpdate.record,
+            newBgUrl, // This is the new individual background
+            imageToUpdate.customFieldPositions || fieldPositions, // Use custom if available, else global
+            imageToUpdate.customFieldStyles || fieldStyles     // Use custom if available, else global
+          );
+        } else {
+          // console.error('[handleIndividualImageUpload reader.onload] Could not find imageToUpdate for index:', replacingImageIndex);
         }
       };
+      reader.onerror = (error) => {
+        // console.error('[handleIndividualImageUpload reader.onerror] FileReader error:', error);
+      };
       reader.readAsDataURL(file);
+    } else {
+      // console.warn('[handleIndividualImageUpload] No file selected or replacingImageIndex is null.');
     }
+
     // Reset the input value to allow uploading the same file again if needed
     if (individualImageInputRef.current) {
       individualImageInputRef.current.value = "";
@@ -966,6 +1014,7 @@ const ImageGeneratorFrontendOnly = ({
                           transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out', // Transição suave para o hover do Box
                         }}>
                           <img 
+                            key={imageData.url} // Força a recriação da tag img quando a URL muda
                             src={imageData.url} 
                             alt={`Preview ${index + 1}`} 
                             style={{ 
