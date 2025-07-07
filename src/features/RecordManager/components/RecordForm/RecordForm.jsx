@@ -1,16 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import styles from './FormularioRegistro.module.css';
+import PropTypes from 'prop-types';
+import styles from './RecordForm.module.css';
 
-const FormularioRegistro = ({
+/**
+ * Formulário para adicionar ou editar um registro.
+ * Se `isPrimeiroRegistro` for true, permite a definição dinâmica de colunas.
+ *
+ * @param {Object} props - Propriedades do componente.
+ * @param {string[]} [props.colunas=[]] - Nomes das colunas existentes (ignorado se `isPrimeiroRegistro` for true).
+ * @param {Object} [props.dadosIniciais=null] - Dados do registro para edição.
+ * @param {Function} props.onSubmit - Callback chamado ao submeter o formulário.
+ * @param {Function} props.onCancelar - Callback chamado ao cancelar.
+ * @param {boolean} [props.isPrimeiroRegistro=false] - Indica se é o primeiro registro, permitindo definir colunas.
+ * @param {boolean} [props.darkMode=false] - Flag para habilitar o modo escuro.
+ */
+const RecordForm = ({
     colunas = [],
-    dadosIniciais = null, // Pode ser null para adição
+    dadosIniciais = null,
     onSubmit,
     onCancelar,
-    isPrimeiroRegistro = false, // Nova prop para controlar a lógica de definir colunas
-    darkMode = false // Nova prop para modo escuro
+    isPrimeiroRegistro = false,
+    darkMode = false
 }) => {
     const [formData, setFormData] = useState({});
-    // Para o primeiro registro, precisamos de estado para os nomes e valores das novas colunas
     const [novasColunas, setNovasColunas] = useState(
         isPrimeiroRegistro
         ? [
@@ -181,4 +193,20 @@ const FormularioRegistro = ({
     );
 };
 
-export default FormularioRegistro;
+RecordForm.propTypes = {
+    colunas: PropTypes.arrayOf(PropTypes.string),
+    dadosIniciais: PropTypes.object,
+    onSubmit: PropTypes.func.isRequired,
+    onCancelar: PropTypes.func.isRequired,
+    isPrimeiroRegistro: PropTypes.bool,
+    darkMode: PropTypes.bool,
+};
+
+RecordForm.defaultProps = {
+    colunas: [],
+    dadosIniciais: null,
+    isPrimeiroRegistro: false,
+    darkMode: false,
+};
+
+export default RecordForm;

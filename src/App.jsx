@@ -51,7 +51,7 @@ import CssBaseline from '@mui/material/CssBaseline'; // Normaliza estilos e apli
 
 import FieldPositioner from './components/FieldPositioner';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
-import GerenciadorRegistros from '../GerenciadorRegistros/GerenciadorRegistros'; // Importar o GerenciadorRegistros
+import RecordManager from './features/RecordManager/RecordManager'; // Importar o RecordManager (antigo GerenciadorRegistros)
 import DeepSeekAuthSetup from './components/DeepSeekAuthSetup';
 import GeminiAuthSetup from './components/GeminiAuthSetup'; // Importar GeminiAuthSetup
 import GoogleDriveAuthModal from './components/GoogleDriveAuthModal'; // Importar GoogleDriveAuthModal
@@ -1247,7 +1247,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
 
           {/* Passo 1: Editar Dados */}
           {activeStep === 1 && (
-            <GerenciadorRegistros
+            <RecordManager
               registrosIniciais={csvData}
               colunasIniciais={csvHeaders}
               onDadosAlterados={handleDadosAlterados} // Nome da prop atualizado
