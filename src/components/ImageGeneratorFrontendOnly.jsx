@@ -61,8 +61,8 @@ const ImageGeneratorFrontendOnly = ({
 
   // Novos estados para o editor WYSIWYG de imagens geradas
   const [editingGeneratedImageIndex, setEditingGeneratedImageIndex] = useState(null);
-  const [individualFieldPositions, setIndividualFieldPositions] = useState({});
-  const [individualFieldStyles, setIndividualFieldStyles] = useState({});
+  // Removed: const [individualFieldPositions, setIndividualFieldPositions] = useState({});
+  // Removed: const [individualFieldStyles, setIndividualFieldStyles] = useState({});
   const [showGeneratedImageEditor, setShowGeneratedImageEditor] = useState(false);
 
 
@@ -491,16 +491,16 @@ const ImageGeneratorFrontendOnly = ({
     // console.log('[handleOpenGeneratedImageEditor] positionsToLoad:', positionsToLoad);
     // console.log('[handleOpenGeneratedImageEditor] stylesToLoad:', stylesToLoad);
 
-    setIndividualFieldPositions(JSON.parse(JSON.stringify(positionsToLoad)));
-    setIndividualFieldStyles(JSON.parse(JSON.stringify(stylesToLoad)));
+    // Removed: setIndividualFieldPositions(JSON.parse(JSON.stringify(positionsToLoad)));
+    // Removed: setIndividualFieldStyles(JSON.parse(JSON.stringify(stylesToLoad)));
     setShowGeneratedImageEditor(true);
   };
 
   const handleCloseGeneratedImageEditor = () => {
     setShowGeneratedImageEditor(false);
     setEditingGeneratedImageIndex(null);
-    setIndividualFieldPositions({});
-    setIndividualFieldStyles({});
+    // Removed: setIndividualFieldPositions({});
+    // Removed: setIndividualFieldStyles({});
   };
 
   const handleSaveIndividualModifications = (modifiedImageData) => {
@@ -1173,19 +1173,42 @@ const ImageGeneratorFrontendOnly = ({
       </Dialog>
 
       {/* Editor WYSIWYG para Imagem Gerada Individual */}
-      {showGeneratedImageEditor && editingGeneratedImageIndex !== null && (
-        <GeneratedImageEditor
-          open={showGeneratedImageEditor}
-          onClose={handleCloseGeneratedImageEditor}
-          imageData={generatedImages.find(img => img.index === editingGeneratedImageIndex)}
-          globalCsvHeaders={csvHeaders} // Passar todos os headers CSV possíveis
-          initialFieldPositions={individualFieldPositions}
-          initialFieldStyles={individualFieldStyles}
-          onSave={handleSaveIndividualModifications}
-          colorPalette={colorPalette} // Passar a paleta de cores
-          globalBackgroundImage={backgroundImage} // Passar o BG global como fallback
-        />
-      )}
+      {(() => {
+        if (showGeneratedImageEditor && editingGeneratedImageIndex !== null) {
+          const imageToEdit = generatedImages.find(img => img.index === editingGeneratedImageIndex);
+          if (!imageToEdit) {
+            // This case should ideally not happen if editingGeneratedImageIndex is valid.
+            // Closing the editor or showing an error might be appropriate.
+            // For now, we'll prevent rendering if imageToEdit is not found.
+            // Consider calling handleCloseGeneratedImageEditor() here or similar.
+            console.error(`[IGFO] Render: Could not find image with index ${editingGeneratedImageIndex} to edit.`);
+            return null;
+          }
+
+          const positionsToLoad = imageToEdit.customFieldPositions !== undefined
+            ? imageToEdit.customFieldPositions
+            : fieldPositions; // global fieldPositions prop from App.jsx
+
+          const stylesToLoad = imageToEdit.customFieldStyles !== undefined
+            ? imageToEdit.customFieldStyles
+            : fieldStyles;    // global fieldStyles prop from App.jsx
+
+          return (
+            <GeneratedImageEditor
+              open={showGeneratedImageEditor}
+              onClose={handleCloseGeneratedImageEditor}
+              imageData={imageToEdit} // Pass the full, most current image object
+              globalCsvHeaders={csvHeaders}
+              initialFieldPositions={JSON.parse(JSON.stringify(positionsToLoad || {}))}
+              initialFieldStyles={JSON.parse(JSON.stringify(stylesToLoad || {}))}
+              onSave={handleSaveIndividualModifications}
+              colorPalette={colorPalette}
+              globalBackgroundImage={backgroundImage}
+            />
+          );
+        }
+        return null;
+      })()}
 
       {/* Hidden file input for individual image replacement */}
       <input
