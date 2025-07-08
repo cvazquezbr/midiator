@@ -448,8 +448,18 @@ const ImageGeneratorFrontendOnly = ({
       : fieldStyles;
     
     // console.log('[handleOpenGeneratedImageEditor] imageToEdit.backgroundImage:', imageToEdit.backgroundImage ? imageToEdit.backgroundImage.substring(0, 100) + '...' : 'undefined');
-    setIndividualFieldPositions(JSON.parse(JSON.stringify(currentPositions)));
-    setIndividualFieldStyles(JSON.parse(JSON.stringify(currentStyles))); // This will be initialFieldStyles in GeneratedImageEditor
+
+  // If customFieldPositions exists (even if it's an empty object {}), use it. Otherwise, use global.
+  const positionsToLoad = imageToEditFromArg.customFieldPositions !== undefined
+    ? imageToEditFromArg.customFieldPositions
+    : fieldPositions;
+
+  const stylesToLoad = imageToEditFromArg.customFieldStyles !== undefined
+    ? imageToEditFromArg.customFieldStyles
+    : fieldStyles;
+
+  setIndividualFieldPositions(JSON.parse(JSON.stringify(positionsToLoad)));
+  setIndividualFieldStyles(JSON.parse(JSON.stringify(stylesToLoad))); // This will be initialFieldStyles in GeneratedImageEditor
     setShowGeneratedImageEditor(true);
   };
 
