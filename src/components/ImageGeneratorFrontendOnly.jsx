@@ -438,28 +438,24 @@ const ImageGeneratorFrontendOnly = ({
   const handleOpenGeneratedImageEditor = (imageToEdit, index) => {
     setEditingGeneratedImageIndex(index);
 
-    // Usa as customizações da imagem se existirem e tiverem conteúdo, senão fallback para globais
-    const currentPositions = (imageToEdit.customFieldPositions && Object.keys(imageToEdit.customFieldPositions).length > 0)
+    // console.log('[handleOpenGeneratedImageEditor] imageToEdit object:', imageToEdit);
+    // console.log('[handleOpenGeneratedImageEditor] imageToEdit.customFieldPositions:', imageToEdit.customFieldPositions);
+    // console.log('[handleOpenGeneratedImageEditor] imageToEdit.customFieldStyles:', imageToEdit.customFieldStyles);
+
+    // If customFieldPositions exists (even if it's an empty object {}), use it. Otherwise, use global.
+    const positionsToLoad = imageToEdit.customFieldPositions !== undefined
       ? imageToEdit.customFieldPositions
-      : fieldPositions;
+      : fieldPositions; // global fieldPositions from props
 
-    const currentStyles = (imageToEdit.customFieldStyles && Object.keys(imageToEdit.customFieldStyles).length > 0)
+    const stylesToLoad = imageToEdit.customFieldStyles !== undefined
       ? imageToEdit.customFieldStyles
-      : fieldStyles;
-    
-    // console.log('[handleOpenGeneratedImageEditor] imageToEdit.backgroundImage:', imageToEdit.backgroundImage ? imageToEdit.backgroundImage.substring(0, 100) + '...' : 'undefined');
+      : fieldStyles;    // global fieldStyles from props
 
-  // If customFieldPositions exists (even if it's an empty object {}), use it. Otherwise, use global.
-  const positionsToLoad = imageToEditFromArg.customFieldPositions !== undefined
-    ? imageToEditFromArg.customFieldPositions
-    : fieldPositions;
+    // console.log('[handleOpenGeneratedImageEditor] positionsToLoad:', positionsToLoad);
+    // console.log('[handleOpenGeneratedImageEditor] stylesToLoad:', stylesToLoad);
 
-  const stylesToLoad = imageToEditFromArg.customFieldStyles !== undefined
-    ? imageToEditFromArg.customFieldStyles
-    : fieldStyles;
-
-  setIndividualFieldPositions(JSON.parse(JSON.stringify(positionsToLoad)));
-  setIndividualFieldStyles(JSON.parse(JSON.stringify(stylesToLoad))); // This will be initialFieldStyles in GeneratedImageEditor
+    setIndividualFieldPositions(JSON.parse(JSON.stringify(positionsToLoad)));
+    setIndividualFieldStyles(JSON.parse(JSON.stringify(stylesToLoad)));
     setShowGeneratedImageEditor(true);
   };
 
