@@ -282,19 +282,27 @@ const TextBox = ({
   };
 
   const handleTextareaBlur = () => {
-    commitChanges();
+    if (isEditing) { // Check if we were actually editing
+        if (onContentChange && content !== editedContent) {
+            onContentChange(field, editedContent); // Commit content if changed
+        }
+        setIsEditing(false); // Exit editing mode
+        onSelect(field);     // Explicitly try to select this field
+    }
   };
 
   const handleTextareaKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      commitChanges();
+      commitChanges(); // This will set isEditing to false
+      onSelect(field);  // Explicitly select the field for FormattingPanel
       // Explicitly blur after committing via Enter key to ensure focus shifts correctly.
       textareaRef.current?.blur();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       setEditedContent(content); // Revert to original prop content
       setIsEditing(false);
+      onSelect(field); // Also ensure selected for FormattingPanel on escape
       textareaRef.current?.blur(); // Ensure blur on escape too
     }
   };

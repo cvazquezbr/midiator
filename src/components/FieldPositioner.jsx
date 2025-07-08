@@ -337,8 +337,8 @@ const FieldPositioner = ({
                 }
               }}
               onMouseDown={(e) => {
-                // Evita desmarcar ao clicar dentro de um TextBox
-                if (e.target.classList.contains('text-box')) return;
+                // Evita desmarcar ao clicar dentro de um TextBox ou em seus elementos internos
+                if (e.target.closest('.text-box')) return;
                 setSelectedField(null);
               }}
               onTouchStart={handleContainerTouchStart}
