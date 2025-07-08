@@ -281,15 +281,15 @@ const TextBox = ({
                          // This should happen regardless of content change to exit edit mode.
   };
 
-  const handleTextareaBlur = () => {
-    if (isEditing) { // Check if we were actually editing
-        if (onContentChange && content !== editedContent) {
-            onContentChange(field, editedContent); // Commit content if changed
-        }
-        setIsEditing(false); // Exit editing mode
-        // onSelect(field) removed
-    }
-  };
+const handleTextareaBlur = () => {
+  if (isEditing) { // Check if we were actually editing
+      if (onContentChange && content !== editedContent) {
+          onContentChange(field, editedContent); // Commit content if changed
+      }
+      setIsEditing(false); // Exit editing mode
+      // onSelect(field) removed // This is the version from 'fix/textbox-blur-selection' (our intended fix)
+  }
+};
 
   const handleTextareaKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -390,7 +390,7 @@ const TextBox = ({
     return lines;
   };
 
-  const textLines = wrapText(content, pixelPosition.width - 16);
+  const textLines = wrapText(editedContent, pixelPosition.width - 16); // Use editedContent for display
   const lineHeight = (style.fontSize || 16) * 1.2;
   const handleSize = isMobile ? 16 : 8;
 
@@ -428,10 +428,8 @@ const TextBox = ({
       onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
       onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
       onClick={(e) => {
-        if (isEditing && e.target === textareaRef.current) {
-          return; // Allow clicks inside textarea
-        }
-        if (!isEditing) {
+        // Always select the field when clicked, unless it\'s already in editing mode and the click is within the textarea
+        if (!isEditing || e.target !== textareaRef.current) {
           onSelect(field);
         }
       }}
