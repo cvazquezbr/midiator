@@ -32,6 +32,14 @@ const TextBox = ({
     }
   }, [content, isEditing]);
 
+  // Effect to focus and select text when entering edit mode
+  useEffect(() => {
+    if (isEditing && isSelected && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.select();
+    }
+  }, [isEditing, isSelected]);
+
   const pixelPosition = {
     x: (position.x / 100) * containerSize.width,
     y: (position.y / 100) * containerSize.height,
@@ -256,11 +264,7 @@ const TextBox = ({
   const handleDoubleClick = () => {
     if (isSelected) {
       setIsEditing(true);
-      // Focus the textarea after a short delay to ensure it's rendered
-      setTimeout(() => {
-        textareaRef.current?.focus();
-        textareaRef.current?.select();
-      }, 0);
+      // Focus is now handled by the useEffect hook
     }
   };
 
