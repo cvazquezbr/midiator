@@ -45,7 +45,8 @@ const ImageGeneratorFrontendOnly = ({
   csvHeaders, // Todos os cabeçalhos CSV possíveis (para GeneratedImageEditor)
   colorPalette, // Paleta de cores global (para GeneratedImageEditor)
   setGeneratedImagesData, // Setter para atualizar o estado em App.jsx
-  initialGeneratedImagesData // Dados iniciais carregados do JSON
+  initialGeneratedImagesData, // Dados iniciais carregados do JSON
+  onThumbnailRecordTextUpdate // <-- ADICIONADO: Callback para atualizar o CSV em App.jsx
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   // O estado local `generatedImages` será inicializado com `initialGeneratedImagesData`
@@ -460,38 +461,40 @@ const ImageGeneratorFrontendOnly = ({
   };
 
   const handleSaveIndividualModifications = (modifiedImageData) => {
-    // modifiedImageData contém: index, record, fieldPositions (editados), fieldStyles (editados)
-    // e potencialmente backgroundImage se o editor suportar mudança de BG individual no futuro.
+    // modifiedImageData contém: index, record (potencialmente atualizado), fieldPositions (editados), fieldStyles (editados)
 
-    const { index: imageIndex, record: csvRecord, fieldPositions: newPositions, fieldStyles: newStyles } = modifiedImageData;
+    const { index: imageIndex, record: updatedCsvRecord, fieldPositions: newPositions, fieldStyles: newStyles } = modifiedImageData;
 
-    // Atualizar a imagem em generatedImages com as novas posições/estilos customizados
+    // Atualizar a imagem em generatedImages com as novas posições/estilos customizados e o record atualizado
     const updatedImages = generatedImages.map(img => {
       if (img.index === imageIndex) {
         return {
           ...img,
+          record: updatedCsvRecord, // Usar o record que veio do editor
           customFieldPositions: newPositions,
           customFieldStyles: newStyles,
-          // Manter o 'record' original, a menos que o editor WYSIWYG também modifique dados CSV
         };
       }
       return img;
     });
-    setGeneratedImages(updatedImages);
+    setGeneratedImages(updatedImages); // Atualiza o estado local de IGFO
 
-    // Regerar a imagem específica com as novas posições/estilos
+    // Informar App.jsx sobre a mudança no texto do registro para atualizar o csvData principal
+    if (onThumbnailRecordTextUpdate) {
+      onThumbnailRecordTextUpdate(imageIndex, updatedCsvRecord);
+    }
+
+    // Regerar a imagem específica com as novas posições/estilos e o record atualizado
+    // imageToRegenerate já terá o record atualizado devido ao map acima
     const imageToRegenerate = updatedImages.find(im => im.index === imageIndex);
     if (imageToRegenerate) {
       const bgToUse = imageToRegenerate.backgroundImage || backgroundImage;
-      // console.log('[handleSaveIndividualModifications] imageToRegenerate.backgroundImage:', imageToRegenerate.backgroundImage ? imageToRegenerate.backgroundImage.substring(0, 100) + '...' : 'undefined');
-      // console.log('[handleSaveIndividualModifications] backgroundImage (global):', backgroundImage ? backgroundImage.substring(0, 100) + '...' : 'undefined');
-      // console.log('[handleSaveIndividualModifications] bgToUse for regenerateSingleImage:', bgToUse ? bgToUse.substring(0, 100) + '...' : 'undefined');
       regenerateSingleImage(
         imageIndex,
-        csvRecord, // Dados CSV originais da imagem
-        bgToUse, // BG atual da imagem
-        newPositions, // Novas posições
-        newStyles // Novos estilos
+        imageToRegenerate.record, // Passar o record atualizado de imageToRegenerate
+        bgToUse,
+        newPositions,
+        newStyles
       );
     }
     handleCloseGeneratedImageEditor(); // Fecha o editor
