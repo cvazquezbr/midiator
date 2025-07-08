@@ -282,19 +282,35 @@ const TextBox = ({
   };
 
   const handleTextareaBlur = () => {
-    commitChanges();
+    // If blur is caused by clicking outside, FieldPositioner's
+    // mousedown will handle deselection (setSelectedField(null)).
+    // If blur is programmatic (from Enter/Escape), we've already handled selection.
+    // We still need to commit changes if they haven't been (e.g. user clicks another field directly).
+    if (isEditing) { // Only if still in editing mode (e.g., focus moved to another element directly)
+        if (onContentChange && content !== editedContent) {
+            onContentChange(field, editedContent);
+        }
+        setIsEditing(false);
+        onSelect(field); // Explicitly call onSelect, similar to Enter key path
+    }
   };
 
   const handleTextareaKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      commitChanges();
-      // Explicitly blur after committing via Enter key to ensure focus shifts correctly.
-      textareaRef.current?.blur();
+      if (isEditing && onContentChange && content !== editedContent) {
+          onContentChange(field, editedContent);
+      }
+      setIsEditing(false);
+      // Explicitly re-assert selection for formatting panel after editing via Enter
+      onSelect(field); // This calls FieldPositioner.setSelectedField
+      textareaRef.current?.blur(); // Blur after everything else
     } else if (e.key === 'Escape') {
       e.preventDefault();
       setEditedContent(content); // Revert to original prop content
       setIsEditing(false);
+      // Also ensure selected state is re-asserted for panel
+      onSelect(field);
       textareaRef.current?.blur(); // Ensure blur on escape too
     }
   };
