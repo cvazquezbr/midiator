@@ -73,12 +73,12 @@ const GeneratedImageEditor = ({
 
       // Initialize editedStyles
       const newEditedStyles = {};
-      const fieldsToStyle = Object.keys(initialFieldPositions); // Fields present in the current image layout
-
-      fieldsToStyle.forEach(field => {
+      // Iterate over all possible headers to ensure FormattingPanel has complete style info
+      // and that FieldPositioner receives a style object for every field it might render.
+      globalCsvHeaders.forEach(field => {
         newEditedStyles[field] = {
-          ...COMPLETE_DEFAULT_STYLE, // Start with all defaults
-          ...(initialFieldStyles[field] || {}), // Override with any specific styles for this field
+          ...COMPLETE_DEFAULT_STYLE, // Start with all defaults defined in GeneratedImageEditor
+          ...(initialFieldStyles && initialFieldStyles[field] ? initialFieldStyles[field] : {}), // Override with specific styles for this field from prop
         };
       });
       setEditedStyles(newEditedStyles);
@@ -87,7 +87,7 @@ const GeneratedImageEditor = ({
       // If essential data is missing, ensure we are not in an initialized state.
       setStylesAreInitialized(false); 
     }
-  }, [imageData, initialFieldPositions, initialFieldStyles]);
+  }, [imageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders]); // Added globalCsvHeaders
 
   if (!imageData) {
     return null;

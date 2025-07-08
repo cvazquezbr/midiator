@@ -21,6 +21,27 @@ import {
 import TextBox from './TextBox';
 import FormattingPanel from './FormattingPanel';
 
+// Define COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER at module level
+const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
+  fontFamily: 'Arial',
+  fontSize: 24,
+  fontWeight: 'normal',
+  fontStyle: 'normal',
+  textDecoration: 'none',
+  color: '#000000',
+  textAlign: 'left',
+  verticalAlign: 'top',
+  lineHeightMultiplier: 1.2,
+  textStroke: false,
+  strokeColor: '#ffffff',
+  strokeWidth: 2,
+  textShadow: false,
+  shadowColor: '#000000',
+  shadowBlur: 4,
+  shadowOffsetX: 2,
+  shadowOffsetY: 2,
+};
+
 const FieldPositioner = ({
   backgroundImage,
   csvHeaders,
@@ -72,65 +93,68 @@ const FieldPositioner = ({
     return () => observer.disconnect();
   }, []);
 
-  // Inicializar posições e estilos padrão se não existirem
+  // Effect to initialize or update field positions and styles based on csvHeaders and props.
+  // This ensures that every field in csvHeaders has a corresponding position and a complete style object.
   useEffect(() => {
     if (csvHeaders.length > 0) {
-      const newDefaultPositions = {};
-      const newDefaultStyles = {};
-
-      // Check if the incoming props represent an intentionally empty state
-      const parentProvidedEmptyPositions = Object.keys(fieldPositions).length === 0;
-      const parentProvidedEmptyStyles = Object.keys(fieldStyles).length === 0;
+      const newCombinedPositions = {};
+      const newCombinedStyles = {};
+      let positionsHaveChanged = false;
+      let stylesHaveChanged = false;
 
       csvHeaders.forEach((header, index) => {
-        if (!fieldPositions[header]) {
-          newDefaultPositions[header] = {
-            x: 10 + (index % 3) * 30,
-            y: 10 + Math.floor(index / 3) * 25,
-            width: 25,
-            height: 15,
-            visible: true
-          };
-        }
+        // Logic for positions: use existing if available, else default.
+        const existingPosition = fieldPositions[header];
+        const defaultPosition = {
+          x: 10 + (index % 3) * 30,
+          y: 10 + Math.floor(index / 3) * 25,
+          width: 25,
+          height: 15,
+          visible: true
+        };
+        // Ensure all default keys are present if existingPosition is only partial (though not typical for positions)
+        newCombinedPositions[header] = existingPosition
+          ? { ...defaultPosition, ...existingPosition }
+          : defaultPosition;
 
-        if (!fieldStyles[header]) {
-          newDefaultStyles[header] = {
-            fontFamily: 'Arial',
-            fontSize: 24,
-            fontWeight: 'normal',
-            fontStyle: 'normal',
-            textDecoration: 'none',
-            color: '#000000',
-            textStroke: false,
-            strokeColor: '#ffffff',
-            strokeWidth: 2,
-            textShadow: false,
-            shadowColor: '#000000',
-            shadowBlur: 4,
-            shadowOffsetX: 2,
-            shadowOffsetY: 2,
-            textAlign: 'left',
-            verticalAlign: 'top',
-            lineHeightMultiplier: 1.2
-          };
-        }
+        // Logic for styles: merge existing styles with a complete default set.
+        // Custom styles from fieldStyles[header] (from parent) override the defaults.
+        newCombinedStyles[header] = {
+          ...COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER,
+          ...(fieldStyles[header] || {}),
+        };
       });
 
-      // Only call parent setters if the parent didn't provide an intentionally empty state
-      // AND there are actually new defaults to add (for headers that were genuinely missing from a partially filled object).
-      if (Object.keys(newDefaultPositions).length > 0 && !parentProvidedEmptyPositions) {
-        // If parentProvidedEmptyPositions is true, it means fieldPositions was {},
-        // so newDefaultPositions contains defaults for ALL headers. We don't want to call parent's setter in this case.
-        // If parentProvidedEmptyPositions is false, it means fieldPositions was partially filled,
-        // and newDefaultPositions contains defaults for the *remaining* headers. Call parent's setter.
-        setFieldPositions(prev => ({ ...prev, ...newDefaultPositions }));
+      // Check if the newly combined positions are different from the current prop
+      if (JSON.stringify(newCombinedPositions) !== JSON.stringify(fieldPositions)) {
+        positionsHaveChanged = true;
       }
 
-      if (Object.keys(newDefaultStyles).length > 0 && !parentProvidedEmptyStyles) {
-        setFieldStyles(prev => ({ ...prev, ...newDefaultStyles }));
+      // Check if the newly combined styles are different from the current prop
+      if (JSON.stringify(newCombinedStyles) !== JSON.stringify(fieldStyles)) {
+        stylesHaveChanged = true;
+      }
+
+      // Call parent setters only if there's an actual change.
+      if (positionsHaveChanged) {
+        setFieldPositions(newCombinedPositions);
+      }
+      if (stylesHaveChanged) {
+        setFieldStyles(newCombinedStyles);
       }
     }
-  }, [csvHeaders, fieldPositions, fieldStyles, setFieldPositions, setFieldStyles]);
+    // This effect depends on the content of fieldPositions and fieldStyles objects, not just their references.
+    // Stringifying them for the dependency array is a common way to track changes in object content,
+    // though it can be performance-intensive for very large/complex objects.
+    // For this use case, it's likely acceptable.
+  }, [
+    csvHeaders,
+    JSON.stringify(fieldPositions), // Re-run if content of fieldPositions changes
+    JSON.stringify(fieldStyles),   // Re-run if content of fieldStyles changes
+    setFieldPositions,
+    setFieldStyles
+    // COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER is a constant, not needed in deps
+  ]);
 
   const handlePositionChange = (field, newPosition) => {
     setFieldPositions(prev => ({
