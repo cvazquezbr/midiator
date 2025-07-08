@@ -287,7 +287,7 @@ const TextBox = ({
             onContentChange(field, editedContent); // Commit content if changed
         }
         setIsEditing(false); // Exit editing mode
-        onSelect(field);     // Explicitly try to select this field
+        // onSelect(field) removed
     }
   };
 
