@@ -287,7 +287,7 @@ const TextBox = ({
             onContentChange(field, editedContent); // Commit content if changed
         }
         setIsEditing(false); // Exit editing mode
-        onSelect(field);     // Explicitly try to select this field
+        // onSelect(field) is intentionally removed here based on our current strategy
     }
   };
 
@@ -390,7 +390,7 @@ const TextBox = ({
     return lines;
   };
 
-  const textLines = wrapText(content, pixelPosition.width - 16);
+  const textLines = wrapText(editedContent, pixelPosition.width - 16); // Use editedContent for display
   const lineHeight = (style.fontSize || 16) * 1.2;
   const handleSize = isMobile ? 16 : 8;
 
@@ -428,10 +428,8 @@ const TextBox = ({
       onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
       onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
       onClick={(e) => {
-        if (isEditing && e.target === textareaRef.current) {
-          return; // Allow clicks inside textarea
-        }
-        if (!isEditing) {
+        // Always select the field when clicked, unless it\'s already in editing mode and the click is within the textarea
+        if (!isEditing || e.target !== textareaRef.current) {
           onSelect(field);
         }
       }}
@@ -529,4 +527,3 @@ const TextBox = ({
 };
 
 export default TextBox;
-
