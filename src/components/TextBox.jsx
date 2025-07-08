@@ -285,11 +285,8 @@ const TextBox = ({
     if (isEditing) { // Check if we were actually editing
         if (onContentChange && content !== editedContent) {
             onContentChange(field, editedContent); // Commit content if changed
-        }
-        setIsEditing(false); // Exit editing mode
-        // The onSelect(field) call has been removed.
-        // Selection will now be handled by the click event on other elements (another field or the background)
-        // or by the Enter key handler if that's how editing was concluded.
+        }        setIsEditing(false); // Exit editing mode
+        onSelect(field); // Re-select the field after blur to keep it active for FormattingPanel
     }
   };
 
@@ -392,7 +389,7 @@ const TextBox = ({
     return lines;
   };
 
-  const textLines = wrapText(content, pixelPosition.width - 16);
+  const textLines = wrapText(editedContent, pixelPosition.width - 16); // Use editedContent for display
   const lineHeight = (style.fontSize || 16) * 1.2;
   const handleSize = isMobile ? 16 : 8;
 
@@ -430,10 +427,8 @@ const TextBox = ({
       onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
       onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
       onClick={(e) => {
-        if (isEditing && e.target === textareaRef.current) {
-          return; // Allow clicks inside textarea
-        }
-        if (!isEditing) {
+        // Always select the field when clicked, unless it\'s already in editing mode and the click is within the textarea
+        if (!isEditing || e.target !== textareaRef.current) {
           onSelect(field);
         }
       }}
