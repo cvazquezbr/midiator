@@ -75,12 +75,16 @@ const FieldPositioner = ({
   // Inicializar posições e estilos padrão se não existirem
   useEffect(() => {
     if (csvHeaders.length > 0) {
-      const newPositions = {};
-      const newStyles = {};
+      const newDefaultPositions = {};
+      const newDefaultStyles = {};
+
+      // Check if the incoming props represent an intentionally empty state
+      const parentProvidedEmptyPositions = Object.keys(fieldPositions).length === 0;
+      const parentProvidedEmptyStyles = Object.keys(fieldStyles).length === 0;
 
       csvHeaders.forEach((header, index) => {
         if (!fieldPositions[header]) {
-          newPositions[header] = {
+          newDefaultPositions[header] = {
             x: 10 + (index % 3) * 30,
             y: 10 + Math.floor(index / 3) * 25,
             width: 25,
@@ -90,7 +94,7 @@ const FieldPositioner = ({
         }
 
         if (!fieldStyles[header]) {
-          newStyles[header] = {
+          newDefaultStyles[header] = {
             fontFamily: 'Arial',
             fontSize: 24,
             fontWeight: 'normal',
@@ -112,12 +116,18 @@ const FieldPositioner = ({
         }
       });
 
-      if (Object.keys(newPositions).length > 0) {
-        setFieldPositions(prev => ({ ...prev, ...newPositions }));
+      // Only call parent setters if the parent didn't provide an intentionally empty state
+      // AND there are actually new defaults to add (for headers that were genuinely missing from a partially filled object).
+      if (Object.keys(newDefaultPositions).length > 0 && !parentProvidedEmptyPositions) {
+        // If parentProvidedEmptyPositions is true, it means fieldPositions was {},
+        // so newDefaultPositions contains defaults for ALL headers. We don't want to call parent's setter in this case.
+        // If parentProvidedEmptyPositions is false, it means fieldPositions was partially filled,
+        // and newDefaultPositions contains defaults for the *remaining* headers. Call parent's setter.
+        setFieldPositions(prev => ({ ...prev, ...newDefaultPositions }));
       }
 
-      if (Object.keys(newStyles).length > 0) {
-        setFieldStyles(prev => ({ ...prev, ...newStyles }));
+      if (Object.keys(newDefaultStyles).length > 0 && !parentProvidedEmptyStyles) {
+        setFieldStyles(prev => ({ ...prev, ...newDefaultStyles }));
       }
     }
   }, [csvHeaders, fieldPositions, fieldStyles, setFieldPositions, setFieldStyles]);

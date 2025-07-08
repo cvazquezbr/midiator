@@ -287,7 +287,11 @@ const handleTextareaBlur = () => {
           onContentChange(field, editedContent); // Commit content if changed
       }
       setIsEditing(false); // Exit editing mode
-      // onSelect(field) removed // This is the version from 'fix/textbox-blur-selection' (our intended fix)
+      // Re-adding onSelect(field) to test if it resolves the blur save regression.
+      // This was previously removed to fix a selection issue, so it might need further review.
+      if (onSelect) {
+        onSelect(field);
+      }
   }
 };
 
