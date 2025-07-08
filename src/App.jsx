@@ -604,7 +604,32 @@ function App() {
     // setShowGerenciadorRegistros(false); // Removido
     // A lógica de avançar o passo foi removida daqui, será controlada pelos botões globais Next/Back
     // e pela lógica em canProceedToStep.
-  }, [darkMode, fieldPositions, fieldStyles, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles]);
+
+    // Reconcile generatedImagesData with the new csvData (novosRegistros)
+    setGeneratedImagesData(prevGeneratedImages => {
+      if (prevGeneratedImages.length !== novosRegistros.length) {
+        // Lengths are different, rebuild generatedImagesData from scratch
+        // This will reset any individual thumbnail customizations
+        return novosRegistros.map((record, index) => ({
+          index,
+          record,
+          blob: null,
+          url: null,
+          filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+          backgroundImage: backgroundImage, // Use global background
+          // customFieldPositions and customFieldStyles will be undefined, relying on global defaults
+        }));
+      } else {
+        // Lengths are the same, update records while trying to preserve customizations
+        return prevGeneratedImages.map((oldImage, index) => ({
+          ...oldImage,
+          record: novosRegistros[index], // Update the record to match new csvData
+          index: index,                  // Ensure index is current
+        }));
+      }
+    });
+
+  }, [darkMode, fieldPositions, fieldStyles, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles, backgroundImage, generatedImagesData.length]); // Added backgroundImage and generatedImagesData.length
 
 
   // Callback for FieldPositioner to update csvData when text is edited in-place
