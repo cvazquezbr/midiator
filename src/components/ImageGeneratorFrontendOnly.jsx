@@ -111,12 +111,25 @@ const ImageGeneratorFrontendOnly = ({
   // Isso é útil se o usuário carregar um novo arquivo JSON enquanto este componente já está montado.
   useEffect(() => {
     if (initialGeneratedImagesData) {
-      // Apenas atualiza se os dados iniciais forem diferentes dos atuais para evitar loops
-      // É importante uma comparação mais robusta se os objetos puderem ser complexos e mutáveis
-      if (JSON.stringify(initialGeneratedImagesData) !== JSON.stringify(generatedImages)) {
-        setGeneratedImages(initialGeneratedImagesData);
+      // More direct update: if the prop reference is different.
+      // This relies on App.jsx providing new references for meaningful changes.
+      // Avoids issues with JSON.stringify for complex objects or undefined properties.
+      // We also check if generatedImages is empty and initial is not, for initial population.
+      if (initialGeneratedImagesData !== generatedImages) {
+         setGeneratedImages(initialGeneratedImagesData);
+      }
+    } else {
+      // If initialGeneratedImagesData is null or undefined (e.g., data cleared in App.jsx),
+      // reset local state only if it's not already empty, to avoid needless update.
+      if (generatedImages.length > 0) {
+        setGeneratedImages([]);
       }
     }
+    // Note: `generatedImages` is intentionally not in the dependency array here.
+    // This effect is meant to react to changes in the *prop* `initialGeneratedImagesData`.
+    // If `generatedImages` were included, and `setGeneratedImages` was called, it could lead to
+    // loops if `App.jsx` passes the same reference back. The `initialGeneratedImagesData !== generatedImages`
+    // check helps, but keeping dependencies minimal for prop-driven effects is often clearer.
   }, [initialGeneratedImagesData]);
 
   // Função para quebrar texto em linhas dentro de uma área retangular
