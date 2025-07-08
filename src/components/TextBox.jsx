@@ -281,14 +281,15 @@ const TextBox = ({
                          // This should happen regardless of content change to exit edit mode.
   };
 
-  const handleTextareaBlur = () => {
-    if (isEditing) { // Check if we were actually editing
-        if (onContentChange && content !== editedContent) {
-            onContentChange(field, editedContent); // Commit content if changed
-        }        setIsEditing(false); // Exit editing mode
-        onSelect(field); // Re-select the field after blur to keep it active for FormattingPanel
-    }
-  };
+const handleTextareaBlur = () => {
+  if (isEditing) { // Check if we were actually editing
+      if (onContentChange && content !== editedContent) {
+          onContentChange(field, editedContent); // Commit content if changed
+      }
+      setIsEditing(false); // Exit editing mode
+      // onSelect(field) removed // This is the version from 'fix/textbox-blur-selection' (our intended fix)
+  }
+};
 
   const handleTextareaKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
