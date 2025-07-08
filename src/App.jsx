@@ -613,6 +613,23 @@ function App() {
     // No need to update headers or fieldPositions/Styles here, as only content changes.
   }, [setCsvData]);
 
+  // Callback for GeneratedImageEditor (via ImageGeneratorFrontendOnly) to update a specific record in csvData
+  const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => {
+    setCsvData(prevCsvData => {
+      // Ensure recordIndex is within bounds
+      if (recordIndex < 0 || recordIndex >= prevCsvData.length) {
+        console.error("handleThumbnailRecordTextUpdate: recordIndex out of bounds", recordIndex);
+        return prevCsvData;
+      }
+      return prevCsvData.map((row, idx) => {
+        if (idx === recordIndex) {
+          return updatedRecord;
+        }
+        return row;
+      });
+    });
+  }, [setCsvData]);
+
   const handleGenerateIAContent = async () => {
     setIsGenerating(true);
 
@@ -1343,9 +1360,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               csvHeaders={csvHeaders} // <-- ADICIONADO
               colorPalette={colorPalette}
               // Passar o setter para que ImageGeneratorFrontendOnly possa atualizar App.jsx
-              setGeneratedImagesData={setGeneratedImagesData} 
+              setGeneratedImagesData={setGeneratedImagesData}
               // Passar os dados existentes, caso o ImageGeneratorFrontendOnly precise deles ao iniciar
               initialGeneratedImagesData={generatedImagesData}
+              onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} // <-- ADICIONADO
             />
           )}
 
