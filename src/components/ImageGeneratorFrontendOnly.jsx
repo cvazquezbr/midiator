@@ -435,10 +435,34 @@ const ImageGeneratorFrontendOnly = ({
   };
 
   // Novas funções para o editor WYSIWYG de imagem gerada
-  const handleOpenGeneratedImageEditor = (imageToEdit, index) => {
+  const handleOpenGeneratedImageEditor = (imageFromClosure, index) => { // Renamed first param for clarity
     setEditingGeneratedImageIndex(index);
 
-    // console.log('[handleOpenGeneratedImageEditor] imageToEdit object:', imageToEdit);
+    // Fetch the most current version from state using the index, to avoid potential stale closure issues.
+    const imageToEdit = generatedImages.find(img => img.index === index);
+
+    if (!imageToEdit) {
+      console.error(`[IGFO] handleOpenGeneratedImageEditor: Could not find image in local 'generatedImages' state with index: ${index}. imageFromClosure was:`, imageFromClosure);
+      // Fallback or error handling if imageToEdit is not found, though this should ideally not happen
+      // if 'index' is always valid and 'generatedImages' is properly synced.
+      // For now, let's try to proceed with imageFromClosure if imageToEdit is missing,
+      // though this indicates a deeper state inconsistency.
+      const fallbackImage = imageFromClosure || {}; // Use imageFromClosure if primary fetch fails
+
+      const positionsToLoad = fallbackImage.customFieldPositions !== undefined
+        ? fallbackImage.customFieldPositions
+        : fieldPositions;
+      const stylesToLoad = fallbackImage.customFieldStyles !== undefined
+        ? fallbackImage.customFieldStyles
+        : fieldStyles;
+
+      setIndividualFieldPositions(JSON.parse(JSON.stringify(positionsToLoad)));
+      setIndividualFieldStyles(JSON.parse(JSON.stringify(stylesToLoad)));
+      setShowGeneratedImageEditor(true);
+      return;
+    }
+
+    // console.log('[handleOpenGeneratedImageEditor] imageToEdit (freshly fetched) object:', imageToEdit);
     // console.log('[handleOpenGeneratedImageEditor] imageToEdit.customFieldPositions:', imageToEdit.customFieldPositions);
     // console.log('[handleOpenGeneratedImageEditor] imageToEdit.customFieldStyles:', imageToEdit.customFieldStyles);
 
