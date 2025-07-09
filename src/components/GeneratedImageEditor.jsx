@@ -66,9 +66,9 @@ const GeneratedImageEditor = ({
   }, []); // setEditedRecord is stable
 
   useEffect(() => {
-    // console.log("GeneratedImageEditor -- Received Props -- initialFieldPositions:", JSON.stringify(initialFieldPositions, null, 2)); // LOG REMOVED
-    // console.log("GeneratedImageEditor -- Received Props -- initialFieldStyles:", JSON.stringify(initialFieldStyles, null, 2)); // LOG REMOVED
-    // console.log("GeneratedImageEditor -- Received Props -- imageData:", JSON.stringify(imageData, null, 2)); // Optional is fine to keep commented
+    // Diagnostic logs from previous session removed.
+    // The console.log for imageData was already commented and can remain as such if desired for future debugging, or removed.
+    // For this cleanup, we ensure active diagnostic logs are removed.
 
     if (imageData && initialFieldPositions && initialFieldStyles) {
       setSelectedFieldInternal(null);
@@ -121,7 +121,6 @@ const GeneratedImageEditor = ({
   // Prioriza uma imagem de fundo específica da imageData (se existir, ex: após substituição individual)
   // Caso contrário, usa a imagem de fundo global.
   const currentBackgroundImageForEditor = imageData.backgroundImage || globalBackgroundImage;
-  // console.log('[GeneratedImageEditor render] currentBackgroundImageForEditor:', currentBackgroundImageForEditor ? currentBackgroundImageForEditor.substring(0, 100) + '...' : 'undefined');
 
   // Os cabeçalhos CSV para este editor devem ser os da linha específica sendo editada.
   // FieldPositioner e FormattingPanel esperam uma lista de todos os cabeçalhos para popular seletores, etc.
@@ -151,7 +150,6 @@ const GeneratedImageEditor = ({
         {!stylesAreInitialized ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
             <Typography>Carregando estilos...</Typography>
-            {/* Optionally, add a CircularProgress MUI component here */}
           </Box>
         ) : !currentBackgroundImageForEditor ? (
           <Typography>Imagem de fundo não disponível para edição.</Typography>
