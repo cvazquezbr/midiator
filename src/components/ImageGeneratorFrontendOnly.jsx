@@ -21,7 +21,7 @@ import {
 } from '@mui/material';
 import {
   Download,
-  Visibility,
+  // Visibility, // Removed as unused
   Close,
   GetApp,
   Image as ImageIcon,
@@ -55,14 +55,12 @@ const ImageGeneratorFrontendOnly = ({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPreview, setSelectedPreview] = useState(null);
   
-  // Estados para edição de texto CSV (antigo) - pode ser removido ou adaptado se necessário
-  const [editingImageTextData, setEditingImageTextData] = useState(null); // Renomeado para clareza
-  const [editedCsvFields, setEditedCsvFields] = useState({});       // Renomeado para clareza
+  // REMOVED: Old CSV text editing states
+  // const [editingImageTextData, setEditingImageTextData] = useState(null);
+  // const [editedCsvFields, setEditedCsvFields] = useState({});
 
   // Novos estados para o editor WYSIWYG de imagens geradas
   const [editingGeneratedImageIndex, setEditingGeneratedImageIndex] = useState(null);
-  // Removed: const [individualFieldPositions, setIndividualFieldPositions] = useState({});
-  // Removed: const [individualFieldStyles, setIndividualFieldStyles] = useState({});
   const [showGeneratedImageEditor, setShowGeneratedImageEditor] = useState(false);
 
 
@@ -75,7 +73,7 @@ const ImageGeneratorFrontendOnly = ({
   const [showAuthSetup, setShowAuthSetup] = useState(false);
   const [replacingImageIndex, setReplacingImageIndex] = useState(null);
 
-  const canvasRef = useRef(null);
+  // Removed: const canvasRef = useRef(null);
   const individualImageInputRef = useRef(null);
   const uploadLock = useRef(false); // Lock síncrono para prevenir dupla execução
 
@@ -418,42 +416,7 @@ const ImageGeneratorFrontendOnly = ({
     setSelectedPreview(null);
   };
 
-  // Antiga função handleEdit - agora focada em edição de texto CSV se mantida
-  const handleEditTextCsv = (imageData) => {
-    setEditingImageTextData(imageData);
-    setEditedCsvFields(imageData.record);
-  };
-
-  const handleSaveTextCsvEdit = () => {
-    if (!editingImageTextData) return;
-
-    const updatedImages = generatedImages.map(img =>
-      img.index === editingImageTextData.index ? { ...img, record: editedCsvFields } : img
-    );
-    setGeneratedImages(updatedImages);
-    // Regerar a imagem específica com os dados CSV atualizados,
-    // usando suas posições/estilos atuais (sejam globais ou customizados)
-    const imageToRegenerate = updatedImages.find(im => im.index === editingImageTextData.index);
-    if (imageToRegenerate) {
-      regenerateSingleImage(
-        editingImageTextData.index,
-        editedCsvFields, // Novos dados CSV
-        imageToRegenerate.backgroundImage || backgroundImage, // BG atual da imagem
-        imageToRegenerate.customFieldPositions || fieldPositions, // Posições atuais
-        imageToRegenerate.customFieldStyles || fieldStyles // Estilos atuais
-      );
-    }
-    setEditingImageTextData(null);
-  };
-
-  const handleCancelTextCsvEdit = () => {
-    setEditingImageTextData(null);
-    setEditedCsvFields({});
-  };
-
-  const handleCsvFieldChange = (fieldName, value) => {
-    setEditedCsvFields(prev => ({ ...prev, [fieldName]: value }));
-  };
+  // REMOVED: Old CSV text editing functions: handleEditTextCsv, handleSaveTextCsvEdit, handleCancelTextCsvEdit, handleCsvFieldChange
 
   // Novas funções para o editor WYSIWYG de imagem gerada
   const handleOpenGeneratedImageEditor = (imageFromClosure, index) => { // Renamed first param for clarity
@@ -507,8 +470,6 @@ const ImageGeneratorFrontendOnly = ({
   const handleCloseGeneratedImageEditor = () => {
     setShowGeneratedImageEditor(false);
     setEditingGeneratedImageIndex(null);
-    // Removed: setIndividualFieldPositions({});
-    // Removed: setIndividualFieldStyles({});
   };
 
   const handleSaveIndividualModifications = (modifiedImageData) => {
@@ -1159,28 +1120,9 @@ const ImageGeneratorFrontendOnly = ({
         </DialogContent>
       </Dialog>
 
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      {/* Removed: <canvas ref={canvasRef} style={{ display: 'none' }} /> */}
 
-      {/* Dialog de Edição de Texto CSV (Antigo/Opcional) */}
-      <Dialog open={!!editingImageTextData} onClose={handleCancelTextCsvEdit} maxWidth="sm" fullWidth>
-        <DialogTitle>Editar Dados CSV da Imagem</DialogTitle>
-        <DialogContent>
-          {editingImageTextData && Object.keys(editingImageTextData.record).map(fieldName => (
-            <TextField
-              key={fieldName}
-              fullWidth
-              margin="dense"
-              label={fieldName}
-              value={editedCsvFields[fieldName] || ''}
-              onChange={(e) => handleCsvFieldChange(fieldName, e.target.value)}
-            />
-          ))}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelTextCsvEdit}>Cancelar</Button>
-          <Button onClick={handleSaveTextCsvEdit} color="primary">Salvar Dados CSV</Button>
-        </DialogActions>
-      </Dialog>
+      {/* REMOVED: Old CSV text editing Dialog */}
 
       {/* Editor WYSIWYG para Imagem Gerada Individual */}
       {(() => {
