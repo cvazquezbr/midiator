@@ -66,6 +66,10 @@ const GeneratedImageEditor = ({
   }, []); // setEditedRecord is stable
 
   useEffect(() => {
+    console.log("GeneratedImageEditor -- Received Props -- initialFieldPositions:", JSON.stringify(initialFieldPositions, null, 2));
+    console.log("GeneratedImageEditor -- Received Props -- initialFieldStyles:", JSON.stringify(initialFieldStyles, null, 2));
+    // console.log("GeneratedImageEditor -- Received Props -- imageData:", JSON.stringify(imageData, null, 2)); // Optional
+
     if (imageData && initialFieldPositions && initialFieldStyles) {
       setSelectedFieldInternal(null);
       setEditedPositions(JSON.parse(JSON.stringify(initialFieldPositions)));
@@ -126,6 +130,11 @@ const GeneratedImageEditor = ({
   // Use editedRecord for the preview data if it's available
   const editorCsvData = editedRecord ? [editedRecord] : (imageData ? [imageData.record] : []);
 
+  // Log state before passing to FieldPositioner
+  if (stylesAreInitialized && currentBackgroundImageForEditor) { // Only log if we are about to render FieldPositioner
+    console.log("GeneratedImageEditor -- Passing to FieldPositioner -- editedPositions:", JSON.stringify(editedPositions, null, 2));
+    console.log("GeneratedImageEditor -- Passing to FieldPositioner -- editedStyles:", JSON.stringify(editedStyles, null, 2));
+  }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="body">

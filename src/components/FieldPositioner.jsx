@@ -96,6 +96,10 @@ const FieldPositioner = ({
   // Effect to initialize or update field positions and styles based on csvHeaders and props.
   // This ensures that every field in csvHeaders has a corresponding position and a complete style object.
   useEffect(() => {
+    console.log("FieldPositioner -- Received Props -- fieldPositions:", JSON.stringify(fieldPositions, null, 2));
+    console.log("FieldPositioner -- Received Props -- fieldStyles:", JSON.stringify(fieldStyles, null, 2));
+    // console.log("FieldPositioner -- Received Props -- csvHeaders:", JSON.stringify(csvHeaders, null, 2)); // Optional
+
     if (csvHeaders.length > 0) {
       const newCombinedPositions = {};
       const newCombinedStyles = {};
