@@ -249,7 +249,7 @@ const GenerationStep = ({ generationQuality, setGenerationQuality, generationNam
     </div>);
 };
 
-const PublicationStep = ({ mockDataFromApp }) => { // Renomeado mockData para evitar conflito com o mockData global
+const PublicationStep = ({ mockDataFromApp }) => {
   const imagesForIndex = (mockDataFromApp || mockData).map((item, index) => ({id:item.id, thumbnailUrl:null, title:item.titulo, filename:`midiator_${item.id}_${item.titulo.toLowerCase().replace(/\s+/g,'_')}.png`, status:index%2===0?'Enviado':'Pendente'}));
   return (
     <div className="space-y-6">
@@ -276,6 +276,216 @@ const PublicationStep = ({ mockDataFromApp }) => { // Renomeado mockData para ev
 };
 
 function App() {
->>>>>>> REPLACE
   const [activeStep, setActiveStep] = useState(0);
   const [previewMode, setPreviewMode] = useState('single');
+
+  // Estados principais da aplicação
+  const [csvData, setCsvData] = useState([]);
+  const [csvHeaders, setCsvHeaders] = useState([]);
+  const [backgroundImage, setBackgroundImage] = useState(null);
+  const [colorPalette, setColorPalette] = useState([]);
+  const [fieldPositions, setFieldPositions] = useState({});
+  const [fieldStyles, setFieldStyles] = useState({});
+  const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
+  const [generatedImagesData, setGeneratedImagesData] = useState([]);
+
+  // Estados específicos das etapas
+  const [templateDimensions, setTemplateDimensions] = useState({ width: 1080, height: 1080 });
+  const [templateFormat, setTemplateFormat] = useState('Instagram Post (1080x1080)');
+  const [generationQuality, setGenerationQuality] = useState('Alta (PNG)');
+  const [generationNaming, setGenerationNaming] = useState('midiator_{index}_{titulo}');
+
+  // Refs
+  const fileInputRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const loadStateInputRef = useRef(null);
+
+  // Funções de manipulação de dados
+  const handleCSVUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          if (results.data && results.data.length > 0) {
+            setCsvData(results.data);
+            const headers = Object.keys(results.data[0] || {});
+            setCsvHeaders(headers);
+
+            const newPositions = {};
+            const newStyles = {};
+            headers.forEach((header, index) => {
+              if (!newPositions[header]) {
+                newPositions[header] = { x: 10 + (index % 3) * 30, y: 10 + Math.floor(index / 3) * 25, width: 25, height: 15, visible: true };
+              }
+              if (!newStyles[header]) {
+                newStyles[header] = { fontFamily: 'Arial', fontSize: 24, color: '#000000', textAlign: 'left', verticalAlign: 'top', lineHeightMultiplier: 1.2 };
+              }
+            });
+            setFieldPositions(newPositions);
+            setFieldStyles(newStyles);
+          }
+        },
+        error: (error) => console.error('Erro ao ler CSV:', error),
+      });
+    }
+  };
+
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageUrl = e.target.result;
+        setBackgroundImage(imageUrl);
+        const img = new window.Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+          try {
+            const colorThief = new ColorThief();
+            setColorPalette(colorThief.getPalette(img, 5).map(rgb => `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`));
+          } catch (error) {
+            console.error("Error extracting color palette:", error);
+            setColorPalette([]);
+          }
+        };
+        img.src = imageUrl;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCsvDataUpdate = useCallback((updatedCsvData) => {
+    setCsvData(updatedCsvData);
+  }, []);
+
+  const handleNext = () => {
+    setActiveStep((prev) => Math.min(appSteps.length - 1, prev + 1));
+  };
+
+  const handleBack = () => {
+    setActiveStep((prev) => Math.max(0, prev - 1));
+  };
+
+  const renderStepContent = () => {
+    switch (activeStep) {
+      case 0: return <DataStep
+                      csvData={csvData}
+                      setCsvData={setCsvData}
+                      csvHeaders={csvHeaders}
+                      setCsvHeaders={setCsvHeaders}
+                      handleCSVUpload={handleCSVUpload}
+                      fileInputRef={fileInputRef}
+                    />;
+      case 1: return <TemplateStep
+                      backgroundImage={backgroundImage}
+                      handleImageUpload={handleImageUpload}
+                      imageInputRef={imageInputRef}
+                      templateDimensions={templateDimensions}
+                      setTemplateDimensions={setTemplateDimensions}
+                      templateFormat={templateFormat}
+                      setTemplateFormat={setTemplateFormat}
+                    />;
+      case 2: return <DesignStep
+                      backgroundImage={backgroundImage}
+                      csvHeaders={csvHeaders}
+                      fieldPositions={fieldPositions}
+                      setFieldPositions={setFieldPositions}
+                      fieldStyles={fieldStyles}
+                      setFieldStyles={setFieldStyles}
+                      csvData={csvData}
+                      onImageDisplayedSizeChange={setDisplayedImageSize}
+                      colorPalette={colorPalette}
+                      onCsvDataUpdate={handleCsvDataUpdate}
+                    />;
+      case 3: return <GenerationStep
+                      generationQuality={generationQuality}
+                      setGenerationQuality={setGenerationQuality}
+                      generationNaming={generationNaming}
+                      setGenerationNaming={setGenerationNaming}
+                      generatedImagesData={generatedImagesData}
+                    />;
+      case 4: return <PublicationStep mockDataFromApp={mockData} />; // Passando mockData como prop diferente
+      default: return <DataStep
+                        csvData={csvData}
+                        setCsvData={setCsvData}
+                        csvHeaders={csvHeaders}
+                        setCsvHeaders={setCsvHeaders}
+                        handleCSVUpload={handleCSVUpload}
+                        fileInputRef={fileInputRef}
+                      />;
+    }
+  };
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-10">
+          <div className="flex items-center justify-between px-6 py-4">
+            <div className="flex items-center space-x-4">
+              <SidebarTrigger className="md:hidden"/>
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">M</span>
+                </div>
+                <h1 className="text-xl font-bold text-gray-800">Midiator</h1>
+              </div>
+              <span className="text-sm text-gray-500 hidden md:inline">Social Media Generator</span>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setPreviewMode(previewMode === 'single' ? 'grid' : 'single')}
+                className="text-gray-600 hover:text-gray-800"
+              >
+                {previewMode === 'single' ? <GridIcon className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex pt-16">
+          <Sidebar className="shadow-lg">
+            <SidebarContent className="p-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">Etapas do Processo</h2>
+              <div className="space-y-2">
+                {appSteps.map((step, index) => (
+                  <StepIndicator
+                    key={step.id}
+                    step={step}
+                    isActive={activeStep === index}
+                    isCompleted={index < activeStep}
+                    onClick={() => setActiveStep(index)}
+                  />
+                ))}
+              </div>
+            </SidebarContent>
+          </Sidebar>
+
+          <main className="flex-1 p-6 overflow-auto">
+            {renderStepContent()}
+            <div className="flex justify-between items-center mt-8">
+              <Button onClick={handleBack} disabled={activeStep === 0} variant="outline">
+                <ChevronLeft className="w-4 h-4 mr-2" /> Anterior
+              </Button>
+              <div className="flex space-x-2">
+                {appSteps.map((_, index) => (
+                  <div key={index} className={`w-2 h-2 rounded-full transition-colors ${index === activeStep ? 'bg-purple-500' : index < activeStep ? 'bg-green-500' : 'bg-gray-300'}`}/>
+                ))}
+              </div>
+              <Button onClick={handleNext} disabled={activeStep === appSteps.length - 1}>
+                Próximo <ChevronRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+}
+
+export default App;
