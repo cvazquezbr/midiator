@@ -163,6 +163,15 @@ function App() {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
   }, [darkMode]);
 
+  // Diagnostic log for generatedImagesData changes
+  useEffect(() => {
+    console.log("App.jsx - generatedImagesData STATE CHANGED:", JSON.stringify(generatedImagesData, null, 2));
+    // To inspect a specific item, e.g., index 7 if it exists:
+    // if (generatedImagesData && generatedImagesData.length > 7) {
+    //   console.log("App.jsx - generatedImagesData[7]:", JSON.stringify(generatedImagesData[7], null, 2));
+    // }
+  }, [generatedImagesData]);
+
   const steps = [
     {
       label: 'Definir Dados Iniciais',
@@ -473,8 +482,14 @@ function App() {
                   };
                 })
               );
+              console.log("App.jsx - handleLoadStateFromFile - BEFORE setGeneratedImagesData - restoredGeneratedImages:", JSON.stringify(restoredGeneratedImages, null, 2));
+              // Example to check a specific item if you know its expected index, e.g., 7 for thumbnail #8
+              // if (restoredGeneratedImages && restoredGeneratedImages.length > 7) {
+              //   console.log("App.jsx - handleLoadStateFromFile - restoredGeneratedImages[7]:", JSON.stringify(restoredGeneratedImages[7], null, 2));
+              // }
               setGeneratedImagesData(restoredGeneratedImages);
             } else {
+              console.log("App.jsx - handleLoadStateFromFile - No generatedImages in JSON or old version, clearing generatedImagesData.");
               setGeneratedImagesData([]); // Limpar se não houver dados ou for versão antiga
             }
             
@@ -606,30 +621,37 @@ function App() {
     // e pela lógica em canProceedToStep.
 
     // Reconcile generatedImagesData with the new csvData (novosRegistros)
+    console.log("App.jsx - handleDadosAlterados - ENTERED. novosRegistros count:", novosRegistros.length, "Current generatedImagesData count:", generatedImagesData.length);
     setGeneratedImagesData(prevGeneratedImages => {
+      console.log("App.jsx - handleDadosAlterados - INSIDE setGeneratedImagesData callback. prevGeneratedImages count:", prevGeneratedImages.length);
       if (prevGeneratedImages.length !== novosRegistros.length) {
-        // Lengths are different, rebuild generatedImagesData from scratch
-        // This will reset any individual thumbnail customizations
-        return novosRegistros.map((record, index) => ({
+        console.log("App.jsx - handleDadosAlterados - Lengths DIFFER, rebuilding generatedImagesData. This will RESET custom props.");
+        const rebuiltGeneratedImages = novosRegistros.map((record, index) => ({
           index,
           record,
           blob: null,
           url: null,
           filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
           backgroundImage: backgroundImage, // Use global background
-          // customFieldPositions and customFieldStyles will be undefined, relying on global defaults
         }));
+        // console.log("App.jsx - handleDadosAlterados - REBUILT generatedImagesData:", JSON.stringify(rebuiltGeneratedImages, null, 2));
+        return rebuiltGeneratedImages;
       } else {
-        // Lengths are the same, update records while trying to preserve customizations
-        return prevGeneratedImages.map((oldImage, index) => ({
+        console.log("App.jsx - handleDadosAlterados - Lengths SAME, preserving custom props in generatedImagesData.");
+        const updatedGeneratedImages = prevGeneratedImages.map((oldImage, index) => ({
           ...oldImage,
-          record: novosRegistros[index], // Update the record to match new csvData
-          index: index,                  // Ensure index is current
+          record: novosRegistros[index],
+          index: index,
         }));
+        // To log a specific item being preserved, e.g., index 7 for thumbnail #8:
+        // if (updatedGeneratedImages.length > 7) {
+        //   console.log("App.jsx - handleDadosAlterados - Preserved generatedImagesData[7]:", JSON.stringify(updatedGeneratedImages[7], null, 2));
+        // }
+        return updatedGeneratedImages;
       }
     });
 
-  }, [darkMode, fieldPositions, fieldStyles, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles, backgroundImage, generatedImagesData.length]); // Added backgroundImage and generatedImagesData.length
+  }, [darkMode, fieldPositions, fieldStyles, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles, backgroundImage, generatedImagesData.length]);
 
 
   // Callback for FieldPositioner to update csvData when text is edited in-place
