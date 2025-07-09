@@ -163,14 +163,14 @@ function App() {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
   }, [darkMode]);
 
-  // Diagnostic log for generatedImagesData changes
-  useEffect(() => {
-    console.log("App.jsx - generatedImagesData STATE CHANGED:", JSON.stringify(generatedImagesData, null, 2));
-    // To inspect a specific item, e.g., index 7 if it exists:
-    // if (generatedImagesData && generatedImagesData.length > 7) {
-    //   console.log("App.jsx - generatedImagesData[7]:", JSON.stringify(generatedImagesData[7], null, 2));
-    // }
-  }, [generatedImagesData]);
+  // Diagnostic log for generatedImagesData changes // LOG REMOVED
+  // useEffect(() => {
+  //   console.log("App.jsx - generatedImagesData STATE CHANGED:", JSON.stringify(generatedImagesData, null, 2));
+  //   // To inspect a specific item, e.g., index 7 if it exists:
+  //   // if (generatedImagesData && generatedImagesData.length > 7) {
+  //   //   console.log("App.jsx - generatedImagesData[7]:", JSON.stringify(generatedImagesData[7], null, 2));
+  //   // }
+  // }, [generatedImagesData]);
 
   const steps = [
     {
@@ -482,14 +482,14 @@ function App() {
                   };
                 })
               );
-              console.log("App.jsx - handleLoadStateFromFile - BEFORE setGeneratedImagesData - restoredGeneratedImages:", JSON.stringify(restoredGeneratedImages, null, 2));
+              // console.log("App.jsx - handleLoadStateFromFile - BEFORE setGeneratedImagesData - restoredGeneratedImages:", JSON.stringify(restoredGeneratedImages, null, 2)); // LOG REMOVED
               // Example to check a specific item if you know its expected index, e.g., 7 for thumbnail #8
               // if (restoredGeneratedImages && restoredGeneratedImages.length > 7) {
               //   console.log("App.jsx - handleLoadStateFromFile - restoredGeneratedImages[7]:", JSON.stringify(restoredGeneratedImages[7], null, 2));
               // }
               setGeneratedImagesData(restoredGeneratedImages);
             } else {
-              console.log("App.jsx - handleLoadStateFromFile - No generatedImages in JSON or old version, clearing generatedImagesData.");
+              // console.log("App.jsx - handleLoadStateFromFile - No generatedImages in JSON or old version, clearing generatedImagesData."); // LOG REMOVED
               setGeneratedImagesData([]); // Limpar se não houver dados ou for versão antiga
             }
             
@@ -621,11 +621,11 @@ function App() {
     // e pela lógica em canProceedToStep.
 
     // Reconcile generatedImagesData with the new csvData (novosRegistros)
-    console.log("App.jsx - handleDadosAlterados - ENTERED. novosRegistros count:", novosRegistros.length, "Current generatedImagesData count:", generatedImagesData.length);
+    // console.log("App.jsx - handleDadosAlterados - ENTERED. novosRegistros count:", novosRegistros.length, "Current generatedImagesData count:", generatedImagesData.length); // LOG REMOVED
     setGeneratedImagesData(prevGeneratedImages => {
-      console.log("App.jsx - handleDadosAlterados - INSIDE setGeneratedImagesData callback. prevGeneratedImages count:", prevGeneratedImages.length);
+      // console.log("App.jsx - handleDadosAlterados - INSIDE setGeneratedImagesData callback. prevGeneratedImages count:", prevGeneratedImages.length); // LOG REMOVED
       if (prevGeneratedImages.length !== novosRegistros.length) {
-        console.log("App.jsx - handleDadosAlterados - Lengths DIFFER, rebuilding generatedImagesData. This will RESET custom props.");
+        // console.log("App.jsx - handleDadosAlterados - Lengths DIFFER, rebuilding generatedImagesData. This will RESET custom props."); // LOG REMOVED
         const rebuiltGeneratedImages = novosRegistros.map((record, index) => ({
           index,
           record,
@@ -637,7 +637,7 @@ function App() {
         // console.log("App.jsx - handleDadosAlterados - REBUILT generatedImagesData:", JSON.stringify(rebuiltGeneratedImages, null, 2));
         return rebuiltGeneratedImages;
       } else {
-        console.log("App.jsx - handleDadosAlterados - Lengths SAME, preserving custom props in generatedImagesData.");
+        // console.log("App.jsx - handleDadosAlterados - Lengths SAME, preserving custom props in generatedImagesData."); // LOG REMOVED
         const updatedGeneratedImages = prevGeneratedImages.map((oldImage, index) => ({
           ...oldImage,
           record: novosRegistros[index],

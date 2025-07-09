@@ -1203,14 +1203,6 @@ const ImageGeneratorFrontendOnly = ({
             ? imageToEdit.customFieldStyles
             : fieldStyles;    // global fieldStyles prop from App.jsx
 
-          console.log("IGFO -- For Editor -- imageToEdit:", JSON.stringify(imageToEdit, null, 2));
-          console.log("IGFO -- For Editor -- imageToEdit.customFieldPositions:", JSON.stringify(imageToEdit?.customFieldPositions, null, 2));
-          console.log("IGFO -- For Editor -- imageToEdit.customFieldStyles:", JSON.stringify(imageToEdit?.customFieldStyles, null, 2));
-          console.log("IGFO -- For Editor -- global fieldPositions (prop):", JSON.stringify(fieldPositions, null, 2));
-          console.log("IGFO -- For Editor -- global fieldStyles (prop):", JSON.stringify(fieldStyles, null, 2));
-          console.log("IGFO -- For Editor -- positionsToLoad:", JSON.stringify(positionsToLoad, null, 2));
-          console.log("IGFO -- For Editor -- stylesToLoad:", JSON.stringify(stylesToLoad, null, 2));
-
           return (
             <GeneratedImageEditor
               open={showGeneratedImageEditor}
