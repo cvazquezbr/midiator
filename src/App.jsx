@@ -1,110 +1,285 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'; // Correção: Restaurar importação completa
-import { useIsMobile } from './hooks/use-mobile'; // Importa o hook
-import {
-  Container,
-  Paper,
-  Typography,
-  Box,
-  Button,
-  Grid,
-  Card,
-  CardContent,
-  Alert,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
-  Chip,
-  IconButton, // Adicionado para botões de ícone
-  Tooltip, // Adicionado para dicas de ferramenta
-  ToggleButton,
-  ToggleButtonGroup,
-  TextField,
-  CircularProgress,
-  Link as MuiLink
-} from '@mui/material';
-import {
-  CloudUpload,
-  FileUpload,
-  Settings,
-  Image as ImageIcon,
-  Palette,
-  ArrowBackIosNew, // Ícone para voltar
-  ArrowForwardIos, // Ícone para próximo
-  MoreVert, // Ícone para o menu de ações
-  Brightness4, // Ícone para modo dark
-  Brightness7, // Ícone para modo light
-  Edit, // Ícone para editar registros
-  Download as DownloadIcon, // Ícone para exportar CSV
-  CloudQueue // Ícone para Google Drive
-} from '@mui/icons-material';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Papa from 'papaparse';
 import ColorThief from 'colorthief';
-// Adicionar Menu e MenuItem para o menu de ações
-import { Menu, MenuItem } from '@mui/material';
-// Imports para Theming
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline'; // Normaliza estilos e aplica cor de fundo do tema
 
+import {
+  Upload,
+  Image as ImageIconLucide,
+  Type,
+  Move,
+  Download,
+  Play,
+  FileText,
+  Palette,
+  Settings,
+  Eye,
+  Grid as GridIcon,
+  Layers,
+  Zap,
+  Cloud,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  Plus,
+  X as XIcon
+} from 'lucide-react';
+
+import { Button } from "@/components/ui/button";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarTrigger } from '@/components/ui/sidebar';
+
+// Componentes locais
 import FieldPositioner from './components/FieldPositioner';
-import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
-import RecordManager from './features/RecordManager/RecordManager'; // Importar o RecordManager (antigo GerenciadorRegistros)
-import DeepSeekAuthSetup from './components/DeepSeekAuthSetup';
-import GeminiAuthSetup from './components/GeminiAuthSetup'; // Importar GeminiAuthSetup
-import GoogleDriveAuthModal from './components/GoogleDriveAuthModal'; // Importar GoogleDriveAuthModal
-import { getDeepSeekApiKey } from './utils/deepSeekCredentials';
-import { getGeminiApiKey } from './utils/geminiCredentials'; // Importar getGeminiApiKey
-import { callDeepSeekApi } from './utils/deepSeekAPI';
-import { callGeminiApi } from './utils/geminiAPI'; // Importar callGeminiApi
-import VpnKeyIcon from '@mui/icons-material/VpnKey';
-import GoogleIcon from '@mui/icons-material/Google'; // Ícone para Gemini (exemplo)
-import './App.css';
+// ImageGeneratorFrontendOnly, DeepSeekAuthSetup, etc., serão reintegrados/recriados conforme necessário em etapas futuras.
 
-// Definição dos temas light e dark
-const lightTheme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2', // Azul padrão do MUI
-    },
-    secondary: {
-      main: '#dc004e', // Rosa padrão do MUI
-    },
-    background: {
-      default: '#f4f6f8', // Um cinza claro para o fundo
-      paper: '#ffffff',   // Branco para os Papers
-    },
-  },
-});
+// Definição das etapas
+const appSteps = [
+  { id: 0, title: 'Dados', icon: FileText, description: 'Carregar CSV ou criar manualmente' },
+  { id: 1, title: 'Template', icon: ImageIconLucide, description: 'Configurar background e layout' },
+  { id: 2, title: 'Design', icon: Palette, description: 'Posicionar campos e estilizar' },
+  { id: 3, title: 'Geração', icon: Zap, description: 'Gerar e exportar imagens' },
+  { id: 4, title: 'Publicação', icon: Cloud, description: 'Upload e automação' }
+];
 
-const darkTheme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#90caf9', // Um azul mais claro para contraste no modo escuro
-    },
-    secondary: {
-      main: '#f48fb1', // Um rosa mais claro
-    },
-    background: {
-      default: '#121212', // Padrão do Material Design para fundo escuro
-      paper: '#1e1e1e',   // Um pouco mais claro para Papers no modo escuro
-    },
-    text: {
-      primary: '#ffffff',
-      secondary: 'rgba(255, 255, 255, 0.7)',
+const mockData = [
+  { id: 1, titulo: 'Oferta Especial', subtitulo: 'Até 50% OFF', cta: 'Comprar Agora' },
+  { id: 2, titulo: 'Novo Produto', subtitulo: 'Lançamento', cta: 'Saber Mais' },
+  { id: 3, titulo: 'Black Friday', subtitulo: 'Descontos incríveis', cta: 'Ver Ofertas' }
+];
+
+// Componente Indicador de Etapa (Sidebar)
+const StepIndicator = ({ step, isActive, isCompleted, onClick }) => {
+  const Icon = step.icon;
+  return (
+    <div
+      onClick={onClick}
+      className={`flex items-center space-x-4 p-4 rounded-lg transition-all duration-300 cursor-pointer ${
+      isActive ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' :
+      isCompleted ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+    }`}>
+      <div className={`p-2 rounded-full ${
+        isActive ? 'bg-white/20' : isCompleted ? 'bg-green-200' : 'bg-white'
+      }`}>
+        {isCompleted ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+      </div>
+      <div className="flex-1">
+        <h3 className="font-semibold">{step.title}</h3>
+        <p className="text-sm opacity-80">{step.description}</p>
+      </div>
+      {isActive && <ChevronRight className="w-5 h-5" />}
+    </div>
+  );
+};
+
+// --- COMPONENTES DE ETAPA ---
+
+const DataStep = ({ csvData, setCsvData, csvHeaders, setCsvHeaders, handleCSVUpload, fileInputRef }) => {
+  const handleRemoveRow = (indexToRemove) => {
+    setCsvData(prevData => prevData.filter((_, index) => index !== indexToRemove));
+  };
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Carregar Dados</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors">
+            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Upload CSV</h3>
+            <p className="text-gray-600 mb-4">Carregue um arquivo CSV com seus dados</p>
+            <Button onClick={() => fileInputRef.current?.click()}>Selecionar Arquivo</Button>
+            <input type="file" accept=".csv" hidden ref={fileInputRef} onChange={handleCSVUpload} />
+          </div>
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors">
+            <Plus className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Criar Manualmente</h3>
+            <p className="text-gray-600 mb-4">Adicione registros um por um</p>
+            <Button>Novo Registro</Button>
+          </div>
+        </div>
+      </div>
+      {csvData.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold mb-4">Preview dos Dados ({csvData.length} registros)</h3>
+          <div className="overflow-x-auto"><table className="w-full">
+            <thead><tr className="border-b border-gray-200">
+              {csvHeaders.map(h=><th key={h} className="text-left py-3 px-4 font-medium text-gray-600">{h}</th>)}
+              <th className="text-left py-3 px-4 font-medium text-gray-600">Ações</th>
+            </tr></thead>
+            <tbody>{csvData.map((item, index) => (
+              <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                {csvHeaders.map(h=><td key={h} className="py-3 px-4 whitespace-nowrap">{String(item[h])}</td>)}
+                <td className="py-3 px-4">
+                  <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700" onClick={() => handleRemoveRow(index)}>
+                    <XIcon className="w-4 h-4" />
+                  </Button>
+                </td>
+              </tr>))}
+            </tbody>
+          </table></div>
+        </div>)}
+    </div>
+  );
+};
+
+const TemplateStep = ({ backgroundImage, handleImageUpload, imageInputRef, templateDimensions, setTemplateDimensions, templateFormat, setTemplateFormat }) => {
+  const formatOptions = ['Instagram Post (1080x1080)', 'Instagram Story (1080x1920)', 'Facebook Post (1200x630)', 'LinkedIn Post (1200x627)', 'Twitter Post (1024x512)', 'Custom'];
+  const handleFormatChange = (value) => {
+    setTemplateFormat(value);
+    if (value !== 'Custom') {
+      const dims = value.match(/\((\d+)x(\d+)\)/);
+      if (dims) setTemplateDimensions({ width: parseInt(dims[1]), height: parseInt(dims[2]) });
     }
-  },
-});
+  };
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Template de Background</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <div>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition-colors mb-6 cursor-pointer" onClick={() => imageInputRef.current?.click()}>
+              <ImageIconLucide className="w-12 h-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-semibold mb-2">Upload Background</h3>
+              <p className="text-gray-600 mb-4">PNG, JPG ou JPEG</p><Button>Selecionar Imagem</Button>
+              <input type="file" accept=".png,.jpg,.jpeg" hidden ref={imageInputRef} onChange={handleImageUpload} />
+            </div>
+            <div className="space-y-4">
+              <div><label className="block text-sm font-medium text-gray-700 mb-2">Formato</label>
+                <select value={templateFormat} onChange={(e) => handleFormatChange(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                  {formatOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                </select>
+              </div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-2">Dimensões</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="number" placeholder="Largura (px)" value={templateDimensions.width} onChange={(e) => setTemplateDimensions(d=>({...d, width: parseInt(e.target.value)||''}))} className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" disabled={templateFormat !== 'Custom'} />
+                  <input type="number" placeholder="Altura (px)" value={templateDimensions.height} onChange={(e) => setTemplateDimensions(d=>({...d, height: parseInt(e.target.value)||''}))} className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" disabled={templateFormat !== 'Custom'} />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-gray-100 rounded-lg min-h-[300px] flex items-center justify-center p-4 border border-gray-200">
+            {backgroundImage ? <img src={backgroundImage} alt="Preview Template" className="max-w-full max-h-[400px] object-contain rounded-md shadow-md"/>
+              : <div className="text-center text-gray-500"><Eye className="w-12 h-12 text-gray-400 mx-auto mb-2" /><p>Preview do Template</p><p className="text-sm">Faça upload de uma imagem para visualizar</p></div>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
+const DesignStep = ({ backgroundImage, csvHeaders, fieldPositions, setFieldPositions, fieldStyles, setFieldStyles, csvData, onImageDisplayedSizeChange, colorPalette, onCsvDataUpdate }) => {
+  const [selectedFieldForStyling, setSelectedFieldForStyling] = useState(null);
+  const handleFieldSelect = (fieldName) => setSelectedFieldForStyling(fieldName);
+
+  const PropertiesPanel = ({ selectedField, currentStyles, onStyleChange }) => {
+    if (!selectedField || !currentStyles) return <div className="text-sm text-gray-500">Selecione um campo para ver as propriedades.</div>;
+    const handleGeneric = (p, v) => onStyleChange({...currentStyles, [p]: v});
+    const handleNumber = (p, v) => onStyleChange({...currentStyles, [p]: parseInt(v,10)||0});
+    const handleToggle = (p) => onStyleChange({...currentStyles, [p]: !currentStyles[p]});
+    const fonts = ['Arial', 'Helvetica', 'Times New Roman', 'Georgia', 'Verdana', 'Courier New', 'Lucida Console'];
+    return (
+      <div className="space-y-4 text-sm"><h4 className="font-medium text-gray-800 mb-2 border-b pb-1">Propriedades de: <span className="font-bold text-purple-600">{selectedField}</span></h4>
+        <div><label className="block text-xs font-medium text-gray-600 mb-1">Fonte</label><select value={currentStyles.fontFamily||'Arial'} onChange={e=>handleGeneric('fontFamily',e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm bg-white focus:ring-purple-500 focus:border-purple-500">{fonts.map(f=><option key={f} value={f}>{f}</option>)}</select></div>
+        <div><label className="block text-xs font-medium text-gray-600 mb-1">Tamanho ({currentStyles.fontSize||24}px)</label><input type="range" min="8" max="128" value={currentStyles.fontSize||24} onChange={e=>handleNumber('fontSize',e.target.value)} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"/></div>
+        <div><label className="block text-xs font-medium text-gray-600 mb-1">Cor Texto</label><input type="color" value={currentStyles.color||'#000000'} onChange={e=>handleGeneric('color',e.target.value)} className="w-full h-8 px-1 py-0.5 border border-gray-300 rounded-md"/></div>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50 cursor-pointer"><input type="checkbox" checked={currentStyles.fontWeight==='bold'} onChange={()=>handleGeneric('fontWeight',currentStyles.fontWeight==='bold'?'normal':'bold')} className="rounded text-purple-500 focus:ring-purple-500"/><span className="text-xs">Negrito</span></label>
+          <label className="flex items-center space-x-2 p-2 border rounded-md hover:bg-gray-50 cursor-pointer"><input type="checkbox" checked={currentStyles.fontStyle==='italic'} onChange={()=>handleGeneric('fontStyle',currentStyles.fontStyle==='italic'?'normal':'italic')} className="rounded text-purple-500 focus:ring-purple-500"/><span className="text-xs">Itálico</span></label>
+        </div>
+        <div><label className="block text-xs font-medium text-gray-600 mb-1">Alinh. Horizontal</label><select value={currentStyles.textAlign||'left'} onChange={e=>handleGeneric('textAlign',e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm bg-white focus:ring-purple-500 focus:border-purple-500"><option value="left">Esquerda</option><option value="center">Centro</option><option value="right">Direita</option></select></div>
+        <div className="pt-2 mt-2 border-t"><label className="flex items-center space-x-2 cursor-pointer mb-2"><input type="checkbox" checked={!!currentStyles.textStroke} onChange={()=>handleToggle('textStroke')} className="rounded text-purple-500 focus:ring-purple-500"/><span className="text-xs font-medium text-gray-600">Contorno</span></label>
+          {currentStyles.textStroke && <div className="space-y-2 pl-4">
+            <div><label className="block text-xs text-gray-500 mb-0.5">Cor</label><input type="color" value={currentStyles.strokeColor||'#ffffff'} onChange={e=>handleGeneric('strokeColor',e.target.value)} className="w-full h-7 px-1 py-0.5 border border-gray-300 rounded-md"/></div>
+            <div><label className="block text-xs text-gray-500 mb-0.5">Largura ({currentStyles.strokeWidth||1}px)</label><input type="range" min="1" max="10" value={currentStyles.strokeWidth||1} onChange={e=>handleNumber('strokeWidth',e.target.value)} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"/></div>
+          </div>}
+        </div>
+        <div className="pt-2 mt-2 border-t"><label className="flex items-center space-x-2 cursor-pointer mb-2"><input type="checkbox" checked={!!currentStyles.textShadow} onChange={()=>handleToggle('textShadow')} className="rounded text-purple-500 focus:ring-purple-500"/><span className="text-xs font-medium text-gray-600">Sombra</span></label>
+          {currentStyles.textShadow && <div className="space-y-2 pl-4">
+            <div><label className="block text-xs text-gray-500 mb-0.5">Cor</label><input type="color" value={currentStyles.shadowColor||'#000000'} onChange={e=>handleGeneric('shadowColor',e.target.value)} className="w-full h-7 px-1 py-0.5 border border-gray-300 rounded-md"/></div>
+            <div className="grid grid-cols-2 gap-2">
+              <div><label className="block text-xs text-gray-500 mb-0.5">Desloc. X ({currentStyles.shadowOffsetX||0}px)</label><input type="range" min="-10" max="10" value={currentStyles.shadowOffsetX||0} onChange={e=>handleNumber('shadowOffsetX',e.target.value)} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"/></div>
+              <div><label className="block text-xs text-gray-500 mb-0.5">Desloc. Y ({currentStyles.shadowOffsetY||0}px)</label><input type="range" min="-10" max="10" value={currentStyles.shadowOffsetY||0} onChange={e=>handleNumber('shadowOffsetY',e.target.value)} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"/></div>
+            </div>
+            <div><label className="block text-xs text-gray-500 mb-0.5">Borrão ({currentStyles.shadowBlur||0}px)</label><input type="range" min="0" max="20" value={currentStyles.shadowBlur||0} onChange={e=>handleNumber('shadowBlur',e.target.value)} className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-500"/></div>
+          </div>}
+        </div>
+      </div>);
+  };
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Design e Posicionamento</h2>
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          <div className="xl:col-span-3 bg-gray-50 rounded-lg p-2">
+            {backgroundImage ? <FieldPositioner {...{backgroundImage, csvHeaders, fieldPositions, setFieldPositions, fieldStyles, setFieldStyles, csvData, onImageDisplayedSizeChange, colorPalette, onFieldSelect: handleFieldSelect, selectedField: selectedFieldForStyling, onCsvDataUpdate}}/>
+              : <div className="bg-gray-100 rounded-lg h-96 flex items-center justify-center text-center text-gray-500"><div><Layers className="w-12 h-12 text-gray-400 mx-auto mb-2"/><p>Canvas de Design</p><p className="text-sm">Faça upload de uma imagem de template na etapa anterior.</p></div></div>}
+          </div>
+          <div className="space-y-6">
+            <div className="bg-gray-50 rounded-lg p-4 border"><h3 className="font-semibold text-gray-700 mb-3">Campos Disponíveis</h3><div className="space-y-2">{csvHeaders.length > 0 ? csvHeaders.map(h=>(<div key={h} className="flex items-center justify-between p-2.5 bg-white rounded-md border shadow-sm"><span className="text-sm text-gray-700">{h}</span><Move className="w-4 h-4 text-gray-400 cursor-grab"/></div>)) : <p className="text-sm text-gray-500">Nenhum campo de dados carregado.</p>}</div></div>
+            <div className="bg-gray-50 rounded-lg p-4 border"><h3 className="font-semibold text-gray-700 mb-3">Propriedades</h3><PropertiesPanel selectedField={selectedFieldForStyling} currentStyles={fieldStyles[selectedFieldForStyling]} onStyleChange={newSty => {if(selectedFieldForStyling)setFieldStyles(prev=>({...prev,[selectedFieldForStyling]:newSty}))}}/></div>
+          </div>
+        </div>
+      </div>
+    </div>);
+};
+
+const GenerationStep = ({ generationQuality, setGenerationQuality, generationNaming, setGenerationNaming, generatedImagesData }) => {
+  const qualityOptions = ['Alta (PNG)', 'Média (JPG 90%)', 'Baixa (JPG 70%)'];
+  const handleGenerateAll = () => console.log("Gerando...", { generationQuality, generationNaming });
+  const previewItems = generatedImagesData?.length>0 ? generatedImagesData.slice(0,4) : Array(4).fill(null).map((_,i)=>({url:null,filename:`Preview ${i+1}`,record:{titulo:`Mock ${i+1}`}}));
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Geração de Imagens</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <div className="bg-gray-50 rounded-lg p-4 mb-6 border"><h3 className="font-semibold text-gray-700 mb-3">Configurações</h3><div className="space-y-4">
+              <div><label className="block text-sm font-medium text-gray-600 mb-1">Qualidade</label><select value={generationQuality} onChange={e=>setGenerationQuality(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-purple-500">{qualityOptions.map(o=><option key={o} value={o}>{o}</option>)}</select></div>
+              <div><label className="block text-sm font-medium text-gray-600 mb-1">Nomenclatura</label><input type="text" placeholder="midiator_{index}_{titulo}" value={generationNaming} onChange={e=>setGenerationNaming(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-purple-500"/><p className="text-xs text-gray-500 mt-1">Use {`{index}`}, {`{titulo}`}, etc.</p></div>
+            </div></div>
+            <Button onClick={handleGenerateAll} className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 font-semibold hover:from-purple-600 hover:to-pink-600 flex items-center justify-center space-x-2 text-base"><Play className="w-5 h-5"/><span>Gerar Todas</span></Button>
+          </div>
+          <div><div className="bg-gray-50 rounded-lg p-4 border"><h3 className="font-semibold text-gray-700 mb-3">Preview</h3>
+            {previewItems.length>0 ? <div className="grid grid-cols-2 gap-3">{previewItems.map((item,i)=>(
+              <div key={i} className="bg-white rounded-lg p-3 border shadow-sm">
+                <div className="bg-gray-200 rounded h-24 mb-2 flex items-center justify-center">{item.url ? <img src={item.url} alt={item.filename||`Preview ${i}`} className="max-h-full max-w-full object-contain"/> : <ImageIconLucide className="w-8 h-8 text-gray-400"/>}</div>
+                <div className="flex justify-between items-center"><span className="text-xs font-medium truncate" title={item.filename||`file_${i}.png`}>{item.filename||`file_${i}.png`}</span><Download className="w-4 h-4 text-gray-400 hover:text-purple-600 cursor-pointer"/></div>
+              </div>))}</div>
+            : <p className="text-sm text-gray-500 text-center py-4">Nenhuma imagem gerada.</p>}
+          </div></div>
+        </div>
+      </div>
+    </div>);
+};
+
+const PublicationStep = ({ mockDataFromApp }) => {
+  const imagesForIndex = (mockDataFromApp || mockData).map((item, index) => ({id:item.id, thumbnailUrl:null, title:item.titulo, filename:`midiator_${item.id}_${item.titulo.toLowerCase().replace(/\s+/g,'_')}.png`, status:index%2===0?'Enviado':'Pendente'}));
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Publicação e Automação</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg p-6 mb-6 shadow-lg"><div className="flex items-center space-x-3 mb-3"><Cloud className="w-7 h-7"/><h3 className="text-xl font-semibold">Google Drive</h3></div><p className="text-sm opacity-90 mb-4">Upload automático para Google Drive.</p><Button className="bg-white text-purple-600 hover:bg-gray-100 font-medium">Conectar Drive</Button></div>
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg p-6 shadow-lg"><div className="flex items-center space-x-3 mb-3"><Zap className="w-7 h-7"/><h3 className="text-xl font-semibold">Zapier</h3></div><p className="text-sm opacity-90 mb-4">Automatize publicações com Zapier.</p><Button className="bg-white text-orange-600 hover:bg-gray-100 font-medium">Configurar Zapier</Button></div>
+          </div>
+          <div><div className="bg-gray-50 rounded-lg p-4 border h-full"><h3 className="font-semibold text-gray-700 mb-3">Índice de Imagens</h3>
+            {imagesForIndex.length>0 ? <div className="space-y-2 max-h-96 overflow-y-auto pr-2">{imagesForIndex.map(item=>(
+              <div key={item.id} className="flex items-center justify-between p-3 bg-white rounded-md border shadow-sm">
+                <div className="flex items-center space-x-3"><div className={`w-10 h-10 rounded flex items-center justify-center ${item.thumbnailUrl?'':'bg-gray-200'}`}>{item.thumbnailUrl?<img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover rounded"/>:<ImageIconLucide className="w-5 h-5 text-gray-400"/>}</div>
+                  <div><p className="text-sm font-medium text-gray-800 truncate max-w-xs">{item.title}</p><p className="text-xs text-gray-500 truncate max-w-xs">{item.filename}</p></div>
+                </div>
+                <div className="flex items-center space-x-2">{item.status==='Enviado'?<span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded-full font-medium">Enviado</span>:<span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full font-medium">Pendente</span>}<Download className="w-4 h-4 text-gray-400 hover:text-purple-600 cursor-pointer"/></div>
+              </div>))}</div>
+            : <p className="text-sm text-gray-500 text-center py-4">Nenhuma imagem para listar.</p>}
+          </div></div>
+        </div>
+      </div>
+    </div>);
+};
 
 function App() {
   const [activeStep, setActiveStep] = useState(0);
-  // Inicializa darkMode a partir do localStorage ou default para false (light mode)
-  const [darkMode, setDarkMode] = useState(() => {
-    const savedMode = localStorage.getItem('darkMode');
-    return savedMode ? JSON.parse(savedMode) : false;
-  });
+  const [previewMode, setPreviewMode] = useState('single');
+
+  // Estados principais da aplicação
   const [csvData, setCsvData] = useState([]);
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [backgroundImage, setBackgroundImage] = useState(null);
@@ -112,64 +287,20 @@ function App() {
   const [fieldPositions, setFieldPositions] = useState({});
   const [fieldStyles, setFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
-  const [generatedImagesData, setGeneratedImagesData] = useState([]); // Para armazenar dados de ImageGeneratorFrontendOnly
-  const isMobile = useIsMobile(); // Usa o hook para determinar se é mobile
-  const [anchorElMenu, setAnchorElMenu] = useState(null); // Para o menu de ações
-  const [isHeaderHovered, setIsHeaderHovered] = useState(false); // Novo estado para hover no cabeçalho
-  const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false); // Estado para o modal da chave DeepSeek
-  const [showGeminiAuthModal, setShowGeminiAuthModal] = useState(false); // Estado para o modal da chave Gemini
-  const [showGoogleDriveAuthModal, setShowGoogleDriveAuthModal] = useState(false); // Estado para o modal do Google Drive
+  const [generatedImagesData, setGeneratedImagesData] = useState([]);
 
-  // Estados para a Geração com IA
-  const [inputMethod, setInputMethod] = useState('csv'); // 'csv' ou 'ia'
-  const [selectedApiModel, setSelectedApiModel] = useState('deepseek'); // 'deepseek' ou 'gemini'
-  const [promptNumRecords, setPromptNumRecords] = useState(10); // Default 10, conforme sugerido
-  const [promptText, setPromptText] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false); // Para feedback de carregamento da IA
+  // Estados específicos das etapas
+  const [templateDimensions, setTemplateDimensions] = useState({ width: 1080, height: 1080 });
+  const [templateFormat, setTemplateFormat] = useState('Instagram Post (1080x1080)');
+  const [generationQuality, setGenerationQuality] = useState('Alta (PNG)');
+  const [generationNaming, setGenerationNaming] = useState('midiator_{index}_{titulo}');
 
-
+  // Refs
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
-  const loadStateInputRef = useRef(null); // Ref para o input de carregar estado
+  const loadStateInputRef = useRef(null);
 
-  // Efeito para salvar a preferência do tema no localStorage
-  useEffect(() => {
-    localStorage.setItem('darkMode', JSON.stringify(darkMode));
-  }, [darkMode]);
-
-  // Diagnostic log for generatedImagesData changes // LOG REMOVED
-  // useEffect(() => {
-  //   console.log("App.jsx - generatedImagesData STATE CHANGED:", JSON.stringify(generatedImagesData, null, 2));
-  //   // To inspect a specific item, e.g., index 7 if it exists:
-  //   // if (generatedImagesData && generatedImagesData.length > 7) {
-  //   //   console.log("App.jsx - generatedImagesData[7]:", JSON.stringify(generatedImagesData[7], null, 2));
-  //   // }
-  // }, [generatedImagesData]);
-
-  const steps = [
-    {
-      label: 'Definir Dados Iniciais',
-      description: 'Carregue um CSV ou prepare para adicionar dados manualmente.'
-    },
-    {
-      label: 'Editar Dados',
-      description: 'Adicione, edite ou remova registros conforme necessário.'
-    },
-    {
-      label: 'Upload da Imagem',
-      description: 'Carregue a imagem de fundo PNG/JPG.'
-    },
-    {
-      label: 'Posicionar e Formatar',
-      description: 'Posicione os campos e configure a formatação.'
-    },
-    {
-      label: 'Gerar Imagens',
-      description: 'Gere as imagens finais.'
-    }
-  ];
-
-  // Função para ler arquivo CSV
+  // Funções de manipulação de dados
   const handleCSVUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -178,72 +309,29 @@ function App() {
         skipEmptyLines: true,
         complete: (results) => {
           if (results.data && results.data.length > 0) {
-            const newCsvData = results.data;
-            const newHeaders = Object.keys(newCsvData[0] || {});
+            setCsvData(results.data);
+            const headers = Object.keys(results.data[0] || {});
+            setCsvHeaders(headers);
             
-            setCsvData(newCsvData);
-            setCsvHeaders(newHeaders);
-            
-            // Adaptar fieldPositions e fieldStyles existentes
-            const updatedFieldPositions = {};
-            const updatedFieldStyles = {};
-
-            const defaultStylesBase = {
-              fontFamily: 'Arial',
-              fontSize: 24,
-              fontWeight: 'normal',
-              fontStyle: 'normal',
-              textDecoration: 'none',
-              color: '#000000',
-              textStroke: false,
-              strokeColor: '#ffffff',
-              strokeWidth: 2,
-              textShadow: false,
-              shadowColor: '#000000',
-              shadowBlur: 4,
-              shadowOffsetX: 2,
-              shadowOffsetY: 2,
-              textAlign: 'left', // Adicionado para consistência com defaults iniciais
-              verticalAlign: 'top' // Adicionado para consistência
-            };
-            
-            newHeaders.forEach((header, index) => {
-              // Posições
-              if (fieldPositions[header]) {
-                updatedFieldPositions[header] = fieldPositions[header];
-              } else {
-                updatedFieldPositions[header] = {
-                  x: 10 + (index % 5) * 18, // Ajustado para caber mais campos inicialmente
-                  y: 10 + Math.floor(index / 5) * 12,
-                  width: 15, // Ligeiramente menor para caber mais
-                  height: 10,
-                  visible: true
-                };
+            const newPositions = {};
+            const newStyles = {};
+            headers.forEach((header, index) => {
+              if (!newPositions[header]) {
+                newPositions[header] = { x: 10 + (index % 3) * 30, y: 10 + Math.floor(index / 3) * 25, width: 25, height: 15, visible: true };
               }
-              
-              // Estilos
-              if (fieldStyles[header]) {
-                updatedFieldStyles[header] = fieldStyles[header];
-              } else {
-                updatedFieldStyles[header] = { ...defaultStylesBase };
+              if (!newStyles[header]) {
+                newStyles[header] = { fontFamily: 'Arial', fontSize: 24, color: '#000000', textAlign: 'left', verticalAlign: 'top', lineHeightMultiplier: 1.2 };
               }
             });
-            
-            setFieldPositions(updatedFieldPositions);
-            setFieldStyles(updatedFieldStyles);
-            
-            setActiveStep(1); // Avança para a etapa de Edição de Dados (índice 1)
+            setFieldPositions(newPositions);
+            setFieldStyles(newStyles);
           }
         },
-        error: (error) => {
-          console.error('Erro ao ler CSV:', error);
-          alert('Erro ao ler o arquivo CSV. Verifique se o formato está correto.');
-        }
+        error: (error) => console.error('Erro ao ler CSV:', error),
       });
     }
   };
 
-  // Função para upload da imagem de fundo
   const handleImageUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -251,1209 +339,153 @@ function App() {
       reader.onload = (e) => {
         const imageUrl = e.target.result;
         setBackgroundImage(imageUrl);
-
-        const img = new Image();
+        const img = new window.Image();
         img.crossOrigin = 'Anonymous';
         img.onload = () => {
-          const colorThief = new ColorThief();
-          const palette = colorThief.getPalette(img, 5); // Extrai 5 cores
-          setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`));
+          try {
+            const colorThief = new ColorThief();
+            setColorPalette(colorThief.getPalette(img, 5).map(rgb => `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`));
+          } catch (error) {
+            console.error("Error extracting color palette:", error);
+            setColorPalette([]);
+          }
         };
         img.src = imageUrl;
-
-        // setActiveStep(2) -> Se Upload da Imagem é a etapa 2, a próxima é a 3 (Posicionar e Formatar)
-        // O array de steps é 0-indexed:
-        // 0: Definir Dados Iniciais
-        // 1: Editar Dados
-        // 2: Upload da Imagem
-        // 3: Posicionar e Formatar
-        // 4: Gerar Imagens
-        const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar');
-        if (etapaPosicionarFormatarIndex !== -1) {
-            setActiveStep(etapaPosicionarFormatarIndex);
-        }
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const handleCsvDataUpdate = useCallback((updatedCsvData) => {
+    setCsvData(updatedCsvData);
+  }, []);
+
   const handleNext = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    setActiveStep((prev) => Math.min(appSteps.length - 1, prev + 1));
   };
 
   const handleBack = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1);
+    setActiveStep((prev) => Math.max(0, prev - 1));
   };
 
-  const canProceedToStep = (nextStepIndex) => {
-    // `nextStepIndex` é o índice do passo PARA o qual queremos ir.
-    // `activeStep` é o passo atual.
+  const renderStepContent = () => {
     switch (activeStep) {
-      case 0: // Saindo de 'Definir Dados Iniciais' para 'Editar Dados' (nextStepIndex === 1)
-        return true; // Sempre pode ir para a edição, mesmo que não haja dados CSV carregados.
-      case 1: // Saindo de 'Editar Dados' para 'Upload da Imagem' (nextStepIndex === 2)
-        return csvData.length > 0; // Precisa ter dados para prosseguir para a imagem.
-      case 2: // Saindo de 'Upload da Imagem' para 'Posicionar e Formatar' (nextStepIndex === 3)
-        return backgroundImage !== null; // Precisa ter imagem de fundo.
-      case 3: // Saindo de 'Posicionar e Formatar' para 'Gerar Imagens' (nextStepIndex === 4)
-        return true; // Posicionamento é opcional para gerar.
-      default:
-        return true; // Permite avançar de outros passos por padrão (ex: de Gerar para um futuro Resumo)
+      case 0: return <DataStep
+                      csvData={csvData}
+                      setCsvData={setCsvData}
+                      csvHeaders={csvHeaders}
+                      setCsvHeaders={setCsvHeaders}
+                      handleCSVUpload={handleCSVUpload}
+                      fileInputRef={fileInputRef}
+                    />;
+      case 1: return <TemplateStep
+                      backgroundImage={backgroundImage}
+                      handleImageUpload={handleImageUpload}
+                      imageInputRef={imageInputRef}
+                      templateDimensions={templateDimensions}
+                      setTemplateDimensions={setTemplateDimensions}
+                      templateFormat={templateFormat}
+                      setTemplateFormat={setTemplateFormat}
+                    />;
+      case 2: return <DesignStep
+                      backgroundImage={backgroundImage}
+                      csvHeaders={csvHeaders}
+                      fieldPositions={fieldPositions}
+                      setFieldPositions={setFieldPositions}
+                      fieldStyles={fieldStyles}
+                      setFieldStyles={setFieldStyles}
+                      csvData={csvData}
+                      onImageDisplayedSizeChange={setDisplayedImageSize}
+                      colorPalette={colorPalette}
+                      onCsvDataUpdate={handleCsvDataUpdate}
+                    />;
+      case 3: return <GenerationStep
+                      generationQuality={generationQuality}
+                      setGenerationQuality={setGenerationQuality}
+                      generationNaming={generationNaming}
+                      setGenerationNaming={setGenerationNaming}
+                      generatedImagesData={generatedImagesData}
+                    />;
+      case 4: return <PublicationStep mockDataFromApp={mockData} />; // Passando mockData como prop diferente
+      default: return <DataStep
+                        csvData={csvData}
+                        setCsvData={setCsvData}
+                        csvHeaders={csvHeaders}
+                        setCsvHeaders={setCsvHeaders}
+                        handleCSVUpload={handleCSVUpload}
+                        fileInputRef={fileInputRef}
+                      />;
     }
   };
-
-  // Calcular estatísticas dos campos
-  const getFieldStats = () => {
-    const visibleFields = Object.values(fieldPositions).filter(pos => pos.visible).length;
-    const totalFields = csvHeaders.length;
-    const styledFields = Object.keys(fieldStyles).length;
-    
-    return { visibleFields, totalFields, styledFields };
-  };
-
-  const { visibleFields, totalFields, styledFields } = getFieldStats();
-
-  // Função para salvar o estado do template
-  const handleSaveState = async () => {
-    // Função auxiliar para converter Blob para Base64
-    const blobToBase64 = (blob) => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    };
-
-    // Mapear generatedImagesData para um formato serializável
-    const serializableGeneratedImages = await Promise.all(
-      generatedImagesData.map(async (img) => {
-        let imageBase64 = null;
-        if (img.blob) {
-          try {
-            imageBase64 = await blobToBase64(img.blob);
-          } catch (error) {
-            console.error("Erro ao converter blob para Base64:", error);
-            // Continuar mesmo se um blob falhar, para não impedir o salvamento do resto
-          }
-        }
-        return {
-          ...img,
-          blob: undefined, // Remover o blob original
-          url: undefined, // Remover o objectURL temporário
-          imageBase64: imageBase64, // Adicionar a string base64
-          // Manter: record, filename, customFieldPositions, customFieldStyles, backgroundImage (se individual)
-        };
-      })
-    );
-
-    const stateToSave = {
-      version: "1.1", // Incrementar versão para refletir a nova estrutura
-      backgroundImageUrl: backgroundImage, // Este é o BG global/template, já é uma string (dataURL ou URL externa)
-      fieldPositions: fieldPositions,
-      fieldStyles: fieldStyles,
-      csvHeaders: csvHeaders,
-      colorPalette: colorPalette,
-      csvData: csvData,
-      generatedImages: serializableGeneratedImages, // Salvar os dados das imagens geradas
-    };
-
-    const jsonString = JSON.stringify(stateToSave, null, 2);
-    const blob = new Blob([jsonString], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "template_config.json";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    alert("Configuração do template salva como template_config.json!");
-  };
-
-  // Função para carregar o estado do template de um arquivo
-  const handleLoadStateFromFile = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (e) => { // Tornar async para aguardar conversões
-        try {
-          const loadedState = JSON.parse(e.target.result);
-
-          // Função auxiliar para converter Base64 para Blob
-          const base64ToBlob = async (base64, type = 'image/png') => {
-            const res = await fetch(base64);
-            const blob = await res.blob();
-            return blob;
-          };
-
-          // Verificar versão e campos essenciais
-          if (loadedState.version && (loadedState.version === "1.0" || loadedState.version === "1.1") &&
-              loadedState.backgroundImageUrl !== undefined &&
-              loadedState.fieldPositions &&
-              loadedState.fieldStyles &&
-              loadedState.csvHeaders) {
-
-            setBackgroundImage(loadedState.backgroundImageUrl);
-            setFieldPositions(loadedState.fieldPositions);
-            setFieldStyles(loadedState.fieldStyles);
-            setCsvHeaders(loadedState.csvHeaders);
-            
-            if (loadedState.colorPalette) {
-              setColorPalette(loadedState.colorPalette);
-            } else {
-              // Fallback se a paleta não estiver no JSON (templates antigos)
-              // Poderia tentar extrair da imagem carregada se backgroundImage existir
-              if (loadedState.backgroundImageUrl) {
-                const img = new Image();
-                img.crossOrigin = 'Anonymous';
-                img.onload = () => {
-                  const colorThief = new ColorThief();
-                  try {
-                    const palette = colorThief.getPalette(img, 5);
-                    setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`));
-                  } catch (error) {
-                    console.warn("Não foi possível extrair paleta da imagem carregada no JSON.", error);
-                    setColorPalette([]); // Reset ou paleta padrão
-                  }
-                };
-                img.src = loadedState.backgroundImageUrl;
-              } else {
-                setColorPalette([]); // Reset ou paleta padrão
-              }
-            }
-            
-            if (loadedState.csvData) {
-              setCsvData(loadedState.csvData);
-              // Se csvHeaders não vierem explicitamente ou forem inconsistentes,
-              // poderíamos derivá-los de loadedState.csvData[0] aqui,
-              // mas como loadedState.csvHeaders é obrigatório, confiamos nele.
-            } else {
-              setCsvData([]);
-            }
-
-            // Restaurar generatedImages se presentes (versão 1.1+)
-            if (loadedState.version === "1.1" && loadedState.generatedImages) {
-              const restoredGeneratedImages = await Promise.all(
-                loadedState.generatedImages.map(async (imgData) => {
-                  let blob = null;
-                  let url = null;
-                  if (imgData.imageBase64) {
-                    try {
-                      blob = await base64ToBlob(imgData.imageBase64);
-                      url = URL.createObjectURL(blob);
-                    } catch (error) {
-                      console.error("Erro ao converter base64 para blob ao carregar:", error);
-                    }
-                  }
-                  return {
-                    ...imgData,
-                    blob: blob,
-                    url: url,
-                    imageBase64: undefined, // Remover para não manter em memória desnecessariamente
-                  };
-                })
-              );
-              // console.log("App.jsx - handleLoadStateFromFile - BEFORE setGeneratedImagesData - restoredGeneratedImages:", JSON.stringify(restoredGeneratedImages, null, 2)); // LOG REMOVED
-              // Example to check a specific item if you know its expected index, e.g., 7 for thumbnail #8
-              // if (restoredGeneratedImages && restoredGeneratedImages.length > 7) {
-              //   console.log("App.jsx - handleLoadStateFromFile - restoredGeneratedImages[7]:", JSON.stringify(restoredGeneratedImages[7], null, 2));
-              // }
-              setGeneratedImagesData(restoredGeneratedImages);
-            } else {
-              // console.log("App.jsx - handleLoadStateFromFile - No generatedImages in JSON or old version, clearing generatedImagesData."); // LOG REMOVED
-              setGeneratedImagesData([]); // Limpar se não houver dados ou for versão antiga
-            }
-            
-            // Navegação de passo
-            if (loadedState.backgroundImageUrl && loadedState.csvHeaders.length > 0) {
-              setActiveStep(2); 
-            } else if (loadedState.csvHeaders.length > 0) {
-              setActiveStep(1); 
-            } else {
-              setActiveStep(0);
-            }
-
-            alert("Configuração do template carregada com sucesso!");
-          } else {
-            alert("Arquivo JSON inválido, formato incorreto ou versão incompatível.");
-            console.log("Loaded state:", loadedState); // Adicionar log para depuração
-          }
-        } catch (error) {
-          console.error("Erro ao carregar o arquivo JSON:", error);
-          alert("Erro ao ler o arquivo JSON.");
-        }
-      };
-      reader.readAsText(file);
-      event.target.value = null; 
-    }
-  };
-
-  const handleMenuOpen = (event) => {
-    setAnchorElMenu(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorElMenu(null);
-  };
-
-  const handleLoadTemplateClick = () => {
-    handleMenuClose();
-    // Acionar o clique no input de arquivo escondido
-    if (loadStateInputRef.current) {
-      loadStateInputRef.current.click();
-    }
-  };
-
-  const handleSaveTemplateClick = () => {
-    handleMenuClose();
-    handleSaveState();
-  };
-
-  const handleExportCSV = () => {
-    if (csvData.length === 0) {
-      alert("Não há dados para exportar.");
-      return;
-    }
-
-    // Papa.unparse espera um array de objetos ou um array de arrays.
-    // Se csvHeaders for usado, ele garante a ordem das colunas.
-    // Se csvData já for um array de objetos com as chaves corretas,
-    // Papa.unparse(csvData) pode ser suficiente, mas usar 'fields' garante a ordem.
-    const config = {
-      quotes: true, // Adiciona aspas em todos os campos
-      delimiter: ";", // Usa ponto e vírgula como delimitador
-      header: true, // Inclui a linha de cabeçalho
-      fields: csvHeaders // Garante a ordem das colunas e quais incluir
-    };
-    const csvString = Papa.unparse(csvData, config);
-
-    const blob = new Blob([`\uFEFF${csvString}`], { type: "text/csv;charset=utf-8;" }); // Adiciona BOM para UTF-8 Excel
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "dados_exportados.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    handleMenuClose(); // Fechar o menu após a ação
-  };
-
-  const handleOpenGerenciadorRegistros = () => {
-    // setShowGerenciadorRegistros(true); // Removido
-    setActiveStep(1); // Avança para a etapa de edição
-    handleMenuClose(); // Fechar o menu de ações se estiver aberto
-  };
-
-  // Renomeado de handleConcluirEdicaoRegistros para handleDadosAlterados
-  const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
-    // console.log('[App] handleDadosAlterados Recebeu Registros:', JSON.parse(JSON.stringify(novosRegistros)), 'Colunas:', novasColunas);
-    setCsvData(novosRegistros);
-    setCsvHeaders(novasColunas);
-
-    // Atualizar fieldPositions e fieldStyles com base nas novas colunas
-    const updatedFieldPositions = {};
-    const updatedFieldStyles = {};
-    const defaultStylesBase = {
-      fontFamily: 'Arial',
-      fontSize: 24,
-      fontWeight: 'normal',
-      fontStyle: 'normal',
-      textDecoration: 'none',
-      color: darkMode ? '#FFFFFF' : '#000000', // Ajustar cor padrão com base no tema
-      textStroke: false,
-      strokeColor: darkMode ? '#000000' : '#FFFFFF',
-      strokeWidth: 2,
-      textShadow: false,
-      shadowColor: '#000000',
-      shadowBlur: 4,
-      shadowOffsetX: 2,
-      shadowOffsetY: 2,
-      textAlign: 'left',
-      verticalAlign: 'top'
-    };
-
-    novasColunas.forEach((header, index) => {
-      updatedFieldPositions[header] = fieldPositions[header] || {
-        x: 10 + (index % 5) * 18,
-        y: 10 + Math.floor(index / 5) * 12,
-        width: 15,
-        height: 10,
-        visible: true
-      };
-      updatedFieldStyles[header] = fieldStyles[header] || { ...defaultStylesBase };
-    });
-
-    setFieldPositions(updatedFieldPositions);
-    setFieldStyles(updatedFieldStyles);
-
-    // Reconcile generatedImagesData with the new csvData (novosRegistros)
-    setGeneratedImagesData(prevGeneratedImages => {
-      if (prevGeneratedImages.length !== novosRegistros.length) {
-        const rebuiltGeneratedImages = novosRegistros.map((record, index) => ({
-          index,
-          record,
-          blob: null,
-          url: null,
-          filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-          backgroundImage: backgroundImage, // Use global background
-        }));
-        return rebuiltGeneratedImages;
-      } else {
-        const updatedGeneratedImages = prevGeneratedImages.map((oldImage, index) => ({
-          ...oldImage,
-          record: novosRegistros[index],
-          index: index,
-        }));
-        return updatedGeneratedImages;
-      }
-    });
-
-  }, [darkMode, fieldPositions, fieldStyles, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles, backgroundImage, generatedImagesData.length]);
-
-
-  // Callback for FieldPositioner to update csvData when text is edited in-place
-  const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
-    setCsvData(newCsvData);
-    // No need to update headers or fieldPositions/Styles here, as only content changes.
-  }, [setCsvData]);
-
-  // Callback for GeneratedImageEditor (via ImageGeneratorFrontendOnly) to update a specific record in csvData
-  const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => {
-    setCsvData(prevCsvData => {
-      // Ensure recordIndex is within bounds
-      if (recordIndex < 0 || recordIndex >= prevCsvData.length) {
-        console.error("handleThumbnailRecordTextUpdate: recordIndex out of bounds", recordIndex);
-        return prevCsvData;
-      }
-      return prevCsvData.map((row, idx) => {
-        if (idx === recordIndex) {
-          return updatedRecord;
-        }
-        return row;
-      });
-    });
-  }, [setCsvData]);
-
-  const handleGenerateIAContent = async () => {
-    setIsGenerating(true);
-
-    let apiKey;
-    let apiToCall;
-    let apiName = "";
-
-    if (selectedApiModel === 'deepseek') {
-      apiKey = getDeepSeekApiKey();
-      apiToCall = callDeepSeekApi;
-      apiName = "DeepSeek";
-    } else if (selectedApiModel === 'gemini') {
-      apiKey = getGeminiApiKey();
-      apiToCall = callGeminiApi;
-      apiName = "Gemini";
-    } else {
-      alert('Modelo de IA não selecionado ou inválido.');
-      setIsGenerating(false);
-      return;
-    }
-
-    if (!apiKey) {
-      alert(`Por favor, configure sua chave da API ${apiName} primeiro.\nVocê pode fazer isso no menu "Mais ações" (ícone de três pontos) no cabeçalho.`);
-      setIsGenerating(false);
-      return;
-    }
-
-    if (!promptText.trim()) {
-      alert('Por favor, forneça um texto descritivo para o prompt.');
-      setIsGenerating(false);
-      return;
-    }
-
-    if (promptNumRecords <= 0) {
-        alert('A quantidade de registros a gerar deve ser maior que zero.');
-        setIsGenerating(false);
-        return;
-    }
-
-    const finalPrompt = `A partir do TEXTO BASE fornecido abaixo, gere conteúdo para um carrossel de Instagram com ${promptNumRecords} elementos.
-
-TEXTO BASE:
-${promptText}
-
-INSTRUÇÕES DE FORMATAÇÃO DA SAÍDA (MUITO IMPORTANTE):
-A SUA RESPOSTA DEVE CONTER *APENAS E SOMENTE* UM BLOCO DE TEXTO FORMATADO COMO CSV, SEM NENHUM TEXTO ADICIONAL ANTES OU DEPOIS DO BLOCO CSV.
-O BLOCO CSV DEVE SER DELIMITADO EXATAMENTE POR TRÊS CRASE SEGUIDAS E A PALAVRA "csv" (\`\`\`csv) NO INÍCIO, E TRÊS CRASE SEGUIDAS (\`\`\`) NO FINAL.
-DENTRO DO BLOCO CSV:
-- A primeira linha DEVE SER o cabeçalho: Titulo;Texto Principal;Ponte para o Próximo
-- As linhas subsequentes DEVERÃO ser os dados de cada elemento, com os campos separados por PONTO E VÍRGULA (;).
-- NÃO inclua números de elemento ou qualquer outra coluna além de "Titulo", "Texto Principal", e "Ponte para o Próximo".
-- NÃO inclua explicações, introduções, ou qualquer texto fora do bloco \`\`\`csv ... \`\`\`.
-
-REQUISITOS PARA O CONTEÚDO DE CADA ELEMENTO (LINHA DO CSV):
-1. **Titulo** (Coluna 1):
-   - Máximo de 4 palavras.
-   - Deve começar com um emoji relevante.
-   - Precisa ser curto e impactante.
-   - Exemplo: "✨ Segredo Revelado"
-2. **Texto Principal** (Coluna 2):
-   - Entre 120 e 180 caracteres.
-   - Adaptado do TEXTO BASE, com linguagem conversacional e direta.
-   - Deve conter 1 pergunta retórica para engajamento.
-   - Exemplo: "Sabia que 80% dos negócios falham nisso? Descubra como evitar esse erro..."
-3. **Ponte para o Próximo** (Coluna 3):
-   - Máximo de 40 caracteres.
-   - Criar curiosidade para o próximo elemento.
-   - Usar fórmula: Emoji + Chamada + Dica do próximo.
-   - No último elemento, substitua por uma Chamada para Ação (CTA) final.
-   - Exemplos:
-     → "Próximo: O passo que muda tudo!"
-     → "Siga para o segredo nº3 👇"
-
-ESTRUTURA NARRATIVA SUGERIDA:
-- Elemento 1: Dado impactante ou pergunta instigante extraída do início do TEXTO BASE.
-- Elementos intermediários: Desenvolver os pontos principais do TEXTO BASE.
-- Último Elemento: CTA claro ou resumo conclusivo.
-
-TOM DE VOZ:
-- Empático e motivacional (use "você" e "vamos").
-- Urgência controlada ("Agora você pode...").
-- Toque de storytelling.
-
-Exemplo de como o BLOCO CSV deve se parecer na sua resposta (não inclua este exemplo na sua resposta final, apenas o bloco gerado):
-\`\`\`csv
-Titulo;Texto Principal;Ponte para o Próximo
-✨ Grande Novidade;Descubra algo incrível que vai mudar seu dia! Você está pronto para a surpresa?;➡️ Veja o próximo!
-🎉 Outra Dica;Continuando nossa jornada com mais um segredo. Já se perguntou como isso é possível?;CTA Final Aqui!
-\`\`\`
-Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` com os dados.`;
-
-    console.log("Prompt para Gemini/DeepSeek:", finalPrompt); // Log atualizado para ser genérico
-    console.log("Número de Registros para Gerar:", promptNumRecords);
-
-    // console.log("Prompt para DeepSeek:", finalPrompt); // Manter para depuração se necessário
-    // console.log("Número de Registros para Gerar:", promptNumRecords);
-
-    try {
-      let iaResponseText = "";
-      if (apiToCall) { // Verifica se apiToCall está definida
-        iaResponseText = await apiToCall(finalPrompt, apiKey);
-        console.log(`Resposta da API ${apiName} (bruta):`, iaResponseText);
-      } else {
-        throw new Error("Nenhuma função de API válida foi selecionada.");
-      }
-
-      const parsedResult = parseIaResponseToCsvData(iaResponseText, promptNumRecords);
-
-      if (parsedResult && parsedResult.data && parsedResult.data.length > 0) {
-        setCsvData(parsedResult.data);
-        setCsvHeaders(parsedResult.headers);
-
-        const updatedFieldPositions = {};
-        const updatedFieldStyles = {};
-        const defaultStylesBase = {
-          fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
-          textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
-          strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
-          shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
-          textAlign: 'left', verticalAlign: 'top'
-        };
-
-        parsedResult.headers.forEach((header, index) => {
-          updatedFieldPositions[header] = {
-            x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12,
-            width: 15, height: 10, visible: true
-          };
-          updatedFieldStyles[header] = { ...defaultStylesBase };
-        });
-        setFieldPositions(updatedFieldPositions);
-        setFieldStyles(updatedFieldStyles);
-
-        setActiveStep(1); // Avança para Edição de Dados
-      } else {
-        alert('Não foi possível processar a resposta da IA para o formato de tabela. Verifique o console para a resposta bruta da IA e a saída do parser.');
-        console.log(`[App] Falha no parsing ou dados vazios. Resposta da API ${apiName}:`, iaResponseText, "Resultado do Parser:", parsedResult);
-      }
-
-    } catch (error) {
-      console.error(`Erro ao chamar ou processar API ${apiName}:`, error);
-      alert(`Erro ao gerar conteúdo com IA via ${apiName}: ${error.message}`);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const parseIaResponseToCsvData = (responseText, numRecords) => {
-    // Definição dos cabeçalhos esperados pelo GerenciadorRegistros
-    const finalHeaders = ["Título", "Texto Principal", "Ponte para o Próximo"];
-    const data = [];
-
-    if (!responseText || typeof responseText !== 'string') {
-      console.error("[parseIaResponseToCsvData] Resposta da IA inválida ou vazia.");
-      return { data: [], headers: finalHeaders };
-    }
-
-    console.log("[parseIaResponseToCsvData] Resposta bruta recebida para parsing:", responseText);
-
-    // 1. Extrair o bloco CSV
-    const csvBlockRegex = /```csv\s*([\s\S]+?)\s*```/;
-    const csvMatch = responseText.match(csvBlockRegex);
-    console.log("[parseIaResponseToCsvData] Resultado do match da regex (csvMatch):", csvMatch);
-
-    if (csvMatch && csvMatch[1] && csvMatch[1].trim() !== "") {
-        const csvContent = csvMatch[1].trim();
-        console.log("[parseIaResponseToCsvData] Conteúdo CSV bruto extraído (csvMatch[1]):", csvMatch[1]);
-        console.log("[parseIaResponseToCsvData] Conteúdo CSV após trim (csvContent):", csvContent);
-
-        const parseResult = Papa.parse(csvContent, {
-            header: true,
-            skipEmptyLines: true,
-            dynamicTyping: true,
-        });
-
-        console.log("[parseIaResponseToCsvData] Resultado do Papa.parse:", parseResult);
-
-        if (parseResult.errors && parseResult.errors.length > 0) {
-            console.error("[parseIaResponseToCsvData] Erros durante o parsing com PapaParse:", parseResult.errors.map(err => ({ ...err, input: undefined })));
-        }
-
-        if (parseResult.data && parseResult.data.length > 0) {
-            const actualHeadersFromIA = parseResult.meta.fields || [];
-            console.log("[parseIaResponseToCsvData] Cabeçalhos reais detectados pela IA (via PapaParse):", actualHeadersFromIA);
-
-            const headerMap = {};
-            actualHeadersFromIA.forEach(iaHeader => {
-                const iaHeaderTrimmed = iaHeader.trim();
-                const iaHeaderLower = iaHeaderTrimmed.toLowerCase();
-                if (iaHeaderLower.includes('titulo') || iaHeaderLower.includes('título')) headerMap[iaHeaderTrimmed] = "Título";
-                else if (iaHeaderLower.includes('texto_principal') || iaHeaderLower.includes('texto principal')) headerMap[iaHeaderTrimmed] = "Texto Principal";
-                else if (iaHeaderLower.includes('ponte_proximo') || iaHeaderLower.includes('ponte para o próximo')) headerMap[iaHeaderTrimmed] = "Ponte para o Próximo";
-                else if (iaHeaderLower.includes('id_elemento') || iaHeaderLower.includes('id') || iaHeaderLower.includes('num_slide') || iaHeaderLower.includes('elemento')) headerMap[iaHeaderTrimmed] = "id";
-            });
-            console.log("[parseIaResponseToCsvData] Mapa de Cabeçalhos construído:", headerMap);
-
-            parseResult.data.forEach(rawRecord => {
-                const record = {};
-                let hasTitle = false;
-                for (const iaHeaderMapped in headerMap) {
-                    const targetAppHeader = headerMap[iaHeaderMapped];
-                    if (rawRecord.hasOwnProperty(iaHeaderMapped)) {
-                        let value = rawRecord[iaHeaderMapped];
-                        record[targetAppHeader] = value !== null && value !== undefined ? String(value).trim() : "";
-                        if (targetAppHeader === "Título" && record[targetAppHeader]) {
-                            hasTitle = true;
-                        }
-                    }
-                }
-                if (hasTitle) {
-                    finalHeaders.forEach(appFinalHeader => {
-                        if (!record[appFinalHeader]) record[appFinalHeader] = "";
-                    });
-                    data.push(record);
-                } else {
-                    console.warn("[parseIaResponseToCsvData] Registro ignorado por não ter um 'Título' mapeado:", rawRecord);
-                }
-            });
-            console.log("[parseIaResponseToCsvData] Dados Parseados com Sucesso (Gemini CSV via PapaParse):", data);
-            return { data, headers: finalHeaders };
-        } else {
-            console.error("[parseIaResponseToCsvData] PapaParse não retornou dados ou dados eram vazios, mesmo após encontrar bloco CSV.");
-        }
-    } else {
-      console.error("[parseIaResponseToCsvData] Bloco CSV não encontrado ou vazio na resposta da IA. Detalhes do csvMatch:", csvMatch);
-    }
-
-    // Se chegou aqui, o parsing do bloco CSV falhou ou não havia bloco CSV. Tentar fallback.
-    console.log("[parseIaResponseToCsvData] Tentando parser de fallback (formato DeepSeek).");
-    const fallbackLines = responseText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-    let currentRecord = {};
-    const fallbackData = []; // Usar um novo array para o fallback
-
-    for (const line of fallbackLines) {
-        if (line.toLowerCase().startsWith("título:") || line.toLowerCase().startsWith("titulo:")) {
-            if (Object.keys(currentRecord).length > 0 && currentRecord["Título"]) fallbackData.push(currentRecord);
-            currentRecord = { "Título": line.substring(line.indexOf(':') + 1).trim() };
-        } else if (line.toLowerCase().startsWith("texto principal:")) {
-            currentRecord["Texto Principal"] = line.substring(line.indexOf(':') + 1).trim();
-        } else if (line.toLowerCase().startsWith("ponte para o próximo:") || line.toLowerCase().startsWith("ponte:")) {
-            currentRecord["Ponte para o Próximo"] = line.substring(line.indexOf(':') + 1).trim();
-            if (currentRecord["Título"]) fallbackData.push(currentRecord);
-            currentRecord = {};
-        }
-    }
-    if (Object.keys(currentRecord).length > 0 && currentRecord["Título"]) fallbackData.push(currentRecord);
-
-    if (fallbackData.length > 0) {
-        console.log("[parseIaResponseToCsvData] Parseado como fallback (formato DeepSeek):", JSON.parse(JSON.stringify(fallbackData)));
-        const processedData = fallbackData.map(record => ({
-            "Título": record["Título"] || "",
-            "Texto Principal": record["Texto Principal"] || "",
-            "Ponte para o Próximo": record["Ponte para o Próximo"] || "",
-        }));
-        return { data: processedData, headers: finalHeaders };
-    } else {
-        console.error("[parseIaResponseToCsvData] Fallback também não encontrou dados estruturados.");
-        return { data: [], headers: finalHeaders }; // Retorna data vazia se tudo falhar
-    }
-    return { data, headers: finalHeaders }; // Retorna os cabeçalhos finais esperados
-  };
-
-  const currentTheme = darkMode ? darkTheme : lightTheme;
-
-  // Removida a renderização condicional do GerenciadorRegistros aqui,
-  // ele será renderizado como parte do conteúdo da etapa.
-
-  const headerExpandedHeight = '280px'; // Altura do header quando expandido
-  const headerCollapsedHeight = '80px'; // Altura do header quando colapsado (para padding do container)
-  const headerPaperHeightCollapsed = '60px'; // Altura do Paper do header quando colapsado
 
   return (
-    <ThemeProvider theme={currentTheme}>
-      <CssBaseline /> {/* Adiciona normalização e cor de fundo do tema */}
-      {/* Ajustar pt (padding-top) do Container com base em isMobile ou isHeaderHovered */}
-      <Container
-        maxWidth="xl"
-        sx={{
-          pt: isMobile ? headerCollapsedHeight : (isHeaderHovered ? headerExpandedHeight : headerCollapsedHeight),
-          transition: 'padding-top 0.3s ease-in-out'
-        }}
-      >
-        <Paper 
-          elevation={3} 
-          onMouseEnter={() => !isMobile && setIsHeaderHovered(true)}
-          onMouseLeave={() => !isMobile && setIsHeaderHovered(false)}
-          sx={{ 
-            p: isMobile ? 2 : (isHeaderHovered ? 4 : 2),
-            mb: 4,
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 1100,
-            height: isMobile ? headerPaperHeightCollapsed : (isHeaderHovered ? 'auto' : headerPaperHeightCollapsed),
-            minHeight: headerPaperHeightCollapsed,
-            overflow: 'hidden',
-            transition: 'height 0.3s ease-in-out, padding 0.3s ease-in-out',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-          <Box>
-            <Typography 
-              variant={isMobile || !isHeaderHovered ? 'h5' : 'h3'}
-              component="h3" 
-              color="primary"
-              sx={{
-                transition: 'font-size 0.3s ease-in-out',
-                m:0, p:0,
-                lineHeight: isMobile || !isHeaderHovered ? 'normal': 'inherit'
-              }}
-            >
-              Midiator - Mesclar conteúdo
-            </Typography>
-            {/* Mostrar subtítulo apenas se não for mobile E o header estiver expandido (hover) */}
-            {!isMobile && isHeaderHovered && (
-              <Typography
-                variant="h6"
-                color="textSecondary"
-                sx={{
-                  mb: 0,
-                  transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out',
-                  opacity: isHeaderHovered ? 1 : 0,
-                  height: isHeaderHovered ? 'auto' : 0
-                }}
-              >
-                Crie imagens personalizadas com controles de formatação individual
-              </Typography>
-            )}
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}> {/* Container para os ícones do lado direito */}
-            <Tooltip title={darkMode ? "Alternar para modo claro" : "Alternar para modo escuro"}>
-              <IconButton onClick={() => setDarkMode(!darkMode)} color="inherit">
-                {darkMode ? <Brightness7 /> : <Brightness4 />}
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Mais ações">
-              <IconButton
-                aria-label="Mais ações"
-                aria-controls="actions-menu"
-                aria-haspopup="true"
-                onClick={handleMenuOpen}
-                color="inherit"
-              >
-                <MoreVert />
-              </IconButton>
-            </Tooltip>
-            <Menu
-              id="actions-menu"
-              anchorEl={anchorElMenu}
-              keepMounted
-              open={Boolean(anchorElMenu)}
-              onClose={handleMenuClose}
-            >
-              <MenuItem onClick={() => setActiveStep(1)}> {/* Atalho para ir para Etapa de Edição */}
-                <Edit sx={{ mr: 1 }} />
-                Ir para Edição de Dados
-              </MenuItem>
-              <MenuItem onClick={() => { setShowDeepSeekAuthModal(true); handleMenuClose(); }}>
-                <VpnKeyIcon sx={{ mr: 1 }} /> {/* Considerar um ícone específico para DeepSeek se houver */}
-                Configurar API DeepSeek
-              </MenuItem>
-              <MenuItem onClick={() => { setShowGeminiAuthModal(true); handleMenuClose(); }}>
-                <GoogleIcon sx={{ mr: 1 }} /> {/* Exemplo de ícone para Gemini */}
-                Configurar API Gemini
-              </MenuItem>
-              <MenuItem onClick={() => { setShowGoogleDriveAuthModal(true); handleMenuClose(); }}>
-                <CloudQueue sx={{ mr: 1 }} />
-                Configurar API Google Drive
-              </MenuItem>
-              <MenuItem onClick={handleSaveTemplateClick}>Salvar Config. Template</MenuItem>
-              <MenuItem onClick={handleLoadTemplateClick}>Carregar Config. Template</MenuItem>
-              <MenuItem onClick={handleExportCSV} disabled={csvData.length === 0}>
-                <DownloadIcon sx={{ mr: 1 }} />
-                Exportar CSV
-              </MenuItem>
-            </Menu>
-            {/* Input de arquivo escondido para carregar template */}
-            <input 
-              type="file" 
-              hidden 
-              accept=".json" 
-              onChange={handleLoadStateFromFile} 
-              ref={loadStateInputRef} 
-            />
-          </Box>
-        </Box>
-        
-        {/* Mostrar indicadores de status apenas se não for mobile E o header estiver expandido (hover) */}
-        {!isMobile && isHeaderHovered && (
-          <>
-            {/* Indicadores de status */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2, mb: 2, flexWrap: 'wrap', transition: 'opacity 0.3s ease-in-out, height 0.3s ease-in-out', opacity: isHeaderHovered ? 1 : 0, height: isHeaderHovered ? 'auto' : 0 }}>
-              <Chip 
-                icon={<FileUpload />}
-                label={`${csvData.length} registros`}
-                color={csvData.length > 0 ? 'success' : 'default'}
-                variant={csvData.length > 0 ? 'filled' : 'outlined'}
-                size={!isHeaderHovered ? 'small' : 'medium'}
-              />
-              <Chip 
-                icon={<ImageIcon />}
-                label="Imagem de fundo"
-                color={backgroundImage ? 'success' : 'default'}
-                variant={backgroundImage ? 'filled' : 'outlined'}
-                size={!isHeaderHovered ? 'small' : 'medium'}
-              />
-              <Chip 
-                icon={<Settings />}
-                label={`${visibleFields}/${totalFields} campos`}
-                color={visibleFields > 0 ? 'info' : 'default'}
-                variant="filled"
-                size={!isHeaderHovered ? 'small' : 'medium'}
-              />
-              <Chip 
-                icon={<Palette />}
-                label={`${styledFields} estilos`}
-                color={styledFields > 0 ? 'secondary' : 'default'}
-                variant="filled"
-                size={!isHeaderHovered ? 'small' : 'medium'}
-              />
-            </Box>
-            {/* Botões Salvar/Carregar Configuração foram movidos para o Menu */}
-          </>
-        )}
-      </Paper>
+    <SidebarProvider>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-10">
+          <div className="flex items-center justify-between px-6 py-4">
+            <div className="flex items-center space-x-4">
+              <SidebarTrigger className="md:hidden"/>
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">M</span>
+                </div>
+                <h1 className="text-xl font-bold text-gray-800">Midiator</h1>
+              </div>
+              <span className="text-sm text-gray-500 hidden md:inline">Social Media Generator</span>
+            </div>
 
-      <Grid container spacing={3} sx={{ mt: 0 }}> {/* mt:0 porque o padding do container já cuida do espaço */}
-        {/* Stepper lateral */}
-        <Grid item xs={12} md={3}>
-          <Card>
-            <CardContent>
-              <Stepper activeStep={activeStep} orientation="vertical">
-                {steps.map((step, index) => (
-                  <Step key={step.label}>
-                    <StepLabel
-                      optional={
-                        index === steps.length - 1 ? (
-                          <Typography variant="caption">Último passo</Typography>
-                        ) : null
-                      }
-                    >
-                      {step.label}
-                    </StepLabel>
-                    <StepContent>
-                      <Typography variant="body2" color="textSecondary">
-                        {step.description}
-                      </Typography>
-                    </StepContent>
-                  </Step>
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setPreviewMode(previewMode === 'single' ? 'grid' : 'single')}
+                className="text-gray-600 hover:text-gray-800"
+              >
+                {previewMode === 'single' ? <GridIcon className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex pt-16">
+          <Sidebar className="shadow-lg">
+            <SidebarContent className="p-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">Etapas do Processo</h2>
+              <div className="space-y-2">
+                {appSteps.map((step, index) => (
+                  <StepIndicator
+                    key={step.id}
+                    step={step}
+                    isActive={activeStep === index}
+                    isCompleted={index < activeStep}
+                    onClick={() => setActiveStep(index)}
+                  />
                 ))}
-              </Stepper>
-            </CardContent>
-          </Card>
-        </Grid>
+              </div>
+            </SidebarContent>
+          </Sidebar>
 
-        {/* Conteúdo principal */}
-        <Grid item xs={12} md={9} 
-           >
-          
-          {/* Passo 0: Definir Dados Iniciais (Upload CSV ou Manual) */}
-          {activeStep === 0 && (
-            <Card>
-              <CardContent>
-                <Typography variant="h5" gutterBottom>
-                  <FileUpload sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  {steps[0].label}
-                </Typography>
-
-                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-                  <ToggleButtonGroup
-                    color="primary"
-                    value={inputMethod}
-                    exclusive
-                    onChange={(event, newInputMethod) => {
-                      if (newInputMethod !== null) {
-                        setInputMethod(newInputMethod);
-                      }
-                    }}
-                    aria-label="Método de entrada de dados"
-                  >
-                    <ToggleButton value="csv">Carregar CSV</ToggleButton>
-                    <ToggleButton value="ia">Gerar com IA</ToggleButton>
-                  </ToggleButtonGroup>
-                </Box>
-
-                {inputMethod === 'csv' && (
-                  <Box sx={{ textAlign: 'center', py: 2 }}>
-                    <Button
-                      variant="contained"
-                      component="label"
-                      size="large"
-                      startIcon={<FileUpload />}
-                      sx={{ mb: 2 }}
-                    >
-                      Selecionar Arquivo CSV
-                      <input
-                        type="file"
-                        accept=".csv"
-                        hidden
-                        ref={fileInputRef}
-                        onChange={handleCSVUpload}
-                      />
-                    </Button>
-                    <Typography variant="body2" color="textSecondary" sx={{mt:1}}>
-                      Carregue um arquivo CSV para definir os dados.
-                    </Typography>
-                    {csvData.length > 0 && (
-                      <Alert severity="success" sx={{ mt: 2 }}>
-                        ✅ {csvData.length} registros carregados. Campos: {csvHeaders.join(', ')}.
-                        <br/>Clique em "Próximo" para editar.
-                      </Alert>
-                    )}
-                     {csvData.length === 0 && activeStep === 0 && (
-                       <Alert severity="info" sx={{mt: 2,  maxWidth: '60%', margin: '10px auto' } }>
-                          Nenhum dado CSV carregado.
-                       </Alert>
-                    )}
-                  </Box>
-                )}
-
-                {inputMethod === 'ia' && (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', py: 2 }}>
-                    <ToggleButtonGroup
-                      color="secondary"
-                      value={selectedApiModel}
-                      exclusive
-                      onChange={(event, newModel) => {
-                        if (newModel !== null) {
-                          setSelectedApiModel(newModel);
-                        }
-                      }}
-                      aria-label="Selecionar Modelo de IA"
-                      sx={{ mb: 2 }}
-                    >
-                      <ToggleButton value="deepseek">DeepSeek</ToggleButton>
-                      <ToggleButton value="gemini">Gemini</ToggleButton>
-                    </ToggleButtonGroup>
-
-                    {selectedApiModel === 'deepseek' && !getDeepSeekApiKey() && (
-                      <Alert severity="warning" sx={{ mb: 2, width: '100%', maxWidth: '500px' }}>
-                        Chave da API DeepSeek não configurada.
-                        <MuiLink component="button" variant="body2" onClick={() => setShowDeepSeekAuthModal(true)} sx={{ml:1}}>
-                          Configurar Chave DeepSeek
-                        </MuiLink>
-                      </Alert>
-                    )}
-                    {selectedApiModel === 'gemini' && !getGeminiApiKey() && (
-                      <Alert severity="warning" sx={{ mb: 2, width: '100%', maxWidth: '500px' }}>
-                        Chave da API Gemini não configurada.
-                        <MuiLink component="button" variant="body2" onClick={() => setShowGeminiAuthModal(true)} sx={{ml:1}}>
-                          Configurar Chave Gemini
-                        </MuiLink>
-                      </Alert>
-                    )}
-
-                    <TextField
-                      label="Quantidade de Elementos/Registros"
-                      type="number"
-                      value={promptNumRecords}
-                      onChange={(e) => setPromptNumRecords(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                      inputProps={{ min: 1 }}
-                      variant="outlined"
-                      sx={{ width: '100%', maxWidth: '500px' }}
-                    />
-                    <TextField
-                      label="Texto Descritivo do Prompt (Objetivo)"
-                      multiline
-                      rows={4}
-                      value={promptText}
-                      onChange={(e) => setPromptText(e.target.value)}
-                      variant="outlined"
-                      sx={{ width: '100%', maxWidth: '500px' }}
-                      placeholder="Ex: Um carrossel sobre os benefícios da meditação para reduzir o estresse, focado em dicas práticas para iniciantes."
-                    />
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      size="large"
-                      onClick={handleGenerateIAContent}
-                      disabled={
-                        isGenerating ||
-                        !promptText.trim() ||
-                        (selectedApiModel === 'deepseek' && !getDeepSeekApiKey()) ||
-                        (selectedApiModel === 'gemini' && !getGeminiApiKey())
-                      }
-                      sx={{ mt: 1, position: 'relative' }}
-                    >
-                      {isGenerating && (
-                        <CircularProgress
-                          size={24}
-                          sx={{
-                            color: 'primary.contrastText',
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            marginTop: '-12px',
-                            marginLeft: '-12px',
-                          }}
-                        />
-                      )}
-                      {isGenerating ? 'Gerando...' : 'Gerar Conteúdo com IA'}
-                    </Button>
-                     <Typography variant="body2" color="textSecondary" sx={{mt:1}}>
-                        Após gerar, os dados aparecerão abaixo. Clique em "Próximo" para editá-los.
-                    </Typography>
-                     {csvData.length > 0 && ( // Mostrar dados gerados se houver
-                      <Alert severity="success" sx={{ mt: 2 }}>
-                        ✅ {csvData.length} registros gerados/carregados. Campos: {csvHeaders.join(', ')}.
-                        <br/>Clique em "Próximo" para editar.
-                      </Alert>
-                    )}
-                  </Box>
-                )}
-
-                {/* Mensagem genérica para quando não há dados e está na Etapa 0, para o modo IA */}
-                {inputMethod === 'ia' && csvData.length === 0 && !isGenerating && (
-                   <Alert severity="info" sx={{mt: 2, maxWidth: '70%', margin: '20px auto' } }>
-                      Preencha os campos acima e clique em "Gerar Conteúdo com IA" para iniciar. Alternativamente, selecione "Carregar CSV" para usar um arquivo.
-                   </Alert>
-                )}
-                {/* O Box que engloba os conteúdos de 'csv' ou 'ia' já foi fechado dentro de suas respectivas condições.
-                    Não há um </Box> extra necessário aqui antes de </CardContent>
-                */}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Passo 1: Editar Dados */}
-          {activeStep === 1 && (
-            <RecordManager
-              registrosIniciais={csvData}
-              colunasIniciais={csvHeaders}
-              onDadosAlterados={handleDadosAlterados} // Nome da prop atualizado
-              darkMode={darkMode}
-            />
-          )}
-
-          {/* Passo 2: Upload Imagem */}
-          {activeStep === 2 && (
-            <Card>
-              <CardContent>
-                <Typography variant="h5" gutterBottom>
-                  <CloudUpload sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  {steps[2].label}
-                </Typography>
-                
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Button
-                    variant="contained"
-                    component="label"
-                    size="large"
-                    startIcon={<CloudUpload />}
-                    sx={{ mb: 2 }}
-                  >
-                    Selecionar Imagem PNG/JPG
-                    <input
-                      type="file"
-                      accept=".png,.jpg,.jpeg"
-                      hidden
-                      ref={imageInputRef}
-                      onChange={handleImageUpload}
-                    />
-                  </Button>
-                  
-                  <Typography variant="body2" color="textSecondary">
-                    Esta imagem será usada como fundo para todas as imagens geradas
-                  </Typography>
-                  
-                  {backgroundImage && (
-                    <Box sx={{ mt: 3 }}>
-                      <Alert severity="success" sx={{ mb: 2 }}>
-                        ✅ Imagem de fundo carregada com sucesso!
-                      </Alert>
-                      <img
-                        src={backgroundImage}
-                        alt="Preview"
-                        style={{
-                          maxWidth: '100%',
-                          maxHeight: '300px',
-                          objectFit: 'contain',
-                          border: '2px solid #ddd',
-                          borderRadius: '8px'
-                        }}
-                      />
-                    </Box>
-                  )}
-                </Box>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Passo 3: Posicionamento e Formatação */}
-          {activeStep === 3 && (
-            <FieldPositioner
-              backgroundImage={backgroundImage}
-              csvHeaders={csvHeaders}
-              fieldPositions={fieldPositions}
-              setFieldPositions={setFieldPositions}
-              fieldStyles={fieldStyles}
-              setFieldStyles={setFieldStyles}
-              csvData={csvData}
-              onImageDisplayedSizeChange={setDisplayedImageSize}
-              colorPalette={colorPalette}
-              onCsvDataUpdate={handleCsvRecordContentUpdate} // Pass the callback here
-            />
-          )}
-
-          {/* Passo 4: Geração */}
-          {activeStep === 4 && (
-            <ImageGeneratorFrontendOnly
-              csvData={csvData}
-              backgroundImage={backgroundImage}
-              fieldPositions={fieldPositions}
-              fieldStyles={fieldStyles}
-              displayedImageSize={displayedImageSize}
-              csvHeaders={csvHeaders} // <-- ADICIONADO
-              colorPalette={colorPalette}
-              // Passar o setter para que ImageGeneratorFrontendOnly possa atualizar App.jsx
-              setGeneratedImagesData={setGeneratedImagesData}
-              // Passar os dados existentes, caso o ImageGeneratorFrontendOnly precise deles ao iniciar
-              initialGeneratedImagesData={generatedImagesData}
-              onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} // <-- ADICIONADO
-            />
-          )}
-
-          {/* Botões de navegação não estão mais aqui */}
-        </Grid> {/* Fecha Grid item xs={12} md={9} do conteúdo principal */}
-      </Grid> {/* Fecha Grid container spacing={3} */}
-
-      {/* Botões de Navegação Circulares Flutuantes */}
-      <Box
-        sx={{
-          position: 'fixed',
-          bottom: '50%', // Centraliza verticalmente
-          left: '20px', // Distância da esquerda
-          transform: 'translateY(50%)', // Ajuste fino para centralização vertical
-          zIndex: 1000, // Para garantir que fiquem acima de outros elementos
-        }}
-      >
-        <Tooltip title="Anterior" placement="right">
-          <span> {/* Span para habilitar tooltip em botão desabilitado */}
-            <IconButton
-              aria-label="anterior"
-              onClick={handleBack}
-              disabled={activeStep === 0}
-              sx={{
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                },
-                '&.Mui-disabled': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                }
-              }}
-            >
-              <ArrowBackIosNew />
-            </IconButton>
-          </span>
-        </Tooltip>
-      </Box>
-
-      <Box
-        sx={{
-          position: 'fixed',
-          bottom: '50%', // Centraliza verticalmente
-          right: '20px', // Distância da direita
-          transform: 'translateY(50%)', // Ajuste fino para centralização vertical
-          zIndex: 1000, // Para garantir que fiquem acima de outros elementos
-        }}
-      >
-        <Tooltip title={activeStep === steps.length - 1 ? 'Finalizar' : 'Próximo'} placement="left">
-          <span> {/* Span para habilitar tooltip em botão desabilitado */}
-            <IconButton
-              aria-label="próximo"
-              onClick={handleNext}
-              disabled={activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)}
-              sx={{
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                },
-                '&.Mui-disabled': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                }
-              }}
-            >
-              <ArrowForwardIos />
-            </IconButton>
-          </span>
-        </Tooltip>
-      </Box>
-
-      {/* Modal de Configuração da Chave API DeepSeek */}
-      <DeepSeekAuthSetup
-        open={showDeepSeekAuthModal}
-        onClose={() => setShowDeepSeekAuthModal(false)}
-      />
-
-      {/* Modal de Configuração da Chave API Gemini */}
-      <GeminiAuthSetup
-        open={showGeminiAuthModal}
-        onClose={() => setShowGeminiAuthModal(false)}
-      />
-
-      {/* Modal de Configuração da API Google Drive */}
-      <GoogleDriveAuthModal
-        open={showGoogleDriveAuthModal}
-        onClose={() => setShowGoogleDriveAuthModal(false)}
-      />
-    </Container>
-    </ThemeProvider>
+          <main className="flex-1 p-6 overflow-auto">
+            {renderStepContent()}
+            <div className="flex justify-between items-center mt-8">
+              <Button onClick={handleBack} disabled={activeStep === 0} variant="outline">
+                <ChevronLeft className="w-4 h-4 mr-2" /> Anterior
+              </Button>
+              <div className="flex space-x-2">
+                {appSteps.map((_, index) => (
+                  <div key={index} className={`w-2 h-2 rounded-full transition-colors ${index === activeStep ? 'bg-purple-500' : index < activeStep ? 'bg-green-500' : 'bg-gray-300'}`}/>
+                ))}
+              </div>
+              <Button onClick={handleNext} disabled={activeStep === appSteps.length - 1}>
+                Próximo <ChevronRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 }
 
 export default App;
-

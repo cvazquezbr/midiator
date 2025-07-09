@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos globais adicionais ou overrides podem vir aqui, se necessário */
+body {
+  font-family: 'Inter', sans-serif; /* Exemplo de uma fonte base mais moderna, se desejado */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
