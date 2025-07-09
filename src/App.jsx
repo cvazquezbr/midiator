@@ -40,7 +40,7 @@ const appSteps = [
   { id: 4, title: 'Publicação', icon: Cloud, description: 'Upload e automação' }
 ];
 
-const mockData = [
+const mockData = [ // Usado para previews se dados reais não estiverem disponíveis
   { id: 1, titulo: 'Oferta Especial', subtitulo: 'Até 50% OFF', cta: 'Comprar Agora' },
   { id: 2, titulo: 'Novo Produto', subtitulo: 'Lançamento', cta: 'Saber Mais' },
   { id: 3, titulo: 'Black Friday', subtitulo: 'Descontos incríveis', cta: 'Ver Ofertas' }
@@ -298,7 +298,8 @@ function App() {
   // Refs
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
-  const loadStateInputRef = useRef(null);
+  const loadStateInputRef = useRef(null); // Para carregar estado salvo (funcionalidade futura)
+
 
   // Funções de manipulação de dados
   const handleCSVUpload = (event) => {
@@ -312,16 +313,14 @@ function App() {
             setCsvData(results.data);
             const headers = Object.keys(results.data[0] || {});
             setCsvHeaders(headers);
-            // Inicializar fieldPositions e fieldStyles para novos headers
-            const newPositions = {...fieldPositions};
-            const newStyles = {...fieldStyles};
+
+            const newPositions = {};
+            const newStyles = {};
             headers.forEach((header, index) => {
               if (!newPositions[header]) {
                 newPositions[header] = { x: 10 + (index % 3) * 30, y: 10 + Math.floor(index / 3) * 25, width: 25, height: 15, visible: true };
               }
               if (!newStyles[header]) {
-                // Supondo que COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER está acessível ou definido aqui
-                // Para simplificar, vamos usar um default básico por enquanto se não estiver
                 newStyles[header] = { fontFamily: 'Arial', fontSize: 24, color: '#000000', textAlign: 'left', verticalAlign: 'top', lineHeightMultiplier: 1.2 };
               }
             });
@@ -376,7 +375,7 @@ function App() {
                       csvData={csvData}
                       setCsvData={setCsvData}
                       csvHeaders={csvHeaders}
-                      setCsvHeaders={setCsvHeaders} // Passando setCsvHeaders
+                      setCsvHeaders={setCsvHeaders}
                       handleCSVUpload={handleCSVUpload}
                       fileInputRef={fileInputRef}
                     />;
@@ -408,7 +407,7 @@ function App() {
                       setGenerationNaming={setGenerationNaming}
                       generatedImagesData={generatedImagesData}
                     />;
-      case 4: return <PublicationStep /* generatedImagesData={generatedImagesData} mockData={mockData} */ />;
+      case 4: return <PublicationStep generatedImagesData={generatedImagesData} mockData={mockData} />;
       default: return <DataStep
                         csvData={csvData}
                         setCsvData={setCsvData}
@@ -446,12 +445,11 @@ function App() {
               >
                 {previewMode === 'single' ? <GridIcon className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </Button>
-              {/* Adicionar botão de Settings/Configurações globais se necessário no futuro */}
             </div>
           </div>
         </header>
 
-        <div className="flex pt-16"> {/* pt-16 para compensar altura do header fixo */}
+        <div className="flex pt-16">
           <Sidebar className="shadow-lg">
             <SidebarContent className="p-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-4">Etapas do Processo</h2>
