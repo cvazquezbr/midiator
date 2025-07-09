@@ -287,8 +287,7 @@ const handleTextareaBlur = () => {
           onContentChange(field, editedContent); // Commit content if changed
       }
       setIsEditing(false); // Exit editing mode
-      // Re-adding onSelect(field) to test if it resolves the blur save regression.
-      // This was previously removed to fix a selection issue, so it might need further review.
+      // Ensure parent knows about selection state on blur, as it might be relevant for UI updates (e.g., FormattingPanel).
       if (onSelect) {
         onSelect(field);
       }
@@ -360,13 +359,6 @@ const handleTextareaBlur = () => {
         document.body.style.touchAction = '';
       };
     }
-  // Reverting dependencies to the version from feat/field-editor-enhancements
-  // as a debugging step for the "Expected )" build error.
-  // The functions handleMouseMove, etc., are defined in the component scope
-  // and will be fresh on each render. If they don't rely on props/state
-  // that aren't already in this array, not listing them is okay,
-  // but using useCallback for them and then listing them would be better.
-  // For now, this revert is to isolate the build error.
   }, [isDragging, isResizing, dragStart, initialPosition, initialSize]);
 
   const wrapText = (text, maxWidth) => {
@@ -398,7 +390,6 @@ const handleTextareaBlur = () => {
   const lineHeight = (style.fontSize || 16) * 1.2;
   const handleSize = isMobile ? 16 : 8;
 
-  // Re-typing the return statement carefully to avoid hidden syntax errors.
   return (
     <Box
       ref={textBoxRef}
@@ -482,7 +473,7 @@ const handleTextareaBlur = () => {
             textShadow: style.textShadow
               ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}`
               : 'none',
-            WebkitTextStroke: style.textStroke // Corrected from 'WebkitTextStroke:' to 'WebkitTextStroke:'
+            WebkitTextStroke: style.textStroke
               ? `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}`
               : 'none',
           }}

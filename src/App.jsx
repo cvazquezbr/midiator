@@ -40,9 +40,6 @@ import {
 } from '@mui/icons-material';
 import Papa from 'papaparse';
 import ColorThief from 'colorthief';
-// import React, { useState, useRef, useEffect, useCallback } from 'react'; // Removido, pois já está no topo
-// import { useIsMobile } from './hooks/use-mobile'; // Removendo a duplicata - useIsMobile já é importado na linha 2
-// ... (outros imports)
 // Adicionar Menu e MenuItem para o menu de ações
 import { Menu, MenuItem } from '@mui/material';
 // Imports para Theming
@@ -117,7 +114,6 @@ function App() {
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
   const [generatedImagesData, setGeneratedImagesData] = useState([]); // Para armazenar dados de ImageGeneratorFrontendOnly
   const isMobile = useIsMobile(); // Usa o hook para determinar se é mobile
-  // const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(isMobile); // Removido ou ajustado
   const [anchorElMenu, setAnchorElMenu] = useState(null); // Para o menu de ações
   const [isHeaderHovered, setIsHeaderHovered] = useState(false); // Novo estado para hover no cabeçalho
   const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false); // Estado para o modal da chave DeepSeek
@@ -135,28 +131,6 @@ function App() {
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const loadStateInputRef = useRef(null); // Ref para o input de carregar estado
-
-  // Efeito para lidar com o scroll e colapsar o header - REMOVIDO
-  // useEffect(() => {
-  //   // Se for mobile, o header começa colapsado e não muda com o scroll
-  //   if (isMobile) {
-  //     // setIsHeaderCollapsed(true); // isHeaderCollapsed foi removido ou seu uso mudou
-  //     return;
-  //   }
-
-  //   const handleScroll = () => {
-  //     if (window.scrollY > 50) {
-  //       // setIsHeaderCollapsed(true);
-  //     } else {
-  //       // setIsHeaderCollapsed(false);
-  //     }
-  //   };
-
-  //   window.addEventListener('scroll', handleScroll);
-  //   return () => {
-  //     window.removeEventListener('scroll', handleScroll);
-  //   };
-  // }, [isMobile]);
 
   // Efeito para salvar a preferência do tema no localStorage
   useEffect(() => {
@@ -259,7 +233,6 @@ function App() {
             setFieldStyles(updatedFieldStyles);
             
             setActiveStep(1); // Avança para a etapa de Edição de Dados (índice 1)
-            // alert(`${newCsvData.length} registros carregados do CSV com sucesso! Clique em 'Próximo' para editar ou continuar.`); // Removido
           }
         },
         error: (error) => {
@@ -299,7 +272,6 @@ function App() {
         if (etapaPosicionarFormatarIndex !== -1) {
             setActiveStep(etapaPosicionarFormatarIndex);
         }
-        // alert("Imagem de fundo carregada com sucesso! Clique em 'Próximo' para continuar."); // Removido
       };
       reader.readAsDataURL(file);
     }
@@ -616,16 +588,9 @@ function App() {
     setFieldPositions(updatedFieldPositions);
     setFieldStyles(updatedFieldStyles);
 
-    // setShowGerenciadorRegistros(false); // Removido
-    // A lógica de avançar o passo foi removida daqui, será controlada pelos botões globais Next/Back
-    // e pela lógica em canProceedToStep.
-
     // Reconcile generatedImagesData with the new csvData (novosRegistros)
-    // console.log("App.jsx - handleDadosAlterados - ENTERED. novosRegistros count:", novosRegistros.length, "Current generatedImagesData count:", generatedImagesData.length); // LOG REMOVED
     setGeneratedImagesData(prevGeneratedImages => {
-      // console.log("App.jsx - handleDadosAlterados - INSIDE setGeneratedImagesData callback. prevGeneratedImages count:", prevGeneratedImages.length); // LOG REMOVED
       if (prevGeneratedImages.length !== novosRegistros.length) {
-        // console.log("App.jsx - handleDadosAlterados - Lengths DIFFER, rebuilding generatedImagesData. This will RESET custom props."); // LOG REMOVED
         const rebuiltGeneratedImages = novosRegistros.map((record, index) => ({
           index,
           record,
@@ -634,19 +599,13 @@ function App() {
           filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
           backgroundImage: backgroundImage, // Use global background
         }));
-        // console.log("App.jsx - handleDadosAlterados - REBUILT generatedImagesData:", JSON.stringify(rebuiltGeneratedImages, null, 2));
         return rebuiltGeneratedImages;
       } else {
-        // console.log("App.jsx - handleDadosAlterados - Lengths SAME, preserving custom props in generatedImagesData."); // LOG REMOVED
         const updatedGeneratedImages = prevGeneratedImages.map((oldImage, index) => ({
           ...oldImage,
           record: novosRegistros[index],
           index: index,
         }));
-        // To log a specific item being preserved, e.g., index 7 for thumbnail #8:
-        // if (updatedGeneratedImages.length > 7) {
-        //   console.log("App.jsx - handleDadosAlterados - Preserved generatedImagesData[7]:", JSON.stringify(updatedGeneratedImages[7], null, 2));
-        // }
         return updatedGeneratedImages;
       }
     });
@@ -943,11 +902,6 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
   // Removida a renderização condicional do GerenciadorRegistros aqui,
   // ele será renderizado como parte do conteúdo da etapa.
 
-  // Efeito temporário para logar csvData após atualização (para depuração da exclusão)
-  // useEffect(() => {
-  //   console.log('[App] Estado csvData atualizado (dentro do useEffect):', JSON.parse(JSON.stringify(csvData)));
-  // }, [csvData]);
-
   const headerExpandedHeight = '280px'; // Altura do header quando expandido
   const headerCollapsedHeight = '80px'; // Altura do header quando colapsado (para padding do container)
   const headerPaperHeightCollapsed = '60px'; // Altura do Paper do header quando colapsado
@@ -1038,10 +992,6 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               open={Boolean(anchorElMenu)}
               onClose={handleMenuClose}
             >
-              {/* <MenuItem onClick={handleOpenGerenciadorRegistros}> // Removido - Edição agora é uma etapa
-                <Edit sx={{ mr: 1 }} />
-                Editar Registros
-              </MenuItem> */}
               <MenuItem onClick={() => setActiveStep(1)}> {/* Atalho para ir para Etapa de Edição */}
                 <Edit sx={{ mr: 1 }} />
                 Ir para Edição de Dados
