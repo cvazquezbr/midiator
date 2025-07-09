@@ -4,44 +4,59 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.6); /* Mais escuro */
+    background-color: hsla(var(--foreground), 0.5); /* Similar ao black/50 do Shadcn Dialog */
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    padding: 15px; /* Espaço para evitar que o modal toque as bordas em telas pequenas */
+    padding: 1rem; /* Equivalente a p-4 do Tailwind */
 }
 
 .modalContent {
-    background: white;
-    padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    width: 100%; /* Ocupa largura disponível até max-width */
-    max-width: 550px; /* Um pouco maior */
+    background: hsl(var(--background)); /* Usar cor de fundo do tema */
+    color: hsl(var(--foreground)); /* Usar cor de texto do tema */
+    padding: 1.5rem; /* Equivalente a p-6 do Shadcn Dialog */
+    border-radius: var(--radius, 0.5rem); /* Equivalente a rounded-lg, com fallback */
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); /* Similar a shadow-lg */
+    width: 100%;
+    max-width: 550px; /* Mantido, mas Shadcn Dialog usa sm:max-w-lg (512px) */
     position: relative;
-    max-height: 90vh; /* Altura máxima */
-    overflow-y: auto; /* Scroll se o conteúdo for maior */
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modalOverlay.darkMode .modalContent {
+    /* As variáveis CSS já devem lidar com o modo escuro se bem configuradas */
 }
 
 .closeButton {
     position: absolute;
-    top: 15px; /* Ajuste */
-    right: 15px; /* Ajuste */
-    background: none;
+    top: 1rem; /* Shadcn usa top-4 */
+    right: 1rem; /* Shadcn usa right-4 */
+    background: transparent;
     border: none;
-    font-size: 1.8rem; /* Maior */
-    font-weight: bold;
-    color: #888;
+    font-size: 1.5rem; /* Shadcn usa um ícone SVG, então o tamanho é do ícone */
+    color: hsl(var(--muted-foreground));
     cursor: pointer;
     line-height: 1;
+    padding: 0.25rem; /* Para área de clique */
+    border-radius: var(--radius, 0.25rem); /* Para consistência no hover/focus */
+    opacity: 0.7;
+    transition: opacity 0.2s ease-in-out;
 }
-.modalOverlay.darkMode .closeButton {
-    color: #bbb;
-}
+
 .closeButton:hover {
-    color: #555;
+    opacity: 1;
+    color: hsl(var(--foreground));
 }
-.modalOverlay.darkMode .closeButton:hover {
-    color: #fff;
+
+.closeButton:focus {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    opacity: 1;
 }
+
+/* Não é mais necessário .modalOverlay.darkMode .closeButton e .modalOverlay.darkMode .closeButton:hover
+   se as variáveis CSS lidarem com o tema.
+*/
