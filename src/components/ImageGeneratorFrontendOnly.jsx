@@ -358,12 +358,20 @@ const ImageGeneratorFrontendOnly = ({
           canvas.toBlob(resolve, 'image/png', 1.0);
         });
 
+        // Try to find existing custom data for this index to preserve it
+        const existingImageDataItem = generatedImages.find(img => img.index === i);
+
         const imageData = {
           blob: blob,
           url: URL.createObjectURL(blob),
           record: record,
           index: i,
-          filename: `midiator_${String(i + 1).padStart(3, '0')}.png`
+          filename: `midiator_${String(i + 1).padStart(3, '0')}.png`,
+          // Preserve existing custom properties if they exist
+          customFieldPositions: existingImageDataItem?.customFieldPositions,
+          customFieldStyles: existingImageDataItem?.customFieldStyles,
+          // Use existing custom background if present, otherwise the global one used for this generation pass
+          backgroundImage: existingImageDataItem?.backgroundImage || backgroundImage
         };
 
         images.push(imageData);
