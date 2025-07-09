@@ -66,8 +66,8 @@ const GeneratedImageEditor = ({
   }, []); // setEditedRecord is stable
 
   useEffect(() => {
-    console.log("GeneratedImageEditor -- Received Props -- initialFieldPositions:", JSON.stringify(initialFieldPositions, null, 2));
-    console.log("GeneratedImageEditor -- Received Props -- initialFieldStyles:", JSON.stringify(initialFieldStyles, null, 2));
+    // console.log("GeneratedImageEditor -- Received Props -- initialFieldPositions:", JSON.stringify(initialFieldPositions, null, 2)); // LOG REMOVED
+    // console.log("GeneratedImageEditor -- Received Props -- initialFieldStyles:", JSON.stringify(initialFieldStyles, null, 2)); // LOG REMOVED
     // console.log("GeneratedImageEditor -- Received Props -- imageData:", JSON.stringify(imageData, null, 2)); // Optional is fine to keep commented
 
     if (imageData && initialFieldPositions && initialFieldStyles) {
