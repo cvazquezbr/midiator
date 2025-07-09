@@ -674,7 +674,9 @@ const ImageGeneratorFrontendOnly = ({
         record: record,
         index: index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        backgroundImage: currentBackgroundImage // Store the background image used for this specific image
+        backgroundImage: currentBackgroundImage, // Store the background image used for this specific image
+        customFieldPositions: positionsToUse,   // Preserve the positions used for this regeneration
+        customFieldStyles: stylesToUse          // Preserve the styles used for this regeneration
       };
 
       setGeneratedImages(prevImages => {
