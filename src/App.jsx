@@ -199,6 +199,7 @@ function App() {
   const [anchorElMenu, setAnchorElMenu] = useState(null);
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
+  const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false);
   const [showGeminiAuthModal, setShowGeminiAuthModal] = useState(false);
   const [showGoogleDriveAuthModal, setShowGoogleDriveAuthModal] = useState(false);
@@ -344,9 +345,8 @@ function App() {
     setIsDraggingOverCsv(false);
   };
 
-  // Função para upload da imagem de fundo
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
+  // Função para processar o arquivo de imagem de fundo
+  const parseImageFile = (file) => {
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -369,6 +369,38 @@ function App() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // Função para upload da imagem de fundo via clique
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    parseImageFile(file);
+  };
+
+  // Funções para drag and drop da imagem de fundo
+  const handleImageDrop = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOverImage(false);
+    const file = event.dataTransfer.files[0];
+    parseImageFile(file);
+  };
+
+  const handleImageDragOver = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleImageDragEnter = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOverImage(true);
+  };
+
+  const handleImageDragLeave = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOverImage(false);
   };
 
   const handleNext = () => {
@@ -1451,20 +1483,26 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
 
                 <Grid container spacing={4}>
                   <Grid item xs={12} lg={6}>
-                    <Card sx={{
-                      border: '2px dashed #d1d5db',
-                      backgroundColor: 'transparent',
-                      textAlign: 'center',
-                      p: 4,
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        borderColor: 'primary.main',
-                        backgroundColor: 'rgba(139, 92, 246, 0.05)'
-                      }
-                    }}>
+                    <Card
+                      sx={{
+                        border: isDraggingOverImage ? '2px dashed #8b5cf6' : '2px dashed #d1d5db',
+                        backgroundColor: isDraggingOverImage ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+                        textAlign: 'center',
+                        p: 4,
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          backgroundColor: 'rgba(139, 92, 246, 0.05)'
+                        }
+                      }}
+                      onDrop={handleImageDrop}
+                      onDragOver={handleImageDragOver}
+                      onDragEnter={handleImageDragEnter}
+                      onDragLeave={handleImageDragLeave}
+                    >
                       <ImageIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                      <Typography variant="h6" gutterBottom>Upload Background</Typography>
+                      <Typography variant="h6" gutterBottom>Arraste e solte ou clique para Upload de Imagem</Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                         PNG, JPG ou JPEG
                       </Typography>
