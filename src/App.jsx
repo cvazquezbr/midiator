@@ -1014,30 +1014,12 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             <Box sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 2,
+              gap: 1, // Adjusted gap to accommodate the wider logo text
               flexGrow: 1
             }}>
-              <Box sx={{
-                width: 32,
-                height: 32,
-                borderRadius: 2,
-                background: 'rgba(255,255,255,0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
-                  M
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
-                  Midiator
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                  Social Media Generator
-                </Typography>
-              </Box>
+              {/* New SVG Logo */}
+              <img src="/src/assets/logo.svg" alt="Midiator Logo" style={{ height: '40px' }} />
+              {/* Text is now part of the SVG, so no separate text elements needed here. */}
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
