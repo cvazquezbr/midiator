@@ -138,8 +138,9 @@ const RecordForm = ({
                 <p className={styles.infoText}>Como este é o primeiro registro, você definirá as colunas e seus valores iniciais.</p>
                 {novasColunas.map((nc, index) => (
                     <div key={index} className={styles.novaColunaGroup}>
-                        <div className={styles.formGroup}>
-                            <label htmlFor={`novaColunaNome-${index}`}>Nome da Coluna {index + 1}:</label>
+                        {/* Nome da Coluna Field */}
+                        <div className={styles.formGroup}> {/* This will now be label on top of input due to .novaColunaGroup .formGroup override */}
+                            <label htmlFor={`novaColunaNome-${index}`}>Nome Coluna {index + 1}</label>
                             <input
                                 type="text"
                                 id={`novaColunaNome-${index}`}
@@ -148,23 +149,35 @@ const RecordForm = ({
                                 placeholder="Ex: NomeCliente"
                             />
                         </div>
-                        <div className={styles.formGroup}>
-                            <label htmlFor={`novaColunaValor-${index}`}>Valor para Coluna {index + 1}:</label>
+                        {/* Valor da Coluna Field */}
+                        <div className={styles.formGroup}> {/* This will also be label on top of input */}
+                            <label htmlFor={`novaColunaValor-${index}`}>Valor Coluna {index + 1}</label>
                             <input
                                 type="text"
                                 id={`novaColunaValor-${index}`}
                                 value={nc.valor}
                                 onChange={(e) => handleNovaColunaChange(index, 'valor', e.target.value)}
+                                placeholder="Valor inicial"
                             />
                         </div>
+                        {/* Botão Remover */}
                         {novasColunas.length > 1 && (
-                             <button type="button" onClick={() => removerCampoNovaColuna(index)} className={`${styles.btn} ${styles.btnRemoveField}`} title="Remover esta coluna">-</button>
+                             <button
+                                type="button"
+                                onClick={() => removerCampoNovaColuna(index)}
+                                className={`${styles.btn} ${styles.btnRemoveField}`}
+                                title="Remover esta coluna"
+                             >
+                                -
+                             </button>
                         )}
+                         {/* If only one column, render a placeholder or nothing in the button's grid cell to maintain layout */}
+                         {novasColunas.length <= 1 && <div className={styles.removeButtonPlaceholder}></div>}
                     </div>
                 ))}
                 <button type="button" onClick={adicionarCampoNovaColuna} className={`${styles.btn} ${styles.btnAddField}`}>+ Adicionar Outra Coluna</button>
                 <div className={styles.formActions}>
-                    <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>Salvar Registro e Definir Colunas</button>
+                    <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>Salvar e Definir Colunas</button>
                     <button type="button" onClick={onCancelar} className={`${styles.btn} ${styles.btnSecondary}`}>Cancelar</button>
                 </div>
             </form>
