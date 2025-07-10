@@ -198,6 +198,7 @@ function App() {
   const isMobile = useIsMobile();
   const [anchorElMenu, setAnchorElMenu] = useState(null);
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
+  const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
   const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false);
   const [showGeminiAuthModal, setShowGeminiAuthModal] = useState(false);
   const [showGoogleDriveAuthModal, setShowGoogleDriveAuthModal] = useState(false);
@@ -245,8 +246,7 @@ function App() {
     }
   ];
   // Função para ler arquivo CSV
-  const handleCSVUpload = (event) => {
-    const file = event.target.files[0];
+  const parseCsvFile = (file) => {
     if (file) {
       Papa.parse(file, {
         header: true,
@@ -312,6 +312,36 @@ function App() {
         }
       });
     }
+  };
+
+  const handleCSVUpload = (event) => {
+    const file = event.target.files[0];
+    parseCsvFile(file);
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOverCsv(false);
+    const file = event.dataTransfer.files[0];
+    parseCsvFile(file);
+  };
+
+  const handleDragOver = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleDragEnter = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOverCsv(true);
+  };
+
+  const handleDragLeave = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOverCsv(false);
   };
 
   // Função para upload da imagem de fundo
@@ -1208,20 +1238,26 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                 {inputMethod === 'csv' && (
                   <Grid container spacing={3}>
                     <Grid item xs={12} md={6}>
-                      <Card sx={{
-                        border: '2px dashed #d1d5db',
-                        backgroundColor: 'transparent',
-                        textAlign: 'center',
-                        p: 4,
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          borderColor: 'primary.main',
-                          backgroundColor: 'rgba(139, 92, 246, 0.05)'
-                        }
-                      }}>
+                      <Card
+                        sx={{
+                          border: isDraggingOverCsv ? '2px dashed #8b5cf6' : '2px dashed #d1d5db',
+                          backgroundColor: isDraggingOverCsv ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+                          textAlign: 'center',
+                          p: 4,
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            borderColor: 'primary.main',
+                            backgroundColor: 'rgba(139, 92, 246, 0.05)'
+                          }
+                        }}
+                        onDrop={handleDrop}
+                        onDragOver={handleDragOver}
+                        onDragEnter={handleDragEnter}
+                        onDragLeave={handleDragLeave}
+                      >
                         <CloudUpload sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                        <Typography variant="h6" gutterBottom>Upload CSV</Typography>
+                        <Typography variant="h6" gutterBottom>Arraste e solte ou clique para Upload CSV</Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                           Carregue um arquivo CSV com seus dados
                         </Typography>
