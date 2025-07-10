@@ -217,6 +217,11 @@ function App() {
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
+    if (darkMode) {
+      document.documentElement.classList.add('dark-mode-active');
+    } else {
+      document.documentElement.classList.remove('dark-mode-active');
+    }
   }, [darkMode]);
 
   const steps = [
