@@ -487,8 +487,8 @@ const FieldPositioner = ({
             )}
 
             {/* Instruções */}
-            <Box sx={{ mt: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
-              <Typography variant="body2" color="textSecondary">
+            <Box sx={{ mt: 2, p: 2, borderRadius: 1 }}>
+              <Typography variant="body2" color="text.primary">
                 <strong>Instruções:</strong>
                 <br />
                 • Clique em um campo para selecioná-lo e editar suas propriedades
