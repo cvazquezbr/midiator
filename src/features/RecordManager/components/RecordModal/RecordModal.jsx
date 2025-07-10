@@ -31,10 +31,11 @@ const RecordModal = ({
 
     const colunasParaFormulario = isPrimeiroRegistro ? [] : colunasExistentes;
     const overlayClasses = `${styles.modalOverlay} ${darkMode ? styles.darkMode : ''}`;
+    const contentClasses = `${styles.modalContent} ${darkMode ? styles.modalContentDarkMode : ''}`;
 
     return (
         <div className={overlayClasses} onClick={onFechar}>
-            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={contentClasses} onClick={(e) => e.stopPropagation()}>
                 <button type="button" onClick={onFechar} className={styles.closeButton} title="Fechar">&times;</button>
                 <h2>{tituloModal}</h2>
                 <RecordForm
