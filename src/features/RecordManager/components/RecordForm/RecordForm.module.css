@@ -38,33 +38,32 @@
 }
 
 .formGroup {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem; /* Espaço entre label e input (Tailwind gap-2) */
+    display: grid;
+    grid-template-columns: minmax(120px, auto) 1fr; /* Label column and Input column */
+    gap: 0.75rem 1rem; /* Row gap and Column gap */
+    align-items: center; /* Vertically align label and input */
 }
 
 .formGroup label {
-    /* font-weight: bold; // Shadcn label é font-medium */
-    font-size: 0.875rem; /* text-sm */
-    font-weight: 500; /* font-medium */
+    font-size: 0.9rem; /* Increased font size for legibility */
+    font-weight: 600; /* Slightly bolder */
     color: hsl(var(--foreground));
-    /* margin-bottom: 5px; // Usar gap no .formGroup */
+    justify-self: end; /* Align label text to the right */
+    padding-right: 0.5rem; /* Space between label and input area */
 }
-/* .darkMode .formGroup label não é mais necessário */
-
 
 .formGroup input[type="text"] {
-    padding: 0.5rem 0.75rem; /* h-9 px-3 py-2 (py-1 em input.jsx, mas height é 9) */
+    padding: 0.6rem 0.8rem; /* Slightly increased padding */
     border: 1px solid hsl(var(--input));
-    border-radius: var(--radius, 0.375rem); /* rounded-md */
-    font-size: 0.875rem; /* text-sm */
+    border-radius: var(--radius, 0.375rem);
+    font-size: 0.9rem; /* Increased font size for legibility */
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
     transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    height: 2.25rem; /* h-9 */
-    width: 100%;
+    height: auto; /* Allow height to be determined by padding and font-size */
+    min-height: 2.4rem; /* Ensure a minimum height */
+    width: 100%; /* Take full width of the grid cell */
 }
-/* .darkMode .formGroup input[type="text"] não é mais necessário */
 
 .formGroup input[type="text"]::placeholder {
     color: hsl(var(--muted-foreground));
@@ -148,51 +147,56 @@
 
 
 .novaColunaGroup {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem; /* Espaço entre nome da coluna, valor e botão de remover */
-    align-items: flex-end;
+    display: grid; /* Changed to grid */
+    grid-template-columns: 1fr 1fr auto; /* Nome Coluna, Valor Coluna, Botão Remover */
+    gap: 0.75rem 1rem; /* Row gap and Column gap */
+    align-items: start; /* Align items to the start of their grid area */
     padding-bottom: 1rem;
     margin-bottom: 0.75rem;
     border-bottom: 1px dashed hsl(var(--border));
 }
-/* .darkMode .novaColunaGroup não é mais necessário */
 
 .novaColunaGroup:last-of-type {
     border-bottom: none;
     margin-bottom: 0;
 }
 
-
+/* Each field within novaColunaGroup will be a standard formGroup */
 .novaColunaGroup .formGroup {
-    flex: 1;
-    min-width: 150px;
+    grid-template-columns: 1fr; /* Label on top of input */
+    gap: 0.5rem; /* Reduced gap for tighter packing */
+}
+.novaColunaGroup .formGroup label {
+    justify-self: start; /* Align label to the left */
+    padding-right: 0;
+}
+
+.removeButtonPlaceholder {
+    width: 1px; /* Just to occupy space in the grid cell if needed */
 }
 
 .btnAddField, .btnRemoveField {
     /* Reutilizar estilos .btn e adicionar especificidades */
     padding: 0.5rem 0.75rem; /* size-sm like */
     font-size: 0.875rem; /* text-sm */
-    margin-left: 0.25rem;
-    height: 2rem; /* h-8 */
+    height: 2.25rem; /* Match other buttons h-9 */
     line-height: 1.25rem;
 }
 .btnAddField {
-    /* background-color: #28a745; Similar ao success, mas Shadcn não tem por padrão */
-    background-color: hsl(var(--primary)); /* Usar primário por enquanto */
+    background-color: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
-    align-self: flex-start;
     margin-top: 0.5rem;
     margin-bottom: 0.5rem;
+    grid-column: 1 / -1; /* Span all columns if it's a direct child of a grid */
 }
 .btnAddField:hover {
     background-color: hsla(var(--primary), 0.9);
 }
-/* .darkMode .btnAddField não é mais necessário */
 
 .btnRemoveField {
     background-color: hsl(var(--destructive));
     color: hsl(var(--destructive-foreground));
+    align-self: center; /* Vertically center in its grid cell */
 }
 .btnRemoveField:hover {
     background-color: hsla(var(--destructive), 0.9);
