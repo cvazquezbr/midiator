@@ -1018,7 +1018,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               flexGrow: 1
             }}>
               {/* New SVG Logo */}
-              <img src="/src/assets/logo.svg" alt="Midiator Logo" style={{ height: '40px' }} />
+              <img src="/logo.svg" alt="Midiator Logo" style={{ height: '40px' }} />
               {/* Text is now part of the SVG, so no separate text elements needed here. */}
             </Box>
 
