@@ -13,8 +13,9 @@
 }
 
 .modalContent {
-    background: hsl(var(--background)); /* Usar cor de fundo do tema */
-    color: hsl(var(--foreground)); /* Usar cor de texto do tema */
+    /* background: hsl(var(--background)); */ /* Temporarily overridden for testing */
+    background-color: #ffffff; /* Default light background */
+    color: hsl(var(--foreground));
     padding: 1.5rem; /* Equivalente a p-6 do Shadcn Dialog */
     border-radius: var(--radius, 0.5rem); /* Equivalente a rounded-lg, com fallback */
     border: 1px solid hsl(var(--border));
@@ -26,8 +27,16 @@
     overflow-y: auto;
 }
 
+.modalContentDarkMode {
+    background-color: #1e293b; /* Dark background from App.jsx darkTheme.palette.background.paper */
+    color: hsl(var(--foreground)); /* Ensure foreground is also themed if needed, though this should be handled by .darkMode on overlay */
+}
+
+/* This rule might not be needed if .modalContentDarkMode handles the text color */
 .modalOverlay.darkMode .modalContent {
     /* As variáveis CSS já devem lidar com o modo escuro se bem configuradas */
+    /* Forcing text color if needed, but should be inherited or set by .modalContentDarkMode */
+    /* color: hsl(0 0% 98%); */
 }
 
 .closeButton {
