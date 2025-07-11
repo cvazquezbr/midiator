@@ -28,6 +28,23 @@ const TextBox = ({
   const textBoxRef = useRef(null);
   const textareaRef = useRef(null); // Ref for the textarea
 
+  // Helper function to get bounding box of a rotated element
+  const getRotatedBoundingBox = (widthPercent, heightPercent, rotationDegrees) => {
+    const width = (widthPercent / 100) * containerSize.width;
+    const height = (heightPercent / 100) * containerSize.height;
+    const radians = rotationDegrees * (Math.PI / 180);
+    const sin = Math.abs(Math.sin(radians));
+    const cos = Math.abs(Math.cos(radians));
+
+    const newWidth = height * sin + width * cos;
+    const newHeight = height * cos + width * sin;
+
+    return {
+      width: (newWidth / containerSize.width) * 100,
+      height: (newHeight / containerSize.height) * 100,
+    };
+  };
+
   // Update editedContent if the external content prop changes while not editing
   useEffect(() => {
     if (!isEditing) {
@@ -155,9 +172,10 @@ const TextBox = ({
     const deltaYPercent = (deltaY / containerSize.height) * 100;
 
     if (isDragging) {
-      const newX = Math.max(0, Math.min(100 - position.width, initialPosition.x + deltaXPercent));
-      const newY = Math.max(0, Math.min(100 - position.height, initialPosition.y + deltaYPercent));
-      onPositionChange(field, { x: newX, y: newY });
+      const rotatedBoundingBox = getRotatedBoundingBox(position.width, position.height, rotation || 0);
+      const newX = Math.max(0, Math.min(100 - rotatedBoundingBox.width, initialPosition.x + deltaXPercent));
+      const newY = Math.max(0, Math.min(100 - rotatedBoundingBox.height, initialPosition.y + deltaYPercent));
+      onPositionChange(field, { ...position, x: newX, y: newY }); // Preserve rotation
     } else if (isResizing && resizeHandle) {
       let newX = initialPosition.x;
       let newY = initialPosition.y;
@@ -206,7 +224,40 @@ const TextBox = ({
       newX = Math.max(0, Math.min(100 - newWidth, newX));
       newY = Math.max(0, Math.min(100 - newHeight, newY));
 
-      onPositionChange(field, { x: newX, y: newY });
+      newX = Math.max(0, Math.min(100 - newWidth, newX)); // Basic constraint for position
+      newY = Math.max(0, Math.min(100 - newHeight, newY)); // Basic constraint for position
+
+      // Basic constraint for position before rotation consideration
+      let constrainedX = Math.max(0, Math.min(100 - newWidth, newX));
+      let constrainedY = Math.max(0, Math.min(100 - newHeight, newY));
+
+      // Ensure minimum dimensions
+      newWidth = Math.max(5, newWidth);
+      newHeight = Math.max(3, newHeight);
+
+      // Test if the new dimensions and position would cause the rotated bounding box to exceed container limits.
+      const testBoundingBox = getRotatedBoundingBox(newWidth, newHeight, currentRotation);
+
+      // Adjust position based on the bounding box, ensuring the top-left of the bounding box stays within bounds.
+      // This is a simplified interpretation: we ensure the bounding box itself doesn't start off-screen.
+      constrainedX = Math.max(0, Math.min(100 - testBoundingBox.width, constrainedX));
+      constrainedY = Math.max(0, Math.min(100 - testBoundingBox.height, constrainedY));
+
+      // If, after position adjustment, the bounding box STILL overflows (meaning size is the issue)
+      // then we prevent the update for this step.
+      const finalBoundingBox = getRotatedBoundingBox(newWidth, newHeight, currentRotation);
+      if (
+        constrainedX + finalBoundingBox.width > 100.5 || // Using 100.5 to allow for minor floating point issues
+        constrainedY + finalBoundingBox.height > 100.5 ||
+        constrainedX < -0.5 || // Check negative with tolerance
+        constrainedY < -0.5
+      ) {
+        // If new size/pos would overflow even after basic constraint, do not apply this delta.
+        // This makes the resize "stick" when it hits a boundary it can't satisfy.
+        return;
+      }
+
+      onPositionChange(field, { x: constrainedX, y: constrainedY, rotation: currentRotation });
       onSizeChange(field, { width: newWidth, height: newHeight });
     }
   };
@@ -238,10 +289,13 @@ const TextBox = ({
     const deltaYPercent = (deltaY / containerSize.height) * 100;
 
     if (isDragging) {
-      const newX = Math.max(0, Math.min(100 - position.width, initialPosition.x + deltaXPercent));
-      const newY = Math.max(0, Math.min(100 - position.height, initialPosition.y + deltaYPercent));
-      onPositionChange(field, { x: newX, y: newY });
+      const rotatedBoundingBox = getRotatedBoundingBox(position.width, position.height, rotation || 0);
+      const newX = Math.max(0, Math.min(100 - rotatedBoundingBox.width, initialPosition.x + deltaXPercent));
+      const newY = Math.max(0, Math.min(100 - rotatedBoundingBox.height, initialPosition.y + deltaYPercent));
+      onPositionChange(field, { ...position, x: newX, y: newY }); // Preserve rotation
     } else if (isResizing && resizeHandle) {
+      // Store current rotation to pass it along, as onPositionChange and onSizeChange might not preserve it
+      const currentRotation = position.rotation || 0;
       let newX = initialPosition.x;
       let newY = initialPosition.y;
       let newWidth = initialSize.width;
@@ -288,6 +342,21 @@ const TextBox = ({
       newHeight = Math.max(3, Math.min(100 - newY, newHeight));
       newX = Math.max(0, Math.min(100 - newWidth, newX));
       newY = Math.max(0, Math.min(100 - newHeight, newY));
+
+      // Recalculate bounding box for the new size and position before applying
+      const finalRotatedBox = getRotatedBoundingBox(newWidth, newHeight, currentRotation);
+
+      // Adjust position if the rotated box overflows
+      if (newX + finalRotatedBox.width > 100) {
+        newX = 100 - finalRotatedBox.width;
+      }
+      if (newY + finalRotatedBox.height > 100) {
+        newY = 100 - finalRotatedBox.height;
+      }
+      // Ensure position is not negative after adjustment
+      newX = Math.max(0, newX);
+      newY = Math.max(0, newY);
+
 
       onPositionChange(field, { x: newX, y: newY });
       onSizeChange(field, { width: newWidth, height: newHeight });
