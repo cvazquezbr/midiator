@@ -11,48 +11,49 @@ const TextBox = ({
   onPositionChange,
   onSizeChange,
   containerSize,
-  onContentChange, // New prop for content updates
-  rotation // New prop for rotation
+  onContentChange,
+  rotation
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
-  const [isRotating, setIsRotating] = useState(false); // State for rotation
-  const [isEditing, setIsEditing] = useState(false); // State for edit mode
-  const [editedContent, setEditedContent] = useState(content); // State for temporary edited content
+  const [isRotating, setIsRotating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState(content);
   const [resizeHandle, setResizeHandle] = useState(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [initialPosition, setInitialPosition] = useState({ x: 0, y: 0 });
   const [initialSize, setInitialSize] = useState({ width: 0, height: 0 });
-  const [initialRotation, setInitialRotation] = useState(0); // State for initial rotation
+  const [initialRotation, setInitialRotation] = useState(0);
 
   const textBoxRef = useRef(null);
-  const textareaRef = useRef(null); // Ref for the textarea
+  const textareaRef = useRef(null);
 
-  // Helper function to get bounding box of a rotated element
   const getRotatedBoundingBox = (widthPercent, heightPercent, rotationDegrees) => {
-    const width = (widthPercent / 100) * containerSize.width;
-    const height = (heightPercent / 100) * containerSize.height;
+    // Ensure containerSize has valid dimensions before using them
+    const cWidth = containerSize.width || 1; // Fallback to 1 to avoid NaN/Infinity if not ready
+    const cHeight = containerSize.height || 1; // Fallback to 1 to avoid NaN/Infinity if not ready
+
+    const width = (widthPercent / 100) * cWidth;
+    const height = (heightPercent / 100) * cHeight;
     const radians = rotationDegrees * (Math.PI / 180);
     const sin = Math.abs(Math.sin(radians));
     const cos = Math.abs(Math.cos(radians));
 
-    const newWidth = height * sin + width * cos;
-    const newHeight = height * cos + width * sin;
+    const newWidth = width * cos + height * sin;
+    const newHeight = width * sin + height * cos;
 
     return {
-      width: (newWidth / containerSize.width) * 100,
-      height: (newHeight / containerSize.height) * 100,
+      width: (newWidth / cWidth) * 100,
+      height: (newHeight / cHeight) * 100,
     };
   };
 
-  // Update editedContent if the external content prop changes while not editing
   useEffect(() => {
     if (!isEditing) {
       setEditedContent(content);
     }
   }, [content, isEditing]);
 
-  // Effect to focus and select text when entering edit mode
   useEffect(() => {
     if (isEditing && isSelected && textareaRef.current) {
       textareaRef.current.focus();
@@ -61,13 +62,12 @@ const TextBox = ({
   }, [isEditing, isSelected]);
 
   const pixelPosition = {
-    x: (position.x / 100) * containerSize.width,
-    y: (position.y / 100) * containerSize.height,
-    width: (position.width / 100) * containerSize.width,
-    height: (position.height / 100) * containerSize.height
+    x: (position.x / 100) * (containerSize.width || 1),
+    y: (position.y / 100) * (containerSize.height || 1),
+    width: (position.width / 100) * (containerSize.width || 1),
+    height: (position.height / 100) * (containerSize.height || 1)
   };
 
-  // Detectar se é dispositivo móvel
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
                    ('ontouchstart' in window) || 
                    (navigator.maxTouchPoints > 0);
@@ -83,13 +83,10 @@ const TextBox = ({
     { name: 'w', cursor: 'w-resize', x: 0, y: 0.5 }
   ];
 
-  // Original handleMouseDown and handleTouchStart are kept for internal logic
   const doHandleMouseDown = (e, type, handle = null) => {
     e.preventDefault();
     e.stopPropagation();
-
     onSelect(field);
-
     setDragStart({ x: e.clientX, y: e.clientY });
 
     if (type === 'drag') {
@@ -103,11 +100,9 @@ const TextBox = ({
     } else if (type === 'rotate') {
       setIsRotating(true);
       setInitialRotation(rotation || 0);
-      // Store the center of the TextBox for rotation calculation
       const rect = textBoxRef.current.getBoundingClientRect();
       setDragStart({
-        x: e.clientX,
-        y: e.clientY,
+        x: e.clientX, y: e.clientY,
         centerX: rect.left + rect.width / 2,
         centerY: rect.top + rect.height / 2
       });
@@ -115,16 +110,11 @@ const TextBox = ({
   };
 
   const handleTouchStart = (e, type, handle = null) => {
-    // Prevenir comportamento padrão IMEDIATAMENTE
     e.preventDefault();
     e.stopPropagation();
-
-    // Desabilitar scroll do body durante a interação
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
-
     onSelect(field);
-
     const touch = e.touches[0];
     setDragStart({ x: touch.clientX, y: touch.clientY });
 
@@ -141,8 +131,7 @@ const TextBox = ({
       setInitialRotation(rotation || 0);
       const rect = textBoxRef.current.getBoundingClientRect();
       setDragStart({
-        x: touch.clientX,
-        y: touch.clientY,
+        x: touch.clientX, y: touch.clientY,
         centerX: rect.left + rect.width / 2,
         centerY: rect.top + rect.height / 2
       });
@@ -159,7 +148,6 @@ const TextBox = ({
       const angle = Math.atan2(currentY - dragStart.centerY, currentX - dragStart.centerX) * (180 / Math.PI);
       const startAngle = Math.atan2(dragStart.y - dragStart.centerY, dragStart.x - dragStart.centerX) * (180 / Math.PI);
       let newRotation = initialRotation + (angle - startAngle);
-      // Normalize rotation to be between 0 and 360
       newRotation = (newRotation % 360 + 360) % 360;
       onPositionChange(field, { ...position, rotation: newRotation });
       return;
@@ -167,39 +155,36 @@ const TextBox = ({
 
     const deltaX = currentX - dragStart.x;
     const deltaY = currentY - dragStart.y;
-
-    const deltaXPercent = (deltaX / containerSize.width) * 100;
-    const deltaYPercent = (deltaY / containerSize.height) * 100;
+    const deltaXPercent = (deltaX / (containerSize.width || 1)) * 100;
+    const deltaYPercent = (deltaY / (containerSize.height || 1)) * 100;
 
     if (isDragging) {
-      const rotatedBoundingBox = getRotatedBoundingBox(position.width, position.height, position.rotation || 0);
-      let newDragX = initialPosition.x + deltaXPercent;
-      let newDragY = initialPosition.y + deltaYPercent;
+      const currentRotation = position.rotation || 0;
+      const rotatedBoundingBox = getRotatedBoundingBox(position.width, position.height, currentRotation);
+      const initialCenterX = initialPosition.x + position.width / 2;
+      const initialCenterY = initialPosition.y + position.height / 2;
+      let newCenterX = initialCenterX + deltaXPercent;
+      let newCenterY = initialCenterY + deltaYPercent;
 
-      if (field === "DEBUG") { // Log only for a specific field for less noise, change "DEBUG" to a real field name for testing
-        console.log(
-          `Dragging Field: ${field}\n` +
-          `containerSize H: ${containerSize.height.toFixed(2)}\n` +
-          `position H: ${position.height.toFixed(2)}%, rotation: ${(position.rotation || 0).toFixed(0)}deg\n` +
-          `rotatedBoundingBox H (raw): ${(rotatedBoundingBox.height * containerSize.height / 100).toFixed(2)}px\n` +
-          `rotatedBoundingBox H (%): ${rotatedBoundingBox.height.toFixed(2)}%\n` +
-          `initialDragY: ${initialPosition.y.toFixed(2)}%, deltaYPercent: ${deltaYPercent.toFixed(2)}%\n` +
-          `Pre-clamp newDragY: ${(initialPosition.y + deltaYPercent).toFixed(2)}%\n` +
-          `Clamp Max Y: ${(100 - rotatedBoundingBox.height).toFixed(2)}%\n` +
-          `Final newDragY: ${Math.max(0, Math.min(100 - rotatedBoundingBox.height, newDragY)).toFixed(2)}%`
-        );
-      }
+      const minCenterX = rotatedBoundingBox.width / 2;
+      const maxCenterX = 100 - rotatedBoundingBox.width / 2;
+      newCenterX = Math.max(minCenterX, Math.min(maxCenterX, newCenterX));
 
-      newDragX = Math.max(0, Math.min(100 - rotatedBoundingBox.width, newDragX));
-      newDragY = Math.max(0, Math.min(100 - rotatedBoundingBox.height, newDragY));
-      onPositionChange(field, { ...position, x: newDragX, y: newDragY });
+      const minCenterY = rotatedBoundingBox.height / 2;
+      const maxCenterY = 100 - rotatedBoundingBox.height / 2;
+      newCenterY = Math.max(minCenterY, Math.min(maxCenterY, newCenterY));
+
+      const finalNewDragX = newCenterX - position.width / 2;
+      const finalNewDragY = newCenterY - position.height / 2;
+
+      onPositionChange(field, { ...position, x: finalNewDragX, y: finalNewDragY });
+
     } else if (isResizing && resizeHandle) {
-      // Correctly initialize newX, newY, newWidth, newHeight for mouse resizing logic
       let newX = initialPosition.x;
       let newY = initialPosition.y;
       let newWidth = initialSize.width;
       let newHeight = initialSize.height;
-      const currentFieldRotation = position.rotation || 0; // Get current rotation from prop
+      const currentFieldRotation = position.rotation || 0;
 
       switch (resizeHandle.name) {
         case 'nw': newX += deltaXPercent; newY += deltaYPercent; newWidth -= deltaXPercent; newHeight -= deltaYPercent; break;
@@ -212,26 +197,21 @@ const TextBox = ({
         case 'w': newX += deltaXPercent; newWidth -= deltaXPercent; break;
       }
 
-      // Ensure minimum dimensions
       newWidth = Math.max(5, newWidth);
       newHeight = Math.max(3, newHeight);
 
-      // Basic sanity check for un-rotated dimensions and positions
       if (newX + newWidth > 100) {
         if (resizeHandle.name.includes('w')) { newX = 100 - newWidth; } else { newWidth = 100 - newX; }
       }
       if (newY + newHeight > 100) {
         if (resizeHandle.name.includes('n')) { newY = 100 - newHeight; } else { newHeight = 100 - newY; }
       }
-      newX = Math.max(0, newX); // Ensure X is not negative
-      newY = Math.max(0, newY); // Ensure Y is not negative
-      // Re-ensure min dimensions after potential adjustments if X/Y were clamped to 0
+      newX = Math.max(0, newX);
+      newY = Math.max(0, newY);
       newWidth = Math.max(5, newWidth);
       newHeight = Math.max(3, newHeight);
-      // And ensure width/height don't cause overflow from a 0,0 origin if X/Y were clamped
       if (newX === 0) newWidth = Math.min(newWidth, 100);
       if (newY === 0) newHeight = Math.min(newHeight, 100);
-
 
       const rotatedBoundingBox = getRotatedBoundingBox(newWidth, newHeight, currentFieldRotation);
       let finalPosX = newX;
@@ -259,7 +239,6 @@ const TextBox = ({
   const handleTouchMove = (e) => {
     if (!isDragging && !isResizing && !isRotating) return;
     
-    // Prevenir scroll SEMPRE durante drag/resize/rotate
     e.preventDefault();
     e.stopPropagation();
 
@@ -278,172 +257,142 @@ const TextBox = ({
 
     const deltaX = currentX - dragStart.x;
     const deltaY = currentY - dragStart.y;
-
-    const deltaXPercent = (deltaX / containerSize.width) * 100;
-    const deltaYPercent = (deltaY / containerSize.height) * 100;
+    const deltaXPercent = (deltaX / (containerSize.width || 1)) * 100;
+    const deltaYPercent = (deltaY / (containerSize.height || 1)) * 100;
 
     if (isDragging) {
-      const rotatedBoundingBox = getRotatedBoundingBox(position.width, position.height, rotation || 0);
-      const newX = Math.max(0, Math.min(100 - rotatedBoundingBox.width, initialPosition.x + deltaXPercent));
-      const newY = Math.max(0, Math.min(100 - rotatedBoundingBox.height, initialPosition.y + deltaYPercent));
-      onPositionChange(field, { ...position, x: newX, y: newY }); // Preserve rotation
+      const currentFieldRotation = position.rotation || 0;
+      const rotatedBoundingBox = getRotatedBoundingBox(position.width, position.height, currentFieldRotation);
+      const initialCenterX = initialPosition.x + position.width / 2;
+      const initialCenterY = initialPosition.y + position.height / 2;
+      let newCenterX = initialCenterX + deltaXPercent;
+      let newCenterY = initialCenterY + deltaYPercent;
+
+      const minCenterX = rotatedBoundingBox.width / 2;
+      const maxCenterX = 100 - rotatedBoundingBox.width / 2;
+      newCenterX = Math.max(minCenterX, Math.min(maxCenterX, newCenterX));
+
+      const minCenterY = rotatedBoundingBox.height / 2;
+      const maxCenterY = 100 - rotatedBoundingBox.height / 2;
+      newCenterY = Math.max(minCenterY, Math.min(maxCenterY, newCenterY));
+
+      const finalNewDragX = newCenterX - position.width / 2;
+      const finalNewDragY = newCenterY - position.height / 2;
+
+      onPositionChange(field, { ...position, x: finalNewDragX, y: finalNewDragY });
+
     } else if (isResizing && resizeHandle) {
-      // Store current rotation to pass it along, as onPositionChange and onSizeChange might not preserve it
-      const currentRotation = position.rotation || 0;
+      const currentFieldRotation = position.rotation || 0;
       let newX = initialPosition.x;
       let newY = initialPosition.y;
       let newWidth = initialSize.width;
       let newHeight = initialSize.height;
 
       switch (resizeHandle.name) {
-        case 'nw':
-          newX += deltaXPercent;
-          newY += deltaYPercent;
-          newWidth -= deltaXPercent;
-          newHeight -= deltaYPercent;
-          break;
-        case 'n':
-          newY += deltaYPercent;
-          newHeight -= deltaYPercent;
-          break;
-        case 'ne':
-          newY += deltaYPercent;
-          newWidth += deltaXPercent;
-          newHeight -= deltaYPercent;
-          break;
-        case 'e':
-          newWidth += deltaXPercent;
-          break;
-        case 'se':
-          newWidth += deltaXPercent;
-          newHeight += deltaYPercent;
-          break;
-        case 's':
-          newHeight += deltaYPercent;
-          break;
-        case 'sw':
-          newX += deltaXPercent;
-          newWidth -= deltaXPercent;
-          newHeight += deltaYPercent;
-          break;
-        case 'w':
-          newX += deltaXPercent;
-          newWidth -= deltaXPercent;
-          break;
+        case 'nw': newX += deltaXPercent; newY += deltaYPercent; newWidth -= deltaXPercent; newHeight -= deltaYPercent; break;
+        case 'n': newY += deltaYPercent; newHeight -= deltaYPercent; break;
+        case 'ne': newY += deltaYPercent; newWidth += deltaXPercent; newHeight -= deltaYPercent; break;
+        case 'e': newWidth += deltaXPercent; break;
+        case 'se': newWidth += deltaXPercent; newHeight += deltaYPercent; break;
+        case 's': newHeight += deltaYPercent; break;
+        case 'sw': newX += deltaXPercent; newWidth -= deltaXPercent; newHeight += deltaYPercent; break;
+        case 'w': newX += deltaXPercent; newWidth -= deltaXPercent; break;
       }
 
-      newWidth = Math.max(5, Math.min(100 - newX, newWidth));
-      newHeight = Math.max(3, Math.min(100 - newY, newHeight));
-      newX = Math.max(0, Math.min(100 - newWidth, newX));
-      newY = Math.max(0, Math.min(100 - newHeight, newY));
+      newWidth = Math.max(5, newWidth);
+      newHeight = Math.max(3, newHeight);
 
-      // Recalculate bounding box for the new size and position before applying
-      const finalRotatedBox = getRotatedBoundingBox(newWidth, newHeight, currentRotation);
-
-      // Adjust position if the rotated box overflows
-      if (newX + finalRotatedBox.width > 100) {
-        newX = 100 - finalRotatedBox.width;
+      if (newX + newWidth > 100) {
+        if (resizeHandle.name.includes('w')) { newX = 100 - newWidth; } else { newWidth = 100 - newX; }
       }
-      if (newY + finalRotatedBox.height > 100) {
-        newY = 100 - finalRotatedBox.height;
+      if (newY + newHeight > 100) {
+        if (resizeHandle.name.includes('n')) { newY = 100 - newHeight; } else { newHeight = 100 - newY; }
       }
-      // Ensure position is not negative after adjustment
       newX = Math.max(0, newX);
       newY = Math.max(0, newY);
+      newWidth = Math.max(5, newWidth);
+      newHeight = Math.max(3, newHeight);
+      if (newX === 0) newWidth = Math.min(newWidth, 100);
+      if (newY === 0) newHeight = Math.min(newHeight, 100);
 
+      const rotatedBoundingBox = getRotatedBoundingBox(newWidth, newHeight, currentFieldRotation);
+      let finalPosX = newX;
+      let finalPosY = newY;
 
-      onPositionChange(field, { x: newX, y: newY });
+      if (finalPosX + rotatedBoundingBox.width > 100) { finalPosX = 100 - rotatedBoundingBox.width; }
+      if (finalPosY + rotatedBoundingBox.height > 100) { finalPosY = 100 - rotatedBoundingBox.height; }
+      finalPosX = Math.max(0, finalPosX);
+      finalPosY = Math.max(0, finalPosY);
+
+      if (rotatedBoundingBox.width > 100.5 || rotatedBoundingBox.height > 100.5) {
+         if (finalPosX < -0.5 || finalPosY < -0.5 ) { return; }
+         if (finalPosX + rotatedBoundingBox.width > 100.5 || finalPosY + rotatedBoundingBox.height > 100.5) { return; }
+      }
+
+      onPositionChange(field, { x: finalPosX, y: finalPosY, rotation: currentFieldRotation });
       onSizeChange(field, { width: newWidth, height: newHeight });
     }
   };
 
   const handleMouseUp = () => {
-    setIsDragging(false);
-    setIsResizing(false);
-    setIsRotating(false); // Reset rotation state
+    setIsDragging(false); setIsResizing(false); setIsRotating(false);
     setResizeHandle(null);
   };
 
   const handleTouchEnd = () => {
-    // Restaurar scroll do body
     document.body.style.overflow = '';
     document.body.style.touchAction = '';
-    
-    setIsDragging(false);
-    setIsResizing(false);
-    setIsRotating(false); // Reset rotation state
+    setIsDragging(false); setIsResizing(false); setIsRotating(false);
     setResizeHandle(null);
   };
 
   const handleDoubleClick = () => {
-    if (isSelected) {
-      setIsEditing(true);
-      // Focus is now handled by the useEffect hook
-    }
+    if (isSelected) setIsEditing(true);
   };
 
-  const handleTextareaChange = (e) => {
-    setEditedContent(e.target.value);
-  };
+  const handleTextareaChange = (e) => setEditedContent(e.target.value);
 
   const commitChanges = () => {
-    // Only call onContentChange if the content has actually changed
     if (isEditing && onContentChange && content !== editedContent) {
       onContentChange(field, editedContent);
     }
-    setIsEditing(false); // Ensure isEditing is set to false after committing
-                         // This should happen regardless of content change to exit edit mode.
+    setIsEditing(false);
   };
 
-const handleTextareaBlur = () => {
-  if (isEditing) { // Check if we were actually editing
+  const handleTextareaBlur = () => {
+    if (isEditing) {
       if (onContentChange && content !== editedContent) {
-          onContentChange(field, editedContent); // Commit content if changed
+        onContentChange(field, editedContent);
       }
-      setIsEditing(false); // Exit editing mode
-      // Ensure parent knows about selection state on blur, as it might be relevant for UI updates (e.g., FormattingPanel).
-      if (onSelect) {
-        onSelect(field);
-      }
-  }
-};
+      setIsEditing(false);
+      if (onSelect) onSelect(field);
+    }
+  };
 
   const handleTextareaKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      commitChanges(); // This will set isEditing to false
-      onSelect(field);  // Explicitly select the field for FormattingPanel
-      // Explicitly blur after committing via Enter key to ensure focus shifts correctly.
+      e.preventDefault(); commitChanges(); onSelect(field);
       textareaRef.current?.blur();
     } else if (e.key === 'Escape') {
-      e.preventDefault();
-      setEditedContent(content); // Revert to original prop content
-      setIsEditing(false);
-      onSelect(field); // Also ensure selected for FormattingPanel on escape
-      textareaRef.current?.blur(); // Ensure blur on escape too
+      e.preventDefault(); setEditedContent(content); setIsEditing(false);
+      onSelect(field);
+      textareaRef.current?.blur();
     }
   };
 
-  // Prevent drag/resize when editing text
   const effectiveHandleMouseDown = (e, type, handle = null) => {
     if (isEditing) {
-      // If clicking inside textarea, let the default behavior happen
-      if (e.target === textareaRef.current) {
-        return;
-      }
-      // If clicking outside textarea but still in edit mode (e.g. on a resize handle by mistake), blur textarea
+      if (e.target === textareaRef.current) return;
       textareaRef.current?.blur();
-      e.stopPropagation(); // Stop propagation to prevent selection or other parent handlers
+      e.stopPropagation();
       return;
     }
-    doHandleMouseDown(e, type, handle); // Corrected to doHandleMouseDown
+    doHandleMouseDown(e, type, handle);
   };
 
   const effectiveHandleTouchStart = (e, type, handle = null) => {
     if (isEditing) {
-       if (e.target === textareaRef.current) {
-        return;
-      }
+       if (e.target === textareaRef.current) return;
       textareaRef.current?.blur();
       e.stopPropagation();
       return;
@@ -451,40 +400,32 @@ const handleTextareaBlur = () => {
     handleTouchStart(e, type, handle);
   };
 
-
   useEffect(() => {
-    if (isDragging || isResizing || isRotating) { // Added isRotating
-      // Configurar event listeners com opções adequadas para mobile
+    if (isDragging || isResizing || isRotating) {
       const options = { passive: false, capture: true };
-      
       document.addEventListener('mousemove', handleMouseMove, options);
       document.addEventListener('mouseup', handleMouseUp, options);
       document.addEventListener('touchmove', handleTouchMove, options);
       document.addEventListener('touchend', handleTouchEnd, options);
-      
       return () => {
         document.removeEventListener('mousemove', handleMouseMove, options);
         document.removeEventListener('mouseup', handleMouseUp, options);
         document.removeEventListener('touchmove', handleTouchMove, options);
         document.removeEventListener('touchend', handleTouchEnd, options);
-        
-        // Garantir que o scroll seja restaurado
         document.body.style.overflow = '';
         document.body.style.touchAction = '';
       };
     }
-  }, [isDragging, isResizing, isRotating, dragStart, initialPosition, initialSize, initialRotation]); // Added isRotating and initialRotation
+  }, [isDragging, isResizing, isRotating, dragStart, initialPosition, initialSize, initialRotation]);
 
   const wrapText = (text, maxWidth) => {
     if (!text) return [''];
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${style.fontSize || 16}px ${style.fontFamily || 'Arial'}`;
-
     const words = text.toString().split(' ');
     const lines = [];
     let currentLine = words[0] || '';
-
     for (let i = 1; i < words.length; i++) {
       const word = words[i];
       const testLine = currentLine + ' ' + word;
@@ -500,7 +441,7 @@ const handleTextareaBlur = () => {
     return lines;
   };
 
-  const textLines = wrapText(editedContent, pixelPosition.width - 16); // Use editedContent for display
+  const textLines = wrapText(editedContent, pixelPosition.width - 16);
   const lineHeight = (style.fontSize || 16) * 1.2;
   const handleSize = isMobile ? 16 : 8;
 
@@ -509,88 +450,49 @@ const handleTextareaBlur = () => {
       ref={textBoxRef}
       className="text-box"
       sx={{
-        position: 'absolute',
-        left: `${position.x}%`,
-        top: `${position.y}%`,
-        width: `${position.width}%`,
-        height: `${position.height}%`,
+        position: 'absolute', left: `${position.x}%`, top: `${position.y}%`,
+        width: `${position.width}%`, height: `${position.height}%`,
         cursor: isDragging ? 'grabbing' : (isEditing ? 'text' : 'grab'),
-        userSelect: 'none',
-        border: isSelected ? '2px solid #2196f3' : '2px solid transparent',
-        borderRadius: 1,
-        backgroundColor: isSelected ? 'rgba(33, 150, 243, 0.1)' : 'transparent',
-        transform: `rotate(${rotation || 0}deg)`, // Apply rotation
-        padding: '8px', // This padding applies to the main Box
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-        zIndex: 2,
-        display: 'flex', // Used for text alignment
+        userSelect: 'none', border: isSelected ? '2px solid #2196f3' : '2px solid transparent',
+        borderRadius: 1, backgroundColor: isSelected ? 'rgba(33, 150, 243, 0.1)' : 'transparent',
+        transform: `rotate(${rotation || 0}deg)`, padding: '8px', boxSizing: 'border-box',
+        overflow: 'hidden', zIndex: 2, display: 'flex',
         justifyContent: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
         alignItems: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
-        touchAction: 'none',
-        WebkitTouchCallout: 'none',
-        WebkitUserSelect: 'none',
+        touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none',
         '&:hover': {
-          border: isSelected ? '2px solid #2196f3' : '2px solid #a0cfff', // Slightly different hover if not selected
+          border: isSelected ? '2px solid #2196f3' : '2px solid #a0cfff',
           backgroundColor: isSelected ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
         },
       }}
       onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
       onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
-      onClick={(e) => {
-        // Always select the field when clicked, unless it\'s already in editing mode and the click is within the textarea
-        if (!isEditing || e.target !== textareaRef.current) {
-          onSelect(field);
-        }
-      }}
+      onClick={(e) => { if (!isEditing || e.target !== textareaRef.current) onSelect(field); }}
       onDoubleClick={handleDoubleClick}
     >
       {isEditing && isSelected ? (
         <textarea
-          ref={textareaRef}
-          value={editedContent}
-          onChange={handleTextareaChange}
-          onBlur={handleTextareaBlur}
-          onKeyDown={handleTextareaKeyDown} // Use the dedicated handler
-          style={{ // Inline styles for the textarea
-            width: '100%',
-            height: '100%',
-            fontFamily: style.fontFamily || 'Arial',
-            fontSize: `${style.fontSize || 16}px`,
-            fontWeight: style.fontWeight || 'normal',
-            fontStyle: style.fontStyle || 'normal',
-            color: style.color || '#000000',
-            lineHeight: `${lineHeight}px`,
-            textDecoration: style.textDecoration || 'none',
-            border: 'none',
-            outline: 'none',
-            backgroundColor: 'transparent', // Crucial for blending
-            resize: 'none',
-            overflow: 'hidden', // Or 'auto' if content might exceed box and scroll is desired
-            padding: 0, // Padding is on the parent Box
-            boxSizing: 'border-box',
+          ref={textareaRef} value={editedContent} onChange={handleTextareaChange}
+          onBlur={handleTextareaBlur} onKeyDown={handleTextareaKeyDown}
+          style={{
+            width: '100%', height: '100%', fontFamily: style.fontFamily || 'Arial',
+            fontSize: `${style.fontSize || 16}px`, fontWeight: style.fontWeight || 'normal',
+            fontStyle: style.fontStyle || 'normal', color: style.color || '#000000',
+            lineHeight: `${lineHeight}px`, textDecoration: style.textDecoration || 'none',
+            border: 'none', outline: 'none', backgroundColor: 'transparent',
+            resize: 'none', overflow: 'hidden', padding: 0, boxSizing: 'border-box',
             textAlign: style.textAlign || 'left',
           }}
         />
       ) : (
-        <Box // This Box is for displaying static text
+        <Box
           sx={{
-            // Styles for static text are inherited or applied here
-            // Pointer events none to ensure drag/clicks go to parent unless editing
-            pointerEvents: 'none', // Text itself should not capture mouse events meant for the draggable box
-            fontFamily: style.fontFamily || 'Arial',
-            fontSize: `${style.fontSize || 16}px`,
-            fontWeight: style.fontWeight || 'normal',
-            fontStyle: style.fontStyle || 'normal',
-            color: style.color || '#000000',
-            textDecoration: style.textDecoration || 'none',
-            lineHeight: `${lineHeight}px`,
-            textShadow: style.textShadow
-              ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}`
-              : 'none',
-            WebkitTextStroke: style.textStroke
-              ? `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}`
-              : 'none',
+            pointerEvents: 'none', fontFamily: style.fontFamily || 'Arial',
+            fontSize: `${style.fontSize || 16}px`, fontWeight: style.fontWeight || 'normal',
+            fontStyle: style.fontStyle || 'normal', color: style.color || '#000000',
+            textDecoration: style.textDecoration || 'none', lineHeight: `${lineHeight}px`,
+            textShadow: style.textShadow ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}` : 'none',
+            WebkitTextStroke: style.textStroke ? `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}` : 'none',
           }}
         >
           {textLines.map((line, index) => (
@@ -600,77 +502,41 @@ const handleTextareaBlur = () => {
           ))}
         </Box>
       )}
-      {/* End of ternary for editing/displaying text */}
-
-      {/* Resize handles directly rendered if condition is met, without Fragment wrapper */}
       {isSelected && !isEditing && resizeHandles.map((handle) => (
         <Box
-          key={handle.name}
-          className={`resize-handle-${handle.name}`}
+          key={handle.name} className={`resize-handle-${handle.name}`}
           sx={{
-            position: 'absolute',
-            left: `${handle.x * 100}%`,
-            top: `${handle.y * 100}%`,
-            width: `${handleSize}px`,
-            height: `${handleSize}px`,
-            backgroundColor: '#2196f3',
-            border: '2px solid #ffffff',
-            borderRadius: '50%',
-            cursor: handle.cursor,
-            pointerEvents: 'auto',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 10,
-            minWidth: isMobile ? '20px' : '8px',
-            minHeight: isMobile ? '20px' : '8px',
+            position: 'absolute', left: `${handle.x * 100}%`, top: `${handle.y * 100}%`,
+            width: `${handleSize}px`, height: `${handleSize}px`,
+            backgroundColor: '#2196f3', border: '2px solid #ffffff', borderRadius: '50%',
+            cursor: handle.cursor, pointerEvents: 'auto', transform: 'translate(-50%, -50%)',
+            zIndex: 10, minWidth: isMobile ? '20px' : '8px', minHeight: isMobile ? '20px' : '8px',
             touchAction: 'none',
-            '&:active': {
-              backgroundColor: '#1976d2',
-              transform: 'translate(-50%, -50%) scale(1.2)',
-            },
+            '&:active': { backgroundColor: '#1976d2', transform: 'translate(-50%, -50%) scale(1.2)'},
           }}
           onMouseDown={(e) => effectiveHandleMouseDown(e, 'resize', handle)}
           onTouchStart={(e) => effectiveHandleTouchStart(e, 'resize', handle)}
         />
       ))}
-
-      {/* Rotation Handle */}
       {isSelected && !isEditing && (
         <Box
           className="rotate-handle"
           sx={{
-            position: 'absolute',
-            top: `-${handleSize * 2}px`, // Position above the TextBox
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: `${handleSize * 1.5}px`,
-            height: `${handleSize * 1.5}px`,
-            backgroundColor: '#ff9800', // Orange color for rotation
-            border: '2px solid #ffffff',
-            borderRadius: '50%',
-            cursor: 'grab', // Using grab cursor for rotation
-            pointerEvents: 'auto',
-            zIndex: 11, // Above resize handles
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minWidth: isMobile ? '24px' : '12px',
-            minHeight: isMobile ? '24px' : '12px',
+            position: 'absolute', top: `-${handleSize * 2}px`, left: '50%',
+            transform: 'translateX(-50%)', width: `${handleSize * 1.5}px`, height: `${handleSize * 1.5}px`,
+            backgroundColor: '#ff9800', border: '2px solid #ffffff', borderRadius: '50%',
+            cursor: 'grab', pointerEvents: 'auto', zIndex: 11, display: 'flex',
+            alignItems: 'center', justifyContent: 'center',
+            minWidth: isMobile ? '24px' : '12px', minHeight: isMobile ? '24px' : '12px',
             touchAction: 'none',
-            '&:active': {
-              backgroundColor: '#f57c00',
-              cursor: 'grabbing',
-            },
+            '&:active': { backgroundColor: '#f57c00', cursor: 'grabbing' },
           }}
           onMouseDown={(e) => effectiveHandleMouseDown(e, 'rotate')}
           onTouchStart={(e) => effectiveHandleTouchStart(e, 'rotate')}
-        >
-          {/* Optional: Add an icon for rotation, e.g., from Material Icons */}
-          {/* <RotateRightIcon sx={{ color: 'white', fontSize: isMobile ? 16 : 10 }} /> */}
-        </Box>
+        />
       )}
   </Box>
   );
 };
 
 export default TextBox;
-
