@@ -226,13 +226,13 @@ function App() {
 
   const steps = [
     {
-      label: 'Dados',
+      label: 'Conteeúdo',
       description: 'Carregar CSV ou criar manualmente',
       icon: InsertDriveFileOutlined
     },
     {
-      label: 'Editar Dados',
-      description: 'Adicione, edite ou remova registros conforme necessário.',
+      label: 'Editar Conteúdo',
+      description: 'Adicione, edite ou remova posts conforme necessário.',
       icon: Edit
     },
     {
