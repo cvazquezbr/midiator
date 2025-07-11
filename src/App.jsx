@@ -1283,9 +1283,9 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                         onDragLeave={handleDragLeave}
                       >
                         <CloudUpload sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                        <Typography variant="h6" gutterBottom>Arraste e solte ou clique para Upload CSV</Typography>
+                        <Typography variant="h6" gutterBottom>Arraste e solte ou clique para Upload texto dos posts</Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                          Carregue um arquivo CSV com seus dados
+                          Carregue um arquivo CSV com o conteúdo de seus posts
                         </Typography>
                         <Button
                           variant="contained"
