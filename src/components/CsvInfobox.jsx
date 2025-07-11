@@ -89,7 +89,7 @@ const CsvInfobox = () => {
             <ListItemIcon sx={{ minWidth: 28 }}>
               <CheckCircleOutlineIcon fontSize="small" color="success" />
             </ListItemIcon>
-            <ListItemText primary="Aspas: Se um campo contiver o delimitador (ponto e vírgula), o campo inteiro deve ser envolto em aspas duplas (")." />
+            <ListItemText primary='Aspas: Se um campo contiver o delimitador (ponto e vírgula), o campo inteiro deve ser envolto em aspas duplas (").' />
           </ListItem>
         </List>
          <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
