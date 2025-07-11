@@ -172,9 +172,23 @@ const TextBox = ({
     const deltaYPercent = (deltaY / containerSize.height) * 100;
 
     if (isDragging) {
-      const rotatedBoundingBox = getRotatedBoundingBox(position.width, position.height, position.rotation || 0); // Use position.rotation
-      let newDragX = initialPosition.x + deltaXPercent; // Use a different var name to avoid conflict
-      let newDragY = initialPosition.y + deltaYPercent; // Use a different var name to avoid conflict
+      const rotatedBoundingBox = getRotatedBoundingBox(position.width, position.height, position.rotation || 0);
+      let newDragX = initialPosition.x + deltaXPercent;
+      let newDragY = initialPosition.y + deltaYPercent;
+
+      if (field === "DEBUG") { // Log only for a specific field for less noise, change "DEBUG" to a real field name for testing
+        console.log(
+          `Dragging Field: ${field}\n` +
+          `containerSize H: ${containerSize.height.toFixed(2)}\n` +
+          `position H: ${position.height.toFixed(2)}%, rotation: ${(position.rotation || 0).toFixed(0)}deg\n` +
+          `rotatedBoundingBox H (raw): ${(rotatedBoundingBox.height * containerSize.height / 100).toFixed(2)}px\n` +
+          `rotatedBoundingBox H (%): ${rotatedBoundingBox.height.toFixed(2)}%\n` +
+          `initialDragY: ${initialPosition.y.toFixed(2)}%, deltaYPercent: ${deltaYPercent.toFixed(2)}%\n` +
+          `Pre-clamp newDragY: ${(initialPosition.y + deltaYPercent).toFixed(2)}%\n` +
+          `Clamp Max Y: ${(100 - rotatedBoundingBox.height).toFixed(2)}%\n` +
+          `Final newDragY: ${Math.max(0, Math.min(100 - rotatedBoundingBox.height, newDragY)).toFixed(2)}%`
+        );
+      }
 
       newDragX = Math.max(0, Math.min(100 - rotatedBoundingBox.width, newDragX));
       newDragY = Math.max(0, Math.min(100 - rotatedBoundingBox.height, newDragY));
