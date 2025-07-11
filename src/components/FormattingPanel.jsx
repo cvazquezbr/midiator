@@ -247,6 +247,24 @@ const FormattingPanel = ({
                   fullWidth
                 />
               </Grid>
+              <Grid item xs={12}>
+                <Typography gutterBottom>Rotação: {position.rotation?.toFixed(0) || '0'}°</Typography>
+                <Slider
+                  value={position.rotation || 0}
+                  onChange={(e, value) => updateFieldPosition(selectedField, 'rotation', value)}
+                  min={0}
+                  max={360}
+                  step={1}
+                  valueLabelDisplay="auto"
+                  marks={[
+                    { value: 0, label: '0°' },
+                    { value: 90, label: '90°' },
+                    { value: 180, label: '180°' },
+                    { value: 270, label: '270°' },
+                    { value: 360, label: '360°' },
+                  ]}
+                />
+              </Grid>
               <Grid item xs={12} sx={{ mt: 1 }}>
                 <Typography variant="caption" display="block" gutterBottom>
                   Alinhamento do Texto na Caixa

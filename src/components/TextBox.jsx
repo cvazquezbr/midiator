@@ -11,16 +11,19 @@ const TextBox = ({
   onPositionChange,
   onSizeChange,
   containerSize,
-  onContentChange // New prop for content updates
+  onContentChange, // New prop for content updates
+  rotation // New prop for rotation
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isRotating, setIsRotating] = useState(false); // State for rotation
   const [isEditing, setIsEditing] = useState(false); // State for edit mode
   const [editedContent, setEditedContent] = useState(content); // State for temporary edited content
   const [resizeHandle, setResizeHandle] = useState(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [initialPosition, setInitialPosition] = useState({ x: 0, y: 0 });
   const [initialSize, setInitialSize] = useState({ width: 0, height: 0 });
+  const [initialRotation, setInitialRotation] = useState(0); // State for initial rotation
 
   const textBoxRef = useRef(null);
   const textareaRef = useRef(null); // Ref for the textarea
@@ -80,6 +83,17 @@ const TextBox = ({
       setResizeHandle(handle);
       setInitialPosition({ x: position.x, y: position.y });
       setInitialSize({ width: position.width, height: position.height });
+    } else if (type === 'rotate') {
+      setIsRotating(true);
+      setInitialRotation(rotation || 0);
+      // Store the center of the TextBox for rotation calculation
+      const rect = textBoxRef.current.getBoundingClientRect();
+      setDragStart({
+        x: e.clientX,
+        y: e.clientY,
+        centerX: rect.left + rect.width / 2,
+        centerY: rect.top + rect.height / 2
+      });
     }
   };
 
@@ -105,14 +119,37 @@ const TextBox = ({
       setResizeHandle(handle);
       setInitialPosition({ x: position.x, y: position.y });
       setInitialSize({ width: position.width, height: position.height });
+    } else if (type === 'rotate') {
+      setIsRotating(true);
+      setInitialRotation(rotation || 0);
+      const rect = textBoxRef.current.getBoundingClientRect();
+      setDragStart({
+        x: touch.clientX,
+        y: touch.clientY,
+        centerX: rect.left + rect.width / 2,
+        centerY: rect.top + rect.height / 2
+      });
     }
   };
 
   const handleMouseMove = (e) => {
-    if (!isDragging && !isResizing) return;
+    if (!isDragging && !isResizing && !isRotating) return;
 
-    const deltaX = e.clientX - dragStart.x;
-    const deltaY = e.clientY - dragStart.y;
+    const currentX = e.clientX;
+    const currentY = e.clientY;
+
+    if (isRotating) {
+      const angle = Math.atan2(currentY - dragStart.centerY, currentX - dragStart.centerX) * (180 / Math.PI);
+      const startAngle = Math.atan2(dragStart.y - dragStart.centerY, dragStart.x - dragStart.centerX) * (180 / Math.PI);
+      let newRotation = initialRotation + (angle - startAngle);
+      // Normalize rotation to be between 0 and 360
+      newRotation = (newRotation % 360 + 360) % 360;
+      onPositionChange(field, { ...position, rotation: newRotation });
+      return;
+    }
+
+    const deltaX = currentX - dragStart.x;
+    const deltaY = currentY - dragStart.y;
 
     const deltaXPercent = (deltaX / containerSize.width) * 100;
     const deltaYPercent = (deltaY / containerSize.height) * 100;
@@ -175,15 +212,27 @@ const TextBox = ({
   };
 
   const handleTouchMove = (e) => {
-    if (!isDragging && !isResizing) return;
+    if (!isDragging && !isResizing && !isRotating) return;
     
-    // Prevenir scroll SEMPRE durante drag/resize
+    // Prevenir scroll SEMPRE durante drag/resize/rotate
     e.preventDefault();
     e.stopPropagation();
 
     const touch = e.touches[0];
-    const deltaX = touch.clientX - dragStart.x;
-    const deltaY = touch.clientY - dragStart.y;
+    const currentX = touch.clientX;
+    const currentY = touch.clientY;
+
+    if (isRotating) {
+      const angle = Math.atan2(currentY - dragStart.centerY, currentX - dragStart.centerX) * (180 / Math.PI);
+      const startAngle = Math.atan2(dragStart.y - dragStart.centerY, dragStart.x - dragStart.centerX) * (180 / Math.PI);
+      let newRotation = initialRotation + (angle - startAngle);
+      newRotation = (newRotation % 360 + 360) % 360;
+      onPositionChange(field, { ...position, rotation: newRotation });
+      return;
+    }
+
+    const deltaX = currentX - dragStart.x;
+    const deltaY = currentY - dragStart.y;
 
     const deltaXPercent = (deltaX / containerSize.width) * 100;
     const deltaYPercent = (deltaY / containerSize.height) * 100;
@@ -248,6 +297,7 @@ const TextBox = ({
   const handleMouseUp = () => {
     setIsDragging(false);
     setIsResizing(false);
+    setIsRotating(false); // Reset rotation state
     setResizeHandle(null);
   };
 
@@ -258,6 +308,7 @@ const TextBox = ({
     
     setIsDragging(false);
     setIsResizing(false);
+    setIsRotating(false); // Reset rotation state
     setResizeHandle(null);
   };
 
@@ -339,7 +390,7 @@ const handleTextareaBlur = () => {
 
 
   useEffect(() => {
-    if (isDragging || isResizing) {
+    if (isDragging || isResizing || isRotating) { // Added isRotating
       // Configurar event listeners com opções adequadas para mobile
       const options = { passive: false, capture: true };
       
@@ -359,7 +410,7 @@ const handleTextareaBlur = () => {
         document.body.style.touchAction = '';
       };
     }
-  }, [isDragging, isResizing, dragStart, initialPosition, initialSize]);
+  }, [isDragging, isResizing, isRotating, dragStart, initialPosition, initialSize, initialRotation]); // Added isRotating and initialRotation
 
   const wrapText = (text, maxWidth) => {
     if (!text) return [''];
@@ -405,6 +456,7 @@ const handleTextareaBlur = () => {
         border: isSelected ? '2px solid #2196f3' : '2px solid transparent',
         borderRadius: 1,
         backgroundColor: isSelected ? 'rgba(33, 150, 243, 0.1)' : 'transparent',
+        transform: `rotate(${rotation || 0}deg)`, // Apply rotation
         padding: '8px', // This padding applies to the main Box
         boxSizing: 'border-box',
         overflow: 'hidden',
@@ -517,6 +569,42 @@ const handleTextareaBlur = () => {
           onTouchStart={(e) => effectiveHandleTouchStart(e, 'resize', handle)}
         />
       ))}
+
+      {/* Rotation Handle */}
+      {isSelected && !isEditing && (
+        <Box
+          className="rotate-handle"
+          sx={{
+            position: 'absolute',
+            top: `-${handleSize * 2}px`, // Position above the TextBox
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: `${handleSize * 1.5}px`,
+            height: `${handleSize * 1.5}px`,
+            backgroundColor: '#ff9800', // Orange color for rotation
+            border: '2px solid #ffffff',
+            borderRadius: '50%',
+            cursor: 'grab', // Using grab cursor for rotation
+            pointerEvents: 'auto',
+            zIndex: 11, // Above resize handles
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: isMobile ? '24px' : '12px',
+            minHeight: isMobile ? '24px' : '12px',
+            touchAction: 'none',
+            '&:active': {
+              backgroundColor: '#f57c00',
+              cursor: 'grabbing',
+            },
+          }}
+          onMouseDown={(e) => effectiveHandleMouseDown(e, 'rotate')}
+          onTouchStart={(e) => effectiveHandleTouchStart(e, 'rotate')}
+        >
+          {/* Optional: Add an icon for rotation, e.g., from Material Icons */}
+          {/* <RotateRightIcon sx={{ color: 'white', fontSize: isMobile ? 16 : 10 }} /> */}
+        </Box>
+      )}
   </Box>
   );
 };

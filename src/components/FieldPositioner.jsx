@@ -112,11 +112,12 @@ const FieldPositioner = ({
           y: 10 + Math.floor(index / 3) * 25,
           width: 25,
           height: 15,
-          visible: true
+          visible: true,
+          rotation: 0 // Initialize rotation
         };
-        // Ensure all default keys are present if existingPosition is only partial (though not typical for positions)
+        // Ensure all default keys are present if existingPosition is only partial
         newCombinedPositions[header] = existingPosition
-          ? { ...defaultPosition, ...existingPosition }
+          ? { ...defaultPosition, ...existingPosition, rotation: existingPosition.rotation || 0 }
           : defaultPosition;
 
         // Logic for styles: merge existing styles with a complete default set.
@@ -417,6 +418,7 @@ const FieldPositioner = ({
                       onSizeChange={handleSizeChange}
                       containerSize={imageSize}
                       onContentChange={handleContentChange} // Pass the handler to TextBox
+                      rotation={position.rotation} // Pass rotation to TextBox
                     />
                   );
                 })
