@@ -172,92 +172,72 @@ const TextBox = ({
     const deltaYPercent = (deltaY / containerSize.height) * 100;
 
     if (isDragging) {
-      const rotatedBoundingBox = getRotatedBoundingBox(position.width, position.height, rotation || 0);
-      const newX = Math.max(0, Math.min(100 - rotatedBoundingBox.width, initialPosition.x + deltaXPercent));
-      const newY = Math.max(0, Math.min(100 - rotatedBoundingBox.height, initialPosition.y + deltaYPercent));
-      onPositionChange(field, { ...position, x: newX, y: newY }); // Preserve rotation
+      const rotatedBoundingBox = getRotatedBoundingBox(position.width, position.height, position.rotation || 0); // Use position.rotation
+      let newDragX = initialPosition.x + deltaXPercent; // Use a different var name to avoid conflict
+      let newDragY = initialPosition.y + deltaYPercent; // Use a different var name to avoid conflict
+
+      newDragX = Math.max(0, Math.min(100 - rotatedBoundingBox.width, newDragX));
+      newDragY = Math.max(0, Math.min(100 - rotatedBoundingBox.height, newDragY));
+      onPositionChange(field, { ...position, x: newDragX, y: newDragY });
     } else if (isResizing && resizeHandle) {
+      // Correctly initialize newX, newY, newWidth, newHeight for mouse resizing logic
       let newX = initialPosition.x;
       let newY = initialPosition.y;
       let newWidth = initialSize.width;
       let newHeight = initialSize.height;
+      const currentFieldRotation = position.rotation || 0; // Get current rotation from prop
 
       switch (resizeHandle.name) {
-        case 'nw':
-          newX += deltaXPercent;
-          newY += deltaYPercent;
-          newWidth -= deltaXPercent;
-          newHeight -= deltaYPercent;
-          break;
-        case 'n':
-          newY += deltaYPercent;
-          newHeight -= deltaYPercent;
-          break;
-        case 'ne':
-          newY += deltaYPercent;
-          newWidth += deltaXPercent;
-          newHeight -= deltaYPercent;
-          break;
-        case 'e':
-          newWidth += deltaXPercent;
-          break;
-        case 'se':
-          newWidth += deltaXPercent;
-          newHeight += deltaYPercent;
-          break;
-        case 's':
-          newHeight += deltaYPercent;
-          break;
-        case 'sw':
-          newX += deltaXPercent;
-          newWidth -= deltaXPercent;
-          newHeight += deltaYPercent;
-          break;
-        case 'w':
-          newX += deltaXPercent;
-          newWidth -= deltaXPercent;
-          break;
+        case 'nw': newX += deltaXPercent; newY += deltaYPercent; newWidth -= deltaXPercent; newHeight -= deltaYPercent; break;
+        case 'n': newY += deltaYPercent; newHeight -= deltaYPercent; break;
+        case 'ne': newY += deltaYPercent; newWidth += deltaXPercent; newHeight -= deltaYPercent; break;
+        case 'e': newWidth += deltaXPercent; break;
+        case 'se': newWidth += deltaXPercent; newHeight += deltaYPercent; break;
+        case 's': newHeight += deltaYPercent; break;
+        case 'sw': newX += deltaXPercent; newWidth -= deltaXPercent; newHeight += deltaYPercent; break;
+        case 'w': newX += deltaXPercent; newWidth -= deltaXPercent; break;
       }
-
-      newWidth = Math.max(5, Math.min(100 - newX, newWidth));
-      newHeight = Math.max(3, Math.min(100 - newY, newHeight));
-      newX = Math.max(0, Math.min(100 - newWidth, newX));
-      newY = Math.max(0, Math.min(100 - newHeight, newY));
-
-      newX = Math.max(0, Math.min(100 - newWidth, newX)); // Basic constraint for position
-      newY = Math.max(0, Math.min(100 - newHeight, newY)); // Basic constraint for position
-
-      // Basic constraint for position before rotation consideration
-      let constrainedX = Math.max(0, Math.min(100 - newWidth, newX));
-      let constrainedY = Math.max(0, Math.min(100 - newHeight, newY));
 
       // Ensure minimum dimensions
       newWidth = Math.max(5, newWidth);
       newHeight = Math.max(3, newHeight);
 
-      // Test if the new dimensions and position would cause the rotated bounding box to exceed container limits.
-      const testBoundingBox = getRotatedBoundingBox(newWidth, newHeight, currentRotation);
+      // Basic sanity check for un-rotated dimensions and positions
+      if (newX + newWidth > 100) {
+        if (resizeHandle.name.includes('w')) { newX = 100 - newWidth; } else { newWidth = 100 - newX; }
+      }
+      if (newY + newHeight > 100) {
+        if (resizeHandle.name.includes('n')) { newY = 100 - newHeight; } else { newHeight = 100 - newY; }
+      }
+      newX = Math.max(0, newX); // Ensure X is not negative
+      newY = Math.max(0, newY); // Ensure Y is not negative
+      // Re-ensure min dimensions after potential adjustments if X/Y were clamped to 0
+      newWidth = Math.max(5, newWidth);
+      newHeight = Math.max(3, newHeight);
+      // And ensure width/height don't cause overflow from a 0,0 origin if X/Y were clamped
+      if (newX === 0) newWidth = Math.min(newWidth, 100);
+      if (newY === 0) newHeight = Math.min(newHeight, 100);
 
-      // Adjust position based on the bounding box, ensuring the top-left of the bounding box stays within bounds.
-      // This is a simplified interpretation: we ensure the bounding box itself doesn't start off-screen.
-      constrainedX = Math.max(0, Math.min(100 - testBoundingBox.width, constrainedX));
-      constrainedY = Math.max(0, Math.min(100 - testBoundingBox.height, constrainedY));
 
-      // If, after position adjustment, the bounding box STILL overflows (meaning size is the issue)
-      // then we prevent the update for this step.
-      const finalBoundingBox = getRotatedBoundingBox(newWidth, newHeight, currentRotation);
-      if (
-        constrainedX + finalBoundingBox.width > 100.5 || // Using 100.5 to allow for minor floating point issues
-        constrainedY + finalBoundingBox.height > 100.5 ||
-        constrainedX < -0.5 || // Check negative with tolerance
-        constrainedY < -0.5
-      ) {
-        // If new size/pos would overflow even after basic constraint, do not apply this delta.
-        // This makes the resize "stick" when it hits a boundary it can't satisfy.
-        return;
+      const rotatedBoundingBox = getRotatedBoundingBox(newWidth, newHeight, currentFieldRotation);
+      let finalPosX = newX;
+      let finalPosY = newY;
+
+      if (finalPosX + rotatedBoundingBox.width > 100) {
+        finalPosX = 100 - rotatedBoundingBox.width;
+      }
+      if (finalPosY + rotatedBoundingBox.height > 100) {
+        finalPosY = 100 - rotatedBoundingBox.height;
+      }
+      finalPosX = Math.max(0, finalPosX);
+      finalPosY = Math.max(0, finalPosY);
+
+      if (rotatedBoundingBox.width > 100.5 || rotatedBoundingBox.height > 100.5) {
+         if (finalPosX < -0.5 || finalPosY < -0.5 ) { return; }
+         if (finalPosX + rotatedBoundingBox.width > 100.5 || finalPosY + rotatedBoundingBox.height > 100.5) { return; }
       }
 
-      onPositionChange(field, { x: constrainedX, y: constrainedY, rotation: currentRotation });
+      onPositionChange(field, { x: finalPosX, y: finalPosY, rotation: currentFieldRotation });
       onSizeChange(field, { width: newWidth, height: newHeight });
     }
   };
