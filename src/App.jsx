@@ -228,7 +228,7 @@ function App() {
 
   const steps = [
     {
-      label: 'Conteeúdo',
+      label: 'Conteúdo',
       description: 'Carregar CSV ou criar manualmente',
       icon: InsertDriveFileOutlined
     },
