@@ -629,13 +629,31 @@ function App() {
     setAnchorElMenu(null);
   };
 
-  const handleDownloadExampleCSV = useCallback(() => {
-    const link = document.createElement("a");
-    link.href = "/exemplo_posts.csv"; // Caminho para o arquivo na pasta public
-    link.download = "exemplo_posts.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadExampleCSV = useCallback(async () => {
+    try {
+      const response = await fetch("/exemplo_posts.csv");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const csvText = await response.text();
+
+      // Adicionar BOM UTF-8
+      const csvWithBOM = "\uFEFF" + csvText;
+
+      const blob = new Blob([csvWithBOM], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "exemplo_posts.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erro ao baixar o CSV de exemplo:", error);
+      alert("Não foi possível baixar o arquivo CSV de exemplo. Verifique o console para mais detalhes.");
+    }
   }, []);
 
   const handleLoadTemplateClick = () => {
