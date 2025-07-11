@@ -61,14 +61,14 @@ import CssBaseline from '@mui/material/CssBaseline';
 import FieldPositioner from './components/FieldPositioner';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
 import RecordManager from './features/RecordManager/RecordManager';
-import DeepSeekAuthSetup from './components/DeepSeekAuthSetup';
+// import DeepSeekAuthSetup from './components/DeepSeekAuthSetup'; // Removed
 import GeminiAuthSetup from './components/GeminiAuthSetup';
 import GoogleDriveAuthModal from './components/GoogleDriveAuthModal';
-import { getDeepSeekApiKey } from './utils/deepSeekCredentials';
+// import { getDeepSeekApiKey } from './utils/deepSeekCredentials'; // Removed
 import { getGeminiApiKey } from './utils/geminiCredentials';
-import { callDeepSeekApi } from './utils/deepSeekAPI';
+// import { callDeepSeekApi } from './utils/deepSeekAPI'; // Removed
 import { callGeminiApi } from './utils/geminiAPI';
-import VpnKeyIcon from '@mui/icons-material/VpnKey';
+// import VpnKeyIcon from '@mui/icons-material/VpnKey'; // Removed as it was for DeepSeek menu item
 import GoogleIcon from '@mui/icons-material/Google';
 import './App.css';
 
@@ -200,13 +200,13 @@ function App() {
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
-  const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false);
+  // const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false); // Removed
   const [showGeminiAuthModal, setShowGeminiAuthModal] = useState(false);
   const [showGoogleDriveAuthModal, setShowGoogleDriveAuthModal] = useState(false);
 
   // Estados para a Geração com IA
   const [inputMethod, setInputMethod] = useState('csv');
-  const [selectedApiModel, setSelectedApiModel] = useState('deepseek');
+  // const [selectedApiModel, setSelectedApiModel] = useState('deepseek'); // Removed, defaulting to gemini
   const [promptNumRecords, setPromptNumRecords] = useState(10);
   const [promptText, setPromptText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -755,24 +755,13 @@ function App() {
 
     let apiKey;
     let apiToCall;
-    let apiName = "";
+    let apiName = "Gemini"; // Defaulting to Gemini
 
-    if (selectedApiModel === 'deepseek') {
-      apiKey = getDeepSeekApiKey();
-      apiToCall = callDeepSeekApi;
-      apiName = "DeepSeek";
-    } else if (selectedApiModel === 'gemini') {
-      apiKey = getGeminiApiKey();
-      apiToCall = callGeminiApi;
-      apiName = "Gemini";
-    } else {
-      alert('Modelo de IA não selecionado ou inválido.');
-      setIsGenerating(false);
-      return;
-    }
+    apiKey = getGeminiApiKey();
+    apiToCall = callGeminiApi;
 
     if (!apiKey) {
-      alert(`Por favor, configure sua chave da API ${apiName} primeiro.\nVocê pode fazer isso no menu "Mais ações" (ícone de três pontos) no cabeçalho.`);
+      alert(`Por favor, configure sua chave da API Gemini primeiro.\nVocê pode fazer isso no menu "Mais ações" (ícone de três pontos) no cabeçalho.`);
       setIsGenerating(false);
       return;
     }
@@ -1119,10 +1108,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                 open={Boolean(anchorElMenu)}
                 onClose={handleMenuClose}
               >
-                <MenuItem onClick={() => { setShowDeepSeekAuthModal(true); handleMenuClose(); }}>
+                {/* <MenuItem onClick={() => { setShowDeepSeekAuthModal(true); handleMenuClose(); }}>
                   <VpnKeyIcon sx={{ mr: 1 }} />
                   Configurar API DeepSeek
-                </MenuItem>
+                </MenuItem> */}
                 <MenuItem onClick={() => { setShowGeminiAuthModal(true); handleMenuClose(); }}>
                   <GoogleIcon sx={{ mr: 1 }} />
                   Configurar API Gemini
@@ -1347,39 +1336,16 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
 
                 {inputMethod === 'ia' && (
                   <Box sx={{ maxWidth: 600, mx: 'auto' }}>
-                    <ToggleButtonGroup
-                      color="secondary"
-                      value={selectedApiModel}
-                      exclusive
-                      onChange={(event, newModel) => {
-                        if (newModel !== null) {
-                          setSelectedApiModel(newModel);
-                        }
-                      }}
-                      sx={{
-                        mb: 3,
-                        display: 'flex',
-                        justifyContent: 'center',
-                        '& .MuiToggleButton-root': {
-                          borderRadius: 2,
-                          px: 3,
-                          py: 1.5,
-                          fontWeight: 600
-                        }
-                      }}
-                    >
-                      <ToggleButton value="deepseek">DeepSeek</ToggleButton>
-                      <ToggleButton value="gemini">Gemini</ToggleButton>
-                    </ToggleButtonGroup>
-                    {selectedApiModel === 'deepseek' && !getDeepSeekApiKey() && (
+                    {/* ToggleButtonGroup for AI model selection removed */}
+                    {/* {selectedApiModel === 'deepseek' && !getDeepSeekApiKey() && ( // This block is removed
                       <Alert severity="warning" sx={{ mb: 2, width: '100%', maxWidth: '500px' }}>
                         Chave da API DeepSeek não configurada.
                         <MuiLink component="button" variant="body2" onClick={() => setShowDeepSeekAuthModal(true)} sx={{ ml: 1 }}>
                           Configurar Chave DeepSeek
                         </MuiLink>
                       </Alert>
-                    )}
-                    {selectedApiModel === 'gemini' && !getGeminiApiKey() && (
+                    )} */}
+                    {!getGeminiApiKey() && (
                       <Alert severity="warning" sx={{ mb: 2, width: '100%', maxWidth: '500px' }}>
                         Chave da API Gemini não configurada.
                         <MuiLink component="button" variant="body2" onClick={() => setShowGeminiAuthModal(true)} sx={{ ml: 1 }}>
@@ -1419,8 +1385,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                       disabled={
                         isGenerating ||
                         !promptText.trim() ||
-                        (selectedApiModel === 'deepseek' && !getDeepSeekApiKey()) ||
-                        (selectedApiModel === 'gemini' && !getGeminiApiKey())
+                        !getGeminiApiKey() // Only check for Gemini Key
                       } sx={{
                         py: 1.5,
                         borderRadius: 2,
@@ -1650,10 +1615,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
       </Box>
 
       {/* Modals */}
-      <DeepSeekAuthSetup
+      {/* <DeepSeekAuthSetup
         open={showDeepSeekAuthModal}
         onClose={() => setShowDeepSeekAuthModal(false)}
-      />
+      /> */}
       <GeminiAuthSetup
         open={showGeminiAuthModal}
         onClose={() => setShowGeminiAuthModal(false)}
