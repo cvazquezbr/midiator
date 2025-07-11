@@ -29,6 +29,7 @@ const TextBox = ({
   const textareaRef = useRef(null); // Ref for the textarea
 
   // Helper function to get bounding box of a rotated element
+  // Moved getRotatedBoundingBox to be defined before it's used by calculateResizedDimensionsAndPosition
   const getRotatedBoundingBox = (widthPercent, heightPercent, rotationDegrees) => {
     const width = (widthPercent / 100) * containerSize.width;
     const height = (heightPercent / 100) * containerSize.height;
@@ -43,6 +44,78 @@ const TextBox = ({
       width: (newWidth / containerSize.width) * 100,
       height: (newHeight / containerSize.height) * 100,
     };
+  };
+
+  const calculateResizedDimensionsAndPosition = (
+    currentInitialPosition,
+    currentInitialSize,
+    deltaXPercent,
+    deltaYPercent,
+    resizeHandleName,
+    currentRotationDegrees
+  ) => {
+    let currentWidth = currentInitialSize.width;
+    let currentHeight = currentInitialSize.height;
+    const rotationRadians = currentRotationDegrees * (Math.PI / 180);
+    const cosA = Math.cos(rotationRadians);
+    const sinA = Math.sin(rotationRadians);
+
+    const dxScreen = deltaXPercent;
+    const dyScreen = deltaYPercent;
+
+    const dxBox = dxScreen * cosA + dyScreen * sinA;
+    const dyBox = -dxScreen * sinA + dyScreen * cosA;
+
+    let newWidth = currentWidth;
+    let newHeight = currentHeight;
+    let anchorDxBox = 0;
+    let anchorDyBox = 0;
+
+    switch (resizeHandleName) {
+      case 'n': newHeight -= dyBox; anchorDyBox = dyBox; break;
+      case 's': newHeight += dyBox; break;
+      case 'w': newWidth -= dxBox; anchorDxBox = dxBox; break;
+      case 'e': newWidth += dxBox; break;
+      case 'nw': newWidth -= dxBox; newHeight -= dyBox; anchorDxBox = dxBox; anchorDyBox = dyBox; break;
+      case 'ne': newWidth += dxBox; newHeight -= dyBox; anchorDyBox = dyBox; break;
+      case 'sw': newWidth -= dxBox; newHeight += dyBox; anchorDxBox = dxBox; break;
+      case 'se': newWidth += dxBox; newHeight += dyBox; break;
+    }
+
+    newWidth = Math.max(5, newWidth);
+    newHeight = Math.max(3, newHeight);
+
+    const anchorDxScreen = anchorDxBox * cosA - anchorDyBox * sinA;
+    const anchorDyScreen = anchorDxBox * sinA + anchorDyBox * cosA;
+
+    let newX = currentInitialPosition.x + anchorDxScreen;
+    let newY = currentInitialPosition.y + anchorDyScreen;
+
+    const tempRotatedBoundsForSize = getRotatedBoundingBox(newWidth, newHeight, currentRotationDegrees);
+
+    if (tempRotatedBoundsForSize.width > 100) {
+      if (resizeHandleName.includes('w') || resizeHandleName.includes('e')) {
+          newWidth = currentInitialSize.width;
+      }
+    }
+    if (tempRotatedBoundsForSize.height > 100) {
+       if (resizeHandleName.includes('n') || resizeHandleName.includes('s')) {
+          newHeight = currentInitialSize.height;
+      }
+    }
+
+    const finalRotatedBounds = getRotatedBoundingBox(newWidth, newHeight, currentRotationDegrees);
+
+    if (newX < 0) newX = 0;
+    if (newX + finalRotatedBounds.width > 100) {
+      newX = 100 - finalRotatedBounds.width;
+    }
+    if (newY < 0) newY = 0;
+    if (newY + finalRotatedBounds.height > 100) {
+      newY = 100 - finalRotatedBounds.height;
+    }
+
+    return { newX, newY, newWidth, newHeight };
   };
 
   // Update editedContent if the external content prop changes while not editing
@@ -175,101 +248,37 @@ const TextBox = ({
       const currentRotation = position.rotation || 0;
       const rotatedBoundingBox = getRotatedBoundingBox(position.width, position.height, currentRotation);
 
-      // Calculate the current center of the un-rotated element
       const initialCenterX = initialPosition.x + position.width / 2;
       const initialCenterY = initialPosition.y + position.height / 2;
 
-      // Calculate the new desired center based on mouse movement
       let newCenterX = initialCenterX + deltaXPercent;
       let newCenterY = initialCenterY + deltaYPercent;
 
-      // Clamp the new center X
       const minCenterX = rotatedBoundingBox.width / 2;
       const maxCenterX = 100 - rotatedBoundingBox.width / 2;
       newCenterX = Math.max(minCenterX, Math.min(maxCenterX, newCenterX));
       
-      // Clamp the new center Y
       const minCenterY = rotatedBoundingBox.height / 2;
       const maxCenterY = 100 - rotatedBoundingBox.height / 2;
       newCenterY = Math.max(minCenterY, Math.min(maxCenterY, newCenterY));
 
-      // Calculate the new top-left position (position.x, position.y) based on the clamped center
       const finalNewDragX = newCenterX - position.width / 2;
       const finalNewDragY = newCenterY - position.height / 2;
       
-      if (field === "Titulo") { 
-        console.log(
-          `Dragging Field: ${field}, Rot: ${currentRotation.toFixed(0)}\n` +
-          `containerH: ${containerSize.height.toFixed(1)}, posH: ${position.height.toFixed(1)}%, bbH: ${rotatedBoundingBox.height.toFixed(1)}%\n` +
-          `initialCenterY: ${initialCenterY.toFixed(1)}%, deltaY: ${deltaYPercent.toFixed(1)}%\n` +
-          `newCenterY (pre-clamp): ${(initialCenterY + deltaYPercent).toFixed(1)}%\n` +
-          `minCenterY: ${minCenterY.toFixed(1)}%, maxCenterY: ${maxCenterY.toFixed(1)}%\n` +
-          `newCenterY (clamped): ${newCenterY.toFixed(1)}%\n` +
-          `finalNewDragY: ${finalNewDragY.toFixed(1)}%`
-        );
-      }
-
       onPositionChange(field, { ...position, x: finalNewDragX, y: finalNewDragY });
 
     } else if (isResizing && resizeHandle) {
-      // Correctly initialize newX, newY, newWidth, newHeight for mouse resizing logic
-      let newX = initialPosition.x;
-      let newY = initialPosition.y;
-      let newWidth = initialSize.width;
-      let newHeight = initialSize.height;
-      const currentFieldRotation = position.rotation || 0; // Get current rotation from prop
-
-      switch (resizeHandle.name) {
-        case 'nw': newX += deltaXPercent; newY += deltaYPercent; newWidth -= deltaXPercent; newHeight -= deltaYPercent; break;
-        case 'n': newY += deltaYPercent; newHeight -= deltaYPercent; break;
-        case 'ne': newY += deltaYPercent; newWidth += deltaXPercent; newHeight -= deltaYPercent; break;
-        case 'e': newWidth += deltaXPercent; break;
-        case 'se': newWidth += deltaXPercent; newHeight += deltaYPercent; break;
-        case 's': newHeight += deltaYPercent; break;
-        case 'sw': newX += deltaXPercent; newWidth -= deltaXPercent; newHeight += deltaYPercent; break;
-        case 'w': newX += deltaXPercent; newWidth -= deltaXPercent; break;
-      }
-
-      // Ensure minimum dimensions
-      newWidth = Math.max(5, newWidth);
-      newHeight = Math.max(3, newHeight);
-
-      // Basic sanity check for un-rotated dimensions and positions
-      if (newX + newWidth > 100) {
-        if (resizeHandle.name.includes('w')) { newX = 100 - newWidth; } else { newWidth = 100 - newX; }
-      }
-      if (newY + newHeight > 100) {
-        if (resizeHandle.name.includes('n')) { newY = 100 - newHeight; } else { newHeight = 100 - newY; }
-      }
-      newX = Math.max(0, newX); // Ensure X is not negative
-      newY = Math.max(0, newY); // Ensure Y is not negative
-      // Re-ensure min dimensions after potential adjustments if X/Y were clamped to 0
-      newWidth = Math.max(5, newWidth); 
-      newHeight = Math.max(3, newHeight);
-      // And ensure width/height don't cause overflow from a 0,0 origin if X/Y were clamped
-      if (newX === 0) newWidth = Math.min(newWidth, 100);
-      if (newY === 0) newHeight = Math.min(newHeight, 100);
-
-
-      const rotatedBoundingBox = getRotatedBoundingBox(newWidth, newHeight, currentFieldRotation);
-      let finalPosX = newX; 
-      let finalPosY = newY; 
-
-      if (finalPosX + rotatedBoundingBox.width > 100) {
-        finalPosX = 100 - rotatedBoundingBox.width;
-      }
-      if (finalPosY + rotatedBoundingBox.height > 100) {
-        finalPosY = 100 - rotatedBoundingBox.height;
-      }
-      finalPosX = Math.max(0, finalPosX);
-      finalPosY = Math.max(0, finalPosY);
+      const rotationDegrees = position.rotation || 0;
+      const { newX, newY, newWidth, newHeight } = calculateResizedDimensionsAndPosition(
+        initialPosition,
+        initialSize,
+        deltaXPercent,
+        deltaYPercent,
+        resizeHandle.name,
+        rotationDegrees
+      );
       
-      if (rotatedBoundingBox.width > 100.5 || rotatedBoundingBox.height > 100.5) {
-         if (finalPosX < -0.5 || finalPosY < -0.5 ) { return; }
-         if (finalPosX + rotatedBoundingBox.width > 100.5 || finalPosY + rotatedBoundingBox.height > 100.5) { return; }
-      }
-      
-      onPositionChange(field, { x: finalPosX, y: finalPosY, rotation: currentFieldRotation });
+      onPositionChange(field, { x: newX, y: newY, rotation: rotationDegrees });
       onSizeChange(field, { width: newWidth, height: newHeight });
     }
   };
@@ -277,7 +286,6 @@ const TextBox = ({
   const handleTouchMove = (e) => {
     if (!isDragging && !isResizing && !isRotating) return;
     
-    // Prevenir scroll SEMPRE durante drag/resize/rotate
     e.preventDefault();
     e.stopPropagation();
 
@@ -296,81 +304,29 @@ const TextBox = ({
 
     const deltaX = currentX - dragStart.x;
     const deltaY = currentY - dragStart.y;
-
     const deltaXPercent = (deltaX / containerSize.width) * 100;
     const deltaYPercent = (deltaY / containerSize.height) * 100;
 
     if (isDragging) {
       const rotatedBoundingBox = getRotatedBoundingBox(position.width, position.height, rotation || 0);
-      const newX = Math.max(0, Math.min(100 - rotatedBoundingBox.width, initialPosition.x + deltaXPercent));
-      const newY = Math.max(0, Math.min(100 - rotatedBoundingBox.height, initialPosition.y + deltaYPercent));
-      onPositionChange(field, { ...position, x: newX, y: newY }); // Preserve rotation
+      let newX = initialPosition.x + deltaXPercent;
+      let newY = initialPosition.y + deltaYPercent;
+
+      newX = Math.max(0, Math.min(100 - rotatedBoundingBox.width, newX));
+      newY = Math.max(0, Math.min(100 - rotatedBoundingBox.height, newY));
+      onPositionChange(field, { ...position, x: newX, y: newY });
     } else if (isResizing && resizeHandle) {
-      // Store current rotation to pass it along, as onPositionChange and onSizeChange might not preserve it
-      const currentRotation = position.rotation || 0; 
-      let newX = initialPosition.x;
-      let newY = initialPosition.y;
-      let newWidth = initialSize.width;
-      let newHeight = initialSize.height;
+      const rotationDegrees = position.rotation || 0;
+      const { newX, newY, newWidth, newHeight } = calculateResizedDimensionsAndPosition(
+        initialPosition,
+        initialSize,
+        deltaXPercent,
+        deltaYPercent,
+        resizeHandle.name,
+        rotationDegrees
+      );
 
-      switch (resizeHandle.name) {
-        case 'nw':
-          newX += deltaXPercent;
-          newY += deltaYPercent;
-          newWidth -= deltaXPercent;
-          newHeight -= deltaYPercent;
-          break;
-        case 'n':
-          newY += deltaYPercent;
-          newHeight -= deltaYPercent;
-          break;
-        case 'ne':
-          newY += deltaYPercent;
-          newWidth += deltaXPercent;
-          newHeight -= deltaYPercent;
-          break;
-        case 'e':
-          newWidth += deltaXPercent;
-          break;
-        case 'se':
-          newWidth += deltaXPercent;
-          newHeight += deltaYPercent;
-          break;
-        case 's':
-          newHeight += deltaYPercent;
-          break;
-        case 'sw':
-          newX += deltaXPercent;
-          newWidth -= deltaXPercent;
-          newHeight += deltaYPercent;
-          break;
-        case 'w':
-          newX += deltaXPercent;
-          newWidth -= deltaXPercent;
-          break;
-      }
-
-      newWidth = Math.max(5, Math.min(100 - newX, newWidth));
-      newHeight = Math.max(3, Math.min(100 - newY, newHeight));
-      newX = Math.max(0, Math.min(100 - newWidth, newX));
-      newY = Math.max(0, Math.min(100 - newHeight, newY));
-      
-      // Recalculate bounding box for the new size and position before applying
-      const finalRotatedBox = getRotatedBoundingBox(newWidth, newHeight, currentRotation);
-
-      // Adjust position if the rotated box overflows
-      if (newX + finalRotatedBox.width > 100) {
-        newX = 100 - finalRotatedBox.width;
-      }
-      if (newY + finalRotatedBox.height > 100) {
-        newY = 100 - finalRotatedBox.height;
-      }
-      // Ensure position is not negative after adjustment
-      newX = Math.max(0, newX);
-      newY = Math.max(0, newY);
-
-
-      onPositionChange(field, { x: newX, y: newY });
+      onPositionChange(field, { x: newX, y: newY, rotation: rotationDegrees });
       onSizeChange(field, { width: newWidth, height: newHeight });
     }
   };
