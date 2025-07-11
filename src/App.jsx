@@ -52,6 +52,7 @@ import {
   Visibility,
   Grid3x3
 } from '@mui/icons-material';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'; // Importar o ícone se não estiver globalmente disponível
 import Papa from 'papaparse';
 import ColorThief from 'colorthief';
 import { Menu, MenuItem } from '@mui/material';
@@ -61,6 +62,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import FieldPositioner from './components/FieldPositioner';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
 import RecordManager from './features/RecordManager/RecordManager';
+import CsvInfobox from './components/CsvInfobox'; // Importar o novo componente
 // import DeepSeekAuthSetup from './components/DeepSeekAuthSetup'; // Removed
 import GeminiAuthSetup from './components/GeminiAuthSetup';
 import GoogleDriveAuthModal from './components/GoogleDriveAuthModal';
@@ -1284,9 +1286,12 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                       >
                         <CloudUpload sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                         <Typography variant="h6" gutterBottom>Arraste e solte ou clique para Upload CSV</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                          Carregue um arquivo CSV com seus dados
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Carregue um arquivo CSV com o conteúdo de seus posts
+                          </Typography>
+                          <CsvInfobox />
+                        </Box>
                         <Button
                           variant="contained"
                           component="label"
