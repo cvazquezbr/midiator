@@ -629,6 +629,14 @@ function App() {
     setAnchorElMenu(null);
   };
 
+  const handleDownloadExampleCSV = useCallback(() => {
+    const link = document.createElement("a");
+    link.href = "/exemplo_posts.csv"; // Caminho para o arquivo na pasta public
+    link.download = "exemplo_posts.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
 
   const handleLoadTemplateClick = () => {
     handleMenuClose();
@@ -1292,20 +1300,29 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                           </Typography>
                           <CsvInfobox />
                         </Box>
-                        <Button
-                          variant="contained"
-                          component="label"
-                          sx={{ borderRadius: 2 }}
-                        >
-                          Selecionar Arquivo
-                          <input
-                            type="file"
-                            accept=".csv"
-                            hidden
-                            ref={fileInputRef}
-                            onChange={handleCSVUpload}
-                          />
-                        </Button>
+                        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                          <Button
+                            variant="contained"
+                            component="label"
+                            sx={{ borderRadius: 2 }}
+                          >
+                            Selecionar Arquivo
+                            <input
+                              type="file"
+                              accept=".csv"
+                              hidden
+                              ref={fileInputRef}
+                              onChange={handleCSVUpload}
+                            />
+                          </Button>
+                          <Button
+                            variant="contained"
+                            onClick={handleDownloadExampleCSV}
+                            sx={{ borderRadius: 2 }}
+                          >
+                            Baixar CSV Exemplo
+                          </Button>
+                        </Box>
                       </Card>
                     </Grid>
 
