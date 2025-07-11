@@ -366,10 +366,13 @@ const ImageGeneratorFrontendOnly = ({
           index: i,
           filename: `midiator_${String(i + 1).padStart(3, '0')}.png`,
           // Preserve existing custom properties if they exist
+          // AQUI A MUDANÇA PRINCIPAL:
+          // Sempre usar o 'backgroundImage' da prop (o modelo global atual)
+          // quando estivermos na função 'generateImages' (geração/regeneração global).
+          // As customizações de 'customFieldPositions' e 'customFieldStyles' podem ser mantidas.
+          backgroundImage: backgroundImage, // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ESTA LINHA
           customFieldPositions: existingImageDataItem?.customFieldPositions,
           customFieldStyles: existingImageDataItem?.customFieldStyles,
-          // Use existing custom background if present, otherwise the global one used for this generation pass
-          backgroundImage: existingImageDataItem?.backgroundImage || backgroundImage
         };
 
         images.push(imageData);
