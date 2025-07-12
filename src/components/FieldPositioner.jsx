@@ -71,13 +71,17 @@ const FieldPositioner = ({
 
   const handleFieldSelectInternal = useCallback((fieldToSelect) => {
     setSelectedField(fieldToSelect);
-    if (isMobile) {
-      setIsDrawerOpen(true); // Open drawer on mobile when a field is selected
-    }
     if (onSelectFieldExternal) {
       onSelectFieldExternal(fieldToSelect);
     }
-  }, [isMobile, onSelectFieldExternal]);
+  }, [onSelectFieldExternal]);
+
+  const handleFieldLongPress = (field) => {
+    if (isMobile) {
+      setSelectedField(field);
+      setIsDrawerOpen(true);
+    }
+  };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -412,6 +416,7 @@ const FieldPositioner = ({
                       containerSize={imageSize}
                       onContentChange={handleContentChange}
                       rotation={position.rotation}
+                      onLongPress={handleFieldLongPress}
                     />
                   );
                 })

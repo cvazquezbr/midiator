@@ -12,11 +12,13 @@ const TextBox = ({
   onSizeChange,
   containerSize,
   onContentChange,
-  rotation
+  rotation,
+  onLongPress
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
+  const longPressTimeout = useRef(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(content);
   const [resizeHandle, setResizeHandle] = useState(null);
@@ -276,6 +278,15 @@ const TextBox = ({
   const doHandleMouseDown = (e, type, handle = null) => {
     e.preventDefault();
     e.stopPropagation();
+
+    longPressTimeout.current = setTimeout(() => {
+      if (onLongPress) {
+        onLongPress(field);
+      }
+      // NÃ£o inicie o arraste se for um clique longo
+      longPressTimeout.current = null;
+    }, 500); // 500ms para um clique longo
+
     onSelect(field);
     setDragStart({ x: e.clientX, y: e.clientY });
 
@@ -304,6 +315,14 @@ const TextBox = ({
     e.stopPropagation();
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
+
+    longPressTimeout.current = setTimeout(() => {
+      if (onLongPress) {
+        onLongPress(field);
+      }
+      longPressTimeout.current = null;
+    }, 500);
+
     onSelect(field);
     const touch = e.touches[0];
     setDragStart({ x: touch.clientX, y: touch.clientY });
@@ -324,7 +343,6 @@ const TextBox = ({
         x: touch.clientX, y: touch.clientY,
         centerX: rect.left + rect.width / 2,
         centerY: rect.top + rect.height / 2
-
       });
     }
   };
@@ -454,11 +472,21 @@ const TextBox = ({
   };
 
   const handleMouseUp = () => {
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
+      longPressTimeout.current = null;
+      // Se o temporizador foi cancelado, Ã© um clique curto
+      // A aÃ§Ã£o de clique (onSelect) jÃ¡ foi chamada no mouseDown
+    }
     setIsDragging(false); setIsResizing(false); setIsRotating(false);
     setResizeHandle(null);
   };
 
   const handleTouchEnd = () => {
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
+      longPressTimeout.current = null;
+    }
     document.body.style.overflow = '';
     document.body.style.touchAction = '';
     setIsDragging(false); setIsResizing(false); setIsRotating(false);
@@ -586,7 +614,15 @@ const TextBox = ({
       }}
       onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
       onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
-      onClick={(e) => { if (!isEditing || e.target !== textareaRef.current) onSelect(field); }}
+      onClick={(e) => {
+        if (longPressTimeout.current) {
+          clearTimeout(longPressTimeout.current);
+          longPressTimeout.current = null;
+        }
+        if (!isEditing || e.target !== textareaRef.current) {
+          onSelect(field);
+        }
+      }}
       onDoubleClick={handleDoubleClick}
     >
       {/* Div interna para visualização de borda e conteúdo */}
