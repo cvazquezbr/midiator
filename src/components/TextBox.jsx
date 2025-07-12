@@ -48,99 +48,189 @@ const TextBox = ({
   };
 
   const calculateResizedDimensionsAndPosition = (initialPosition, initialSize, deltaXPercent, deltaYPercent, handleName, rotationDegrees) => {
+    let newX = initialPosition.x;
+    let newY = initialPosition.y;
+    let newWidth = initialSize.width;
+    let newHeight = initialSize.height;
+
     const rad = rotationDegrees * (Math.PI / 180);
     const cos = Math.cos(rad);
     const sin = Math.sin(rad);
 
-    let { x: prevX, y: prevY } = initialPosition;
-    let { width: prevWidth, height: prevHeight } = initialSize;
-
-    // Calculate the center of the box before resizing
-    const prevCenterX = prevX + prevWidth / 2;
-    const prevCenterY = prevY + prevHeight / 2;
-
-    // Normalized deltas (mouse movement in screen space)
-    const dx = deltaXPercent;
-    const dy = deltaYPercent;
-
-    // Projected deltas onto the rotated axes of the textbox
+    // Adjust deltas based on rotation
     // deltaRotX is change along the box's rotated "width" axis
     // deltaRotY is change along the box's rotated "height" axis
-    const deltaRotX = dx * cos + dy * sin;
-    const deltaRotY = -dx * sin + dy * cos;
+    const rotatedDeltaX = deltaXPercent * cos + deltaYPercent * sin;
+    const rotatedDeltaY = -deltaXPercent * sin + deltaYPercent * cos;
 
-    let newWidth = prevWidth;
-    let newHeight = prevHeight;
-    let newCenterX = prevCenterX;
-    let newCenterY = prevCenterY;
+    // Store initial center for reference
+    const initialCenterX = initialPosition.x + initialSize.width / 2;
+    const initialCenterY = initialPosition.y + initialSize.height / 2;
 
-    // Adjust dimensions based on which handle is being dragged
-    if (handleName.includes('e')) {
-      newWidth += deltaRotX;
-    }
-    if (handleName.includes('w')) {
-      newWidth -= deltaRotX;
-    }
-    if (handleName.includes('s')) {
-      newHeight += deltaRotY;
-    }
-    if (handleName.includes('n')) {
-      newHeight -= deltaRotY;
+    // Calculate the initial position of all 4 corners of the UNROTATED box
+    const corners = {
+        nw: { x: initialPosition.x, y: initialPosition.y },
+        ne: { x: initialPosition.x + initialSize.width, y: initialPosition.y },
+        sw: { x: initialPosition.x, y: initialPosition.y + initialSize.height },
+        se: { x: initialPosition.x + initialSize.width, y: initialPosition.y + initialSize.height },
+    };
+
+    // Function to rotate a point around a center
+    const rotatePoint = (point, center, angleRad) => {
+        const s = Math.sin(angleRad);
+        const c = Math.cos(angleRad);
+        // translate point back to origin:
+        point.x -= center.x;
+        point.y -= center.y;
+        // rotate point
+        const xnew = point.x * c - point.y * s;
+        const ynew = point.x * s + point.y * c;
+        // translate point back:
+        point.x = xnew + center.x;
+        point.y = ynew + center.y;
+        return point;
+    };
+
+    // Get initial ROTATED screen positions of corners
+    const initialRotatedCorners = {};
+    for (const key in corners) {
+        initialRotatedCorners[key] = rotatePoint({ ...corners[key] }, { x: initialCenterX, y: initialCenterY }, rad);
     }
 
-    // Prevent negative or too small dimensions
+    let fixedAnchorPoint = { x: 0, y: 0 };
+    let oppositeHandleName = '';
+
+    // Determine the fixed anchor point based on the handle being dragged
+    let oppositeHandleMidpointKey = ''; // For side handles, to find midpoint of opposite side
+
+    switch (handleName) {
+        case 'n':
+            fixedAnchorPoint = {
+                x: (initialRotatedCorners.sw.x + initialRotatedCorners.se.x) / 2,
+                y: (initialRotatedCorners.sw.y + initialRotatedCorners.se.y) / 2
+            };
+            oppositeHandleName = 's_mid'; // Indicates midpoint of south side
+            newHeight -= rotatedDeltaY;
+            // Width should not change for 'n' handle drag
+            newWidth = initialSize.width;
+            break;
+        case 'e':
+            fixedAnchorPoint = {
+                x: (initialRotatedCorners.nw.x + initialRotatedCorners.sw.x) / 2,
+                y: (initialRotatedCorners.nw.y + initialRotatedCorners.sw.y) / 2
+            };
+            oppositeHandleName = 'w_mid'; // Indicates midpoint of west side
+            newWidth += rotatedDeltaX;
+            // Height should not change for 'e' handle drag
+            newHeight = initialSize.height;
+            break;
+        case 's':
+            fixedAnchorPoint = {
+                x: (initialRotatedCorners.nw.x + initialRotatedCorners.ne.x) / 2,
+                y: (initialRotatedCorners.nw.y + initialRotatedCorners.ne.y) / 2
+            };
+            oppositeHandleName = 'n_mid'; // Indicates midpoint of north side
+            newHeight += rotatedDeltaY;
+            newWidth = initialSize.width;
+            break;
+        case 'w':
+            fixedAnchorPoint = {
+                x: (initialRotatedCorners.ne.x + initialRotatedCorners.se.x) / 2,
+                y: (initialRotatedCorners.ne.y + initialRotatedCorners.se.y) / 2
+            };
+            oppositeHandleName = 'e_mid'; // Indicates midpoint of east side
+            newWidth -= rotatedDeltaX;
+            newHeight = initialSize.height;
+            break;
+        // Corner cases remain the same, anchoring to the opposite corner
+        case 'nw': fixedAnchorPoint = initialRotatedCorners.se; oppositeHandleName = 'se';
+            newWidth -= rotatedDeltaX; newHeight -= rotatedDeltaY; break;
+        case 'ne': fixedAnchorPoint = initialRotatedCorners.sw; oppositeHandleName = 'sw';
+            newWidth += rotatedDeltaX; newHeight -= rotatedDeltaY; break;
+        case 'se': fixedAnchorPoint = initialRotatedCorners.nw; oppositeHandleName = 'nw';
+            newWidth += rotatedDeltaX; newHeight += rotatedDeltaY; break;
+        case 'sw': fixedAnchorPoint = initialRotatedCorners.ne; oppositeHandleName = 'ne';
+            newWidth -= rotatedDeltaX; newHeight += rotatedDeltaY; break;
+    }
+
     newWidth = Math.max(5, newWidth);
     newHeight = Math.max(3, newHeight);
 
-    // Calculate change in width and height
-    const dWidth = newWidth - prevWidth;
-    const dHeight = newHeight - prevHeight;
+    // Calculate the new position of the dragged handle in the rotated system,
+    // assuming the fixedAnchorPoint stays put.
+    // This is the tricky part. We need to find the new (X, Y) of the unrotated bounding box.
 
-    // Adjust the center based on the handle and rotation
-    // The change in center should be half the change in dimension, projected back to screen coordinates
-    if (handleName.includes('e')) {
-      newCenterX += (dWidth / 2) * cos;
-      newCenterY += (dWidth / 2) * sin;
+    // Let the fixed anchor point in the *local* unrotated frame be (ax_local, ay_local)
+    // e.g. if handle is 'e', anchor is 'sw'. In local frame, sw is (0, H_initial).
+    // Let the dragged handle in the *local* unrotated frame be (dx_local, dy_local)
+    // e.g. if handle is 'e', it's (W_initial, H_initial/2) or a corner.
+
+    // The vector from the fixed anchor to the dragged handle, in the local frame, changes length.
+    // Its new length is newWidth or newHeight or sqrt(newW^2+newH^2).
+    // The direction of this vector (in local frame) is fixed. e.g., from W to E is along local X axis.
+
+    // Simpler: find the new center such that the fixedAnchorPoint remains at its screen position.
+    // Let P_anchor_screen be the screen coords of the fixed anchor.
+    // Let C_new be the new center (newCenterX, newCenterY) of the unrotated box.
+    // Let P_anchor_local be the local coords of the anchor relative to C_new (e.g., (-newWidth/2, newHeight/2) for 'sw' if center is origin).
+    // P_anchor_screen = Rotate(P_anchor_local, C_new, rad) + C_new
+    // P_anchor_screen.x = (P_anchor_local.x * cos - P_anchor_local.y * sin) + newCenterX
+    // P_anchor_screen.y = (P_anchor_local.x * sin + P_anchor_local.y * cos) + newCenterY
+    // We know P_anchor_screen (it's fixedAnchorPoint.x, fixedAnchorPoint.y).
+    // We know P_anchor_local's components in terms of newWidth/newHeight.
+    // Solve for newCenterX, newCenterY.
+
+    let localAnchorXComp, localAnchorYComp; // Components of vector from center to anchor point in local frame
+    switch (oppositeHandleName) {
+        // Corner cases (anchor is an opposite corner)
+        case 'nw': localAnchorXComp = -newWidth / 2; localAnchorYComp = -newHeight / 2; break;
+        case 'ne': localAnchorXComp = newWidth / 2; localAnchorYComp = -newHeight / 2; break;
+        case 'sw': localAnchorXComp = -newWidth / 2; localAnchorYComp = newHeight / 2; break;
+        case 'se': localAnchorXComp = newWidth / 2; localAnchorYComp = newHeight / 2; break;
+        // Side cases (anchor is midpoint of the opposite side)
+        case 'n_mid': // Dragging 's' handle, anchor is midpoint of 'n' side
+            localAnchorXComp = 0; localAnchorYComp = -newHeight / 2; break;
+        case 'e_mid': // Dragging 'w' handle, anchor is midpoint of 'e' side
+            localAnchorXComp = newWidth / 2; localAnchorYComp = 0; break;
+        case 's_mid': // Dragging 'n' handle, anchor is midpoint of 's' side
+            localAnchorXComp = 0; localAnchorYComp = newHeight / 2; break;
+        case 'w_mid': // Dragging 'e' handle, anchor is midpoint of 'w' side
+            localAnchorXComp = -newWidth / 2; localAnchorYComp = 0; break;
+        default:
+            console.error("Unknown oppositeHandleName:", oppositeHandleName);
+            localAnchorXComp = 0; localAnchorYComp = 0;
     }
-    if (handleName.includes('w')) {
-      newCenterX -= (dWidth / 2) * cos;
-      newCenterY -= (dWidth / 2) * sin;
-    }
-    if (handleName.includes('s')) {
-      newCenterX += (dHeight / 2) * sin; // positive sin for Y-axis pointing down
-      newCenterY += (dHeight / 2) * cos;
-    }
-    if (handleName.includes('n')) {
-      newCenterX -= (dHeight / 2) * sin; // negative sin for Y-axis pointing down
-      newCenterY -= (dHeight / 2) * cos;
-    }
 
-    // For corner handles, the above adjustments are cumulative.
+    // We want: fixedAnchorPoint.x = newCenterX + localAnchorXComp * cos - localAnchorYComp * sin
+    //          fixedAnchorPoint.y = newCenterY + localAnchorXComp * sin + localAnchorYComp * cos
 
-    // Calculate new top-left position from the new center and new dimensions
-    let newX = newCenterX - newWidth / 2;
-    let newY = newCenterY - newHeight / 2;
+    // So: newCenterX = fixedAnchorPoint.x - (localAnchorXComp * cos - localAnchorYComp * sin)
+    //     newCenterY = fixedAnchorPoint.y - (localAnchorXComp * sin + localAnchorYComp * cos)
 
-    // Boundary checks for position and size to keep within 0-100%
-    // This part might need more sophisticated logic when rotated,
-    // as the rotated bounding box can extend beyond the simple x,y,width,height.
-    // For now, basic clamping on newX, newY.
+    const termX = localAnchorXComp * cos - localAnchorYComp * sin;
+    const termY = localAnchorXComp * sin + localAnchorYComp * cos;
 
+    const newCenterX = fixedAnchorPoint.x - termX;
+    const newCenterY = fixedAnchorPoint.y - termY;
+
+    newX = newCenterX - newWidth / 2;
+    newY = newCenterY - newHeight / 2;
+
+    // Boundary checks (basic for now, might need getRotatedBoundingBox checks)
+    newWidth = Math.max(5, newWidth);
+    newHeight = Math.max(3, newHeight);
+
+    // Clamping position and then potentially dimensions if position clamping forces it
     newX = Math.max(0, newX);
     newY = Math.max(0, newY);
 
     if (newX + newWidth > 100) {
         newWidth = 100 - newX;
-        // If width was clamped, re-adjust center if anchored from west/east
-        if (handleName.includes('w')) newX = 100 - newWidth;
     }
     if (newY + newHeight > 100) {
         newHeight = 100 - newY;
-        // If height was clamped, re-adjust center if anchored from north/south
-         if (handleName.includes('n')) newY = 100 - newHeight;
     }
-
-    // Final clamp on position after width/height adjustments
+    // Re-clamp position if dimensions changed due to boundary
     newX = Math.max(0, Math.min(newX, 100 - newWidth));
     newY = Math.max(0, Math.min(newY, 100 - newHeight));
 
