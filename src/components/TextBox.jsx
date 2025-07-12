@@ -41,7 +41,6 @@ const TextBox = ({
 
     const newWidth = width * cos + height * sin;
     const newHeight = width * sin + height * cos;
-
     return {
       width: (newWidth / cWidth) * 100,
       height: (newHeight / cHeight) * 100,
@@ -134,6 +133,7 @@ const TextBox = ({
         x: touch.clientX, y: touch.clientY,
         centerX: rect.left + rect.width / 2,
         centerY: rect.top + rect.height / 2
+
       });
     }
   };
@@ -148,7 +148,9 @@ const TextBox = ({
       const angle = Math.atan2(currentY - dragStart.centerY, currentX - dragStart.centerX) * (180 / Math.PI);
       const startAngle = Math.atan2(dragStart.y - dragStart.centerY, dragStart.x - dragStart.centerX) * (180 / Math.PI);
       let newRotation = initialRotation + (angle - startAngle);
+
       newRotation = (newRotation % 360 + 360) % 360;
+
       onPositionChange(field, { ...position, rotation: newRotation });
       return;
     }
@@ -161,6 +163,7 @@ const TextBox = ({
     if (isDragging) {
       const currentRotation = position.rotation || 0;
       const rotatedBoundingBox = getRotatedBoundingBox(position.width, position.height, currentRotation);
+
       const initialCenterX = initialPosition.x + position.width / 2;
       const initialCenterY = initialPosition.y + position.height / 2;
       let newCenterX = initialCenterX + deltaXPercent;
@@ -226,12 +229,23 @@ const TextBox = ({
       finalPosX = Math.max(0, finalPosX);
       finalPosY = Math.max(0, finalPosY);
 
-      if (rotatedBoundingBox.width > 100.5 || rotatedBoundingBox.height > 100.5) {
-         if (finalPosX < -0.5 || finalPosY < -0.5 ) { return; }
-         if (finalPosX + rotatedBoundingBox.width > 100.5 || finalPosY + rotatedBoundingBox.height > 100.5) { return; }
-      }
+      const finalNewDragX = newCenterX - position.width / 2;
+      const finalNewDragY = newCenterY - position.height / 2;
+      
+      onPositionChange(field, { ...position, x: finalNewDragX, y: finalNewDragY });
 
-      onPositionChange(field, { x: finalPosX, y: finalPosY, rotation: currentFieldRotation });
+    } else if (isResizing && resizeHandle) {
+      const rotationDegrees = position.rotation || 0;
+      const { newX, newY, newWidth, newHeight } = calculateResizedDimensionsAndPosition(
+        initialPosition,
+        initialSize,
+        deltaXPercent,
+        deltaYPercent,
+        resizeHandle.name,
+        rotationDegrees
+      );
+      
+      onPositionChange(field, { x: newX, y: newY, rotation: rotationDegrees });
       onSizeChange(field, { width: newWidth, height: newHeight });
     }
   };
@@ -257,6 +271,7 @@ const TextBox = ({
 
     const deltaX = currentX - dragStart.x;
     const deltaY = currentY - dragStart.y;
+
     const deltaXPercent = (deltaX / (containerSize.width || 1)) * 100;
     const deltaYPercent = (deltaY / (containerSize.height || 1)) * 100;
 
@@ -330,6 +345,7 @@ const TextBox = ({
       }
 
       onPositionChange(field, { x: finalPosX, y: finalPosY, rotation: currentFieldRotation });
+
       onSizeChange(field, { width: newWidth, height: newHeight });
     }
   };
