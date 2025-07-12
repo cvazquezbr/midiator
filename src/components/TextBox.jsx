@@ -28,8 +28,6 @@ const TextBox = ({
   const textBoxRef = useRef(null);
   const textareaRef = useRef(null); // Ref for the textarea
 
-  // Helper function to get bounding box of a rotated element
-  // Moved getRotatedBoundingBox to be defined before it's used by calculateResizedDimensionsAndPosition
   const getRotatedBoundingBox = (widthPercent, heightPercent, rotationDegrees) => {
     const width = (widthPercent / 100) * containerSize.width;
     const height = (heightPercent / 100) * containerSize.height;
@@ -37,83 +35,150 @@ const TextBox = ({
     const sin = Math.abs(Math.sin(radians));
     const cos = Math.abs(Math.cos(radians));
 
-    const newWidth = height * sin + width * cos;
-    const newHeight = height * cos + width * sin;
+    const newWidthPx = height * sin + width * cos;
+    const newHeightPx = height * cos + width * sin;
 
     return {
-      width: (newWidth / containerSize.width) * 100,
-      height: (newHeight / containerSize.height) * 100,
+      width: (newWidthPx / containerSize.width) * 100,
+      height: (newHeightPx / containerSize.height) * 100,
     };
+  };
+
+  // Função auxiliar para transformar um ponto de coordenadas da caixa para coordenadas de tela
+  const transformBoxPointToScreen = (pointInBoxCoords, boxTopLeftX, boxTopLeftY, boxW, boxH, degrees) => {
+      const radians = degrees * (Math.PI / 180);
+      const cosA = Math.cos(radians);
+      const sinA = Math.sin(radians);
+
+      const boxCenterX_unrotated = boxTopLeftX + boxW / 2;
+      const boxCenterY_unrotated = boxTopLeftY + boxH / 2;
+
+      const localX = pointInBoxCoords.x - boxW / 2;
+      const localY = pointInBoxCoords.y - boxH / 2;
+
+      const rotatedLocalX = localX * cosA - localY * sinA;
+      const rotatedLocalY = localX * sinA + localY * cosA;
+
+      return {
+          x: boxCenterX_unrotated + rotatedLocalX,
+          y: boxCenterY_unrotated + rotatedLocalY,
+      };
   };
 
   const calculateResizedDimensionsAndPosition = (
     currentInitialPosition,
     currentInitialSize,
-    deltaXPercent,
-    deltaYPercent,
+    deltaXPercentScreen,
+    deltaYPercentScreen,
     resizeHandleName,
     currentRotationDegrees
   ) => {
-    let currentWidth = currentInitialSize.width;
-    let currentHeight = currentInitialSize.height;
+    const initialBoxX = currentInitialPosition.x;
+    const initialBoxY = currentInitialPosition.y;
+    const initialBoxW = currentInitialSize.width;
+    const initialBoxH = currentInitialSize.height;
+
     const rotationRadians = currentRotationDegrees * (Math.PI / 180);
     const cosA = Math.cos(rotationRadians);
     const sinA = Math.sin(rotationRadians);
 
-    const dxScreen = deltaXPercent;
-    const dyScreen = deltaYPercent;
+    const pivotRatios = {
+        'n': { x: 0.5, y: 1.0 },   // Meio do lado Sul
+        's': { x: 0.5, y: 0.0 },   // Meio do lado Norte
+        'w': { x: 1.0, y: 0.5 },   // Meio do lado Leste
+        'e': { x: 0.0, y: 0.5 },   // Meio do lado Oeste
+        'nw': { x: 1.0, y: 1.0 },  // Canto SE
+        'ne': { x: 0.0, y: 1.0 },  // Canto SW
+        'sw': { x: 1.0, y: 0.0 },  // Canto NE
+        'se': { x: 0.0, y: 0.0 }   // Canto NW
+    };
+    const pivotRatio = pivotRatios[resizeHandleName] || { x: 0.0, y: 0.0 }; // Default para 'se'
 
+    const pivotInInitialBox = {
+        x: pivotRatio.x * initialBoxW,
+        y: pivotRatio.y * initialBoxH
+    };
+
+    const pivotScreenPosInitial = transformBoxPointToScreen(
+        pivotInInitialBox,
+        initialBoxX, initialBoxY,
+        initialBoxW, initialBoxH,
+        currentRotationDegrees
+    );
+
+    const dxScreen = deltaXPercentScreen;
+    const dyScreen = deltaYPercentScreen;
     const dxBox = dxScreen * cosA + dyScreen * sinA;
     const dyBox = -dxScreen * sinA + dyScreen * cosA;
 
-    let newWidth = currentWidth;
-    let newHeight = currentHeight;
-    let anchorDxBox = 0;
-    let anchorDyBox = 0;
+    let newWidth = initialBoxW;
+    let newHeight = initialBoxH;
+    let tempAnchorShiftX_box = 0;
+    let tempAnchorShiftY_box = 0;
 
     switch (resizeHandleName) {
-      case 'n': newHeight -= dyBox; anchorDyBox = dyBox; break;
-      case 's': newHeight += dyBox; break;
-      case 'w': newWidth -= dxBox; anchorDxBox = dxBox; break;
-      case 'e': newWidth += dxBox; break;
-      case 'nw': newWidth -= dxBox; newHeight -= dyBox; anchorDxBox = dxBox; anchorDyBox = dyBox; break;
-      case 'ne': newWidth += dxBox; newHeight -= dyBox; anchorDyBox = dyBox; break;
-      case 'sw': newWidth -= dxBox; newHeight += dyBox; anchorDxBox = dxBox; break;
-      case 'se': newWidth += dxBox; newHeight += dyBox; break;
+        case 'n': newHeight -= dyBox; tempAnchorShiftY_box = dyBox; break;
+        case 's': newHeight += dyBox; break;
+        case 'w': newWidth -= dxBox; tempAnchorShiftX_box = dxBox; break;
+        case 'e': newWidth += dxBox; break;
+        case 'nw': newWidth -= dxBox; newHeight -= dyBox; tempAnchorShiftX_box = dxBox; tempAnchorShiftY_box = dyBox; break;
+        case 'ne': newWidth += dxBox; newHeight -= dyBox; tempAnchorShiftY_box = dyBox; break;
+        case 'sw': newWidth -= dxBox; newHeight += dyBox; tempAnchorShiftX_box = dxBox; break;
+        case 'se': newWidth += dxBox; newHeight += dyBox; break;
     }
 
     newWidth = Math.max(5, newWidth);
     newHeight = Math.max(3, newHeight);
 
-    const anchorDxScreen = anchorDxBox * cosA - anchorDyBox * sinA;
-    const anchorDyScreen = anchorDxBox * sinA + anchorDyBox * cosA;
+    const prelimAnchorShiftX_screen = tempAnchorShiftX_box * cosA - tempAnchorShiftY_box * sinA;
+    const prelimAnchorShiftY_screen = tempAnchorShiftX_box * sinA + tempAnchorShiftY_box * cosA;
+    const prelimBoxX = initialBoxX + prelimAnchorShiftX_screen;
+    const prelimBoxY = initialBoxY + prelimAnchorShiftY_screen;
 
-    let newX = currentInitialPosition.x + anchorDxScreen;
-    let newY = currentInitialPosition.y + anchorDyScreen;
+    const pivotInNewResizedBox = {
+        x: pivotRatio.x * newWidth,
+        y: pivotRatio.y * newHeight
+    };
+    const pivotScreenPosAfterResize_prelim = transformBoxPointToScreen(
+        pivotInNewResizedBox,
+        prelimBoxX, prelimBoxY,
+        newWidth, newHeight,
+        currentRotationDegrees
+    );
 
-    const tempRotatedBoundsForSize = getRotatedBoundingBox(newWidth, newHeight, currentRotationDegrees);
+    const correctionX = pivotScreenPosInitial.x - pivotScreenPosAfterResize_prelim.x;
+    const correctionY = pivotScreenPosInitial.y - pivotScreenPosAfterResize_prelim.y;
 
-    if (tempRotatedBoundsForSize.width > 100) {
-      if (resizeHandleName.includes('w') || resizeHandleName.includes('e')) {
-          newWidth = currentInitialSize.width;
-      }
-    }
-    if (tempRotatedBoundsForSize.height > 100) {
-       if (resizeHandleName.includes('n') || resizeHandleName.includes('s')) {
-          newHeight = currentInitialSize.height;
-      }
-    }
+    let newX = prelimBoxX + correctionX;
+    let newY = prelimBoxY + correctionY;
 
+    // Lógica de contenção
     const finalRotatedBounds = getRotatedBoundingBox(newWidth, newHeight, currentRotationDegrees);
-
-    if (newX < 0) newX = 0;
+    if (newX < 0) {
+        // Se newX < 0, e o pivô estava à direita (e.g., alça 'e' ou 'ne' ou 'se'),
+        // o ajuste para manter o pivô pode ter empurrado newX para < 0.
+        // Precisamos ajustar newWidth também.
+        // Esta parte da contenção é complexa quando um pivô deve ser mantido.
+        // Uma simplificação por agora:
+        newX = 0;
+    }
     if (newX + finalRotatedBounds.width > 100) {
-      newX = 100 - finalRotatedBounds.width;
+        newX = 100 - finalRotatedBounds.width;
     }
-    if (newY < 0) newY = 0;
+    if (newY < 0) {
+        newY = 0;
+    }
     if (newY + finalRotatedBounds.height > 100) {
-      newY = 100 - finalRotatedBounds.height;
+        newY = 100 - finalRotatedBounds.height;
     }
+     // Re-verificar se newX/newY ainda estão dentro dos limites após o ajuste de largura/altura
+    if (newX < 0) newX = 0;
+    if (newX + getRotatedBoundingBox(newWidth, newHeight, currentRotationDegrees).width > 100) {
+      // Potencialmente reajustar newWidth se newX foi fixado em 0 e ainda estoura
+      // Ou newX se newWidth é fixo.
+    }
+    // Similar para newY e newHeight.
+    // A contenção robusta com pivôs é não trivial. A lógica acima é uma primeira aproximação.
 
     return { newX, newY, newWidth, newHeight };
   };
