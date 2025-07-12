@@ -48,75 +48,101 @@ const TextBox = ({
   };
 
   const calculateResizedDimensionsAndPosition = (initialPosition, initialSize, deltaXPercent, deltaYPercent, handleName, rotationDegrees) => {
-    let newX = initialPosition.x;
-    let newY = initialPosition.y;
-    let newWidth = initialSize.width;
-    let newHeight = initialSize.height;
-
     const rad = rotationDegrees * (Math.PI / 180);
     const cos = Math.cos(rad);
     const sin = Math.sin(rad);
 
-    // Adjust deltas based on rotation
-    const rotatedDeltaX = deltaXPercent * cos + deltaYPercent * sin;
-    const rotatedDeltaY = deltaYPercent * cos - deltaXPercent * sin;
+    let { x: prevX, y: prevY } = initialPosition;
+    let { width: prevWidth, height: prevHeight } = initialSize;
 
-    switch (handleName) {
-      case 'nw':
-        newWidth -= rotatedDeltaX;
-        newHeight -= rotatedDeltaY;
-        newX += deltaXPercent - (rotatedDeltaX - deltaXPercent);
-        newY += deltaYPercent - (rotatedDeltaY - deltaYPercent);
-        break;
-      case 'n':
-        newHeight -= rotatedDeltaY;
-        newY += deltaYPercent - (rotatedDeltaY - deltaYPercent);
-        // Adjust X for N handle based on sine component of Y mouse movement
-        newX -= deltaYPercent * sin;
-        break;
-      case 'ne':
-        newWidth += rotatedDeltaX;
-        newHeight -= rotatedDeltaY;
-        newY += deltaYPercent - (rotatedDeltaY - deltaYPercent);
-        // Adjust X for NE handle (no change needed based on original logic, but Y needs care)
-        break;
-      case 'e':
-        newWidth += rotatedDeltaX;
-        // Adjust Y for E handle based on sine component of X mouse movement
-        newY += deltaXPercent * sin;
-        break;
-      case 'se':
-        newWidth += rotatedDeltaX;
-        newHeight += rotatedDeltaY;
-        // No change to X, Y needed based on original logic for SE
-        break;
-      case 's':
-        newHeight += rotatedDeltaY;
-        // Adjust X for S handle based on sine component of Y mouse movement
-        newX += deltaYPercent * sin;
-        break;
-      case 'sw':
-        newWidth -= rotatedDeltaX;
-        newHeight += rotatedDeltaY;
-        newX += deltaXPercent - (rotatedDeltaX - deltaXPercent);
-        break;
-      case 'w':
-        newWidth -= rotatedDeltaX;
-        newX += deltaXPercent - (rotatedDeltaX - deltaXPercent);
-         // Adjust Y for W handle based on sine component of X mouse movement
-        newY -= deltaXPercent * sin;
-        break;
+    // Calculate the center of the box before resizing
+    const prevCenterX = prevX + prevWidth / 2;
+    const prevCenterY = prevY + prevHeight / 2;
+
+    // Normalized deltas (mouse movement in screen space)
+    const dx = deltaXPercent;
+    const dy = deltaYPercent;
+
+    // Projected deltas onto the rotated axes of the textbox
+    // deltaRotX is change along the box's rotated "width" axis
+    // deltaRotY is change along the box's rotated "height" axis
+    const deltaRotX = dx * cos + dy * sin;
+    const deltaRotY = -dx * sin + dy * cos;
+
+    let newWidth = prevWidth;
+    let newHeight = prevHeight;
+    let newCenterX = prevCenterX;
+    let newCenterY = prevCenterY;
+
+    // Adjust dimensions based on which handle is being dragged
+    if (handleName.includes('e')) {
+      newWidth += deltaRotX;
+    }
+    if (handleName.includes('w')) {
+      newWidth -= deltaRotX;
+    }
+    if (handleName.includes('s')) {
+      newHeight += deltaRotY;
+    }
+    if (handleName.includes('n')) {
+      newHeight -= deltaRotY;
     }
 
-    // Basic boundary checks (can be enhanced)
+    // Prevent negative or too small dimensions
     newWidth = Math.max(5, newWidth);
     newHeight = Math.max(3, newHeight);
-    newX = Math.max(0, Math.min(100 - newWidth, newX));
-    newY = Math.max(0, Math.min(100 - newHeight, newY));
 
-    // Ensure width/height don't exceed 100 when combined with x/y
-    if (newX + newWidth > 100) newWidth = 100 - newX;
-    if (newY + newHeight > 100) newHeight = 100 - newY;
+    // Calculate change in width and height
+    const dWidth = newWidth - prevWidth;
+    const dHeight = newHeight - prevHeight;
+
+    // Adjust the center based on the handle and rotation
+    // The change in center should be half the change in dimension, projected back to screen coordinates
+    if (handleName.includes('e')) {
+      newCenterX += (dWidth / 2) * cos;
+      newCenterY += (dWidth / 2) * sin;
+    }
+    if (handleName.includes('w')) {
+      newCenterX -= (dWidth / 2) * cos;
+      newCenterY -= (dWidth / 2) * sin;
+    }
+    if (handleName.includes('s')) {
+      newCenterX += (dHeight / 2) * sin; // positive sin for Y-axis pointing down
+      newCenterY += (dHeight / 2) * cos;
+    }
+    if (handleName.includes('n')) {
+      newCenterX -= (dHeight / 2) * sin; // negative sin for Y-axis pointing down
+      newCenterY -= (dHeight / 2) * cos;
+    }
+
+    // For corner handles, the above adjustments are cumulative.
+
+    // Calculate new top-left position from the new center and new dimensions
+    let newX = newCenterX - newWidth / 2;
+    let newY = newCenterY - newHeight / 2;
+
+    // Boundary checks for position and size to keep within 0-100%
+    // This part might need more sophisticated logic when rotated,
+    // as the rotated bounding box can extend beyond the simple x,y,width,height.
+    // For now, basic clamping on newX, newY.
+
+    newX = Math.max(0, newX);
+    newY = Math.max(0, newY);
+
+    if (newX + newWidth > 100) {
+        newWidth = 100 - newX;
+        // If width was clamped, re-adjust center if anchored from west/east
+        if (handleName.includes('w')) newX = 100 - newWidth;
+    }
+    if (newY + newHeight > 100) {
+        newHeight = 100 - newY;
+        // If height was clamped, re-adjust center if anchored from north/south
+         if (handleName.includes('n')) newY = 100 - newHeight;
+    }
+
+    // Final clamp on position after width/height adjustments
+    newX = Math.max(0, Math.min(newX, 100 - newWidth));
+    newY = Math.max(0, Math.min(newY, 100 - newHeight));
 
 
     return { newX, newY, newWidth, newHeight };
