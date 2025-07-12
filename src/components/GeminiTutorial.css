@@ -1,0 +1,19 @@
+.tutorial-container {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-top: 15px;
+}
+
+.tutorial-container h3 {
+  margin-top: 0;
+  font-size: 1.1em;
+}
+
+.tutorial-container ol {
+  padding-left: 20px;
+}
+
+.tutorial-container li {
+  margin-bottom: 10px;
+}
