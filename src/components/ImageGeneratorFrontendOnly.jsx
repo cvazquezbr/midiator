@@ -276,6 +276,8 @@ const ImageGeneratorFrontendOnly = ({
             const text = record[field] || "";
             if (!text) return;
 
+          ctx.save(); // Salvar o estado do canvas ANTES da rotação e translação
+
             // Calcular posições precisas da caixa de texto na imagem final
             const scaledPos = {
               x: Math.round((position.x / 100) * img.width),
@@ -283,6 +285,15 @@ const ImageGeneratorFrontendOnly = ({
               width: Math.round((position.width / 100) * img.width),
               height: Math.round((position.height / 100) * img.height)
             };
+
+          // Aplicar rotação
+          if (position.rotation) {
+            const centerX = scaledPos.x + scaledPos.width / 2;
+            const centerY = scaledPos.y + scaledPos.height / 2;
+            ctx.translate(centerX, centerY);
+            ctx.rotate(position.rotation * Math.PI / 180);
+            ctx.translate(-centerX, -centerY);
+          }
 
             // Escalar o tamanho da fonte
             const scaledFontSize = style.fontSize * Math.min(scaleX, scaleY);
@@ -349,6 +360,7 @@ const ImageGeneratorFrontendOnly = ({
               // A cor e efeitos já estão no contexto (ctx).
               drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: scaledFontSize });
             });
+          ctx.restore(); // Restaurar o estado do canvas para o próximo campo
           });
 
         // Converter canvas para blob com alta qualidade
@@ -576,12 +588,24 @@ const ImageGeneratorFrontendOnly = ({
         const text = record[field] || "";
         if (!text) return;
 
+        ctx.save(); // Salvar o estado do canvas ANTES da rotação e translação
+
         const scaledPos = {
           x: Math.round((position.x / 100) * img.width),
           y: Math.round((position.y / 100) * img.height),
           width: Math.round((position.width / 100) * img.width),
           height: Math.round((position.height / 100) * img.height)
         };
+
+        // Aplicar rotação
+        if (position.rotation) {
+          const centerX = scaledPos.x + scaledPos.width / 2;
+          const centerY = scaledPos.y + scaledPos.height / 2;
+          ctx.translate(centerX, centerY);
+          ctx.rotate(position.rotation * Math.PI / 180);
+          ctx.translate(-centerX, -centerY);
+        }
+
         const scaledFontSize = style.fontSize * Math.min(scaleX, scaleY);
         
         applyTextEffects(ctx, { ...style, fontSize: scaledFontSize });
@@ -625,6 +649,7 @@ const ImageGeneratorFrontendOnly = ({
           const finalLineY = currentLineRenderY + (lineIndex * lineHeight);
           drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: scaledFontSize });
         });
+        ctx.restore(); // Restaurar o estado do canvas para o próximo campo
       });
 
       const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
