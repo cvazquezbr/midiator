@@ -17,3 +17,11 @@
 .tutorial-container li {
   margin-bottom: 10px;
 }
+
+.image-placeholder {
+  border: 1px dashed #ccc;
+  padding: 20px;
+  text-align: center;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { getGeminiApiKey, saveGeminiApiKey, removeGeminiApiKey } from '../utils/geminiCredentials';
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Link } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
-import GeminiTutorial from './GeminiTutorial'; // Importe o componente do tutorial
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton } from '@mui/material';
+import { Visibility, VisibilityOff, Info } from '@mui/icons-material';
+import GeminiTutorial from './GeminiTutorial';
 
 const GeminiAuthSetup = ({ open, onClose }) => {
   const [apiKey, setApiKey] = useState('');
-  const [showTutorial, setShowTutorial] = useState(false);
   const [currentStoredKey, setCurrentStoredKey] = useState(null);
   const [showKey, setShowKey] = useState(false);
   const [message, setMessage] = useState('');
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -48,20 +48,29 @@ const GeminiAuthSetup = ({ open, onClose }) => {
   }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Configurar Chave da API Gemini</DialogTitle>
-      <DialogContent>
-        <Typography variant="body2" gutterBottom>
-          Insira sua chave da API Gemini (Google AI Studio). Esta chave será armazenada localmente no seu navegador.
-        </Typography>
+    <>
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Configurar Chave da API Gemini
+          <IconButton
+            aria-label="info"
+            onClick={() => setShowTutorial(true)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <Info />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" gutterBottom>
+            Insira sua chave da API Gemini (Google AI Studio). Esta chave será armazenada localmente no seu navegador.
+          </Typography>
 
-        <Link component="button" variant="body2" onClick={() => setShowTutorial(!showTutorial)} sx={{ mt: 1, textAlign: 'left' }}>
-          {showTutorial ? 'Ocultar tutorial' : 'Como obter a sua'}
-        </Link>
-
-        {showTutorial && <GeminiTutorial />}
-
-        {currentStoredKey && !message.includes('removida') && (
+          {currentStoredKey && !message.includes('removida') && (
           <Typography variant="caption" color="textSecondary" gutterBottom>
             Chave atual configurada: {getMaskedKey(currentStoredKey)}
           </Typography>
@@ -110,6 +119,8 @@ const GeminiAuthSetup = ({ open, onClose }) => {
         </Box>
       </DialogActions>
     </Dialog>
+    <GeminiTutorial open={showTutorial} onClose={() => setShowTutorial(false)} />
+    </>
   );
 };
 
