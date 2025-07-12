@@ -47,6 +47,81 @@ const TextBox = ({
     };
   };
 
+  const calculateResizedDimensionsAndPosition = (initialPosition, initialSize, deltaXPercent, deltaYPercent, handleName, rotationDegrees) => {
+    let newX = initialPosition.x;
+    let newY = initialPosition.y;
+    let newWidth = initialSize.width;
+    let newHeight = initialSize.height;
+
+    const rad = rotationDegrees * (Math.PI / 180);
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    // Adjust deltas based on rotation
+    const rotatedDeltaX = deltaXPercent * cos + deltaYPercent * sin;
+    const rotatedDeltaY = deltaYPercent * cos - deltaXPercent * sin;
+
+    switch (handleName) {
+      case 'nw':
+        newWidth -= rotatedDeltaX;
+        newHeight -= rotatedDeltaY;
+        newX += deltaXPercent - (rotatedDeltaX - deltaXPercent);
+        newY += deltaYPercent - (rotatedDeltaY - deltaYPercent);
+        break;
+      case 'n':
+        newHeight -= rotatedDeltaY;
+        newY += deltaYPercent - (rotatedDeltaY - deltaYPercent);
+        // Adjust X for N handle based on sine component of Y mouse movement
+        newX -= deltaYPercent * sin;
+        break;
+      case 'ne':
+        newWidth += rotatedDeltaX;
+        newHeight -= rotatedDeltaY;
+        newY += deltaYPercent - (rotatedDeltaY - deltaYPercent);
+        // Adjust X for NE handle (no change needed based on original logic, but Y needs care)
+        break;
+      case 'e':
+        newWidth += rotatedDeltaX;
+        // Adjust Y for E handle based on sine component of X mouse movement
+        newY += deltaXPercent * sin;
+        break;
+      case 'se':
+        newWidth += rotatedDeltaX;
+        newHeight += rotatedDeltaY;
+        // No change to X, Y needed based on original logic for SE
+        break;
+      case 's':
+        newHeight += rotatedDeltaY;
+        // Adjust X for S handle based on sine component of Y mouse movement
+        newX += deltaYPercent * sin;
+        break;
+      case 'sw':
+        newWidth -= rotatedDeltaX;
+        newHeight += rotatedDeltaY;
+        newX += deltaXPercent - (rotatedDeltaX - deltaXPercent);
+        break;
+      case 'w':
+        newWidth -= rotatedDeltaX;
+        newX += deltaXPercent - (rotatedDeltaX - deltaXPercent);
+         // Adjust Y for W handle based on sine component of X mouse movement
+        newY -= deltaXPercent * sin;
+        break;
+    }
+
+    // Basic boundary checks (can be enhanced)
+    newWidth = Math.max(5, newWidth);
+    newHeight = Math.max(3, newHeight);
+    newX = Math.max(0, Math.min(100 - newWidth, newX));
+    newY = Math.max(0, Math.min(100 - newHeight, newY));
+
+    // Ensure width/height don't exceed 100 when combined with x/y
+    if (newX + newWidth > 100) newWidth = 100 - newX;
+    if (newY + newHeight > 100) newHeight = 100 - newY;
+
+
+    return { newX, newY, newWidth, newHeight };
+  };
+
   useEffect(() => {
     if (!isEditing) {
       setEditedContent(content);
@@ -183,58 +258,6 @@ const TextBox = ({
       onPositionChange(field, { ...position, x: finalNewDragX, y: finalNewDragY });
 
     } else if (isResizing && resizeHandle) {
-      let newX = initialPosition.x;
-      let newY = initialPosition.y;
-      let newWidth = initialSize.width;
-      let newHeight = initialSize.height;
-      const currentFieldRotation = position.rotation || 0;
-
-      switch (resizeHandle.name) {
-        case 'nw': newX += deltaXPercent; newY += deltaYPercent; newWidth -= deltaXPercent; newHeight -= deltaYPercent; break;
-        case 'n': newY += deltaYPercent; newHeight -= deltaYPercent; break;
-        case 'ne': newY += deltaYPercent; newWidth += deltaXPercent; newHeight -= deltaYPercent; break;
-        case 'e': newWidth += deltaXPercent; break;
-        case 'se': newWidth += deltaXPercent; newHeight += deltaYPercent; break;
-        case 's': newHeight += deltaYPercent; break;
-        case 'sw': newX += deltaXPercent; newWidth -= deltaXPercent; newHeight += deltaYPercent; break;
-        case 'w': newX += deltaXPercent; newWidth -= deltaXPercent; break;
-      }
-
-      newWidth = Math.max(5, newWidth);
-      newHeight = Math.max(3, newHeight);
-
-      if (newX + newWidth > 100) {
-        if (resizeHandle.name.includes('w')) { newX = 100 - newWidth; } else { newWidth = 100 - newX; }
-      }
-      if (newY + newHeight > 100) {
-        if (resizeHandle.name.includes('n')) { newY = 100 - newHeight; } else { newHeight = 100 - newY; }
-      }
-      newX = Math.max(0, newX);
-      newY = Math.max(0, newY);
-      newWidth = Math.max(5, newWidth);
-      newHeight = Math.max(3, newHeight);
-      if (newX === 0) newWidth = Math.min(newWidth, 100);
-      if (newY === 0) newHeight = Math.min(newHeight, 100);
-
-      const rotatedBoundingBox = getRotatedBoundingBox(newWidth, newHeight, currentFieldRotation);
-      let finalPosX = newX;
-      let finalPosY = newY;
-
-      if (finalPosX + rotatedBoundingBox.width > 100) {
-        finalPosX = 100 - rotatedBoundingBox.width;
-      }
-      if (finalPosY + rotatedBoundingBox.height > 100) {
-        finalPosY = 100 - rotatedBoundingBox.height;
-      }
-      finalPosX = Math.max(0, finalPosX);
-      finalPosY = Math.max(0, finalPosY);
-
-      const finalNewDragX = newCenterX - position.width / 2;
-      const finalNewDragY = newCenterY - position.height / 2;
-      
-      onPositionChange(field, { ...position, x: finalNewDragX, y: finalNewDragY });
-
-    } else if (isResizing && resizeHandle) {
       const rotationDegrees = position.rotation || 0;
       const { newX, newY, newWidth, newHeight } = calculateResizedDimensionsAndPosition(
         initialPosition,
@@ -245,7 +268,8 @@ const TextBox = ({
         rotationDegrees
       );
       
-      onPositionChange(field, { x: newX, y: newY, rotation: rotationDegrees });
+      // Ensure that the position object passed to onPositionChange includes all necessary properties
+      onPositionChange(field, { ...position, x: newX, y: newY, rotation: rotationDegrees });
       onSizeChange(field, { width: newWidth, height: newHeight });
     }
   };
@@ -297,55 +321,18 @@ const TextBox = ({
       onPositionChange(field, { ...position, x: finalNewDragX, y: finalNewDragY });
 
     } else if (isResizing && resizeHandle) {
-      const currentFieldRotation = position.rotation || 0;
-      let newX = initialPosition.x;
-      let newY = initialPosition.y;
-      let newWidth = initialSize.width;
-      let newHeight = initialSize.height;
+      const rotationDegrees = position.rotation || 0;
+      const { newX, newY, newWidth, newHeight } = calculateResizedDimensionsAndPosition(
+        initialPosition,
+        initialSize,
+        deltaXPercent,
+        deltaYPercent,
+        resizeHandle.name,
+        rotationDegrees
+      );
 
-      switch (resizeHandle.name) {
-        case 'nw': newX += deltaXPercent; newY += deltaYPercent; newWidth -= deltaXPercent; newHeight -= deltaYPercent; break;
-        case 'n': newY += deltaYPercent; newHeight -= deltaYPercent; break;
-        case 'ne': newY += deltaYPercent; newWidth += deltaXPercent; newHeight -= deltaYPercent; break;
-        case 'e': newWidth += deltaXPercent; break;
-        case 'se': newWidth += deltaXPercent; newHeight += deltaYPercent; break;
-        case 's': newHeight += deltaYPercent; break;
-        case 'sw': newX += deltaXPercent; newWidth -= deltaXPercent; newHeight += deltaYPercent; break;
-        case 'w': newX += deltaXPercent; newWidth -= deltaXPercent; break;
-      }
-
-      newWidth = Math.max(5, newWidth);
-      newHeight = Math.max(3, newHeight);
-
-      if (newX + newWidth > 100) {
-        if (resizeHandle.name.includes('w')) { newX = 100 - newWidth; } else { newWidth = 100 - newX; }
-      }
-      if (newY + newHeight > 100) {
-        if (resizeHandle.name.includes('n')) { newY = 100 - newHeight; } else { newHeight = 100 - newY; }
-      }
-      newX = Math.max(0, newX);
-      newY = Math.max(0, newY);
-      newWidth = Math.max(5, newWidth);
-      newHeight = Math.max(3, newHeight);
-      if (newX === 0) newWidth = Math.min(newWidth, 100);
-      if (newY === 0) newHeight = Math.min(newHeight, 100);
-
-      const rotatedBoundingBox = getRotatedBoundingBox(newWidth, newHeight, currentFieldRotation);
-      let finalPosX = newX;
-      let finalPosY = newY;
-
-      if (finalPosX + rotatedBoundingBox.width > 100) { finalPosX = 100 - rotatedBoundingBox.width; }
-      if (finalPosY + rotatedBoundingBox.height > 100) { finalPosY = 100 - rotatedBoundingBox.height; }
-      finalPosX = Math.max(0, finalPosX);
-      finalPosY = Math.max(0, finalPosY);
-
-      if (rotatedBoundingBox.width > 100.5 || rotatedBoundingBox.height > 100.5) {
-         if (finalPosX < -0.5 || finalPosY < -0.5 ) { return; }
-         if (finalPosX + rotatedBoundingBox.width > 100.5 || finalPosY + rotatedBoundingBox.height > 100.5) { return; }
-      }
-
-      onPositionChange(field, { x: finalPosX, y: finalPosY, rotation: currentFieldRotation });
-
+      // Ensure that the position object passed to onPositionChange includes all necessary properties
+      onPositionChange(field, { ...position, x: newX, y: newY, rotation: rotationDegrees });
       onSizeChange(field, { width: newWidth, height: newHeight });
     }
   };
