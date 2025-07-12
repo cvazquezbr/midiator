@@ -30,7 +30,8 @@ import {
   TableChart,
   Google,
   Edit,
-  SwapHoriz
+  SwapHoriz,
+  Share // <-- Adicionar ícone de compartilhamento
 } from '@mui/icons-material';
 import GoogleAuthSetup from './GoogleAuthSetup';
 import GeneratedImageEditor from './GeneratedImageEditor'; // Importar o novo editor
@@ -408,6 +409,34 @@ const ImageGeneratorFrontendOnly = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Função para compartilhar uma imagem
+  const handleShare = async (imageData) => {
+    if (!imageData || !imageData.blob) {
+      alert('A imagem não está disponível para compartilhamento.');
+      return;
+    }
+
+    const file = new File([imageData.blob], imageData.filename, { type: imageData.blob.type });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'Compartilhar Imagem',
+          text: `Confira a imagem: ${imageData.filename}`,
+        });
+      } catch (error) {
+        console.error('Erro ao compartilhar:', error);
+        // Não mostrar alerta para erro "AbortError", que ocorre quando o usuário fecha o diálogo de compartilhamento
+        if (error.name !== 'AbortError') {
+          alert('Ocorreu um erro ao tentar compartilhar a imagem.');
+        }
+      }
+    } else {
+      alert('Seu navegador não suporta o compartilhamento de arquivos.');
+    }
   };
 
   // Função para fazer download de todas as imagens
@@ -1102,6 +1131,14 @@ const ImageGeneratorFrontendOnly = ({
                             title="Download"
                           >
                             <Download />
+                          </IconButton>
+                          {/* Botão de Compartilhar */}
+                          <IconButton
+                            size="small"
+                            onClick={() => handleShare(imageData)}
+                            title="Compartilhar"
+                          >
+                            <Share />
                           </IconButton>
                         </Box>
                       </CardContent>
