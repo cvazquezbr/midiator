@@ -62,6 +62,7 @@ const FieldPositioner = ({
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isInteracting, setIsInteracting] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false); // State for the drawer
+  const [isMoving, setIsMoving] = useState(false);
   const containerRef = useRef(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
 
@@ -417,6 +418,7 @@ const FieldPositioner = ({
                       onContentChange={handleContentChange}
                       rotation={position.rotation}
                       onLongPress={handleFieldLongPress}
+                      setIsMoving={setIsMoving}
                     />
                   );
                 })
@@ -472,7 +474,7 @@ const FieldPositioner = ({
         </Grid>
       )}
 
-      {isMobile && (
+      {isMobile && !isMoving && (
         <>
           <Fab
             color="primary"

@@ -13,7 +13,8 @@ const TextBox = ({
   containerSize,
   onContentChange,
   rotation,
-  onLongPress
+  onLongPress,
+  setIsMoving
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -279,6 +280,8 @@ const TextBox = ({
     e.preventDefault();
     e.stopPropagation();
 
+    if (setIsMoving) setIsMoving(true);
+
     longPressTimeout.current = setTimeout(() => {
       if (onLongPress) {
         onLongPress(field);
@@ -313,6 +316,7 @@ const TextBox = ({
   const handleTouchStart = (e, type, handle = null) => {
     e.preventDefault();
     e.stopPropagation();
+    if (setIsMoving) setIsMoving(true);
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
 
@@ -472,6 +476,7 @@ const TextBox = ({
   };
 
   const handleMouseUp = () => {
+    if (setIsMoving) setIsMoving(false);
     if (longPressTimeout.current) {
       clearTimeout(longPressTimeout.current);
       longPressTimeout.current = null;
@@ -483,6 +488,7 @@ const TextBox = ({
   };
 
   const handleTouchEnd = () => {
+    if (setIsMoving) setIsMoving(false);
     if (longPressTimeout.current) {
       clearTimeout(longPressTimeout.current);
       longPressTimeout.current = null;
