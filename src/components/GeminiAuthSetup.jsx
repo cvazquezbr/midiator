@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getGeminiApiKey, saveGeminiApiKey, removeGeminiApiKey } from '../utils/geminiCredentials';
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Link } from '@mui/material';
 import { Visibility, VisibilityOff, Info } from '@mui/icons-material';
 import GeminiTutorial from './GeminiTutorial';
 
@@ -50,25 +50,26 @@ const GeminiAuthSetup = ({ open, onClose }) => {
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          Configurar Chave da API Gemini
-          <IconButton
-            aria-label="info"
-            onClick={() => setShowTutorial(true)}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: (theme) => theme.palette.grey[500],
-            }}
-          >
-            <Info />
-          </IconButton>
-        </DialogTitle>
+        <DialogTitle>Configurar Chave da API Gemini</DialogTitle>
         <DialogContent>
           <Typography variant="body2" gutterBottom>
             Insira sua chave da API Gemini (Google AI Studio). Esta chave será armazenada localmente no seu navegador.
           </Typography>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+            <Link component="button" variant="body2" onClick={() => setShowTutorial(true)} sx={{ textAlign: 'left' }}>
+              Aprenda a obter a sua chave
+            </Link>
+            <IconButton
+              aria-label="info"
+              onClick={() => setShowTutorial(true)}
+              sx={{
+                color: (theme) => theme.palette.grey[500],
+              }}
+            >
+              <Info />
+            </IconButton>
+          </Box>
 
           {currentStoredKey && !message.includes('removida') && (
           <Typography variant="caption" color="textSecondary" gutterBottom>
