@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'; // Added useCallback
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -8,7 +8,8 @@ import {
   Button,
   Alert,
   IconButton,
-  Tooltip
+  Tooltip,
+  Fab
 } from '@mui/material';
 import {
   Add,
@@ -16,12 +17,13 @@ import {
   SkipPrevious,
   ArrowLeft,
   ArrowRight,
-  SkipNext
+  SkipNext,
+  Edit
 } from '@mui/icons-material';
 import TextBox from './TextBox';
 import FormattingPanel from './FormattingPanel';
+import FormattingDrawer from './FormattingDrawer'; // Import the new drawer
 
-// Define COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER at module level
 const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
   fontFamily: 'Arial',
   fontSize: 24,
@@ -59,20 +61,23 @@ const FieldPositioner = ({
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isInteracting, setIsInteracting] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false); // State for the drawer
   const containerRef = useRef(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
 
-  // Detectar se é dispositivo móvel
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                   ('ontouchstart' in window) || 
-                   (navigator.maxTouchPoints > 0);
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    ('ontouchstart' in window) ||
+    (navigator.maxTouchPoints > 0);
 
   const handleFieldSelectInternal = useCallback((fieldToSelect) => {
     setSelectedField(fieldToSelect);
+    if (isMobile) {
+      setIsDrawerOpen(true); // Open drawer on mobile when a field is selected
+    }
     if (onSelectFieldExternal) {
       onSelectFieldExternal(fieldToSelect);
     }
-  }, [onSelectFieldExternal]); // setSelectedField is stable
+  }, [isMobile, onSelectFieldExternal]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -310,8 +315,7 @@ const FieldPositioner = ({
 
   return (
     <Grid container spacing={3}>
-      {/* Área de edição */}
-      <Grid item xs={12} lg={8}>
+      <Grid item xs={12} lg={isMobile ? 12 : 8}>
         <Card>
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -343,15 +347,12 @@ const FieldPositioner = ({
               </Alert>
             )}
 
-            {/* Instruções específicas para mobile */}
             {isMobile && (
               <Alert severity="info" sx={{ mb: 2 }}>
-                <strong>Modo Mobile:</strong> Toque e arraste para mover campos. 
-                Use os pontos azuis para redimensionar. O scroll será desabilitado durante a edição.
+                <strong>Modo Mobile:</strong> Toque em um campo para abrir o painel de edição.
               </Alert>
             )}
 
-            {/* Container da imagem com campos */}
             <Box
               ref={containerRef}
               className="text-container"
@@ -362,16 +363,13 @@ const FieldPositioner = ({
                 overflow: 'hidden',
                 backgroundColor: '#fff',
                 cursor: 'default',
-                // CSS específico para mobile
                 touchAction: isMobile ? 'pan-x pan-y' : 'auto',
                 WebkitOverflowScrolling: 'touch',
-                // Melhor suporte para touch em mobile
                 '&.interacting': {
                   touchAction: 'none'
                 }
               }}
               onMouseDown={(e) => {
-                // Evita desmarcar ao clicar dentro de um TextBox ou em seus elementos internos
                 if (e.target.closest('.text-box')) return;
                 setSelectedField(null);
               }}
@@ -385,7 +383,6 @@ const FieldPositioner = ({
                   width: '100%',
                   height: 'auto',
                   display: 'block',
-                  // Prevenir drag da imagem
                   pointerEvents: 'none',
                   userSelect: 'none',
                   WebkitUserDrag: 'none'
@@ -393,17 +390,13 @@ const FieldPositioner = ({
                 draggable={false}
               />
 
-              {/* Campos de texto */}
               {csvHeaders && csvHeaders.length > 0
                 ? csvHeaders.map(header => {
                   const position = fieldPositions[header];
                   const style = fieldStyles[header];
-
                   if (!position || !position.visible) return null;
-
-                  const record = csvData[currentPreviewIndex] || (csvData.length > 0 ? csvData[0] : {});
+                  const record = csvData[currentPreviewIndex] || {};
                   const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
-
 
                   return (
                     <TextBox
@@ -417,8 +410,8 @@ const FieldPositioner = ({
                       onPositionChange={handlePositionChange}
                       onSizeChange={handleSizeChange}
                       containerSize={imageSize}
-                      onContentChange={handleContentChange} // Pass the handler to TextBox
-                      rotation={position.rotation} // Pass rotation to TextBox
+                      onContentChange={handleContentChange}
+                      rotation={position.rotation}
                     />
                   );
                 })
@@ -426,44 +419,16 @@ const FieldPositioner = ({
               }
             </Box>
 
-            {/* CSV Data Navigation */}
             {csvData && csvData.length > 1 && (
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
-                <Tooltip title="Primeiro Registro">
-                  <span>
-                    <IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small">
-                      <SkipPrevious />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip title="Registro Anterior">
-                  <span>
-                    <IconButton onClick={handlePreviousPreview} disabled={currentPreviewIndex === 0} size="small">
-                      <ArrowLeft />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Typography variant="body2" sx={{minWidth: '100px', textAlign: 'center'}}>
-                  Registro: {currentPreviewIndex + 1} / {csvData.length}
-                </Typography>
-                <Tooltip title="Próximo Registro">
-                  <span>
-                    <IconButton onClick={handleNextPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small">
-                      <ArrowRight />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip title="Último Registro">
-                  <span>
-                    <IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small">
-                      <SkipNext />
-                    </IconButton>
-                  </span>
-                </Tooltip>
+                <Tooltip title="Primeiro Registro"><span><IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small"><SkipPrevious /></IconButton></span></Tooltip>
+                <Tooltip title="Registro Anterior"><span><IconButton onClick={handlePreviousPreview} disabled={currentPreviewIndex === 0} size="small"><ArrowLeft /></IconButton></span></Tooltip>
+                <Typography variant="body2" sx={{ minWidth: '100px', textAlign: 'center' }}>Registro: {currentPreviewIndex + 1} / {csvData.length}</Typography>
+                <Tooltip title="Próximo Registro"><span><IconButton onClick={handleNextPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><ArrowRight /></IconButton></span></Tooltip>
+                <Tooltip title="Último Registro"><span><IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><SkipNext /></IconButton></span></Tooltip>
               </Box>
             )}
 
-            {/* Color Palette */}
             {colorPalette && colorPalette.length > 0 && (
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
                 {colorPalette.map((color, index) => (
@@ -478,42 +443,18 @@ const FieldPositioner = ({
                       border: '2px solid #fff',
                       boxShadow: '0 0 5px rgba(0,0,0,0.2)',
                       touchAction: 'manipulation',
-                      '&:active': {
-                        transform: 'scale(0.95)'
-                      }
+                      '&:active': { transform: 'scale(0.95)' }
                     }}
                     onClick={() => handleColorCircleClick(color)}
                   />
                 ))}
               </Box>
             )}
-
-            {/* Instruções */}
-            <Box sx={{ mt: 2, p: 2, borderRadius: 1 }}>
-              <Typography variant="body2" color="text.primary">
-                <strong>Instruções:</strong>
-                <br />
-                • Clique em um campo para selecioná-lo e editar suas propriedades
-                <br />
-                • Arraste o círculo central para mover o campo
-                <br />
-                • Arraste os pontos nas bordas para redimensionar
-                <br />
-                • Use o painel lateral para configurar fonte, cor e efeitos
-                {isMobile && (
-                  <>
-                    <br />
-                    <strong>Mobile:</strong> O scroll será temporariamente desabilitado durante a edição dos campos
-                  </>
-                )}
-              </Typography>
-            </Box>
           </CardContent>
         </Card>
       </Grid>
 
-      {/* Painel de formatação */}
-      {showFormattingPanel && (
+      {!isMobile && showFormattingPanel && (
         <Grid item xs={12} lg={4}>
           <FormattingPanel
             selectedField={selectedField}
@@ -524,6 +465,30 @@ const FieldPositioner = ({
             csvHeaders={csvHeaders}
           />
         </Grid>
+      )}
+
+      {isMobile && (
+        <>
+          <Fab
+            color="primary"
+            aria-label="edit"
+            sx={{ position: 'fixed', bottom: 16, right: 16 }}
+            onClick={() => setIsDrawerOpen(true)}
+            disabled={!selectedField}
+          >
+            <Edit />
+          </Fab>
+          <FormattingDrawer
+            open={isDrawerOpen}
+            onClose={() => setIsDrawerOpen(false)}
+            selectedField={selectedField}
+            fieldStyles={fieldStyles}
+            setFieldStyles={setFieldStyles}
+            fieldPositions={fieldPositions}
+            setFieldPositions={setFieldPositions}
+            csvHeaders={csvHeaders}
+          />
+        </>
       )}
     </Grid>
   );
