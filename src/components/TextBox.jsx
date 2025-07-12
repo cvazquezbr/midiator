@@ -589,113 +589,29 @@ const TextBox = ({
       onClick={(e) => { if (!isEditing || e.target !== textareaRef.current) onSelect(field); }}
       onDoubleClick={handleDoubleClick}
     >
-      {isEditing && isSelected ? (
-        <textarea
-          ref={textareaRef} value={editedContent} onChange={handleTextareaChange}
-          onBlur={handleTextareaBlur} onKeyDown={handleTextareaKeyDown}
-          style={{
-            width: '100%', height: '100%', fontFamily: style.fontFamily || 'Arial',
-            fontSize: `${style.fontSize || 16}px`, fontWeight: style.fontWeight || 'normal',
-            fontStyle: style.fontStyle || 'normal', color: style.color || '#000000',
-            lineHeight: `${lineHeight}px`, textDecoration: style.textDecoration || 'none',
-            border: 'none', outline: 'none', backgroundColor: 'transparent',
-            resize: 'none', overflow: 'hidden', padding: 0, boxSizing: 'border-box',
-            textAlign: style.textAlign || 'left',
-          }}
-        />
-      ) : (
-        <Box
-          sx={{
-            pointerEvents: 'none', fontFamily: style.fontFamily || 'Arial',
-            fontSize: `${style.fontSize || 16}px`, fontWeight: style.fontWeight || 'normal',
-            fontStyle: style.fontStyle || 'normal', color: style.color || '#000000',
-            textDecoration: style.textDecoration || 'none', lineHeight: `${lineHeight}px`,
-            textShadow: style.textShadow ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}` : 'none',
-            WebkitTextStroke: style.textStroke ? `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}` : 'none',
-          }}
-        >
-          {textLines.map((line, index) => (
-            <div key={index} style={{ marginBottom: index < textLines.length - 1 ? '2px' : 0 }}>
-              {line}
-            </div>
-          ))}
-        </Box>
-      )}
-      {isSelected && !isEditing && resizeHandles.map((handle) => (
-        <Box
-          key={handle.name}
-          className={`resize-handle-${handle.name}`}
-          sx={{
-            position: 'absolute',
-            left: `calc(${handle.x * 100}% - ${handleSize / 2}px)`,
-            top: `calc(${handle.y * 100}% - ${handleSize / 2}px)`,
-            width: `${handleSize}px`,
-            height: `${handleSize}px`,
-            backgroundColor: '#2196f3',
-            border: '2px solid #ffffff',
-            borderRadius: '50%',
-            cursor: handle.cursor,
-            pointerEvents: 'auto',
-            zIndex: 10,
-            touchAction: 'none',
-            '&:active': {
-              backgroundColor: '#1976d2',
-              transform: 'scale(1.2)',
-            },
-          }}
-          onMouseDown={(e) => effectiveHandleMouseDown(e, 'resize', handle)}
-          onTouchStart={(e) => effectiveHandleTouchStart(e, 'resize', handle)}
-        />
-      ))}
-      {isSelected && !isEditing && (
-        <Box
-          className="rotate-handle"
-          sx={{
-            position: 'absolute',
-            top: `-${handleSize * 2.5}px`, // Aumentar a distância para não sobrepor a borda
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: `${handleSize * 1.5}px`,
-            height: `${handleSize * 1.5}px`,
-            backgroundColor: '#ff9800',
-            border: '2px solid #ffffff',
-            borderRadius: '50%',
-            cursor: 'grab',
-            pointerEvents: 'auto',
-            zIndex: 11,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            touchAction: 'none',
-            '&:active': { backgroundColor: '#f57c00', cursor: 'grabbing' },
-          }}
-          onMouseDown={(e) => effectiveHandleMouseDown(e, 'rotate')}
-          onTouchStart={(e) => effectiveHandleTouchStart(e, 'rotate')}
-        />
-      )}
-    {/* Div interna para visualização de borda e conteúdo */}
-    <Box
-      sx={{
-        width: '100%',
-        height: '100%',
-        border: isSelected ? '2px solid #2196f3' : '2px solid transparent',
-        borderRadius: 1,
-        backgroundColor: isSelected ? 'rgba(33, 150, 243, 0.1)' : 'transparent',
-        padding: '8px',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-        display: 'flex',
-        justifyContent: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
-        alignItems: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
-        touchAction: 'none',
-        WebkitTouchCallout: 'none',
-        WebkitUserSelect: 'none',
-        '&:hover': {
-          border: isSelected ? '2px solid #2196f3' : '2px solid #a0cfff',
-          backgroundColor: isSelected ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
-        },
-      }}
-    >
+      {/* Div interna para visualização de borda e conteúdo */}
+      <Box
+        sx={{
+          width: '100%',
+          height: '100%',
+          border: isSelected ? '2px solid #2196f3' : '2px solid transparent',
+          borderRadius: 1,
+          backgroundColor: isSelected ? 'rgba(33, 150, 243, 0.1)' : 'transparent',
+          padding: '8px',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+          display: 'flex',
+          justifyContent: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
+          alignItems: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
+          touchAction: 'none',
+          WebkitTouchCallout: 'none',
+          WebkitUserSelect: 'none',
+          '&:hover': {
+            border: isSelected ? '2px solid #2196f3' : '2px solid #a0cfff',
+            backgroundColor: isSelected ? 'rgba(33, 150, 243, 0.1)' : 'rgba(33, 150, 243, 0.05)',
+          },
+        }}
+      >
         {isEditing && isSelected ? (
           <textarea
             ref={textareaRef} value={editedContent} onChange={handleTextareaChange}
@@ -729,59 +645,63 @@ const TextBox = ({
           </Box>
         )}
       </Box>
-      {isSelected && !isEditing && resizeHandles.map((handle) => (
-        <Box
-          key={handle.name}
-          className={`resize-handle-${handle.name}`}
-          sx={{
-            position: 'absolute',
-            left: `calc(${handle.x * 100}% - ${handleSize / 2}px)`,
-            top: `calc(${handle.y * 100}% - ${handleSize / 2}px)`,
-            width: `${handleSize}px`,
-            height: `${handleSize}px`,
-            backgroundColor: '#2196f3',
-            border: '2px solid #ffffff',
-            borderRadius: '50%',
-            cursor: handle.cursor,
-            pointerEvents: 'auto',
-            zIndex: 10,
-            touchAction: 'none',
-            '&:active': {
-              backgroundColor: '#1976d2',
-              transform: 'scale(1.2)',
-            },
-          }}
-          onMouseDown={(e) => effectiveHandleMouseDown(e, 'resize', handle)}
-          onTouchStart={(e) => effectiveHandleTouchStart(e, 'resize', handle)}
-        />
-      ))}
+
+      {/* Handles de redimensionamento e rotação */}
       {isSelected && !isEditing && (
-        <Box
-          className="rotate-handle"
-          sx={{
-            position: 'absolute',
-            top: `-${handleSize * 2.5}px`, // Aumentar a distância para não sobrepor a borda
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: `${handleSize * 1.5}px`,
-            height: `${handleSize * 1.5}px`,
-            backgroundColor: '#ff9800',
-            border: '2px solid #ffffff',
-            borderRadius: '50%',
-            cursor: 'grab',
-            pointerEvents: 'auto',
-            zIndex: 11,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            touchAction: 'none',
-            '&:active': { backgroundColor: '#f57c00', cursor: 'grabbing' },
-          }}
-          onMouseDown={(e) => effectiveHandleMouseDown(e, 'rotate')}
-          onTouchStart={(e) => effectiveHandleTouchStart(e, 'rotate')}
-        />
+        <>
+          {resizeHandles.map((handle) => (
+            <Box
+              key={handle.name}
+              className={`resize-handle-${handle.name}`}
+              sx={{
+                position: 'absolute',
+                left: `calc(${handle.x * 100}% - ${handleSize / 2}px)`,
+                top: `calc(${handle.y * 100}% - ${handleSize / 2}px)`,
+                width: `${handleSize}px`,
+                height: `${handleSize}px`,
+                backgroundColor: '#2196f3',
+                border: '2px solid #ffffff',
+                borderRadius: '50%',
+                cursor: handle.cursor,
+                pointerEvents: 'auto',
+                zIndex: 10,
+                touchAction: 'none',
+                '&:active': {
+                  backgroundColor: '#1976d2',
+                  transform: 'scale(1.2)',
+                },
+              }}
+              onMouseDown={(e) => effectiveHandleMouseDown(e, 'resize', handle)}
+              onTouchStart={(e) => effectiveHandleTouchStart(e, 'resize', handle)}
+            />
+          ))}
+          <Box
+            className="rotate-handle"
+            sx={{
+              position: 'absolute',
+              top: `-${handleSize * 2.5}px`, // Aumentar a distância para não sobrepor a borda
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: `${handleSize * 1.5}px`,
+              height: `${handleSize * 1.5}px`,
+              backgroundColor: '#ff9800',
+              border: '2px solid #ffffff',
+              borderRadius: '50%',
+              cursor: 'grab',
+              pointerEvents: 'auto',
+              zIndex: 11,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              touchAction: 'none',
+              '&:active': { backgroundColor: '#f57c00', cursor: 'grabbing' },
+            }}
+            onMouseDown={(e) => effectiveHandleMouseDown(e, 'rotate')}
+            onTouchStart={(e) => effectiveHandleTouchStart(e, 'rotate')}
+          />
+        </>
       )}
-  </Box>
+    </Box>
   );
 };
 
