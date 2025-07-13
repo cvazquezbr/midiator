@@ -34,6 +34,7 @@ import {
   FileUpload,
   Settings,
   Image as ImageIcon,
+  Movie,
   Palette,
   ArrowBackIosNew,
   ArrowForwardIos,
@@ -60,6 +61,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 
 import FieldPositioner from './components/FieldPositioner';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
+import VideoGenerator from './components/VideoGenerator';
 import RecordManager from './features/RecordManager/RecordManager';
 import CsvInfobox from './components/CsvInfobox';
 import GeminiAuthSetup from './components/GeminiAuthSetup';
@@ -246,6 +248,11 @@ function App() {
       label: 'Gerar Imagens',
       description: 'Gere as imagens finais.',
       icon: FormatBold
+    },
+    {
+      label: 'Gerar Vídeo',
+      description: 'Crie um vídeo a partir das imagens geradas.',
+      icon: Movie
     }
   ];
   // Função para ler arquivo CSV
@@ -1579,6 +1586,13 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               setGeneratedImagesData={setGeneratedImagesData}
               initialGeneratedImagesData={generatedImagesData}
               onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
+            />
+          )}
+
+          {/* Passo 5: Geração de Vídeo */}
+          {activeStep === 5 && (
+            <VideoGenerator
+              generatedImages={generatedImagesData}
             />
           )}
 
