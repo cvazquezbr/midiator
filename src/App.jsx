@@ -20,7 +20,6 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   TextField,
-  CircularProgress,
   Link as MuiLink,
   Drawer,
   List,
@@ -1247,7 +1246,6 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             transition: 'margin-left 0.3s ease',
           }}
         >
-          {console.log('Current activeStep:', activeStep)}
           {/* Passo 0: Definir Dados Iniciais */}
           {activeStep === 0 && (
             <Card>
@@ -1429,18 +1427,6 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                         position: 'relative'
                       }}
                     >
-                      {isGenerating && (
-                        <CircularProgress
-                          size={24}
-                          sx={{
-                            position: 'absolute',
-                            left: '50%',
-                            top: '50%',
-                            marginLeft: '-12px',
-                            marginTop: '-12px',
-                          }}
-                        />
-                      )}
                       {isGenerating ? 'Gerando...' : 'Gerar Conteúdo com IA'}
                     </Button>
                     <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
