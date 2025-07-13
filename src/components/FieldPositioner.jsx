@@ -160,14 +160,7 @@ const FieldPositioner = ({
     // Stringifying them for the dependency array is a common way to track changes in object content,
     // though it can be performance-intensive for very large/complex objects.
     // For this use case, it's likely acceptable.
-  }, [
-    csvHeaders,
-    JSON.stringify(fieldPositions), // Re-run if content of fieldPositions changes
-    JSON.stringify(fieldStyles),   // Re-run if content of fieldStyles changes
-    setFieldPositions,
-    setFieldStyles
-    // COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER is a constant, not needed in deps
-  ]);
+  }, [csvHeaders, setFieldPositions, setFieldStyles]);
 
   const handlePositionChange = (field, newPosition) => {
     setFieldPositions(prev => ({
