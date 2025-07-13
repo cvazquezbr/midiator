@@ -8,33 +8,46 @@ import {
   Grid,
   LinearProgress,
   Alert,
-  Slider,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
+  TextField,
+  Paper,
 } from '@mui/material';
-import { Movie, Slideshow } from '@mui/icons-material';
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile } from '@ffmpeg/util';
+import { Movie, PlayArrow, GetApp } from '@mui/icons-material';
+import FFmpeg from '@ffmpeg/ffmpeg';
 
 const VideoGenerator = ({ generatedImages }) => {
   const [video, setVideo] = useState(null);
   const [error, setError] = useState(null);
-  const [slideDurations, setSlideDurations] = useState([]);
+  const [slideDuration, setSlideDuration] = useState(3);
+  const [resolution, setResolution] = useState('1080p');
+  const [fps, setFps] = useState(30);
   const [transition, setTransition] = useState('fade');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const ffmpegRef = useRef(new FFmpeg());
+  const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
 
   const imageContainerRef = useRef(null);
 
   useEffect(() => {
-    if (generatedImages.length > 0) {
-      setSlideDurations(Array(generatedImages.length).fill(1));
+    const loadFfmpeg = async () => {
+      const ffmpeg = ffmpegRef.current;
+      ffmpeg.on('log', ({ message }) => {
+        console.log(message);
+      });
+      ffmpeg.on('progress', ({ progress, time }) => {
+        console.log(`Progress: ${progress * 100} %`);
+        console.log(`Time: ${time / 1000000} s`);
+      });
+      await ffmpeg.load();
+      setFfmpegLoaded(true);
     }
-  }, [generatedImages]);
+    loadFfmpeg();
+  }, []);
 
   useEffect(() => {
     let interval;
@@ -44,90 +57,73 @@ const VideoGenerator = ({ generatedImages }) => {
           if (prevIndex < generatedImages.length - 1) {
             return prevIndex + 1;
           } else {
-            setIsPlaying(false);
-            return 0;
+            setIsPlaying(false); // Para o slideshow no final
+            return 0; // Volta para o início
           }
         });
-      }, slideDurations[currentImageIndex] * 1000);
+      }, slideDuration * 1000);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, slideDurations, currentImageIndex, generatedImages.length]);
+  }, [isPlaying, slideDuration, generatedImages.length]);
 
-  const handlePlaySlideshow = () => {
+  const handleGeneratePreview = () => {
+    setCurrentImageIndex(0);
     setIsPlaying(true);
   };
 
-  const handleDurationChange = (index, value) => {
-    setSlideDurations((prevDurations) => {
-      const newDurations = [...prevDurations];
-      newDurations[index] = value;
-      return newDurations;
-    });
+  const resolutionMap = {
+    '1080p': '1920x1080',
+    '720p': '1280x720',
+    '480p': '854x480',
   };
 
-  const generateVideo = async () => {
+  const handleGenerateFinalVideo = async () => {
     setIsLoading(true);
     setError(null);
     setVideo(null);
 
     const ffmpeg = ffmpegRef.current;
     try {
-      await ffmpeg.load();
       for (let i = 0; i < generatedImages.length; i++) {
-        const file = await fetchFile(generatedImages[i].url);
-        await ffmpeg.writeFile(`img${i}.png`, file);
+        const response = await fetch(generatedImages[i].url);
+        const data = await response.arrayBuffer();
+        await ffmpeg.writeFile(`img${i}.png`, new Uint8Array(data));
       }
 
+      const inputFiles = generatedImages
+        .map((_, i) => `-loop 1 -t ${slideDuration} -i img${i}.png`)
+        .join(' ');
+
+      // Lógica de transição
       let filterComplex = '';
-      switch (transition) {
-        case 'fade':
-          filterComplex = generatedImages
-            .map(
-              (_, i) =>
-                `[${i}:v]fade=t=in:st=0:d=0.5,fade=t=out:st=${
-                  slideDurations[i] - 0.5
-                }:d=0.5[v${i}]`
-            )
-            .join(';');
-          break;
-        case 'slide':
-          filterComplex = generatedImages
-            .map(
-              (_, i) =>
-                `[${i}:v]format=pix_fmts=yuva420p,fade=t=in:st=0:d=0.5:alpha=1,fade=t=out:st=${
-                  slideDurations[i] - 0.5
-                }:d=0.5:alpha=1[v${i}]`
-            )
-            .join(';');
-          break;
-        case 'none':
-        default:
-          filterComplex = generatedImages
-            .map((_, i) => `[${i}:v]null[v${i}]`)
-            .join(';');
-          break;
-      }
+      const n = generatedImages.length;
 
-      const concatFilter =
-        generatedImages.map((_, i) => `[v${i}]`).join('') +
-        `concat=n=${generatedImages.length}:v=1:a=0[v]`;
+      if (n > 0) {
+        const scaledInputs = generatedImages.map((_, i) => `[${i}:v]scale=${resolutionMap[resolution]}:force_original_aspect_ratio=decrease,pad=${resolutionMap[resolution]}:-1:-1:color=black,setsar=1[v${i}];`).join('');
+
+        if (n > 1 && transition !== 'none') {
+          let xfadeChain = '';
+          xfadeChain += `[v0][v1]xfade=transition=${transition}:duration=1:offset=${slideDuration - 1}[xv1];`;
+          for (let i = 1; i < n - 1; i++) {
+            xfadeChain += `[xv${i}][v${i + 1}]xfade=transition=${transition}:duration=1:offset=${(i + 1) * slideDuration - 1}[xv${i + 1}];`;
+          }
+          filterComplex = scaledInputs + xfadeChain;
+        } else {
+          filterComplex = scaledInputs + generatedImages.map((_, i) => `[v${i}]`).join('') + `concat=n=${n}:v=1:a=0[out]`;
+        }
+      }
 
       const command = [
         '-y',
-        ...generatedImages.flatMap((_, i) => [
-          '-loop',
-          '1',
-          '-t',
-          slideDurations[i].toString(),
-          '-i',
-          `img${i}.png`,
-        ]),
+        ...inputFiles.split(' '),
         '-filter_complex',
-        `${filterComplex};${concatFilter}`,
+        filterComplex,
         '-map',
-        '[v]',
+        n > 1 && transition !== 'none' ? `[xv${n-1}]` : '[out]',
         '-c:v',
         'libx264',
+        '-r',
+        fps.toString(),
         '-pix_fmt',
         'yuv420p',
         'output.mp4',
@@ -147,6 +143,17 @@ const VideoGenerator = ({ generatedImages }) => {
     }
   };
 
+  const handleExport = () => {
+    if (video) {
+      const a = document.createElement('a');
+      a.href = video;
+      a.download = 'video_gerado.mp4';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
   return (
     <Box sx={{ mt: 3 }}>
       <Card>
@@ -156,46 +163,119 @@ const VideoGenerator = ({ generatedImages }) => {
             Gerar Vídeo
           </Typography>
 
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Transition</InputLabel>
-                <Select
-                  value={transition}
-                  onChange={(e) => setTransition(e.target.value)}
-                >
-                  <MenuItem value="fade">Fade</MenuItem>
-                  <MenuItem value="slide">Slide</MenuItem>
-                  <MenuItem value="none">None</MenuItem>
-                </Select>
-              </FormControl>
+          {/* Seção de Configurações */}
+          <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Configurações
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Duração por Slide (s)"
+                  type="number"
+                  value={slideDuration}
+                  onChange={(e) => setSlideDuration(Number(e.target.value))}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Resolução</InputLabel>
+                  <Select
+                    value={resolution}
+                    onChange={(e) => setResolution(e.target.value)}
+                  >
+                    <MenuItem value="1080p">1080p</MenuItem>
+                    <MenuItem value="720p">720p</MenuItem>
+                    <MenuItem value="480p">480p</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="FPS"
+                  type="number"
+                  value={fps}
+                  onChange={(e) => setFps(e.target.value)}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Modelo de Transição</InputLabel>
+                  <Select
+                    value={transition}
+                    onChange={(e) => setTransition(e.target.value)}
+                  >
+                    <MenuItem value="fade">Fade</MenuItem>
+                    <MenuItem value="slide">Slide</MenuItem>
+                    <MenuItem value="zoom">Zoom</MenuItem>
+                    <MenuItem value="none">None</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
             </Grid>
-          </Grid>
+          </Paper>
 
-          <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-            <Button
-              variant="contained"
-              onClick={generateVideo}
-              disabled={isLoading || generatedImages.length === 0}
-              startIcon={<Movie />}
+          {/* Seção de Preview */}
+          <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Preview
+            </Typography>
+            <Box
+              ref={imageContainerRef}
+              sx={{
+                width: '100%',
+                aspectRatio: '16/9',
+                backgroundColor: '#000',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
             >
-              Generate Video
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={handlePlaySlideshow}
-              disabled={isPlaying || generatedImages.length === 0}
-              startIcon={<Slideshow />}
-            >
-              Play Slideshow
-            </Button>
-          </Box>
+              {generatedImages.length > 0 && (
+                <img
+                  src={generatedImages[currentImageIndex].url}
+                  alt={`Frame ${currentImageIndex + 1}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                  }}
+                />
+              )}
+            </Box>
+          </Paper>
+
+          {/* Seção de Timeline */}
+          <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Timeline
+            </Typography>
+            <Box sx={{ display: 'flex', overflowX: 'auto', gap: 1 }}>
+              {generatedImages.map((image, index) => (
+                <img
+                  key={image.url}
+                  src={image.url}
+                  alt={`Thumbnail ${index + 1}`}
+                  style={{
+                    height: '80px',
+                    border:
+                      index === currentImageIndex
+                        ? '2px solid #1976d2'
+                        : '2px solid transparent',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => setCurrentImageIndex(index)}
+                />
+              ))}
+            </Box>
+          </Paper>
 
           {isLoading && (
             <Box sx={{ mt: 2 }}>
               <LinearProgress />
               <Typography variant="body2" sx={{ mt: 1 }}>
-                Generating video...
+                Gerando vídeo...
               </Typography>
             </Box>
           )}
@@ -209,74 +289,39 @@ const VideoGenerator = ({ generatedImages }) => {
           {video && (
             <Box sx={{ mt: 3 }}>
               <Typography variant="h6" gutterBottom>
-                Generated Video
+                Vídeo Final
               </Typography>
               <video src={video} controls style={{ width: '100%' }} />
             </Box>
           )}
 
-          <Box
-            ref={imageContainerRef}
-            sx={{
-              mt: 3,
-              width: '100%',
-              aspectRatio: '16/9',
-              backgroundColor: '#000',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            {generatedImages.map((image, index) => (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  opacity: index === currentImageIndex ? 1 : 0,
-                  transition: `opacity 0.5s ${transition}`,
-                }}
-              >
-                <img
-                  key={image.url}
-                  src={image.url}
-                  alt={`Frame ${index + 1}`}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                  }}
-                />
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    bottom: 10,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    color: 'white',
-                    p: 1,
-                    borderRadius: 1,
-                  }}
-                >
-                  <InputLabel htmlFor={`duration-${index}`} sx={{ color: 'white' }}>
-                    Duration (s)
-                  </InputLabel>
-                  <Slider
-                    id={`duration-${index}`}
-                    value={slideDurations[index] || 1}
-                    onChange={(e, newValue) => handleDurationChange(index, newValue)}
-                    aria-labelledby="duration-slider"
-                    valueLabelDisplay="auto"
-                    step={0.1}
-                    min={0.1}
-                    max={10}
-                    sx={{ width: 150, color: 'white' }}
-                  />
-                </Box>
-              </div>
-            ))}
+          {/* Botões de Ação */}
+          <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+            <Button
+              variant="contained"
+              onClick={handleGeneratePreview}
+              disabled={isLoading || generatedImages.length === 0 || isPlaying || !ffmpegLoaded}
+              startIcon={<PlayArrow />}
+            >
+              Gerar Preview
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleGenerateFinalVideo}
+              disabled={isLoading || generatedImages.length === 0 || !ffmpegLoaded}
+              startIcon={<Movie />}
+            >
+              Gerar Vídeo Final
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={handleExport}
+              disabled={!video || isLoading}
+              startIcon={<GetApp />}
+            >
+              Exportar
+            </Button>
           </Box>
         </CardContent>
       </Card>
