@@ -26,6 +26,8 @@ const VideoGenerator = ({ generatedImages }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState('');
   const ffmpegRef = useRef(new FFmpeg());
 
   const imageContainerRef = useRef(null);
@@ -52,18 +54,33 @@ const VideoGenerator = ({ generatedImages }) => {
   };
 
   const generateVideo = async () => {
+    console.log('Starting video generation...');
     setIsLoading(true);
     setError(null);
     setVideo(null);
+    setProgress(0);
+    setProgressMessage('Carregando ffmpeg...');
 
     const ffmpeg = ffmpegRef.current;
+    ffmpeg.on('log', ({ message }) => {
+      console.log(message);
+    });
+    ffmpeg.on('progress', ({ progress }) => {
+      setProgress(Math.round(progress * 100));
+    });
+
     try {
-      await ffmpeg.load();
+      await ffmpeg.load({
+        coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+      });
+      console.log('ffmpeg loaded successfully');
+      setProgressMessage('Escrevendo arquivos...');
       for (let i = 0; i < generatedImages.length; i++) {
         const file = await fetchFile(generatedImages[i].url);
         await ffmpeg.writeFile(`img${i}.png`, file);
       }
 
+      setProgressMessage('Gerando vídeo...');
       await ffmpeg.exec([
         '-framerate',
         `${frameRate}`,
@@ -85,6 +102,8 @@ const VideoGenerator = ({ generatedImages }) => {
       setError(err.message);
     } finally {
       setIsLoading(false);
+      setProgress(0);
+      setProgressMessage('');
     }
   };
 
@@ -149,10 +168,10 @@ const VideoGenerator = ({ generatedImages }) => {
 
           {isLoading && (
             <Box sx={{ mt: 2 }}>
-              <LinearProgress />
               <Typography variant="body2" sx={{ mt: 1 }}>
-                Generating video...
+                {progressMessage}
               </Typography>
+              <LinearProgress variant="determinate" value={progress} />
             </Box>
           )}
 
