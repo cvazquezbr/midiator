@@ -14,55 +14,19 @@ import {
   FormControl,
   InputLabel,
 } from '@mui/material';
-import { Movie, PlayArrow, Stop, Slideshow } from '@mui/icons-material';
-import Uppy from '@uppy/core';
-import ScreenCapture from '@uppy/screen-capture';
+import { Movie, Slideshow } from '@mui/icons-material';
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile } from '@ffmpeg/util';
 
 const VideoGenerator = ({ generatedImages }) => {
-  const [isRecording, setIsRecording] = useState(false);
   const [video, setVideo] = useState(null);
   const [error, setError] = useState(null);
   const [frameRate, setFrameRate] = useState(1);
   const [transition, setTransition] = useState('fade');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-
-  const uppy = new Uppy({
-    autoProceed: true,
-  }).use(ScreenCapture, {
-    onBeforeRecording: async () => {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-      });
-      return stream;
-    },
-  });
-
-  useEffect(() => {
-    if (!uppy) {
-      return;
-    }
-    const onComplete = (result) => {
-      const videoFile = result.successful[0];
-      if (videoFile) {
-        setVideo(URL.createObjectURL(videoFile.data));
-      }
-      setIsRecording(false);
-    };
-
-    const onError = (error) => {
-      setError(error.message);
-      setIsRecording(false);
-    };
-
-    uppy.on('complete', onComplete);
-    uppy.on('error', onError);
-
-    return () => {
-      uppy.off('complete', onComplete);
-      uppy.off('error', onError);
-    };
-  }, [uppy]);
+  const [isLoading, setIsLoading] = useState(false);
+  const ffmpegRef = useRef(new FFmpeg());
 
   const imageContainerRef = useRef(null);
 
@@ -83,17 +47,45 @@ const VideoGenerator = ({ generatedImages }) => {
     return () => clearInterval(interval);
   }, [isPlaying, frameRate, generatedImages.length]);
 
-  const handleStartRecording = () => {
-    uppy.getPlugin('ScreenCapture').start();
-    setIsRecording(true);
-  };
-
-  const handleStopRecording = () => {
-    uppy.getPlugin('ScreenCapture').stop();
-  };
-
   const handlePlaySlideshow = () => {
     setIsPlaying(true);
+  };
+
+  const generateVideo = async () => {
+    setIsLoading(true);
+    setError(null);
+    setVideo(null);
+
+    const ffmpeg = ffmpegRef.current;
+    try {
+      await ffmpeg.load();
+      for (let i = 0; i < generatedImages.length; i++) {
+        const file = await fetchFile(generatedImages[i].url);
+        await ffmpeg.writeFile(`img${i}.png`, file);
+      }
+
+      await ffmpeg.exec([
+        '-framerate',
+        `${frameRate}`,
+        '-i',
+        'img%d.png',
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        'output.mp4',
+      ]);
+
+      const data = await ffmpeg.readFile('output.mp4');
+      const videoUrl = URL.createObjectURL(
+        new Blob([data.buffer], { type: 'video/mp4' })
+      );
+      setVideo(videoUrl);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -139,19 +131,11 @@ const VideoGenerator = ({ generatedImages }) => {
           <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
             <Button
               variant="contained"
-              onClick={handleStartRecording}
-              disabled={isRecording}
-              startIcon={<PlayArrow />}
+              onClick={generateVideo}
+              disabled={isLoading || generatedImages.length === 0}
+              startIcon={<Movie />}
             >
-              Start Recording
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleStopRecording}
-              disabled={!isRecording}
-              startIcon={<Stop />}
-            >
-              Stop Recording
+              Generate Video
             </Button>
             <Button
               variant="outlined"
@@ -163,11 +147,11 @@ const VideoGenerator = ({ generatedImages }) => {
             </Button>
           </Box>
 
-          {isRecording && (
+          {isLoading && (
             <Box sx={{ mt: 2 }}>
               <LinearProgress />
               <Typography variant="body2" sx={{ mt: 1 }}>
-                Recording...
+                Generating video...
               </Typography>
             </Box>
           )}
