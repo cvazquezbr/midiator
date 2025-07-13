@@ -16,7 +16,7 @@ import {
   Paper,
 } from '@mui/material';
 import { Movie, PlayArrow, GetApp } from '@mui/icons-material';
-import FFmpeg from '@ffmpeg/ffmpeg';
+import { createFFmpeg } from '@ffmpeg/ffmpeg';
 
 const VideoGenerator = ({ generatedImages }) => {
   const [video, setVideo] = useState(null);
@@ -28,7 +28,7 @@ const VideoGenerator = ({ generatedImages }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const ffmpegRef = useRef(new FFmpeg());
+  const ffmpegRef = useRef(createFFmpeg({ log: true }));
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
 
   const imageContainerRef = useRef(null);
