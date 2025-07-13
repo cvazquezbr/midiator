@@ -16,11 +16,17 @@ import {
   Paper,
 } from '@mui/material';
 import { Movie, PlayArrow, GetApp } from '@mui/icons-material';
-import { createFFmpeg } from '@ffmpeg/ffmpeg';
+
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile, toBlobURL } from '@ffmpeg/util'; // Importe toBlobURL aqui
+
+
+
 
 const VideoGenerator = ({ generatedImages }) => {
   const [video, setVideo] = useState(null);
   const [error, setError] = useState(null);
+  const [progress, setProgress] = useState(0);
   const [slideDuration, setSlideDuration] = useState(3);
   const [resolution, setResolution] = useState('1080p');
   const [fps, setFps] = useState(30);
@@ -28,39 +34,47 @@ const VideoGenerator = ({ generatedImages }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const ffmpegRef = useRef(createFFmpeg({ log: true }));
+
+  const ffmpegRef = useRef(new FFmpeg());
+
+
+
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
 
   const imageContainerRef = useRef(null);
 
+  // Correção 1: Lógica de carregamento do FFmpeg atualizada
   useEffect(() => {
     const loadFfmpeg = async () => {
       const ffmpeg = ffmpegRef.current;
       ffmpeg.on('log', ({ message }) => {
-        console.log(message);
+        console.log(message); // Útil para depuração
       });
-      ffmpeg.on('progress', ({ progress, time }) => {
-        console.log(`Progress: ${progress * 100} %`);
-        console.log(`Time: ${time / 1000000} s`);
+      ffmpeg.on('progress', ({ progress }) => {
+        setProgress(Math.round(progress * 100));
       });
-      await ffmpeg.load();
-      setFfmpegLoaded(true);
-    }
+
+      try {
+        // Use um CDN (como unpkg) para carregar os arquivos do core.
+        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+        await ffmpeg.load({
+          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript' ),
+          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+        });
+        setFfmpegLoaded(true);
+      } catch (err) {
+        console.error("Failed to load ffmpeg:", err);
+        setError("Não foi possível carregar o componente de vídeo. Tente recarregar a página.");
+      }
+    };
     loadFfmpeg();
   }, []);
 
   useEffect(() => {
     let interval;
-    if (isPlaying) {
+    if (isPlaying && generatedImages.length > 0) {
       interval = setInterval(() => {
-        setCurrentImageIndex((prevIndex) => {
-          if (prevIndex < generatedImages.length - 1) {
-            return prevIndex + 1;
-          } else {
-            setIsPlaying(false); // Para o slideshow no final
-            return 0; // Volta para o início
-          }
-        });
+        setCurrentImageIndex((prevIndex) => (prevIndex + 1) % generatedImages.length);
       }, slideDuration * 1000);
     }
     return () => clearInterval(interval);
@@ -68,7 +82,7 @@ const VideoGenerator = ({ generatedImages }) => {
 
   const handleGeneratePreview = () => {
     setCurrentImageIndex(0);
-    setIsPlaying(true);
+    setIsPlaying(!isPlaying); // Alterna o estado de play/pause
   };
 
   const resolutionMap = {
@@ -81,54 +95,54 @@ const VideoGenerator = ({ generatedImages }) => {
     setIsLoading(true);
     setError(null);
     setVideo(null);
+    setProgress(0);
 
     const ffmpeg = ffmpegRef.current;
     try {
+      // Escreve os arquivos de imagem no sistema de arquivos virtual do FFmpeg
       for (let i = 0; i < generatedImages.length; i++) {
-        const response = await fetch(generatedImages[i].url);
-        const data = await response.arrayBuffer();
-        await ffmpeg.writeFile(`img${i}.png`, new Uint8Array(data));
+        // Usar fetchFile da biblioteca @ffmpeg/util é mais robusto
+        await ffmpeg.writeFile(`img${i}.png`, await fetchFile(generatedImages[i].url));
       }
 
-      const inputFiles = generatedImages
-        .map((_, i) => `-loop 1 -t ${slideDuration} -i img${i}.png`)
-        .join(' ');
-
-      // Lógica de transição
-      let filterComplex = '';
+      // Correção 2: Geração de comando FFmpeg mais robusta
+      const command = ['-y'];
+      const filterComplexParts = [];
       const n = generatedImages.length;
 
-      if (n > 0) {
-        const scaledInputs = generatedImages.map((_, i) => `[${i}:v]scale=${resolutionMap[resolution]}:force_original_aspect_ratio=decrease,pad=${resolutionMap[resolution]}:-1:-1:color=black,setsar=1[v${i}];`).join('');
-
-        if (n > 1 && transition !== 'none') {
-          let xfadeChain = '';
-          xfadeChain += `[v0][v1]xfade=transition=${transition}:duration=1:offset=${slideDuration - 1}[xv1];`;
-          for (let i = 1; i < n - 1; i++) {
-            xfadeChain += `[xv${i}][v${i + 1}]xfade=transition=${transition}:duration=1:offset=${(i + 1) * slideDuration - 1}[xv${i + 1}];`;
-          }
-          filterComplex = scaledInputs + xfadeChain;
-        } else {
-          filterComplex = scaledInputs + generatedImages.map((_, i) => `[v${i}]`).join('') + `concat=n=${n}:v=1:a=0[out]`;
-        }
+      // Adiciona cada imagem como uma entrada de loop
+      for (let i = 0; i < n; i++) {
+        command.push('-loop', '1', '-t', slideDuration.toString(), '-i', `img${i}.png`);
       }
 
-      const command = [
-        '-y',
-        ...inputFiles.split(' '),
-        '-filter_complex',
-        filterComplex,
-        '-map',
-        n > 1 && transition !== 'none' ? `[xv${n-1}]` : '[out]',
-        '-c:v',
-        'libx264',
-        '-r',
-        fps.toString(),
-        '-pix_fmt',
-        'yuv420p',
-        'output.mp4',
-      ];
+      // Prepara o filtro de escala e preenchimento para cada vídeo
+      const scaledInputs = generatedImages.map((_, i) =>
+        `[${i}:v]scale=${resolutionMap[resolution]}:force_original_aspect_ratio=decrease,pad=${resolutionMap[resolution]}:-1:-1:color=black,setsar=1[v${i}];`
+      ).join('');
+      filterComplexParts.push(scaledInputs);
 
+      let outputMapLabel = '[out]'; // Rótulo de saída padrão
+
+      if (n > 1 && transition !== 'none') {
+        let xfadeChain = '';
+        // Constrói a cadeia de transições xfade
+        xfadeChain += `[v0][v1]xfade=transition=${transition}:duration=1:offset=${slideDuration - 1}[xv1];`;
+        for (let i = 1; i < n - 1; i++) {
+          xfadeChain += `[xv${i}][v${i + 1}]xfade=transition=${transition}:duration=1:offset=${(i + 1) * slideDuration - 1}[xv${i + 1}];`;
+        }
+        filterComplexParts.push(xfadeChain);
+        outputMapLabel = `[xv${n - 1}]`; // A saída é o último elo da cadeia
+      } else {
+        // Se não houver transição, apenas concatena os vídeos
+        const concatInputs = generatedImages.map((_, i) => `[v${i}]`).join('');
+        filterComplexParts.push(`${concatInputs}concat=n=${n}:v=1:a=0[out]`);
+      }
+
+      command.push('-filter_complex', filterComplexParts.join(''));
+      command.push('-map', outputMapLabel);
+      command.push('-c:v', 'libx264', '-r', fps.toString(), '-pix_fmt', 'yuv420p', 'output.mp4');
+
+      console.log("Executing FFmpeg command:", command.join(' '));
       await ffmpeg.exec(command);
 
       const data = await ffmpeg.readFile('output.mp4');
@@ -137,9 +151,11 @@ const VideoGenerator = ({ generatedImages }) => {
       );
       setVideo(videoUrl);
     } catch (err) {
-      setError(err.message);
+      console.error(err);
+      setError(`Ocorreu um erro na geração do vídeo: ${err.message}`);
     } finally {
       setIsLoading(false);
+      setProgress(0);
     }
   };
 
@@ -149,7 +165,7 @@ const VideoGenerator = ({ generatedImages }) => {
       a.href = video;
       a.download = 'video_gerado.mp4';
       document.body.appendChild(a);
-      a.click();
+a.click();
       document.body.removeChild(a);
     }
   };
@@ -162,6 +178,13 @@ const VideoGenerator = ({ generatedImages }) => {
             <Movie sx={{ mr: 1, verticalAlign: 'middle' }} />
             Gerar Vídeo
           </Typography>
+
+          {!ffmpegLoaded && !error && (
+            <Box sx={{ my: 2 }}>
+              <Typography>Carregando editor de vídeo...</Typography>
+              <LinearProgress />
+            </Box>
+          )}
 
           {/* Seção de Configurações */}
           <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
@@ -176,6 +199,7 @@ const VideoGenerator = ({ generatedImages }) => {
                   value={slideDuration}
                   onChange={(e) => setSlideDuration(Number(e.target.value))}
                   fullWidth
+                  inputProps={{ min: 1 }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -185,15 +209,15 @@ const VideoGenerator = ({ generatedImages }) => {
                     value={resolution}
                     onChange={(e) => setResolution(e.target.value)}
                   >
-                    <MenuItem value="1080p">1080p</MenuItem>
-                    <MenuItem value="720p">720p</MenuItem>
-                    <MenuItem value="480p">480p</MenuItem>
+                    <MenuItem value="1080p">1080p (Full HD)</MenuItem>
+                    <MenuItem value="720p">720p (HD)</MenuItem>
+                    <MenuItem value="480p">480p (SD)</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
-                  label="FPS"
+                  label="FPS (Quadros por segundo)"
                   type="number"
                   value={fps}
                   onChange={(e) => setFps(e.target.value)}
@@ -207,10 +231,12 @@ const VideoGenerator = ({ generatedImages }) => {
                     value={transition}
                     onChange={(e) => setTransition(e.target.value)}
                   >
-                    <MenuItem value="fade">Fade</MenuItem>
-                    <MenuItem value="slide">Slide</MenuItem>
-                    <MenuItem value="zoom">Zoom</MenuItem>
-                    <MenuItem value="none">None</MenuItem>
+                    <MenuItem value="fade">Fade (Esmaecer)</MenuItem>
+                    <MenuItem value="slideleft">Slide Left</MenuItem>
+                    <MenuItem value="slideright">Slide Right</MenuItem>
+                    <MenuItem value="slideup">Slide Up</MenuItem>
+                    <MenuItem value="slidedown">Slide Down</MenuItem>
+                    <MenuItem value="none">Nenhuma</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -240,6 +266,8 @@ const VideoGenerator = ({ generatedImages }) => {
                     width: '100%',
                     height: '100%',
                     objectFit: 'contain',
+                    transition: 'opacity 0.5s ease-in-out', // Efeito suave no preview
+                    opacity: 1,
                   }}
                 />
               )}
@@ -251,7 +279,7 @@ const VideoGenerator = ({ generatedImages }) => {
             <Typography variant="h6" gutterBottom>
               Timeline
             </Typography>
-            <Box sx={{ display: 'flex', overflowX: 'auto', gap: 1 }}>
+            <Box sx={{ display: 'flex', overflowX: 'auto', gap: 1, p: 1 }}>
               {generatedImages.map((image, index) => (
                 <img
                   key={image.url}
@@ -259,10 +287,11 @@ const VideoGenerator = ({ generatedImages }) => {
                   alt={`Thumbnail ${index + 1}`}
                   style={{
                     height: '80px',
+                    borderRadius: '4px',
                     border:
                       index === currentImageIndex
-                        ? '2px solid #1976d2'
-                        : '2px solid transparent',
+                        ? '3px solid #1976d2'
+                        : '3px solid transparent',
                     cursor: 'pointer',
                   }}
                   onClick={() => setCurrentImageIndex(index)}
@@ -273,9 +302,9 @@ const VideoGenerator = ({ generatedImages }) => {
 
           {isLoading && (
             <Box sx={{ mt: 2 }}>
-              <LinearProgress />
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                Gerando vídeo...
+              <LinearProgress variant="determinate" value={progress} />
+              <Typography variant="body2" sx={{ mt: 1, textAlign: 'center' }}>
+                Gerando vídeo... {progress}%
               </Typography>
             </Box>
           )}
@@ -291,19 +320,19 @@ const VideoGenerator = ({ generatedImages }) => {
               <Typography variant="h6" gutterBottom>
                 Vídeo Final
               </Typography>
-              <video src={video} controls style={{ width: '100%' }} />
+              <video src={video} controls style={{ width: '100%', borderRadius: '4px' }} />
             </Box>
           )}
 
           {/* Botões de Ação */}
-          <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+          <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
             <Button
               variant="contained"
               onClick={handleGeneratePreview}
-              disabled={isLoading || generatedImages.length === 0 || isPlaying || !ffmpegLoaded}
+              disabled={isLoading || generatedImages.length === 0 || !ffmpegLoaded}
               startIcon={<PlayArrow />}
             >
-              Gerar Preview
+              {isPlaying ? 'Parar Preview' : 'Iniciar Preview'}
             </Button>
             <Button
               variant="contained"

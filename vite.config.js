@@ -12,7 +12,11 @@ export default defineConfig({
       clientPort: 5173,
       protocol: 'ws',
       host: 'localhost'
-    }
+    },
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
   },
   resolve: {
     alias: {
@@ -20,3 +24,4 @@ export default defineConfig({
     },
   },
 })
+
