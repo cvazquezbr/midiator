@@ -58,9 +58,11 @@ const VideoGenerator = ({ generatedImages }) => {
   };
 
   const handleDurationChange = (index, value) => {
-    const newDurations = [...slideDurations];
-    newDurations[index] = value;
-    setSlideDurations(newDurations);
+    setSlideDurations((prevDurations) => {
+      const newDurations = [...prevDurations];
+      newDurations[index] = value;
+      return newDurations;
+    });
   };
 
   const generateVideo = async () => {
@@ -110,13 +112,50 @@ const VideoGenerator = ({ generatedImages }) => {
         generatedImages.map((_, i) => `[v${i}]`).join('') +
         `concat=n=${generatedImages.length}:v=1:a=0[v]`;
 
-      const command = `-y ${generatedImages
-        .map((_, i) => `-loop 1 -t ${slideDurations[i]} -i img${i}.png`)
-        .join(
-          ' '
-        )} -filter_complex "${filterComplex};${concatFilter}" -map "[v]" -c:v libx264 -pix_fmt yuv420p output.mp4`;
+      const inputs = generatedImages.flatMap((_, i) => ['-i', `img${i}.png`]);
 
-      await ffmpeg.exec(command.split(' '));
+      const filterComplex = generatedImages
+        .map(
+          (_, i) =>
+            `[${i}:v]tpad=stop_mode=clone:stop_duration=${slideDurations[i]}[v${i}]`
+        )
+        .join(';');
+
+      let crossfadeFilter = '';
+      if (transition === 'fade' && generatedImages.length > 1) {
+        let currentVideo = 'v0';
+        for (let i = 1; i < generatedImages.length; i++) {
+          const nextVideo = `v${i}`;
+          const outputVideo = `cf${i}`;
+          const offset = slideDurations
+            .slice(0, i)
+            .reduce((a, b) => a + b, 0);
+          crossfadeFilter += `[${currentVideo}][${nextVideo}]xfade=transition=fade:duration=1:offset=${
+            offset - 0.5
+          }[${outputVideo}];`;
+          currentVideo = outputVideo;
+        }
+        crossfadeFilter = crossfadeFilter.slice(0, -1); // remove last semicolon
+      }
+
+      const command = [
+        '-y',
+        ...inputs,
+        '-filter_complex',
+        `${filterComplex};${crossfadeFilter}`,
+        '-map',
+        `[${
+          transition === 'fade' && generatedImages.length > 1
+            ? 'cf' + (generatedImages.length - 1)
+            : 'v0'
+        }]`,
+        '-c:v',
+        'libx264',
+        '-pix_fmt',
+        'yuv420p',
+        'output.mp4',
+      ];
+      await ffmpeg.exec(command);
 
       const data = await ffmpeg.readFile('output.mp4');
       const videoUrl = URL.createObjectURL(

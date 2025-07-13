@@ -825,9 +825,8 @@ DENTRO DO BLOCO CSV:
 REQUISITOS PARA O CONTEÚDO DE CADA ELEMENTO (LINHA DO CSV):
 1. **Titulo** (Coluna 1):
    - Máximo de 4 palavras.
-   - Deve começar com um emoji relevante.
    - Precisa ser curto e impactante.
-   - Exemplo: "✨ Segredo Revelado"
+   - Exemplo: "Segredo Revelado"
 2. **Texto Principal** (Coluna 2):
    - Entre 120 e 180 caracteres.
    - Adaptado do TEXTO BASE, com linguagem conversacional e direta.
