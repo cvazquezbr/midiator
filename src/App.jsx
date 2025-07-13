@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useIsMobile } from './hooks/use-mobile';
+import { useIsMobile } from './hooks/use-mobile.js';
 import {
   Container,
   Paper,
@@ -52,7 +52,7 @@ import {
   Visibility,
   Grid3x3
 } from '@mui/icons-material';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'; // Importar o ícone se não estiver globalmente disponível
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Papa from 'papaparse';
 import ColorThief from 'colorthief';
 import { Menu, MenuItem } from '@mui/material';
@@ -182,7 +182,7 @@ function App() {
   const [activeStep, setActiveStep] = useState(0);
   const [darkMode, setDarkMode] = useState(() => {
     const savedMode = localStorage.getItem('darkMode');
-    return savedMode ? JSON.parse(savedMode) : false;
+    return savedMode ? JSON.parse(savedMode) : window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [csvData, setCsvData] = useState([]);
@@ -1247,6 +1247,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             transition: 'margin-left 0.3s ease',
           }}
         >
+          {console.log('Current activeStep:', activeStep)}
           {/* Passo 0: Definir Dados Iniciais */}
           {activeStep === 0 && (
             <Card>
