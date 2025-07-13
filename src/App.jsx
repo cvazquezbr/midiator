@@ -62,15 +62,11 @@ import CssBaseline from '@mui/material/CssBaseline';
 import FieldPositioner from './components/FieldPositioner';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
 import RecordManager from './features/RecordManager/RecordManager';
-import CsvInfobox from './components/CsvInfobox'; // Importar o novo componente
-// import DeepSeekAuthSetup from './components/DeepSeekAuthSetup'; // Removed
+import CsvInfobox from './components/CsvInfobox';
 import GeminiAuthSetup from './components/GeminiAuthSetup';
 import GoogleDriveAuthModal from './components/GoogleDriveAuthModal';
-// import { getDeepSeekApiKey } from './utils/deepSeekCredentials'; // Removed
 import { getGeminiApiKey } from './utils/geminiCredentials';
-// import { callDeepSeekApi } from './utils/deepSeekAPI'; // Removed
 import { callGeminiApi } from './utils/geminiAPI';
-// import VpnKeyIcon from '@mui/icons-material/VpnKey'; // Removed as it was for DeepSeek menu item
 import GoogleIcon from '@mui/icons-material/Google';
 import './App.css';
 
