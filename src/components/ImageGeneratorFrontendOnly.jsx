@@ -17,8 +17,7 @@ import {
   TextField,
   FormControlLabel,
   Switch,
-  Divider,
-  CircularProgress
+  Divider
 } from '@mui/material';
 import {
   Download,
@@ -32,19 +31,8 @@ import {
   Google,
   Edit,
   SwapHoriz,
-  Share, // <-- Adicionar ícone de compartilhamento
-  ViewModule // <-- Adicionar ícone de quebra-cabeça
+  Share // <-- Adicionar ícone de compartilhamento
 } from '@mui/icons-material';
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer"
 import GoogleAuthSetup from './GoogleAuthSetup';
 import GeneratedImageEditor from './GeneratedImageEditor'; // Importar o novo editor
 import googleDriveAPI from '../utils/googleDriveAPI';
@@ -75,11 +63,6 @@ const ImageGeneratorFrontendOnly = ({
   // Novos estados para o editor WYSIWYG de imagens geradas
   const [editingGeneratedImageIndex, setEditingGeneratedImageIndex] = useState(null);
   const [showGeneratedImageEditor, setShowGeneratedImageEditor] = useState(false);
-
-  // Estados para o puzzle
-  const [puzzleImage, setPuzzleImage] = useState(null);
-  const [puzzleRows, setPuzzleRows] = useState(3);
-  const [puzzleCols, setPuzzleCols] = useState(3);
 
 
   // Estados para integração Google Drive
@@ -115,15 +98,6 @@ const ImageGeneratorFrontendOnly = ({
 
     loadFonts();
   }, []);
-
-  if (!fontsLoaded) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
-        <CircularProgress />
-        <Typography sx={{ ml: 2 }}>Carregando fontes...</Typography>
-      </Box>
-    );
-  }
 
   // Efeito para atualizar o estado pai (App.jsx) quando generatedImages local mudar
   useEffect(() => {
@@ -484,50 +458,6 @@ const ImageGeneratorFrontendOnly = ({
   const closePreview = () => {
     setPreviewOpen(false);
     setSelectedPreview(null);
-  };
-
-  // Função para baixar a imagem como quebra-cabeça
-  const downloadAsPuzzle = async (imageData, rows, cols) => {
-    if (!imageData || !imageData.blob) {
-      alert('A imagem original não está disponível.');
-      return;
-    }
-
-    const img = new Image();
-    img.src = URL.createObjectURL(imageData.blob);
-    await new Promise(resolve => img.onload = resolve);
-
-    const pieceWidth = img.width / cols;
-    const pieceHeight = img.height / rows;
-
-    for (let i = 0; i < rows; i++) {
-      for (let j = 0; j < cols; j++) {
-        const canvas = document.createElement('canvas');
-        canvas.width = pieceWidth;
-        canvas.height = pieceHeight;
-        const ctx = canvas.getContext('2d');
-
-        ctx.drawImage(
-          img,
-          j * pieceWidth, i * pieceHeight, // source x, y
-          pieceWidth, pieceHeight,      // source width, height
-          0, 0,                         // destination x, y
-          pieceWidth, pieceHeight       // destination width, height
-        );
-
-        const pieceBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-        const pieceUrl = URL.createObjectURL(pieceBlob);
-
-        const link = document.createElement('a');
-        link.href = pieceUrl;
-        const baseFilename = imageData.filename.replace('.png', '');
-        link.download = `${baseFilename}_puzzle_${i + 1}_${j + 1}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(pieceUrl);
-      }
-    }
   };
 
   // REMOVED: Old CSV text editing functions: handleEditTextCsv, handleSaveTextCsvEdit, handleCancelTextCsvEdit, handleCsvFieldChange
@@ -1210,47 +1140,6 @@ const ImageGeneratorFrontendOnly = ({
                           >
                             <Share />
                           </IconButton>
-                          <Drawer>
-                            <DrawerTrigger asChild>
-                              <IconButton size="small" title="Baixar como Quebra-Cabeça">
-                                <ViewModule />
-                              </IconButton>
-                            </DrawerTrigger>
-                            <DrawerContent>
-                              <div className="mx-auto w-full max-w-sm">
-                                <DrawerHeader>
-                                  <DrawerTitle>Baixar como Quebra-Cabeça</DrawerTitle>
-                                  <DrawerDescription>Selecione o número de linhas e colunas para dividir a imagem.</DrawerDescription>
-                                </DrawerHeader>
-                                <div className="p-4 pb-0">
-                                  <div className="flex items-center justify-center space-x-2">
-                                    <TextField
-                                      label="Linhas"
-                                      type="number"
-                                      value={puzzleRows}
-                                      onChange={(e) => setPuzzleRows(parseInt(e.target.value, 10))}
-                                      inputProps={{ min: 1, style: { textAlign: 'center' } }}
-                                      sx={{ width: '100px' }}
-                                    />
-                                    <TextField
-                                      label="Colunas"
-                                      type="number"
-                                      value={puzzleCols}
-                                      onChange={(e) => setPuzzleCols(parseInt(e.target.value, 10))}
-                                      inputProps={{ min: 1, style: { textAlign: 'center' } }}
-                                      sx={{ width: '100px' }}
-                                    />
-                                  </div>
-                                </div>
-                                <DrawerFooter>
-                                  <Button onClick={() => downloadAsPuzzle(imageData, puzzleRows, puzzleCols)}>Download</Button>
-                                  <DrawerClose asChild>
-                                    <Button variant="outlined">Cancelar</Button>
-                                  </DrawerClose>
-                                </DrawerFooter>
-                              </div>
-                            </DrawerContent>
-                          </Drawer>
                         </Box>
                       </CardContent>
                     </Card>
@@ -1300,42 +1189,34 @@ const ImageGeneratorFrontendOnly = ({
 
       {/* REMOVED: Old CSV text editing Dialog */}
 
-      {/* Editor WYSIWYG para Imagem Gerada Individual */}
-      {(() => {
-        if (showGeneratedImageEditor && editingGeneratedImageIndex !== null) {
-          const imageToEdit = generatedImages.find(img => img.index === editingGeneratedImageIndex);
-          if (!imageToEdit) {
-            // This case should ideally not happen if editingGeneratedImageIndex is valid.
-            // Closing the editor or showing an error might be appropriate.
-            // For now, we'll prevent rendering if imageToEdit is not found.
-            // Consider calling handleCloseGeneratedImageEditor() here or similar.
-            console.error(`[IGFO] Render: Could not find image with index ${editingGeneratedImageIndex} to edit.`);
-            return null;
-          }
-
-          const positionsToLoad = imageToEdit.customFieldPositions !== undefined
-            ? imageToEdit.customFieldPositions
-            : fieldPositions; // global fieldPositions prop from App.jsx
-
-          const stylesToLoad = imageToEdit.customFieldStyles !== undefined
-            ? imageToEdit.customFieldStyles
-            : fieldStyles;    // global fieldStyles prop from App.jsx
-
-          return (
-            <GeneratedImageEditor
-              open={showGeneratedImageEditor}
-              onClose={handleCloseGeneratedImageEditor}
-              imageData={imageToEdit} // Pass the full, most current image object
-              globalCsvHeaders={csvHeaders}
-              initialFieldPositions={JSON.parse(JSON.stringify(positionsToLoad || {}))}
-              initialFieldStyles={JSON.parse(JSON.stringify(stylesToLoad || {}))}
-              onSave={handleSaveIndividualModifications}
-              colorPalette={colorPalette}
-              globalBackgroundImage={backgroundImage}
-            />
-          );
+      {showGeneratedImageEditor && editingGeneratedImageIndex !== null && (() => {
+        const imageToEdit = generatedImages.find(img => img.index === editingGeneratedImageIndex);
+        if (!imageToEdit) {
+          console.error(`[IGFO] Render: Could not find image with index ${editingGeneratedImageIndex} to edit.`);
+          return null;
         }
-        return null;
+
+        const positionsToLoad = imageToEdit.customFieldPositions !== undefined
+          ? imageToEdit.customFieldPositions
+          : fieldPositions; // global fieldPositions prop from App.jsx
+
+        const stylesToLoad = imageToEdit.customFieldStyles !== undefined
+          ? imageToEdit.customFieldStyles
+          : fieldStyles;    // global fieldStyles prop from App.jsx
+
+        return (
+          <GeneratedImageEditor
+            open={showGeneratedImageEditor}
+            onClose={handleCloseGeneratedImageEditor}
+            imageData={imageToEdit} // Pass the full, most current image object
+            globalCsvHeaders={csvHeaders}
+            initialFieldPositions={JSON.parse(JSON.stringify(positionsToLoad || {}))}
+            initialFieldStyles={JSON.parse(JSON.stringify(stylesToLoad || {}))}
+            onSave={handleSaveIndividualModifications}
+            colorPalette={colorPalette}
+            globalBackgroundImage={backgroundImage}
+          />
+        );
       })()}
 
       {/* Hidden file input for individual image replacement */}
