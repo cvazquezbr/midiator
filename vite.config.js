@@ -4,9 +4,12 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
+  },
   server: {
     hmr: {
-      clientPort: 5173,  // Adicione esta linha
+      clientPort: 5173,
       protocol: 'ws',
       host: 'localhost'
     }
@@ -16,7 +19,4 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  headers: {
-    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' ws://localhost:5173 wss://localhost:5173 http://localhost:5173; style-src 'self' 'unsafe-inline'"
-  }
 })

@@ -77,13 +77,6 @@ const FieldPositioner = ({
     }
   }, [onSelectFieldExternal]);
 
-  const handleFieldLongPress = (field) => {
-    if (isMobile) {
-      setSelectedField(field);
-      setIsDrawerOpen(true);
-    }
-  };
-
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -410,7 +403,6 @@ const FieldPositioner = ({
                       containerSize={imageSize}
                       onContentChange={handleContentChange}
                       rotation={position.rotation}
-                      onLongPress={handleFieldLongPress}
                       setIsMoving={setIsMoving}
                     />
                   );
