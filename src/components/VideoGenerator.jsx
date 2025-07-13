@@ -18,10 +18,7 @@ import {
 import { Movie, PlayArrow, GetApp } from '@mui/icons-material';
 
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util'; // Importe toBlobURL aqui
-
-
-
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 const VideoGenerator = ({ generatedImages }) => {
   const [video, setVideo] = useState(null);
@@ -34,39 +31,50 @@ const VideoGenerator = ({ generatedImages }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  const ffmpegRef = useRef(new FFmpeg());
-
-
-
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
 
+  const ffmpegRef = useRef(new FFmpeg());
   const imageContainerRef = useRef(null);
 
-  // Correção 1: Lógica de carregamento do FFmpeg atualizada
+  // Carregamento corrigido do FFmpeg
   useEffect(() => {
     const loadFfmpeg = async () => {
       const ffmpeg = ffmpegRef.current;
+      
       ffmpeg.on('log', ({ message }) => {
-        console.log(message); // Útil para depuração
+        console.log(message);
       });
+      
       ffmpeg.on('progress', ({ progress }) => {
         setProgress(Math.round(progress * 100));
       });
 
       try {
-        // Use um CDN (como unpkg) para carregar os arquivos do core.
-        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+        // Usando jsdelivr CDN que tem melhor suporte a CORS
+        const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+        
         await ffmpeg.load({
-          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript' ),
+          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
           wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+          workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
         });
+        
         setFfmpegLoaded(true);
+        console.log('FFmpeg carregado com sucesso!');
       } catch (err) {
-        console.error("Failed to load ffmpeg:", err);
-        setError("Não foi possível carregar o componente de vídeo. Tente recarregar a página.");
+        console.error("Erro ao carregar FFmpeg:", err);
+        // Tentar fallback local
+        try {
+          await ffmpeg.load();
+          setFfmpegLoaded(true);
+          console.log('FFmpeg carregado com configuração padrão!');
+        } catch (fallbackErr) {
+          console.error("Erro no fallback:", fallbackErr);
+          setError(`Não foi possível carregar o componente de vídeo. Tente recarregar a página.`);
+        }
       }
     };
+
     loadFfmpeg();
   }, []);
 
@@ -82,7 +90,7 @@ const VideoGenerator = ({ generatedImages }) => {
 
   const handleGeneratePreview = () => {
     setCurrentImageIndex(0);
-    setIsPlaying(!isPlaying); // Alterna o estado de play/pause
+    setIsPlaying(!isPlaying);
   };
 
   const resolutionMap = {
@@ -92,67 +100,55 @@ const VideoGenerator = ({ generatedImages }) => {
   };
 
   const handleGenerateFinalVideo = async () => {
+    if (!ffmpegLoaded) {
+      setError('FFmpeg ainda não foi carregado. Aguarde um momento.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setVideo(null);
     setProgress(0);
 
     const ffmpeg = ffmpegRef.current;
+    
     try {
-      // Escreve os arquivos de imagem no sistema de arquivos virtual do FFmpeg
+      // Limpar arquivos anteriores
+      try {
+        await ffmpeg.deleteFile('output.mp4');
+      } catch (e) {
+        // Arquivo não existe, ok
+      }
+
+      // Escrever arquivos de imagem
       for (let i = 0; i < generatedImages.length; i++) {
-        // Usar fetchFile da biblioteca @ffmpeg/util é mais robusto
-        await ffmpeg.writeFile(`img${i}.png`, await fetchFile(generatedImages[i].url));
+        const imageData = await fetchFile(generatedImages[i].url);
+        await ffmpeg.writeFile(`img${i}.png`, imageData);
       }
 
-      // Correção 2: Geração de comando FFmpeg mais robusta
-      const command = ['-y'];
-      const filterComplexParts = [];
-      const n = generatedImages.length;
+      // Comando FFmpeg simplificado para testar
+      const command = [
+        '-y', // Sobrescrever arquivo de saída
+        '-framerate', '1/' + slideDuration, // Taxa de quadros baseada na duração
+        '-i', 'img%d.png', // Padrão de entrada
+        '-c:v', 'libx264', // Codec de vídeo
+        '-r', fps.toString(), // FPS de saída
+        '-pix_fmt', 'yuv420p', // Formato de pixel
+        '-s', resolutionMap[resolution], // Resolução
+        'output.mp4'
+      ];
 
-      // Adiciona cada imagem como uma entrada de loop
-      for (let i = 0; i < n; i++) {
-        command.push('-loop', '1', '-t', slideDuration.toString(), '-i', `img${i}.png`);
-      }
-
-      // Prepara o filtro de escala e preenchimento para cada vídeo
-      const scaledInputs = generatedImages.map((_, i) =>
-        `[${i}:v]scale=${resolutionMap[resolution]}:force_original_aspect_ratio=decrease,pad=${resolutionMap[resolution]}:-1:-1:color=black,setsar=1[v${i}];`
-      ).join('');
-      filterComplexParts.push(scaledInputs);
-
-      let outputMapLabel = '[out]'; // Rótulo de saída padrão
-
-      if (n > 1 && transition !== 'none') {
-        let xfadeChain = '';
-        // Constrói a cadeia de transições xfade
-        xfadeChain += `[v0][v1]xfade=transition=${transition}:duration=1:offset=${slideDuration - 1}[xv1];`;
-        for (let i = 1; i < n - 1; i++) {
-          xfadeChain += `[xv${i}][v${i + 1}]xfade=transition=${transition}:duration=1:offset=${(i + 1) * slideDuration - 1}[xv${i + 1}];`;
-        }
-        filterComplexParts.push(xfadeChain);
-        outputMapLabel = `[xv${n - 1}]`; // A saída é o último elo da cadeia
-      } else {
-        // Se não houver transição, apenas concatena os vídeos
-        const concatInputs = generatedImages.map((_, i) => `[v${i}]`).join('');
-        filterComplexParts.push(`${concatInputs}concat=n=${n}:v=1:a=0[out]`);
-      }
-
-      command.push('-filter_complex', filterComplexParts.join(''));
-      command.push('-map', outputMapLabel);
-      command.push('-c:v', 'libx264', '-r', fps.toString(), '-pix_fmt', 'yuv420p', 'output.mp4');
-
-      console.log("Executing FFmpeg command:", command.join(' '));
+      console.log("Executando comando FFmpeg:", command.join(' '));
       await ffmpeg.exec(command);
 
       const data = await ffmpeg.readFile('output.mp4');
-      const videoUrl = URL.createObjectURL(
-        new Blob([data.buffer], { type: 'video/mp4' })
-      );
+      const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
+      const videoUrl = URL.createObjectURL(videoBlob);
       setVideo(videoUrl);
+
     } catch (err) {
-      console.error(err);
-      setError(`Ocorreu um erro na geração do vídeo: ${err.message}`);
+      console.error('Erro na geração do vídeo:', err);
+      setError(`Erro na geração do vídeo: ${err.message}`);
     } finally {
       setIsLoading(false);
       setProgress(0);
@@ -165,7 +161,7 @@ const VideoGenerator = ({ generatedImages }) => {
       a.href = video;
       a.download = 'video_gerado.mp4';
       document.body.appendChild(a);
-a.click();
+      a.click();
       document.body.removeChild(a);
     }
   };
@@ -199,7 +195,7 @@ a.click();
                   value={slideDuration}
                   onChange={(e) => setSlideDuration(Number(e.target.value))}
                   fullWidth
-                  inputProps={{ min: 1 }}
+                  inputProps={{ min: 1, max: 10 }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -220,22 +216,20 @@ a.click();
                   label="FPS (Quadros por segundo)"
                   type="number"
                   value={fps}
-                  onChange={(e) => setFps(e.target.value)}
+                  onChange={(e) => setFps(Number(e.target.value))}
                   fullWidth
+                  inputProps={{ min: 1, max: 60 }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
-                  <InputLabel>Modelo de Transição</InputLabel>
+                  <InputLabel>Transição</InputLabel>
                   <Select
                     value={transition}
                     onChange={(e) => setTransition(e.target.value)}
                   >
-                    <MenuItem value="fade">Fade (Esmaecer)</MenuItem>
-                    <MenuItem value="slideleft">Slide Left</MenuItem>
-                    <MenuItem value="slideright">Slide Right</MenuItem>
-                    <MenuItem value="slideup">Slide Up</MenuItem>
-                    <MenuItem value="slidedown">Slide Down</MenuItem>
+                    <MenuItem value="fade">Fade</MenuItem>
+                    <MenuItem value="dissolve">Dissolve</MenuItem>
                     <MenuItem value="none">Nenhuma</MenuItem>
                   </Select>
                 </FormControl>
@@ -266,7 +260,7 @@ a.click();
                     width: '100%',
                     height: '100%',
                     objectFit: 'contain',
-                    transition: 'opacity 0.5s ease-in-out', // Efeito suave no preview
+                    transition: 'opacity 0.5s ease-in-out',
                     opacity: 1,
                   }}
                 />
@@ -329,7 +323,7 @@ a.click();
             <Button
               variant="contained"
               onClick={handleGeneratePreview}
-              disabled={isLoading || generatedImages.length === 0 || !ffmpegLoaded}
+              disabled={isLoading || generatedImages.length === 0}
               startIcon={<PlayArrow />}
             >
               {isPlaying ? 'Parar Preview' : 'Iniciar Preview'}
