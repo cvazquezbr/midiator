@@ -48,6 +48,9 @@ const FormattingPanel = ({
   setFieldPositions,
   csvHeaders
 }) => {
+  // Log received props
+  console.log('[FormattingPanel] Received props: selectedField =', selectedField, 'fieldStyles =', fieldStyles);
+
   const fonts = [
     'Arial',
     'Helvetica',
@@ -155,6 +158,13 @@ const FormattingPanel = ({
 
   const style = fieldStyles[selectedField] || {};
   const position = fieldPositions[selectedField] || {};
+
+  // Log the resolved style object for the selected field
+  if (selectedField) {
+    console.log('[FormattingPanel] Resolved style for selectedField (' + selectedField + '):', style);
+  } else {
+    console.log('[FormattingPanel] No selectedField, style object is default:', style);
+  }
 
   return (
     <Card>
