@@ -17,7 +17,6 @@ import {
 import { Movie, PlayArrow, Stop, Slideshow } from '@mui/icons-material';
 import Uppy from '@uppy/core';
 import ScreenCapture from '@uppy/screen-capture';
-import { useUppy } from '@uppy/react';
 
 const VideoGenerator = ({ generatedImages }) => {
   const [isRecording, setIsRecording] = useState(false);
@@ -28,7 +27,7 @@ const VideoGenerator = ({ generatedImages }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const uppy = useUppy(() => new Uppy({
+  const uppy = new Uppy({
     autoProceed: true,
   }).use(ScreenCapture, {
     onBeforeRecording: async () => {
@@ -37,7 +36,7 @@ const VideoGenerator = ({ generatedImages }) => {
       });
       return stream;
     },
-  }));
+  });
 
   useEffect(() => {
     if (!uppy) {
