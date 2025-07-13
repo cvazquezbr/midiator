@@ -21,7 +21,7 @@ import { fetchFile } from '@ffmpeg/util';
 const VideoGenerator = ({ generatedImages }) => {
   const [video, setVideo] = useState(null);
   const [error, setError] = useState(null);
-  const [frameRate, setFrameRate] = useState(1);
+  const [slideDurations, setSlideDurations] = useState([]);
   const [transition, setTransition] = useState('fade');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -29,6 +29,12 @@ const VideoGenerator = ({ generatedImages }) => {
   const ffmpegRef = useRef(new FFmpeg());
 
   const imageContainerRef = useRef(null);
+
+  useEffect(() => {
+    if (generatedImages.length > 0) {
+      setSlideDurations(Array(generatedImages.length).fill(1));
+    }
+  }, [generatedImages]);
 
   useEffect(() => {
     let interval;
@@ -42,13 +48,19 @@ const VideoGenerator = ({ generatedImages }) => {
             return 0;
           }
         });
-      }, 1000 / frameRate);
+      }, slideDurations[currentImageIndex] * 1000);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, frameRate, generatedImages.length]);
+  }, [isPlaying, slideDurations, currentImageIndex, generatedImages.length]);
 
   const handlePlaySlideshow = () => {
     setIsPlaying(true);
+  };
+
+  const handleDurationChange = (index, value) => {
+    const newDurations = [...slideDurations];
+    newDurations[index] = value;
+    setSlideDurations(newDurations);
   };
 
   const generateVideo = async () => {
@@ -64,17 +76,47 @@ const VideoGenerator = ({ generatedImages }) => {
         await ffmpeg.writeFile(`img${i}.png`, file);
       }
 
-      await ffmpeg.exec([
-        '-framerate',
-        `${frameRate}`,
-        '-i',
-        'img%d.png',
-        '-c:v',
-        'libx264',
-        '-pix_fmt',
-        'yuv420p',
-        'output.mp4',
-      ]);
+      let filterComplex = '';
+      switch (transition) {
+        case 'fade':
+          filterComplex = generatedImages
+            .map(
+              (_, i) =>
+                `[${i}:v]fade=t=in:st=0:d=0.5,fade=t=out:st=${
+                  slideDurations[i] - 0.5
+                }:d=0.5[v${i}]`
+            )
+            .join(';');
+          break;
+        case 'slide':
+          filterComplex = generatedImages
+            .map(
+              (_, i) =>
+                `[${i}:v]format=pix_fmts=yuva420p,fade=t=in:st=0:d=0.5:alpha=1,fade=t=out:st=${
+                  slideDurations[i] - 0.5
+                }:d=0.5:alpha=1[v${i}]`
+            )
+            .join(';');
+          break;
+        case 'none':
+        default:
+          filterComplex = generatedImages
+            .map((_, i) => `[${i}:v]null[v${i}]`)
+            .join(';');
+          break;
+      }
+
+      const concatFilter =
+        generatedImages.map((_, i) => `[v${i}]`).join('') +
+        `concat=n=${generatedImages.length}:v=1:a=0[v]`;
+
+      const command = `-y ${generatedImages
+        .map((_, i) => `-loop 1 -t ${slideDurations[i]} -i img${i}.png`)
+        .join(
+          ' '
+        )} -filter_complex "${filterComplex};${concatFilter}" -map "[v]" -c:v libx264 -pix_fmt yuv420p output.mp4`;
+
+      await ffmpeg.exec(command.split(' '));
 
       const data = await ffmpeg.readFile('output.mp4');
       const videoUrl = URL.createObjectURL(
@@ -98,21 +140,6 @@ const VideoGenerator = ({ generatedImages }) => {
           </Typography>
 
           <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth>
-                <InputLabel>Frame Rate (FPS)</InputLabel>
-                <Slider
-                  value={frameRate}
-                  onChange={(e, newValue) => setFrameRate(newValue)}
-                  aria-labelledby="frame-rate-slider"
-                  valueLabelDisplay="auto"
-                  step={1}
-                  marks
-                  min={1}
-                  max={30}
-                />
-              </FormControl>
-            </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
                 <InputLabel>Transition</InputLabel>
@@ -183,21 +210,55 @@ const VideoGenerator = ({ generatedImages }) => {
             }}
           >
             {generatedImages.map((image, index) => (
-              <img
-                key={image.url}
-                src={image.url}
-                alt={`Frame ${index + 1}`}
+              <div
                 style={{
                   position: 'absolute',
                   top: 0,
                   left: 0,
                   width: '100%',
                   height: '100%',
-                  objectFit: 'contain',
                   opacity: index === currentImageIndex ? 1 : 0,
-                  transition: `opacity ${1 / frameRate}s ${transition}`,
+                  transition: `opacity 0.5s ${transition}`,
                 }}
-              />
+              >
+                <img
+                  key={image.url}
+                  src={image.url}
+                  alt={`Frame ${index + 1}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                  }}
+                />
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: 10,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    color: 'white',
+                    p: 1,
+                    borderRadius: 1,
+                  }}
+                >
+                  <InputLabel htmlFor={`duration-${index}`} sx={{ color: 'white' }}>
+                    Duration (s)
+                  </InputLabel>
+                  <Slider
+                    id={`duration-${index}`}
+                    value={slideDurations[index] || 1}
+                    onChange={(e, newValue) => handleDurationChange(index, newValue)}
+                    aria-labelledby="duration-slider"
+                    valueLabelDisplay="auto"
+                    step={0.1}
+                    min={0.1}
+                    max={10}
+                    sx={{ width: 150, color: 'white' }}
+                  />
+                </Box>
+              </div>
             ))}
           </Box>
         </CardContent>
