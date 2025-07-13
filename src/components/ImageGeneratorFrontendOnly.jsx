@@ -115,6 +115,15 @@ const ImageGeneratorFrontendOnly = ({
     loadFonts();
   }, []);
 
+  if (!fontsLoaded) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Carregando fontes...</Typography>
+      </Box>
+    );
+  }
+
   // Efeito para atualizar o estado pai (App.jsx) quando generatedImages local mudar
   useEffect(() => {
     if (setGeneratedImagesData) {
