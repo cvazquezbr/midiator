@@ -31,8 +31,19 @@ import {
   Google,
   Edit,
   SwapHoriz,
-  Share // <-- Adicionar ícone de compartilhamento
+  Share, // <-- Adicionar ícone de compartilhamento
+  ViewModule // <-- Adicionar ícone de quebra-cabeça
 } from '@mui/icons-material';
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
 import GoogleAuthSetup from './GoogleAuthSetup';
 import GeneratedImageEditor from './GeneratedImageEditor'; // Importar o novo editor
 import googleDriveAPI from '../utils/googleDriveAPI';
@@ -63,6 +74,11 @@ const ImageGeneratorFrontendOnly = ({
   // Novos estados para o editor WYSIWYG de imagens geradas
   const [editingGeneratedImageIndex, setEditingGeneratedImageIndex] = useState(null);
   const [showGeneratedImageEditor, setShowGeneratedImageEditor] = useState(false);
+
+  // Estados para o puzzle
+  const [puzzleImage, setPuzzleImage] = useState(null);
+  const [puzzleRows, setPuzzleRows] = useState(3);
+  const [puzzleCols, setPuzzleCols] = useState(3);
 
 
   // Estados para integração Google Drive
@@ -458,6 +474,50 @@ const ImageGeneratorFrontendOnly = ({
   const closePreview = () => {
     setPreviewOpen(false);
     setSelectedPreview(null);
+  };
+
+  // Função para baixar a imagem como quebra-cabeça
+  const downloadAsPuzzle = async (imageData, rows, cols) => {
+    if (!imageData || !imageData.blob) {
+      alert('A imagem original não está disponível.');
+      return;
+    }
+
+    const img = new Image();
+    img.src = URL.createObjectURL(imageData.blob);
+    await new Promise(resolve => img.onload = resolve);
+
+    const pieceWidth = img.width / cols;
+    const pieceHeight = img.height / rows;
+
+    for (let i = 0; i < rows; i++) {
+      for (let j = 0; j < cols; j++) {
+        const canvas = document.createElement('canvas');
+        canvas.width = pieceWidth;
+        canvas.height = pieceHeight;
+        const ctx = canvas.getContext('2d');
+
+        ctx.drawImage(
+          img,
+          j * pieceWidth, i * pieceHeight, // source x, y
+          pieceWidth, pieceHeight,      // source width, height
+          0, 0,                         // destination x, y
+          pieceWidth, pieceHeight       // destination width, height
+        );
+
+        const pieceBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        const pieceUrl = URL.createObjectURL(pieceBlob);
+
+        const link = document.createElement('a');
+        link.href = pieceUrl;
+        const baseFilename = imageData.filename.replace('.png', '');
+        link.download = `${baseFilename}_puzzle_${i + 1}_${j + 1}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(pieceUrl);
+      }
+    }
   };
 
   // REMOVED: Old CSV text editing functions: handleEditTextCsv, handleSaveTextCsvEdit, handleCancelTextCsvEdit, handleCsvFieldChange
@@ -1140,6 +1200,47 @@ const ImageGeneratorFrontendOnly = ({
                           >
                             <Share />
                           </IconButton>
+                          <Drawer>
+                            <DrawerTrigger asChild>
+                              <IconButton size="small" title="Baixar como Quebra-Cabeça">
+                                <ViewModule />
+                              </IconButton>
+                            </DrawerTrigger>
+                            <DrawerContent>
+                              <div className="mx-auto w-full max-w-sm">
+                                <DrawerHeader>
+                                  <DrawerTitle>Baixar como Quebra-Cabeça</DrawerTitle>
+                                  <DrawerDescription>Selecione o número de linhas e colunas para dividir a imagem.</DrawerDescription>
+                                </DrawerHeader>
+                                <div className="p-4 pb-0">
+                                  <div className="flex items-center justify-center space-x-2">
+                                    <TextField
+                                      label="Linhas"
+                                      type="number"
+                                      value={puzzleRows}
+                                      onChange={(e) => setPuzzleRows(parseInt(e.target.value, 10))}
+                                      inputProps={{ min: 1, style: { textAlign: 'center' } }}
+                                      sx={{ width: '100px' }}
+                                    />
+                                    <TextField
+                                      label="Colunas"
+                                      type="number"
+                                      value={puzzleCols}
+                                      onChange={(e) => setPuzzleCols(parseInt(e.target.value, 10))}
+                                      inputProps={{ min: 1, style: { textAlign: 'center' } }}
+                                      sx={{ width: '100px' }}
+                                    />
+                                  </div>
+                                </div>
+                                <DrawerFooter>
+                                  <Button onClick={() => downloadAsPuzzle(imageData, puzzleRows, puzzleCols)}>Download</Button>
+                                  <DrawerClose asChild>
+                                    <Button variant="outlined">Cancelar</Button>
+                                  </DrawerClose>
+                                </DrawerFooter>
+                              </div>
+                            </DrawerContent>
+                          </Drawer>
                         </Box>
                       </CardContent>
                     </Card>
