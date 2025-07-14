@@ -1,48 +1,43 @@
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  plugins: [
-    react(),
-  ],
-
+  plugins: [react()],
+  
   server: {
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
-      'Content-Security-Policy': "script-src 'self' 'unsafe-eval'",
     },
+    fs: {
+      allow: ['..', '/public/ffmpeg']
+    }
   },
-  // Opcional, mas recomendado para otimizar o build de produção
-  optimizeDeps: {
-    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
-  },
-  resolve: {
-    alias: {
-      "@": `${__dirname}/src`,
-    },
-  },
-  define: {
-    global: 'globalThis',
-  },
+  
   build: {
+    target: 'esnext',
+    assetsInclude: ['**/*.wasm'],
     rollupOptions: {
-      external: ["@ffmpeg/ffmpeg", "@ffmpeg/util"],
       output: {
-        manualChunks: {
-          ffmpeg: ["@ffmpeg/ffmpeg", "@ffmpeg/util"],
-        },
-      },
-    },
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name.endsWith('.wasm')) {
+            return 'assets/[name][extname]'
+          }
+          return 'assets/[name]-[hash][extname]'
+        }
+      }
+    }
   },
+  
+  optimizeDeps: {
+    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util']
+  },
+  
   worker: {
-    format: 'es',
+    format: 'es'
   },
-});
-
-
+  
+  define: {
+    global: 'globalThis'
+  }
+})

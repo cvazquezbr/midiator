@@ -36,6 +36,13 @@ const VideoGenerator = ({ generatedImages }) => {
   const progressIntervalRef = useRef(null);
   const startTimeRef = useRef(null);
 
+  useEffect(() => {
+  console.log('Carregando FFmpeg...');
+  console.log('Caminho absoluto:', window.location.origin + '/ffmpeg/');
+  console.log('Suporte a WebAssembly:', typeof WebAssembly !== 'undefined');
+  console.log('Suporte a SharedArrayBuffer:', typeof SharedArrayBuffer !== 'undefined');
+}, []);
+
   const resolutionMap = {
     '1080p': '1920x1080',
     '720p': '1280x720',
@@ -88,59 +95,106 @@ const VideoGenerator = ({ generatedImages }) => {
     return checks;
   }, []);
 
-  const loadFFmpegWithRetry = useCallback(async (maxRetries = 3, baseDelay = 1000) => {
-    const ffmpeg = ffmpegRef.current;
+  useEffect(() => {
+    console.log('BASE_URL:', import.meta.env.BASE_URL);
+    console.log('FFmpeg Path:', `${window.location.origin}/ffmpeg/`);
+  }, []);
 
-    if (!environmentChecks?.webAssemblySupport) {
-      throw new Error('WebAssembly não é suportado neste navegador');
-    }
 
-    if (!environmentChecks?.sharedArrayBufferSupport) {
-      console.warn('⚠️ SharedArrayBuffer não disponível. Tentando modo de compatibilidade...');
-      setCompatibilityMode(true);
-      return false;
-    }
+const loadFFmpegWithRetry = useCallback(async (maxRetries = 3, baseDelay = 1000) => {
+  const ffmpeg = ffmpegRef.current;
 
-    // CORREÇÃO AQUI: A baseURL aponta para os ficheiros que estão na pasta /public
-    const baseURL = '/ffmpeg/'; // Vite serve a pasta /public na raiz
+  if (!environmentChecks?.webAssemblySupport) {
+    throw new Error('WebAssembly não é suportado neste navegador');
+  }
 
-    let lastError = null;
+  if (!environmentChecks?.sharedArrayBufferSupport) {
+    console.warn('⚠️ SharedArrayBuffer não disponível. Tentando modo de compatibilidade...');
+    setCompatibilityMode(true);
+    return false;
+  }
 
-    for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
+  const baseURL = '/ffmpeg/';
+  let lastError = null;
+
+  for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
+    try {
+      console.log(`🔄 Tentativa ${retryCount + 1}/${maxRetries} para carregar FFmpeg...`);
+      setLoadingProgress(((retryCount + 1) / maxRetries) * 100);
+
+      // Abordagem 1: Usar caminho absoluto com window.location.origin
+      const absolutePath = window.location.origin + baseURL;
+      
+      // Abordagem 2: Fallback para fetch + Blob (mais confiável)
       try {
-        console.log(`🔄 Tentativa ${retryCount + 1}/${maxRetries} para carregar FFmpeg localmente...`);
-        setLoadingProgress(((retryCount + 1) / maxRetries) * 100);
-
-        // Usamos toBlobURL para carregar os ficheiros como URLs, evitando o erro do Vite.
-        const loadPromise = ffmpeg.load({
-          coreURL: await toBlobURL(`${baseURL}ffmpeg-core.js`, 'text/javascript'),
-          wasmURL: await toBlobURL(`${baseURL}ffmpeg-core.wasm`, 'application/wasm'),
+        // Tenta carregar via caminho absoluto
+        await ffmpeg.load({
+          coreURL: absolutePath + 'ffmpeg-core.js',
+          wasmURL: absolutePath + 'ffmpeg-core.wasm',
         });
-
-        const timeoutMs = 30000 + (retryCount * 15000);
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error(`Timeout de ${timeoutMs}ms excedido`)), timeoutMs);
+        console.log('✅ FFmpeg carregado com caminho absoluto!');
+      } catch (absError) {
+        console.warn('Falha com caminho absoluto, tentando blob...', absError);
+        
+        // Fallback para Blob
+        const [coreResponse, wasmResponse] = await Promise.all([
+          fetch(absolutePath + 'ffmpeg-core.js'),
+          fetch(absolutePath + 'ffmpeg-core.wasm')
+        ]);
+        
+        if (!coreResponse.ok) throw new Error(`ffmpeg-core.js: ${coreResponse.status}`);
+        if (!wasmResponse.ok) throw new Error(`ffmpeg-core.wasm: ${wasmResponse.status}`);
+        
+        const coreBlob = await coreResponse.blob();
+        const wasmBlob = await wasmResponse.blob();
+        
+        const coreBlobURL = URL.createObjectURL(coreBlob);
+        const wasmBlobURL = URL.createObjectURL(wasmBlob);
+        
+        await ffmpeg.load({
+          coreURL: coreBlobURL,
+          wasmURL: wasmBlobURL,
         });
+        
+        URL.revokeObjectURL(coreBlobURL);
+        URL.revokeObjectURL(wasmBlobURL);
+        console.log('✅ FFmpeg carregado via Blob!');
+      }
 
-        await Promise.race([loadPromise, timeoutPromise]);
+      return true;
 
-        console.log('✅ FFmpeg carregado localmente com sucesso!');
-        return true;
+    } catch (err) {
+      lastError = err;
+      console.warn(`❌ Tentativa ${retryCount + 1} falhou:`, err.message);
 
-      } catch (err) {
-        lastError = err;
-        console.warn(`❌ Tentativa ${retryCount + 1} falhou ao carregar FFmpeg localmente:`, err.message);
-
-        if (retryCount < maxRetries - 1) {
-          const delay = baseDelay * Math.pow(2, retryCount);
-          console.log(`⏳ Aguardando ${delay}ms antes da próxima tentativa...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
+      if (retryCount < maxRetries - 1) {
+        const delay = baseDelay * Math.pow(2, retryCount);
+        console.log(`⏳ Aguardando ${delay}ms antes da próxima tentativa...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
+  }
 
-    throw new Error(`Falha ao carregar FFmpeg localmente após múltiplas tentativas. Último erro: ${lastError?.message || 'Erro desconhecido'}`);
-  }, [environmentChecks]);
+  
+
+  // Fallback final: CDN público
+  try {
+    console.log('🔄 Tentando CDN público como último recurso...');
+    const cdnURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/';
+    
+    await ffmpeg.load({
+      coreURL: await toBlobURL(cdnURL + 'ffmpeg-core.js', 'text/javascript'),
+      wasmURL: await toBlobURL(cdnURL + 'ffmpeg-core.wasm', 'application/wasm'),
+    });
+    
+    console.log('✅ FFmpeg carregado via CDN!');
+    return true;
+  } catch (cdnErr) {
+    console.error('Erro com CDN:', cdnErr);
+    throw new Error(`Falha após ${maxRetries} tentativas e CDN. Último erro: ${lastError?.message || 'Erro desconhecido'}`);
+  }
+}, [environmentChecks]);
+
   useEffect(() => {
     const ffmpegInstance = ffmpegRef.current; // Copiado para variável local
 
