@@ -126,15 +126,48 @@ const VideoGenerator = ({ generatedImages }) => {
         await ffmpeg.writeFile(`img${i}.png`, imageData);
       }
 
-      // Comando FFmpeg simplificado para testar
+      const [width, height] = resolutionMap[resolution].split('x');
+
+      // 1. Preparar os inputs e filtros
+      const inputs = [];
+      const filter_complex = [];
+      
+      // Adicionar cada imagem como um input
+      for (let i = 0; i < generatedImages.length; i++) {
+        inputs.push('-i', `img${i}.png`);
+      }
+
+      // Criar os filtros para cada imagem
+      for (let i = 0; i < generatedImages.length; i++) {
+        // Redimensionar e adicionar padding
+        filter_complex.push(
+          `[${i}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1[v${i}]`
+        );
+      }
+
+      // Criar a cadeia de transições
+      let lastOutput = `v0`;
+      for (let i = 0; i < generatedImages.length - 1; i++) {
+        const currentOutput = `vt${i}`;
+        filter_complex.push(
+          `[${lastOutput}][v${i+1}]xfade=transition=${transition}:duration=1:offset=${slideDuration - 1}[${currentOutput}]`
+        );
+        lastOutput = currentOutput;
+      }
+
+      const transitionDuration = 1;
+      const totalDuration = (generatedImages.length * slideDuration) - (generatedImages.length > 1 ? (generatedImages.length - 1) * transitionDuration : 0);
+
       const command = [
-        '-y', // Sobrescrever arquivo de saída
-        '-framerate', '1/' + slideDuration, // Taxa de quadros baseada na duração
-        '-i', 'img%d.png', // Padrão de entrada
-        '-c:v', 'libx264', // Codec de vídeo
-        '-r', fps.toString(), // FPS de saída
-        '-pix_fmt', 'yuv420p', // Formato de pixel
-        '-s', resolutionMap[resolution], // Resolução
+        '-y',
+        ...inputs,
+        '-filter_complex', filter_complex.join(';'),
+        '-map', `[${lastOutput}]`,
+        '-c:v', 'libx264',
+        '-r', fps.toString(),
+        '-pix_fmt', 'yuv420p',
+        '-t', totalDuration.toString(),
+        '-s', resolutionMap[resolution],
         'output.mp4'
       ];
 
