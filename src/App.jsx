@@ -607,8 +607,6 @@ function App() {
             } else {
               setActiveStep(0);
             }
-
-            alert("Configuração do template carregada com sucesso!");
           } else {
             alert("Arquivo JSON inválido, formato incorreto ou versão incompatível.");
             console.log("Loaded state:", loadedState); // Adicionar log para depuração
