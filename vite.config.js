@@ -2,7 +2,6 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { copy } from 'vite-plugin-copy';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -10,29 +9,18 @@ const __dirname = dirname(__filename);
 export default defineConfig({
   plugins: [
     react(),
-    copy([
-      {
-        from: 'node_modules/@ffmpeg/core/dist/umd/ffmpeg-core.js',
-        to: 'public/ffmpeg',
-      },
-      {
-        from: 'node_modules/@ffmpeg/core/dist/umd/ffmpeg-core.wasm',
-        to: 'public/ffmpeg',
-      },
-      {
-        from: 'node_modules/@ffmpeg/core/dist/umd/ffmpeg-core.worker.js',
-        to: 'public/ffmpeg',
-      },
-    ]),
   ],
-  optimizeDeps: {
-    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
-  },
+
   server: {
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Content-Security-Policy': "script-src 'self' 'unsafe-eval'",
     },
+  },
+  // Opcional, mas recomendado para otimizar o build de produção
+  optimizeDeps: {
+    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
   },
   resolve: {
     alias: {

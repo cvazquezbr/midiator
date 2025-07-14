@@ -6,8 +6,10 @@ import {
   Snackbar, CircularProgress, IconButton, Tooltip
 } from '@mui/material';
 import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh } from '@mui/icons-material';
+
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile } from '@ffmpeg/util';
+
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 const VideoGenerator = ({ generatedImages }) => {
   const [video, setVideo] = useState(null);
@@ -74,7 +76,7 @@ const VideoGenerator = ({ generatedImages }) => {
 
     try {
       // Removido 'response' não utilizado
-      await fetch('https://cdn.jsdelivr.net/npm/react@18.0.0/package.json', { 
+      await fetch('https://cdn.jsdelivr.net/npm/react@18.0.0/package.json', {
         method: 'HEAD',
         mode: 'no-cors'
       });
@@ -88,7 +90,7 @@ const VideoGenerator = ({ generatedImages }) => {
 
   const loadFFmpegWithRetry = useCallback(async (maxRetries = 3, baseDelay = 1000) => {
     const ffmpeg = ffmpegRef.current;
-    
+
     if (!environmentChecks?.webAssemblySupport) {
       throw new Error('WebAssembly não é suportado neste navegador');
     }
@@ -99,11 +101,8 @@ const VideoGenerator = ({ generatedImages }) => {
       return false;
     }
 
-    const localFFmpegPaths = {
-      coreURL: '/ffmpeg/ffmpeg-core.js',
-      wasmURL: '/ffmpeg/ffmpeg-core.wasm',
-      workerURL: '/ffmpeg/ffmpeg-core.worker.js',
-    };
+    // CORREÇÃO AQUI: A baseURL aponta para os ficheiros que estão na pasta /public
+    const baseURL = '/ffmpeg/'; // Vite serve a pasta /public na raiz
 
     let lastError = null;
 
@@ -111,8 +110,12 @@ const VideoGenerator = ({ generatedImages }) => {
       try {
         console.log(`🔄 Tentativa ${retryCount + 1}/${maxRetries} para carregar FFmpeg localmente...`);
         setLoadingProgress(((retryCount + 1) / maxRetries) * 100);
-        
-        const loadPromise = ffmpeg.load(localFFmpegPaths);
+
+        // Usamos toBlobURL para carregar os ficheiros como URLs, evitando o erro do Vite.
+        const loadPromise = ffmpeg.load({
+          coreURL: await toBlobURL(`${baseURL}ffmpeg-core.js`, 'text/javascript'),
+          wasmURL: await toBlobURL(`${baseURL}ffmpeg-core.wasm`, 'application/wasm'),
+        });
 
         const timeoutMs = 30000 + (retryCount * 15000);
         const timeoutPromise = new Promise((_, reject) => {
@@ -120,14 +123,14 @@ const VideoGenerator = ({ generatedImages }) => {
         });
 
         await Promise.race([loadPromise, timeoutPromise]);
-        
+
         console.log('✅ FFmpeg carregado localmente com sucesso!');
         return true;
-        
+
       } catch (err) {
         lastError = err;
         console.warn(`❌ Tentativa ${retryCount + 1} falhou ao carregar FFmpeg localmente:`, err.message);
-        
+
         if (retryCount < maxRetries - 1) {
           const delay = baseDelay * Math.pow(2, retryCount);
           console.log(`⏳ Aguardando ${delay}ms antes da próxima tentativa...`);
@@ -135,17 +138,16 @@ const VideoGenerator = ({ generatedImages }) => {
         }
       }
     }
-    
-    throw new Error(`Falha ao carregar FFmpeg localmente após múltiplas tentativas. Último erro: ${lastError?.message || 'Erro desconhecido'}`);
-  }, [environmentChecks]); // Adicionado environmentChecks como dependência
 
+    throw new Error(`Falha ao carregar FFmpeg localmente após múltiplas tentativas. Último erro: ${lastError?.message || 'Erro desconhecido'}`);
+  }, [environmentChecks]);
   useEffect(() => {
     const ffmpegInstance = ffmpegRef.current; // Copiado para variável local
 
     const loadFfmpeg = async () => {
       try {
         const checks = await checkEnvironmentSupport();
-        
+
         if (!checks.webAssemblySupport) {
           throw new Error('WebAssembly não é suportado neste navegador. Considere atualizar para uma versão mais recente.');
         }
@@ -158,7 +160,7 @@ const VideoGenerator = ({ generatedImages }) => {
           if (duration > 0) {
             const percent = Math.max(0, Math.min(100, Math.round((currentTime / duration) * 100)));
             setProgress(percent);
-            
+
             if (startTimeRef.current) {
               const elapsed = (Date.now() - startTimeRef.current) / 1000;
               const remaining = (elapsed / percent) * (100 - percent);
@@ -168,9 +170,9 @@ const VideoGenerator = ({ generatedImages }) => {
         });
 
         console.log('🔄 Iniciando carregamento do FFmpeg...');
-        
+
         const loadSuccess = await loadFFmpegWithRetry();
-        
+
         if (loadSuccess) {
           setFfmpegLoaded(true);
           setLoadingProgress(100);
@@ -179,7 +181,7 @@ const VideoGenerator = ({ generatedImages }) => {
           setCompatibilityMode(true);
           setFfmpegLoaded(false);
         }
-        
+
       } catch (err) {
         console.error('Erro ao carregar FFmpeg:', err);
         const errorMessage = err.message || 'Erro desconhecido ao carregar FFmpeg';
@@ -190,7 +192,7 @@ const VideoGenerator = ({ generatedImages }) => {
     };
 
     loadFfmpeg();
-    
+
     return () => {
       if (ffmpegInstance) { // Usando a variável local
         try {
@@ -245,7 +247,7 @@ const VideoGenerator = ({ generatedImages }) => {
     setProcessingTime(0);
     setEstimatedTime(0);
     startTimeRef.current = Date.now();
-    
+
     clearInterval(progressIntervalRef.current);
     progressIntervalRef.current = setInterval(() => {
       if (startTimeRef.current) {
@@ -257,13 +259,13 @@ const VideoGenerator = ({ generatedImages }) => {
     const ffmpeg = ffmpegRef.current;
 
     try {
-      await ffmpeg.deleteFile('output.mp4').catch(() => {});
-      
+      await ffmpeg.deleteFile('output.mp4').catch(() => { });
+
       const writePromises = generatedImages.map(async (img, i) => {
         const imageData = await fetchFile(img.url);
         await ffmpeg.writeFile(`img${i}.png`, imageData);
       });
-      
+
       await Promise.all(writePromises);
 
       const [width, height] = resolutionMap[resolution].split('x');
@@ -288,7 +290,7 @@ const VideoGenerator = ({ generatedImages }) => {
           generatedImages.map((_, i) => `[v${i}]`).join(''),
           `concat=n=${generatedImages.length}:v=1:a=0[outv]`
         ].join(';');
-        
+
         outputStream = ['-map', '[outv]'];
         totalDuration = generatedImages.length * slideDuration;
       } else {
@@ -300,7 +302,7 @@ const VideoGenerator = ({ generatedImages }) => {
           const input2 = `v${i + 1}`;
           const output = `crossfade${i}`;
           const offset = (i + 1) * (slideDuration - 1);
-          
+
           transitionFilters.push(
             `[${input1}][${input2}]xfade=transition=${transition}:duration=1:offset=${offset}[${output}]`
           );
@@ -355,7 +357,7 @@ const VideoGenerator = ({ generatedImages }) => {
 
     try {
       console.log('🔄 Usando modo de compatibilidade (Canvas + MediaRecorder)');
-      
+
       if (typeof MediaRecorder === 'undefined') {
         throw new Error('MediaRecorder não está disponível neste navegador');
       }
@@ -363,13 +365,13 @@ const VideoGenerator = ({ generatedImages }) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const [width, height] = resolutionMap[resolution].split('x').map(Number);
-      
+
       canvas.width = width;
       canvas.height = height;
 
       const stream = canvas.captureStream(fps);
-      const recorder = new MediaRecorder(stream, { 
-        mimeType: 'video/webm;codecs=vp9' 
+      const recorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp9'
       });
       const chunks = [];
 
@@ -395,7 +397,7 @@ const VideoGenerator = ({ generatedImages }) => {
       for (let i = 0; i < generatedImages.length; i++) {
         const img = new Image();
         img.crossOrigin = 'anonymous';
-        
+
         await new Promise((resolve, reject) => {
           img.onload = resolve;
           img.onerror = reject;
@@ -461,7 +463,7 @@ const VideoGenerator = ({ generatedImages }) => {
 
   const LoadingStatus = () => {
     if (ffmpegLoaded) return null;
-    
+
     return (
       <Box sx={{ my: 2, textAlign: 'center' }}>
         {!error ? (
@@ -475,11 +477,11 @@ const VideoGenerator = ({ generatedImages }) => {
             </Typography>
           </>
         ) : (
-          <Alert 
-            severity="error" 
-            sx={{ 
-              mb: 2, 
-              backgroundColor: 'rgba(244,67,54,0.2)', 
+          <Alert
+            severity="error"
+            sx={{
+              mb: 2,
+              backgroundColor: 'rgba(244,67,54,0.2)',
               color: 'white',
               '& .MuiAlert-icon': { color: 'white' }
             }}
@@ -487,15 +489,15 @@ const VideoGenerator = ({ generatedImages }) => {
             <Typography variant="body2" sx={{ mb: 1 }}>
               {error}
             </Typography>
-            
-            <Button 
-              size="small" 
+
+            <Button
+              size="small"
               onClick={() => setShowTroubleshooting(!showTroubleshooting)}
               sx={{ color: 'white', textDecoration: 'underline' }}
             >
               {showTroubleshooting ? 'Ocultar' : 'Ver'} soluções
             </Button>
-            
+
             {showTroubleshooting && (
               <Box sx={{ mt: 2, textAlign: 'left' }}>
                 <Typography variant="caption" sx={{ display: 'block', mb: 1 }}>
@@ -516,9 +518,9 @@ const VideoGenerator = ({ generatedImages }) => {
                 <Typography variant="caption" sx={{ display: 'block' }}>
                   • Recarregue a página (Ctrl+F5)
                 </Typography>
-                
-                <Button 
-                  size="small" 
+
+                <Button
+                  size="small"
                   onClick={handleReload}
                   startIcon={<Refresh />}
                   sx={{ mt: 1, color: 'white', border: '1px solid white' }}
@@ -535,15 +537,15 @@ const VideoGenerator = ({ generatedImages }) => {
 
   return (
     <Box sx={{ mt: 3 }}>
-      <Card sx={{ 
+      <Card sx={{
         background: 'linear-gradient(135deg, #1e3c72, #2a5298)',
         color: 'white',
         borderRadius: 2,
         boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
       }}>
         <CardContent>
-          <Typography variant="h5" gutterBottom sx={{ 
-            display: 'flex', 
+          <Typography variant="h5" gutterBottom sx={{
+            display: 'flex',
             alignItems: 'center',
             fontWeight: 'bold',
             color: 'white'
@@ -560,11 +562,11 @@ const VideoGenerator = ({ generatedImages }) => {
           <LoadingStatus />
 
           {compatibilityMode && (
-            <Alert 
-              severity="info" 
-              sx={{ 
-                mb: 2, 
-                backgroundColor: 'rgba(25,118,210,0.2)', 
+            <Alert
+              severity="info"
+              sx={{
+                mb: 2,
+                backgroundColor: 'rgba(25,118,210,0.2)',
                 color: 'white',
                 '& .MuiAlert-icon': { color: 'white' }
               }}
@@ -574,9 +576,9 @@ const VideoGenerator = ({ generatedImages }) => {
           )}
 
           {environmentChecks && (
-            <Paper elevation={0} sx={{ 
-              p: 2, 
-              mb: 3, 
+            <Paper elevation={0} sx={{
+              p: 2,
+              mb: 3,
               backgroundColor: 'rgba(255,255,255,0.1)',
               borderRadius: 2
             }}>
@@ -608,9 +610,9 @@ const VideoGenerator = ({ generatedImages }) => {
             </Paper>
           )}
 
-          <Paper elevation={0} sx={{ 
-            p: 2, 
-            mb: 3, 
+          <Paper elevation={0} sx={{
+            p: 2,
+            mb: 3,
             backgroundColor: 'rgba(255,255,255,0.1)',
             borderRadius: 2
           }}>
@@ -620,7 +622,7 @@ const VideoGenerator = ({ generatedImages }) => {
                 <Info sx={{ ml: 1, fontSize: 18, verticalAlign: 'middle' }} />
               </Tooltip>
             </Typography>
-            
+
             <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -638,7 +640,7 @@ const VideoGenerator = ({ generatedImages }) => {
                   variant="outlined"
                 />
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
                   <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Resolução</InputLabel>
@@ -653,7 +655,7 @@ const VideoGenerator = ({ generatedImages }) => {
                   </Select>
                 </FormControl>
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <TextField
                   label="Quadros por Segundo (FPS)"
@@ -670,7 +672,7 @@ const VideoGenerator = ({ generatedImages }) => {
                   variant="outlined"
                 />
               </Grid>
-              
+
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
                   <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Transição</InputLabel>
@@ -691,16 +693,16 @@ const VideoGenerator = ({ generatedImages }) => {
             </Grid>
           </Paper>
 
-          <Paper elevation={0} sx={{ 
-            p: 2, 
-            mb: 3, 
+          <Paper elevation={0} sx={{
+            p: 2,
+            mb: 3,
             backgroundColor: 'rgba(255,255,255,0.1)',
             borderRadius: 2
           }}>
             <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
               Pré-visualização
             </Typography>
-            
+
             <Box
               ref={imageContainerRef}
               sx={{
@@ -748,10 +750,10 @@ const VideoGenerator = ({ generatedImages }) => {
                   {estimatedTime > 0 ? `Tempo estimado: ${formatTime(estimatedTime)}` : 'Calculando...'}
                 </Typography>
               </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={progress} 
-                sx={{ height: 10, borderRadius: 5 }} 
+              <LinearProgress
+                variant="determinate"
+                value={progress}
+                sx={{ height: 10, borderRadius: 5 }}
               />
               <Typography variant="caption" sx={{ display: 'block', mt: 1, textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>
                 Processando há {processingTime} segundos
@@ -765,15 +767,15 @@ const VideoGenerator = ({ generatedImages }) => {
               <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
                 Vídeo Final {compatibilityMode && '(WebM)'}
               </Typography>
-              <video 
-                src={video} 
-                controls 
-                style={{ 
-                  width: '100%', 
+              <video
+                src={video}
+                controls
+                style={{
+                  width: '100%',
                   borderRadius: 8,
                   boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
                   backgroundColor: '#000'
-                }} 
+                }}
               />
             </Box>
           )}
@@ -784,7 +786,7 @@ const VideoGenerator = ({ generatedImages }) => {
               onClick={handleGeneratePreview}
               disabled={isLoading || generatedImages.length === 0}
               startIcon={<PlayArrow />}
-              sx={{ 
+              sx={{
                 flex: 1,
                 minWidth: 200,
                 background: 'linear-gradient(45deg, #00c853, #64dd17)',
@@ -793,31 +795,31 @@ const VideoGenerator = ({ generatedImages }) => {
             >
               {isPlaying ? 'Parar Preview' : 'Iniciar Preview'}
             </Button>
-            
+
             <Button
               variant="contained"
               color="primary"
               onClick={handleGenerateFinalVideo}
               disabled={isLoading || generatedImages.length === 0}
               startIcon={<Movie />}
-              sx={{ 
+              sx={{
                 flex: 1,
                 minWidth: 200,
-                background: compatibilityMode ? 
-                  'linear-gradient(45deg, #ff9800, #ffc107)' : 
+                background: compatibilityMode ?
+                  'linear-gradient(45deg, #ff9800, #ffc107)' :
                   'linear-gradient(45deg, #2962ff, #2979ff)',
                 fontWeight: 'bold'
               }}
             >
               {compatibilityMode ? 'Gerar Vídeo (Compatibilidade)' : 'Gerar Vídeo Final'}
             </Button>
-            
+
             <Button
               variant="contained"
               onClick={handleExport}
               disabled={!video || isLoading}
               startIcon={<GetApp />}
-              sx={{ 
+              sx={{
                 flex: 1,
                 minWidth: 200,
                 background: 'linear-gradient(45deg, #ff6d00, #ff9100)',
@@ -836,8 +838,8 @@ const VideoGenerator = ({ generatedImages }) => {
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert 
-          severity="error" 
+        <Alert
+          severity="error"
           onClose={handleCloseSnackbar}
           icon={<ErrorOutline />}
           sx={{ width: '100%' }}
