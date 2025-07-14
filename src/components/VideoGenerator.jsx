@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box, Button, Typography, Card, CardContent, Grid,
   LinearProgress, Alert, Select, MenuItem,
@@ -7,7 +7,7 @@ import {
 } from '@mui/material';
 import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh } from '@mui/icons-material';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { fetchFile } from '@ffmpeg/util';
 
 const VideoGenerator = ({ generatedImages }) => {
   const [video, setVideo] = useState(null);
@@ -34,7 +34,6 @@ const VideoGenerator = ({ generatedImages }) => {
   const progressIntervalRef = useRef(null);
   const startTimeRef = useRef(null);
 
-  // Configurações otimizadas
   const resolutionMap = {
     '1080p': '1920x1080',
     '720p': '1280x720',
@@ -49,17 +48,15 @@ const VideoGenerator = ({ generatedImages }) => {
     { value: 'none', label: 'Nenhuma (Mais Rápido)' },
   ];
 
-  // Verificação de suporte do ambiente
-  const checkEnvironmentSupport = async () => {
+  const checkEnvironmentSupport = useCallback(async () => {
     const checks = {
       webAssemblySupport: typeof WebAssembly !== 'undefined',
       sharedArrayBufferSupport: typeof SharedArrayBuffer !== 'undefined',
-      crossOriginIsolated: crossOriginIsolated || false,
+      crossOriginIsolated: window.crossOriginIsolated || false, // Corrigido: 'crossOriginIsolated' is not defined
       adBlockerDetected: false,
       networkRestricted: false
     };
 
-    // Teste simples para detectar bloqueador de anúncios
     try {
       const testImg = new Image();
       testImg.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
@@ -75,9 +72,9 @@ const VideoGenerator = ({ generatedImages }) => {
       checks.adBlockerDetected = true;
     }
 
-    // Teste de conectividade com CDN
     try {
-      const response = await fetch('https://cdn.jsdelivr.net/npm/react@18.0.0/package.json', { 
+      // Removido 'response' não utilizado
+      await fetch('https://cdn.jsdelivr.net/npm/react@18.0.0/package.json', { 
         method: 'HEAD',
         mode: 'no-cors'
       });
@@ -87,62 +84,11 @@ const VideoGenerator = ({ generatedImages }) => {
 
     setEnvironmentChecks(checks);
     return checks;
-  };
+  }, []);
 
-  // Cache de arquivos FFmpeg
-  const cacheFFmpegFiles = async () => {
-    if ('caches' in window) {
-      try {
-        const cache = await caches.open('ffmpeg-wasm-v1');
-        const filesToCache = [
-          'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
-          'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
-          'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.worker.js'
-        ];
-        
-        await cache.addAll(filesToCache);
-        console.log('✅ Arquivos FFmpeg.wasm armazenados em cache');
-        return true;
-      } catch (error) {
-        console.warn('⚠️ Falha ao armazenar arquivos em cache:', error);
-        return false;
-      }
-    }
-    return false;
-  };
-
-  // Carregamento do cache
-  const loadFromCache = async () => {
-    if ('caches' in window) {
-      try {
-        const cache = await caches.open('ffmpeg-wasm-v1');
-        const coreResponse = await cache.match('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js');
-        const wasmResponse = await cache.match('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm');
-        const workerResponse = await cache.match('https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.worker.js');
-        
-        if (coreResponse && wasmResponse && workerResponse) {
-          const coreBlob = await coreResponse.blob();
-          const wasmBlob = await wasmResponse.blob();
-          const workerBlob = await workerResponse.blob();
-          
-          return {
-            coreURL: URL.createObjectURL(coreBlob),
-            wasmURL: URL.createObjectURL(wasmBlob),
-            workerURL: URL.createObjectURL(workerBlob)
-          };
-        }
-      } catch (error) {
-        console.warn('⚠️ Falha ao carregar do cache:', error);
-      }
-    }
-    return null;
-  };
-
-  // Carregamento com retry inteligente
-  const loadFFmpegWithRetry = async (maxRetries = 3, baseDelay = 1000) => {
+  const loadFFmpegWithRetry = useCallback(async (maxRetries = 3, baseDelay = 1000) => {
     const ffmpeg = ffmpegRef.current;
     
-    // Verificar suporte básico
     if (!environmentChecks?.webAssemblySupport) {
       throw new Error('WebAssembly não é suportado neste navegador');
     }
@@ -150,114 +96,65 @@ const VideoGenerator = ({ generatedImages }) => {
     if (!environmentChecks?.sharedArrayBufferSupport) {
       console.warn('⚠️ SharedArrayBuffer não disponível. Tentando modo de compatibilidade...');
       setCompatibilityMode(true);
-      return false; // Indica que deve usar modo de compatibilidade
+      return false;
     }
 
-    // Tentar carregar do cache primeiro
-    const cachedFiles = await loadFromCache();
-    if (cachedFiles) {
+    const localFFmpegPaths = {
+      coreURL: '/ffmpeg/ffmpeg-core.js',
+      wasmURL: '/ffmpeg/ffmpeg-core.wasm',
+      workerURL: '/ffmpeg/ffmpeg-core.worker.js',
+    };
+
+    let lastError = null;
+
+    for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
       try {
-        console.log('🔄 Carregando FFmpeg do cache...');
-        await ffmpeg.load(cachedFiles);
-        console.log('✅ FFmpeg carregado do cache com sucesso!');
+        console.log(`🔄 Tentativa ${retryCount + 1}/${maxRetries} para carregar FFmpeg localmente...`);
+        setLoadingProgress(((retryCount + 1) / maxRetries) * 100);
+        
+        const loadPromise = ffmpeg.load(localFFmpegPaths);
+
+        const timeoutMs = 30000 + (retryCount * 15000);
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error(`Timeout de ${timeoutMs}ms excedido`)), timeoutMs);
+        });
+
+        await Promise.race([loadPromise, timeoutPromise]);
+        
+        console.log('✅ FFmpeg carregado localmente com sucesso!');
         return true;
-      } catch (error) {
-        console.warn('⚠️ Falha ao carregar do cache, tentando CDNs...', error);
-      }
-    }
-
-    const loadOptions = [
-      {
-        name: 'JSDelivr v0.12.6',
-        baseURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd',
-        priority: 1
-      },
-      {
-        name: 'unpkg v0.12.6',
-        baseURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd',
-        priority: 2
-      },
-      {
-        name: 'JSDelivr v0.12.4',
-        baseURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.4/dist/umd',
-        priority: 3
-      },
-      {
-        name: 'JSDelivr v0.11.0',
-        baseURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/esm',
-        priority: 4
-      }
-    ];
-
-    for (const option of loadOptions) {
-      let retryCount = 0;
-      
-      while (retryCount < maxRetries) {
-        try {
-          console.log(`🔄 Tentativa ${retryCount + 1}/${maxRetries} para ${option.name}...`);
-          setLoadingProgress(((loadOptions.indexOf(option) * maxRetries + retryCount) / (loadOptions.length * maxRetries)) * 100);
-          
-          const loadWithProgress = async () => {
-            const coreURL = await toBlobURL(`${option.baseURL}/ffmpeg-core.js`, 'text/javascript');
-            const wasmURL = await toBlobURL(`${option.baseURL}/ffmpeg-core.wasm`, 'application/wasm');
-            const workerURL = await toBlobURL(`${option.baseURL}/ffmpeg-core.worker.js`, 'text/javascript');
-            
-            return ffmpeg.load({
-              coreURL,
-              wasmURL,
-              workerURL,
-            });
-          };
-
-          // Timeout adaptativo
-          const timeoutMs = 30000 + (retryCount * 15000);
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error(`Timeout de ${timeoutMs}ms excedido`)), timeoutMs);
-          });
-
-          await Promise.race([loadWithProgress(), timeoutPromise]);
-          
-          console.log(`✅ FFmpeg carregado com sucesso usando ${option.name}!`);
-          
-          // Tentar armazenar em cache para próximas vezes
-          await cacheFFmpegFiles();
-          
-          return true;
-          
-        } catch (err) {
-          retryCount++;
-          console.warn(`❌ Tentativa ${retryCount} falhou para ${option.name}:`, err.message);
-          
-          if (retryCount < maxRetries) {
-            const delay = baseDelay * Math.pow(2, retryCount - 1);
-            console.log(`⏳ Aguardando ${delay}ms antes da próxima tentativa...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-          }
+        
+      } catch (err) {
+        lastError = err;
+        console.warn(`❌ Tentativa ${retryCount + 1} falhou ao carregar FFmpeg localmente:`, err.message);
+        
+        if (retryCount < maxRetries - 1) {
+          const delay = baseDelay * Math.pow(2, retryCount);
+          console.log(`⏳ Aguardando ${delay}ms antes da próxima tentativa...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
     }
     
-    throw new Error('Falha ao carregar FFmpeg de todas as CDNs após múltiplas tentativas');
-  };
+    throw new Error(`Falha ao carregar FFmpeg localmente após múltiplas tentativas. Último erro: ${lastError?.message || 'Erro desconhecido'}`);
+  }, [environmentChecks]); // Adicionado environmentChecks como dependência
 
-  // Carregar FFmpeg
   useEffect(() => {
+    const ffmpegInstance = ffmpegRef.current; // Copiado para variável local
+
     const loadFfmpeg = async () => {
       try {
-        // Verificar ambiente primeiro
         const checks = await checkEnvironmentSupport();
         
         if (!checks.webAssemblySupport) {
           throw new Error('WebAssembly não é suportado neste navegador. Considere atualizar para uma versão mais recente.');
         }
 
-        const ffmpeg = ffmpegRef.current;
-
-        ffmpeg.on('log', ({ message }) => {
+        ffmpegInstance.on('log', ({ message }) => {
           console.log('FFmpeg Log:', message);
         });
 
-        ffmpeg.on('progress', ({ progress: currentTime, duration }) => {
+        ffmpegInstance.on('progress', ({ progress: currentTime, duration }) => {
           if (duration > 0) {
             const percent = Math.max(0, Math.min(100, Math.round((currentTime / duration) * 100)));
             setProgress(percent);
@@ -278,7 +175,6 @@ const VideoGenerator = ({ generatedImages }) => {
           setFfmpegLoaded(true);
           setLoadingProgress(100);
         } else {
-          // Modo de compatibilidade
           console.log('🔄 Usando modo de compatibilidade...');
           setCompatibilityMode(true);
           setFfmpegLoaded(false);
@@ -296,17 +192,16 @@ const VideoGenerator = ({ generatedImages }) => {
     loadFfmpeg();
     
     return () => {
-      if (ffmpegRef.current) {
+      if (ffmpegInstance) { // Usando a variável local
         try {
-          ffmpegRef.current.terminate();
+          ffmpegInstance.terminate();
         } catch (err) {
           console.warn('Erro ao terminar FFmpeg:', err);
         }
       }
     };
-  }, []);
+  }, [checkEnvironmentSupport, loadFFmpegWithRetry]); // Adicionado checkEnvironmentSupport e loadFFmpegWithRetry como dependências
 
-  // Preview automático
   useEffect(() => {
     let interval;
     if (isPlaying && generatedImages.length > 0) {
@@ -487,7 +382,6 @@ const VideoGenerator = ({ generatedImages }) => {
 
       recorder.start();
 
-      // Simular progresso
       const progressInterval = setInterval(() => {
         setProgress(prev => {
           if (prev >= 90) {
@@ -565,7 +459,6 @@ const VideoGenerator = ({ generatedImages }) => {
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds} min`;
   };
 
-  // Componente de status de carregamento
   const LoadingStatus = () => {
     if (ffmpegLoaded) return null;
     
@@ -577,7 +470,7 @@ const VideoGenerator = ({ generatedImages }) => {
             <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.8)' }}>
               Carregando motor de vídeo... {Math.round(loadingProgress)}%
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', display: 'block', mt: 1 }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
               {compatibilityMode ? 'Preparando modo de compatibilidade...' : 'Primeira vez pode levar até 30 segundos'}
             </Typography>
           </>
