@@ -607,7 +607,12 @@ function App() {
 
             // Navegação de passo
             if (loadedState.backgroundImageUrl && loadedState.csvHeaders.length > 0) {
-              setActiveStep(2);
+              const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar');
+              if (etapaPosicionarFormatarIndex !== -1) {
+                setActiveStep(etapaPosicionarFormatarIndex);
+              } else {
+                setActiveStep(3); // Fallback para o índice 3 se a busca falhar
+              }
             } else if (loadedState.csvHeaders.length > 0) {
               setActiveStep(1);
             } else {
