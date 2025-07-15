@@ -563,12 +563,8 @@ const TextBox = ({
     return lines;
   };
 
-  // Fator de escala para ajustar o tamanho da fonte com base na altura da caixa de texto.
-  // Este valor pode precisar de ajustes para um bom resultado visual.
-  const FONT_SCALE_FACTOR = 0.8;
-
-  // Calcula o tamanho da fonte dinamicamente com base na altura do contêiner e na altura percentual da caixa de texto.
-  const dynamicFontSize = (position.height / 100) * (containerSize.height || 1) * FONT_SCALE_FACTOR;
+  // Calcula o tamanho da fonte dinamicamente com base no tamanho da fonte do estilo e no tamanho do contêiner.
+  const dynamicFontSize = (style.fontSize || 16) * (containerSize.width / 1080); // 1080 é a largura de referência
 
   const textLines = wrapText(editedContent, pixelPosition.width - 16, dynamicFontSize);
   const lineHeight = dynamicFontSize * (style.lineHeightMultiplier || 1.2);

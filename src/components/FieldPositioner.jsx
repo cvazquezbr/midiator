@@ -21,7 +21,6 @@ import {
   Edit
 } from '@mui/icons-material';
 import TextBox from './TextBox';
-import FormattingPanel from './FormattingPanel';
 import FormattingDrawer from './FormattingDrawer'; // Import the new drawer
 
 const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
@@ -55,7 +54,6 @@ const FieldPositioner = ({
   onImageDisplayedSizeChange,
   colorPalette,
   onSelectFieldExternal,
-  showFormattingPanel,
   onCsvDataUpdate // New prop to notify App.jsx of changes
 }) => {
   const [selectedField, setSelectedField] = useState(null);
@@ -300,7 +298,7 @@ const FieldPositioner = ({
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} lg={showFormattingPanel ? 8 : 12}>
+      <Grid item xs={12} lg={12}>
         <Card>
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -433,18 +431,6 @@ const FieldPositioner = ({
         </Card>
       </Grid>
 
-      {showFormattingPanel && (
-        <Grid item xs={12} lg={4}>
-          <FormattingPanel
-            selectedField={selectedField}
-            fieldStyles={fieldStyles}
-            setFieldStyles={setFieldStyles}
-            fieldPositions={fieldPositions}
-            setFieldPositions={setFieldPositions}
-            csvHeaders={csvHeaders}
-          />
-        </Grid>
-      )}
     </Grid>
   );
 };
