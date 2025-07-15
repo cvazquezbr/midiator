@@ -60,6 +60,8 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
 import FieldPositioner from './components/FieldPositioner';
+import FormattingPanel from './components/FormattingPanel';
+import FormattingDrawer from './components/FormattingDrawer';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
 import VideoGenerator from './components/VideoGenerator';
 import RecordManager from './features/RecordManager/RecordManager';
@@ -199,6 +201,8 @@ function App() {
   const [isHeaderHovered, setIsHeaderHovered] = useState(false);
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
+  const [selectedField, setSelectedField] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   // const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false); // Removed
   const [showGeminiAuthModal, setShowGeminiAuthModal] = useState(false);
   const [showGoogleDriveAuthModal, setShowGoogleDriveAuthModal] = useState(false);
@@ -1555,19 +1559,35 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
 
           {/* Passo 3: Posicionamento e Formatação */}
           {activeStep === 3 && (
-            <FieldPositioner
-              backgroundImage={backgroundImage}
-              csvHeaders={csvHeaders}
-              fieldPositions={fieldPositions}
-              setFieldPositions={setFieldPositions}
-              fieldStyles={fieldStyles}
-              setFieldStyles={setFieldStyles}
-              csvData={csvData}
-              onImageDisplayedSizeChange={setDisplayedImageSize}
-              colorPalette={colorPalette}
-              onCsvDataUpdate={handleCsvRecordContentUpdate}
-              showFormattingPanel={!isMobile}
-            />
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={!isMobile ? 8 : 12}>
+                <FieldPositioner
+                  backgroundImage={backgroundImage}
+                  csvHeaders={csvHeaders}
+                  fieldPositions={fieldPositions}
+                  setFieldPositions={setFieldPositions}
+                  fieldStyles={fieldStyles}
+                  setFieldStyles={setFieldStyles}
+                  csvData={csvData}
+                  onImageDisplayedSizeChange={setDisplayedImageSize}
+                  colorPalette={colorPalette}
+                  onCsvDataUpdate={handleCsvRecordContentUpdate}
+                  onSelectFieldExternal={setSelectedField}
+                />
+              </Grid>
+              {!isMobile && (
+                <Grid item xs={12} md={4}>
+                  <FormattingPanel
+                    selectedField={selectedField}
+                    fieldStyles={fieldStyles}
+                    setFieldStyles={setFieldStyles}
+                    fieldPositions={fieldPositions}
+                    setFieldPositions={setFieldPositions}
+                    csvHeaders={csvHeaders}
+                  />
+                </Grid>
+              )}
+            </Grid>
           )}
 
           {/* Passo 4: Geração */}
@@ -1662,6 +1682,29 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
         open={showGoogleDriveAuthModal}
         onClose={() => setShowGoogleDriveAuthModal(false)}
       />
+      {isMobile && activeStep === 3 && (
+        <>
+          <Fab
+            color="primary"
+            aria-label="edit"
+            sx={{ position: 'fixed', bottom: 16, right: 16 }}
+            onClick={() => setIsDrawerOpen(true)}
+            disabled={!selectedField}
+          >
+            <Edit />
+          </Fab>
+          <FormattingDrawer
+            open={isDrawerOpen}
+            onClose={() => setIsDrawerOpen(false)}
+            selectedField={selectedField}
+            fieldStyles={fieldStyles}
+            setFieldStyles={setFieldStyles}
+            fieldPositions={fieldPositions}
+            setFieldPositions={setFieldPositions}
+            csvHeaders={csvHeaders}
+          />
+        </>
+      )}
     </ThemeProvider>
   );
 }
