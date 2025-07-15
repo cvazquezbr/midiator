@@ -1,40 +1,47 @@
-const TTS_API_KEY_STORAGE_KEY = 'googleCloudTTSApiKey';
+const TTS_CREDENTIALS_STORAGE_KEY = 'googleCloudTTSCredentials';
 
 /**
- * Salva a chave da API do Google Cloud TTS no localStorage.
- * @param {string} apiKey - A chave da API a ser salva.
+ * Salva o JSON de credenciais do Google Cloud TTS no localStorage.
+ * @param {object} credentials - O objeto JSON de credenciais a ser salvo.
  */
-export function saveGoogleCloudTTSApiKey(apiKey) {
+export function saveGoogleCloudTTSCredentials(credentials) {
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
-      window.localStorage.setItem(TTS_API_KEY_STORAGE_KEY, apiKey);
+      window.localStorage.setItem(TTS_CREDENTIALS_STORAGE_KEY, JSON.stringify(credentials));
     } catch (error) {
-      console.error("Erro ao salvar a chave da API do Google Cloud TTS:", error);
-      // Opcional: Adicionar um fallback ou notificação para o usuário
+      console.error("Erro ao salvar as credenciais do Google Cloud TTS:", error);
     }
   }
 }
 
 /**
- * Recupera a chave da API do Google Cloud TTS do localStorage.
- * @returns {string|null} A chave da API ou null se não for encontrada.
+ * Recupera as credenciais do Google Cloud TTS do localStorage.
+ * @returns {object|null} O objeto de credenciais ou null se não for encontrado.
  */
-export function getGoogleCloudTTSApiKey() {
+export function getGoogleCloudTTSCredentials() {
   if (typeof window !== 'undefined' && window.localStorage) {
-    return window.localStorage.getItem(TTS_API_KEY_STORAGE_KEY);
+    const credentialsString = window.localStorage.getItem(TTS_CREDENTIALS_STORAGE_KEY);
+    if (credentialsString) {
+      try {
+        return JSON.parse(credentialsString);
+      } catch (error) {
+        console.error("Erro ao analisar as credenciais do Google Cloud TTS:", error);
+        return null;
+      }
+    }
   }
   return null;
 }
 
 /**
- * Remove a chave da API do Google Cloud TTS do localStorage.
+ * Remove as credenciais do Google Cloud TTS do localStorage.
  */
-export function removeGoogleCloudTTSApiKey() {
+export function removeGoogleCloudTTSCredentials() {
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
-      window.localStorage.removeItem(TTS_API_KEY_STORAGE_KEY);
+      window.localStorage.removeItem(TTS_CREDENTIALS_STORAGE_KEY);
     } catch (error) {
-      console.error("Erro ao remover a chave da API do Google Cloud TTS:", error);
+      console.error("Erro ao remover as credenciais do Google Cloud TTS:", error);
     }
   }
 }

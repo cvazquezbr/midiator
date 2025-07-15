@@ -1,21 +1,75 @@
+import { KJUR, KEYUTIL } from 'jsrsasign';
+
 const TTS_API_URL = 'https://texttospeech.googleapis.com/v1/text:synthesize';
+let accessToken = null;
+let tokenExpiry = 0;
+
+/**
+ * Generates an OAuth 2.0 access token from a Google service account JSON key.
+ * @param {object} serviceAccount - The service account JSON object.
+ * @returns {Promise<string>} The access token.
+ */
+async function getAccessToken(serviceAccount) {
+  const now = Math.floor(Date.now() / 1000);
+  if (accessToken && tokenExpiry > now + 60) {
+    return accessToken;
+  }
+
+  const header = {
+    alg: 'RS256',
+    typ: 'JWT',
+  };
+
+  const payload = {
+    iss: serviceAccount.client_email,
+    scope: 'https://www.googleapis.com/auth/cloud-platform',
+    aud: serviceAccount.token_uri,
+    exp: now + 3600,
+    iat: now,
+  };
+
+  const stringifiedHeader = JSON.stringify(header);
+  const stringifiedPayload = JSON.stringify(payload);
+  const privateKey = KEYUTIL.getKey(serviceAccount.private_key);
+  const jwt = KJUR.jws.JWS.sign('RS256', stringifiedHeader, stringifiedPayload, privateKey);
+
+  const response = await fetch(serviceAccount.token_uri, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: { message: response.statusText } }));
+    const errorMessage = errorData.error?.message || `Error ${response.status}`;
+    throw new Error(`Error fetching access token: ${errorMessage}`);
+  }
+
+  const tokenData = await response.json();
+  accessToken = tokenData.access_token;
+  tokenExpiry = now + tokenData.expires_in;
+
+  return accessToken;
+}
 
 /**
  * Calls the Google Cloud Text-to-Speech API.
  * @param {string} text - The text to be synthesized.
- * @param {string} apiKey - The user's Google Cloud TTS API key.
+ * @param {object} credentials - The service account JSON object.
  * @returns {Promise<string>} A base64-encoded audio string.
  * @throws {Error} If the API call fails or the response is not in the expected format.
  */
-export async function callGoogleCloudTTSAPI(text, apiKey) {
+export async function callGoogleCloudTTSAPI(text, credentials) {
   if (!text) {
     throw new Error('Text cannot be empty.');
   }
-  if (!apiKey) {
-    throw new Error('Google Cloud TTS API key was not provided.');
+  if (!credentials) {
+    throw new Error('Google Cloud TTS credentials were not provided.');
   }
 
-  const apiUrl = `${TTS_API_URL}?key=${apiKey}`;
+  const token = await getAccessToken(credentials);
 
   const requestBody = {
     input: {
@@ -23,7 +77,7 @@ export async function callGoogleCloudTTSAPI(text, apiKey) {
     },
     voice: {
       languageCode: 'pt-BR',
-      name: 'pt-BR-Standard-A', // "Vozes Chirp HD" is a product name, not an API voice name. Using a standard voice.
+      name: 'pt-BR-Wavenet-A', // Using a WaveNet voice for better quality
     },
     audioConfig: {
       audioEncoding: 'MP3',
@@ -31,10 +85,11 @@ export async function callGoogleCloudTTSAPI(text, apiKey) {
   };
 
   try {
-    const response = await fetch(apiUrl, {
+    const response = await fetch(TTS_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(requestBody),
     });
