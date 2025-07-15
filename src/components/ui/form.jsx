@@ -46,7 +46,7 @@ const useFormField = () => {
 
 const FormItemContext = React.createContext({})
 
-function FormItem({
+export function FormItem({
   className,
   ...props
 }) {
@@ -59,7 +59,7 @@ function FormItem({
   );
 }
 
-function FormLabel({
+export function FormLabel({
   className,
   ...props
 }) {
@@ -75,7 +75,7 @@ function FormLabel({
   );
 }
 
-function FormControl({
+export function FormControl({
   ...props
 }) {
   const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
@@ -94,7 +94,7 @@ function FormControl({
   );
 }
 
-function FormDescription({
+export function FormDescription({
   className,
   ...props
 }) {
@@ -109,7 +109,7 @@ function FormDescription({
   );
 }
 
-function FormMessage({
+export function FormMessage({
   className,
   ...props
 }) {
@@ -129,15 +129,4 @@ function FormMessage({
       {body}
     </p>
   );
-}
-
-export {
-  useFormField,
-  Form,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormDescription,
-  FormMessage,
-  FormField,
 }

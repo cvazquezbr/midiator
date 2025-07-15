@@ -105,7 +105,7 @@ const ImageGeneratorFrontendOnly = ({
     if (setGeneratedImagesData) {
       setGeneratedImagesData(generatedImages);
     }
-  }, [generatedImages, setGeneratedImagesData]);
+  }, [generatedImages]);
 
   // Efeito para sincronizar com initialGeneratedImagesData se ele mudar externamente
   // Isso é útil se o usuário carregar um novo arquivo JSON enquanto este componente já está montado.

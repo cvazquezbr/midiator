@@ -57,7 +57,7 @@ class GoogleDriveAPI {
   async _initializeGIS(clientId, apiKey, resolve, reject) {
     try {
       // 2. Configura o Token Client para autenticação
-      this.tokenClient = google.accounts.oauth2.initTokenClient({
+      this.tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets',
         callback: (response) => {
@@ -89,9 +89,9 @@ class GoogleDriveAPI {
         const script = document.createElement('script');
         script.src = 'https://apis.google.com/js/api.js';
         script.onload = () => {
-          gapi.load('client', {
+          window.gapi.load('client', {
             callback: () => {
-              gapi.client.init({
+              window.gapi.client.init({
                 apiKey: apiKey,
                 discoveryDocs: [
                   'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
@@ -105,9 +105,9 @@ class GoogleDriveAPI {
         script.onerror = () => reject(new Error('Falha ao carregar Google API'));
         document.head.appendChild(script);
       } else {
-        gapi.load('client', {
+        window.gapi.load('client', {
           callback: () => {
-            gapi.client.init({
+            window.gapi.client.init({
               apiKey: apiKey,
               discoveryDocs: [
                 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
@@ -136,7 +136,7 @@ class GoogleDriveAPI {
    */
   async signOut() {
     if (this.accessToken) {
-      google.accounts.oauth2.revoke(this.accessToken);
+      window.google.accounts.oauth2.revoke(this.accessToken);
     }
     this.accessToken = null;
     this.isSignedIn = false;
@@ -450,20 +450,20 @@ class GoogleDriveAPI {
     if (!this.isInitialized || !this.isSignedIn) {
       throw new Error('Usuário não está logado para mover arquivo.');
     }
-    if (!gapi || !gapi.client || !gapi.client.drive) {
+    if (!window.gapi || !window.gapi.client || !window.gapi.client.drive) {
         throw new Error('Cliente GAPI Drive não está pronto para mover arquivo.');
     }
 
     try {
       // Obter os pais atuais do arquivo para removê-lo da raiz ou de outras pastas.
-      const file = await gapi.client.drive.files.get({
+      const file = await window.gapi.client.drive.files.get({
         fileId: fileId,
         fields: 'parents'
       });
 
       const previousParents = file.result.parents ? file.result.parents.join(',') : '';
 
-      const response = await gapi.client.drive.files.update({
+      const response = await window.gapi.client.drive.files.update({
         fileId: fileId,
         addParents: folderId,
         removeParents: previousParents, // Garante que o arquivo seja movido e não copiado.

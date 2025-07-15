@@ -10,7 +10,7 @@ const initialTemplate = {
   fields: [],
 };
 
-export const TemplateProvider = ({ children }) => {
+export function TemplateProvider({ children }) {
   const [template, setTemplate] = useState(initialTemplate);
   const [selectedFieldId, setSelectedFieldId] = useState(null);
 

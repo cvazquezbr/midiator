@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box, Button, Typography, Card, CardContent, Grid,
   LinearProgress, Alert, Select, MenuItem,
@@ -9,9 +9,9 @@ import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh } from '@mui/icon
 
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { fetchFile } from '@ffmpeg/util';
 
-const VideoGenerator = ({ generatedImages }) => {
+const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [video, setVideo] = useState(null);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -26,7 +26,6 @@ const VideoGenerator = ({ generatedImages }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [processingTime, setProcessingTime] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState(0);
-  const [loadingProgress, setLoadingProgress] = useState(0);
   const [showTroubleshooting, setShowTroubleshooting] = useState(false);
   const [environmentChecks, setEnvironmentChecks] = useState(null);
   const [compatibilityMode, setCompatibilityMode] = useState(false);
@@ -78,42 +77,44 @@ const VideoGenerator = ({ generatedImages }) => {
     { value: 'none', label: 'Nenhuma (Mais Rápido)' },
   ];
 
-  const checkEnvironmentSupport = useCallback(async () => {
-    const checks = {
-      webAssemblySupport: typeof WebAssembly !== 'undefined',
-      sharedArrayBufferSupport: typeof SharedArrayBuffer !== 'undefined',
-      crossOriginIsolated: window.crossOriginIsolated || false, // Corrigido: 'crossOriginIsolated' is not defined
-      adBlockerDetected: false,
-      networkRestricted: false
+  useEffect(() => {
+    const checkEnvironmentSupport = async () => {
+      const checks = {
+        webAssemblySupport: typeof WebAssembly !== 'undefined',
+        sharedArrayBufferSupport: typeof SharedArrayBuffer !== 'undefined',
+        crossOriginIsolated: window.crossOriginIsolated || false,
+        adBlockerDetected: false,
+        networkRestricted: false,
+      };
+
+      try {
+        const testImg = new Image();
+        testImg.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
+        await new Promise((resolve, reject) => {
+          testImg.onload = resolve;
+          testImg.onerror = () => {
+            checks.adBlockerDetected = true;
+            resolve();
+          };
+          setTimeout(reject, 2000);
+        });
+      } catch (e) {
+        checks.adBlockerDetected = true;
+      }
+
+      try {
+        await fetch('https://cdn.jsdelivr.net/npm/react@18.0.0/package.json', {
+          method: 'HEAD',
+          mode: 'no-cors',
+        });
+      } catch (e) {
+        checks.networkRestricted = true;
+      }
+
+      setEnvironmentChecks(checks);
     };
 
-    try {
-      const testImg = new Image();
-      testImg.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js';
-      await new Promise((resolve, reject) => {
-        testImg.onload = resolve;
-        testImg.onerror = () => {
-          checks.adBlockerDetected = true;
-          resolve();
-        };
-        setTimeout(reject, 2000);
-      });
-    } catch (e) {
-      checks.adBlockerDetected = true;
-    }
-
-    try {
-      // Removido 'response' não utilizado
-      await fetch('https://cdn.jsdelivr.net/npm/react@18.0.0/package.json', {
-        method: 'HEAD',
-        mode: 'no-cors'
-      });
-    } catch (e) {
-      checks.networkRestricted = true;
-    }
-
-    setEnvironmentChecks(checks);
-    return checks;
+    checkEnvironmentSupport();
   }, []);
 
   useEffect(() => {
@@ -223,7 +224,8 @@ const generateVideoWithFFmpeg = async () => {
     // 2.1 inputs
     const inputs = [];
     generatedImages.forEach((_, i) => {
-      inputs.push("-loop", "1", "-t", slideDuration.toString(), "-i", `img${i}.png`);
+      const duration = generatedAudioData && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration;
+      inputs.push("-loop", "1", "-t", duration.toString(), "-i", `img${i}.png`);
     });
 
     // 2.2 filter chains – colour + SAR (+ opcional scale/pad)
@@ -236,6 +238,7 @@ const generateVideoWithFFmpeg = async () => {
     // 2.3 concatenation vs. cross‑fades
     let filterComplex = "";
     let lastLabel = "";
+    let totalDuration = 0;
 
     if (transition === "none") {
       filterComplex = [
@@ -244,13 +247,20 @@ const generateVideoWithFFmpeg = async () => {
         `concat=n=${generatedImages.length}:v=1:a=0[outv]`
       ].join(";");
       lastLabel = "[outv]";
+      totalDuration = generatedImages.reduce((acc, _, i) => {
+        const duration = generatedAudioData && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration;
+        return acc + duration;
+      }, 0);
     } else {
       const transitionFilters = [];
       let previous = "v0";
+      let currentTime = 0;
       generatedImages.slice(1).forEach((_, idx) => {
         const next = `v${idx + 1}`;
         const label = `xf${idx}`;
-        const offset = (idx + 1) * slideDuration + idx * fadeSeconds;
+        const duration = generatedAudioData && generatedAudioData[idx] ? generatedAudioData[idx].duration : slideDuration;
+        currentTime += duration;
+        const offset = currentTime;
         transitionFilters.push(
           `[${previous}][${next}]xfade=transition=${transition}:duration=${fadeSeconds}:offset=${offset}[${label}]`
         );
@@ -258,13 +268,9 @@ const generateVideoWithFFmpeg = async () => {
       });
       filterComplex = [...filterParts, ...transitionFilters].join(";");
       lastLabel = `[${previous}]`;
+      const lastImageDuration = generatedAudioData && generatedAudioData[generatedImages.length - 1] ? generatedAudioData[generatedImages.length - 1].duration : slideDuration;
+      totalDuration = currentTime + lastImageDuration;
     }
-
-    // 2.4 total duration
-    const totalDuration =
-      transition === "none"
-        ? generatedImages.length * slideDuration
-        : generatedImages.length * slideDuration + (generatedImages.length - 1) * fadeSeconds;
 
     /* ----------------------------------------------------------------
      * 3. Execute FFmpeg
@@ -425,7 +431,7 @@ const generateVideoWithFFmpeg = async () => {
           <>
             <CircularProgress sx={{ color: 'white', mb: 1 }} />
             <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-              Carregando motor de vídeo... {Math.round(loadingProgress)}%
+              Carregando motor de vídeo...
             </Typography>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
               {compatibilityMode ? 'Preparando modo de compatibilidade...' : 'Primeira vez pode levar até 30 segundos'}

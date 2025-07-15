@@ -53,8 +53,11 @@ const GoogleAuthSetup = ({ onAuthSuccess, onAuthError }) => {
     const storedClientId = localStorage.getItem("google_drive_client_id"); // Alterado para chave canônica
     if (storedApiKey) setApiKey(storedApiKey);
     if (storedClientId) setClientId(storedClientId);
-    checkAuthStatus();
   }, []);
+
+  useEffect(() => {
+    checkAuthStatus();
+  }, [authStatus]);
 
   const checkAuthStatus = async () => {
     try {
