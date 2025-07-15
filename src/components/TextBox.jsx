@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Box } from '@mui/material';
 
 const TextBox = ({ 
@@ -29,7 +29,7 @@ const TextBox = ({
   const textBoxRef = useRef(null);
   const textareaRef = useRef(null);
 
-  const getRotatedBoundingBox = (widthPercent, heightPercent, rotationDegrees) => {
+  const getRotatedBoundingBox = useCallback((widthPercent, heightPercent, rotationDegrees) => {
     // Ensure containerSize has valid dimensions before using them
     const cWidth = containerSize.width || 1; // Fallback to 1 to avoid NaN/Infinity if not ready
     const cHeight = containerSize.height || 1; // Fallback to 1 to avoid NaN/Infinity if not ready
@@ -46,7 +46,7 @@ const TextBox = ({
       width: (newWidth / cWidth) * 100,
       height: (newHeight / cHeight) * 100,
     };
-  };
+  }, [containerSize.width, containerSize.height]);
 
   const calculateResizedDimensionsAndPosition = (initialPosition, initialSize, deltaXPercent, deltaYPercent, handleName, rotationDegrees) => {
     let newX = initialPosition.x;
@@ -102,8 +102,6 @@ const TextBox = ({
     let oppositeHandleName = '';
 
     // Determine the fixed anchor point based on the handle being dragged
-    let oppositeHandleMidpointKey = ''; // For side handles, to find midpoint of opposite side
-
     switch (handleName) {
         case 'n':
             fixedAnchorPoint = {
@@ -334,7 +332,7 @@ const TextBox = ({
     }
   };
 
-  const handleMouseMove = (e) => {
+  const handleMouseMove = useCallback((e) => {
     if (!isDragging && !isResizing && !isRotating) return;
 
     const currentX = e.clientX;
@@ -393,9 +391,9 @@ const TextBox = ({
       onPositionChange(field, { ...position, x: newX, y: newY, rotation: rotationDegrees });
       onSizeChange(field, { width: newWidth, height: newHeight });
     }
-  };
+  }, [isDragging, isResizing, isRotating, dragStart, initialRotation, field, position, containerSize, initialPosition, initialSize, resizeHandle, onPositionChange, onSizeChange, getRotatedBoundingBox]);
 
-  const handleTouchMove = (e) => {
+  const handleTouchMove = useCallback((e) => {
     if (!isDragging && !isResizing && !isRotating) return;
     
     e.preventDefault();
@@ -456,21 +454,19 @@ const TextBox = ({
       onPositionChange(field, { ...position, x: newX, y: newY, rotation: rotationDegrees });
       onSizeChange(field, { width: newWidth, height: newHeight });
     }
-  };
+  }, [isDragging, isResizing, isRotating, dragStart, initialRotation, field, position, containerSize, initialPosition, initialSize, resizeHandle, onPositionChange, onSizeChange, getRotatedBoundingBox]);
 
-  const handleMouseUp = () => {
-    if (setIsMoving) setIsMoving(false);
+  const handleMouseUp = useCallback(() => {
     setIsDragging(false); setIsResizing(false); setIsRotating(false);
     setResizeHandle(null);
-  };
+  }, []);
 
-  const handleTouchEnd = () => {
-    if (setIsMoving) setIsMoving(false);
+  const handleTouchEnd = useCallback(() => {
     document.body.style.overflow = '';
     document.body.style.touchAction = '';
     setIsDragging(false); setIsResizing(false); setIsRotating(false);
     setResizeHandle(null);
-  };
+  }, []);
 
   const handleDoubleClick = () => {
     if (isSelected) setIsEditing(true);
@@ -542,13 +538,13 @@ const TextBox = ({
         document.body.style.touchAction = '';
       };
     }
-  }, [isDragging, isResizing, isRotating, dragStart, initialPosition, initialSize, initialRotation]);
+  }, [isDragging, isResizing, isRotating, dragStart, initialPosition, initialSize, initialRotation, handleMouseMove, handleMouseUp, handleTouchEnd, handleTouchMove]);
 
-  const wrapText = (text, maxWidth) => {
+  const wrapText = (text, maxWidth, fontSize) => {
     if (!text) return [''];
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${style.fontSize || 16}px ${style.fontFamily || 'Arial'}`;
+    ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${fontSize}px ${style.fontFamily || 'Arial'}`;
     const words = text.toString().split(' ');
     const lines = [];
     let currentLine = words[0] || '';
@@ -567,8 +563,15 @@ const TextBox = ({
     return lines;
   };
 
-  const textLines = wrapText(editedContent, pixelPosition.width - 16);
-  const lineHeight = (style.fontSize || 16) * 1.2;
+  // Fator de escala para ajustar o tamanho da fonte com base na altura da caixa de texto.
+  // Este valor pode precisar de ajustes para um bom resultado visual.
+  const FONT_SCALE_FACTOR = 0.8;
+
+  // Calcula o tamanho da fonte dinamicamente com base na altura do contêiner e na altura percentual da caixa de texto.
+  const dynamicFontSize = (position.height / 100) * (containerSize.height || 1) * FONT_SCALE_FACTOR;
+
+  const textLines = wrapText(editedContent, pixelPosition.width - 16, dynamicFontSize);
+  const lineHeight = dynamicFontSize * (style.lineHeightMultiplier || 1.2);
   const handleSize = isMobile ? 24 : 12; // Aumentado o tamanho do handle
 
   return (
@@ -629,7 +632,7 @@ const TextBox = ({
             onBlur={handleTextareaBlur} onKeyDown={handleTextareaKeyDown}
             style={{
               width: '100%', height: '100%', fontFamily: style.fontFamily || 'Arial',
-              fontSize: `${style.fontSize || 16}px`, fontWeight: style.fontWeight || 'normal',
+              fontSize: `${dynamicFontSize}px`, fontWeight: style.fontWeight || 'normal',
               fontStyle: style.fontStyle || 'normal', color: style.color || '#000000',
               lineHeight: `${lineHeight}px`, textDecoration: style.textDecoration || 'none',
               border: 'none', outline: 'none', backgroundColor: 'transparent',
@@ -641,7 +644,7 @@ const TextBox = ({
           <Box
             sx={{
               pointerEvents: 'none', fontFamily: style.fontFamily || 'Arial',
-              fontSize: `${style.fontSize || 16}px`, fontWeight: style.fontWeight || 'normal',
+              fontSize: `${dynamicFontSize}px`, fontWeight: style.fontWeight || 'normal',
               fontStyle: style.fontStyle || 'normal', color: style.color || '#000000',
               textDecoration: style.textDecoration || 'none', lineHeight: `${lineHeight}px`,
               textShadow: style.textShadow ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}` : 'none',

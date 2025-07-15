@@ -62,7 +62,6 @@ const FieldPositioner = ({
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isInteracting, setIsInteracting] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false); // State for the drawer
-  const [isMoving, setIsMoving] = useState(false);
   const containerRef = useRef(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
 
@@ -94,7 +93,7 @@ const FieldPositioner = ({
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, []);
+  }, [onImageDisplayedSizeChange]);
 
   // Effect to initialize or update field positions and styles based on csvHeaders and props.
   // This ensures that every field in csvHeaders has a corresponding position and a complete style object.
@@ -153,7 +152,7 @@ const FieldPositioner = ({
     // Stringifying them for the dependency array is a common way to track changes in object content,
     // though it can be performance-intensive for very large/complex objects.
     // For this use case, it's likely acceptable.
-  }, [csvHeaders, setFieldPositions, setFieldStyles]);
+  }, [csvHeaders, fieldPositions, fieldStyles, setFieldPositions, setFieldStyles]);
 
   const handlePositionChange = (field, newPosition) => {
     setFieldPositions(prev => ({
@@ -230,7 +229,7 @@ const FieldPositioner = ({
     }
   };
 
-  const handleContainerTouchEnd = (e) => {
+  const handleContainerTouchEnd = () => {
     setIsInteracting(false);
   };
 
@@ -306,7 +305,7 @@ const FieldPositioner = ({
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} lg={isMobile ? 12 : 8}>
+      <Grid item xs={12} lg={showFormattingPanel ? 12 : 8}>
         <Card>
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -403,7 +402,6 @@ const FieldPositioner = ({
                       containerSize={imageSize}
                       onContentChange={handleContentChange}
                       rotation={position.rotation}
-                      setIsMoving={setIsMoving}
                     />
                   );
                 })
@@ -446,7 +444,7 @@ const FieldPositioner = ({
         </Card>
       </Grid>
 
-      {!isMobile && showFormattingPanel && (
+      {showFormattingPanel && !isMobile && (
         <Grid item xs={12} lg={4}>
           <FormattingPanel
             selectedField={selectedField}
@@ -459,7 +457,7 @@ const FieldPositioner = ({
         </Grid>
       )}
 
-      {isMobile && !isMoving && (
+      {isMobile && (
         <>
           <Fab
             color="primary"
