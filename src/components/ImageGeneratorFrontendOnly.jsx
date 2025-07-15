@@ -63,6 +63,7 @@ const ImageGeneratorFrontendOnly = ({
   // Novos estados para o editor WYSIWYG de imagens geradas
   const [editingGeneratedImageIndex, setEditingGeneratedImageIndex] = useState(null);
   const [showGeneratedImageEditor, setShowGeneratedImageEditor] = useState(false);
+  const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 });
 
 
   // Estados para integração Google Drive
@@ -206,15 +207,6 @@ const ImageGeneratorFrontendOnly = ({
     ctx.fillText(text, x, y);
   };
 
-  // Função para calcular posições precisas
-  const calculatePrecisePosition = (position, canvasWidth, canvasHeight) => {
-    return {
-      x: Math.round((position.x / 100) * canvasWidth),
-      y: Math.round((position.y / 100) * canvasHeight),
-      width: Math.round((position.width / 100) * canvasWidth),
-      height: Math.round((position.height / 100) * canvasHeight)
-    };
-  };
 
   // Função principal para gerar imagens
   const generateImages = async () => {
@@ -239,6 +231,8 @@ const ImageGeneratorFrontendOnly = ({
         img.onerror = reject;
         img.src = backgroundImage;
       });
+
+      setOriginalImageSize({ width: img.width, height: img.height });
 
       for (let i = 0; i < csvData.length; i++) {
         const record = csvData[i];
@@ -448,11 +442,6 @@ const ImageGeneratorFrontendOnly = ({
     });
   };
 
-  // Função para abrir preview
-  const openPreview = (imageData) => {
-    setSelectedPreview(imageData);
-    setPreviewOpen(true);
-  };
 
   // Função para fechar preview
   const closePreview = () => {
@@ -475,17 +464,6 @@ const ImageGeneratorFrontendOnly = ({
       // if 'index' is always valid and 'generatedImages' is properly synced.
       // For now, let's try to proceed with imageFromClosure if imageToEdit is missing,
       // though this indicates a deeper state inconsistency.
-      const fallbackImage = imageFromClosure || {}; // Use imageFromClosure if primary fetch fails
-
-      const positionsToLoad = fallbackImage.customFieldPositions !== undefined
-        ? fallbackImage.customFieldPositions
-        : fieldPositions;
-      const stylesToLoad = fallbackImage.customFieldStyles !== undefined
-        ? fallbackImage.customFieldStyles
-        : fieldStyles;
-
-      setIndividualFieldPositions(JSON.parse(JSON.stringify(positionsToLoad)));
-      setIndividualFieldStyles(JSON.parse(JSON.stringify(stylesToLoad)));
       setShowGeneratedImageEditor(true);
       return;
     }
@@ -494,17 +472,6 @@ const ImageGeneratorFrontendOnly = ({
     // console.log('[handleOpenGeneratedImageEditor] imageToEdit.customFieldPositions:', imageToEdit.customFieldPositions);
     // console.log('[handleOpenGeneratedImageEditor] imageToEdit.customFieldStyles:', imageToEdit.customFieldStyles);
 
-    // If customFieldPositions exists (even if it's an empty object {}), use it. Otherwise, use global.
-    const positionsToLoad = imageToEdit.customFieldPositions !== undefined
-      ? imageToEdit.customFieldPositions
-      : fieldPositions; // global fieldPositions from props
-
-    const stylesToLoad = imageToEdit.customFieldStyles !== undefined
-      ? imageToEdit.customFieldStyles
-      : fieldStyles;    // global fieldStyles from props
-
-    // console.log('[handleOpenGeneratedImageEditor] positionsToLoad:', positionsToLoad);
-    // console.log('[handleOpenGeneratedImageEditor] stylesToLoad:', stylesToLoad);
 
     // Removed: setIndividualFieldPositions(JSON.parse(JSON.stringify(positionsToLoad)));
     // Removed: setIndividualFieldStyles(JSON.parse(JSON.stringify(stylesToLoad)));
@@ -755,7 +722,7 @@ const ImageGeneratorFrontendOnly = ({
           // console.error('[handleIndividualImageUpload reader.onload] Could not find imageToUpdate for index:', replacingImageIndex);
         }
       };
-      reader.onerror = (error) => {
+      reader.onerror = () => {
         // console.error('[handleIndividualImageUpload reader.onerror] FileReader error:', error);
       };
       reader.readAsDataURL(file);
@@ -1215,6 +1182,7 @@ const ImageGeneratorFrontendOnly = ({
             onSave={handleSaveIndividualModifications}
             colorPalette={colorPalette}
             globalBackgroundImage={backgroundImage}
+            originalImageSize={originalImageSize}
           />
         );
       })()}
