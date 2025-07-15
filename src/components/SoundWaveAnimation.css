@@ -3,6 +3,7 @@
   justify-content: center;
   align-items: center;
   height: 50px;
+  margin-top: 16px;
 }
 
 .sound-wave-bar {
@@ -14,7 +15,7 @@
   animation-duration: 1.5s;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
-  transform-origin: bottom;
+  transform-origin: center;
 }
 
 .sound-wave-bar.active {
