@@ -195,6 +195,7 @@ function App() {
   const [fieldPositions, setFieldPositions] = useState({});
   const [fieldStyles, setFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
+  const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 });
   const [generatedImagesData, setGeneratedImagesData] = useState([]);
   const isMobile = useIsMobile();
   const [anchorElMenu, setAnchorElMenu] = useState(null);
@@ -369,6 +370,7 @@ function App() {
         const img = new Image();
         img.crossOrigin = 'Anonymous';
         img.onload = () => {
+          setOriginalImageSize({ width: img.width, height: img.height });
           const colorThief = new ColorThief();
           const palette = colorThief.getPalette(img, 5);
           setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`));
@@ -1573,6 +1575,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   colorPalette={colorPalette}
                   onCsvDataUpdate={handleCsvRecordContentUpdate}
                   onSelectFieldExternal={setSelectedField}
+                  originalImageSize={originalImageSize}
                 />
               </Grid>
               {!isMobile && (
@@ -1603,6 +1606,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               setGeneratedImagesData={setGeneratedImagesData}
               initialGeneratedImagesData={generatedImagesData}
               onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
+              originalImageSize={originalImageSize}
             />
           )}
 

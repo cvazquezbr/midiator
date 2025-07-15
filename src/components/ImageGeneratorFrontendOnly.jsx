@@ -47,7 +47,8 @@ const ImageGeneratorFrontendOnly = ({
   colorPalette, // Paleta de cores global (para GeneratedImageEditor)
   setGeneratedImagesData, // Setter para atualizar o estado em App.jsx
   initialGeneratedImagesData, // Dados iniciais carregados do JSON
-  onThumbnailRecordTextUpdate // <-- ADICIONADO: Callback para atualizar o CSV em App.jsx
+  onThumbnailRecordTextUpdate, // <-- ADICIONADO: Callback para atualizar o CSV em App.jsx
+  originalImageSize
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   // O estado local `generatedImages` será inicializado com `initialGeneratedImagesData`
@@ -63,7 +64,6 @@ const ImageGeneratorFrontendOnly = ({
   // Novos estados para o editor WYSIWYG de imagens geradas
   const [editingGeneratedImageIndex, setEditingGeneratedImageIndex] = useState(null);
   const [showGeneratedImageEditor, setShowGeneratedImageEditor] = useState(false);
-  const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 });
 
 
   // Estados para integração Google Drive
@@ -232,8 +232,6 @@ const ImageGeneratorFrontendOnly = ({
         img.src = backgroundImage;
       });
 
-      setOriginalImageSize({ width: img.width, height: img.height });
-
       for (let i = 0; i < csvData.length; i++) {
         const record = csvData[i];
 
@@ -253,14 +251,6 @@ const ImageGeneratorFrontendOnly = ({
         // Desenhar imagem de fundo
         ctx.drawImage(img, 0, 0);
 
-          // Calcular fator de escala baseado no tamanho da imagem exibida na edição
-          // Garantir que displayedImageSize não seja zero para evitar divisão por zero
-          const safeDisplayedWidth = displayedImageSize.width > 0 ? displayedImageSize.width : img.width;
-          const safeDisplayedHeight = displayedImageSize.height > 0 ? displayedImageSize.height : img.height;
-
-          const scaleX = img.width / safeDisplayedWidth;
-          const scaleY = img.height / safeDisplayedHeight;
-
           // Desenhar campos do CSV com estilos individuais
           Object.keys(record).forEach(field => {
             const position = fieldPositions[field];
@@ -271,91 +261,79 @@ const ImageGeneratorFrontendOnly = ({
             const text = record[field] || "";
             if (!text) return;
 
-          ctx.save(); // Salvar o estado do canvas ANTES da rotação e translação
+            ctx.save(); // Salvar o estado do canvas ANTES da rotação e translação
 
             // Calcular posições precisas da caixa de texto na imagem final
-            const scaledPos = {
+            const posPx = {
               x: Math.round((position.x / 100) * img.width),
               y: Math.round((position.y / 100) * img.height),
               width: Math.round((position.width / 100) * img.width),
               height: Math.round((position.height / 100) * img.height)
             };
 
-          // Aplicar rotação
-          if (position.rotation) {
-            const centerX = scaledPos.x + scaledPos.width / 2;
-            const centerY = scaledPos.y + scaledPos.height / 2;
-            ctx.translate(centerX, centerY);
-            ctx.rotate(position.rotation * Math.PI / 180);
-            ctx.translate(-centerX, -centerY);
-          }
+            // Aplicar rotação
+            if (position.rotation) {
+              const centerX = posPx.x + posPx.width / 2;
+              const centerY = posPx.y + posPx.height / 2;
+              ctx.translate(centerX, centerY);
+              ctx.rotate(position.rotation * Math.PI / 180);
+              ctx.translate(-centerX, -centerY);
+            }
 
-            // Escalar o tamanho da fonte
-            const scaledFontSize = style.fontSize * Math.min(scaleX, scaleY);
+            // O tamanho da fonte agora é fixo, baseado no estilo, pois estamos renderizando no canvas de tamanho original.
+            const fontSize = style.fontSize || 24;
 
-            // Aplicar configurações de texto (será usado por drawTextWithEffects)
-            // É importante definir a fonte no contexto ANTES de medir texto ou desenhar.
-            applyTextEffects(ctx, { ...style, fontSize: scaledFontSize });
+            // Aplicar configurações de texto
+            applyTextEffects(ctx, { ...style, fontSize: fontSize });
 
-            // Calcular padding escalado (baseado no padding de 8px do TextBox.jsx)
-            const editorPadding = 8;
-            const scaledPaddingX = editorPadding * scaleX;
-            const scaledPaddingY = editorPadding * scaleY;
+            // O padding do editor (8px) precisa ser dimensionado para o tamanho real da imagem.
+            // A referência para a escala é o tamanho em que o editor foi exibido.
+            const editorReferenceWidth = displayedImageSize.width > 0 ? displayedImageSize.width : 1080; // um fallback razoável
+            const paddingScaleFactor = img.width / editorReferenceWidth;
+            const scaledPadding = 8 * paddingScaleFactor;
 
-            // Área efetiva para o texto dentro da caixa (considerando o padding)
-            const effectiveTextWidth = Math.max(0, scaledPos.width - (2 * scaledPaddingX));
-            const effectiveTextHeight = Math.max(0, scaledPos.height - (2 * scaledPaddingY));
+            // Área efetiva para o texto dentro da caixa
+            const effectiveTextWidth = Math.max(0, posPx.width - (2 * scaledPadding));
+            const effectiveTextHeight = Math.max(0, posPx.height - (2 * scaledPadding));
 
-            // Posição inicial do conteúdo do texto (canto superior esquerdo da área de texto, após padding)
-            const textContentStartX = scaledPos.x + scaledPaddingX;
-            const textContentStartY = scaledPos.y + scaledPaddingY;
+            // Posição inicial do conteúdo do texto
+            const textContentStartX = posPx.x + scaledPadding;
+            const textContentStartY = posPx.y + scaledPadding;
 
-            // Quebrar texto em linhas dentro da ÁREA EFETIVA
-            // Os argumentos x e y para wrapTextInArea não são usados em sua implementação atual,
-            // mas passamos 0,0 por clareza, já que a quebra é relativa à effectiveTextWidth/Height.
-            const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: scaledFontSize });
+            // Quebrar texto em linhas
+            const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: fontSize });
 
             // Desenhar cada linha
-            const lineHeight = scaledFontSize * (style.lineHeightMultiplier || 1.2); // Use scaledFontSize
-            let currentLineRenderY = textContentStartY; // Posição Y inicial para renderizar a primeira linha de texto
+            const lineHeight = fontSize * (style.lineHeightMultiplier || 1.2);
+            let currentLineRenderY = textContentStartY;
 
-            // Ajustar currentLineRenderY com base no alinhamento vertical DENTRO da área de texto efetiva
+            // Ajuste de alinhamento vertical
             if (style.verticalAlign === 'middle') {
-              const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - scaledFontSize) : 0); // Altura real do bloco de texto
+              const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
               currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
             } else if (style.verticalAlign === 'bottom') {
-              const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - scaledFontSize) : 0);
+              const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
               currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
             }
-            // 'top' já é o padrão (começa em textContentStartY)
 
             lines.forEach((line, lineIndex) => {
-              let currentLineRenderX = textContentStartX; // Posição X inicial para renderizar a linha (após padding esquerdo)
-
-              // Ajustar currentLineRenderX com base no alinhamento horizontal DENTRO da área de texto efetiva
-              // Certifique-se de que ctx.font está definido com scaledFontSize antes de measureText
-              ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${scaledFontSize}px ${style.fontFamily || 'Arial'}`;
+              let currentLineRenderX = textContentStartX;
               const textMetrics = ctx.measureText(line);
               const currentTextWidth = textMetrics.width;
 
-
+              // Ajuste de alinhamento horizontal
               if (style.textAlign === 'center') {
                 currentLineRenderX += (effectiveTextWidth - currentTextWidth) / 2;
               } else if (style.textAlign === 'right') {
                 currentLineRenderX += effectiveTextWidth - currentTextWidth;
               }
-              // 'left' já é o padrão (começa em textContentStartX)
 
-              // A posição Y da linha atual para renderização
-              // Adiciona o offset da linha atual ao Y inicial do bloco de texto
               const finalLineY = currentLineRenderY + (lineIndex * lineHeight);
 
-              // applyTextEffects já foi chamado antes do loop, configurando cor, sombra, etc.
-              // Precisamos garantir que a fonte está correta para strokeText e fillText.
-              // A cor e efeitos já estão no contexto (ctx).
-              drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: scaledFontSize });
+              // Desenhar o texto com efeitos
+              drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: fontSize });
             });
-          ctx.restore(); // Restaurar o estado do canvas para o próximo campo
+            ctx.restore(); // Restaurar o estado do canvas para o próximo campo
           });
 
         // Converter canvas para blob com alta qualidade
@@ -569,15 +547,7 @@ const ImageGeneratorFrontendOnly = ({
       ctx.textRenderingOptimization = 'optimizeQuality';
       ctx.drawImage(img, 0, 0);
 
-      // Garantir que displayedImageSize não seja zero para evitar divisão por zero
-      const safeDisplayedWidth = displayedImageSize.width > 0 ? displayedImageSize.width : img.width;
-      const safeDisplayedHeight = displayedImageSize.height > 0 ? displayedImageSize.height : img.height;
-
-      const scaleX = img.width / safeDisplayedWidth;
-      const scaleY = img.height / safeDisplayedHeight;
-
       Object.keys(record).forEach(field => {
-        // Usar as posições e estilos passados como argumento, não os globais
         const position = positionsToUse[field];
         const style = stylesToUse[field];
         if (!position || !position.visible || !style) return;
@@ -586,53 +556,49 @@ const ImageGeneratorFrontendOnly = ({
 
         ctx.save(); // Salvar o estado do canvas ANTES da rotação e translação
 
-        const scaledPos = {
+        const posPx = {
           x: Math.round((position.x / 100) * img.width),
           y: Math.round((position.y / 100) * img.height),
           width: Math.round((position.width / 100) * img.width),
           height: Math.round((position.height / 100) * img.height)
         };
 
-        // Aplicar rotação
         if (position.rotation) {
-          const centerX = scaledPos.x + scaledPos.width / 2;
-          const centerY = scaledPos.y + scaledPos.height / 2;
+          const centerX = posPx.x + posPx.width / 2;
+          const centerY = posPx.y + posPx.height / 2;
           ctx.translate(centerX, centerY);
           ctx.rotate(position.rotation * Math.PI / 180);
           ctx.translate(-centerX, -centerY);
         }
 
-        const scaledFontSize = style.fontSize * Math.min(scaleX, scaleY);
+        const fontSize = style.fontSize || 24;
+        applyTextEffects(ctx, { ...style, fontSize: fontSize });
+
+        const editorReferenceWidth = displayedImageSize.width > 0 ? displayedImageSize.width : 1080;
+        const paddingScaleFactor = img.width / editorReferenceWidth;
+        const scaledPadding = 8 * paddingScaleFactor;
+
+        const effectiveTextWidth = Math.max(0, posPx.width - (2 * scaledPadding));
+        const effectiveTextHeight = Math.max(0, posPx.height - (2 * scaledPadding));
+
+        const textContentStartX = posPx.x + scaledPadding;
+        const textContentStartY = posPx.y + scaledPadding;
+
+        const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: fontSize });
         
-        applyTextEffects(ctx, { ...style, fontSize: scaledFontSize });
-
-        const editorPadding = 8;
-        const scaledPaddingX = editorPadding * scaleX;
-        const scaledPaddingY = editorPadding * scaleY;
-
-        const effectiveTextWidth = Math.max(0, scaledPos.width - (2 * scaledPaddingX));
-        const effectiveTextHeight = Math.max(0, scaledPos.height - (2 * scaledPaddingY));
-
-        const textContentStartX = scaledPos.x + scaledPaddingX;
-        const textContentStartY = scaledPos.y + scaledPaddingY;
-
-        const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: scaledFontSize });
-        
-        const lineHeight = scaledFontSize * (style.lineHeightMultiplier || 1.2);
+        const lineHeight = fontSize * (style.lineHeightMultiplier || 1.2);
         let currentLineRenderY = textContentStartY;
 
         if (style.verticalAlign === 'middle') {
-          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - scaledFontSize) : 0);
+          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
           currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
         } else if (style.verticalAlign === 'bottom') {
-          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - scaledFontSize) : 0);
+          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
           currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
         }
 
         lines.forEach((line, lineIndex) => {
           let currentLineRenderX = textContentStartX;
-          
-          ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${scaledFontSize}px ${style.fontFamily || 'Arial'}`;
           const textMetrics = ctx.measureText(line);
           const currentTextWidth = textMetrics.width;
 
@@ -643,7 +609,7 @@ const ImageGeneratorFrontendOnly = ({
           }
           
           const finalLineY = currentLineRenderY + (lineIndex * lineHeight);
-          drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: scaledFontSize });
+          drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: fontSize });
         });
         ctx.restore(); // Restaurar o estado do canvas para o próximo campo
       });
@@ -1182,7 +1148,7 @@ const ImageGeneratorFrontendOnly = ({
             onSave={handleSaveIndividualModifications}
             colorPalette={colorPalette}
             globalBackgroundImage={backgroundImage}
-            originalImageSize={originalImageSize}
+            originalImageSize={originalImageSize} // Pass the prop here
           />
         );
       })()}
