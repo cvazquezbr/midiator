@@ -27,7 +27,8 @@ import {
   ListItemIcon,
   ListItemText,
   AppBar,
-  Toolbar
+  Toolbar,
+  Fab
 } from '@mui/material';
 import {
   CloudUpload,
