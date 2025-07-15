@@ -31,6 +31,7 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [environmentChecks, setEnvironmentChecks] = useState(null);
   const [compatibilityMode, setCompatibilityMode] = useState(false);
   const [showProgressModal, setShowProgressModal] = useState(false);
+  const [totalFrames, setTotalFrames] = useState(0);
   const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
@@ -146,6 +147,12 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
       setSnackbarOpen(true);
       return;
     }
+
+    const totalVideoFrames = generatedImages.reduce((acc, _, i) => {
+      const duration = (generatedAudioData && generatedAudioData[i]) ? generatedAudioData[i].duration : slideDuration;
+      return acc + Math.floor(duration * fps);
+    }, 0);
+    setTotalFrames(totalVideoFrames);
 
     setShowProgressModal(true);
     isCancelledRef.current = false;
@@ -341,13 +348,9 @@ const generateVideoWithFFmpeg = async () => {
       "output.mp4"
     );
 
-    ffmpeg.on('progress', ({ progress, time }) => {
-      const percentage = Math.round(progress * 100);
-      setProgress(percentage > 100 ? 100 : percentage);
-      if (time) {
-        const remaining = (time / progress) - time;
-        setEstimatedTime(Math.round(remaining / 1000000));
-      }
+    ffmpeg.on('progress', ({ time }) => {
+      const framesProcessed = Math.round(time / 1000000 * fps);
+      setProgress(framesProcessed);
     });
 
     console.log("⚙️ FFmpeg cmd:", cmd.join(" "));
@@ -579,10 +582,10 @@ const generateVideoWithFFmpeg = async () => {
       <ProgressModal
         open={showProgressModal}
         progress={progress}
-        total={generatedImages.length}
+        total={totalFrames}
         onCancel={handleCancel}
         title="Gerando Vídeo"
-        progressText={`Progresso: ${progress} de ${generatedImages.length} frames processados.`}
+        progressText={`Progresso: ${progress} de ${totalFrames} frames processados.`}
       />
       <iframe
         ref={iframeRef}
