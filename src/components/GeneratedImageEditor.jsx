@@ -15,6 +15,9 @@ import { useTheme } from '@mui/material/styles';
 import { Close } from '@mui/icons-material';
 import FieldPositioner from './FieldPositioner'; // Reutilizar o FieldPositioner
 import FormattingPanel from './FormattingPanel'; // Reutilizar o FormattingPanel
+import FormattingDrawer from './FormattingDrawer'; // Importar o FormattingDrawer
+import { Fab } from '@mui/material';
+import { Edit } from '@mui/icons-material';
 
 // Define a comprehensive default style object
 const COMPLETE_DEFAULT_STYLE = {
@@ -55,6 +58,7 @@ const GeneratedImageEditor = ({
   const [editedRecord, setEditedRecord] = useState(null); // State for the CSV record being edited
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null); // Estado para o campo selecionado internamente
   const [stylesAreInitialized, setStylesAreInitialized] = useState(false); // New state for initialization tracking
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const theme = useTheme();
   const isPanelVisible = useMediaQuery(theme.breakpoints.up('md'));
 
@@ -159,7 +163,6 @@ const GeneratedImageEditor = ({
                 csvData={editorCsvData} // Dados CSV desta imagem para preview
                 colorPalette={colorPalette}
                 onSelectFieldExternal={handleInternalFieldSelection} // Use memoized handler
-                showFormattingPanel={!isPanelVisible} // Controla a exibição do painel interno do FieldPositioner
                 onCsvDataUpdate={handleFieldPositionerCsvDataUpdate} // Use memoized handler
               />
             </Grid>
@@ -184,6 +187,29 @@ const GeneratedImageEditor = ({
           Salvar Alterações na Imagem
         </Button>
       </DialogActions>
+      {!isPanelVisible && (
+        <>
+          <Fab
+            color="primary"
+            aria-label="edit"
+            sx={{ position: 'fixed', bottom: 16, right: 16 }}
+            onClick={() => setIsDrawerOpen(true)}
+            disabled={!selectedFieldInternal}
+          >
+            <Edit />
+          </Fab>
+          <FormattingDrawer
+            open={isDrawerOpen}
+            onClose={() => setIsDrawerOpen(false)}
+            selectedField={selectedFieldInternal}
+            fieldStyles={editedStyles}
+            setFieldStyles={setEditedStyles}
+            fieldPositions={editedPositions}
+            setFieldPositions={setEditedPositions}
+            csvHeaders={editorCsvHeaders}
+          />
+        </>
+      )}
     </Dialog>
   );
 };
