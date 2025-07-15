@@ -31,17 +31,38 @@ const VideoGenerator = ({ generatedImages }) => {
   const [environmentChecks, setEnvironmentChecks] = useState(null);
   const [compatibilityMode, setCompatibilityMode] = useState(false);
 
-  const ffmpegRef = useRef(new FFmpeg());
+  const ffmpegRef = useRef(null);
   const imageContainerRef = useRef(null);
   const progressIntervalRef = useRef(null);
   const startTimeRef = useRef(null);
+  const iframeRef = useRef(null);
 
   useEffect(() => {
-  console.log('Carregando FFmpeg...');
-  console.log('Caminho absoluto:', window.location.origin + '/ffmpeg/');
-  console.log('Suporte a WebAssembly:', typeof WebAssembly !== 'undefined');
-  console.log('Suporte a SharedArrayBuffer:', typeof SharedArrayBuffer !== 'undefined');
-}, []);
+    const handleMessage = (event) => {
+      if (event.source === iframeRef.current.contentWindow && event.data.type === 'ffmpeg-loaded') {
+        ffmpegRef.current = new FFmpeg();
+        setFfmpegLoaded(true);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  useEffect(() => {
+    const loadFfmpeg = async () => {
+      if (ffmpegLoaded) {
+        try {
+          await ffmpegRef.current.load();
+        } catch (err) {
+          setError(`Não foi possível carregar o editor de vídeo: ${err.message}`);
+          setSnackbarOpen(true);
+          setCompatibilityMode(true);
+        }
+      }
+    };
+    loadFfmpeg();
+  }, [ffmpegLoaded]);
+
 
   const resolutionMap = {
     '1080p': '1920x1080',
@@ -100,164 +121,6 @@ const VideoGenerator = ({ generatedImages }) => {
     console.log('FFmpeg Path:', `${window.location.origin}/ffmpeg/`);
   }, []);
 
-
-const loadFFmpegWithRetry = useCallback(async (maxRetries = 3, baseDelay = 1000) => {
-  const ffmpeg = ffmpegRef.current;
-
-  if (!environmentChecks?.webAssemblySupport) {
-    throw new Error('WebAssembly não é suportado neste navegador');
-  }
-
-  if (!environmentChecks?.sharedArrayBufferSupport) {
-    console.warn('⚠️ SharedArrayBuffer não disponível. Tentando modo de compatibilidade...');
-    setCompatibilityMode(true);
-    return false;
-  }
-
-  const baseURL = '/ffmpeg/';
-  let lastError = null;
-
-  for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
-    try {
-      console.log(`🔄 Tentativa ${retryCount + 1}/${maxRetries} para carregar FFmpeg...`);
-      setLoadingProgress(((retryCount + 1) / maxRetries) * 100);
-
-      // Abordagem 1: Usar caminho absoluto com window.location.origin
-      const absolutePath = window.location.origin + baseURL;
-      
-      // Abordagem 2: Fallback para fetch + Blob (mais confiável)
-      try {
-        // Tenta carregar via caminho absoluto
-        await ffmpeg.load({
-          coreURL: absolutePath + 'ffmpeg-core.js',
-          wasmURL: absolutePath + 'ffmpeg-core.wasm',
-        });
-        console.log('✅ FFmpeg carregado com caminho absoluto!');
-      } catch (absError) {
-        console.warn('Falha com caminho absoluto, tentando blob...', absError);
-        
-        // Fallback para Blob
-        const [coreResponse, wasmResponse] = await Promise.all([
-          fetch(absolutePath + 'ffmpeg-core.js'),
-          fetch(absolutePath + 'ffmpeg-core.wasm')
-        ]);
-        
-        if (!coreResponse.ok) throw new Error(`ffmpeg-core.js: ${coreResponse.status}`);
-        if (!wasmResponse.ok) throw new Error(`ffmpeg-core.wasm: ${wasmResponse.status}`);
-        
-        const coreBlob = await coreResponse.blob();
-        const wasmBlob = await wasmResponse.blob();
-        
-        const coreBlobURL = URL.createObjectURL(coreBlob);
-        const wasmBlobURL = URL.createObjectURL(wasmBlob);
-        
-        await ffmpeg.load({
-          coreURL: coreBlobURL,
-          wasmURL: wasmBlobURL,
-        });
-        
-        URL.revokeObjectURL(coreBlobURL);
-        URL.revokeObjectURL(wasmBlobURL);
-        console.log('✅ FFmpeg carregado via Blob!');
-      }
-
-      return true;
-
-    } catch (err) {
-      lastError = err;
-      console.warn(`❌ Tentativa ${retryCount + 1} falhou:`, err.message);
-
-      if (retryCount < maxRetries - 1) {
-        const delay = baseDelay * Math.pow(2, retryCount);
-        console.log(`⏳ Aguardando ${delay}ms antes da próxima tentativa...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-
-  
-
-  // Fallback final: CDN público
-  try {
-    console.log('🔄 Tentando CDN público como último recurso...');
-    const cdnURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/';
-    
-    await ffmpeg.load({
-      coreURL: await toBlobURL(cdnURL + 'ffmpeg-core.js', 'text/javascript'),
-      wasmURL: await toBlobURL(cdnURL + 'ffmpeg-core.wasm', 'application/wasm'),
-    });
-    
-    console.log('✅ FFmpeg carregado via CDN!');
-    return true;
-  } catch (cdnErr) {
-    console.error('Erro com CDN:', cdnErr);
-    throw new Error(`Falha após ${maxRetries} tentativas e CDN. Último erro: ${lastError?.message || 'Erro desconhecido'}`);
-  }
-}, [environmentChecks]);
-
-  useEffect(() => {
-    const ffmpegInstance = ffmpegRef.current; // Copiado para variável local
-
-    const loadFfmpeg = async () => {
-      try {
-        const checks = await checkEnvironmentSupport();
-
-        if (!checks.webAssemblySupport) {
-          throw new Error('WebAssembly não é suportado neste navegador. Considere atualizar para uma versão mais recente.');
-        }
-
-        ffmpegInstance.on('log', ({ message }) => {
-          console.log('FFmpeg Log:', message);
-        });
-
-        ffmpegInstance.on('progress', ({ progress: currentTime, duration }) => {
-          if (duration > 0) {
-            const percent = Math.max(0, Math.min(100, Math.round((currentTime / duration) * 100)));
-            setProgress(percent);
-
-            if (startTimeRef.current) {
-              const elapsed = (Date.now() - startTimeRef.current) / 1000;
-              const remaining = (elapsed / percent) * (100 - percent);
-              setEstimatedTime(Math.round(remaining));
-            }
-          }
-        });
-
-        console.log('🔄 Iniciando carregamento do FFmpeg...');
-
-        const loadSuccess = await loadFFmpegWithRetry();
-
-        if (loadSuccess) {
-          setFfmpegLoaded(true);
-          setLoadingProgress(100);
-        } else {
-          console.log('🔄 Usando modo de compatibilidade...');
-          setCompatibilityMode(true);
-          setFfmpegLoaded(false);
-        }
-
-      } catch (err) {
-        console.error('Erro ao carregar FFmpeg:', err);
-        const errorMessage = err.message || 'Erro desconhecido ao carregar FFmpeg';
-        setError(`Não foi possível carregar o editor de vídeo: ${errorMessage}`);
-        setSnackbarOpen(true);
-        setCompatibilityMode(true);
-      }
-    };
-
-    loadFfmpeg();
-
-    return () => {
-      if (ffmpegInstance) { // Usando a variável local
-        try {
-          ffmpegInstance.terminate();
-        } catch (err) {
-          console.warn('Erro ao terminar FFmpeg:', err);
-        }
-      }
-    };
-  }, [checkEnvironmentSupport, loadFFmpegWithRetry]); // Adicionado checkEnvironmentSupport e loadFFmpegWithRetry como dependências
-
   useEffect(() => {
     let interval;
     if (isPlaying && generatedImages.length > 0) {
@@ -293,114 +156,152 @@ const loadFFmpegWithRetry = useCallback(async (maxRetries = 3, baseDelay = 1000)
     }
   };
 
-  const generateVideoWithFFmpeg = async () => {
-    setIsLoading(true);
-    setError(null);
-    setVideo(null);
-    setProgress(0);
-    setProcessingTime(0);
-    setEstimatedTime(0);
-    startTimeRef.current = Date.now();
+// Version with **optional fixed output resolution**
+// -------------------------------------------------------------
+// External vars expected in scope:
+//   generatedImages      – array of { url }
+//   slideDuration        – seconds each still stays on screen *before* fade
+//   transition           – "none" | any xfade transition name (e.g. "fade")
+//   transitionDuration   – seconds (optional, defaults to 1)
+//   fps                  – frames per second
+//   outputResolution     – "source" | "1080p" | "720p" | "480p" (defaults to "source")
+//   ffmpegRef            – React ref to an already‑loaded FFmpeg.wasm instance
+// -------------------------------------------------------------
+const generateVideoWithFFmpeg = async () => {
+  /* ------------------------------------------------------------------
+   * 0. Defaults & helpers
+   * ----------------------------------------------------------------*/
+  const fadeSeconds = (typeof transition === "number" && transition > 0)
+    ? transition
+    : 1;
 
-    clearInterval(progressIntervalRef.current);
-    progressIntervalRef.current = setInterval(() => {
-      if (startTimeRef.current) {
-        const seconds = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        setProcessingTime(seconds);
-      }
-    }, 1000);
-
-    const ffmpeg = ffmpegRef.current;
-
-    try {
-      await ffmpeg.deleteFile('output.mp4').catch(() => { });
-
-      const writePromises = generatedImages.map(async (img, i) => {
-        const imageData = await fetchFile(img.url);
-        await ffmpeg.writeFile(`img${i}.png`, imageData);
-      });
-
-      await Promise.all(writePromises);
-
-      const [width, height] = resolutionMap[resolution].split('x');
-      const inputs = [];
-      const filterParts = [];
-
-      for (let i = 0; i < generatedImages.length; i++) {
-        inputs.push('-loop', '1', '-t', slideDuration.toString(), '-i', `img${i}.png`);
-        filterParts.push(
-          `[${i}:v]setpts=PTS-STARTPTS,scale=${width}:${height}:force_original_aspect_ratio=decrease` +
-          `,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1[v${i}]`
-        );
-      }
-
-      let filterComplex;
-      let outputStream;
-      let totalDuration;
-
-      if (transition === 'none') {
-        filterComplex = [
-          ...filterParts,
-          generatedImages.map((_, i) => `[v${i}]`).join(''),
-          `concat=n=${generatedImages.length}:v=1:a=0[outv]`
-        ].join(';');
-
-        outputStream = ['-map', '[outv]'];
-        totalDuration = generatedImages.length * slideDuration;
-      } else {
-        let lastOutput = 'v0';
-        const transitionFilters = [];
-
-        for (let i = 0; i < generatedImages.length - 1; i++) {
-          const input1 = lastOutput;
-          const input2 = `v${i + 1}`;
-          const output = `crossfade${i}`;
-          const offset = (i + 1) * (slideDuration - 1);
-
-          transitionFilters.push(
-            `[${input1}][${input2}]xfade=transition=${transition}:duration=1:offset=${offset}[${output}]`
-          );
-          lastOutput = output;
-        }
-
-        filterComplex = [...filterParts, ...transitionFilters].join(';');
-        outputStream = ['-map', `[${lastOutput}]`];
-        totalDuration = (generatedImages.length * slideDuration) - (generatedImages.length - 1);
-      }
-
-      const command = [
-        '-y',
-        ...inputs,
-        '-filter_complex', filterComplex,
-        ...outputStream,
-        '-c:v', 'libx264',
-        '-r', fps.toString(),
-        '-pix_fmt', 'yuv420p',
-        '-t', totalDuration.toString(),
-        '-preset', 'ultrafast',
-        'output.mp4',
-      ];
-
-      console.log("Executando comando FFmpeg:", command.join(' '));
-      await ffmpeg.exec(command);
-
-      const data = await ffmpeg.readFile('output.mp4');
-      const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
-      const videoUrl = URL.createObjectURL(videoBlob);
-      setVideo(videoUrl);
-
-    } catch (err) {
-      console.error('Erro na geração do vídeo:', err);
-      setError(`Erro na geração do vídeo: ${err.message}`);
-      setSnackbarOpen(true);
-    } finally {
-      setIsLoading(false);
-      setProgress(0);
-      clearInterval(progressIntervalRef.current);
-      startTimeRef.current = null;
-    }
+  const resMap = {
+    "1080p": { w: 1920, h: 1080 },
+    "720p" : { w: 1280, h: 720  },
+    "480p" : { w:  854, h: 480  }
   };
+  const resKey = resolution || "source";
+  const needScale = resKey !== "source" && resMap[resKey];
+  const { w: outW, h: outH } = needScale ? resMap[resKey] : { w: null, h: null };
 
+  /* ------------------------------------------------------------------
+   *  UI helpers (unchanged)
+   * ----------------------------------------------------------------*/
+  setIsLoading(true);
+  setError(null);
+  setVideo(null);
+  setProgress(0);
+  setProcessingTime(0);
+  setEstimatedTime(0);
+  startTimeRef.current = Date.now();
+  clearInterval(progressIntervalRef.current);
+  progressIntervalRef.current = setInterval(() => {
+    if (startTimeRef.current) {
+      setProcessingTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
+    }
+  }, 1000);
+
+  /* ------------------------------------------------------------------
+   * 1.  FFmpeg WASM instance
+   * ----------------------------------------------------------------*/
+  const ffmpeg = ffmpegRef.current;
+  try {
+    await ffmpeg.deleteFile("output.mp4").catch(() => {});
+
+    // 1.1 Load stills into FS
+    await Promise.all(
+      generatedImages.map(async (img, i) => {
+        const fileData = await fetchFile(img.url);
+        await ffmpeg.writeFile(`img${i}.png`, fileData);
+      })
+    );
+
+    /* ----------------------------------------------------------------
+     * 2. Build dynamic FFmpeg CLI parts
+     * --------------------------------------------------------------*/
+
+    // 2.1 inputs
+    const inputs = [];
+    generatedImages.forEach((_, i) => {
+      inputs.push("-loop", "1", "-t", slideDuration.toString(), "-i", `img${i}.png`);
+    });
+
+    // 2.2 filter chains – colour + SAR (+ opcional scale/pad)
+    const filterParts = generatedImages.map((_, i) => {
+      const base = `[${i}:v]format=yuv420p,setsar=1,setpts=PTS-STARTPTS`;
+      if (!needScale) return `${base}[v${i}]`;
+      return `${base},scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2[v${i}]`;
+    });
+
+    // 2.3 concatenation vs. cross‑fades
+    let filterComplex = "";
+    let lastLabel = "";
+
+    if (transition === "none") {
+      filterComplex = [
+        ...filterParts,
+        generatedImages.map((_, i) => `[v${i}]`).join(""),
+        `concat=n=${generatedImages.length}:v=1:a=0[outv]`
+      ].join(";");
+      lastLabel = "[outv]";
+    } else {
+      const transitionFilters = [];
+      let previous = "v0";
+      generatedImages.slice(1).forEach((_, idx) => {
+        const next = `v${idx + 1}`;
+        const label = `xf${idx}`;
+        const offset = (idx + 1) * slideDuration + idx * fadeSeconds;
+        transitionFilters.push(
+          `[${previous}][${next}]xfade=transition=${transition}:duration=${fadeSeconds}:offset=${offset}[${label}]`
+        );
+        previous = label;
+      });
+      filterComplex = [...filterParts, ...transitionFilters].join(";");
+      lastLabel = `[${previous}]`;
+    }
+
+    // 2.4 total duration
+    const totalDuration =
+      transition === "none"
+        ? generatedImages.length * slideDuration
+        : generatedImages.length * slideDuration + (generatedImages.length - 1) * fadeSeconds;
+
+    /* ----------------------------------------------------------------
+     * 3. Execute FFmpeg
+     * --------------------------------------------------------------*/
+    const cmd = [
+      "-y",
+      ...inputs,
+      "-filter_complex", filterComplex,
+      "-map", lastLabel,
+      "-c:v", "libx264",
+      "-r", fps.toString(),
+      "-pix_fmt", "yuv420p",
+      "-t", totalDuration.toString(),
+      "-preset", "ultrafast",
+      "output.mp4"
+    ];
+
+    console.log("⚙️ FFmpeg cmd:", cmd.join(" "));
+    await ffmpeg.exec(cmd);
+
+    /* ----------------------------------------------------------------
+     * 4. Collect & expose output
+     * --------------------------------------------------------------*/
+    const data = await ffmpeg.readFile("output.mp4");
+    const url = URL.createObjectURL(new Blob([data.buffer], { type: "video/mp4" }));
+    setVideo(url);
+  } catch (err) {
+    console.error("Erro na geração do vídeo:", err);
+    setError(`Erro na geração do vídeo: ${err.message}`);
+    setSnackbarOpen(true);
+  } finally {
+    setIsLoading(false);
+    setProgress(0);
+    clearInterval(progressIntervalRef.current);
+    startTimeRef.current = null;
+  }
+};
   const generateVideoWithCompatibilityMode = async () => {
     setIsLoading(true);
     setError(null);
@@ -591,6 +492,12 @@ const loadFFmpegWithRetry = useCallback(async (maxRetries = 3, baseDelay = 1000)
 
   return (
     <Box sx={{ mt: 3 }}>
+      <iframe
+        ref={iframeRef}
+        src="/ffmpeg-loader.html"
+        style={{ display: 'none' }}
+        title="FFmpeg Loader"
+      />
       <Card sx={{
         background: 'linear-gradient(135deg, #1e3c72, #2a5298)',
         color: 'white',
@@ -683,7 +590,7 @@ const loadFFmpegWithRetry = useCallback(async (maxRetries = 3, baseDelay = 1000)
                   label="Duração por Slide (segundos)"
                   type="number"
                   value={slideDuration}
-                  onChange={(e) => setSlideDuration(Math.max(1, Math.min(10, Number(e.target.value))))}
+                  onChange={(e) => setSlideDuration(Math.max(1, Math.min(45, Number(e.target.value))))}
                   fullWidth
                   InputProps={{
                     style: { color: 'white' }

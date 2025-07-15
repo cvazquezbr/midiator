@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>FFmpeg Loader</title>
+  <script src="/ffmpeg/ffmpeg-core.js"></script>
+  <script>
+    window.onload = () => {
+      parent.postMessage({ type: 'ffmpeg-loaded' }, '*');
+    };
+  </script>
+</head>
+<body>
+</body>
+</html>
