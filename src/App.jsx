@@ -35,6 +35,7 @@ import {
   Settings,
   Image as ImageIcon,
   Movie,
+  Audiotrack,
   Palette,
   ArrowBackIosNew,
   ArrowForwardIos,
@@ -63,6 +64,7 @@ import FieldPositioner from './components/FieldPositioner';
 import FormattingPanel from './components/FormattingPanel';
 import FormattingDrawer from './components/FormattingDrawer';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
+import AudioGenerator from './components/AudioGenerator';
 import VideoGenerator from './components/VideoGenerator';
 import RecordManager from './features/RecordManager/RecordManager';
 import CsvInfobox from './components/CsvInfobox';
@@ -197,9 +199,9 @@ function App() {
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
   const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 });
   const [generatedImagesData, setGeneratedImagesData] = useState([]);
+  const [generatedAudioData, setGeneratedAudioData] = useState([]);
   const isMobile = useIsMobile();
   const [anchorElMenu, setAnchorElMenu] = useState(null);
-  const [isHeaderHovered, setIsHeaderHovered] = useState(false);
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [selectedField, setSelectedField] = useState(null);
@@ -253,6 +255,11 @@ function App() {
       label: 'Gerar Imagens',
       description: 'Gere as imagens finais.',
       icon: FormatBold
+    },
+    {
+      label: 'Gerar Áudio',
+      description: 'Crie a narração para os slides.',
+      icon: Audiotrack
     },
     {
       label: 'Gerar Vídeo',
@@ -426,7 +433,7 @@ function App() {
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
   };
 
-  const canProceedToStep = (nextStepIndex) => {
+  const canProceedToStep = () => {
     switch (activeStep) {
       case 0:
         return true;
@@ -521,7 +528,7 @@ function App() {
           const loadedState = JSON.parse(e.target.result);
 
           // Função auxiliar para converter Base64 para Blob
-          const base64ToBlob = async (base64, type = 'image/png') => {
+          const base64ToBlob = async (base64) => {
             const res = await fetch(base64);
             const blob = await res.blob();
             return blob;
@@ -768,7 +775,7 @@ function App() {
         return updatedGeneratedImages;
       }
     });
-  }, [darkMode, fieldPositions, fieldStyles, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles, backgroundImage, generatedImagesData.length]);
+  }, [darkMode, fieldPositions, fieldStyles, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles, backgroundImage]);
 
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
     setCsvData(newCsvData);
@@ -923,7 +930,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
     }
   };
 
-  const parseIaResponseToCsvData = (responseText, numRecords) => {
+  const parseIaResponseToCsvData = (responseText) => {
     // Definição dos cabeçalhos esperados pelo GerenciadorRegistros
     const finalHeaders = ["Título", "Texto Principal", "Ponte para o Próximo"];
     const data = [];
@@ -977,7 +984,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
           let hasTitle = false;
           for (const iaHeaderMapped in headerMap) {
             const targetAppHeader = headerMap[iaHeaderMapped];
-            if (rawRecord.hasOwnProperty(iaHeaderMapped)) {
+            if (Object.prototype.hasOwnProperty.call(rawRecord, iaHeaderMapped)) {
               let value = rawRecord[iaHeaderMapped];
               record[targetAppHeader] = value !== null && value !== undefined ? String(value).trim() : "";
               if (targetAppHeader === "Título" && record[targetAppHeader]) {
@@ -1035,13 +1042,12 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
       console.error("[parseIaResponseToCsvData] Fallback também não encontrou dados estruturados.");
       return { data: [], headers: finalHeaders }; // Retorna data vazia se tudo falhar
     }
-    return { data, headers: finalHeaders }; // Retorna os cabeçalhos finais esperados
   };
 
   const currentTheme = darkMode ? darkTheme : lightTheme;
 
   // Componente do indicador de step moderno
-  const StepIndicator = ({ step, isActive, isCompleted, onClick, index }) => {
+  const StepIndicator = ({ step, isActive, isCompleted, onClick }) => {
     const Icon = step.icon;
     return (
       <ListItem
@@ -1615,10 +1621,20 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             />
           )}
 
-          {/* Passo 5: Geração de Vídeo */}
+          {/* Passo 5: Geração de Áudio */}
           {activeStep === 5 && (
+            <AudioGenerator
+              csvData={csvData}
+              fieldPositions={fieldPositions}
+              onAudiosGenerated={setGeneratedAudioData}
+            />
+          )}
+
+          {/* Passo 6: Geração de Vídeo */}
+          {activeStep === 6 && (
             <VideoGenerator
               generatedImages={generatedImagesData}
+              generatedAudioData={generatedAudioData}
             />
           )}
 

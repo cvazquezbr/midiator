@@ -42,7 +42,7 @@ function useSidebar() {
   return context
 }
 
-function SidebarProvider({
+export function SidebarProvider({
   defaultOpen = true,
   open: openProp,
   onOpenChange: setOpenProp,
@@ -129,7 +129,7 @@ function SidebarProvider({
   );
 }
 
-function Sidebar({
+export function Sidebar({
   side = "left",
   variant = "sidebar",
   collapsible = "offcanvas",
@@ -221,7 +221,7 @@ function Sidebar({
   );
 }
 
-function SidebarTrigger({
+export function SidebarTrigger({
   className,
   onClick,
   ...props
@@ -246,7 +246,7 @@ function SidebarTrigger({
   );
 }
 
-function SidebarRail({
+export function SidebarRail({
   className,
   ...props
 }) {
@@ -273,7 +273,7 @@ function SidebarRail({
   );
 }
 
-function SidebarInset({
+export function SidebarInset({
   className,
   ...props
 }) {
@@ -289,7 +289,7 @@ function SidebarInset({
   );
 }
 
-function SidebarInput({
+export function SidebarInput({
   className,
   ...props
 }) {
@@ -302,7 +302,7 @@ function SidebarInput({
   );
 }
 
-function SidebarHeader({
+export function SidebarHeader({
   className,
   ...props
 }) {
@@ -315,7 +315,7 @@ function SidebarHeader({
   );
 }
 
-function SidebarFooter({
+export function SidebarFooter({
   className,
   ...props
 }) {
@@ -328,7 +328,7 @@ function SidebarFooter({
   );
 }
 
-function SidebarSeparator({
+export function SidebarSeparator({
   className,
   ...props
 }) {
@@ -341,7 +341,7 @@ function SidebarSeparator({
   );
 }
 
-function SidebarContent({
+export function SidebarContent({
   className,
   ...props
 }) {
@@ -357,7 +357,7 @@ function SidebarContent({
   );
 }
 
-function SidebarGroup({
+export function SidebarGroup({
   className,
   ...props
 }) {
@@ -370,7 +370,7 @@ function SidebarGroup({
   );
 }
 
-function SidebarGroupLabel({
+export function SidebarGroupLabel({
   className,
   asChild = false,
   ...props
@@ -390,7 +390,7 @@ function SidebarGroupLabel({
   );
 }
 
-function SidebarGroupAction({
+export function SidebarGroupAction({
   className,
   asChild = false,
   ...props
@@ -412,7 +412,7 @@ function SidebarGroupAction({
   );
 }
 
-function SidebarGroupContent({
+export function SidebarGroupContent({
   className,
   ...props
 }) {
@@ -425,7 +425,7 @@ function SidebarGroupContent({
   );
 }
 
-function SidebarMenu({
+export function SidebarMenu({
   className,
   ...props
 }) {
@@ -438,7 +438,7 @@ function SidebarMenu({
   );
 }
 
-function SidebarMenuItem({
+export function SidebarMenuItem({
   className,
   ...props
 }) {
@@ -451,7 +451,7 @@ function SidebarMenuItem({
   );
 }
 
-const sidebarMenuButtonVariants = cva(
+export const sidebarMenuButtonVariants = cva(
   "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-hidden ring-sidebar-ring transition-[width,height,padding] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[state=open]:hover:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
   {
     variants: {
@@ -473,7 +473,7 @@ const sidebarMenuButtonVariants = cva(
   }
 )
 
-function SidebarMenuButton({
+export function SidebarMenuButton({
   asChild = false,
   isActive = false,
   variant = "default",
@@ -517,7 +517,7 @@ function SidebarMenuButton({
   );
 }
 
-function SidebarMenuAction({
+export function SidebarMenuAction({
   className,
   asChild = false,
   showOnHover = false,
@@ -545,7 +545,7 @@ function SidebarMenuAction({
   );
 }
 
-function SidebarMenuBadge({
+export function SidebarMenuBadge({
   className,
   ...props
 }) {
@@ -566,7 +566,7 @@ function SidebarMenuBadge({
   );
 }
 
-function SidebarMenuSkeleton({
+export function SidebarMenuSkeleton({
   className,
   showIcon = false,
   ...props
@@ -597,7 +597,7 @@ function SidebarMenuSkeleton({
   );
 }
 
-function SidebarMenuSub({
+export function SidebarMenuSub({
   className,
   ...props
 }) {
@@ -614,7 +614,7 @@ function SidebarMenuSub({
   );
 }
 
-function SidebarMenuSubItem({
+export function SidebarMenuSubItem({
   className,
   ...props
 }) {
@@ -627,7 +627,7 @@ function SidebarMenuSubItem({
   );
 }
 
-function SidebarMenuSubButton({
+export function SidebarMenuSubButton({
   asChild = false,
   size = "md",
   isActive = false,
@@ -652,31 +652,4 @@ function SidebarMenuSubButton({
       )}
       {...props} />
   );
-}
-
-export {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupAction,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInput,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuBadge,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSkeleton,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
-  SidebarProvider,
-  SidebarRail,
-  SidebarSeparator,
-  SidebarTrigger,
-  useSidebar,
 }
