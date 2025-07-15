@@ -29,7 +29,7 @@ import {
   SaveAlt,
   CloudDownload
 } from '@mui/icons-material';
-import { getGoogleCloudTTSApiKey } from '../utils/googleCloudTTSCredentials';
+import { getGoogleCloudTTSCredentials } from '../utils/googleCloudTTSCredentials';
 import { callGoogleCloudTTSAPI } from '../utils/googleCloudTTSAPI';
 
 const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
@@ -59,11 +59,11 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
   };
 
   const generateAudioGoogleTTS = async (text) => {
-    const apiKey = getGoogleCloudTTSApiKey();
-    if (!apiKey) {
-      throw new Error('Chave da API do Google Cloud TTS não configurada.');
+    const credentials = getGoogleCloudTTSCredentials();
+    if (!credentials) {
+      throw new Error('Credenciais do Google Cloud TTS não configuradas.');
     }
-    const audioContent = await callGoogleCloudTTSAPI(text, apiKey);
+    const audioContent = await callGoogleCloudTTSAPI(text, credentials);
     const blob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
