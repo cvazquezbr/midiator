@@ -51,9 +51,10 @@ const GeneratedImageEditor = ({
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
   const [editedRecord, setEditedRecord] = useState(null); // State for the CSV record being edited
-  const [displayedEditorImageSize, setDisplayedEditorImageSize] = useState({ width: 0, height: 0 });
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null); // Estado para o campo selecionado internamente
   const [stylesAreInitialized, setStylesAreInitialized] = useState(false); // New state for initialization tracking
+  const [isPanelVisible, setIsPanelVisible] = useState(true); // Controle da visibilidade do painel
+  const containerRef = useRef(null); // Ref para o contêiner do grid
 
   const handleInternalFieldSelection = useCallback((fieldToSelect) => {
     setSelectedFieldInternal(fieldToSelect);
@@ -93,6 +94,29 @@ const GeneratedImageEditor = ({
     }
   }, [imageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders]); // Added globalCsvHeaders
 
+  useEffect(() => {
+    const observer = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        // Ajuste o valor 960 conforme necessário para o seu layout
+        const shouldShowPanel = entry.contentRect.width > 960;
+        if (shouldShowPanel !== isPanelVisible) {
+          setIsPanelVisible(shouldShowPanel);
+        }
+      }
+    });
+
+    const currentRef = containerRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [isPanelVisible]);
+
   if (!imageData) {
     return null;
   }
@@ -105,16 +129,6 @@ const GeneratedImageEditor = ({
       fieldStyles: editedStyles,
     });
     onClose();
-  };
-
-  const handleContentChangeInEditor = (field, newText) => {
-    setEditedRecord(prevRecord => ({
-      ...prevRecord,
-      [field]: newText
-    }));
-    // Note: Unlike FieldPositioner, we don't need to call a prop like onCsvDataUpdate here.
-    // The changes to editedRecord are local to GeneratedImageEditor until 'Save' is clicked.
-    // The parent (ImageGeneratorFrontendOnly) will receive the updated record via onSave.
   };
 
   // Determina a imagem de fundo a ser usada no editor
@@ -154,8 +168,8 @@ const GeneratedImageEditor = ({
         ) : !currentBackgroundImageForEditor ? (
           <Typography>Imagem de fundo não disponível para edição.</Typography>
         ) : (
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={8}>
+          <Grid container spacing={2} ref={containerRef}>
+            <Grid item xs={12} md={isPanelVisible ? 8 : 12}>
               <FieldPositioner
                 backgroundImage={currentBackgroundImageForEditor}
                 csvHeaders={editorCsvHeaders} // Headers relevantes para esta imagem
@@ -164,23 +178,24 @@ const GeneratedImageEditor = ({
                 fieldStyles={editedStyles}
                 setFieldStyles={setEditedStyles}
                 csvData={editorCsvData} // Dados CSV desta imagem para preview
-                onImageDisplayedSizeChange={setDisplayedEditorImageSize} // Para o editor interno
                 colorPalette={colorPalette}
                 onSelectFieldExternal={handleInternalFieldSelection} // Use memoized handler
-                showFormattingPanel={false} // Adicionado para não duplicar o painel
+                showFormattingPanel={!isPanelVisible} // Controla a exibição do painel interno do FieldPositioner
                 onCsvDataUpdate={handleFieldPositionerCsvDataUpdate} // Use memoized handler
               />
             </Grid>
-            <Grid item xs={12} md={4}>
-              <FormattingPanel
-                selectedField={selectedFieldInternal} // Usar o estado interno
-                fieldStyles={editedStyles}
-                setFieldStyles={setEditedStyles}
-                fieldPositions={editedPositions}
-                setFieldPositions={setEditedPositions}
-                csvHeaders={editorCsvHeaders}
-              />
-            </Grid>
+            {isPanelVisible && (
+              <Grid item xs={12} md={4}>
+                <FormattingPanel
+                  selectedField={selectedFieldInternal} // Usar o estado interno
+                  fieldStyles={editedStyles}
+                  setFieldStyles={setEditedStyles}
+                  fieldPositions={editedPositions}
+                  setFieldPositions={setEditedPositions}
+                  csvHeaders={editorCsvHeaders}
+                />
+              </Grid>
+            )}
           </Grid>
         )}
       </DialogContent>
