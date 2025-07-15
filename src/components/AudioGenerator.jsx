@@ -32,13 +32,15 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
 
   const generateAudio = async (text) => {
     return new Promise((resolve, reject) => {
-      const utterance = new SpeechSynthesisUtterance(text);
+      const emojiRegex = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
+      const textWithoutEmojis = text.replace(emojiRegex, '');
+      const utterance = new SpeechSynthesisUtterance(textWithoutEmojis);
       utterance.lang = 'pt-BR';
       utterance.onend = () => {
         // There is no direct way to get the audio blob from the Web Speech API.
         // We will store the text and duration, and synthesize it on the fly.
         // The duration is an approximation.
-        const duration = text.length * 50; // Approximate duration in ms
+        const duration = textWithoutEmojis.length * 50; // Approximate duration in ms
         resolve({ text, duration: duration / 1000 });
       };
       utterance.onerror = (event) => {
