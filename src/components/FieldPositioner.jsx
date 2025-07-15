@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material';
 import TextBox from './TextBox';
 import FormattingPanel from './FormattingPanel';
+import FormattingDrawer from './FormattingDrawer'; // Import the new drawer
 
 const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
   fontFamily: 'Arial',
@@ -54,11 +55,13 @@ const FieldPositioner = ({
   onImageDisplayedSizeChange,
   colorPalette,
   onSelectFieldExternal,
+  showFormattingPanel,
   onCsvDataUpdate // New prop to notify App.jsx of changes
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isInteracting, setIsInteracting] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false); // State for the drawer
   const containerRef = useRef(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
 
@@ -441,7 +444,7 @@ const FieldPositioner = ({
         </Card>
       </Grid>
 
-      {!isMobile && (
+      {!isMobile && showFormattingPanel && (
         <Grid item xs={12} lg={4}>
           <FormattingPanel
             selectedField={selectedField}
@@ -454,6 +457,29 @@ const FieldPositioner = ({
         </Grid>
       )}
 
+      {isMobile && (
+        <>
+          <Fab
+            color="primary"
+            aria-label="edit"
+            sx={{ position: 'fixed', bottom: 16, right: 16 }}
+            onClick={() => setIsDrawerOpen(true)}
+            disabled={!selectedField}
+          >
+            <Edit />
+          </Fab>
+          <FormattingDrawer
+            open={isDrawerOpen}
+            onClose={() => setIsDrawerOpen(false)}
+            selectedField={selectedField}
+            fieldStyles={fieldStyles}
+            setFieldStyles={setFieldStyles}
+            fieldPositions={fieldPositions}
+            setFieldPositions={setFieldPositions}
+            csvHeaders={csvHeaders}
+          />
+        </>
+      )}
     </Grid>
   );
 };
