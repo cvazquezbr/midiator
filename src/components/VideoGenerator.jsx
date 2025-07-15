@@ -217,6 +217,19 @@ const generateVideoWithFFmpeg = async () => {
       })
     );
 
+    // 1.2 Load audio into FS
+    const hasAudio = generatedAudioData && generatedAudioData.length > 0;
+    if (hasAudio) {
+      await Promise.all(
+        generatedAudioData.map(async (audio, i) => {
+          if (audio.blob) {
+            const audioData = await fetchFile(URL.createObjectURL(audio.blob));
+            await ffmpeg.writeFile(`audio${i}.mp3`, audioData);
+          }
+        })
+      );
+    }
+
     /* ----------------------------------------------------------------
      * 2. Build dynamic FFmpeg CLI parts
      * --------------------------------------------------------------*/
@@ -224,9 +237,17 @@ const generateVideoWithFFmpeg = async () => {
     // 2.1 inputs
     const inputs = [];
     generatedImages.forEach((_, i) => {
-      const duration = generatedAudioData && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration;
+      const duration = hasAudio && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration;
       inputs.push("-loop", "1", "-t", duration.toString(), "-i", `img${i}.png`);
     });
+    if (hasAudio) {
+        generatedAudioData.forEach((_, i) => {
+            if (generatedAudioData[i].blob) {
+                inputs.push("-i", `audio${i}.mp3`);
+            }
+        });
+    }
+
 
     // 2.2 filter chains – colour + SAR (+ opcional scale/pad)
     const filterParts = generatedImages.map((_, i) => {
@@ -237,20 +258,29 @@ const generateVideoWithFFmpeg = async () => {
 
     // 2.3 concatenation vs. cross‑fades
     let filterComplex = "";
-    let lastLabel = "";
+    let lastVideoLabel = "";
+    let lastAudioLabel = "";
     let totalDuration = 0;
 
     if (transition === "none") {
+      const videoConcat = generatedImages.map((_, i) => `[v${i}]`).join("");
       filterComplex = [
         ...filterParts,
-        generatedImages.map((_, i) => `[v${i}]`).join(""),
-        `concat=n=${generatedImages.length}:v=1:a=0[outv]`
+        `${videoConcat}concat=n=${generatedImages.length}:v=1:a=0[outv]`
       ].join(";");
-      lastLabel = "[outv]";
+      lastVideoLabel = "[outv]";
+
+      if (hasAudio) {
+        const audioConcat = generatedAudioData.map((_, i) => `[${generatedImages.length + i}:a]`).join("");
+        filterComplex += `;${audioConcat}concat=n=${generatedAudioData.length}:v=0:a=1[outa]`;
+        lastAudioLabel = "[outa]";
+      }
+
       totalDuration = generatedImages.reduce((acc, _, i) => {
-        const duration = generatedAudioData && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration;
+        const duration = hasAudio && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration;
         return acc + duration;
       }, 0);
+
     } else {
       const transitionFilters = [];
       let previous = "v0";
@@ -258,7 +288,7 @@ const generateVideoWithFFmpeg = async () => {
       generatedImages.slice(1).forEach((_, idx) => {
         const next = `v${idx + 1}`;
         const label = `xf${idx}`;
-        const duration = generatedAudioData && generatedAudioData[idx] ? generatedAudioData[idx].duration : slideDuration;
+        const duration = hasAudio && generatedAudioData[idx] ? generatedAudioData[idx].duration : slideDuration;
         currentTime += duration;
         const offset = currentTime;
         transitionFilters.push(
@@ -267,9 +297,15 @@ const generateVideoWithFFmpeg = async () => {
         previous = label;
       });
       filterComplex = [...filterParts, ...transitionFilters].join(";");
-      lastLabel = `[${previous}]`;
-      const lastImageDuration = generatedAudioData && generatedAudioData[generatedImages.length - 1] ? generatedAudioData[generatedImages.length - 1].duration : slideDuration;
+      lastVideoLabel = `[${previous}]`;
+      const lastImageDuration = hasAudio && generatedAudioData[generatedImages.length - 1] ? generatedAudioData[generatedImages.length - 1].duration : slideDuration;
       totalDuration = currentTime + lastImageDuration;
+
+      if (hasAudio) {
+        const audioConcat = generatedAudioData.map((_, i) => `[${generatedImages.length + i}:a]`).join("");
+        filterComplex += `;${audioConcat}concat=n=${generatedAudioData.length}:v=0:a=1[outa]`;
+        lastAudioLabel = "[outa]";
+      }
     }
 
     /* ----------------------------------------------------------------
@@ -279,14 +315,22 @@ const generateVideoWithFFmpeg = async () => {
       "-y",
       ...inputs,
       "-filter_complex", filterComplex,
-      "-map", lastLabel,
+      "-map", lastVideoLabel,
+    ];
+
+    if (hasAudio) {
+        cmd.push("-map", lastAudioLabel);
+        cmd.push("-c:a", "aac");
+    }
+
+    cmd.push(
       "-c:v", "libx264",
       "-r", fps.toString(),
       "-pix_fmt", "yuv420p",
       "-t", totalDuration.toString(),
       "-preset", "ultrafast",
       "output.mp4"
-    ];
+    );
 
     console.log("⚙️ FFmpeg cmd:", cmd.join(" "));
     await ffmpeg.exec(cmd);
