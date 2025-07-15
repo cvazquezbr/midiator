@@ -61,13 +61,8 @@ const FieldPositioner = ({
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isInteracting, setIsInteracting] = useState(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false); // State for the drawer
   const containerRef = useRef(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
-
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    ('ontouchstart' in window) ||
-    (navigator.maxTouchPoints > 0);
 
   const handleFieldSelectInternal = useCallback((fieldToSelect) => {
     setSelectedField(fieldToSelect);
@@ -271,7 +266,7 @@ const FieldPositioner = ({
 
   // Efeito para gerenciar scroll durante interações
   useEffect(() => {
-    if (isInteracting && isMobile) {
+    if (isInteracting) {
       // Prevenir scroll apenas durante interações ativas
       document.body.style.overflow = 'hidden';
       document.body.style.touchAction = 'none';
@@ -281,7 +276,7 @@ const FieldPositioner = ({
         document.body.style.touchAction = '';
       };
     }
-  }, [isInteracting, isMobile]);
+  }, [isInteracting]);
 
   if (!backgroundImage) {
     return (
@@ -305,7 +300,7 @@ const FieldPositioner = ({
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} lg={12}>
+      <Grid item xs={12} lg={showFormattingPanel ? 8 : 12}>
         <Card>
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -337,12 +332,6 @@ const FieldPositioner = ({
               </Alert>
             )}
 
-            {isMobile && (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                <strong>Modo Mobile:</strong> Toque em um campo para abrir o painel de edição.
-              </Alert>
-            )}
-
             <Box
               ref={containerRef}
               className="text-container"
@@ -353,7 +342,7 @@ const FieldPositioner = ({
                 overflow: 'hidden',
                 backgroundColor: '#fff',
                 cursor: 'default',
-                touchAction: isMobile ? 'pan-x pan-y' : 'auto',
+                touchAction: 'pan-x pan-y',
                 WebkitOverflowScrolling: 'touch',
                 '&.interacting': {
                   touchAction: 'none'
@@ -425,8 +414,8 @@ const FieldPositioner = ({
                   <Box
                     key={index}
                     sx={{
-                      width: isMobile ? 40 : 30,
-                      height: isMobile ? 40 : 30,
+                      width: 30,
+                      height: 30,
                       borderRadius: '50%',
                       backgroundColor: color,
                       cursor: 'pointer',
@@ -444,7 +433,7 @@ const FieldPositioner = ({
         </Card>
       </Grid>
 
-      {!isMobile && showFormattingPanel && (
+      {showFormattingPanel && (
         <Grid item xs={12} lg={4}>
           <FormattingPanel
             selectedField={selectedField}
@@ -455,30 +444,6 @@ const FieldPositioner = ({
             csvHeaders={csvHeaders}
           />
         </Grid>
-      )}
-
-      {isMobile && (
-        <>
-          <Fab
-            color="primary"
-            aria-label="edit"
-            sx={{ position: 'fixed', bottom: 16, right: 16 }}
-            onClick={() => setIsDrawerOpen(true)}
-            disabled={!selectedField}
-          >
-            <Edit />
-          </Fab>
-          <FormattingDrawer
-            open={isDrawerOpen}
-            onClose={() => setIsDrawerOpen(false)}
-            selectedField={selectedField}
-            fieldStyles={fieldStyles}
-            setFieldStyles={setFieldStyles}
-            fieldPositions={fieldPositions}
-            setFieldPositions={setFieldPositions}
-            csvHeaders={csvHeaders}
-          />
-        </>
       )}
     </Grid>
   );

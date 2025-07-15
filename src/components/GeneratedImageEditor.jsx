@@ -8,8 +8,10 @@ import {
   Box,
   Grid,
   Typography,
-  IconButton
+  IconButton,
+  useMediaQuery
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Close } from '@mui/icons-material';
 import FieldPositioner from './FieldPositioner'; // Reutilizar o FieldPositioner
 import FormattingPanel from './FormattingPanel'; // Reutilizar o FormattingPanel
@@ -57,10 +59,8 @@ const GeneratedImageEditor = ({
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null); // Estado para o campo selecionado internamente
   const [stylesAreInitialized, setStylesAreInitialized] = useState(false); // New state for initialization tracking
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    ('ontouchstart' in window) ||
-    (navigator.maxTouchPoints > 0);
+  const theme = useTheme();
+  const isLargeScreen = useMediaQuery(theme.breakpoints.up('md'));
 
   const handleInternalFieldSelection = useCallback((fieldToSelect) => {
     setSelectedFieldInternal(fieldToSelect);
@@ -152,7 +152,7 @@ const GeneratedImageEditor = ({
           <Typography>Imagem de fundo não disponível para edição.</Typography>
         ) : (
           <Grid container spacing={2}>
-            <Grid item xs={12} md={!isMobile ? 8 : 12}>
+            <Grid item xs={12} md={isLargeScreen ? 8 : 12}>
               <FieldPositioner
                 backgroundImage={currentBackgroundImageForEditor}
                 csvHeaders={editorCsvHeaders} // Headers relevantes para esta imagem
@@ -163,11 +163,10 @@ const GeneratedImageEditor = ({
                 csvData={editorCsvData} // Dados CSV desta imagem para preview
                 colorPalette={colorPalette}
                 onSelectFieldExternal={handleInternalFieldSelection} // Use memoized handler
-                showFormattingPanel={!isMobile}
                 onCsvDataUpdate={handleFieldPositionerCsvDataUpdate} // Use memoized handler
               />
             </Grid>
-            {!isMobile && (
+            {isLargeScreen && (
               <Grid item xs={12} md={4}>
                 <FormattingPanel
                   selectedField={selectedFieldInternal} // Usar o estado interno
@@ -188,7 +187,7 @@ const GeneratedImageEditor = ({
           Salvar Alterações na Imagem
         </Button>
       </DialogActions>
-      {isMobile && (
+      {!isLargeScreen && (
         <>
           <Fab
             color="primary"
