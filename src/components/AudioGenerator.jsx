@@ -31,6 +31,7 @@ import {
 } from '@mui/icons-material';
 import { getGoogleCloudTTSCredentials } from '../utils/googleCloudTTSCredentials';
 import { callGoogleCloudTTSAPI } from '../utils/googleCloudTTSAPI';
+import ProgressModal from './ProgressModal';
 
 const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
   const [audioData, setAudioData] = useState([]);
@@ -38,8 +39,11 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
   const [audioMode, setAudioMode] = useState('browser');
+  const [progress, setProgress] = useState(0);
+  const [showProgressModal, setShowProgressModal] = useState(false);
   const currentTrackIndexRef = useRef(0);
   const audioRef = useRef(null);
+  const isCancelledRef = useRef(false);
 
   const generateAudioBrowser = async (text) => {
     return new Promise((resolve, reject) => {
@@ -81,8 +85,14 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
 
   const handleGenerateAllAudio = async (voice) => {
     setIsGenerating(true);
+    setShowProgressModal(true);
+    isCancelledRef.current = false;
     const generatedAudios = [];
     for (let i = 0; i < csvData.length; i++) {
+      if (isCancelledRef.current) {
+        break;
+      }
+      setProgress(i + 1);
       const record = csvData[i];
       const visibleFields = Object.keys(record).filter(
         (field) => fieldPositions[field]?.visible
@@ -104,6 +114,12 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
     setAudioData(generatedAudios);
     onAudiosGenerated(generatedAudios);
     setIsGenerating(false);
+    setShowProgressModal(false);
+    setProgress(0);
+  };
+
+  const handleCancel = () => {
+    isCancelledRef.current = true;
   };
 
   const handlePlayPause = (index) => {
@@ -328,6 +344,12 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
           )}
         </CardContent>
       </Card>
+      <ProgressModal
+        open={showProgressModal}
+        progress={progress}
+        total={csvData.length}
+        onCancel={handleCancel}
+      />
     </Box>
   );
 };
