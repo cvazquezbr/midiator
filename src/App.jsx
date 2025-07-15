@@ -70,6 +70,7 @@ import RecordManager from './features/RecordManager/RecordManager';
 import CsvInfobox from './components/CsvInfobox';
 import GeminiAuthSetup from './components/GeminiAuthSetup';
 import GoogleDriveAuthModal from './components/GoogleDriveAuthModal';
+import GoogleCloudTTSAuth from './components/GoogleCloudTTSAuth';
 import { getGeminiApiKey } from './utils/geminiCredentials';
 import { callGeminiApi } from './utils/geminiAPI';
 import GoogleIcon from '@mui/icons-material/Google';
@@ -209,6 +210,7 @@ function App() {
   // const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false); // Removed
   const [showGeminiAuthModal, setShowGeminiAuthModal] = useState(false);
   const [showGoogleDriveAuthModal, setShowGoogleDriveAuthModal] = useState(false);
+  const [showGoogleCloudTTSAuthModal, setShowGoogleCloudTTSAuthModal] = useState(false);
 
   // Estados para a Geração com IA
   const [inputMethod, setInputMethod] = useState('csv');
@@ -1164,6 +1166,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   <CloudQueue sx={{ mr: 1 }} />
                   Configurar API Google Drive
                 </MenuItem>
+                <MenuItem onClick={() => { setShowGoogleCloudTTSAuthModal(true); handleMenuClose(); }}>
+                  <Audiotrack sx={{ mr: 1 }} />
+                  Configurar Google Cloud TTS
+                </MenuItem>
                 <MenuItem onClick={handleSaveTemplateClick}>Salvar Config. Template</MenuItem>
                 <MenuItem onClick={handleLoadTemplateClick}>Carregar Config. Template</MenuItem>
                 <MenuItem onClick={handleExportCSV} disabled={csvData.length === 0}>
@@ -1706,6 +1712,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
       <GoogleDriveAuthModal
         open={showGoogleDriveAuthModal}
         onClose={() => setShowGoogleDriveAuthModal(false)}
+      />
+      <GoogleCloudTTSAuth
+        open={showGoogleCloudTTSAuthModal}
+        onClose={() => setShowGoogleCloudTTSAuthModal(false)}
       />
       {isMobile && activeStep === 3 && (
         <>
