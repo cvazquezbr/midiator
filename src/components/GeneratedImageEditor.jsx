@@ -163,7 +163,6 @@ const GeneratedImageEditor = ({
                 csvData={editorCsvData} // Dados CSV desta imagem para preview
                 colorPalette={colorPalette}
                 onSelectFieldExternal={handleInternalFieldSelection} // Use memoized handler
-                showFormattingPanel={isLargeScreen}
                 onCsvDataUpdate={handleFieldPositionerCsvDataUpdate} // Use memoized handler
               />
             </Grid>
