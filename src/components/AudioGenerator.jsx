@@ -32,7 +32,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
 
   const generateAudio = async (text) => {
     return new Promise((resolve, reject) => {
-      const emojiRegex = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
+      const emojiRegex = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]|\p{Emoji_Presentation}|\p{Extended_Pictographic})/gu;
       const textWithoutEmojis = text.replace(emojiRegex, '');
       const utterance = new SpeechSynthesisUtterance(textWithoutEmojis);
       utterance.lang = 'pt-BR';
