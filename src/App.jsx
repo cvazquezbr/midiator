@@ -1566,7 +1566,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               onImageDisplayedSizeChange={setDisplayedImageSize}
               colorPalette={colorPalette}
               onCsvDataUpdate={handleCsvRecordContentUpdate}
-              isMobile={isMobile} // Pass isMobile prop
+              showFormattingPanel={!isMobile}
             />
           )}
 

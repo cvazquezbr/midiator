@@ -14,7 +14,7 @@ const FormattingDrawer = ({
   csvHeaders,
 }) => {
   return (
-    <Drawer anchor="right" open={open} onClose={onClose}>
+    <Drawer anchor="right" open={open} onClose={onClose} sx={{ zIndex: 1400 }}>
       <Box sx={{ width: 320, p: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6">Editar Campo</Typography>
