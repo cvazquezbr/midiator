@@ -54,7 +54,8 @@ const FieldPositioner = ({
   onImageDisplayedSizeChange,
   colorPalette,
   onSelectFieldExternal,
-  onCsvDataUpdate // New prop to notify App.jsx of changes
+  onCsvDataUpdate, // New prop to notify App.jsx of changes
+  originalImageSize
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -389,6 +390,7 @@ const FieldPositioner = ({
                       containerSize={imageSize}
                       onContentChange={handleContentChange}
                       rotation={position.rotation}
+                      originalImageSize={originalImageSize}
                     />
                   );
                 })

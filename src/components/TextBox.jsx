@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Box } from '@mui/material';
 
-const TextBox = ({ 
+const TextBox = ({
   field,
   position,
   style,
@@ -13,7 +13,8 @@ const TextBox = ({
   containerSize,
   onContentChange,
   rotation,
-  setIsMoving
+  setIsMoving,
+  originalImageSize
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -564,7 +565,21 @@ const TextBox = ({
   };
 
   // Calcula o tamanho da fonte dinamicamente com base no tamanho da fonte do estilo e no tamanho do contêiner.
-  const dynamicFontSize = (style.fontSize || 16) * (containerSize.width / 1080); // 1080 é a largura de referência
+  const calculateDynamicFontSize = () => {
+    if (!originalImageSize || !containerSize || !style.fontSize) {
+      // Fallback para o cálculo antigo se os novos dados não estiverem disponíveis
+      return (style.fontSize || 16) * (containerSize.width / 1080);
+    }
+    const safeDisplayedWidth = containerSize.width > 0 ? containerSize.width : originalImageSize.width;
+    const safeDisplayedHeight = containerSize.height > 0 ? containerSize.height : originalImageSize.height;
+
+    const scaleX = originalImageSize.width / safeDisplayedWidth;
+    const scaleY = originalImageSize.height / safeDisplayedHeight;
+
+    return style.fontSize * Math.min(scaleX, scaleY);
+  };
+
+  const dynamicFontSize = calculateDynamicFontSize();
 
   const textLines = wrapText(editedContent, pixelPosition.width - 16, dynamicFontSize);
   const lineHeight = dynamicFontSize * (style.lineHeightMultiplier || 1.2);
