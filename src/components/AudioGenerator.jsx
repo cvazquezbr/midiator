@@ -58,12 +58,17 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
     });
   };
 
-  const generateAudioGoogleTTS = async (text) => {
+  const removeEmojis = (text) => {
+    return text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
+  };
+
+  const generateAudioGoogleTTS = async (text, voice) => {
     const credentials = getGoogleCloudTTSCredentials();
     if (!credentials) {
       throw new Error('Credenciais do Google Cloud TTS não configuradas.');
     }
-    const audioContent = await callGoogleCloudTTSAPI(text, credentials);
+    const cleanText = removeEmojis(text);
+    const audioContent = await callGoogleCloudTTSAPI(cleanText, credentials, voice);
     const blob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
@@ -74,7 +79,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
     });
   };
 
-  const handleGenerateAllAudio = async () => {
+  const handleGenerateAllAudio = async (voice) => {
     setIsGenerating(true);
     const generatedAudios = [];
     for (let i = 0; i < csvData.length; i++) {
@@ -85,8 +90,8 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
       const textToSpeak = visibleFields.map((field) => record[field]).join('. ');
       try {
         let audio;
-        if (audioMode === 'google-tts') {
-          audio = await generateAudioGoogleTTS(textToSpeak);
+        if (audioMode.startsWith('google-tts')) {
+          audio = await generateAudioGoogleTTS(textToSpeak, voice);
         } else {
           audio = await generateAudioBrowser(textToSpeak);
         }
@@ -223,14 +228,23 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
                   onChange={(e) => setAudioMode(e.target.value)}
                 >
                   <MenuItem value="browser">Navegador (Padrão)</MenuItem>
-                  <MenuItem value="google-tts">Google Cloud TTS (HD)</MenuItem>
+                  <MenuItem value="google-tts-a">Google Cloud TTS (Voz A)</MenuItem>
+                  <MenuItem value="google-tts-b">Google Cloud TTS (Voz B)</MenuItem>
+                  <MenuItem value="google-tts-c">Google Cloud TTS (Voz C)</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={8}>
               <Button
                 variant="contained"
-                onClick={handleGenerateAllAudio}
+                onClick={() => {
+                  const voiceMap = {
+                    'google-tts-a': 'pt-BR-Wavenet-A',
+                    'google-tts-b': 'pt-BR-Wavenet-B',
+                    'google-tts-c': 'pt-BR-Wavenet-C',
+                  };
+                  handleGenerateAllAudio(voiceMap[audioMode]);
+                }}
                 disabled={isGenerating || csvData.length === 0}
                 startIcon={isGenerating ? <CircularProgress size={20} /> : <GraphicEq />}
               >
@@ -273,9 +287,14 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
                         {currentlyPlaying === index ? <Pause /> : <PlayArrow />}
                       </IconButton>
                       <IconButton onClick={async () => {
+                        const voiceMap = {
+                          'google-tts-a': 'pt-BR-Wavenet-A',
+                          'google-tts-b': 'pt-BR-Wavenet-B',
+                          'google-tts-c': 'pt-BR-Wavenet-C',
+                        };
                         let newAudio;
-                        if (audioMode === 'google-tts') {
-                            newAudio = await generateAudioGoogleTTS(audio.text);
+                        if (audioMode.startsWith('google-tts')) {
+                            newAudio = await generateAudioGoogleTTS(audio.text, voiceMap[audioMode]);
                         } else {
                             newAudio = await generateAudioBrowser(audio.text);
                         }

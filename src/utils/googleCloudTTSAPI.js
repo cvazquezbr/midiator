@@ -55,7 +55,7 @@ async function getAccessToken(serviceAccount) {
  * @returns {Promise<string>} A base64-encoded audio string.
  * @throws {Error} If the API call fails or the response is not in the expected format.
  */
-export async function callGoogleCloudTTSAPI(text, credentials) {
+export async function callGoogleCloudTTSAPI(text, credentials, voice = 'pt-BR-Wavenet-A') {
   if (!text) {
     throw new Error('Text cannot be empty.');
   }
@@ -71,7 +71,7 @@ export async function callGoogleCloudTTSAPI(text, credentials) {
     },
     voice: {
       languageCode: 'pt-BR',
-      name: 'pt-BR-Wavenet-A', // Using a WaveNet voice for better quality
+      name: voice,
     },
     audioConfig: {
       audioEncoding: 'MP3',
