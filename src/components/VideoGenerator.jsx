@@ -6,6 +6,7 @@ import {
   Snackbar, CircularProgress, IconButton, Tooltip
 } from '@mui/material';
 import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh } from '@mui/icons-material';
+import ProgressModal from './ProgressModal';
 
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 
@@ -29,6 +30,8 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [showTroubleshooting, setShowTroubleshooting] = useState(false);
   const [environmentChecks, setEnvironmentChecks] = useState(null);
   const [compatibilityMode, setCompatibilityMode] = useState(false);
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
   const imageContainerRef = useRef(null);
@@ -144,6 +147,9 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
       return;
     }
 
+    setShowProgressModal(true);
+    isCancelledRef.current = false;
+
     if (generatedImages.length === 0) {
       setError('Nenhuma imagem disponível para gerar o vídeo.');
       setSnackbarOpen(true);
@@ -210,12 +216,16 @@ const generateVideoWithFFmpeg = async () => {
     await ffmpeg.deleteFile("output.mp4").catch(() => {});
 
     // 1.1 Load stills into FS
-    await Promise.all(
-      generatedImages.map(async (img, i) => {
-        const fileData = await fetchFile(img.url);
-        await ffmpeg.writeFile(`img${i}.png`, fileData);
-      })
-    );
+    for (let i = 0; i < generatedImages.length; i++) {
+      if (isCancelledRef.current) {
+        console.log('Video generation cancelled by user.');
+        return;
+      }
+      const img = generatedImages[i];
+      const fileData = await fetchFile(img.url);
+      await ffmpeg.writeFile(`img${i}.png`, fileData);
+      setProgress(i + 1);
+    }
 
     // 1.2 Load audio into FS
     const hasAudio = generatedAudioData && generatedAudioData.length > 0;
@@ -350,6 +360,7 @@ const generateVideoWithFFmpeg = async () => {
     setProgress(0);
     clearInterval(progressIntervalRef.current);
     startTimeRef.current = null;
+    setShowProgressModal(false);
   }
 };
   const generateVideoWithCompatibilityMode = async () => {
@@ -437,6 +448,7 @@ const generateVideoWithFFmpeg = async () => {
       setProgress(0);
       clearInterval(progressIntervalRef.current);
       startTimeRef.current = null;
+    setShowProgressModal(false);
     }
   };
 
@@ -457,6 +469,10 @@ const generateVideoWithFFmpeg = async () => {
 
   const handleReload = () => {
     window.location.reload();
+  };
+
+  const handleCancel = () => {
+    isCancelledRef.current = true;
   };
 
   const formatTime = (seconds) => {
@@ -542,6 +558,12 @@ const generateVideoWithFFmpeg = async () => {
 
   return (
     <Box sx={{ mt: 3 }}>
+      <ProgressModal
+        open={showProgressModal}
+        progress={progress}
+        total={generatedImages.length}
+        onCancel={handleCancel}
+      />
       <iframe
         ref={iframeRef}
         src="/ffmpeg-loader.html"
