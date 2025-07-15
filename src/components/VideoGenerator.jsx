@@ -563,6 +563,8 @@ const generateVideoWithFFmpeg = async () => {
         progress={progress}
         total={generatedImages.length}
         onCancel={handleCancel}
+        title="Gerando Vídeo"
+        progressText={`Progresso: ${progress} de ${generatedImages.length} frames processados.`}
       />
       <iframe
         ref={iframeRef}

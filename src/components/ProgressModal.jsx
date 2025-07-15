@@ -10,15 +10,15 @@ import {
 } from '@mui/material';
 import SoundWaveAnimation from './SoundWaveAnimation';
 
-const ProgressModal = ({ open, progress, total, onCancel }) => {
+const ProgressModal = ({ open, progress, total, onCancel, title, progressText }) => {
   const percentage = total > 0 ? Math.round((progress / total) * 100) : 0;
 
   return (
     <Dialog open={open} aria-labelledby="progress-dialog-title">
-      <DialogTitle id="progress-dialog-title">Gerando Áudios</DialogTitle>
+      <DialogTitle id="progress-dialog-title">{title || 'Gerando...'}</DialogTitle>
       <DialogContent>
         <Typography variant="body1" gutterBottom>
-          Progresso: {progress} de {total} áudios gerados.
+          {progressText || `Progresso: ${progress} de ${total}`}.
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
           <SoundWaveAnimation progress={percentage} />

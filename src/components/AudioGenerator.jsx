@@ -355,6 +355,8 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
         progress={progress}
         total={csvData.length}
         onCancel={handleCancel}
+        title="Gerando Áudios"
+        progressText={`Progresso: ${progress} de ${csvData.length} áudios gerados.`}
       />
     </Box>
   );
