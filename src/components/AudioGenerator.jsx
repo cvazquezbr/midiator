@@ -12,7 +12,12 @@ import {
   ListItemText,
   ListItemIcon,
   CircularProgress,
-  Chip
+  Chip,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Tooltip
 } from '@mui/material';
 import {
   PlayArrow,
@@ -20,33 +25,52 @@ import {
   Replay,
   GraphicEq,
   Audiotrack,
-  Timer
+  Timer,
+  SaveAlt,
+  CloudDownload
 } from '@mui/icons-material';
+import { getGoogleCloudTTSApiKey } from '../utils/googleCloudTTSCredentials';
+import { callGoogleCloudTTSAPI } from '../utils/googleCloudTTSAPI';
 
 const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
   const [audioData, setAudioData] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
+  const [audioMode, setAudioMode] = useState('browser');
   const currentTrackIndexRef = useRef(0);
+  const audioRef = useRef(null);
 
-  const generateAudio = async (text) => {
+  const generateAudioBrowser = async (text) => {
     return new Promise((resolve, reject) => {
       const emojiRegex = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
       const textWithoutEmojis = text.replace(emojiRegex, '');
       const utterance = new SpeechSynthesisUtterance(textWithoutEmojis);
       utterance.lang = 'pt-BR';
       utterance.onend = () => {
-        // There is no direct way to get the audio blob from the Web Speech API.
-        // We will store the text and duration, and synthesize it on the fly.
-        // The duration is an approximation.
         const duration = textWithoutEmojis.length * 50; // Approximate duration in ms
-        resolve({ text, duration: duration / 1000 });
+        resolve({ text, duration: duration / 1000, blob: null, source: 'browser' });
       };
       utterance.onerror = (event) => {
         reject(event.error);
       };
       speechSynthesis.speak(utterance);
+    });
+  };
+
+  const generateAudioGoogleTTS = async (text) => {
+    const apiKey = getGoogleCloudTTSApiKey();
+    if (!apiKey) {
+      throw new Error('Chave da API do Google Cloud TTS não configurada.');
+    }
+    const audioContent = await callGoogleCloudTTSAPI(text, apiKey);
+    const blob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    return new Promise(resolve => {
+        audio.onloadedmetadata = () => {
+            resolve({ text, duration: audio.duration, blob, source: 'google-tts' });
+        };
     });
   };
 
@@ -60,10 +84,16 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
       );
       const textToSpeak = visibleFields.map((field) => record[field]).join('. ');
       try {
-        const audio = await generateAudio(textToSpeak);
+        let audio;
+        if (audioMode === 'google-tts') {
+          audio = await generateAudioGoogleTTS(textToSpeak);
+        } else {
+          audio = await generateAudioBrowser(textToSpeak);
+        }
         generatedAudios.push(audio);
       } catch (error) {
         console.error('Error generating audio for slide', i, error);
+        alert(`Erro ao gerar áudio para o slide ${i + 1}: ${error.message}`);
       }
     }
     setAudioData(generatedAudios);
@@ -73,30 +103,58 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
 
   const handlePlayPause = (index) => {
     if (currentlyPlaying === index) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
       speechSynthesis.cancel();
       setCurrentlyPlaying(null);
     } else {
       speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(audioData[index].text);
-      utterance.lang = 'pt-BR';
-      utterance.onend = () => {
-        setCurrentlyPlaying(null);
-      };
-      speechSynthesis.speak(utterance);
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      const audio = audioData[index];
+      if (audio.source === 'google-tts' && audio.blob) {
+        const url = URL.createObjectURL(audio.blob);
+        audioRef.current = new Audio(url);
+        audioRef.current.onended = () => {
+          setCurrentlyPlaying(null);
+        };
+        audioRef.current.play();
+      } else {
+        const utterance = new SpeechSynthesisUtterance(audio.text);
+        utterance.lang = 'pt-BR';
+        utterance.onend = () => {
+          setCurrentlyPlaying(null);
+        };
+        speechSynthesis.speak(utterance);
+      }
       setCurrentlyPlaying(index);
     }
   };
 
   const playNextTrack = () => {
     if (currentTrackIndexRef.current < audioData.length) {
-      const utterance = new SpeechSynthesisUtterance(audioData[currentTrackIndexRef.current].text);
-      utterance.lang = 'pt-BR';
-      utterance.onend = () => {
-        setCurrentlyPlaying(null);
-        currentTrackIndexRef.current += 1;
-        playNextTrack();
-      };
-      speechSynthesis.speak(utterance);
+      const audio = audioData[currentTrackIndexRef.current];
+      if (audio.source === 'google-tts' && audio.blob) {
+        const url = URL.createObjectURL(audio.blob);
+        audioRef.current = new Audio(url);
+        audioRef.current.onended = () => {
+          setCurrentlyPlaying(null);
+          currentTrackIndexRef.current += 1;
+          playNextTrack();
+        };
+        audioRef.current.play();
+      } else {
+        const utterance = new SpeechSynthesisUtterance(audio.text);
+        utterance.lang = 'pt-BR';
+        utterance.onend = () => {
+          setCurrentlyPlaying(null);
+          currentTrackIndexRef.current += 1;
+          playNextTrack();
+        };
+        speechSynthesis.speak(utterance);
+      }
       setCurrentlyPlaying(currentTrackIndexRef.current);
     } else {
       setIsPlayingAll(false);
@@ -105,6 +163,9 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
 
   const handlePlayAll = () => {
     if (isPlayingAll) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
       speechSynthesis.cancel();
       setIsPlayingAll(false);
       setCurrentlyPlaying(null);
@@ -113,6 +174,33 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
       currentTrackIndexRef.current = 0;
       playNextTrack();
     }
+  };
+
+  const handleDownload = (index) => {
+    const audio = audioData[index];
+    if (audio.blob) {
+      const url = URL.createObjectURL(audio.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audio_${index + 1}.mp3`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
+  const handleDownloadAll = () => {
+    audioData.forEach((audio, index) => {
+      if (audio.blob) {
+        const url = URL.createObjectURL(audio.blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audio_${index + 1}.mp3`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    });
   };
 
   return (
@@ -124,7 +212,22 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
             Gerar Áudio
           </Typography>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={4}>
+              <FormControl fullWidth>
+                <InputLabel id="audio-mode-label">Modo de Áudio</InputLabel>
+                <Select
+                  labelId="audio-mode-label"
+                  id="audio-mode-select"
+                  value={audioMode}
+                  label="Modo de Áudio"
+                  onChange={(e) => setAudioMode(e.target.value)}
+                >
+                  <MenuItem value="browser">Navegador (Padrão)</MenuItem>
+                  <MenuItem value="google-tts">Google Cloud TTS (HD)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={8}>
               <Button
                 variant="contained"
                 onClick={handleGenerateAllAudio}
@@ -142,6 +245,19 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
               >
                 {isPlayingAll ? 'Pausar Tudo' : 'Reproduzir Tudo'}
               </Button>
+              <Tooltip title="Baixar todos os áudios (somente Google TTS)">
+                <span>
+                  <Button
+                    variant="outlined"
+                    onClick={handleDownloadAll}
+                    disabled={isGenerating || audioData.some(a => !a.blob)}
+                    startIcon={<CloudDownload />}
+                    sx={{ ml: 2 }}
+                  >
+                    Baixar Todos
+                  </Button>
+                </span>
+              </Tooltip>
             </Grid>
           </Grid>
 
@@ -157,7 +273,12 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
                         {currentlyPlaying === index ? <Pause /> : <PlayArrow />}
                       </IconButton>
                       <IconButton onClick={async () => {
-                        const newAudio = await generateAudio(audio.text);
+                        let newAudio;
+                        if (audioMode === 'google-tts') {
+                            newAudio = await generateAudioGoogleTTS(audio.text);
+                        } else {
+                            newAudio = await generateAudioBrowser(audio.text);
+                        }
                         const newAudioData = [...audioData];
                         newAudioData[index] = newAudio;
                         setAudioData(newAudioData);
@@ -165,6 +286,13 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
                       }}>
                         <Replay />
                       </IconButton>
+                      <Tooltip title="Baixar áudio (somente Google TTS)">
+                        <span>
+                          <IconButton onClick={() => handleDownload(index)} disabled={!audio.blob}>
+                            <SaveAlt />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                     </Box>
                   }
                 >
