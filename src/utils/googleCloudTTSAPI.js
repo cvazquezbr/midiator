@@ -1,4 +1,4 @@
-import { KJUR, KEYUTIL } from 'jsrsasign';
+import * as jose from 'jose';
 
 const TTS_API_URL = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 let accessToken = null;
@@ -15,23 +15,17 @@ async function getAccessToken(serviceAccount) {
     return accessToken;
   }
 
-  const header = {
-    alg: 'RS256',
-    typ: 'JWT',
-  };
+  const privateKey = await jose.importPKCS8(serviceAccount.private_key, 'RS256');
 
-  const payload = {
-    iss: serviceAccount.client_email,
+  const jwt = await new jose.SignJWT({
     scope: 'https://www.googleapis.com/auth/cloud-platform',
-    aud: serviceAccount.token_uri,
-    exp: now + 3600,
-    iat: now,
-  };
-
-  const stringifiedHeader = JSON.stringify(header);
-  const stringifiedPayload = JSON.stringify(payload);
-  const privateKey = KEYUTIL.getKey(serviceAccount.private_key);
-  const jwt = KJUR.jws.JWS.sign('RS256', stringifiedHeader, stringifiedPayload, privateKey);
+  })
+    .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
+    .setIssuedAt()
+    .setIssuer(serviceAccount.client_email)
+    .setAudience(serviceAccount.token_uri)
+    .setExpirationTime('1h')
+    .sign(privateKey);
 
   const response = await fetch(serviceAccount.token_uri, {
     method: 'POST',
