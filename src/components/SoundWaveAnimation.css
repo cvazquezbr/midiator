@@ -1,0 +1,34 @@
+.sound-wave-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50px;
+}
+
+.sound-wave-bar {
+  width: 4px;
+  height: 10px;
+  margin: 0 2px;
+  background-color: #ccc;
+  animation-name: sound-wave;
+  animation-duration: 1.5s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  transform-origin: bottom;
+}
+
+.sound-wave-bar.active {
+  background-color: #8b5cf6; /* Purple */
+}
+
+@keyframes sound-wave {
+  0% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(5);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}

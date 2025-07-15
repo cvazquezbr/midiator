@@ -7,8 +7,8 @@ import {
   Button,
   Typography,
   Box,
-  LinearProgress,
 } from '@mui/material';
+import SoundWaveAnimation from './SoundWaveAnimation';
 
 const ProgressModal = ({ open, progress, total, onCancel }) => {
   const percentage = total > 0 ? Math.round((progress / total) * 100) : 0;
@@ -21,12 +21,10 @@ const ProgressModal = ({ open, progress, total, onCancel }) => {
           Progresso: {progress} de {total} áudios gerados.
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-          <Box sx={{ width: '100%', mr: 1 }}>
-            <LinearProgress variant="determinate" value={percentage} />
-          </Box>
-          <Box sx={{ minWidth: 35 }}>
-            <Typography variant="body2" color="text.secondary">{`${percentage}%`}</Typography>
-          </Box>
+          <SoundWaveAnimation progress={percentage} />
+        </Box>
+        <Box sx={{ minWidth: 35, textAlign: 'center', mt: 1 }}>
+          <Typography variant="body2" color="text.secondary">{`${percentage}%`}</Typography>
         </Box>
       </DialogContent>
       <DialogActions>
