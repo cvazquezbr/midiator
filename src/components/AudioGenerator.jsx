@@ -247,6 +247,8 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
                   <MenuItem value="google-tts-a">Google Cloud TTS (Voz A)</MenuItem>
                   <MenuItem value="google-tts-b">Google Cloud TTS (Voz B)</MenuItem>
                   <MenuItem value="google-tts-c">Google Cloud TTS (Voz C)</MenuItem>
+                  <MenuItem value="google-tts-chirp-female">Google Cloud TTS (Chirp HD Feminina)</MenuItem>
+                  <MenuItem value="google-tts-chirp-male">Google Cloud TTS (Chirp HD Masculina)</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -258,6 +260,8 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
                     'google-tts-a': 'pt-BR-Wavenet-A',
                     'google-tts-b': 'pt-BR-Wavenet-B',
                     'google-tts-c': 'pt-BR-Wavenet-C',
+                    'google-tts-chirp-female': 'pt-BR-Chirp3-HD-Achernar',
+                    'google-tts-chirp-male': 'pt-BR-Chirp3-HD-Achird',
                   };
                   handleGenerateAllAudio(voiceMap[audioMode]);
                 }}
@@ -307,6 +311,8 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
                           'google-tts-a': 'pt-BR-Wavenet-A',
                           'google-tts-b': 'pt-BR-Wavenet-B',
                           'google-tts-c': 'pt-BR-Wavenet-C',
+                          'google-tts-chirp-female': 'pt-BR-Chirp3-HD-Achernar',
+                          'google-tts-chirp-male': 'pt-BR-Chirp3-HD-Achird',
                         };
                         let newAudio;
                         if (audioMode.startsWith('google-tts')) {
