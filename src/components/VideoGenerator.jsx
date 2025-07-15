@@ -274,17 +274,16 @@ const generateVideoWithFFmpeg = async () => {
 
     if (transition === "none") {
       const videoConcat = generatedImages.map((_, i) => `[v${i}]`).join("");
+      const audioConcat = hasAudio ? generatedAudioData.map((_, i) => `[${generatedImages.length + i}:a]`).join("") : "";
+      const audioOutput = hasAudio ? ":a=1[outa]" : "";
       filterComplex = [
         ...filterParts,
-        `${videoConcat}concat=n=${generatedImages.length}:v=1:a=0[outv]`
-      ].join(";");
+        `${videoConcat}concat=n=${generatedImages.length}:v=1:a=0[outv]`,
+        hasAudio ? `${audioConcat}concat=n=${generatedAudioData.length}:v=0${audioOutput}` : ""
+      ].filter(Boolean).join(";");
       lastVideoLabel = "[outv]";
+      if (hasAudio) lastAudioLabel = "[outa]";
 
-      if (hasAudio) {
-        const audioConcat = generatedAudioData.map((_, i) => `[${generatedImages.length + i}:a]`).join("");
-        filterComplex += `;${audioConcat}concat=n=${generatedAudioData.length}:v=0:a=1[outa]`;
-        lastAudioLabel = "[outa]";
-      }
 
       totalDuration = generatedImages.reduce((acc, _, i) => {
         const duration = hasAudio && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration;
@@ -328,7 +327,7 @@ const generateVideoWithFFmpeg = async () => {
       "-map", lastVideoLabel,
     ];
 
-    if (hasAudio) {
+    if (hasAudio && lastAudioLabel) {
         cmd.push("-map", lastAudioLabel);
         cmd.push("-c:a", "aac");
     }
@@ -341,6 +340,15 @@ const generateVideoWithFFmpeg = async () => {
       "-preset", "ultrafast",
       "output.mp4"
     );
+
+    ffmpeg.on('progress', ({ progress, time }) => {
+      const percentage = Math.round(progress * 100);
+      setProgress(percentage > 100 ? 100 : percentage);
+      if (time) {
+        const remaining = (time / progress) - time;
+        setEstimatedTime(Math.round(remaining / 1000000));
+      }
+    });
 
     console.log("⚙️ FFmpeg cmd:", cmd.join(" "));
     await ffmpeg.exec(cmd);
@@ -452,14 +460,24 @@ const generateVideoWithFFmpeg = async () => {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (video) {
-      const a = document.createElement('a');
-      a.href = video;
-      a.download = `video-${Date.now()}.${compatibilityMode ? 'webm' : 'mp4'}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      try {
+        const data = await ffmpegRef.current.readFile('output.mp4');
+        const blob = new Blob([data.buffer], { type: 'video/mp4' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `video-${Date.now()}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Error exporting video:', error);
+        setError('Erro ao exportar o vídeo. Tente gerar o vídeo novamente.');
+        setSnackbarOpen(true);
+      }
     }
   };
 
