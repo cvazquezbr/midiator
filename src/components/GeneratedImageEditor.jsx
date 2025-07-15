@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'; // Import useCallback
+import React, { useState, useEffect, useCallback } from 'react'; // Import useCallback
 import {
   Dialog,
   DialogTitle,
@@ -8,8 +8,10 @@ import {
   Box,
   Grid,
   Typography,
-  IconButton
+  IconButton,
+  useMediaQuery
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Close } from '@mui/icons-material';
 import FieldPositioner from './FieldPositioner'; // Reutilizar o FieldPositioner
 import FormattingPanel from './FormattingPanel'; // Reutilizar o FormattingPanel
@@ -53,8 +55,8 @@ const GeneratedImageEditor = ({
   const [editedRecord, setEditedRecord] = useState(null); // State for the CSV record being edited
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null); // Estado para o campo selecionado internamente
   const [stylesAreInitialized, setStylesAreInitialized] = useState(false); // New state for initialization tracking
-  const [isPanelVisible, setIsPanelVisible] = useState(true); // Controle da visibilidade do painel
-  const containerRef = useRef(null); // Ref para o contêiner do grid
+  const theme = useTheme();
+  const isPanelVisible = useMediaQuery(theme.breakpoints.up('md'));
 
   const handleInternalFieldSelection = useCallback((fieldToSelect) => {
     setSelectedFieldInternal(fieldToSelect);
@@ -93,29 +95,6 @@ const GeneratedImageEditor = ({
       setStylesAreInitialized(false); 
     }
   }, [imageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders]); // Added globalCsvHeaders
-
-  useEffect(() => {
-    const observer = new ResizeObserver(entries => {
-      for (let entry of entries) {
-        // Ajuste o valor 960 conforme necessário para o seu layout
-        const shouldShowPanel = entry.contentRect.width > 960;
-        if (shouldShowPanel !== isPanelVisible) {
-          setIsPanelVisible(shouldShowPanel);
-        }
-      }
-    });
-
-    const currentRef = containerRef.current;
-    if (currentRef) {
-      observer.observe(currentRef);
-    }
-
-    return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef);
-      }
-    };
-  }, [isPanelVisible]);
 
   if (!imageData) {
     return null;
@@ -168,7 +147,7 @@ const GeneratedImageEditor = ({
         ) : !currentBackgroundImageForEditor ? (
           <Typography>Imagem de fundo não disponível para edição.</Typography>
         ) : (
-          <Grid container spacing={2} ref={containerRef}>
+          <Grid container spacing={2}>
             <Grid item xs={12} md={isPanelVisible ? 8 : 12}>
               <FieldPositioner
                 backgroundImage={currentBackgroundImageForEditor}
