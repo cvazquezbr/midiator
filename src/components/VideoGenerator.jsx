@@ -315,13 +315,14 @@ const generateVideoWithFFmpeg = async () => {
       });
       filterComplex = [...filterParts, ...transitionFilters].join(";");
       lastVideoLabel = `[${previous}]`;
-      const lastImageDuration = hasAudio && generatedAudioData[generatedImages.length - 1] ? generatedAudioData[generatedImages.length - 1].duration : slideDuration;
-      totalDuration = currentTime + lastImageDuration;
-
       if (hasAudio) {
         const audioConcat = generatedAudioData.map((_, i) => `[${generatedImages.length + i}:a]`).join("");
         filterComplex += `;${audioConcat}concat=n=${generatedAudioData.length}:v=0:a=1[outa]`;
         lastAudioLabel = "[outa]";
+        totalDuration = generatedAudioData.reduce((acc, audio) => acc + (audio.duration || 0), 0);
+      } else {
+        const lastImageDuration = slideDuration;
+        totalDuration = currentTime + lastImageDuration;
       }
     }
 
