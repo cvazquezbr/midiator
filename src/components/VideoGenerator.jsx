@@ -17,7 +17,6 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
   const [slideDuration, setSlideDuration] = useState(3);
-  const [resolution, setResolution] = useState('720p');
   const [fps, setFps] = useState(24);
   const [transition, setTransition] = useState('fade');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -66,12 +65,6 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
     loadFfmpeg();
   }, [ffmpegLoaded]);
 
-
-  const resolutionMap = {
-    '1080p': '1920x1080',
-    '720p': '1280x720',
-    '480p': '854x480',
-  };
 
   const transitionOptions = [
     { value: 'fade', label: 'Fade (Recomendado)' },
@@ -189,14 +182,12 @@ const generateVideoWithFFmpeg = async () => {
     ? transition
     : 1;
 
-  const resMap = {
-    "1080p": { w: 1920, h: 1080 },
-    "720p" : { w: 1280, h: 720  },
-    "480p" : { w:  854, h: 480  }
-  };
-  const resKey = resolution || "source";
-  const needScale = resKey !== "source" && resMap[resKey];
-  const { w: outW, h: outH } = needScale ? resMap[resKey] : { w: null, h: null };
+    const firstImage = new Image();
+    firstImage.src = generatedImages[0].url;
+    await firstImage.decode();
+
+  const outW = firstImage.width;
+  const outH = firstImage.height;
 
   /* ------------------------------------------------------------------
    *  UI helpers (unchanged)
@@ -269,7 +260,6 @@ const generateVideoWithFFmpeg = async () => {
     // 2.2 filter chains – colour + SAR (+ opcional scale/pad)
     const filterParts = generatedImages.map((_, i) => {
       const base = `[${i}:v]format=yuv420p,setsar=1,setpts=PTS-STARTPTS`;
-      if (!needScale) return `${base}[v${i}]`;
       return `${base},scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2[v${i}]`;
     });
 
@@ -389,9 +379,14 @@ const generateVideoWithFFmpeg = async () => {
         throw new Error('MediaRecorder não está disponível neste navegador');
       }
 
+      const firstImage = new Image();
+      firstImage.src = generatedImages[0].url;
+      await firstImage.decode();
+
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const [width, height] = resolutionMap[resolution].split('x').map(Number);
+      const width = firstImage.width;
+      const height = firstImage.height;
 
       canvas.width = width;
       canvas.height = height;
@@ -695,21 +690,6 @@ const generateVideoWithFFmpeg = async () => {
                   }}
                   variant="outlined"
                 />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
-                  <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Resolução</InputLabel>
-                  <Select
-                    value={resolution}
-                    onChange={(e) => setResolution(e.target.value)}
-                    sx={{ color: 'white' }}
-                  >
-                    <MenuItem value="480p">480p (Mais rápido)</MenuItem>
-                    <MenuItem value="720p">720p (Recomendado)</MenuItem>
-                    <MenuItem value="1080p">1080p (Alta qualidade)</MenuItem>
-                  </Select>
-                </FormControl>
               </Grid>
 
               <Grid item xs={12} sm={6}>
