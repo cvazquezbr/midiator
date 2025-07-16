@@ -4,7 +4,7 @@ import {
   LinearProgress, Alert, Select, MenuItem,
   FormControl, InputLabel, TextField, Paper,
   Snackbar, CircularProgress, IconButton, Tooltip, Checkbox, FormControlLabel,
-  ToggleButton, ToggleButtonGroup
+  ToggleButton, ToggleButtonGroup, Slider
 } from '@mui/material';
 import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh, Download } from '@mui/icons-material';
 import JSZip from 'jszip';
@@ -42,6 +42,8 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [narrationVideoPosition, setNarrationVideoPosition] = useState({ x: 0, y: 0 });
   const [chromaKeySimilarity, setChromaKeySimilarity] = useState(0.1);
   const [chromaKeyBlend, setChromaKeyBlend] = useState(0.1);
+  const [sliderMaxX, setSliderMaxX] = useState(100);
+  const [sliderMaxY, setSliderMaxY] = useState(100);
   const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
@@ -518,6 +520,9 @@ const generateSingleVideo = async (imageData, audioData, index) => {
         img.onerror = reject;
         img.src = generatedImages[0].url;
       });
+
+      setSliderMaxX(backgroundDimensions.width - narrationDimensions.width);
+      setSliderMaxY(backgroundDimensions.height - narrationDimensions.height);
 
       const overlayY = backgroundDimensions.height - narrationDimensions.height - narrationVideoPosition.y;
 
@@ -1081,36 +1086,26 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                     variant="outlined"
                   />
                 </Grid>
-                <Grid item xs={12} sm={3}>
-                  <TextField
-                    label="Posição X"
-                    type="number"
+                <Grid item xs={12} sm={6}>
+                  <Typography gutterBottom sx={{ color: 'white' }}>Posição X</Typography>
+                  <Slider
                     value={narrationVideoPosition.x}
-                    onChange={(e) => setNarrationVideoPosition({ ...narrationVideoPosition, x: Number(e.target.value) })}
-                    fullWidth
-                    InputProps={{
-                      style: { color: 'white' }
-                    }}
-                    InputLabelProps={{
-                      style: { color: 'rgba(255,255,255,0.7)' }
-                    }}
-                    variant="outlined"
+                    onChange={(e, newValue) => setNarrationVideoPosition({ ...narrationVideoPosition, x: newValue })}
+                    aria-labelledby="x-slider"
+                    valueLabelDisplay="auto"
+                    max={sliderMaxX}
+                    sx={{ color: 'white' }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={3}>
-                  <TextField
-                    label="Posição Y"
-                    type="number"
+                <Grid item xs={12} sm={6}>
+                  <Typography gutterBottom sx={{ color: 'white' }}>Posição Y (do fundo)</Typography>
+                  <Slider
                     value={narrationVideoPosition.y}
-                    onChange={(e) => setNarrationVideoPosition({ ...narrationVideoPosition, y: Number(e.target.value) })}
-                    fullWidth
-                    InputProps={{
-                      style: { color: 'white' }
-                    }}
-                    InputLabelProps={{
-                      style: { color: 'rgba(255,255,255,0.7)' }
-                    }}
-                    variant="outlined"
+                    onChange={(e, newValue) => setNarrationVideoPosition({ ...narrationVideoPosition, y: newValue })}
+                    aria-labelledby="y-slider"
+                    valueLabelDisplay="auto"
+                    max={sliderMaxY}
+                    sx={{ color: 'white' }}
                   />
                 </Grid>
               </Grid>
