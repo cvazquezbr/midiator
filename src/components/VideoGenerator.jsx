@@ -45,6 +45,7 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [chromaKeyBlend, setChromaKeyBlend] = useState(0.1);
   const [sliderMaxX, setSliderMaxX] = useState(100);
   const [sliderMaxY, setSliderMaxY] = useState(100);
+  const [narrationVideoSize, setNarrationVideoSize] = useState({ width: 0, height: 0 });
   const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
@@ -534,7 +535,7 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       const cmd = [
         '-i', 'background.png',
         '-i', 'narration.mp4',
-        '-filter_complex', `[1:v]${filter}[ckout];[0:v][ckout]overlay=${narrationVideoPosition.x}:${overlayY}[outv]`,
+        '-filter_complex', `[1:v]scale=${narrationVideoSize.width}:${narrationVideoSize.height}[scaled];[scaled]${filter}[ckout];[0:v][ckout]overlay=${narrationVideoPosition.x}:${overlayY}[outv]`,
         '-map', '[outv]',
         '-map', '1:a?',
         '-c:a', 'aac',
@@ -1108,6 +1109,28 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                     value={narrationVideoPosition.y}
                     onChange={(e, newValue) => setNarrationVideoPosition({ ...narrationVideoPosition, y: newValue })}
                     aria-labelledby="y-slider"
+                    valueLabelDisplay="auto"
+                    max={sliderMaxY}
+                    sx={{ color: 'white' }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography gutterBottom sx={{ color: 'white' }}>Largura</Typography>
+                  <Slider
+                    value={narrationVideoSize.width}
+                    onChange={(e, newValue) => setNarrationVideoSize({ ...narrationVideoSize, width: newValue })}
+                    aria-labelledby="width-slider"
+                    valueLabelDisplay="auto"
+                    max={sliderMaxX}
+                    sx={{ color: 'white' }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography gutterBottom sx={{ color: 'white' }}>Altura</Typography>
+                  <Slider
+                    value={narrationVideoSize.height}
+                    onChange={(e, newValue) => setNarrationVideoSize({ ...narrationVideoSize, height: newValue })}
+                    aria-labelledby="height-slider"
                     valueLabelDisplay="auto"
                     max={sliderMaxY}
                     sx={{ color: 'white' }}

@@ -4,6 +4,7 @@ import { Box } from '@mui/material';
 const Placeholder = ({
   placeholderDimensions,
   narrationVideoPosition,
+  narrationVideoSize,
   imageContainerRef,
 }) => {
   if (!placeholderDimensions.width || !imageContainerRef.current) {
@@ -11,10 +12,9 @@ const Placeholder = ({
   }
 
   const width =
-    (placeholderDimensions.width / imageContainerRef.current.offsetWidth) * 100;
+    (narrationVideoSize.width / imageContainerRef.current.offsetWidth) * 100;
   const height =
-    (placeholderDimensions.height / imageContainerRef.current.offsetHeight) *
-    100;
+    (narrationVideoSize.height / imageContainerRef.current.offsetHeight) * 100;
   const bottom =
     (narrationVideoPosition.y / imageContainerRef.current.offsetHeight) * 100;
   const left =
