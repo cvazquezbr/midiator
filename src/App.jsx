@@ -75,6 +75,7 @@ import GoogleCloudTTSAuth from './components/GoogleCloudTTSAuth';
 import { getGeminiApiKey } from './utils/geminiCredentials';
 import { callGeminiApi } from './utils/geminiAPI';
 import GoogleIcon from '@mui/icons-material/Google';
+import pako from 'pako';
 import './App.css';
 
 // Temas atualizados com gradientes e cores modernas
@@ -528,16 +529,17 @@ function App() {
     };
 
     const jsonString = JSON.stringify(stateToSave, null, 2);
-    const blob = new Blob([jsonString], { type: "application/json" });
+    const compressedData = pako.gzip(jsonString);
+    const blob = new Blob([compressedData], { type: "application/octet-stream" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "template_config.json";
+    link.download = "template_config.midiator";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    alert("Configuração do template salva como template_config.json!");
+    alert("Configuração do template salva como template_config.midiator!");
   };
 
   // Função para carregar o estado do template de um arquivo
@@ -547,7 +549,14 @@ function App() {
       const reader = new FileReader();
       reader.onload = async (e) => { // Tornar async para aguardar conversões
         try {
-          const loadedState = JSON.parse(e.target.result);
+          let loadedState;
+          if (file.name.endsWith('.midiator')) {
+            const compressedData = new Uint8Array(e.target.result);
+            const decompressedData = pako.ungzip(compressedData, { to: 'string' });
+            loadedState = JSON.parse(decompressedData);
+          } else {
+            loadedState = JSON.parse(e.target.result);
+          }
 
           // Função auxiliar para converter Base64 para Blob
           const base64ToBlob = async (base64) => {
@@ -679,7 +688,11 @@ function App() {
           alert("Erro ao ler o arquivo JSON.");
         }
       };
-      reader.readAsText(file);
+      if (file.name.endsWith('.midiator')) {
+        reader.readAsArrayBuffer(file);
+      } else {
+        reader.readAsText(file);
+      }
       event.target.value = null;
     }
   };
@@ -1223,7 +1236,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               <input
                 type="file"
                 hidden
-                accept=".json"
+                accept=".json,.midiator"
                 onChange={handleLoadStateFromFile}
                 ref={loadStateInputRef}
               />
@@ -1676,6 +1689,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               csvData={csvData}
               fieldPositions={fieldPositions}
               onAudiosGenerated={setGeneratedAudioData}
+              initialAudioData={generatedAudioData}
             />
           )}
 
