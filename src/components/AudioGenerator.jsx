@@ -300,27 +300,39 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
               {audioData.map((audio, index) => (
                 <ListItem
                   key={index}
-                  sx={{ display: 'flex', alignItems: 'center' }}
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    borderBottom: '1px solid #eee'
+                  }}
                 >
-                  <ListItemIcon>
-                    <Audiotrack />
-                  </ListItemIcon>
-                  <Box sx={{ flexGrow: 1, mr: 2 }}>
-                    <ListItemText
-                      primary={`Slide ${index + 1}`}
-                      secondary={audio.text}
-                      secondaryTypographyProps={{
-                        style: {
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis'
-                        }
-                      }}
-                    />
+                  <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+                      <ListItemIcon sx={{ minWidth: 'auto', mr: 1.5 }}>
+                        <Audiotrack />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={`Slide ${index + 1}`}
+                        secondary={audio.text}
+                        primaryTypographyProps={{
+                          fontWeight: 'bold'
+                        }}
+                        secondaryTypographyProps={{
+                          style: {
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            maxWidth: 'calc(100vw - 250px)'
+                          }
+                        }}
+                      />
+                    </Box>
+                    <Chip icon={<Timer />} label={`${audio.duration.toFixed(1)}s`} sx={{ mr: 1, ml: 1 }} />
                   </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Chip icon={<Timer />} label={`${audio.duration.toFixed(1)}s`} sx={{ mr: 1 }} />
-                    <IconButton onClick={() => handlePlayPause(index)}>
+
+                  <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
+                    <IconButton onClick={() => handlePlayPause(index)} size="small">
                       {currentlyPlaying === index ? <Pause /> : <PlayArrow />}
                     </IconButton>
                     <IconButton onClick={async () => {
@@ -341,12 +353,12 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
                       newAudioData[index] = newAudio;
                       setAudioData(newAudioData);
                       onAudiosGenerated(newAudioData);
-                    }}>
+                    }} size="small">
                       <Replay />
                     </IconButton>
                     <Tooltip title="Baixar áudio (somente Google TTS)">
                       <span>
-                        <IconButton onClick={() => handleDownload(index)} disabled={!audio.blob}>
+                        <IconButton onClick={() => handleDownload(index)} disabled={!audio.blob} size="small">
                           <SaveAlt />
                         </IconButton>
                       </span>
