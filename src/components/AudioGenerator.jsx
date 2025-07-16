@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -33,8 +33,8 @@ import { getGoogleCloudTTSCredentials } from '../utils/googleCloudTTSCredentials
 import { callGoogleCloudTTSAPI } from '../utils/googleCloudTTSAPI';
 import ProgressModal from './ProgressModal';
 
-const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
-  const [audioData, setAudioData] = useState([]);
+const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAudioData }) => {
+  const [audioData, setAudioData] = useState(initialAudioData || []);
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
@@ -44,6 +44,10 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
   const currentTrackIndexRef = useRef(0);
   const audioRef = useRef(null);
   const isCancelledRef = useRef(false);
+
+  useEffect(() => {
+    setAudioData(initialAudioData || []);
+  }, [initialAudioData]);
 
   const generateAudioBrowser = async (text) => {
     return new Promise((resolve, reject) => {
@@ -301,67 +305,68 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
                 <ListItem
                   key={index}
                   sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
                     borderBottom: '1px solid #eee',
                     p: 2
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', maxWidth: 'calc(100% - 180px)', overflow: 'hidden' }}>
-                    <ListItemIcon sx={{ minWidth: 'auto', mr: 1.5 }}>
-                      <Audiotrack />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={`Slide ${index + 1}`}
-                      secondary={audio.text}
-                      primaryTypographyProps={{
-                        fontWeight: 'bold',
-                        whiteSpace: 'nowrap'
-                      }}
-                      secondaryTypographyProps={{
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}
-                    />
-                  </Box>
-
-                  <Box sx={{ display: 'flex', alignItems: 'center', mt: { xs: 1, sm: 0 } }}>
-                    <Chip icon={<Timer />} label={`${audio.duration.toFixed(1)}s`} sx={{ mr: 1 }} />
-                    <IconButton onClick={() => handlePlayPause(index)} size="small">
-                      {currentlyPlaying === index ? <Pause /> : <PlayArrow />}
-                    </IconButton>
-                    <IconButton onClick={async () => {
-                      const voiceMap = {
-                        'google-tts-a': 'pt-BR-Wavenet-A',
-                        'google-tts-b': 'pt-BR-Wavenet-B',
-                        'google-tts-c': 'pt-BR-Wavenet-C',
-                        'google-tts-chirp-female': 'pt-BR-Chirp3-HD-Achernar',
-                        'google-tts-chirp-male': 'pt-BR-Chirp3-HD-Achird',
-                      };
-                      let newAudio;
-                      if (audioMode.startsWith('google-tts')) {
-                        newAudio = await generateAudioGoogleTTS(audio.text, voiceMap[audioMode]);
-                      } else {
-                        newAudio = await generateAudioBrowser(audio.text);
-                      }
-                      const newAudioData = [...audioData];
-                      newAudioData[index] = newAudio;
-                      setAudioData(newAudioData);
-                      onAudiosGenerated(newAudioData);
-                    }} size="small">
-                      <Replay />
-                    </IconButton>
-                    <Tooltip title="Baixar áudio (somente Google TTS)">
-                      <span>
-                        <IconButton onClick={() => handleDownload(index)} disabled={!audio.blob} size="small">
-                          <SaveAlt />
+                  <Grid container alignItems="center" spacing={2}>
+                    <Grid item xs={12} sm>
+                      <Box sx={{ display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+                        <ListItemIcon sx={{ minWidth: 'auto', mr: 1.5 }}>
+                          <Audiotrack />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={`Slide ${index + 1}`}
+                          secondary={audio.text}
+                          primaryTypographyProps={{
+                            fontWeight: 'bold',
+                            whiteSpace: 'nowrap'
+                          }}
+                          secondaryTypographyProps={{
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        />
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm="auto">
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Chip icon={<Timer />} label={`${audio.duration.toFixed(1)}s`} sx={{ mr: 1 }} />
+                        <IconButton onClick={() => handlePlayPause(index)} size="small">
+                          {currentlyPlaying === index ? <Pause /> : <PlayArrow />}
                         </IconButton>
-                      </span>
-                    </Tooltip>
-                  </Box>
+                        <IconButton onClick={async () => {
+                          const voiceMap = {
+                            'google-tts-a': 'pt-BR-Wavenet-A',
+                            'google-tts-b': 'pt-BR-Wavenet-B',
+                            'google-tts-c': 'pt-BR-Wavenet-C',
+                            'google-tts-chirp-female': 'pt-BR-Chirp3-HD-Achernar',
+                            'google-tts-chirp-male': 'pt-BR-Chirp3-HD-Achird',
+                          };
+                          let newAudio;
+                          if (audioMode.startsWith('google-tts')) {
+                            newAudio = await generateAudioGoogleTTS(audio.text, voiceMap[audioMode]);
+                          } else {
+                            newAudio = await generateAudioBrowser(audio.text);
+                          }
+                          const newAudioData = [...audioData];
+                          newAudioData[index] = newAudio;
+                          setAudioData(newAudioData);
+                          onAudiosGenerated(newAudioData);
+                        }} size="small">
+                          <Replay />
+                        </IconButton>
+                        <Tooltip title="Baixar áudio (somente Google TTS)">
+                          <span>
+                            <IconButton onClick={() => handleDownload(index)} disabled={!audio.blob} size="small">
+                              <SaveAlt />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </Box>
+                    </Grid>
+                  </Grid>
                 </ListItem>
               ))}
             </List>
