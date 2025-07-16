@@ -509,10 +509,14 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       const backgroundImageData = await fetchFile(generatedImages[0].url);
       await ffmpeg.writeFile('background.png', backgroundImageData);
 
+      const filter = chromaKeyColor.toUpperCase() === '#FFFFFF'
+        ? `colorkey=color=${chromaKeyColor}:similarity=0.1:blend=0.1`
+        : `chromakey=color=${chromaKeyColor}:similarity=0.1:blend=0.1`;
+
       const cmd = [
         '-i', 'background.png',
         '-i', 'narration.mp4',
-        '-filter_complex', `[1:v]chromakey=color=${chromaKeyColor}:similarity=0.1:blend=0.1[ckout];[0:v][ckout]overlay=${narrationVideoPosition.x}:${narrationVideoPosition.y}[outv]`,
+        '-filter_complex', `[1:v]${filter}[ckout];[0:v][ckout]overlay=${narrationVideoPosition.x}:${narrationVideoPosition.y}[outv]`,
         '-map', '[outv]',
         '-map', '1:a?',
         '-c:a', 'aac',
@@ -983,7 +987,7 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                 Vídeo de Narração
               </Typography>
               <Alert severity="info" sx={{ mb: 2, backgroundColor: 'rgba(25,118,210,0.2)', color: 'white', '& .MuiAlert-icon': { color: 'white' } }}>
-                Para melhores resultados, o vídeo de narração deve ter um fundo de cor sólida (ex: verde).
+                Para melhores resultados, o vídeo de narração deve ter um fundo de cor sólida (ex: verde). Para fundos brancos, use o valor #FFFFFF.
               </Alert>
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid item xs={12}>
