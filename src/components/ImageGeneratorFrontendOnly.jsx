@@ -296,22 +296,15 @@ const ImageGeneratorFrontendOnly = ({
             // Aplicar configurações de texto
             applyTextEffects(ctx, { ...style, fontSize: fontSize });
 
-            const isPortrait = originalImageSize && originalImageSize.height > originalImageSize.width;
-            let editorReferenceSize = isPortrait ? displayedImageSize.height : displayedImageSize.width;
-            if (!editorReferenceSize || editorReferenceSize <= 0) {
-              editorReferenceSize = isPortrait ? originalImageSize.height : originalImageSize.width;
-            }
-            const imageReferenceSize = isPortrait ? img.height : img.width;
-            const paddingScaleFactor = editorReferenceSize > 0 ? imageReferenceSize / editorReferenceSize : 0;
-            const scaledPadding = 8 * paddingScaleFactor;
+            const fixedPadding = 8; // Padding fixo de 8px, igual ao do CSS no TextBox
 
-            // Área efetiva para o texto dentro da caixa
-            const effectiveTextWidth = Math.max(0, posPx.width - (2 * scaledPadding));
-            const effectiveTextHeight = Math.max(0, posPx.height - (2 * scaledPadding));
+            // Área efetiva para o texto dentro da caixa, subtraindo o padding
+            const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
+            const effectiveTextHeight = Math.max(0, posPx.height - (2 * fixedPadding));
 
-            // Posição inicial do conteúdo do texto
-            const textContentStartX = posPx.x + scaledPadding;
-            const textContentStartY = posPx.y + scaledPadding;
+            // Posição inicial do conteúdo do texto (canto superior esquerdo da área de texto)
+            const textContentStartX = posPx.x + fixedPadding;
+            const textContentStartY = posPx.y + fixedPadding;
 
             // Quebrar texto em linhas
             const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: fontSize });
@@ -595,20 +588,15 @@ const ImageGeneratorFrontendOnly = ({
         const fontSize = style.fontSize || 24;
         applyTextEffects(ctx, { ...style, fontSize: fontSize });
 
-        const isPortrait = originalImageSize && originalImageSize.height > originalImageSize.width;
-        let editorReferenceSize = isPortrait ? displayedImageSize.height : displayedImageSize.width;
-        if (!editorReferenceSize || editorReferenceSize <= 0) {
-          editorReferenceSize = isPortrait ? originalImageSize.height : originalImageSize.width;
-        }
-        const imageReferenceSize = isPortrait ? img.height : img.width;
-        const paddingScaleFactor = editorReferenceSize > 0 ? imageReferenceSize / editorReferenceSize : 0;
-        const scaledPadding = 8 * paddingScaleFactor;
+        const fixedPadding = 8; // Padding fixo de 8px, igual ao do CSS no TextBox
 
-        const effectiveTextWidth = Math.max(0, posPx.width - (2 * scaledPadding));
-        const effectiveTextHeight = Math.max(0, posPx.height - (2 * scaledPadding));
+        // Área efetiva para o texto dentro da caixa, subtraindo o padding
+        const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
+        const effectiveTextHeight = Math.max(0, posPx.height - (2 * fixedPadding));
 
-        const textContentStartX = posPx.x + scaledPadding;
-        const textContentStartY = posPx.y + scaledPadding;
+        // Posição inicial do conteúdo do texto (canto superior esquerdo da área de texto)
+        const textContentStartX = posPx.x + fixedPadding;
+        const textContentStartY = posPx.y + fixedPadding;
 
         const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: fontSize });
         

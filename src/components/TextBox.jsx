@@ -564,23 +564,39 @@ const TextBox = ({
     return lines;
   };
 
-  // Calcula o tamanho da fonte dinamicamente com base no tamanho da fonte do estilo e na proporção da imagem.
-  const calculateDynamicFontSize = () => {
-    if (!originalImageSize?.width || !containerSize?.width) {
-      // Retorna um fallback se as dimensões não estiverem disponíveis
-      return style.fontSize || 16;
-    }
-    // A escala é a razão entre a largura da imagem exibida e a largura da imagem original.
-    const scale = containerSize.width / originalImageSize.width;
-    // O tamanho dinâmico da fonte é o tamanho da fonte base multiplicado pela escala.
-    return (style.fontSize || 24) * scale;
-  };
+  const scale = (originalImageSize?.width && containerSize?.width)
+    ? containerSize.width / originalImageSize.width
+    : 1;
 
-  const dynamicFontSize = calculateDynamicFontSize();
+  const baseFontSize = style.fontSize || 24;
+  const lineHeight = baseFontSize * (style.lineHeightMultiplier || 1.2);
 
-  const textLines = wrapText(editedContent, pixelPosition.width - 16, dynamicFontSize);
-  const lineHeight = dynamicFontSize * (style.lineHeightMultiplier || 1.2);
+  // Para o wrap, usamos a largura da caixa em pixels no tamanho original da imagem
+  const originalBoxWidth = (position.width / 100) * (originalImageSize?.width || 1);
+  const paddingInPixels = 8 * 2; // 8px de cada lado
+  const textLines = wrapText(editedContent, originalBoxWidth - paddingInPixels, baseFontSize);
+
   const handleSize = isMobile ? 24 : 12; // Aumentado o tamanho do handle
+
+  // Estilo para o conteúdo do texto, que será escalado
+  const textContentStyle = {
+    fontFamily: style.fontFamily || 'Arial',
+    fontSize: `${baseFontSize}px`,
+    fontWeight: style.fontWeight || 'normal',
+    fontStyle: style.fontStyle || 'normal',
+    color: style.color || '#000000',
+    textDecoration: style.textDecoration || 'none',
+    lineHeight: `${lineHeight}px`,
+    textShadow: style.textShadow ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}` : 'none',
+    WebkitTextStroke: style.textStroke ? `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}` : 'none',
+    // A escala é aplicada aqui para que a renderização do texto (wrap) não seja afetada,
+    // mas o resultado visual corresponda ao tamanho do preview.
+    transform: `scale(${scale})`,
+    transformOrigin: 'top left',
+    width: `${100 / scale}%`,
+    height: `${100 / scale}%`,
+    pointerEvents: 'none',
+  };
 
 
   return (
@@ -594,9 +610,6 @@ const TextBox = ({
         userSelect: 'none',
         transform: `rotate(${rotation || 0}deg)`,
         zIndex: 2,
-        // O contêiner principal agora não tem borda ou fundo próprio,
-        // isso será tratado por um pseudo-elemento ou um div interno.
-        // O overflow foi removido para que os handles não sejam cortados.
         touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none',
         '&:hover': {
           border: isSelected ? '2px solid #2196f3' : '2px solid #a0cfff',
@@ -640,26 +653,27 @@ const TextBox = ({
             ref={textareaRef} value={editedContent} onChange={handleTextareaChange}
             onBlur={handleTextareaBlur} onKeyDown={handleTextareaKeyDown}
             style={{
-              width: '100%', height: '100%', fontFamily: style.fontFamily || 'Arial',
-              fontSize: `${dynamicFontSize}px`, fontWeight: style.fontWeight || 'normal',
-              fontStyle: style.fontStyle || 'normal', color: style.color || '#000000',
-              lineHeight: `${lineHeight}px`, textDecoration: style.textDecoration || 'none',
-              border: 'none', outline: 'none', backgroundColor: 'transparent',
-              resize: 'none', overflow: 'hidden', padding: 0, boxSizing: 'border-box',
+              width: '100%',
+              height: '100%',
+              fontFamily: style.fontFamily || 'Arial',
+              fontSize: `${baseFontSize * scale}px`, // A fonte no textarea precisa ser escalada visualmente
+              fontWeight: style.fontWeight || 'normal',
+              fontStyle: style.fontStyle || 'normal',
+              color: style.color || '#000000',
+              lineHeight: `${lineHeight * scale}px`, // A altura da linha também
+              textDecoration: style.textDecoration || 'none',
+              border: 'none',
+              outline: 'none',
+              backgroundColor: 'transparent',
+              resize: 'none',
+              overflow: 'hidden',
+              padding: 0,
+              boxSizing: 'border-box',
               textAlign: style.textAlign || 'left',
             }}
           />
         ) : (
-          <Box
-            sx={{
-              pointerEvents: 'none', fontFamily: style.fontFamily || 'Arial',
-              fontSize: `${dynamicFontSize}px`, fontWeight: style.fontWeight || 'normal',
-              fontStyle: style.fontStyle || 'normal', color: style.color || '#000000',
-              textDecoration: style.textDecoration || 'none', lineHeight: `${lineHeight}px`,
-              textShadow: style.textShadow ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}` : 'none',
-              WebkitTextStroke: style.textStroke ? `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}` : 'none',
-            }}
-          >
+          <Box sx={textContentStyle}>
             {textLines.map((line, index) => (
               <div key={index} style={{ marginBottom: index < textLines.length - 1 ? '2px' : 0 }}>
                 {line}
