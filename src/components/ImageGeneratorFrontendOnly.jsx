@@ -297,7 +297,10 @@ const ImageGeneratorFrontendOnly = ({
             applyTextEffects(ctx, { ...style, fontSize: fontSize });
 
             const isPortrait = originalImageSize && originalImageSize.height > originalImageSize.width;
-            const editorReferenceSize = isPortrait ? displayedImageSize.height : displayedImageSize.width;
+            let editorReferenceSize = isPortrait ? displayedImageSize.height : displayedImageSize.width;
+            if (!editorReferenceSize || editorReferenceSize <= 0) {
+              editorReferenceSize = isPortrait ? originalImageSize.height : originalImageSize.width;
+            }
             const imageReferenceSize = isPortrait ? img.height : img.width;
             const paddingScaleFactor = editorReferenceSize > 0 ? imageReferenceSize / editorReferenceSize : 0;
             const scaledPadding = 8 * paddingScaleFactor;
@@ -593,7 +596,10 @@ const ImageGeneratorFrontendOnly = ({
         applyTextEffects(ctx, { ...style, fontSize: fontSize });
 
         const isPortrait = originalImageSize && originalImageSize.height > originalImageSize.width;
-        const editorReferenceSize = isPortrait ? displayedImageSize.height : displayedImageSize.width;
+        let editorReferenceSize = isPortrait ? displayedImageSize.height : displayedImageSize.width;
+        if (!editorReferenceSize || editorReferenceSize <= 0) {
+          editorReferenceSize = isPortrait ? originalImageSize.height : originalImageSize.width;
+        }
         const imageReferenceSize = isPortrait ? img.height : img.width;
         const paddingScaleFactor = editorReferenceSize > 0 ? imageReferenceSize / editorReferenceSize : 0;
         const scaledPadding = 8 * paddingScaleFactor;
