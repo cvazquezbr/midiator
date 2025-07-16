@@ -564,39 +564,23 @@ const TextBox = ({
     return lines;
   };
 
-  // Calcula o tamanho da fonte dinamicamente com base no tamanho da fonte do estilo e no tamanho do contêiner.
-  // const calculateDynamicFontSize = () => {
-  //   if (!originalImageSize || !containerSize || !style.fontSize) {
-  //     // Fallback para o cálculo antigo se os novos dados não estiverem disponíveis
-  //     return (style.fontSize || 16) * (containerSize.width / 1080);
-  //   }
-  //   const safeDisplayedWidth = containerSize.width > 0 ? containerSize.width : originalImageSize.width;
-  //   const safeDisplayedHeight = containerSize.height > 0 ? containerSize.height : originalImageSize.height;
-
-  //   const scaleX = originalImageSize.width / safeDisplayedWidth;
-  //   const scaleY = originalImageSize.height / safeDisplayedHeight;
-
-  //   return style.fontSize * Math.min(scaleX, scaleY);
-  // };
-
-  // const dynamicFontSize = calculateDynamicFontSize();
-
-  const fixedFontSize = style.fontSize || 24; // Usar o tamanho da fonte do estilo, sem escala.
-
-  const textLines = wrapText(editedContent, pixelPosition.width - 16, fixedFontSize);
-  const lineHeight = fixedFontSize * (style.lineHeightMultiplier || 1.2);
-  const handleSize = isMobile ? 24 : 12; // Aumentado o tamanho do handle
-
-  const scaleFactor = (containerSize.width && originalImageSize.width)
-    ? containerSize.width / originalImageSize.width
-    : 1;
-
-  // Define o ponto de origem da transformação com base no alinhamento do texto
-  const transformOrigin = () => {
-    const yOrigin = style.verticalAlign === 'top' ? 'top' : style.verticalAlign === 'bottom' ? 'bottom' : 'center';
-    const xOrigin = style.textAlign === 'left' ? 'left' : style.textAlign === 'right' ? 'right' : 'center';
-    return `${yOrigin} ${xOrigin}`;
+  // Calcula o tamanho da fonte dinamicamente com base no tamanho da fonte do estilo e na proporção da imagem.
+  const calculateDynamicFontSize = () => {
+    if (!originalImageSize?.width || !containerSize?.width) {
+      // Retorna um fallback se as dimensões não estiverem disponíveis
+      return style.fontSize || 16;
+    }
+    // A escala é a razão entre a largura da imagem exibida e a largura da imagem original.
+    const scale = containerSize.width / originalImageSize.width;
+    // O tamanho dinâmico da fonte é o tamanho da fonte base multiplicado pela escala.
+    return (style.fontSize || 24) * scale;
   };
+
+  const dynamicFontSize = calculateDynamicFontSize();
+
+  const textLines = wrapText(editedContent, pixelPosition.width - 16, dynamicFontSize);
+  const lineHeight = dynamicFontSize * (style.lineHeightMultiplier || 1.2);
+  const handleSize = isMobile ? 24 : 12; // Aumentado o tamanho do handle
 
 
   return (
@@ -657,27 +641,23 @@ const TextBox = ({
             onBlur={handleTextareaBlur} onKeyDown={handleTextareaKeyDown}
             style={{
               width: '100%', height: '100%', fontFamily: style.fontFamily || 'Arial',
-              fontSize: `${fixedFontSize}px`, fontWeight: style.fontWeight || 'normal',
+              fontSize: `${dynamicFontSize}px`, fontWeight: style.fontWeight || 'normal',
               fontStyle: style.fontStyle || 'normal', color: style.color || '#000000',
               lineHeight: `${lineHeight}px`, textDecoration: style.textDecoration || 'none',
               border: 'none', outline: 'none', backgroundColor: 'transparent',
               resize: 'none', overflow: 'hidden', padding: 0, boxSizing: 'border-box',
               textAlign: style.textAlign || 'left',
-              transform: `scale(${scaleFactor})`,
-              transformOrigin: transformOrigin(),
             }}
           />
         ) : (
           <Box
             sx={{
               pointerEvents: 'none', fontFamily: style.fontFamily || 'Arial',
-              fontSize: `${fixedFontSize}px`, fontWeight: style.fontWeight || 'normal',
+              fontSize: `${dynamicFontSize}px`, fontWeight: style.fontWeight || 'normal',
               fontStyle: style.fontStyle || 'normal', color: style.color || '#000000',
               textDecoration: style.textDecoration || 'none', lineHeight: `${lineHeight}px`,
               textShadow: style.textShadow ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}` : 'none',
               WebkitTextStroke: style.textStroke ? `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}` : 'none',
-              transform: `scale(${scaleFactor})`,
-              transformOrigin: transformOrigin(),
             }}
           >
             {textLines.map((line, index) => (
