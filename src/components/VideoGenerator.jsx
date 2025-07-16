@@ -10,6 +10,7 @@ import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh, Download } from 
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import ProgressModal from './ProgressModal';
+import Placeholder from './Placeholder';
 
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 
@@ -44,7 +45,6 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [chromaKeyBlend, setChromaKeyBlend] = useState(0.1);
   const [sliderMaxX, setSliderMaxX] = useState(100);
   const [sliderMaxY, setSliderMaxY] = useState(100);
-  const [placeholderDimensions, setPlaceholderDimensions] = useState({ width: 0, height: 0 });
   const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
@@ -708,6 +708,8 @@ const generateSingleVideo = async (imageData, audioData, index) => {
     });
   };
 
+  const [placeholderDimensions, setPlaceholderDimensions] = useState({ width: 0, height: 0 });
+
   const handleNarrationVideoUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -1137,7 +1139,7 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                 border: '1px solid rgba(255,255,255,0.1)'
               }}
             >
-              {generatedImages.length > 0 ? (
+              {generatedImages.length > 0 &&
                 <img
                   src={generatedImages[currentImageIndex].url}
                   alt={`Frame ${currentImageIndex + 1}`}
@@ -1148,21 +1150,8 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                     transition: 'opacity 0.5s ease-in-out',
                   }}
                 />
-              )}
-              {videoMode === 'narration' && narrationVideo && placeholderDimensions.width > 0 && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    width: `${(placeholderDimensions.width / imageContainerRef.current?.offsetWidth * 100) || 0}%`,
-                    height: `${(placeholderDimensions.height / imageContainerRef.current?.offsetHeight * 100) || 0}%`,
-                    border: '2px dashed white',
-                    bottom: `${(narrationVideoPosition.y / imageContainerRef.current?.offsetHeight * 100) || 0}%`,
-                    left: `${(narrationVideoPosition.x / imageContainerRef.current?.offsetWidth * 100) || 0}%`,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              )}
-              {generatedImages.length === 0 && (
+              }
+              {generatedImages.length === 0 &&
                 <Box sx={{
                   display: 'flex',
                   justifyContent: 'center',
@@ -1172,6 +1161,13 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                 }}>
                   <Typography>Nenhuma imagem disponível</Typography>
                 </Box>
+              }
+              {videoMode === 'narration' && narrationVideo && (
+                <Placeholder
+                  placeholderDimensions={placeholderDimensions}
+                  narrationVideoPosition={narrationVideoPosition}
+                  imageContainerRef={imageContainerRef}
+                />
               )}
             </Box>
           </Paper>
