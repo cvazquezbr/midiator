@@ -40,6 +40,8 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [videoMode, setVideoMode] = useState('slideshow');
   const [chromaKeyColor, setChromaKeyColor] = useState('0x00FF00');
   const [narrationVideoPosition, setNarrationVideoPosition] = useState({ x: 0, y: 0 });
+  const [chromaKeySimilarity, setChromaKeySimilarity] = useState(0.1);
+  const [chromaKeyBlend, setChromaKeyBlend] = useState(0.1);
   const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
@@ -509,14 +511,24 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       const backgroundImageData = await fetchFile(generatedImages[0].url);
       await ffmpeg.writeFile('background.png', backgroundImageData);
 
+      const narrationDimensions = await getVideoDimensions(narrationVideo);
+      const backgroundDimensions = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve({ width: img.width, height: img.height });
+        img.onerror = reject;
+        img.src = generatedImages[0].url;
+      });
+
+      const overlayY = backgroundDimensions.height - narrationDimensions.height - narrationVideoPosition.y;
+
       const filter = chromaKeyColor.toUpperCase() === '#FFFFFF'
-        ? `colorkey=color=${chromaKeyColor}:similarity=0.1:blend=0.1`
-        : `chromakey=color=${chromaKeyColor}:similarity=0.1:blend=0.1`;
+        ? `colorkey=color=${chromaKeyColor}:similarity=${chromaKeySimilarity}:blend=${chromaKeyBlend}`
+        : `chromakey=color=${chromaKeyColor}:similarity=${chromaKeySimilarity}:blend=${chromaKeyBlend}`;
 
       const cmd = [
         '-i', 'background.png',
         '-i', 'narration.mp4',
-        '-filter_complex', `[1:v]${filter}[ckout];[0:v][ckout]overlay=${narrationVideoPosition.x}:${narrationVideoPosition.y}[outv]`,
+        '-filter_complex', `[1:v]${filter}[ckout];[0:v][ckout]overlay=${narrationVideoPosition.x}:${overlayY}[outv]`,
         '-map', '[outv]',
         '-map', '1:a?',
         '-c:a', 'aac',
@@ -695,6 +707,19 @@ const generateSingleVideo = async (imageData, audioData, index) => {
     if (file) {
       setNarrationVideo(file);
     }
+  };
+
+  const getVideoDimensions = async (file) => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src);
+        resolve({ width: video.videoWidth, height: video.videoHeight });
+      };
+      video.onerror = reject;
+      video.src = URL.createObjectURL(file);
+    });
   };
 
   const formatTime = (seconds) => {
@@ -914,6 +939,38 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                     type="number"
                     value={slideDuration}
                     onChange={(e) => setSlideDuration(Math.max(1, Math.min(45, Number(e.target.value))))}
+                    fullWidth
+                    InputProps={{
+                      style: { color: 'white' }
+                    }}
+                    InputLabelProps={{
+                      style: { color: 'rgba(255,255,255,0.7)' }
+                    }}
+                    variant="outlined"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    label="Similaridade"
+                    type="number"
+                    value={chromaKeySimilarity}
+                    onChange={(e) => setChromaKeySimilarity(Number(e.target.value))}
+                    fullWidth
+                    InputProps={{
+                      style: { color: 'white' }
+                    }}
+                    InputLabelProps={{
+                      style: { color: 'rgba(255,255,255,0.7)' }
+                    }}
+                    variant="outlined"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    label="Blend"
+                    type="number"
+                    value={chromaKeyBlend}
+                    onChange={(e) => setChromaKeyBlend(Number(e.target.value))}
                     fullWidth
                     InputProps={{
                       style: { color: 'white' }
