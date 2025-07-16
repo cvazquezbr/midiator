@@ -2,12 +2,11 @@ import React from 'react';
 import { Box } from '@mui/material';
 
 const Placeholder = ({
-  placeholderDimensions,
   narrationVideoPosition,
   narrationVideoSize,
   imageContainerRef,
 }) => {
-  if (!placeholderDimensions.width || !imageContainerRef.current) {
+  if (!narrationVideoSize.width || !imageContainerRef.current) {
     return null;
   }
 

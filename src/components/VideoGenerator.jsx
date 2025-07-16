@@ -709,14 +709,12 @@ const generateSingleVideo = async (imageData, audioData, index) => {
     });
   };
 
-  const [placeholderDimensions, setPlaceholderDimensions] = useState({ width: 0, height: 0 });
-
   const handleNarrationVideoUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
       setNarrationVideo(file);
       const dimensions = await getVideoDimensions(file);
-      setPlaceholderDimensions(dimensions);
+      setNarrationVideoSize(dimensions);
     }
   };
 
