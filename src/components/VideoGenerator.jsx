@@ -44,6 +44,7 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [chromaKeyBlend, setChromaKeyBlend] = useState(0.1);
   const [sliderMaxX, setSliderMaxX] = useState(100);
   const [sliderMaxY, setSliderMaxY] = useState(100);
+  const [placeholderDimensions, setPlaceholderDimensions] = useState({ width: 0, height: 0 });
   const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
@@ -707,10 +708,12 @@ const generateSingleVideo = async (imageData, audioData, index) => {
     });
   };
 
-  const handleNarrationVideoUpload = (event) => {
+  const handleNarrationVideoUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
       setNarrationVideo(file);
+      const dimensions = await getVideoDimensions(file);
+      setPlaceholderDimensions(dimensions);
     }
   };
 
@@ -1145,7 +1148,21 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                     transition: 'opacity 0.5s ease-in-out',
                   }}
                 />
-              ) : (
+              )}
+              {videoMode === 'narration' && narrationVideo && placeholderDimensions.width > 0 && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    width: `${(placeholderDimensions.width / imageContainerRef.current?.offsetWidth * 100) || 0}%`,
+                    height: `${(placeholderDimensions.height / imageContainerRef.current?.offsetHeight * 100) || 0}%`,
+                    border: '2px dashed white',
+                    bottom: `${(narrationVideoPosition.y / imageContainerRef.current?.offsetHeight * 100) || 0}%`,
+                    left: `${(narrationVideoPosition.x / imageContainerRef.current?.offsetWidth * 100) || 0}%`,
+                    boxSizing: 'border-box',
+                  }}
+                />
+              )}
+              {generatedImages.length === 0 && (
                 <Box sx={{
                   display: 'flex',
                   justifyContent: 'center',
