@@ -65,5 +65,12 @@
     text-align: center; /* Centraliza os botões na célula de ações */
 }
 
+.dataCell {
+    max-width: 300px; /* ou qualquer outra largura máxima que você preferir */
+    white-space: normal;
+    word-wrap: break-word;
+    vertical-align: middle;
+}
+
 /* Estilos para a linha (tr) no modo escuro, se necessário, mas geralmente o TabelaRegistros já cuida do fundo da linha */
 /* .darkMode {} - Ruleset vazio removido para corrigir aviso de lint */
