@@ -3,9 +3,11 @@ import {
   Box, Button, Typography, Card, CardContent, Grid,
   LinearProgress, Alert, Select, MenuItem,
   FormControl, InputLabel, TextField, Paper,
-  Snackbar, CircularProgress, IconButton, Tooltip
+  Snackbar, CircularProgress, IconButton, Tooltip, Checkbox, FormControlLabel
 } from '@mui/material';
-import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh } from '@mui/icons-material';
+import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh, Download } from '@mui/icons-material';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import ProgressModal from './ProgressModal';
 
 import { FFmpeg } from '@ffmpeg/ffmpeg';
@@ -14,6 +16,7 @@ import { fetchFile } from '@ffmpeg/util';
 
 const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [video, setVideo] = useState(null);
+  const [videos, setVideos] = useState([]);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
   const [slideDuration, setSlideDuration] = useState(3);
@@ -31,6 +34,7 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [compatibilityMode, setCompatibilityMode] = useState(false);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [totalFrames, setTotalFrames] = useState(0);
+  const [generatePerRecord, setGeneratePerRecord] = useState(false);
   const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
@@ -141,26 +145,33 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
       return;
     }
 
-    const totalVideoFrames = generatedImages.reduce((acc, _, i) => {
-      const duration = (generatedAudioData && generatedAudioData[i]) ? generatedAudioData[i].duration : slideDuration;
-      return acc + Math.floor(duration * fps);
-    }, 0);
-    setTotalFrames(totalVideoFrames);
-
-    setShowProgressModal(true);
-    isCancelledRef.current = false;
-
     if (generatedImages.length === 0) {
       setError('Nenhuma imagem disponível para gerar o vídeo.');
       setSnackbarOpen(true);
       return;
     }
 
-    if (compatibilityMode || !ffmpegLoaded) {
-      await generateVideoWithCompatibilityMode();
+    setShowProgressModal(true);
+    isCancelledRef.current = false;
+    setVideos([]);
+    setVideo(null);
+
+    if (generatePerRecord) {
+      await generateVideoPerRecord();
     } else {
-      await generateVideoWithFFmpeg();
+      const totalVideoFrames = generatedImages.reduce((acc, _, i) => {
+        const duration = (generatedAudioData && generatedAudioData[i]) ? generatedAudioData[i].duration : slideDuration;
+        return acc + Math.floor(duration * fps);
+      }, 0);
+      setTotalFrames(totalVideoFrames);
+
+      if (compatibilityMode || !ffmpegLoaded) {
+        await generateVideoWithCompatibilityMode();
+      } else {
+        await generateVideoWithFFmpeg();
+      }
     }
+    setShowProgressModal(false);
   };
 
 // Version with **optional fixed output resolution**
@@ -364,6 +375,101 @@ const generateVideoWithFFmpeg = async () => {
     setShowProgressModal(false);
   }
 };
+
+const generateVideoPerRecord = async () => {
+  setIsLoading(true);
+  setError(null);
+  setVideos([]);
+  startTimeRef.current = Date.now();
+
+  for (let i = 0; i < generatedImages.length; i++) {
+    if (isCancelledRef.current) {
+      console.log('Video generation cancelled by user.');
+      break;
+    }
+    setTotalFrames(Math.floor((generatedAudioData[i]?.duration || slideDuration) * fps));
+    const imageData = [generatedImages[i]];
+    const audioData = generatedAudioData[i] ? [generatedAudioData[i]] : null;
+
+    try {
+      const videoBlob = await generateSingleVideo(imageData, audioData, i);
+      const videoUrl = URL.createObjectURL(videoBlob);
+      setVideos(prev => [...prev, { url: videoUrl, name: `video_${i + 1}.mp4` }]);
+    } catch (err) {
+      setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message}`);
+      setSnackbarOpen(true);
+      // Continue to the next video
+    }
+  }
+
+  setIsLoading(false);
+  clearInterval(progressIntervalRef.current);
+  startTimeRef.current = null;
+  setShowProgressModal(false);
+};
+
+const generateSingleVideo = async (imageData, audioData, index) => {
+  const ffmpeg = ffmpegRef.current;
+  const hasAudio = audioData && audioData.length > 0 && audioData[0].blob;
+  const duration = hasAudio ? audioData[0].duration : slideDuration;
+  const outputFilename = `output_${index}.mp4`;
+
+  await ffmpeg.deleteFile(outputFilename).catch(() => {});
+
+  const imgFile = `img_${index}.png`;
+  const audioFile = `audio_${index}.mp3`;
+
+  const fileData = await fetchFile(imageData[0].url);
+  await ffmpeg.writeFile(imgFile, fileData);
+
+  const inputs = ["-loop", "1", "-t", duration.toString(), "-i", imgFile];
+  if (hasAudio) {
+    const audioBlob = await fetchFile(URL.createObjectURL(audioData[0].blob));
+    await ffmpeg.writeFile(audioFile, audioBlob);
+    inputs.push("-i", audioFile);
+  }
+
+  const firstImage = new Image();
+  firstImage.src = imageData[0].url;
+  await firstImage.decode();
+  const outW = firstImage.width;
+  const outH = firstImage.height;
+
+  const filterComplex = `[0:v]format=yuv420p,setsar=1,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2[v]`;
+
+  const cmd = [
+    "-y",
+    ...inputs,
+    "-filter_complex", filterComplex,
+    "-map", "[v]",
+  ];
+
+  if (hasAudio) {
+    cmd.push("-map", "1:a");
+    cmd.push("-c:a", "aac");
+  }
+
+  cmd.push(
+    "-c:v", "libx264",
+    "-r", fps.toString(),
+    "-pix_fmt", "yuv420p",
+    "-t", duration.toString(),
+    "-preset", "ultrafast",
+    outputFilename
+  );
+
+  ffmpeg.on('progress', ({ time }) => {
+    const framesProcessed = Math.round(time / 1000000 * fps);
+    setProgress(framesProcessed);
+  });
+
+  console.log(`⚙️ FFmpeg cmd for video ${index}:`, cmd.join(" "));
+  await ffmpeg.exec(cmd);
+
+  const data = await ffmpeg.readFile(outputFilename);
+  return new Blob([data.buffer], { type: "video/mp4" });
+};
+
   const generateVideoWithCompatibilityMode = async () => {
     setIsLoading(true);
     setError(null);
@@ -489,6 +595,18 @@ const generateVideoWithFFmpeg = async () => {
 
   const handleCancel = () => {
     isCancelledRef.current = true;
+  };
+
+  const handleDownloadAll = async () => {
+    const zip = new JSZip();
+    for (const video of videos) {
+      const response = await fetch(video.url);
+      const blob = await response.blob();
+      zip.file(video.name, blob);
+    }
+    zip.generateAsync({ type: 'blob' }).then((content) => {
+      saveAs(content, 'videos.zip');
+    });
   };
 
   const formatTime = (seconds) => {
@@ -726,6 +844,19 @@ const generateVideoWithFFmpeg = async () => {
                   </Select>
                 </FormControl>
               </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={generatePerRecord}
+                      onChange={(e) => setGeneratePerRecord(e.target.checked)}
+                      sx={{ color: 'white' }}
+                    />
+                  }
+                  label="Gerar um vídeo por registro"
+                  sx={{ color: 'white' }}
+                />
+              </Grid>
             </Grid>
           </Paper>
 
@@ -816,6 +947,44 @@ const generateVideoWithFFmpeg = async () => {
             </Box>
           )}
 
+          {videos.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
+                Vídeos Gerados
+              </Typography>
+              {videos.map((v, index) => (
+                <Paper
+                  key={index}
+                  elevation={2}
+                  sx={{
+                    p: 2,
+                    mb: 2,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(255,255,255,0.15)',
+                    borderRadius: 2,
+                  }}
+                >
+                  <Typography sx={{ color: 'white' }}>{v.name}</Typography>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<Download />}
+                    onClick={() => {
+                      const a = document.createElement('a');
+                      a.href = v.url;
+                      a.download = v.name;
+                      a.click();
+                    }}
+                  >
+                    Baixar
+                  </Button>
+                </Paper>
+              ))}
+            </Box>
+          )}
+
           <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
             <Button
               variant="contained"
@@ -864,6 +1033,23 @@ const generateVideoWithFFmpeg = async () => {
             >
               Exportar Vídeo
             </Button>
+
+            {videos.length > 0 && (
+                <Button
+                  variant="contained"
+                  onClick={handleDownloadAll}
+                  disabled={isLoading}
+                  startIcon={<Download />}
+                  sx={{
+                    flex: 1,
+                    minWidth: 200,
+                    background: 'linear-gradient(45deg, #4caf50, #81c784)',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Baixar Todos
+                </Button>
+            )}
           </Box>
         </CardContent>
       </Card>
