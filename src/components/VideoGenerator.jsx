@@ -45,6 +45,7 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [sliderMaxX, setSliderMaxX] = useState(100);
   const [sliderMaxY, setSliderMaxY] = useState(100);
   const [narrationVideoSize, setNarrationVideoSize] = useState({ width: 0, height: 0 });
+  const [imageOffset, setImageOffset] = useState({ x: 0, y: 0 });
   const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
@@ -730,6 +731,35 @@ const generateSingleVideo = async (imageData, audioData, index) => {
     });
   };
 
+  const calculateImageOffset = () => {
+    if (imageContainerRef.current) {
+      const container = imageContainerRef.current;
+      const image = container.querySelector('img');
+      if (image) {
+        const containerRatio = container.offsetWidth / container.offsetHeight;
+        const imageRatio = image.naturalWidth / image.naturalHeight;
+        let x = 0;
+        let y = 0;
+        if (containerRatio > imageRatio) {
+          const scale = container.offsetHeight / image.naturalHeight;
+          const imageWidth = image.naturalWidth * scale;
+          x = (container.offsetWidth - imageWidth) / 2;
+        } else {
+          const scale = container.offsetWidth / image.naturalWidth;
+          const imageHeight = image.naturalHeight * scale;
+          y = (container.offsetHeight - imageHeight) / 2;
+        }
+        setImageOffset({ x, y });
+      }
+    }
+  };
+
+  useEffect(() => {
+    calculateImageOffset();
+    window.addEventListener('resize', calculateImageOffset);
+    return () => window.removeEventListener('resize', calculateImageOffset);
+  }, [generatedImages, currentImageIndex]);
+
   const formatTime = (seconds) => {
     if (seconds < 60) return `${seconds} segundos`;
     const minutes = Math.floor(seconds / 60);
@@ -1189,8 +1219,8 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                     width: `${(narrationVideoSize.width / imageContainerRef.current?.offsetWidth * 100) || 0}%`,
                     height: `${(narrationVideoSize.height / imageContainerRef.current?.offsetHeight * 100) || 0}%`,
                     border: '2px dashed white',
-                    bottom: `${(narrationVideoPosition.y / imageContainerRef.current?.offsetHeight * 100) || 0}%`,
-                    left: `${(narrationVideoPosition.x / imageContainerRef.current?.offsetWidth * 100) || 0}%`,
+                    bottom: `${((narrationVideoPosition.y + imageOffset.y) / imageContainerRef.current?.offsetHeight * 100) || 0}%`,
+                    left: `${((narrationVideoPosition.x + imageOffset.x) / imageContainerRef.current?.offsetWidth * 100) || 0}%`,
                     boxSizing: 'border-box',
                   }}
                 />
