@@ -1684,14 +1684,14 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
           )}
 
           {/* Passo 5: Geração de Áudio */}
-          {activeStep === 5 && (
+          <div hidden={activeStep !== 5}>
             <AudioGenerator
               csvData={csvData}
               fieldPositions={fieldPositions}
               onAudiosGenerated={setGeneratedAudioData}
               initialAudioData={generatedAudioData}
             />
-          )}
+          </div>
 
           {/* Passo 6: Geração de Vídeo */}
           {activeStep === 6 && (
