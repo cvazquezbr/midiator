@@ -1,9 +1,10 @@
 .sound-wave-container {
   display: flex;
-  justify-content: center;
   align-items: center;
   height: 50px;
+  width: 100%;
   margin-top: 16px;
+  overflow: hidden;
 }
 
 .sound-wave-bar {
