@@ -323,9 +323,8 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
                             whiteSpace: 'nowrap'
                           }}
                           secondaryTypographyProps={{
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
+                            whiteSpace: 'normal',
+                            wordWrap: 'break-word'
                           }}
                         />
                       </Box>
