@@ -302,36 +302,34 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
                   key={index}
                   sx={{
                     display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    borderBottom: '1px solid #eee'
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    borderBottom: '1px solid #eee',
+                    p: 2
                   }}
                 >
-                  <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
-                      <ListItemIcon sx={{ minWidth: 'auto', mr: 1.5 }}>
-                        <Audiotrack />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={`Slide ${index + 1}`}
-                        secondary={audio.text}
-                        primaryTypographyProps={{
-                          fontWeight: 'bold'
-                        }}
-                        secondaryTypographyProps={{
-                          style: {
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            maxWidth: 'calc(100vw - 250px)'
-                          }
-                        }}
-                      />
-                    </Box>
-                    <Chip icon={<Timer />} label={`${audio.duration.toFixed(1)}s`} sx={{ mr: 1, ml: 1 }} />
+                  <Box sx={{ display: 'flex', alignItems: 'center', maxWidth: 'calc(100% - 180px)', overflow: 'hidden' }}>
+                    <ListItemIcon sx={{ minWidth: 'auto', mr: 1.5 }}>
+                      <Audiotrack />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={`Slide ${index + 1}`}
+                      secondary={audio.text}
+                      primaryTypographyProps={{
+                        fontWeight: 'bold',
+                        whiteSpace: 'nowrap'
+                      }}
+                      secondaryTypographyProps={{
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}
+                    />
                   </Box>
 
-                  <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mt: { xs: 1, sm: 0 } }}>
+                    <Chip icon={<Timer />} label={`${audio.duration.toFixed(1)}s`} sx={{ mr: 1 }} />
                     <IconButton onClick={() => handlePlayPause(index)} size="small">
                       {currentlyPlaying === index ? <Pause /> : <PlayArrow />}
                     </IconButton>
@@ -345,9 +343,9 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated }) => {
                       };
                       let newAudio;
                       if (audioMode.startsWith('google-tts')) {
-                          newAudio = await generateAudioGoogleTTS(audio.text, voiceMap[audioMode]);
+                        newAudio = await generateAudioGoogleTTS(audio.text, voiceMap[audioMode]);
                       } else {
-                          newAudio = await generateAudioBrowser(audio.text);
+                        newAudio = await generateAudioBrowser(audio.text);
                       }
                       const newAudioData = [...audioData];
                       newAudioData[index] = newAudio;
