@@ -46,6 +46,7 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [sliderMaxY, setSliderMaxY] = useState(100);
   const [narrationVideoSize, setNarrationVideoSize] = useState({ width: 0, height: 0 });
   const [imageOffset, setImageOffset] = useState({ x: 0, y: 0 });
+  const [lockAspectRatio, setLockAspectRatio] = useState(true);
   const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
@@ -523,8 +524,8 @@ const generateSingleVideo = async (imageData, audioData, index) => {
         img.src = generatedImages[0].url;
       });
 
-      setSliderMaxX(backgroundDimensions.width - narrationDimensions.width);
-      setSliderMaxY(backgroundDimensions.height - narrationDimensions.height);
+      setSliderMaxX(backgroundDimensions.width);
+      setSliderMaxY(backgroundDimensions.height);
 
       const overlayY = backgroundDimensions.height - narrationDimensions.height - narrationVideoPosition.y;
 
@@ -1145,7 +1146,14 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                   <Typography gutterBottom sx={{ color: 'white' }}>Largura</Typography>
                   <Slider
                     value={narrationVideoSize.width}
-                    onChange={(e, newValue) => setNarrationVideoSize({ ...narrationVideoSize, width: newValue })}
+                    onChange={(e, newValue) => {
+                      if (lockAspectRatio) {
+                        const ratio = narrationVideoSize.height / narrationVideoSize.width;
+                        setNarrationVideoSize({ width: newValue, height: Math.round(newValue * ratio) });
+                      } else {
+                        setNarrationVideoSize({ ...narrationVideoSize, width: newValue });
+                      }
+                    }}
                     aria-labelledby="width-slider"
                     valueLabelDisplay="auto"
                     max={sliderMaxX}
@@ -1156,10 +1164,30 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                   <Typography gutterBottom sx={{ color: 'white' }}>Altura</Typography>
                   <Slider
                     value={narrationVideoSize.height}
-                    onChange={(e, newValue) => setNarrationVideoSize({ ...narrationVideoSize, height: newValue })}
+                    onChange={(e, newValue) => {
+                      if (lockAspectRatio) {
+                        const ratio = narrationVideoSize.width / narrationVideoSize.height;
+                        setNarrationVideoSize({ height: newValue, width: Math.round(newValue * ratio) });
+                      } else {
+                        setNarrationVideoSize({ ...narrationVideoSize, height: newValue });
+                      }
+                    }}
                     aria-labelledby="height-slider"
                     valueLabelDisplay="auto"
                     max={sliderMaxY}
+                    sx={{ color: 'white' }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={lockAspectRatio}
+                        onChange={(e) => setLockAspectRatio(e.target.checked)}
+                        sx={{ color: 'white' }}
+                      />
+                    }
+                    label="Manter proporção"
                     sx={{ color: 'white' }}
                   />
                 </Grid>
