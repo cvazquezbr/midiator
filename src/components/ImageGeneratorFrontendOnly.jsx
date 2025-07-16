@@ -296,10 +296,10 @@ const ImageGeneratorFrontendOnly = ({
             // Aplicar configurações de texto
             applyTextEffects(ctx, { ...style, fontSize: fontSize });
 
-            // O padding do editor (8px) precisa ser dimensionado para o tamanho real da imagem.
-            // A referência para a escala é o tamanho em que o editor foi exibido.
-            const editorReferenceWidth = displayedImageSize.width > 0 ? displayedImageSize.width : 1080; // um fallback razoável
-            const paddingScaleFactor = img.width / editorReferenceWidth;
+            const isPortrait = originalImageSize && originalImageSize.height > originalImageSize.width;
+            const editorReferenceSize = isPortrait ? displayedImageSize.height : displayedImageSize.width;
+            const imageReferenceSize = isPortrait ? img.height : img.width;
+            const paddingScaleFactor = editorReferenceSize > 0 ? imageReferenceSize / editorReferenceSize : 0;
             const scaledPadding = 8 * paddingScaleFactor;
 
             // Área efetiva para o texto dentro da caixa
@@ -592,8 +592,10 @@ const ImageGeneratorFrontendOnly = ({
         const fontSize = style.fontSize || 24;
         applyTextEffects(ctx, { ...style, fontSize: fontSize });
 
-        const editorReferenceWidth = displayedImageSize.width > 0 ? displayedImageSize.width : 1080;
-        const paddingScaleFactor = img.width / editorReferenceWidth;
+        const isPortrait = originalImageSize && originalImageSize.height > originalImageSize.width;
+        const editorReferenceSize = isPortrait ? displayedImageSize.height : displayedImageSize.width;
+        const imageReferenceSize = isPortrait ? img.height : img.width;
+        const paddingScaleFactor = editorReferenceSize > 0 ? imageReferenceSize / editorReferenceSize : 0;
         const scaledPadding = 8 * paddingScaleFactor;
 
         const effectiveTextWidth = Math.max(0, posPx.width - (2 * scaledPadding));
