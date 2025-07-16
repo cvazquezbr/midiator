@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ProgressModal from './ProgressModal';
 import {
   Box,
   Button,
@@ -51,6 +52,9 @@ const ImageGeneratorFrontendOnly = ({
   originalImageSize
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const isCancelledRef = useRef(false);
   // O estado local `generatedImages` será inicializado com `initialGeneratedImagesData`
   // e depois atualizado. Ele também chamará `setGeneratedImagesData` para sincronizar com App.jsx.
   const [generatedImages, setGeneratedImages] = useState(initialGeneratedImagesData || []);
@@ -221,6 +225,9 @@ const ImageGeneratorFrontendOnly = ({
     }
 
     setIsGenerating(true);
+    setShowProgressModal(true);
+    setProgress(0);
+    isCancelledRef.current = false;
     const images = [];
 
     try {
@@ -233,6 +240,9 @@ const ImageGeneratorFrontendOnly = ({
       });
 
       for (let i = 0; i < csvData.length; i++) {
+        if (isCancelledRef.current) {
+          break;
+        }
         const record = csvData[i];
 
         // Criar canvas para cada registro
@@ -361,16 +371,24 @@ const ImageGeneratorFrontendOnly = ({
         };
 
         images.push(imageData);
+        setProgress(i + 1);
       }
 
-      setGeneratedImages(images);
+      if (!isCancelledRef.current) {
+        setGeneratedImages(images);
+      }
 
     } catch (error) {
       console.error('Erro na geração de imagens:', error);
       alert(`Erro na geração de imagens: ${error.message}`);
     } finally {
       setIsGenerating(false);
+      setShowProgressModal(false);
     }
+  };
+
+  const handleCancelGeneration = () => {
+    isCancelledRef.current = true;
   };
 
   // Função para fazer download de uma imagem
@@ -1160,6 +1178,14 @@ const ImageGeneratorFrontendOnly = ({
         style={{ display: 'none' }}
         ref={individualImageInputRef}
         onChange={handleIndividualImageUpload}
+      />
+      <ProgressModal
+        open={showProgressModal}
+        progress={progress}
+        total={csvData.length}
+        onCancel={handleCancelGeneration}
+        title="Gerando Imagens"
+        progressText={`Gerando imagem ${progress} de ${csvData.length}...`}
       />
     </Box>
   );
