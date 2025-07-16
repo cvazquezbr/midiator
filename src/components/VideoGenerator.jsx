@@ -10,7 +10,6 @@ import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh, Download } from 
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import ProgressModal from './ProgressModal';
-import Placeholder from './Placeholder';
 
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 
@@ -1183,11 +1182,17 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                   <Typography>Nenhuma imagem disponível</Typography>
                 </Box>
               }
-              {videoMode === 'narration' && narrationVideo && (
-                <Placeholder
-                  placeholderDimensions={placeholderDimensions}
-                  narrationVideoPosition={narrationVideoPosition}
-                  imageContainerRef={imageContainerRef}
+              {videoMode === 'narration' && narrationVideo && narrationVideoSize.width > 0 && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    width: `${(narrationVideoSize.width / imageContainerRef.current?.offsetWidth * 100) || 0}%`,
+                    height: `${(narrationVideoSize.height / imageContainerRef.current?.offsetHeight * 100) || 0}%`,
+                    border: '2px dashed white',
+                    bottom: `${(narrationVideoPosition.y / imageContainerRef.current?.offsetHeight * 100) || 0}%`,
+                    left: `${(narrationVideoPosition.x / imageContainerRef.current?.offsetWidth * 100) || 0}%`,
+                    boxSizing: 'border-box',
+                  }}
                 />
               )}
             </Box>
