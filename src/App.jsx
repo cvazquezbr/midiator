@@ -497,6 +497,24 @@ function App() {
       })
     );
 
+    const serializableGeneratedAudio = await Promise.all(
+        generatedAudioData.map(async (audio) => {
+            let audioBase64 = null;
+            if (audio.blob) {
+                try {
+                    audioBase64 = await blobToBase64(audio.blob);
+                } catch (error) {
+                    console.error("Erro ao converter blob de áudio para Base64:", error);
+                }
+            }
+            return {
+                ...audio,
+                blob: undefined,
+                audioBase64: audioBase64,
+            };
+        })
+    );
+
     const stateToSave = {
       version: "1.1", // Incrementar versão para refletir a nova estrutura
       backgroundImageUrl: backgroundImage, // Este é o BG global/template, já é uma string (dataURL ou URL externa)
@@ -506,6 +524,7 @@ function App() {
       colorPalette: colorPalette,
       csvData: csvData,
       generatedImages: serializableGeneratedImages, // Salvar os dados das imagens geradas
+      generatedAudio: serializableGeneratedAudio,
     };
 
     const jsonString = JSON.stringify(stateToSave, null, 2);
@@ -613,6 +632,29 @@ function App() {
             } else {
               // console.log("App.jsx - handleLoadStateFromFile - No generatedImages in JSON or old version, clearing generatedImagesData."); // LOG REMOVED
               setGeneratedImagesData([]); // Limpar se não houver dados ou for versão antiga
+            }
+
+            if (loadedState.version === "1.1" && loadedState.generatedAudio) {
+                const restoredGeneratedAudio = await Promise.all(
+                    loadedState.generatedAudio.map(async (audioData) => {
+                        let blob = null;
+                        if (audioData.audioBase64) {
+                            try {
+                                blob = await base64ToBlob(audioData.audioBase64);
+                            } catch (error) {
+                                console.error("Erro ao converter base64 para blob de áudio ao carregar:", error);
+                            }
+                        }
+                        return {
+                            ...audioData,
+                            blob: blob,
+                            audioBase64: undefined,
+                        };
+                    })
+                );
+                setGeneratedAudioData(restoredGeneratedAudio);
+            } else {
+                setGeneratedAudioData([]);
             }
 
             // Navegação de passo
