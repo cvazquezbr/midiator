@@ -50,8 +50,8 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
     height: 0,
     duration: 0,
   });
-  const [normalizedVideoPosition, setNormalizedVideoPosition] = useState({ x: 0.5, y: 0.5 }); // Center
-  const [videoScale, setVideoScale] = useState(1); // This will now be a multiplier
+  const [normalizedVideoPosition, setNormalizedVideoPosition] = useState({ x: 0, y: 0 });
+  const [videoScale, setVideoScale] = useState(1);
 
 
   const isCancelledRef = useRef(false);
@@ -728,8 +728,14 @@ const generateSingleVideo = async (imageData, audioData, index) => {
           height: videoElement.videoHeight,
           duration: videoElement.duration,
         });
+        const scaledWidth = videoElement.videoWidth * initialScale;
+        const scaledHeight = videoElement.videoHeight * initialScale;
+
         setVideoScale(initialScale);
-        setNormalizedVideoPosition({ x: 0.5, y: 0.5 });
+        setNormalizedVideoPosition({
+          x: (bgWidth - scaledWidth) / 2 / bgWidth,
+          y: (bgHeight - scaledHeight) / 2 / bgHeight,
+         });
       };
     } else {
       setError('Formato de vídeo inválido. Use .mp4, .mov ou .webm');
