@@ -532,13 +532,14 @@ const generateSingleVideo = async (imageData, audioData, index) => {
         ? `colorkey=color=${chromaKeyColor}:similarity=${chromaKeySimilarity}:blend=${chromaKeyBlend}`
         : `chromakey=color=${chromaKeyColor}:similarity=${chromaKeySimilarity}:blend=${chromaKeyBlend}`;
 
-      const scaledWidth = Math.round(backgroundDimensions.width * zoom);
-      const scaledHeight = -1; // Preserve aspect ratio
+      const finalScale = narrationVideoSize.width / imageContainerRef.current.offsetWidth;
+      const finalWidth = Math.round(backgroundDimensions.width * finalScale);
+      const finalHeight = -1; // Preserve aspect ratio
 
       const cmd = [
         '-i', 'background.png',
         '-i', 'narration.mp4',
-        '-filter_complex', `[1:v]scale=${scaledWidth}:${scaledHeight}[scaled];[scaled]${filter}[ckout];[0:v][ckout]overlay=${narrationVideoPosition.x}:${overlayY}[outv]`,
+        '-filter_complex', `[1:v]scale=${finalWidth}:${finalHeight}[scaled];[scaled]${filter}[ckout];[0:v][ckout]overlay=${narrationVideoPosition.x}:${overlayY}[outv]`,
         '-map', '[outv]',
         '-map', '1:a?',
         '-c:a', 'aac',
