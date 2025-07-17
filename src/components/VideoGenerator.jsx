@@ -46,7 +46,10 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [sliderMaxY, setSliderMaxY] = useState(100);
   const [narrationVideoSize, setNarrationVideoSize] = useState({ width: 0, height: 0 });
   const [imageOffset, setImageOffset] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(0.5);
+  const [zoomFactor, setZoomFactor] = useState(1);
+  const [initialScale, setInitialScale] = useState(1);
+  const [offsetX, setOffsetX] = useState(0);
+  const [offsetY, setOffsetY] = useState(0);
   const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
@@ -532,14 +535,13 @@ const generateSingleVideo = async (imageData, audioData, index) => {
         ? `colorkey=color=${chromaKeyColor}:similarity=${chromaKeySimilarity}:blend=${chromaKeyBlend}`
         : `chromakey=color=${chromaKeyColor}:similarity=${chromaKeySimilarity}:blend=${chromaKeyBlend}`;
 
-      const finalScale = narrationVideoSize.width / imageContainerRef.current.offsetWidth;
-      const finalWidth = Math.round(backgroundDimensions.width * finalScale);
-      const finalHeight = -1; // Preserve aspect ratio
+      const finalWidth = Math.round(originalNarrationVideoSize.current.width * initialScale * zoomFactor);
+      const finalHeight = Math.round(originalNarrationVideoSize.current.height * initialScale * zoomFactor);
 
       const cmd = [
         '-i', 'background.png',
         '-i', 'narration.mp4',
-        '-filter_complex', `[1:v]scale=${finalWidth}:${finalHeight}[scaled];[scaled]${filter}[ckout];[0:v][ckout]overlay=${narrationVideoPosition.x}:${overlayY}[outv]`,
+        '-filter_complex', `[1:v]scale=${finalWidth}:${finalHeight}[scaled];[scaled]${filter}[ckout];[0:v][ckout]overlay=${offsetX}:${offsetY}[outv]`,
         '-map', '[outv]',
         '-map', '1:a?',
         '-c:a', 'aac',
@@ -716,15 +718,15 @@ const generateSingleVideo = async (imageData, audioData, index) => {
   const [originalNarrationVideoSize, setOriginalNarrationVideoSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    if (originalNarrationVideoSize.width > 0 && imageContainerRef.current) {
-      const newWidth = imageContainerRef.current.offsetWidth * zoom;
-      const ratio = originalNarrationVideoSize.height / originalNarrationVideoSize.width;
+    if (originalNarrationVideoSize.width > 0) {
+      const newWidth = originalNarrationVideoSize.width * initialScale * zoomFactor;
+      const newHeight = originalNarrationVideoSize.height * initialScale * zoomFactor;
       setNarrationVideoSize({
         width: newWidth,
-        height: newWidth * ratio,
+        height: newHeight,
       });
     }
-  }, [zoom, originalNarrationVideoSize]);
+  }, [zoomFactor, initialScale, originalNarrationVideoSize]);
 
   const handleNarrationVideoUpload = async (event) => {
     const file = event.target.files[0];
@@ -733,6 +735,27 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       const dimensions = await getVideoDimensions(file);
       setOriginalNarrationVideoSize(dimensions);
       setNarrationVideoSize(dimensions);
+
+      if (generatedImages.length > 0) {
+        const image = new Image();
+        image.src = generatedImages[0].url;
+        image.onload = () => {
+          const W_f = image.width;
+          const H_f = image.height;
+          const AR_f = W_f / H_f;
+          const W_v = dimensions.width;
+          const H_v = dimensions.height;
+          const AR_v = W_v / H_v;
+
+          let scale;
+          if (AR_v > AR_f) {
+            scale = W_f / W_v;
+          } else {
+            scale = H_f / H_v;
+          }
+          setInitialScale(scale);
+        };
+      }
     }
   };
 
@@ -1150,8 +1173,8 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                 <Grid item xs={12} sm={6}>
                   <Typography gutterBottom sx={{ color: 'white' }}>Posição X</Typography>
                   <Slider
-                    value={narrationVideoPosition.x}
-                    onChange={(e, newValue) => setNarrationVideoPosition({ ...narrationVideoPosition, x: newValue })}
+                    value={offsetX}
+                    onChange={(e, newValue) => setOffsetX(newValue)}
                     aria-labelledby="x-slider"
                     valueLabelDisplay="auto"
                     max={sliderMaxX}
@@ -1161,8 +1184,8 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                 <Grid item xs={12} sm={6}>
                   <Typography gutterBottom sx={{ color: 'white' }}>Posição Y (do fundo)</Typography>
                   <Slider
-                    value={narrationVideoPosition.y}
-                    onChange={(e, newValue) => setNarrationVideoPosition({ ...narrationVideoPosition, y: newValue })}
+                    value={offsetY}
+                    onChange={(e, newValue) => setOffsetY(newValue)}
                     aria-labelledby="y-slider"
                     valueLabelDisplay="auto"
                     max={sliderMaxY}
@@ -1172,8 +1195,8 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                 <Grid item xs={12}>
                   <Typography gutterBottom sx={{ color: 'white' }}>Zoom</Typography>
                   <Slider
-                    value={zoom}
-                    onChange={(e, newValue) => setZoom(newValue)}
+                    value={zoomFactor}
+                    onChange={(e, newValue) => setZoomFactor(newValue)}
                     aria-labelledby="zoom-slider"
                     valueLabelDisplay="auto"
                     min={0.1}
