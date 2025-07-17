@@ -716,6 +716,17 @@ const generateSingleVideo = async (imageData, audioData, index) => {
 
   const [originalNarrationVideoSize, setOriginalNarrationVideoSize] = useState({ width: 0, height: 0 });
 
+  useEffect(() => {
+    if (originalNarrationVideoSize.width > 0 && imageContainerRef.current) {
+      const newWidth = imageContainerRef.current.offsetWidth * zoom;
+      const ratio = originalNarrationVideoSize.height / originalNarrationVideoSize.width;
+      setNarrationVideoSize({
+        width: newWidth,
+        height: newWidth * ratio,
+      });
+    }
+  }, [zoom, originalNarrationVideoSize]);
+
   const handleNarrationVideoUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
