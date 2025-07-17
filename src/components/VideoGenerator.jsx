@@ -173,8 +173,6 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
 
     if (generatePerRecord) {
       await generateVideoPerRecord();
-    } else if (videoMode === 'narration') {
-      await generateNarrationVideo();
     } else {
       const totalVideoFrames = generatedImages.reduce((acc, _, i) => {
         const duration = (generatedAudioData && generatedAudioData[i]) ? generatedAudioData[i].duration : slideDuration;
@@ -779,17 +777,6 @@ const generateSingleVideo = async (imageData, audioData, index) => {
   };
 
   useEffect(() => {
-    if (originalNarrationVideoSize.width > 0) {
-      const newWidth = originalNarrationVideoSize.width * initialScale * zoomFactor;
-      const newHeight = originalNarrationVideoSize.height * initialScale * zoomFactor;
-      setNarrationVideoSize({
-        width: newWidth,
-        height: newHeight,
-      });
-    }
-  }, [zoomFactor, initialScale, originalNarrationVideoSize]);
-
-  useEffect(() => {
     const resizeObserver = new ResizeObserver(() => {
       calculateImageOffset();
     });
@@ -804,6 +791,17 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       }
     };
   }, [generatedImages, currentImageIndex]);
+
+  useEffect(() => {
+    if (originalNarrationVideoSize.width > 0) {
+      const newWidth = originalNarrationVideoSize.width * initialScale * zoomFactor;
+      const newHeight = originalNarrationVideoSize.height * initialScale * zoomFactor;
+      setNarrationVideoSize({
+        width: newWidth,
+        height: newHeight,
+      });
+    }
+  }, [zoomFactor, initialScale, originalNarrationVideoSize]);
 
   const formatTime = (seconds) => {
     if (seconds < 60) return `${seconds} segundos`;
