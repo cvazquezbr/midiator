@@ -572,10 +572,10 @@ const TextBox = ({
   const lineHeight = baseFontSize * (style.lineHeightMultiplier || 1.2);
   const scaledLineHeight = lineHeight * fontScale;
 
-  // Para o wrap, usamos a largura da caixa em pixels no tamanho renderizado
-  const renderedBoxWidth = (position.width / 100) * (containerSize.width || 1);
+  // Para o wrap, usamos a largura da caixa em pixels no tamanho original da imagem
+  const originalBoxWidth = (position.width / 100) * (originalImageSize?.width || 1);
   const paddingInPixels = 8 * 2; // 8px de cada lado
-  const textLines = wrapText(editedContent, renderedBoxWidth - paddingInPixels, scaledFontSize);
+  const textLines = wrapText(editedContent, originalBoxWidth - paddingInPixels, baseFontSize);
 
   const handleSize = isMobile ? 24 : 12; // Aumentado o tamanho do handle
 
