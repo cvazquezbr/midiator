@@ -739,6 +739,45 @@ const generateSingleVideo = async (imageData, audioData, index) => {
     });
   };
 
+  const calculateImageOffset = () => {
+    if (imageContainerRef.current) {
+      const container = imageContainerRef.current;
+      const image = container.querySelector('img');
+      if (image) {
+        const containerRatio = container.offsetWidth / container.offsetHeight;
+        const imageRatio = image.naturalWidth / image.naturalHeight;
+        let x = 0;
+        let y = 0;
+        if (containerRatio > imageRatio) {
+          const scale = container.offsetHeight / image.naturalHeight;
+          const imageWidth = image.naturalWidth * scale;
+          x = (container.offsetWidth - imageWidth) / 2;
+        } else {
+          const scale = container.offsetWidth / image.naturalWidth;
+          const imageHeight = image.naturalHeight * scale;
+          y = (container.offsetHeight - imageHeight) / 2;
+        }
+        setImageOffset({ x, y });
+      }
+    }
+  };
+
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver(() => {
+      calculateImageOffset();
+    });
+
+    if (imageContainerRef.current) {
+      resizeObserver.observe(imageContainerRef.current);
+    }
+
+    return () => {
+      if (imageContainerRef.current) {
+        resizeObserver.unobserve(imageContainerRef.current);
+      }
+    };
+  }, [generatedImages, currentImageIndex]);
+
   const formatTime = (seconds) => {
     if (seconds < 60) return `${seconds} segundos`;
     const minutes = Math.floor(seconds / 60);
@@ -1186,11 +1225,11 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                 <Box
                   sx={{
                     position: 'absolute',
-                    width: `${originalNarrationVideoSize.current.width * zoom * (imageContainerRef.current?.offsetWidth / originalNarrationVideoSize.current.width) || 0}px`,
-                    height: `${originalNarrationVideoSize.current.height * zoom * (imageContainerRef.current?.offsetWidth / originalNarrationVideoSize.current.width) || 0}px`,
+                    width: `${narrationVideoSize.width}px`,
+                    height: `${narrationVideoSize.height}px`,
                     border: '2px dashed white',
-                    bottom: `${narrationVideoPosition.y}px`,
-                    left: `${narrationVideoPosition.x}px`,
+                    bottom: `${narrationVideoPosition.y + imageOffset.y}px`,
+                    left: `${narrationVideoPosition.x + imageOffset.x}px`,
                     boxSizing: 'border-box',
                   }}
                 />
