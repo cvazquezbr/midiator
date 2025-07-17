@@ -152,6 +152,29 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
     return () => clearInterval(interval);
   }, [isPlaying, slideDuration, generatedImages.length]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (narrationVideoData.url && imageContainerRef.current) {
+        const bgWidth = imageContainerRef.current.offsetWidth;
+        const bgHeight = imageContainerRef.current.offsetHeight;
+        const scaleX = bgWidth / narrationVideoData.width;
+        const scaleY = bgHeight / narrationVideoData.height;
+        const scale = Math.min(scaleX, scaleY, 1);
+
+        const scaledWidth = narrationVideoData.width * scale;
+        const scaledHeight = narrationVideoData.height * scale;
+        setVideoPosition({
+          x: (bgWidth - scaledWidth) / 2,
+          y: (bgHeight - scaledHeight) / 2,
+        });
+        setVideoScale(scale);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [narrationVideoData.url, narrationVideoData.width, narrationVideoData.height]);
+
   const handleGeneratePreview = () => {
     setCurrentImageIndex(0);
     setIsPlaying(!isPlaying);
