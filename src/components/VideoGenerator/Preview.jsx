@@ -31,15 +31,11 @@ const Preview = ({
 
   const handleDrag = (e, ui) => {
     if (imageContainerRef.current) {
-      const { x, y } = videoPxPosition;
-      const { deltaX, deltaY } = ui;
-      const newX = x + deltaX;
-      const newY = y + deltaY;
       const bgWidth = imageContainerRef.current.offsetWidth;
       const bgHeight = imageContainerRef.current.offsetHeight;
       setNormalizedVideoPosition({
-        x: newX / bgWidth,
-        y: newY / bgHeight,
+        x: ui.x / bgWidth,
+        y: ui.y / bgHeight,
       });
     }
   };
