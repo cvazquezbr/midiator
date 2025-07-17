@@ -3,8 +3,7 @@ import {
   Box, Button, Typography, Card, CardContent, Grid,
   LinearProgress, Alert, Select, MenuItem,
   FormControl, InputLabel, TextField, Paper,
-  Snackbar, CircularProgress, IconButton, Tooltip, Checkbox, FormControlLabel,
-  ToggleButton, ToggleButtonGroup, Slider
+  Snackbar, CircularProgress, IconButton, Tooltip, Checkbox, FormControlLabel
 } from '@mui/material';
 import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh, Download } from '@mui/icons-material';
 import JSZip from 'jszip';
@@ -50,6 +49,7 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [initialScale, setInitialScale] = useState(1);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
+  const [originalNarrationVideoSize, setOriginalNarrationVideoSize] = useState({ width: 0, height: 0 });
   const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
@@ -83,6 +83,7 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
     };
     loadFfmpeg();
   }, [ffmpegLoaded]);
+
 
   const transitionOptions = [
     { value: 'fade', label: 'Fade (Recomendado)' },
@@ -174,8 +175,7 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
       await generateVideoPerRecord();
     } else if (videoMode === 'narration') {
       await generateNarrationVideo();
-    }
-    else {
+    } else {
       const totalVideoFrames = generatedImages.reduce((acc, _, i) => {
         const duration = (generatedAudioData && generatedAudioData[i]) ? generatedAudioData[i].duration : slideDuration;
         return acc + Math.floor(duration * fps);
@@ -487,95 +487,6 @@ const generateSingleVideo = async (imageData, audioData, index) => {
   return new Blob([data.buffer], { type: "video/mp4" });
 };
 
-  const generateNarrationVideo = async () => {
-    if (!narrationVideo) {
-      setError('Por favor, carregue um vídeo de narração.');
-      setSnackbarOpen(true);
-      return;
-    }
-
-    if (generatedImages.length === 0) {
-      setError('Nenhuma imagem de fundo disponível.');
-      setSnackbarOpen(true);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    setVideo(null);
-    setProgress(0);
-    startTimeRef.current = Date.now();
-
-    const ffmpeg = ffmpegRef.current;
-    try {
-      await ffmpeg.deleteFile("output.mp4").catch(() => {});
-      await ffmpeg.deleteFile("narration.mp4").catch(() => {});
-      await ffmpeg.deleteFile("background.png").catch(() => {});
-
-      const narrationData = await fetchFile(narrationVideo);
-      await ffmpeg.writeFile('narration.mp4', narrationData);
-
-      const backgroundImageData = await fetchFile(generatedImages[0].url);
-      await ffmpeg.writeFile('background.png', backgroundImageData);
-
-      const narrationDimensions = await getVideoDimensions(narrationVideo);
-      const backgroundDimensions = await new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve({ width: img.width, height: img.height });
-        img.onerror = reject;
-        img.src = generatedImages[0].url;
-      });
-
-      setSliderMaxX(backgroundDimensions.width);
-      setSliderMaxY(backgroundDimensions.height);
-
-      const overlayY = backgroundDimensions.height - narrationDimensions.height - narrationVideoPosition.y;
-
-      const filter = chromaKeyColor.toUpperCase() === '#FFFFFF'
-        ? `colorkey=color=${chromaKeyColor}:similarity=${chromaKeySimilarity}:blend=${chromaKeyBlend}`
-        : `chromakey=color=${chromaKeyColor}:similarity=${chromaKeySimilarity}:blend=${chromaKeyBlend}`;
-
-      const finalWidth = Math.round(originalNarrationVideoSize.current.width * initialScale * zoomFactor);
-      const finalHeight = Math.round(originalNarrationVideoSize.current.height * initialScale * zoomFactor);
-
-      const cmd = [
-        '-i', 'background.png',
-        '-i', 'narration.mp4',
-        '-filter_complex', `[1:v]scale=${finalWidth}:${finalHeight}[scaled];[scaled]${filter}[ckout];[0:v][ckout]overlay=${offsetX}:${offsetY}[outv]`,
-        '-map', '[outv]',
-        '-map', '1:a?',
-        '-c:a', 'aac',
-        '-b:a', '192k',
-        '-c:v', 'libx264',
-        '-preset', 'ultrafast',
-        '-pix_fmt', 'yuv420p',
-        'output.mp4'
-      ];
-
-      ffmpeg.on('progress', ({ time }) => {
-        // We don't have a good way to calculate total duration here, so we'll just show a generic progress
-        setProgress(50);
-      });
-
-      console.log("⚙️ FFmpeg cmd:", cmd.join(" "));
-      await ffmpeg.exec(cmd);
-
-      const data = await ffmpeg.readFile("output.mp4");
-      const url = URL.createObjectURL(new Blob([data.buffer], { type: "video/mp4" }));
-      setVideo(url);
-    } catch (err) {
-      console.error("Erro na geração do vídeo com narração:", err);
-      setError(`Erro na geração do vídeo com narração: ${err.message}`);
-      setSnackbarOpen(true);
-    } finally {
-      setIsLoading(false);
-      setProgress(0);
-      clearInterval(progressIntervalRef.current);
-      startTimeRef.current = null;
-      setShowProgressModal(false);
-    }
-  };
-
   const generateVideoWithCompatibilityMode = async () => {
     setIsLoading(true);
     setError(null);
@@ -717,17 +628,6 @@ const generateSingleVideo = async (imageData, audioData, index) => {
 
   const [originalNarrationVideoSize, setOriginalNarrationVideoSize] = useState({ width: 0, height: 0 });
 
-  useEffect(() => {
-    if (originalNarrationVideoSize.width > 0) {
-      const newWidth = originalNarrationVideoSize.width * initialScale * zoomFactor;
-      const newHeight = originalNarrationVideoSize.height * initialScale * zoomFactor;
-      setNarrationVideoSize({
-        width: newWidth,
-        height: newHeight,
-      });
-    }
-  }, [zoomFactor, initialScale, originalNarrationVideoSize]);
-
   const handleNarrationVideoUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -794,6 +694,100 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       }
     }
   };
+
+  const generateNarrationVideo = async () => {
+    if (!narrationVideo) {
+      setError('Por favor, carregue um vídeo de narração.');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    if (generatedImages.length === 0) {
+      setError('Nenhuma imagem de fundo disponível.');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setVideo(null);
+    setProgress(0);
+    startTimeRef.current = Date.now();
+
+    const ffmpeg = ffmpegRef.current;
+    try {
+      await ffmpeg.deleteFile("output.mp4").catch(() => {});
+      await ffmpeg.deleteFile("narration.mp4").catch(() => {});
+      await ffmpeg.deleteFile("background.png").catch(() => {});
+
+      const narrationData = await fetchFile(narrationVideo);
+      await ffmpeg.writeFile('narration.mp4', narrationData);
+
+      const backgroundImageData = await fetchFile(generatedImages[0].url);
+      await ffmpeg.writeFile('background.png', backgroundImageData);
+
+      const backgroundDimensions = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve({ width: img.width, height: img.height });
+        img.onerror = reject;
+        img.src = generatedImages[0].url;
+      });
+
+      const finalWidth = Math.round(originalNarrationVideoSize.width * initialScale * zoomFactor);
+      const finalHeight = -1; // Preserve aspect ratio
+
+      const filter = chromaKeyColor.toUpperCase() === '#FFFFFF'
+        ? `colorkey=color=${chromaKeyColor}:similarity=${chromaKeySimilarity}:blend=${chromaKeyBlend}`
+        : `chromakey=color=${chromaKeyColor}:similarity=${chromaKeySimilarity}:blend=${chromaKeyBlend}`;
+
+      const cmd = [
+        '-i', 'background.png',
+        '-i', 'narration.mp4',
+        '-filter_complex', `[1:v]scale=${finalWidth}:${finalHeight}[scaled];[scaled]${filter}[ckout];[0:v][ckout]overlay=${offsetX}:${offsetY}[outv]`,
+        '-map', '[outv]',
+        '-map', '1:a?',
+        '-c:a', 'aac',
+        '-b:a', '192k',
+        '-c:v', 'libx264',
+        '-preset', 'ultrafast',
+        '-pix_fmt', 'yuv420p',
+        'output.mp4'
+      ];
+
+      ffmpeg.on('progress', ({ time }) => {
+        // We don't have a good way to calculate total duration here, so we'll just show a generic progress
+        setProgress(50);
+      });
+
+      console.log("⚙️ FFmpeg cmd:", cmd.join(" "));
+      await ffmpeg.exec(cmd);
+
+      const data = await ffmpeg.readFile("output.mp4");
+      const url = URL.createObjectURL(new Blob([data.buffer], { type: "video/mp4" }));
+      setVideo(url);
+    } catch (err) {
+      console.error("Erro na geração do vídeo com narração:", err);
+      setError(`Erro na geração do vídeo com narração: ${err.message}`);
+      setSnackbarOpen(true);
+    } finally {
+      setIsLoading(false);
+      setProgress(0);
+      clearInterval(progressIntervalRef.current);
+      startTimeRef.current = null;
+      setShowProgressModal(false);
+    }
+  };
+
+  useEffect(() => {
+    if (originalNarrationVideoSize.width > 0) {
+      const newWidth = originalNarrationVideoSize.width * initialScale * zoomFactor;
+      const newHeight = originalNarrationVideoSize.height * initialScale * zoomFactor;
+      setNarrationVideoSize({
+        width: newWidth,
+        height: newHeight,
+      });
+    }
+  }, [zoomFactor, initialScale, originalNarrationVideoSize]);
 
   useEffect(() => {
     const resizeObserver = new ResizeObserver(() => {
@@ -987,6 +981,87 @@ const generateSingleVideo = async (imageData, audioData, index) => {
             backgroundColor: 'rgba(255,255,255,0.1)',
             borderRadius: 2
           }}>
+            <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
+              Configurações do Vídeo
+              <Tooltip title="Configurações recomendadas para melhor desempenho">
+                <Info sx={{ ml: 1, fontSize: 18, verticalAlign: 'middle' }} />
+              </Tooltip>
+            </Typography>
+
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Duração por Slide (segundos)"
+                  type="number"
+                  value={slideDuration}
+                  onChange={(e) => setSlideDuration(Math.max(1, Math.min(45, Number(e.target.value))))}
+                  fullWidth
+                  InputProps={{
+                    style: { color: 'white' }
+                  }}
+                  InputLabelProps={{
+                    style: { color: 'rgba(255,255,255,0.7)' }
+                  }}
+                  variant="outlined"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Quadros por Segundo (FPS)"
+                  type="number"
+                  value={fps}
+                  onChange={(e) => setFps(Math.max(10, Math.min(60, Number(e.target.value))))}
+                  fullWidth
+                  InputProps={{
+                    style: { color: 'white' }
+                  }}
+                  InputLabelProps={{
+                    style: { color: 'rgba(255,255,255,0.7)' }
+                  }}
+                  variant="outlined"
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Transição</InputLabel>
+                  <Select
+                    value={transition}
+                    onChange={(e) => setTransition(e.target.value)}
+                    sx={{ color: 'white' }}
+                    disabled={compatibilityMode}
+                  >
+                    {transitionOptions.map(option => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label} {compatibilityMode && option.value !== 'none' ? '(Indisponível)' : ''}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={generatePerRecord}
+                      onChange={(e) => setGeneratePerRecord(e.target.checked)}
+                      sx={{ color: 'white' }}
+                    />
+                  }
+                  label="Gerar um vídeo por registro"
+                  sx={{ color: 'white' }}
+                />
+              </Grid>
+            </Grid>
+          </Paper>
+
+          <Paper elevation={0} sx={{
+            p: 2,
+            mb: 3,
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            borderRadius: 2
+          }}>
             <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>
               Modo de Geração
             </Typography>
@@ -1006,121 +1081,6 @@ const generateSingleVideo = async (imageData, audioData, index) => {
               <ToggleButton value="narration" sx={{ color: 'white' }}>Com Narração</ToggleButton>
             </ToggleButtonGroup>
           </Paper>
-
-          {videoMode === 'slideshow' && (
-            <Paper elevation={0} sx={{
-              p: 2,
-              mb: 3,
-              backgroundColor: 'rgba(255,255,255,0.1)',
-              borderRadius: 2
-            }}>
-              <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
-                Configurações do Vídeo
-                <Tooltip title="Configurações recomendadas para melhor desempenho">
-                  <Info sx={{ ml: 1, fontSize: 18, verticalAlign: 'middle' }} />
-                </Tooltip>
-              </Typography>
-
-              <Grid container spacing={2} sx={{ mt: 1 }}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Duração por Slide (segundos)"
-                    type="number"
-                    value={slideDuration}
-                    onChange={(e) => setSlideDuration(Math.max(1, Math.min(45, Number(e.target.value))))}
-                    fullWidth
-                    InputProps={{
-                      style: { color: 'white' }
-                    }}
-                    InputLabelProps={{
-                      style: { color: 'rgba(255,255,255,0.7)' }
-                    }}
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={3}>
-                  <TextField
-                    label="Similaridade"
-                    type="number"
-                    value={chromaKeySimilarity}
-                    onChange={(e) => setChromaKeySimilarity(Number(e.target.value))}
-                    fullWidth
-                    InputProps={{
-                      style: { color: 'white' }
-                    }}
-                    InputLabelProps={{
-                      style: { color: 'rgba(255,255,255,0.7)' }
-                    }}
-                    variant="outlined"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={3}>
-                  <TextField
-                    label="Blend"
-                    type="number"
-                    value={chromaKeyBlend}
-                    onChange={(e) => setChromaKeyBlend(Number(e.target.value))}
-                    fullWidth
-                    InputProps={{
-                      style: { color: 'white' }
-                    }}
-                    InputLabelProps={{
-                      style: { color: 'rgba(255,255,255,0.7)' }
-                    }}
-                    variant="outlined"
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Quadros por Segundo (FPS)"
-                    type="number"
-                    value={fps}
-                    onChange={(e) => setFps(Math.max(10, Math.min(60, Number(e.target.value))))}
-                    fullWidth
-                    InputProps={{
-                      style: { color: 'white' }
-                    }}
-                    InputLabelProps={{
-                      style: { color: 'rgba(255,255,255,0.7)' }
-                    }}
-                    variant="outlined"
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth>
-                    <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Transição</InputLabel>
-                    <Select
-                      value={transition}
-                      onChange={(e) => setTransition(e.target.value)}
-                      sx={{ color: 'white' }}
-                      disabled={compatibilityMode}
-                    >
-                      {transitionOptions.map(option => (
-                        <MenuItem key={option.value} value={option.value}>
-                          {option.label} {compatibilityMode && option.value !== 'none' ? '(Indisponível)' : ''}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={generatePerRecord}
-                        onChange={(e) => setGeneratePerRecord(e.target.checked)}
-                        sx={{ color: 'white' }}
-                      />
-                    }
-                    label="Gerar um vídeo por registro"
-                    sx={{ color: 'white' }}
-                  />
-                </Grid>
-              </Grid>
-            </Paper>
-          )}
 
           {videoMode === 'narration' && (
             <Paper elevation={0} sx={{
@@ -1160,6 +1120,38 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                     label="Cor do Chroma Key (Hex)"
                     value={chromaKeyColor}
                     onChange={(e) => setChromaKeyColor(e.target.value)}
+                    fullWidth
+                    InputProps={{
+                      style: { color: 'white' }
+                    }}
+                    InputLabelProps={{
+                      style: { color: 'rgba(255,255,255,0.7)' }
+                    }}
+                    variant="outlined"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    label="Similaridade"
+                    type="number"
+                    value={chromaKeySimilarity}
+                    onChange={(e) => setChromaKeySimilarity(Number(e.target.value))}
+                    fullWidth
+                    InputProps={{
+                      style: { color: 'white' }
+                    }}
+                    InputLabelProps={{
+                      style: { color: 'rgba(255,255,255,0.7)' }
+                    }}
+                    variant="outlined"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    label="Blend"
+                    type="number"
+                    value={chromaKeyBlend}
+                    onChange={(e) => setChromaKeyBlend(Number(e.target.value))}
                     fullWidth
                     InputProps={{
                       style: { color: 'white' }
@@ -1231,7 +1223,7 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                 border: '1px solid rgba(255,255,255,0.1)'
               }}
             >
-              {generatedImages.length > 0 &&
+              {generatedImages.length > 0 ? (
                 <img
                   src={generatedImages[currentImageIndex].url}
                   alt={`Frame ${currentImageIndex + 1}`}
@@ -1242,8 +1234,7 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                     transition: 'opacity 0.5s ease-in-out',
                   }}
                 />
-              }
-              {generatedImages.length === 0 &&
+              ) : (
                 <Box sx={{
                   display: 'flex',
                   justifyContent: 'center',
@@ -1253,7 +1244,7 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                 }}>
                   <Typography>Nenhuma imagem disponível</Typography>
                 </Box>
-              }
+              )}
               {videoMode === 'narration' && narrationVideo && narrationVideoSize.width > 0 &&
                 <Box
                   sx={{
@@ -1261,8 +1252,8 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                     width: `${narrationVideoSize.width}px`,
                     height: `${narrationVideoSize.height}px`,
                     border: '2px dashed white',
-                    bottom: `${narrationVideoPosition.y + imageOffset.y}px`,
-                    left: `${narrationVideoPosition.x + imageOffset.x}px`,
+                    bottom: `${offsetY + imageOffset.y}px`,
+                    left: `${offsetX + imageOffset.x}px`,
                     boxSizing: 'border-box',
                   }}
                 />
