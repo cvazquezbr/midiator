@@ -3,12 +3,14 @@ import {
   Box, Button, Typography, Card, CardContent, Grid,
   LinearProgress, Alert, Select, MenuItem,
   FormControl, InputLabel, TextField, Paper,
-  Snackbar, CircularProgress, IconButton, Tooltip, Checkbox, FormControlLabel
+  Snackbar, CircularProgress, IconButton, Tooltip, Checkbox, FormControlLabel,
+  Switch
 } from '@mui/material';
-import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh, Download } from '@mui/icons-material';
+import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh, Download, UploadFile } from '@mui/icons-material';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import ProgressModal from './ProgressModal';
+import Draggable from 'react-draggable';
 
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 
@@ -35,6 +37,22 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [totalFrames, setTotalFrames] = useState(0);
   const [generatePerRecord, setGeneratePerRecord] = useState(false);
+  const [generationMode, setGenerationMode] = useState('slides'); // 'slides' or 'narration'
+  const [narrationVideo, setNarrationVideo] = useState(null);
+  const [chromaKeyColor, setChromaKeyColor] = useState('#00ff00');
+  const [chromaKeySimilarity, setChromaKeySimilarity] = useState(0.1);
+  const [chromaKeyBlend, setChromaKeyBlend] = useState(0.1);
+  const [narrationVideoData, setNarrationVideoData] = useState({
+    file: null,
+    url: null,
+    width: 0,
+    height: 0,
+    duration: 0,
+  });
+  const [videoPosition, setVideoPosition] = useState({ x: 0, y: 0 });
+  const [videoScale, setVideoScale] = useState(1);
+
+
   const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
@@ -156,7 +174,9 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
     setVideos([]);
     setVideo(null);
 
-    if (generatePerRecord) {
+    if (generationMode === 'narration') {
+      await generateNarrationVideo();
+    } else if (generatePerRecord) {
       await generateVideoPerRecord();
     } else {
       const totalVideoFrames = generatedImages.reduce((acc, _, i) => {
@@ -564,6 +584,96 @@ const generateSingleVideo = async (imageData, audioData, index) => {
     }
   };
 
+  const generateNarrationVideo = async () => {
+    setIsLoading(true);
+    setError(null);
+    setVideo(null);
+    setProgress(0);
+    setShowProgressModal(true);
+    startTimeRef.current = Date.now();
+
+    const ffmpeg = ffmpegRef.current;
+
+    try {
+      const bgImage = generatedImages[0];
+      if (!bgImage) {
+        setError("Por favor, gere ou selecione uma imagem de fundo primeiro.");
+        setSnackbarOpen(true);
+        setIsLoading(false);
+        setShowProgressModal(false);
+        return;
+      }
+      if (!narrationVideoData.file) {
+        setError("Por favor, carregue um vídeo de narração.");
+        setSnackbarOpen(true);
+        setIsLoading(false);
+        setShowProgressModal(false);
+        return;
+      }
+
+      // Fetch files
+      const bgImageData = await fetchFile(bgImage.url);
+      const narrationVideoFileData = await fetchFile(narrationVideoData.url);
+
+      await ffmpeg.writeFile('background.png', bgImageData);
+      await ffmpeg.writeFile('narration.mp4', narrationVideoFileData);
+
+      const firstImage = new Image();
+      firstImage.src = bgImage.url;
+      await firstImage.decode();
+      const realBgWidth = firstImage.width;
+      const realBgHeight = firstImage.height;
+
+      const previewBgWidth = imageContainerRef.current.offsetWidth;
+      const previewBgHeight = imageContainerRef.current.offsetHeight;
+
+      // Proportional mapping
+      const scaleFactorX = realBgWidth / previewBgWidth;
+      const scaleFactorY = realBgHeight / previewBgHeight;
+
+      const realX = videoPosition.x * scaleFactorX;
+      const realY = videoPosition.y * scaleFactorY;
+      const realWidth = (narrationVideoData.width * videoScale) * scaleFactorX;
+      const realHeight = (narrationVideoData.height * videoScale) * scaleFactorY;
+
+      const colorHex = `0x${chromaKeyColor.replace('#', '')}`;
+
+      const filterComplex = `[1:v]chromakey=${colorHex}:${chromaKeySimilarity}:${chromaKeyBlend},scale=${realWidth}:${realHeight}[vid];[0:v][vid]overlay=${realX}:${realY}:shortest=1`;
+
+      const cmd = [
+        '-i', 'background.png',
+        '-i', 'narration.mp4',
+        '-filter_complex', filterComplex,
+        '-c:v', 'libx264',
+        '-t', `${narrationVideoData.duration}`,
+        'output.mp4'
+      ];
+
+      console.log("⚙️ FFmpeg cmd:", cmd.join(" "));
+
+      ffmpeg.on('progress', ({ time }) => {
+        const percentage = (time / (narrationVideoData.duration * 1000000)) * 100;
+        setProgress(Math.min(100, Math.round(percentage)));
+      });
+
+      await ffmpeg.exec(cmd);
+
+      const data = await ffmpeg.readFile('output.mp4');
+      const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+      setVideo(url);
+
+    } catch (err) {
+      console.error("Erro na geração do vídeo de narração:", err);
+      setError(`Erro na geração do vídeo: ${err.message}`);
+      setSnackbarOpen(true);
+    } finally {
+      setIsLoading(false);
+      setShowProgressModal(false);
+      clearInterval(progressIntervalRef.current);
+      startTimeRef.current = null;
+    }
+  };
+
   const handleExport = async () => {
     if (video) {
       try {
@@ -607,6 +717,41 @@ const generateSingleVideo = async (imageData, audioData, index) => {
     zip.generateAsync({ type: 'blob' }).then((content) => {
       saveAs(content, 'videos.zip');
     });
+  };
+
+  const handleNarrationVideoUpload = (event) => {
+    const file = event.target.files[0];
+    if (file && (file.type === 'video/mp4' || file.type === 'video/webm' || file.type === 'video/quicktime')) {
+      const videoUrl = URL.createObjectURL(file);
+      const videoElement = document.createElement('video');
+      videoElement.src = videoUrl;
+      videoElement.onloadedmetadata = () => {
+        const bgWidth = imageContainerRef.current.offsetWidth;
+        const bgHeight = imageContainerRef.current.offsetHeight;
+        const scaleX = bgWidth / videoElement.videoWidth;
+        const scaleY = bgHeight / videoElement.videoHeight;
+        const scale = Math.min(scaleX, scaleY, 1); // Ensure it doesn't scale up initially
+
+        setNarrationVideoData({
+          file: file,
+          url: videoUrl,
+          width: videoElement.videoWidth,
+          height: videoElement.videoHeight,
+          duration: videoElement.duration,
+        });
+        setVideoScale(scale);
+        // Center the video initially
+        const scaledWidth = videoElement.videoWidth * scale;
+        const scaledHeight = videoElement.videoHeight * scale;
+        setVideoPosition({
+          x: (bgWidth - scaledWidth) / 2,
+          y: (bgHeight - scaledHeight) / 2,
+        });
+      };
+    } else {
+      setError('Formato de vídeo inválido. Use .mp4, .mov ou .webm');
+      setSnackbarOpen(true);
+    }
   };
 
   const formatTime = (seconds) => {
@@ -694,11 +839,15 @@ const generateSingleVideo = async (imageData, audioData, index) => {
     <Box sx={{ mt: 3 }}>
       <ProgressModal
         open={showProgressModal}
-        progress={progress}
-        total={totalFrames}
+        progress={generationMode === 'narration' ? progress : (progress / totalFrames) * 100}
+        total={100}
         onCancel={handleCancel}
         title="Gerando Vídeo"
-        progressText={`Progresso: ${progress} de ${totalFrames} frames processados.`}
+        progressText={
+          generationMode === 'narration'
+            ? `Processando... ${Math.round(progress)}%`
+            : `Progresso: ${progress} de ${totalFrames} frames processados.`
+        }
       />
       <iframe
         ref={iframeRef}
@@ -786,16 +935,305 @@ const generateSingleVideo = async (imageData, audioData, index) => {
             borderRadius: 2
           }}>
             <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
-              Configurações do Vídeo
-              <Tooltip title="Configurações recomendadas para melhor desempenho">
-                <Info sx={{ ml: 1, fontSize: 18, verticalAlign: 'middle' }} />
-              </Tooltip>
+                Modo de Geração
+            </Typography>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={generationMode === 'narration'}
+                    onChange={(e) => setGenerationMode(e.target.checked ? 'narration' : 'slides')}
+                    color="primary"
+                  />
+                }
+                label={generationMode === 'narration' ? "Narração com Vídeo" : "Apresentação de Slides"}
+              />
+
+              {generationMode === 'slides' && (
+                <Paper elevation={0} sx={{ p: 2, mt: 2, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
+                  <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
+                    Configurações dos Slides
+                    <Tooltip title="Configurações para o modo de apresentação de slides">
+                      <Info sx={{ ml: 1, fontSize: 18, verticalAlign: 'middle' }} />
+                    </Tooltip>
+                  </Typography>
+                  <Grid container spacing={2} sx={{ mt: 1 }}>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="Duração por Slide (segundos)"
+                        type="number"
+                        value={slideDuration}
+                        onChange={(e) => setSlideDuration(Math.max(1, Math.min(45, Number(e.target.value))))}
+                        fullWidth
+                        InputProps={{ style: { color: 'white' } }}
+                        InputLabelProps={{ style: { color: 'rgba(255,255,255,0.7)' } }}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="Quadros por Segundo (FPS)"
+                        type="number"
+                        value={fps}
+                        onChange={(e) => setFps(Math.max(10, Math.min(60, Number(e.target.value))))}
+                        fullWidth
+                        InputProps={{ style: { color: 'white' } }}
+                        InputLabelProps={{ style: { color: 'rgba(255,255,255,0.7)' } }}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth>
+                        <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Transição</InputLabel>
+                        <Select
+                          value={transition}
+                          onChange={(e) => setTransition(e.target.value)}
+                          sx={{ color: 'white' }}
+                          disabled={compatibilityMode}
+                        >
+                          {transitionOptions.map(option => (
+                            <MenuItem key={option.value} value={option.value}>
+                              {option.label} {compatibilityMode && option.value !== 'none' ? '(Indisponível)' : ''}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={generatePerRecord}
+                            onChange={(e) => setGeneratePerRecord(e.target.checked)}
+                            sx={{ color: 'white' }}
+                          />
+                        }
+                        label="Gerar um vídeo por registro"
+                        sx={{ color: 'white' }}
+                      />
+                    </Grid>
+                  </Grid>
+                </Paper>
+              )}
+
+              {generationMode === 'narration' && (
+                <Paper elevation={0} sx={{ p: 2, mt: 2, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>
+                    Configurações da Narração
+                  </Typography>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                      <Button
+                        variant="outlined"
+                        component="label"
+                        fullWidth
+                        startIcon={<UploadFile />}
+                        sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}
+                      >
+                        Carregar Vídeo de Narração
+                        <input
+                          type="file"
+                          hidden
+                          accept=".mp4,.mov,.webm"
+                          onChange={handleNarrationVideoUpload}
+                        />
+                      </Button>
+                      {narrationVideoData.file && (
+                        <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
+                          Arquivo: {narrationVideoData.file.name}
+                        </Typography>
+                      )}
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={!!narrationVideoData.file} // Enable chroma if video is uploaded
+                            onChange={() => { /* Logic to toggle chroma key */ }}
+                            color="secondary"
+                          />
+                        }
+                        label="Ativar Chroma Key"
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography gutterBottom>Zoom (Escala)</Typography>
+                      <Slider
+                        value={videoScale}
+                        onChange={(e, newValue) => setVideoScale(newValue)}
+                        aria-labelledby="scale-slider"
+                        valueLabelDisplay="auto"
+                        step={0.05}
+                        min={0.1}
+                        max={2}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography gutterBottom>Chroma Key (Remoção de Fundo)</Typography>
+                      <TextField
+                        label="Cor do Fundo"
+                        type="color"
+                        value={chromaKeyColor}
+                        onChange={(e) => setChromaKeyColor(e.target.value)}
+                        fullWidth
+                        InputLabelProps={{ shrink: true }}
+                        sx={{ mb: 2 }}
+                      />
+                      <Typography gutterBottom>Tolerância ({chromaKeySimilarity})</Typography>
+                      <Slider
+                        value={chromaKeySimilarity}
+                        onChange={(e, newValue) => setChromaKeySimilarity(newValue)}
+                        aria-labelledby="similarity-slider"
+                        valueLabelDisplay="auto"
+                        step={0.01}
+                        min={0.01}
+                        max={0.4}
+                      />
+                      <Typography gutterBottom>Suavização da Borda ({chromaKeyBlend})</Typography>
+                      <Slider
+                        value={chromaKeyBlend}
+                        onChange={(e, newValue) => setChromaKeyBlend(newValue)}
+                        aria-labelledby="blend-slider"
+                        valueLabelDisplay="auto"
+                        step={0.01}
+                        min={0}
+                        max={0.5}
+                      />
+                    </Grid>
+                  </Grid>
+                </Paper>
+              )}
+            </Paper>
+
+            <Paper elevation={0} sx={{
+              p: 2,
+              mb: 3,
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              borderRadius: 2
+            }}>
+              <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
+                Pré-visualização
+              </Typography>
+
+              <Box
+                ref={imageContainerRef}
+                sx={{
+                  width: '100%',
+                  aspectRatio: '16/9',
+                  backgroundColor: 'rgba(0,0,0,0.3)',
+                  position: 'relative',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }}
+              >
+                {generatedImages.length > 0 ? (
+                  <img
+                    src={generatedImages[0].url}
+                    alt="Background"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                    }}
+                  />
+                ) : (
+                  <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    height: '100%',
+                    color: 'rgba(255,255,255,0.5)'
+                  }}>
+                    <Typography>Nenhuma imagem de fundo disponível</Typography>
+                  </Box>
+                )}
+              </Box>
+            </Paper>
+          </Paper>
+
+          <Paper elevation={0} sx={{
+            p: 2,
+            mb: 3,
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            borderRadius: 2
+          }}>
+            <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
+              Pré-visualização
             </Typography>
 
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Duração por Slide (segundos)"
+            <Box
+              ref={imageContainerRef}
+              sx={{
+                width: '100%',
+                aspectRatio: '16/9',
+                backgroundColor: 'rgba(0,0,0,0.3)',
+                position: 'relative',
+                borderRadius: 2,
+                overflow: 'hidden',
+                border: '1px solid rgba(255,255,255,0.1)'
+              }}
+            >
+              {generatedImages.length > 0 && generationMode === 'slides' ? (
+                <img
+                  src={generatedImages[currentImageIndex].url}
+                  alt={`Frame ${currentImageIndex + 1}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    transition: 'opacity 0.5s ease-in-out',
+                  }}
+                />
+              ) : generatedImages.length > 0 && generationMode === 'narration' ? (
+                 <img
+                    src={generatedImages[0].url}
+                    alt="Background"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                    }}
+                  />
+              ) : (
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '100%',
+                  color: 'rgba(255,255,255,0.5)'
+                }}>
+                  <Typography>Nenhuma imagem disponível</Typography>
+                </Box>
+              )}
+              {generationMode === 'narration' && narrationVideoData.url && (
+                <Draggable
+                  position={videoPosition}
+                  onStop={(e, data) => setVideoPosition({ x: data.x, y: data.y })}
+                  bounds="parent"
+                >
+                  <video
+                    src={narrationVideoData.url}
+                    autoPlay
+                    loop
+                    muted
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: `${narrationVideoData.width * videoScale}px`,
+                      height: `${narrationVideoData.height * videoScale}px`,
+                      cursor: 'move',
+                      border: '2px dashed #fff',
+                    }}
+                  />
+                </Draggable>
+              )}
+            </Box>
+          </Paper>
+
+          {isLoading && (
+            <Box sx={{ mt: 2, backgroundColor: 'rgba(0,0,0,0.2)', p: 2, borderRadius: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   type="number"
                   value={slideDuration}
                   onChange={(e) => setSlideDuration(Math.max(1, Math.min(45, Number(e.target.value))))}
