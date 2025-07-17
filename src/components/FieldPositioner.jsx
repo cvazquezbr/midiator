@@ -391,6 +391,7 @@ const FieldPositioner = ({
                       onContentChange={handleContentChange}
                       rotation={position.rotation}
                       originalImageSize={originalImageSize}
+                      fontScale={(imageSize.width && originalImageSize?.width) ? imageSize.width / originalImageSize.width : 1}
                     />
                   );
                 })
