@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Box, Typography
+  Box, Typography, Paper
 } from '@mui/material';
 import Draggable from 'react-draggable';
 
