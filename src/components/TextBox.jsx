@@ -14,7 +14,8 @@ const TextBox = ({
   onContentChange,
   rotation,
   setIsMoving,
-  originalImageSize
+  originalImageSize,
+  fontScale: fontScaleProp
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -564,12 +565,12 @@ const TextBox = ({
     return lines;
   };
 
-  const scale = (originalImageSize?.width && containerSize?.width)
-    ? containerSize.width / originalImageSize.width
-    : 1;
+  const fontScale = fontScaleProp || 1;
 
   const baseFontSize = style.fontSize || 24;
+  const scaledFontSize = baseFontSize * fontScale;
   const lineHeight = baseFontSize * (style.lineHeightMultiplier || 1.2);
+  const scaledLineHeight = lineHeight * fontScale;
 
   // Para o wrap, usamos a largura da caixa em pixels no tamanho original da imagem
   const originalBoxWidth = (position.width / 100) * (originalImageSize?.width || 1);
@@ -581,20 +582,14 @@ const TextBox = ({
   // Estilo para o conteúdo do texto, que será escalado
   const textContentStyle = {
     fontFamily: style.fontFamily || 'Arial',
-    fontSize: `${baseFontSize}px`,
+    fontSize: `${scaledFontSize}px`,
     fontWeight: style.fontWeight || 'normal',
     fontStyle: style.fontStyle || 'normal',
     color: style.color || '#000000',
     textDecoration: style.textDecoration || 'none',
-    lineHeight: `${lineHeight}px`,
+    lineHeight: `${scaledLineHeight}px`,
     textShadow: style.textShadow ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}` : 'none',
     WebkitTextStroke: style.textStroke ? `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}` : 'none',
-    // A escala é aplicada aqui para que a renderização do texto (wrap) não seja afetada,
-    // mas o resultado visual corresponda ao tamanho do preview.
-    transform: `scale(${scale})`,
-    transformOrigin: 'top left',
-    width: `${100 / scale}%`,
-    height: `${100 / scale}%`,
     pointerEvents: 'none',
   };
 
@@ -656,11 +651,11 @@ const TextBox = ({
               width: '100%',
               height: '100%',
               fontFamily: style.fontFamily || 'Arial',
-              fontSize: `${baseFontSize * scale}px`, // A fonte no textarea precisa ser escalada visualmente
+              fontSize: `${scaledFontSize}px`, // A fonte no textarea precisa ser escalada visualmente
               fontWeight: style.fontWeight || 'normal',
               fontStyle: style.fontStyle || 'normal',
               color: style.color || '#000000',
-              lineHeight: `${lineHeight * scale}px`, // A altura da linha também
+              lineHeight: `${scaledLineHeight}px`, // A altura da linha também
               textDecoration: style.textDecoration || 'none',
               border: 'none',
               outline: 'none',
