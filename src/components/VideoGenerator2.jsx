@@ -50,8 +50,8 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
     height: 0,
     duration: 0,
   });
-  const [videoPosition, setVideoPosition] = useState({ x: 0, y: 0 });
-  const [videoScale, setVideoScale] = useState(1);
+  const [normalizedVideoPosition, setNormalizedVideoPosition] = useState({ x: 0.5, y: 0.5 }); // Center
+  const [videoScale, setVideoScale] = useState(1); // This will now be a multiplier
 
 
   const isCancelledRef = useRef(false);
@@ -610,15 +610,11 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       const realBgWidth = firstImage.width;
       const realBgHeight = firstImage.height;
 
-      const previewBgWidth = imageContainerRef.current.offsetWidth;
-      const previewBgHeight = imageContainerRef.current.offsetHeight;
+      const realWidth = narrationVideoData.width * videoScale;
+      const realHeight = narrationVideoData.height * videoScale;
 
-      const scaleFactor = realBgWidth / previewBgWidth;
-
-      const realX = videoPosition.x * scaleFactor;
-      const realY = videoPosition.y * scaleFactor;
-      const realWidth = (narrationVideoData.width * videoScale) * scaleFactor;
-      const realHeight = (narrationVideoData.height * videoScale) * scaleFactor;
+      const realX = (normalizedVideoPosition.x * realBgWidth) - (realWidth / 2);
+      const realY = (normalizedVideoPosition.y * realBgHeight) - (realHeight / 2);
 
       const colorHex = `0x${chromaKeyColor.replace('#', '')}`;
 
@@ -718,9 +714,17 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       videoElement.onloadedmetadata = () => {
         const bgWidth = imageContainerRef.current.offsetWidth;
         const bgHeight = imageContainerRef.current.offsetHeight;
-        const scaleX = bgWidth / videoElement.videoWidth;
-        const scaleY = bgHeight / videoElement.videoHeight;
-        const scale = Math.min(scaleX, scaleY, 1);
+
+        const videoAspectRatio = videoElement.videoWidth / videoElement.videoHeight;
+        const bgAspectRatio = bgWidth / bgHeight;
+
+        let initialScale;
+        if (videoAspectRatio > bgAspectRatio) {
+          initialScale = bgWidth / videoElement.videoWidth;
+        } else {
+          initialScale = bgHeight / videoElement.videoHeight;
+        }
+
 
         setNarrationVideoData({
           file: file,
@@ -729,13 +733,8 @@ const generateSingleVideo = async (imageData, audioData, index) => {
           height: videoElement.videoHeight,
           duration: videoElement.duration,
         });
-        setVideoScale(scale);
-        const scaledWidth = videoElement.videoWidth * scale;
-        const scaledHeight = videoElement.videoHeight * scale;
-        setVideoPosition({
-          x: (bgWidth - scaledWidth) / 2,
-          y: (bgHeight - scaledHeight) / 2,
-        });
+        setVideoScale(initialScale);
+        setNormalizedVideoPosition({ x: 0.5, y: 0.5 });
       };
     } else {
       setError('Formato de vídeo inválido. Use .mp4, .mov ou .webm');
@@ -976,8 +975,8 @@ const generateSingleVideo = async (imageData, audioData, index) => {
               generationMode={generationMode}
               currentImageIndex={currentImageIndex}
               narrationVideoData={narrationVideoData}
-              videoPosition={videoPosition}
-              setVideoPosition={setVideoPosition}
+              normalizedVideoPosition={normalizedVideoPosition}
+              setNormalizedVideoPosition={setNormalizedVideoPosition}
               videoScale={videoScale}
               useChromaKey={useChromaKey}
               chromaKeyColor={chromaKeyColor}

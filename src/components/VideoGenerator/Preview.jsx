@@ -10,25 +10,50 @@ const Preview = ({
   generationMode,
   currentImageIndex,
   narrationVideoData,
-  videoPosition,
-  setVideoPosition,
+  normalizedVideoPosition,
+  setNormalizedVideoPosition,
   videoScale,
   useChromaKey,
   chromaKeyColor,
 }) => {
+  const [videoPxPosition, setVideoPxPosition] = React.useState({ x: 0, y: 0 });
+
+  React.useEffect(() => {
+    if (imageContainerRef.current) {
+      const bgWidth = imageContainerRef.current.offsetWidth;
+      const bgHeight = imageContainerRef.current.offsetHeight;
+      setVideoPxPosition({
+        x: normalizedVideoPosition.x * bgWidth,
+        y: normalizedVideoPosition.y * bgHeight,
+      });
+    }
+  }, [normalizedVideoPosition, imageContainerRef]);
+
+  const handleDrag = (e, ui) => {
+    if (imageContainerRef.current) {
+      const { x, y } = videoPxPosition;
+      const { deltaX, deltaY } = ui;
+      const newX = x + deltaX;
+      const newY = y + deltaY;
+      const bgWidth = imageContainerRef.current.offsetWidth;
+      const bgHeight = imageContainerRef.current.offsetHeight;
+      setNormalizedVideoPosition({
+        x: newX / bgWidth,
+        y: newY / bgHeight,
+      });
+    }
+  };
+
   const videoStyle = {
     position: 'absolute',
-    top: 0,
-    left: 0,
     width: `${narrationVideoData.width * videoScale}px`,
     height: `${narrationVideoData.height * videoScale}px`,
     cursor: 'move',
     border: '2px dashed #fff',
+    transform: `translate(${videoPxPosition.x}px, ${videoPxPosition.y}px) translate(-50%, -50%)`,
   };
 
   if (useChromaKey) {
-    // This is a simple visual cue, not a real chroma key effect.
-    // A real-time preview would require a canvas-based solution.
     videoStyle.filter = `drop-shadow(0 0 5px ${chromaKeyColor}) drop-shadow(0 0 15px ${chromaKeyColor})`;
   }
 
@@ -89,8 +114,8 @@ const Preview = ({
         )}
         {generationMode === 'narration' && narrationVideoData.url && (
           <Draggable
-            position={videoPosition}
-            onStop={(e, data) => setVideoPosition({ x: data.x, y: data.y })}
+            position={videoPxPosition}
+            onDrag={handleDrag}
             bounds="parent"
           >
             <video
