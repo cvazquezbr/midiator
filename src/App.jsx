@@ -66,7 +66,7 @@ import FormattingPanel from './components/FormattingPanel';
 import FormattingDrawer from './components/FormattingDrawer';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
 import AudioGenerator from './components/AudioGenerator';
-import VideoGenerator from './components/VideoGenerator';
+import VideoGenerator2 from './components/VideoGenerator2';
 import RecordManager from './features/RecordManager/RecordManager';
 import CsvInfobox from './components/CsvInfobox';
 import GeminiAuthSetup from './components/GeminiAuthSetup';
@@ -1695,7 +1695,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
 
           {/* Passo 6: Geração de Vídeo */}
           {activeStep === 6 && (
-            <VideoGenerator
+            <VideoGenerator2
               generatedImages={generatedImagesData}
               generatedAudioData={generatedAudioData}
             />
