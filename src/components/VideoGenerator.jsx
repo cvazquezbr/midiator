@@ -46,7 +46,6 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [sliderMaxY, setSliderMaxY] = useState(100);
   const [narrationVideoSize, setNarrationVideoSize] = useState({ width: 0, height: 0 });
   const [imageOffset, setImageOffset] = useState({ x: 0, y: 0 });
-  const [lockAspectRatio, setLockAspectRatio] = useState(true);
   const [zoom, setZoom] = useState(0.5);
   const isCancelledRef = useRef(false);
 
@@ -68,17 +67,6 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   }, []);
 
   useEffect(() => {
-    if (originalNarrationVideoSize.width > 0 && imageContainerRef.current) {
-      const newWidth = imageContainerRef.current.offsetWidth * zoom;
-      const ratio = originalNarrationVideoSize.height / originalNarrationVideoSize.width;
-      setNarrationVideoSize({
-        width: newWidth,
-        height: newWidth * ratio,
-      });
-    }
-  }, [zoom, originalNarrationVideoSize]);
-
-  useEffect(() => {
     const loadFfmpeg = async () => {
       if (ffmpegLoaded) {
         try {
@@ -92,7 +80,6 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
     };
     loadFfmpeg();
   }, [ffmpegLoaded]);
-
 
   const transitionOptions = [
     { value: 'fade', label: 'Fade (Recomendado)' },
@@ -727,14 +714,14 @@ const generateSingleVideo = async (imageData, audioData, index) => {
     });
   };
 
-  const [originalNarrationVideoSize, setOriginalNarrationVideoSize] = useState({ width: 0, height: 0 });
+  const originalNarrationVideoSize = useRef({ width: 0, height: 0 });
 
   const handleNarrationVideoUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
       setNarrationVideo(file);
       const dimensions = await getVideoDimensions(file);
-      setOriginalNarrationVideoSize(dimensions);
+      originalNarrationVideoSize.current = dimensions;
       setNarrationVideoSize(dimensions);
     }
   };
@@ -1195,19 +1182,19 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                   <Typography>Nenhuma imagem disponível</Typography>
                 </Box>
               }
-              {videoMode === 'narration' && narrationVideo && narrationVideoSize.width > 0 && (
+              {videoMode === 'narration' && narrationVideo && narrationVideoSize.width > 0 &&
                 <Box
                   sx={{
                     position: 'absolute',
-                    width: `${narrationVideoSize.width * imageScale}px`,
-                    height: `${narrationVideoSize.height * imageScale}px`,
+                    width: `${originalNarrationVideoSize.current.width * zoom * (imageContainerRef.current?.offsetWidth / originalNarrationVideoSize.current.width) || 0}px`,
+                    height: `${originalNarrationVideoSize.current.height * zoom * (imageContainerRef.current?.offsetWidth / originalNarrationVideoSize.current.width) || 0}px`,
                     border: '2px dashed white',
-                    bottom: `${narrationVideoPosition.y * imageScale + imageOffset.y}px`,
-                    left: `${narrationVideoPosition.x * imageScale + imageOffset.x}px`,
+                    bottom: `${narrationVideoPosition.y}px`,
+                    left: `${narrationVideoPosition.x}px`,
                     boxSizing: 'border-box',
                   }}
                 />
-              )}
+              }
             </Box>
           </Paper>
 
