@@ -778,9 +778,19 @@ const generateSingleVideo = async (imageData, audioData, index) => {
   };
 
   useEffect(() => {
-    calculateImageOffset();
-    window.addEventListener('resize', calculateImageOffset);
-    return () => window.removeEventListener('resize', calculateImageOffset);
+    const resizeObserver = new ResizeObserver(() => {
+      calculateImageOffset();
+    });
+
+    if (imageContainerRef.current) {
+      resizeObserver.observe(imageContainerRef.current);
+    }
+
+    return () => {
+      if (imageContainerRef.current) {
+        resizeObserver.unobserve(imageContainerRef.current);
+      }
+    };
   }, [generatedImages, currentImageIndex]);
 
   const formatTime = (seconds) => {
