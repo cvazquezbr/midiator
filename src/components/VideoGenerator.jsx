@@ -46,9 +46,8 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [sliderMaxY, setSliderMaxY] = useState(100);
   const [narrationVideoSize, setNarrationVideoSize] = useState({ width: 0, height: 0 });
   const [imageOffset, setImageOffset] = useState({ x: 0, y: 0 });
-  const [imageScale, setImageScale] = useState(1);
   const [lockAspectRatio, setLockAspectRatio] = useState(true);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.5);
   const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
@@ -69,13 +68,15 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   }, []);
 
   useEffect(() => {
-    if (originalNarrationVideoSize.width > 0) {
+    if (originalNarrationVideoSize.width > 0 && imageContainerRef.current) {
+      const newWidth = imageContainerRef.current.offsetWidth * zoom;
+      const ratio = originalNarrationVideoSize.height / originalNarrationVideoSize.width;
       setNarrationVideoSize({
-        width: Math.round(originalNarrationVideoSize.width * zoom),
-        height: Math.round(originalNarrationVideoSize.height * zoom),
+        width: newWidth,
+        height: newWidth * ratio,
       });
     }
-  }, [zoom]);
+  }, [zoom, originalNarrationVideoSize]);
 
   useEffect(() => {
     const loadFfmpeg = async () => {
@@ -552,7 +553,7 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       const cmd = [
         '-i', 'background.png',
         '-i', 'narration.mp4',
-        '-filter_complex', `[1:v]scale=${scaledWidth}:${scaledHeight}[scaled];[scaled]${filter}[ckout];[0:v][ckout]overlay=${narrationVideoPosition.x}:${overlayY}[outv]`,
+        '-filter_complex', `[1:v]scale=${narrationVideoSize.width}:${narrationVideoSize.height}[scaled];[scaled]${filter}[ckout];[0:v][ckout]overlay=${narrationVideoPosition.x}:${overlayY}[outv]`,
         '-map', '[outv]',
         '-map', '1:a?',
         '-c:a', 'aac',
@@ -560,7 +561,6 @@ const generateSingleVideo = async (imageData, audioData, index) => {
         '-c:v', 'libx264',
         '-preset', 'ultrafast',
         '-pix_fmt', 'yuv420p',
-        '-s', `${imageContainerRef.current.offsetWidth}x${imageContainerRef.current.offsetHeight}`,
         'output.mp4'
       ];
 
@@ -751,47 +751,6 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       video.src = URL.createObjectURL(file);
     });
   };
-
-  const calculateImageOffset = () => {
-    if (imageContainerRef.current) {
-      const container = imageContainerRef.current;
-      const image = container.querySelector('img');
-      if (image) {
-        const containerRatio = container.offsetWidth / container.offsetHeight;
-        const imageRatio = image.naturalWidth / image.naturalHeight;
-        let x = 0;
-        let y = 0;
-        let scale = 1;
-        if (containerRatio > imageRatio) {
-          scale = container.offsetHeight / image.naturalHeight;
-          const imageWidth = image.naturalWidth * scale;
-          x = (container.offsetWidth - imageWidth) / 2;
-        } else {
-          scale = container.offsetWidth / image.naturalWidth;
-          const imageHeight = image.naturalHeight * scale;
-          y = (container.offsetHeight - imageHeight) / 2;
-        }
-        setImageOffset({ x, y });
-        setImageScale(scale);
-      }
-    }
-  };
-
-  useEffect(() => {
-    const resizeObserver = new ResizeObserver(() => {
-      calculateImageOffset();
-    });
-
-    if (imageContainerRef.current) {
-      resizeObserver.observe(imageContainerRef.current);
-    }
-
-    return () => {
-      if (imageContainerRef.current) {
-        resizeObserver.unobserve(imageContainerRef.current);
-      }
-    };
-  }, [generatedImages, currentImageIndex]);
 
   const formatTime = (seconds) => {
     if (seconds < 60) return `${seconds} segundos`;
