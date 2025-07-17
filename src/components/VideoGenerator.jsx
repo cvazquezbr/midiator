@@ -3,7 +3,8 @@ import {
   Box, Button, Typography, Card, CardContent, Grid,
   LinearProgress, Alert, Select, MenuItem,
   FormControl, InputLabel, TextField, Paper,
-  Snackbar, CircularProgress, IconButton, Tooltip, Checkbox, FormControlLabel
+  Snackbar, CircularProgress, IconButton, Tooltip, Checkbox, FormControlLabel,
+  ToggleButton, ToggleButtonGroup, Slider
 } from '@mui/material';
 import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh, Download } from '@mui/icons-material';
 import JSZip from 'jszip';
@@ -68,6 +69,33 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, []);
+
+  useEffect(() => {
+    const updateNarrationVideoSize = () => {
+      if (imageContainerRef.current && originalNarrationVideoSize.width > 0) {
+        const container = imageContainerRef.current;
+        const containerW = container.offsetWidth;
+        const containerH = container.offsetHeight;
+
+        const scaleW = containerW / originalNarrationVideoSize.width;
+        const scaleH = containerH / originalNarrationVideoSize.height;
+        const scale = Math.min(scaleW, scaleH) * 0.9; // 90% of container
+        setInitialScale(scale);
+
+        const newWidth = originalNarrationVideoSize.width * scale;
+        const newHeight = originalNarrationVideoSize.height * scale;
+        setNarrationVideoSize({ width: newWidth, height: newHeight });
+
+        setSliderMaxX(containerW / 2);
+        setSliderMaxY(containerH / 2);
+      }
+    };
+
+    updateNarrationVideoSize();
+    window.addEventListener('resize', updateNarrationVideoSize);
+    return () => window.removeEventListener('resize', updateNarrationVideoSize);
+  }, [originalNarrationVideoSize]);
+
 
   useEffect(() => {
     const loadFfmpeg = async () => {
@@ -180,13 +208,33 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
       }, 0);
       setTotalFrames(totalVideoFrames);
 
-      if (compatibilityMode || !ffmpegLoaded) {
+      if (videoMode === 'narration') {
+        await generateNarrationVideo();
+      } else if (compatibilityMode || !ffmpegLoaded) {
         await generateVideoWithCompatibilityMode();
       } else {
         await generateVideoWithFFmpeg();
       }
     }
     setShowProgressModal(false);
+  };
+
+  const handleNarrationVideoChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setNarrationVideo(file);
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src);
+        setOriginalNarrationVideoSize({ width: video.videoWidth, height: video.videoHeight });
+        // Reset sliders and zoom
+        setOffsetX(0);
+        setOffsetY(0);
+        setZoomFactor(1);
+      };
+      video.src = URL.createObjectURL(file);
+    }
   };
 
 // Version with **optional fixed output resolution**
@@ -612,6 +660,86 @@ const generateSingleVideo = async (imageData, audioData, index) => {
     isCancelledRef.current = true;
   };
 
+  const generateNarrationVideo = async () => {
+    setIsLoading(true);
+    setError(null);
+    setVideo(null);
+    setProgress(0);
+    startTimeRef.current = Date.now();
+
+    const ffmpeg = ffmpegRef.current;
+
+    try {
+      if (!generatedImages || generatedImages.length === 0) {
+        throw new Error("Nenhuma imagem de fundo selecionada.");
+      }
+      if (!narrationVideo) {
+        throw new Error("Nenhum vídeo de narração selecionado.");
+      }
+
+      await ffmpeg.deleteFile("output.mp4").catch(() => {});
+      await ffmpeg.writeFile('background.png', await fetchFile(generatedImages[0].url));
+      await ffmpeg.writeFile('narration.mp4', await fetchFile(narrationVideo));
+
+      const bgImage = new Image();
+      bgImage.src = generatedImages[0].url;
+      await bgImage.decode();
+      const bgW = bgImage.width;
+      const bgH = bgImage.height;
+
+      const scaledW = Math.round(originalNarrationVideoSize.width * zoomFactor);
+      const scaledH = Math.round(originalNarrationVideoSize.height * zoomFactor);
+
+      const finalX = Math.round((bgW / 2) - (scaledW / 2) + offsetX);
+      const finalY = Math.round((bgH / 2) - (scaledH / 2) + offsetY);
+
+      // Fallback for white background as chromakey doesn't work well with it
+      const keyEffect = chromaKeyColor.toLowerCase() === '#ffffff' || chromaKeyColor.toLowerCase() === 'ffffff'
+          ? `colorkey=color=white:similarity=${chromaKeySimilarity}:blend=${chromaKeyBlend}`
+          : `chromakey=color=${chromaKeyColor}:similarity=${chromaKeySimilarity}:blend=${chromaKeyBlend}`;
+
+      const filterComplex = `[1:v]${keyEffect},scale=${scaledW}:${scaledH}[fg];[0:v][fg]overlay=${finalX}:${finalY}:shortest=1[v]`;
+
+      const cmd = [
+        '-i', 'background.png',
+        '-i', 'narration.mp4',
+        '-filter_complex', filterComplex,
+        '-map', '[v]',
+        '-map', '1:a?',
+        '-c:a', 'aac',
+        '-b:a', '192k',
+        '-preset', 'ultrafast',
+        'output.mp4'
+      ];
+
+      ffmpeg.on('progress', ({ time }) => {
+          // Assuming the narration video length is the total time
+          // This is a rough estimation
+          const duration = narrationVideo.duration || 30; // fallback duration
+          const progress = (time / 1000000 / duration) * 100;
+          setProgress(Math.min(100, Math.round(progress)));
+      });
+
+      console.log("⚙️ FFmpeg cmd:", cmd.join(" "));
+      await ffmpeg.exec(cmd);
+
+      const data = await ffmpeg.readFile('output.mp4');
+      const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+      setVideo(url);
+
+    } catch (err) {
+      console.error("Erro na geração do vídeo de narração:", err);
+      setError(`Erro na geração do vídeo: ${err.message}`);
+      setSnackbarOpen(true);
+    } finally {
+      setIsLoading(false);
+      setProgress(0);
+      clearInterval(progressIntervalRef.current);
+      startTimeRef.current = null;
+      setShowProgressModal(false);
+    }
+  };
+
   const handleDownloadAll = async () => {
     const zip = new JSZip();
     for (const video of videos) {
@@ -881,6 +1009,117 @@ const generateSingleVideo = async (imageData, audioData, index) => {
             backgroundColor: 'rgba(255,255,255,0.1)',
             borderRadius: 2
           }}>
+            <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>
+              Modo de Geração
+            </Typography>
+            <ToggleButtonGroup
+              color="primary"
+              value={videoMode}
+              exclusive
+              onChange={(e, newMode) => setVideoMode(newMode)}
+              aria-label="Modo de Geração de Vídeo"
+              fullWidth
+            >
+              <ToggleButton value="slideshow">Slideshow</ToggleButton>
+              <ToggleButton value="narration">Narração</ToggleButton>
+            </ToggleButtonGroup>
+
+            {videoMode === 'narration' && (
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  variant="contained"
+                  component="label"
+                  fullWidth
+                >
+                  Carregar Vídeo de Narração
+                  <input
+                    type="file"
+                    hidden
+                    accept="video/*"
+                    onChange={handleNarrationVideoChange}
+                  />
+                </Button>
+                {narrationVideo && (
+                  <Typography variant="body2" sx={{ mt: 1, textAlign: 'center' }}>
+                    Vídeo selecionado: {narrationVideo.name}
+                  </Typography>
+                )}
+
+                <Grid container spacing={2} sx={{ mt: 1 }}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Cor do Chroma Key (hex)"
+                      value={chromaKeyColor}
+                      onChange={(e) => setChromaKeyColor(e.target.value)}
+                      fullWidth
+                      variant="outlined"
+                      InputProps={{ style: { color: 'white' } }}
+                      InputLabelProps={{ style: { color: 'rgba(255,255,255,0.7)' } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Similaridade do Chroma"
+                      type="number"
+                      value={chromaKeySimilarity}
+                      onChange={(e) => setChromaKeySimilarity(parseFloat(e.target.value))}
+                      fullWidth
+                      variant="outlined"
+                      InputProps={{ style: { color: 'white' } }}
+                      InputLabelProps={{ style: { color: 'rgba(255,255,255,0.7)' } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Blend do Chroma"
+                      type="number"
+                      value={chromaKeyBlend}
+                      onChange={(e) => setChromaKeyBlend(parseFloat(e.target.value))}
+                      fullWidth
+                      variant="outlined"
+                      InputProps={{ style: { color: 'white' } }}
+                      InputLabelProps={{ style: { color: 'rgba(255,255,255,0.7)' } }}
+                    />
+                  </Grid>
+                </Grid>
+                 <Typography gutterBottom sx={{ mt: 2 }}>Zoom</Typography>
+                <Slider
+                  value={zoomFactor}
+                  onChange={(e, newValue) => setZoomFactor(newValue)}
+                  min={0.1}
+                  max={5}
+                  step={0.1}
+                  aria-labelledby="zoom-slider"
+                />
+                <Typography gutterBottom sx={{ mt: 2 }}>Posição X</Typography>
+                <Slider
+                  value={offsetX}
+                  onChange={(e, newValue) => setOffsetX(newValue)}
+                  min={-sliderMaxX}
+                  max={sliderMaxX}
+                  step={1}
+                  aria-labelledby="offset-x-slider"
+                />
+                <Typography gutterBottom sx={{ mt: 2 }}>Posição Y</Typography>
+                <Slider
+                  value={offsetY}
+                  onChange={(e, newValue) => setOffsetY(newValue)}
+                  min={-sliderMaxY}
+                  max={sliderMaxY}
+                  step={1}
+                  aria-labelledby="offset-y-slider"
+                />
+              </Box>
+            )}
+          </Paper>
+
+
+          <Paper elevation={0} sx={{
+            p: 2,
+            mb: 3,
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            borderRadius: 2
+          }}>
             <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
               Pré-visualização
             </Typography>
@@ -908,6 +1147,190 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                     transition: 'opacity 0.5s ease-in-out',
                   }}
                 />
+              )}
+              {videoMode === 'narration' && narrationVideo && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    border: '2px dashed red',
+                    boxSizing: 'border-box',
+                    width: narrationVideoSize.width,
+                    height: narrationVideoSize.height,
+                    top: `calc(50% + ${offsetY}px)`,
+                    left: `calc(50% + ${offsetX}px)`,
+                    transform: `translate(-50%, -50%) scale(${zoomFactor})`,
+                    transition: 'all 0.2s ease-out',
+                  }}
+                />
+              )}
+            </Box>
+          </Paper>
+
+          {isLoading && (
+            <Box sx={{ mt: 2, backgroundColor: 'rgba(0,0,0,0.2)', p: 2, borderRadius: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" sx={{ color: 'white' }}>
+                  Gerando vídeo... {progress}%
+                </Typography>
+                <Typography variant="body2" sx={{ color: 'white' }}>
+                  {estimatedTime > 0 ? `Tempo estimado: ${formatTime(estimatedTime)}` : 'Calculando...'}
+                </Typography>
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={progress}
+                sx={{ height: 10, borderRadius: 5 }}
+              />
+              <Typography variant="caption" sx={{ display: 'block', mt: 1, textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>
+                Processando há {processingTime} segundos
+                {compatibilityMode && ' (Modo de compatibilidade)'}
+              </Typography>
+            </Box>
+          )}
+
+          {video && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
+                Vídeo Final {compatibilityMode && '(WebM)'}
+              </Typography>
+              <video
+                src={video}
+                controls
+                style={{
+                  width: '100%',
+                  borderRadius: 8,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                  backgroundColor: '#000'
+                }}
+              />
+            </Box>
+          )}
+
+          {videos.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
+                Vídeos Gerados
+              </Typography>
+              {videos.map((v, index) => (
+                <Paper
+                  key={index}
+                  elevation={2}
+                  sx={{
+                    p: 2,
+                    mb: 2,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(255,255,255,0.15)',
+                    borderRadius: 2,
+                  }}
+                >
+                  <Typography sx={{ color: 'white' }}>{v.name}</Typography>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<Download />}
+                    onClick={() => {
+                      const a = document.createElement('a');
+                      a.href = v.url;
+                      a.download = v.name;
+                      a.click();
+                    }}
+                  >
+                    Baixar
+                  </Button>
+                </Paper>
+              ))}
+            </Box>
+          )}
+
+          <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+            <Button
+              variant="contained"
+              onClick={handleGeneratePreview}
+              disabled={isLoading || generatedImages.length === 0}
+              startIcon={<PlayArrow />}
+              sx={{
+                flex: 1,
+                minWidth: 200,
+                background: 'linear-gradient(45deg, #00c853, #64dd17)',
+                fontWeight: 'bold'
+              }}
+            >
+              {isPlaying ? 'Parar Preview' : 'Iniciar Preview'}
+            </Button>
+
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleGenerateFinalVideo}
+              disabled={isLoading || generatedImages.length === 0}
+              startIcon={<Movie />}
+              sx={{
+                flex: 1,
+                minWidth: 200,
+                background: compatibilityMode ?
+                  'linear-gradient(45deg, #ff9800, #ffc107)' :
+                  'linear-gradient(45deg, #2962ff, #2979ff)',
+                fontWeight: 'bold'
+              }}
+            >
+              {compatibilityMode ? 'Gerar Vídeo (Compatibilidade)' : 'Gerar Vídeo Final'}
+            </Button>
+
+            <Button
+              variant="contained"
+              onClick={handleExport}
+              disabled={!video || isLoading}
+              startIcon={<GetApp />}
+              sx={{
+                flex: 1,
+                minWidth: 200,
+                background: 'linear-gradient(45deg, #ff6d00, #ff9100)',
+                fontWeight: 'bold'
+              }}
+            >
+              Exportar Vídeo
+            </Button>
+
+            {videos.length > 0 && (
+                <Button
+                  variant="contained"
+                  onClick={handleDownloadAll}
+                  disabled={isLoading}
+                  startIcon={<Download />}
+                  sx={{
+                    flex: 1,
+                    minWidth: 200,
+                    background: 'linear-gradient(45deg, #4caf50, #81c784)',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Baixar Todos
+                </Button>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity="error"
+          onClose={handleCloseSnackbar}
+          icon={<ErrorOutline />}
+          sx={{ width: '100%' }}
+        >
+          {error}
+        </Alert>
+      </Snackbar>
+    </Box>
+  );
+};
               ) : (
                 <Box sx={{
                   display: 'flex',
