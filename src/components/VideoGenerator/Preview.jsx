@@ -16,20 +16,12 @@ const Preview = ({
   useChromaKey,
   chromaKeyColor,
 }) => {
-  console.log('Preview.jsx: props', {
-    narrationVideoData,
-    normalizedVideoPosition,
-    videoScale,
-  });
   const [videoPxPosition, setVideoPxPosition] = React.useState({ x: 0, y: 0 });
 
   React.useEffect(() => {
-    console.log('Preview.jsx: useEffect triggered');
     if (imageContainerRef.current) {
       const bgWidth = imageContainerRef.current.offsetWidth;
       const bgHeight = imageContainerRef.current.offsetHeight;
-      console.log('Preview.jsx: useEffect bgWidth', bgWidth);
-      console.log('Preview.jsx: useEffect bgHeight', bgHeight);
       setVideoPxPosition({
         x: normalizedVideoPosition.x * bgWidth,
         y: normalizedVideoPosition.y * bgHeight,

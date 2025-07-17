@@ -161,12 +161,7 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
         const scaleY = bgHeight / narrationVideoData.height;
         const scale = Math.min(scaleX, scaleY, 1);
 
-        const scaledWidth = narrationVideoData.width * scale;
-        const scaledHeight = narrationVideoData.height * scale;
-        setVideoPosition({
-          x: (bgWidth - scaledWidth) / 2,
-          y: (bgHeight - scaledHeight) / 2,
-        });
+        setNormalizedVideoPosition({ x: 0.5, y: 0.5 });
         setVideoScale(scale);
       }
     };
@@ -735,16 +730,6 @@ const generateSingleVideo = async (imageData, audioData, index) => {
         });
         setVideoScale(initialScale);
         setNormalizedVideoPosition({ x: 0.5, y: 0.5 });
-
-        console.log('VideoGenerator2.jsx: narrationVideoData', {
-          file: file,
-          url: videoUrl,
-          width: videoElement.videoWidth,
-          height: videoElement.videoHeight,
-          duration: videoElement.duration,
-        });
-        console.log('VideoGenerator2.jsx: videoScale', initialScale);
-        console.log('VideoGenerator2.jsx: normalizedVideoPosition', { x: 0.5, y: 0.5 });
       };
     } else {
       setError('Formato de vídeo inválido. Use .mp4, .mov ou .webm');
