@@ -354,49 +354,83 @@ const FieldPositioner = ({
               onTouchStart={handleContainerTouchStart}
               onTouchEnd={handleContainerTouchEnd}
             >
-              <img
-                src={backgroundImage}
-                alt="Background"
+              <div
                 style={{
                   width: '100%',
-                  height: 'auto',
-                  display: 'block',
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                  WebkitUserDrag: 'none'
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
-                draggable={false}
-              />
+              >
+                <div
+                  style={{
+                    position: 'relative',
+                    width: originalImageSize.width * Math.min(imageSize.width / originalImageSize.width, imageSize.height / originalImageSize.height),
+                    height: originalImageSize.height * Math.min(imageSize.width / originalImageSize.width, imageSize.height / originalImageSize.height),
+                  }}
+                >
+                  <img
+                    src={backgroundImage}
+                    alt="Background"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'block',
+                      pointerEvents: 'none',
+                      userSelect: 'none',
+                      WebkitUserDrag: 'none'
+                    }}
+                    draggable={false}
+                  />
 
-              {csvHeaders && csvHeaders.length > 0
-                ? csvHeaders.map(header => {
-                  const position = fieldPositions[header];
-                  const style = fieldStyles[header];
-                  if (!position || !position.visible) return null;
-                  const record = csvData[currentPreviewIndex] || {};
-                  const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
+                  {csvHeaders && csvHeaders.length > 0
+                    ? csvHeaders.map(header => {
+                      const position = fieldPositions[header];
+                      const style = fieldStyles[header];
+                      if (!position || !position.visible) return null;
+                      const record = csvData[currentPreviewIndex] || {};
+                      const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
 
-                  return (
-                    <TextBox
-                      key={header}
-                      field={header}
-                      position={position}
-                      style={style}
-                      content={sampleData}
-                      isSelected={selectedField === header}
-                      onSelect={handleFieldSelectInternal}
-                      onPositionChange={handlePositionChange}
-                      onSizeChange={handleSizeChange}
-                      containerSize={imageSize}
-                      onContentChange={handleContentChange}
-                      rotation={position.rotation}
-                      originalImageSize={originalImageSize}
-                      fontScale={(imageSize.width && originalImageSize?.width) ? imageSize.width / originalImageSize.width : 1}
-                    />
-                  );
-                })
-                : null
-              }
+                      return (
+                        <TextBox
+                          key={header}
+                          field={header}
+                          position={position}
+                          style={style}
+                          content={sampleData}
+                          isSelected={selectedField === header}
+                          onSelect={handleFieldSelectInternal}
+                          onPositionChange={handlePositionChange}
+                          onSizeChange={handleSizeChange}
+                          containerSize={
+                            (() => {
+                              if (!imageSize.width || !originalImageSize?.width || !imageSize.height || !originalImageSize?.height) return { width: 0, height: 0 };
+                              const scale = Math.min(imageSize.width / originalImageSize.width, imageSize.height / originalImageSize.height);
+                              return {
+                                width: originalImageSize.width * scale,
+                                height: originalImageSize.height * scale,
+                              };
+                            })()
+                          }
+                          onContentChange={handleContentChange}
+                          rotation={position.rotation}
+                          originalImageSize={originalImageSize}
+                          fontScale={
+                            (() => {
+                              if (!imageSize.width || !originalImageSize?.width || !imageSize.height || !originalImageSize?.height) return 1;
+                              const scaleX = imageSize.width / originalImageSize.width;
+                              const scaleY = imageSize.height / originalImageSize.height;
+                              return Math.min(scaleX, scaleY);
+                            })()
+                          }
+                        />
+                      );
+                    })
+                    : null
+                  }
+                </div>
+              </div>
             </Box>
 
             {csvData && csvData.length > 1 && (
