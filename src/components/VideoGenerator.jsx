@@ -46,6 +46,7 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [sliderMaxY, setSliderMaxY] = useState(100);
   const [narrationVideoSize, setNarrationVideoSize] = useState({ width: 0, height: 0 });
   const [imageOffset, setImageOffset] = useState({ x: 0, y: 0 });
+  const [imageScale, setImageScale] = useState(1);
   const [lockAspectRatio, setLockAspectRatio] = useState(true);
   const [zoom, setZoom] = useState(1);
   const isCancelledRef = useRef(false);
@@ -760,16 +761,18 @@ const generateSingleVideo = async (imageData, audioData, index) => {
         const imageRatio = image.naturalWidth / image.naturalHeight;
         let x = 0;
         let y = 0;
+        let scale = 1;
         if (containerRatio > imageRatio) {
-          const scale = container.offsetHeight / image.naturalHeight;
+          scale = container.offsetHeight / image.naturalHeight;
           const imageWidth = image.naturalWidth * scale;
           x = (container.offsetWidth - imageWidth) / 2;
         } else {
-          const scale = container.offsetWidth / image.naturalWidth;
+          scale = container.offsetWidth / image.naturalWidth;
           const imageHeight = image.naturalHeight * scale;
           y = (container.offsetHeight - imageHeight) / 2;
         }
         setImageOffset({ x, y });
+        setImageScale(scale);
       }
     }
   };
@@ -1227,11 +1230,11 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                 <Box
                   sx={{
                     position: 'absolute',
-                    width: `${(narrationVideoSize.width / imageContainerRef.current?.offsetWidth * 100) || 0}%`,
-                    height: `${(narrationVideoSize.height / imageContainerRef.current?.offsetHeight * 100) || 0}%`,
+                    width: `${narrationVideoSize.width * imageScale}px`,
+                    height: `${narrationVideoSize.height * imageScale}px`,
                     border: '2px dashed white',
-                    bottom: `${((narrationVideoPosition.y + imageOffset.y) / imageContainerRef.current?.offsetHeight * 100) || 0}%`,
-                    left: `${((narrationVideoPosition.x + imageOffset.x) / imageContainerRef.current?.offsetWidth * 100) || 0}%`,
+                    bottom: `${narrationVideoPosition.y * imageScale + imageOffset.y}px`,
+                    left: `${narrationVideoPosition.x * imageScale + imageOffset.x}px`,
                     boxSizing: 'border-box',
                   }}
                 />
