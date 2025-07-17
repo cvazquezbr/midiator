@@ -27,7 +27,7 @@ const Preview = ({
         y: normalizedVideoPosition.y * bgHeight,
       });
     }
-  }, [normalizedVideoPosition, imageContainerRef]);
+  }, [normalizedVideoPosition, imageContainerRef, narrationVideoData.url]);
 
   const handleDrag = (e, ui) => {
     if (imageContainerRef.current) {
