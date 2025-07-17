@@ -47,6 +47,7 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
   const [narrationVideoSize, setNarrationVideoSize] = useState({ width: 0, height: 0 });
   const [imageOffset, setImageOffset] = useState({ x: 0, y: 0 });
   const [lockAspectRatio, setLockAspectRatio] = useState(true);
+  const [zoom, setZoom] = useState(1);
   const isCancelledRef = useRef(false);
 
   const ffmpegRef = useRef(null);
@@ -65,6 +66,15 @@ const VideoGenerator = ({ generatedImages, generatedAudioData }) => {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, []);
+
+  useEffect(() => {
+    if (originalNarrationVideoSize.width > 0) {
+      setNarrationVideoSize({
+        width: Math.round(originalNarrationVideoSize.width * zoom),
+        height: Math.round(originalNarrationVideoSize.height * zoom),
+      });
+    }
+  }, [zoom]);
 
   useEffect(() => {
     const loadFfmpeg = async () => {
@@ -549,6 +559,7 @@ const generateSingleVideo = async (imageData, audioData, index) => {
         '-c:v', 'libx264',
         '-preset', 'ultrafast',
         '-pix_fmt', 'yuv420p',
+        '-s', `${imageContainerRef.current.offsetWidth}x${imageContainerRef.current.offsetHeight}`,
         'output.mp4'
       ];
 
@@ -715,11 +726,14 @@ const generateSingleVideo = async (imageData, audioData, index) => {
     });
   };
 
+  const [originalNarrationVideoSize, setOriginalNarrationVideoSize] = useState({ width: 0, height: 0 });
+
   const handleNarrationVideoUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
       setNarrationVideo(file);
       const dimensions = await getVideoDimensions(file);
+      setOriginalNarrationVideoSize(dimensions);
       setNarrationVideoSize(dimensions);
     }
   };
@@ -1147,52 +1161,16 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                     sx={{ color: 'white' }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography gutterBottom sx={{ color: 'white' }}>Largura</Typography>
-                  <Slider
-                    value={narrationVideoSize.width}
-                    onChange={(e, newValue) => {
-                      if (lockAspectRatio) {
-                        const ratio = narrationVideoSize.height / narrationVideoSize.width;
-                        setNarrationVideoSize({ width: newValue, height: Math.round(newValue * ratio) });
-                      } else {
-                        setNarrationVideoSize({ ...narrationVideoSize, width: newValue });
-                      }
-                    }}
-                    aria-labelledby="width-slider"
-                    valueLabelDisplay="auto"
-                    max={sliderMaxX}
-                    sx={{ color: 'white' }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography gutterBottom sx={{ color: 'white' }}>Altura</Typography>
-                  <Slider
-                    value={narrationVideoSize.height}
-                    onChange={(e, newValue) => {
-                      if (lockAspectRatio) {
-                        const ratio = narrationVideoSize.width / narrationVideoSize.height;
-                        setNarrationVideoSize({ height: newValue, width: Math.round(newValue * ratio) });
-                      } else {
-                        setNarrationVideoSize({ ...narrationVideoSize, height: newValue });
-                      }
-                    }}
-                    aria-labelledby="height-slider"
-                    valueLabelDisplay="auto"
-                    max={sliderMaxY}
-                    sx={{ color: 'white' }}
-                  />
-                </Grid>
                 <Grid item xs={12}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={lockAspectRatio}
-                        onChange={(e) => setLockAspectRatio(e.target.checked)}
-                        sx={{ color: 'white' }}
-                      />
-                    }
-                    label="Manter proporção"
+                  <Typography gutterBottom sx={{ color: 'white' }}>Zoom</Typography>
+                  <Slider
+                    value={zoom}
+                    onChange={(e, newValue) => setZoom(newValue)}
+                    aria-labelledby="zoom-slider"
+                    valueLabelDisplay="auto"
+                    min={0.1}
+                    max={3}
+                    step={0.1}
                     sx={{ color: 'white' }}
                   />
                 </Grid>
