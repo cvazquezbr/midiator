@@ -736,19 +736,6 @@ const generateSingleVideo = async (imageData, audioData, index) => {
           x: (bgWidth - scaledWidth) / 2 / bgWidth,
           y: (bgHeight - scaledHeight) / 2 / bgHeight,
          });
-
-        console.log('VideoGenerator2.jsx: narrationVideoData', {
-          file: file,
-          url: videoUrl,
-          width: videoElement.videoWidth,
-          height: videoElement.videoHeight,
-          duration: videoElement.duration,
-        });
-        console.log('VideoGenerator2.jsx: videoScale', initialScale);
-        console.log('VideoGenerator2.jsx: normalizedVideoPosition', {
-          x: (bgWidth - scaledWidth) / 2 / bgWidth,
-          y: (bgHeight - scaledHeight) / 2 / bgHeight,
-        });
       };
     } else {
       setError('Formato de vídeo inválido. Use .mp4, .mov ou .webm');
