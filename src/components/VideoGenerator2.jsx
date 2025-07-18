@@ -732,20 +732,6 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       const videoElement = document.createElement('video');
       videoElement.src = videoUrl;
       videoElement.onloadedmetadata = () => {
-        const bgWidth = imageContainerRef.current.offsetWidth;
-        const bgHeight = imageContainerRef.current.offsetHeight;
-
-        const videoAspectRatio = videoElement.videoWidth / videoElement.videoHeight;
-        const bgAspectRatio = bgWidth / bgHeight;
-
-        let initialScale;
-        if (videoAspectRatio > bgAspectRatio) {
-          initialScale = bgWidth / videoElement.videoWidth;
-        } else {
-          initialScale = bgHeight / videoElement.videoHeight;
-        }
-
-
         setNarrationVideoData({
           file: file,
           url: videoUrl,
@@ -753,14 +739,8 @@ const generateSingleVideo = async (imageData, audioData, index) => {
           height: videoElement.videoHeight,
           duration: videoElement.duration,
         });
-        const scaledWidth = videoElement.videoWidth * initialScale;
-        const scaledHeight = videoElement.videoHeight * initialScale;
-
-        setVideoScale(initialScale);
-        setNormalizedVideoPosition({
-          x: (bgWidth - scaledWidth) / 2 / bgWidth,
-          y: (bgHeight - scaledHeight) / 2 / bgHeight,
-         });
+        setVideoScale(0.5); // Default scale to 50%
+        setNormalizedVideoPosition({ x: 0.5, y: 0.5 }); // Default position to center
       };
     } else {
       setError('Formato de vídeo inválido. Use .mp4, .mov ou .webm');

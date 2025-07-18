@@ -15,48 +15,30 @@ const Preview = ({
   videoScale,
   useChromaKey,
   chromaKeyColor,
-  displayedImageSize,
 }) => {
-  const [videoPxPosition, setVideoPxPosition] = React.useState({ x: 0, y: 0 });
-
-  React.useEffect(() => {
-    if (displayedImageSize.width > 0 && displayedImageSize.height > 0) {
-      const container = imageContainerRef.current;
-      const containerWidth = container.offsetWidth;
-      const containerHeight = container.offsetHeight;
-
-      const offsetX = (containerWidth - displayedImageSize.width) / 2;
-      const offsetY = (containerHeight - displayedImageSize.height) / 2;
-
-      setVideoPxPosition({
-        x: normalizedVideoPosition.x * displayedImageSize.width + offsetX,
-        y: normalizedVideoPosition.y * displayedImageSize.height + offsetY,
-      });
-    }
-  }, [normalizedVideoPosition, displayedImageSize, narrationVideoData.url]);
-
   const handleDrag = (e, ui) => {
-    if (displayedImageSize.width > 0 && displayedImageSize.height > 0) {
+    if (imageContainerRef.current) {
       const container = imageContainerRef.current;
       const containerWidth = container.offsetWidth;
       const containerHeight = container.offsetHeight;
 
-      const offsetX = (containerWidth - displayedImageSize.width) / 2;
-      const offsetY = (containerHeight - displayedImageSize.height) / 2;
+      let newX = ui.x / containerWidth;
+      let newY = ui.y / containerHeight;
 
       setNormalizedVideoPosition({
-        x: (ui.x - offsetX) / displayedImageSize.width,
-        y: (ui.y - offsetY) / displayedImageSize.height,
+        x: Math.max(0, Math.min(1, newX)),
+        y: Math.max(0, Math.min(1, newY)),
       });
     }
   };
 
   const videoStyle = {
     position: 'absolute',
-    top: `${videoPxPosition.y}px`,
-    left: `${videoPxPosition.x}px`,
-    width: `${narrationVideoData.width * videoScale}px`,
-    height: `${narrationVideoData.height * videoScale}px`,
+    top: `${normalizedVideoPosition.y * 100}%`,
+    left: `${normalizedVideoPosition.x * 100}%`,
+    width: `${videoScale * 100}%`,
+    height: 'auto',
+    transform: 'translate(-50%, -50%)',
     cursor: 'move',
     border: '2px dashed #fff',
     zIndex: 1,
@@ -124,7 +106,10 @@ const Preview = ({
         {generationMode === 'narration' && narrationVideoData.url && (
           <Draggable
             key={narrationVideoData.url}
-            position={videoPxPosition}
+            position={{
+              x: normalizedVideoPosition.x * imageContainerRef.current?.offsetWidth,
+              y: normalizedVideoPosition.y * imageContainerRef.current?.offsetHeight
+            }}
             onDrag={handleDrag}
             bounds="parent"
           >
