@@ -11,6 +11,7 @@ const ANCHOR_POINTS = {
 
 const Preview = ({
   imageContainerRef,
+  bgImageDimsRef,
   generatedImages,
   generationMode,
   currentImageIndex,
@@ -63,14 +64,18 @@ const Preview = ({
           offsetY = 0;
         }
 
-        setBgImageDims({ 
+        const newDims = { 
           width, 
           height, 
           offsetX, 
           offsetY,
           containerWidth,
           containerHeight
-        });
+        };
+        setBgImageDims(newDims);
+        if (bgImageDimsRef) {
+          bgImageDimsRef.current = newDims;
+        }
       }
     };
 

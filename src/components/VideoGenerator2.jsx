@@ -59,6 +59,7 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
 
   const ffmpegRef = useRef(null);
   const imageContainerRef = useRef(null);
+  const bgImageDimsRef = useRef(null);
   const progressIntervalRef = useRef(null);
   const startTimeRef = useRef(null);
   const iframeRef = useRef(null);
@@ -630,11 +631,20 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       const realBgWidth = firstImage.width;
       const realBgHeight = firstImage.height;
 
-      const realWidth = narrationVideoData.width * videoScale;
-      const realHeight = narrationVideoData.height * videoScale;
+      const { width: bgWidth, height: bgHeight } = bgImageDimsRef.current;
+      
+      const videoAspectRatio = narrationVideoData.width / narrationVideoData.height;
+      
+      let realWidth = bgWidth * videoScale;
+      let realHeight = realWidth / videoAspectRatio;
 
-      const realX = (normalizedVideoPosition.x * realBgWidth);
-      const realY = (normalizedVideoPosition.y * realBgHeight);
+      if (realHeight > bgHeight * videoScale) {
+        realHeight = bgHeight * videoScale;
+        realWidth = realHeight * videoAspectRatio;
+      }
+      
+      const realX = bgImageDimsRef.current.offsetX + (normalizedVideoPosition.x * bgWidth);
+      const realY = bgImageDimsRef.current.offsetY + (normalizedVideoPosition.y * bgHeight);
 
       const colorHex = `0x${chromaKeyColor.replace('#', '')}`;
 
@@ -646,12 +656,16 @@ const generateSingleVideo = async (imageData, audioData, index) => {
 
 
       const cmd = [
-        '-i', 'background.png',
+        '-loop', '1', '-i', 'background.png',
         '-i', 'narration.mp4',
         '-filter_complex', filterComplex,
         '-c:v', 'libx264',
+        '-c:a', 'aac',
+        '-map', '0:v',
+        '-map', '1:a',
         '-t', `${narrationVideoData.duration}`,
         '-aspect', `${realBgWidth}:${realBgHeight}`,
+        '-shortest',
         'output.mp4'
       ];
 
@@ -977,6 +991,7 @@ const generateSingleVideo = async (imageData, audioData, index) => {
 
             <Preview
               imageContainerRef={imageContainerRef}
+              bgImageDimsRef={bgImageDimsRef}
               generatedImages={generatedImages}
               generationMode={generationMode}
               currentImageIndex={currentImageIndex}
@@ -1021,17 +1036,10 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                 autoPlay
                 loop
                 controls
-             
-                sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: '25%',
-                  width: '50%',
-                  height: 'auto',
-                  cursor: 'move',
-                  border: '2px dashed rgb(255, 255, 255)',
-                  zIndex: 99,
-                  backgroundColor: '#000'
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
                 }}
               />
             </Box>
