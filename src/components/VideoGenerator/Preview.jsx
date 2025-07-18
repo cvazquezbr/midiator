@@ -28,8 +28,11 @@ const Preview = ({
     offsetY: 0
   });
   
-  const [anchorPoint, setAnchorPoint] = useState('bottom-right'); // Ponto de ancoragem padrão SE
+  const [videoAspectRatio, setVideoAspectRatio] = useState(16/9);
+  const [anchorPoint, setAnchorPoint] = useState('bottom-right');
   const imgRef = useRef();
+  const videoRef = useRef();
+  const dragHandleRef = useRef();
   const containerRef = useRef();
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
@@ -80,8 +83,21 @@ const Preview = ({
     };
   }, [generatedImages, currentImageIndex, generationMode]);
 
+  // Atualiza a razão de aspecto do vídeo quando carregado
+  const handleVideoLoadedMetadata = (e) => {
+    const video = e.target;
+    if (video.videoWidth > 0 && video.videoHeight > 0) {
+      setVideoAspectRatio(video.videoWidth / video.videoHeight);
+    }
+  };
+
   // Inicia o arrasto
   const handleDragStart = (e) => {
+    // Só inicia o arrasto se o clique foi no manipulador de arrasto
+    if (e.target !== dragHandleRef.current && !dragHandleRef.current.contains(e.target)) {
+      return;
+    }
+    
     setIsDragging(true);
     dragStartRef.current = {
       x: e.clientX,
@@ -107,9 +123,9 @@ const Preview = ({
     const newX = dragStartRef.current.startX + (deltaX / containerWidth);
     const newY = dragStartRef.current.startY + (deltaY / containerHeight);
     
-    // Limita a posição
-    const maxX = 1 - videoScale;
-    const maxY = 1 - videoScale;
+    // Calcula limites baseados no tamanho do vídeo
+    const maxX = 1 - (videoContainerDims.width / bgImageDims.width);
+    const maxY = 1 - (videoContainerDims.height / bgImageDims.height);
     
     setNormalizedVideoPosition({
       x: Math.max(0, Math.min(maxX, newX)),
@@ -139,8 +155,10 @@ const Preview = ({
     setAnchorPoint(point);
     
     const anchor = ANCHOR_POINTS[point];
-    const maxX = 1 - videoScale;
-    const maxY = 1 - videoScale;
+    
+    // Calcula limites baseados no tamanho do vídeo
+    const maxX = 1 - (videoContainerDims.width / bgImageDims.width);
+    const maxY = 1 - (videoContainerDims.height / bgImageDims.height);
     
     // Calcula nova posição baseada no ponto de ancoragem
     const newPosition = {
@@ -151,13 +169,33 @@ const Preview = ({
     setNormalizedVideoPosition(newPosition);
   };
 
+  // Calcula as dimensões do container de vídeo mantendo a razão de aspecto
+  const getVideoContainerDimensions = () => {
+    const baseWidth = bgImageDims.width * videoScale;
+    const baseHeight = bgImageDims.height * videoScale;
+    
+    // Calcula a altura baseada na razão de aspecto do vídeo
+    const calculatedHeight = baseWidth / videoAspectRatio;
+    
+    // Se a altura calculada for maior que a altura base, ajusta pela largura
+    if (calculatedHeight > baseHeight) {
+      return {
+        width: baseHeight * videoAspectRatio,
+        height: baseHeight
+      };
+    }
+    
+    return {
+      width: baseWidth,
+      height: calculatedHeight
+    };
+  };
+
   // Estilo do vídeo
   const videoStyle = {
     width: '100%',
     height: '100%',
-    cursor: 'move',
-    border: '2px dashed #fff',
-    zIndex: 99,
+    objectFit: 'cover', // Garante que o vídeo preencha o container mantendo proporção
     backgroundColor: useChromaKey ? chromaKeyColor : 'transparent',
   };
 
@@ -165,6 +203,9 @@ const Preview = ({
     videoStyle.filter = `drop-shadow(0 0 5px ${chromaKeyColor}) drop-shadow(0 0 15px ${chromaKeyColor})`;
     videoStyle.mixBlendMode = 'multiply';
   }
+
+  // Calcula dimensões do container de vídeo
+  const videoContainerDims = getVideoContainerDimensions();
 
   return (
     <Paper elevation={0} sx={{
@@ -235,6 +276,7 @@ const Preview = ({
           justifyContent: 'center',
           alignItems: 'center'
         }}
+        onMouseDown={handleDragStart}
       >
         {generatedImages.length > 0 ? (
           <img
@@ -300,39 +342,47 @@ const Preview = ({
           </Box>
         )}
 
-        {/* Container para o vídeo usando posicionamento percentual */}
+        {/* Container para o vídeo */}
         {generationMode === 'narration' && narrationVideoData.url && (
           <div
             style={{
               position: 'absolute',
-              top: `${bgImageDims.offsetY}px`,
-              left: `${bgImageDims.offsetX}px`,
-              width: `${bgImageDims.width}px`,
-              height: `${bgImageDims.height}px`,
+              left: `${bgImageDims.offsetX + normalizedVideoPosition.x * bgImageDims.width}px`,
+              top: `${bgImageDims.offsetY + normalizedVideoPosition.y * bgImageDims.height}px`,
+              width: `${videoContainerDims.width}px`,
+              height: `${videoContainerDims.height}px`,
               zIndex: 100,
-              pointerEvents: 'auto'
+              cursor: isDragging ? 'grabbing' : 'move',
+              pointerEvents: 'auto',
+              ...(useChromaKey && {
+                backgroundColor: chromaKeyColor,
+                borderRadius: '4px',
+                overflow: 'hidden',
+                boxShadow: `0 0 10px ${chromaKeyColor}`
+              })
             }}
+            ref={dragHandleRef}
           >
-            <div
-              style={{
-                position: 'absolute',
-                left: `${normalizedVideoPosition.x * 100}%`,
-                top: `${normalizedVideoPosition.y * 100}%`,
-                width: `${videoScale * 100}%`,
-                height: `${videoScale * 100}%`,
-                transform: 'translate(0, 0)',
-                cursor: 'move'
-              }}
-              onMouseDown={handleDragStart}
-            >
-              <video
-                src={narrationVideoData.url}
-                autoPlay
-                loop
-                muted
-                style={videoStyle}
-              />
-            </div>
+            <video
+              ref={videoRef}
+              src={narrationVideoData.url}
+              autoPlay
+              loop
+              muted
+              style={videoStyle}
+              onLoadedMetadata={handleVideoLoadedMetadata}
+            />
+            {/* Overlay para melhor visualização da área de arrasto */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              border: '2px dashed #fff',
+              pointerEvents: 'none',
+              zIndex: 101
+            }} />
           </div>
         )}
       </Box>
