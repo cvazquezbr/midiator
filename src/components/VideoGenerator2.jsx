@@ -1018,11 +1018,19 @@ const generateSingleVideo = async (imageData, audioData, index) => {
               </Typography>
               <video
                 src={video}
+                autoPlay
+                loop
                 controls
-                style={{
-                  width: '100%',
-                  borderRadius: 8,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+             
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '25%',
+                  width: '50%',
+                  height: 'auto',
+                  cursor: 'move',
+                  border: '2px dashed rgb(255, 255, 255)',
+                  zIndex: 99,
                   backgroundColor: '#000'
                 }}
               />
