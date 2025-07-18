@@ -42,11 +42,12 @@ const Preview = ({
 
   const videoStyle = {
     position: 'absolute',
+    top: `${videoPxPosition.y}px`,
+    left: `${videoPxPosition.x}px`,
     width: `${narrationVideoData.width * videoScale}px`,
     height: `${narrationVideoData.height * videoScale}px`,
     cursor: 'move',
     border: '2px dashed #fff',
-    transform: `translate(${videoPxPosition.x}px, ${videoPxPosition.y}px) translate(-50%, -50%)`,
     zIndex: 1,
   };
 
