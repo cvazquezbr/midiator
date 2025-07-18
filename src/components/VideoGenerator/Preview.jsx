@@ -15,27 +15,38 @@ const Preview = ({
   videoScale,
   useChromaKey,
   chromaKeyColor,
+  displayedImageSize,
 }) => {
   const [videoPxPosition, setVideoPxPosition] = React.useState({ x: 0, y: 0 });
 
   React.useEffect(() => {
-    if (imageContainerRef.current) {
-      const bgWidth = imageContainerRef.current.offsetWidth;
-      const bgHeight = imageContainerRef.current.offsetHeight;
+    if (displayedImageSize.width > 0 && displayedImageSize.height > 0) {
+      const container = imageContainerRef.current;
+      const containerWidth = container.offsetWidth;
+      const containerHeight = container.offsetHeight;
+
+      const offsetX = (containerWidth - displayedImageSize.width) / 2;
+      const offsetY = (containerHeight - displayedImageSize.height) / 2;
+
       setVideoPxPosition({
-        x: normalizedVideoPosition.x * bgWidth,
-        y: normalizedVideoPosition.y * bgHeight,
+        x: normalizedVideoPosition.x * displayedImageSize.width + offsetX,
+        y: normalizedVideoPosition.y * displayedImageSize.height + offsetY,
       });
     }
-  }, [normalizedVideoPosition, imageContainerRef, narrationVideoData.url]);
+  }, [normalizedVideoPosition, displayedImageSize, narrationVideoData.url]);
 
   const handleDrag = (e, ui) => {
-    if (imageContainerRef.current) {
-      const bgWidth = imageContainerRef.current.offsetWidth;
-      const bgHeight = imageContainerRef.current.offsetHeight;
+    if (displayedImageSize.width > 0 && displayedImageSize.height > 0) {
+      const container = imageContainerRef.current;
+      const containerWidth = container.offsetWidth;
+      const containerHeight = container.offsetHeight;
+
+      const offsetX = (containerWidth - displayedImageSize.width) / 2;
+      const offsetY = (containerHeight - displayedImageSize.height) / 2;
+
       setNormalizedVideoPosition({
-        x: ui.x / bgWidth,
-        y: ui.y / bgHeight,
+        x: (ui.x - offsetX) / displayedImageSize.width,
+        y: (ui.y - offsetY) / displayedImageSize.height,
       });
     }
   };
