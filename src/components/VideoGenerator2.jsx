@@ -52,6 +52,7 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
   });
   const [normalizedVideoPosition, setNormalizedVideoPosition] = useState({ x: 0, y: 0 });
   const [videoScale, setVideoScale] = useState(1);
+  const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
 
 
   const isCancelledRef = useRef(false);
@@ -151,6 +152,48 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
     }
     return () => clearInterval(interval);
   }, [isPlaying, slideDuration, generatedImages.length]);
+
+  useEffect(() => {
+    const calculateSize = () => {
+      const container = imageContainerRef.current;
+      if (container && generatedImages.length > 0 && generatedImages[0].url) {
+        const containerWidth = container.offsetWidth;
+        const containerHeight = container.offsetHeight;
+        const containerAspectRatio = containerWidth / containerHeight;
+
+        const image = new Image();
+        image.src = generatedImages[0].url;
+        image.onload = () => {
+          const imageAspectRatio = image.width / image.height;
+
+          let newWidth, newHeight;
+
+          if (imageAspectRatio > containerAspectRatio) {
+            newWidth = containerWidth;
+            newHeight = containerWidth / imageAspectRatio;
+          } else {
+            newHeight = containerHeight;
+            newWidth = containerHeight * imageAspectRatio;
+          }
+
+          setDisplayedImageSize({ width: newWidth, height: newHeight });
+        };
+      }
+    };
+
+    calculateSize();
+
+    const resizeObserver = new ResizeObserver(calculateSize);
+    if (imageContainerRef.current) {
+      resizeObserver.observe(imageContainerRef.current);
+    }
+
+    return () => {
+      if (imageContainerRef.current) {
+        resizeObserver.unobserve(imageContainerRef.current);
+      }
+    };
+  }, [generatedImages, imageContainerRef.current]);
 
   const handleGeneratePreview = () => {
     setCurrentImageIndex(0);
@@ -590,8 +633,8 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       const realWidth = narrationVideoData.width * videoScale;
       const realHeight = narrationVideoData.height * videoScale;
 
-      const realX = (normalizedVideoPosition.x * realBgWidth) - (realWidth / 2);
-      const realY = (normalizedVideoPosition.y * realBgHeight) - (realHeight / 2);
+      const realX = (normalizedVideoPosition.x * realBgWidth);
+      const realY = (normalizedVideoPosition.y * realBgHeight);
 
       const colorHex = `0x${chromaKeyColor.replace('#', '')}`;
 
@@ -689,20 +732,6 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       const videoElement = document.createElement('video');
       videoElement.src = videoUrl;
       videoElement.onloadedmetadata = () => {
-        const bgWidth = imageContainerRef.current.offsetWidth;
-        const bgHeight = imageContainerRef.current.offsetHeight;
-
-        const videoAspectRatio = videoElement.videoWidth / videoElement.videoHeight;
-        const bgAspectRatio = bgWidth / bgHeight;
-
-        let initialScale;
-        if (videoAspectRatio > bgAspectRatio) {
-          initialScale = bgWidth / videoElement.videoWidth;
-        } else {
-          initialScale = bgHeight / videoElement.videoHeight;
-        }
-
-
         setNarrationVideoData({
           file: file,
           url: videoUrl,
@@ -710,14 +739,8 @@ const generateSingleVideo = async (imageData, audioData, index) => {
           height: videoElement.videoHeight,
           duration: videoElement.duration,
         });
-        const scaledWidth = videoElement.videoWidth * initialScale;
-        const scaledHeight = videoElement.videoHeight * initialScale;
-
-        setVideoScale(initialScale);
-        setNormalizedVideoPosition({
-          x: (bgWidth - scaledWidth) / 2 / bgWidth,
-          y: (bgHeight - scaledHeight) / 2 / bgHeight,
-         });
+        setVideoScale(0.5); // Default scale to 50%
+        setNormalizedVideoPosition({ x: 0.5, y: 0.5 }); // Default position to center
       };
     } else {
       setError('Formato de vídeo inválido. Use .mp4, .mov ou .webm');
@@ -963,6 +986,7 @@ const generateSingleVideo = async (imageData, audioData, index) => {
               videoScale={videoScale}
               useChromaKey={useChromaKey}
               chromaKeyColor={chromaKeyColor}
+              displayedImageSize={displayedImageSize}
             />
 
           {isLoading && (

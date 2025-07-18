@@ -16,19 +16,6 @@ const Preview = ({
   useChromaKey,
   chromaKeyColor,
 }) => {
-  const [videoPxPosition, setVideoPxPosition] = React.useState({ x: 0, y: 0 });
-
-  React.useEffect(() => {
-    if (imageContainerRef.current) {
-      const bgWidth = imageContainerRef.current.offsetWidth;
-      const bgHeight = imageContainerRef.current.offsetHeight;
-      setVideoPxPosition({
-        x: normalizedVideoPosition.x * bgWidth,
-        y: normalizedVideoPosition.y * bgHeight,
-      });
-    }
-  }, [normalizedVideoPosition, imageContainerRef, narrationVideoData.url]);
-
   const handleDrag = (e, ui) => {
     if (imageContainerRef.current) {
       const bgWidth = imageContainerRef.current.offsetWidth;
@@ -42,10 +29,11 @@ const Preview = ({
 
   const videoStyle = {
     position: 'absolute',
-    top: `${videoPxPosition.y}px`,
-    left: `${videoPxPosition.x}px`,
-    width: `${narrationVideoData.width * videoScale}px`,
-    height: `${narrationVideoData.height * videoScale}px`,
+    top: `${normalizedVideoPosition.y * 100}%`,
+    left: `${normalizedVideoPosition.x * 100}%`,
+    width: `${videoScale * 100}%`,
+    height: 'auto',
+    transform: 'translate(-50%, -50%)',
     cursor: 'move',
     border: '2px dashed #fff',
     zIndex: 1,
@@ -113,7 +101,10 @@ const Preview = ({
         {generationMode === 'narration' && narrationVideoData.url && (
           <Draggable
             key={narrationVideoData.url}
-            position={videoPxPosition}
+            position={{
+              x: normalizedVideoPosition.x * imageContainerRef.current?.offsetWidth,
+              y: normalizedVideoPosition.y * imageContainerRef.current?.offsetHeight
+            }}
             onDrag={handleDrag}
             bounds="parent"
           >
