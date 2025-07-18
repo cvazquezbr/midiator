@@ -161,8 +161,14 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
         const scaleY = bgHeight / narrationVideoData.height;
         const scale = Math.min(scaleX, scaleY, 1);
 
-        setNormalizedVideoPosition({ x: 0.5, y: 0.5 });
+        const scaledWidth = narrationVideoData.width * scale;
+        const scaledHeight = narrationVideoData.height * scale;
+
         setVideoScale(scale);
+        setNormalizedVideoPosition({
+          x: (bgWidth - scaledWidth) / 2 / bgWidth,
+          y: (bgHeight - scaledHeight) / 2 / bgHeight,
+        });
       }
     };
 
