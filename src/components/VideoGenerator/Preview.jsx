@@ -18,16 +18,11 @@ const Preview = ({
 }) => {
   const handleDrag = (e, ui) => {
     if (imageContainerRef.current) {
-      const container = imageContainerRef.current;
-      const containerWidth = container.offsetWidth;
-      const containerHeight = container.offsetHeight;
-
-      let newX = ui.x / containerWidth;
-      let newY = ui.y / containerHeight;
-
+      const bgWidth = imageContainerRef.current.offsetWidth;
+      const bgHeight = imageContainerRef.current.offsetHeight;
       setNormalizedVideoPosition({
-        x: Math.max(0, Math.min(1, newX)),
-        y: Math.max(0, Math.min(1, newY)),
+        x: ui.x / bgWidth,
+        y: ui.y / bgHeight,
       });
     }
   };
