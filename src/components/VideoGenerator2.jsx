@@ -157,6 +157,8 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
       if (narrationVideoData.url && imageContainerRef.current) {
         const bgWidth = imageContainerRef.current.offsetWidth;
         const bgHeight = imageContainerRef.current.offsetHeight;
+        console.log('VideoGenerator2.jsx: handleResize bgWidth', bgWidth);
+        console.log('VideoGenerator2.jsx: handleResize bgHeight', bgHeight);
         const scaleX = bgWidth / narrationVideoData.width;
         const scaleY = bgHeight / narrationVideoData.height;
         const scale = Math.min(scaleX, scaleY, 1);
