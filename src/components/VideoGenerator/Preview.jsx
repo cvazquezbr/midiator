@@ -212,6 +212,46 @@ const Preview = ({
     e.preventDefault();
   };
 
+  // Calcula as dimensões do container de vídeo mantendo a razão de aspecto
+  const getVideoContainerDimensions = () => {
+    const baseWidth = bgImageDims.width * videoScale;
+    const baseHeight = bgImageDims.height * videoScale;
+    
+    // Calcula a altura baseada na razão de aspecto do vídeo
+    const calculatedHeight = baseWidth / videoAspectRatio;
+    
+    // Se a altura calculada for maior que a altura base, ajusta pela largura
+    if (calculatedHeight > baseHeight) {
+      return {
+        width: baseHeight * videoAspectRatio,
+        height: baseHeight
+      };
+    }
+    
+    return {
+      width: baseWidth,
+      height: calculatedHeight
+    };
+  };
+
+  // Estilo do vídeo
+  const videoStyle = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    display: useChromaKey && chromaKeyPreview ? 'none' : 'block'
+  };
+
+  const canvasStyle = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    display: useChromaKey && chromaKeyPreview ? 'block' : 'none'
+  };
+
+  // Calcula dimensões do container de vídeo
+  const videoContainerDims = getVideoContainerDimensions();
+
   // Atualiza a posição durante o arrasto
   const handleDrag = (e) => {
     if (!isDragging || !containerRef.current) return;
@@ -272,46 +312,6 @@ const Preview = ({
     
     setNormalizedVideoPosition(newPosition);
   };
-
-  // Calcula as dimensões do container de vídeo mantendo a razão de aspecto
-  const getVideoContainerDimensions = () => {
-    const baseWidth = bgImageDims.width * videoScale;
-    const baseHeight = bgImageDims.height * videoScale;
-    
-    // Calcula a altura baseada na razão de aspecto do vídeo
-    const calculatedHeight = baseWidth / videoAspectRatio;
-    
-    // Se a altura calculada for maior que a altura base, ajusta pela largura
-    if (calculatedHeight > baseHeight) {
-      return {
-        width: baseHeight * videoAspectRatio,
-        height: baseHeight
-      };
-    }
-    
-    return {
-      width: baseWidth,
-      height: calculatedHeight
-    };
-  };
-
-  // Estilo do vídeo
-  const videoStyle = {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    display: useChromaKey && chromaKeyPreview ? 'none' : 'block'
-  };
-
-  const canvasStyle = {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    display: useChromaKey && chromaKeyPreview ? 'block' : 'none'
-  };
-
-  // Calcula dimensões do container de vídeo
-  const videoContainerDims = getVideoContainerDimensions();
 
   return (
     <Paper elevation={0} sx={{

@@ -408,13 +408,16 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
         generatedImages.slice(1).forEach((_, idx) => {
           const next = `v${idx + 1}`;
           const label = `xf${idx}`;
+          
           const duration = hasAudio && generatedAudioData[idx] ? generatedAudioData[idx].duration : slideDuration;
-          currentTime += duration;
-          const offset = currentTime;
+          
+          const offset = currentTime + duration - fadeSeconds;
+          
           transitionFilters.push(
             `[${previous}][${next}]xfade=transition=${transition}:duration=${fadeSeconds}:offset=${offset}[${label}]`
           );
           previous = label;
+          currentTime += duration - fadeSeconds;
         });
         filterComplex = [...filterParts, ...transitionFilters].join(";");
         lastVideoLabel = `[${previous}]`;
