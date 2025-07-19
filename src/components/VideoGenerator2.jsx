@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Box, Button, Typography, Card, CardContent, Grid,
-  LinearProgress, Alert,
+  Alert,
   Paper,
-  Snackbar, CircularProgress, IconButton, Tooltip, FormControlLabel,
+  Snackbar, CircularProgress, Tooltip, FormControlLabel,
   Switch
 } from '@mui/material';
 import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh, Download } from '@mui/icons-material';
@@ -30,8 +30,6 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [processingTime, setProcessingTime] = useState(0);
-  const [estimatedTime, setEstimatedTime] = useState(0);
   const [showTroubleshooting, setShowTroubleshooting] = useState(false);
   const [environmentChecks, setEnvironmentChecks] = useState(null);
   const [compatibilityMode, setCompatibilityMode] = useState(false);
@@ -255,15 +253,8 @@ const generateVideoWithFFmpeg = async () => {
   setError(null);
   setVideo(null);
   setProgress(0);
-  setProcessingTime(0);
-  setEstimatedTime(0);
   startTimeRef.current = Date.now();
   clearInterval(progressIntervalRef.current);
-  progressIntervalRef.current = setInterval(() => {
-    if (startTimeRef.current) {
-      setProcessingTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
-    }
-  }, 1000);
 
   const ffmpeg = ffmpegRef.current;
   try {
@@ -503,7 +494,6 @@ const generateSingleVideo = async (imageData, audioData, index) => {
     setError(null);
     setVideo(null);
     setProgress(0);
-    setProcessingTime(0);
     startTimeRef.current = Date.now();
 
     try {
@@ -634,29 +624,28 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       const { width: bgWidth, height: bgHeight } = bgImageDimsRef.current;
       
       const videoAspectRatio = narrationVideoData.width / narrationVideoData.height;
-      
-      let realWidth = bgWidth * videoScale;
-      let realHeight = realWidth / videoAspectRatio;
+      let realWidth = realBgWidth * videoScale;
+      let realHeight = realBgWidth / videoAspectRatio;
 
-      if (realHeight > bgHeight * videoScale) {
-        realHeight = bgHeight * videoScale;
-        realWidth = realHeight * videoAspectRatio;
+      if (realHeight > realBgHeight * videoScale) {
+        realHeight = realBgHeight * videoScale;
+        realWidth = realBgHeight * videoAspectRatio;
       }
       
-      const realX = bgImageDimsRef.current.offsetX + (normalizedVideoPosition.x * bgWidth);
-      const realY = bgImageDimsRef.current.offsetY + (normalizedVideoPosition.y * bgHeight);
-
+      const realX = normalizedVideoPosition.x * bgWidth;
+      const realY = normalizedVideoPosition.y * bgHeight;
+      
       const colorHex = `0x${chromaKeyColor.replace('#', '')}`;
-
-      let filterComplex = `[1:v]scale=${realWidth}:${realHeight}[vid];[0:v][vid]overlay=${realX}:${realY}:shortest=1`;
+      
+      let filterComplex = `[1:v]scale=${realWidth}:${realHeight}[vid];[0:v][vid]overlay=x=${realX}:y=${realY}`;
 
       if (useChromaKey) {
-        filterComplex = `[1:v]chromakey=${colorHex}:${chromaKeySimilarity}:${chromaKeyBlend},scale=${realWidth}:${realHeight}[vid];[0:v][vid]overlay=${realX}:${realY}:shortest=1`;
+        filterComplex = `[1:v]chromakey=${colorHex}:${chromaKeySimilarity}:${chromaKeyBlend},scale=${realWidth}:${realHeight}[vid];[0:v][vid]overlay=x=${realX}:y=${realY}`;
       }
 
 
       const cmd = [
-        '-loop', '1', '-i', 'background.png',
+        '-i', 'background.png',
         '-i', 'narration.mp4',
         '-filter_complex', filterComplex,
         '-c:v', 'libx264',
@@ -665,7 +654,6 @@ const generateSingleVideo = async (imageData, audioData, index) => {
         '-map', '1:a',
         '-t', `${narrationVideoData.duration}`,
         '-aspect', `${realBgWidth}:${realBgHeight}`,
-        '-shortest',
         'output.mp4'
       ];
 
@@ -760,13 +748,6 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       setError('Formato de vídeo inválido. Use .mp4, .mov ou .webm');
       setSnackbarOpen(true);
     }
-  };
-
-  const formatTime = (seconds) => {
-    if (seconds < 60) return `${seconds} segundos`;
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds} min`;
   };
 
   const LoadingStatus = () => {
@@ -1004,44 +985,39 @@ const generateSingleVideo = async (imageData, audioData, index) => {
               displayedImageSize={displayedImageSize}
             />
 
-          {isLoading && (
-            <Box sx={{ mt: 2, backgroundColor: 'rgba(0,0,0,0.2)', p: 2, borderRadius: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" sx={{ color: 'white' }}>
-                  Gerando vídeo... {Math.round(progress)}%
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'white' }}>
-                  {estimatedTime > 0 ? `Tempo estimado: ${formatTime(estimatedTime)}` : 'Calculando...'}
-                </Typography>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={progress}
-                sx={{ height: 10, borderRadius: 5 }}
-              />
-              <Typography variant="caption" sx={{ display: 'block', mt: 1, textAlign: 'center', color: 'rgba(255,255,255,0.7)' }}>
-                Processando há {processingTime} segundos
-                {compatibilityMode && ' (Modo de compatibilidade)'}
-              </Typography>
-            </Box>
-          )}
-
           {video && (
             <Box sx={{ mt: 3 }}>
               <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
                 Vídeo Final {compatibilityMode && '(WebM)'}
               </Typography>
-              <video
-                src={video}
-                autoPlay
-                loop
-                controls
-                style={{
+              <Box
+                sx={{
                   width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
+                  aspectRatio: '16/9',
+                  backgroundColor: 'rgba(0,0,0,0.3)',
+                  position: 'relative',
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  maxHeight: '500px',
+                  maxWidth: '100vw',
                 }}
-              />
+              >
+                <video
+                  src={video}
+                  autoPlay
+                  loop
+                  controls
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                  }}
+                />
+              </Box>
             </Box>
           )}
 
