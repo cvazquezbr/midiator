@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Box, Button, Typography, Card, CardContent, Grid,
-  LinearProgress, Alert,
+  Alert,
   Paper,
-  Snackbar, CircularProgress, IconButton, Tooltip, FormControlLabel,
-  Switch, Slider, TextField, Select, MenuItem, FormControl, InputLabel
+  Snackbar, CircularProgress, Tooltip, FormControlLabel,
+  Switch, Slider, Select, MenuItem, FormControl, InputLabel
 } from '@mui/material';
 import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh, Download, Palette } from '@mui/icons-material';
 import JSZip from 'jszip';
@@ -26,7 +26,6 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
   const [fps, setFps] = useState(24);
   const [transition, setTransition] = useState('fade');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -193,16 +192,6 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
   }, []);
 
   useEffect(() => {
-    let interval;
-    if (isPlaying && generatedImages.length > 0) {
-      interval = setInterval(() => {
-        setCurrentImageIndex((prevIndex) => (prevIndex + 1) % generatedImages.length);
-      }, slideDuration * 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, slideDuration, generatedImages.length]);
-
-  useEffect(() => {
     const calculateSize = () => {
       const container = imageContainerRef.current;
       if (container && generatedImages.length > 0 && generatedImages[0].url) {
@@ -287,11 +276,6 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
     }
     
     return filter;
-  };
-
-  const handleGeneratePreview = () => {
-    setCurrentImageIndex(0);
-    setIsPlaying(!isPlaying);
   };
 
   const handleGenerateFinalVideo = async () => {
@@ -1239,21 +1223,6 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
           )}
 
           <Box sx={{ mt: 3, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            <Button
-              variant="contained"
-              onClick={handleGeneratePreview}
-              disabled={isLoading || generatedImages.length === 0}
-              startIcon={<PlayArrow />}
-              sx={{
-                flex: 1,
-                minWidth: 200,
-                fontWeight: 'bold'
-              }}
-              color="success"
-            >
-              {isPlaying ? 'Parar Preview' : 'Iniciar Preview'}
-            </Button>
-
             <Button
               variant="contained"
               color="primary"
