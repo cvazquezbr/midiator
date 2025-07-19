@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Typography, Paper, ButtonGroup, Button } from '@mui/material';
+import { Box, Typography, Paper, ButtonGroup, Button, Chip } from '@mui/material';
 
 const ANCHOR_POINTS = {
   'top-left': { x: 0, y: 0 },
@@ -21,6 +21,12 @@ const Preview = ({
   videoScale,
   useChromaKey,
   chromaKeyColor,
+  chromaKeySimilarity,
+  chromaKeyBlend,
+  chromaKeySpillSuppress,
+  chromaKeyEdgeSmoothing,
+  chromaKeyYuv,
+  chromaKeyColorspace,
 }) => {
   const [bgImageDims, setBgImageDims] = useState({ 
     width: 0, 
@@ -33,10 +39,12 @@ const Preview = ({
   const [anchorPoint, setAnchorPoint] = useState('bottom-right');
   const imgRef = useRef();
   const videoRef = useRef();
+  const canvasRef = useRef();
   const dragHandleRef = useRef();
   const containerRef = useRef();
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
+  const [chromaKeyPreview, setChromaKeyPreview] = useState(false);
 
   // Atualiza as dimensões quando o container ou imagem mudam
   useEffect(() => {
@@ -95,6 +103,98 @@ const Preview = ({
       setVideoAspectRatio(video.videoWidth / video.videoHeight);
     }
   };
+
+  // Função para aplicar chromakey em tempo real no canvas
+  const applyChromaKeyToCanvas = () => {
+    if (!canvasRef.current || !videoRef.current || !useChromaKey) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const video = videoRef.current;
+
+    if (video.readyState >= 2) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      ctx.drawImage(video, 0, 0);
+      
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      // Converter cor hex para RGB
+      const targetColor = {
+        r: parseInt(chromaKeyColor.slice(1, 3), 16),
+        g: parseInt(chromaKeyColor.slice(3, 5), 16),
+        b: parseInt(chromaKeyColor.slice(5, 7), 16)
+      };
+      
+      const threshold = chromaKeySimilarity * 255;
+      const blendFactor = chromaKeyBlend;
+      
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        
+        // Calcular distância da cor alvo
+        const distance = Math.sqrt(
+          Math.pow(r - targetColor.r, 2) +
+          Math.pow(g - targetColor.g, 2) +
+          Math.pow(b - targetColor.b, 2)
+        );
+        
+        if (distance < threshold) {
+          // Aplicar transparência baseada na distância e blend
+          const alpha = Math.max(0, (distance / threshold) * blendFactor);
+          data[i + 3] = alpha * 255;
+          
+          // Supressão de spill se configurado
+          if (chromaKeySpillSuppress > 0) {
+            const spillReduction = 1 - chromaKeySpillSuppress;
+            if (chromaKeyColor.toLowerCase().includes('00ff00')) { // Verde
+              data[i + 1] = data[i + 1] * spillReduction; // Reduzir canal verde
+            } else if (chromaKeyColor.toLowerCase().includes('0000ff')) { // Azul
+              data[i + 2] = data[i + 2] * spillReduction; // Reduzir canal azul
+            }
+          }
+        }
+      }
+      
+      // Aplicar suavização de bordas se configurado
+      if (chromaKeyEdgeSmoothing > 0) {
+        // Implementação básica de blur para suavização
+        const blurRadius = Math.floor(chromaKeyEdgeSmoothing * 10);
+        for (let y = blurRadius; y < canvas.height - blurRadius; y++) {
+          for (let x = blurRadius; x < canvas.width - blurRadius; x++) {
+            const idx = (y * canvas.width + x) * 4;
+            if (data[idx + 3] < 255 && data[idx + 3] > 0) {
+              // Aplicar blur apenas nas bordas semi-transparentes
+              let avgAlpha = 0;
+              let count = 0;
+              for (let dy = -blurRadius; dy <= blurRadius; dy++) {
+                for (let dx = -blurRadius; dx <= blurRadius; dx++) {
+                  const neighborIdx = ((y + dy) * canvas.width + (x + dx)) * 4;
+                  avgAlpha += data[neighborIdx + 3];
+                  count++;
+                }
+              }
+              data[idx + 3] = avgAlpha / count;
+            }
+          }
+        }
+      }
+      
+      ctx.putImageData(imageData, 0, 0);
+    }
+  };
+
+  // Atualizar preview de chromakey em tempo real
+  useEffect(() => {
+    if (useChromaKey && videoRef.current && canvasRef.current) {
+      const interval = setInterval(applyChromaKeyToCanvas, 100); // 10 FPS para preview
+      return () => clearInterval(interval);
+    }
+  }, [useChromaKey, chromaKeyColor, chromaKeySimilarity, chromaKeyBlend, chromaKeySpillSuppress, chromaKeyEdgeSmoothing]);
 
   // Inicia o arrasto
   const handleDragStart = (e) => {
@@ -200,14 +300,16 @@ const Preview = ({
   const videoStyle = {
     width: '100%',
     height: '100%',
-    objectFit: 'cover', // Garante que o vídeo preencha o container mantendo proporção
-    backgroundColor: useChromaKey ? chromaKeyColor : 'transparent',
+    objectFit: 'cover',
+    display: useChromaKey && chromaKeyPreview ? 'none' : 'block'
   };
 
-  if (useChromaKey) {
-    videoStyle.filter = `drop-shadow(0 0 5px ${chromaKeyColor}) drop-shadow(0 0 15px ${chromaKeyColor})`;
-    videoStyle.mixBlendMode = 'multiply';
-  }
+  const canvasStyle = {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    display: useChromaKey && chromaKeyPreview ? 'block' : 'none'
+  };
 
   // Calcula dimensões do container de vídeo
   const videoContainerDims = getVideoContainerDimensions();
@@ -216,12 +318,59 @@ const Preview = ({
     <Paper elevation={0} sx={{
       p: 2,
       mb: 3,
-      backgroundColor: 'rgba(255,255,255,0.1)',
-      borderRadius: 2
+      backgroundColor: 'background.default',
+      borderRadius: 2,
+      border: 1,
+      borderColor: 'divider'
     }}>
-      <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
+      <Typography variant="h6" sx={{ mb: 1, color: 'text.primary' }}>
         Pré-visualização
       </Typography>
+
+      {/* Informações de Chromakey */}
+      {useChromaKey && (
+        <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+          <Chip 
+            label={`Cor: ${chromaKeyColor}`} 
+            size="small" 
+            sx={{ backgroundColor: chromaKeyColor, color: 'white' }}
+          />
+          <Chip 
+            label={`Similaridade: ${(chromaKeySimilarity * 100).toFixed(0)}%`} 
+            size="small" 
+            variant="outlined"
+            sx={{ color: 'text.primary', borderColor: 'divider' }}
+          />
+          <Chip 
+            label={`Blend: ${(chromaKeyBlend * 100).toFixed(0)}%`} 
+            size="small" 
+            variant="outlined"
+            sx={{ color: 'text.primary', borderColor: 'divider' }}
+          />
+          {chromaKeySpillSuppress > 0 && (
+            <Chip 
+              label={`Spill: ${(chromaKeySpillSuppress * 100).toFixed(0)}%`} 
+              size="small" 
+              variant="outlined"
+              sx={{ color: 'text.primary', borderColor: 'divider' }}
+            />
+          )}
+          {chromaKeyEdgeSmoothing > 0 && (
+            <Chip 
+              label={`Suavização: ${(chromaKeyEdgeSmoothing * 100).toFixed(0)}%`} 
+              size="small" 
+              variant="outlined"
+              sx={{ color: 'text.primary', borderColor: 'divider' }}
+            />
+          )}
+          <Chip 
+            label={chromaKeyColorspace === 'yuv' || chromaKeyYuv ? 'YUV' : 'RGB'} 
+            size="small" 
+            variant="outlined"
+            sx={{ color: 'text.primary', borderColor: 'divider' }}
+          />
+        </Box>
+      )}
 
       <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
         <ButtonGroup variant="outlined" size="small">
@@ -258,6 +407,26 @@ const Preview = ({
         </ButtonGroup>
       </Box>
 
+      {/* Toggle para preview de chromakey */}
+      {useChromaKey && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+          <ButtonGroup variant="outlined" size="small">
+            <Button 
+              onClick={() => setChromaKeyPreview(false)}
+              color={!chromaKeyPreview ? 'primary' : 'inherit'}
+            >
+              Original
+            </Button>
+            <Button 
+              onClick={() => setChromaKeyPreview(true)}
+              color={chromaKeyPreview ? 'primary' : 'inherit'}
+            >
+              Com Chromakey
+            </Button>
+          </ButtonGroup>
+        </Box>
+      )}
+
       <Box
         ref={(el) => {
           containerRef.current = el;
@@ -272,11 +441,12 @@ const Preview = ({
         sx={{
           width: '100%',
           aspectRatio: '16/9',
-          backgroundColor: 'rgba(0,0,0,0.3)',
+          backgroundColor: 'background.default',
           position: 'relative',
           borderRadius: 2,
           overflow: 'hidden',
-          border: '1px solid rgba(255,255,255,0.1)',
+          border: 1,
+          borderColor: 'divider',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
@@ -299,7 +469,8 @@ const Preview = ({
               height: `${bgImageDims.height}px`,
               transition: generationMode === 'slides' ? 'opacity 0.5s ease-in-out' : 'none',
               objectFit: 'contain',
-              border: isDragging ? '2px solid #ff4081' : 'none'
+              border: isDragging ? '2px solid' : 'none',
+              borderColor: isDragging ? 'primary.main' : 'transparent'
             }}
             onLoad={() => {
               if (containerRef.current && imgRef.current) {
@@ -342,7 +513,7 @@ const Preview = ({
             justifyContent: 'center',
             alignItems: 'center',
             height: '100%',
-            color: 'rgba(255,255,255,0.5)'
+            color: 'text.secondary'
           }}>
             <Typography>Nenhuma imagem disponível</Typography>
           </Box>
@@ -361,10 +532,9 @@ const Preview = ({
               cursor: isDragging ? 'grabbing' : 'move',
               pointerEvents: 'auto',
               ...(useChromaKey && {
-                backgroundColor: chromaKeyColor,
                 borderRadius: '4px',
                 overflow: 'hidden',
-                boxShadow: `0 0 10px ${chromaKeyColor}`
+                boxShadow: chromaKeyPreview ? `0 0 10px ${chromaKeyColor}` : 'none'
               })
             }}
             ref={dragHandleRef}
@@ -378,6 +548,10 @@ const Preview = ({
               style={videoStyle}
               onLoadedMetadata={handleVideoLoadedMetadata}
             />
+            <canvas
+              ref={canvasRef}
+              style={canvasStyle}
+            />
             {/* Overlay para melhor visualização da área de arrasto */}
             <div style={{
               position: 'absolute',
@@ -385,17 +559,25 @@ const Preview = ({
               left: 0,
               right: 0,
               bottom: 0,
-              border: '2px dashed #fff',
+              border: '2px dashed',
+              borderColor: isDragging ? '#8b5cf6' : '#e5e7eb',
               pointerEvents: 'none',
-              zIndex: 101
+              zIndex: 101,
+              opacity: isDragging ? 1 : 0.3
             }} />
           </div>
         )}
       </Box>
       
       {isDragging && (
-        <Typography variant="body2" sx={{ mt: 1, color: '#ff4081', textAlign: 'center' }}>
+        <Typography variant="body2" sx={{ mt: 1, color: 'primary.main', textAlign: 'center' }}>
           Arrastando o vídeo... Solte para posicionar
+        </Typography>
+      )}
+
+      {useChromaKey && chromaKeyPreview && (
+        <Typography variant="caption" sx={{ mt: 1, color: 'text.secondary', textAlign: 'center', display: 'block' }}>
+          Preview de chromakey em tempo real - A qualidade final será superior
         </Typography>
       )}
     </Paper>
@@ -403,3 +585,4 @@ const Preview = ({
 };
 
 export default Preview;
+
