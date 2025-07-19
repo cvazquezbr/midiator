@@ -14,7 +14,6 @@ const Preview = ({
   bgImageDimsRef,
   generatedImages,
   generationMode,
-  currentImageIndex,
   narrationVideoData,
   normalizedVideoPosition,
   setNormalizedVideoPosition,
@@ -94,7 +93,7 @@ const Preview = ({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [generatedImages, currentImageIndex, generationMode]);
+  }, [generatedImages, generationMode, bgImageDimsRef]);
 
   // Atualiza a razão de aspecto do vídeo quando carregado
   const handleVideoLoadedMetadata = (e) => {
@@ -458,7 +457,7 @@ const Preview = ({
           <img
             ref={imgRef}
             src={generationMode === 'slides' 
-              ? generatedImages[currentImageIndex].url 
+              ? generatedImages[0].url 
               : generatedImages[0].url}
             alt="Background"
             style={{

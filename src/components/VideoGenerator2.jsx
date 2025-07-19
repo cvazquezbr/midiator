@@ -25,7 +25,6 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
   const [slideDuration, setSlideDuration] = useState(3);
   const [fps, setFps] = useState(24);
   const [transition, setTransition] = useState('fade');
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -1130,7 +1129,6 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
             bgImageDimsRef={bgImageDimsRef}
             generatedImages={generatedImages}
             generationMode={generationMode}
-            currentImageIndex={currentImageIndex}
             narrationVideoData={narrationVideoData}
             normalizedVideoPosition={normalizedVideoPosition}
             setNormalizedVideoPosition={setNormalizedVideoPosition}
