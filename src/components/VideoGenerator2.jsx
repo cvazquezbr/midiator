@@ -981,171 +981,176 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
             </Paper>
           )}
 
-          <Paper elevation={0} sx={{
-            p: 2,
-            mb: 3,
-            backgroundColor: 'background.default',
-            borderRadius: 2,
-            border: 1,
-            borderColor: 'divider'
-          }}>
-            <Typography variant="h6" sx={{ mb: 1, color: 'text.primary' }}>
-              Modo de Geração
-            </Typography>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={generationMode === 'narration'}
-                  onChange={(e) => setGenerationMode(e.target.checked ? 'narration' : 'slides')}
-                  color="primary"
-                />
-              }
-              label={generationMode === 'narration' ? "Narração com Vídeo" : "Apresentação de Slides"}
-            />
-
-            {generationMode === 'slides' && (
-              <SlidesSettings
-                slideDuration={slideDuration}
-                setSlideDuration={setSlideDuration}
-                fps={fps}
-                setFps={setFps}
-                transition={transition}
-                setTransition={setTransition}
-                transitionOptions={transitionOptions}
-                compatibilityMode={compatibilityMode}
-                generatePerRecord={generatePerRecord}
-                setGeneratePerRecord={setGeneratePerRecord}
-              />
-            )}
-
-            {generationMode === 'narration' && (
-              <>
-                <NarrationSettings
-                  narrationVideoData={narrationVideoData}
-                  handleNarrationVideoUpload={handleNarrationVideoUpload}
-                  videoScale={videoScale}
-                  setVideoScale={setVideoScale}
-                  useChromaKey={useChromaKey}
-                  setUseChromaKey={setUseChromaKey}
-                  chromaKeyColor={chromaKeyColor}
-                  setChromaKeyColor={setChromaKeyColor}
-                  chromaKeySimilarity={chromaKeySimilarity}
-                  setChromaKeySimilarity={setChromaKeySimilarity}
-                  chromaKeyBlend={chromaKeyBlend}
-                  setChromaKeyBlend={setChromaKeyBlend}
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Paper elevation={0} sx={{
+                p: 2,
+                mb: 3,
+                backgroundColor: 'background.default',
+                borderRadius: 2,
+                border: 1,
+                borderColor: 'divider'
+              }}>
+                <Typography variant="h6" sx={{ mb: 1, color: 'text.primary' }}>
+                  Modo de Geração
+                </Typography>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={generationMode === 'narration'}
+                      onChange={(e) => setGenerationMode(e.target.checked ? 'narration' : 'slides')}
+                      color="primary"
+                    />
+                  }
+                  label={generationMode === 'narration' ? "Narração com Vídeo" : "Apresentação de Slides"}
                 />
 
-                {/* Configurações Avançadas de Chromakey */}
-                {useChromaKey && (
-                  <Paper elevation={0} sx={{
-                    p: 2,
-                    mt: 2,
-                    backgroundColor: 'background.paper',
-                    borderRadius: 2,
-                    border: 1,
-                    borderColor: 'divider'
-                  }}>
-                    <Typography variant="h6" sx={{ mb: 2, color: 'text.primary', display: 'flex', alignItems: 'center' }}>
-                      <Palette sx={{ mr: 1 }} />
-                      Configurações Avançadas de Chromakey
-                    </Typography>
+                {generationMode === 'slides' && (
+                  <SlidesSettings
+                    slideDuration={slideDuration}
+                    setSlideDuration={setSlideDuration}
+                    fps={fps}
+                    setFps={setFps}
+                    transition={transition}
+                    setTransition={setTransition}
+                    transitionOptions={transitionOptions}
+                    compatibilityMode={compatibilityMode}
+                    generatePerRecord={generatePerRecord}
+                    setGeneratePerRecord={setGeneratePerRecord}
+                  />
+                )}
 
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} md={6}>
-                        <FormControl fullWidth sx={{ mb: 2 }}>
-                          <InputLabel>Preset</InputLabel>
-                          <Select
-                            value={chromaKeyPreset}
-                            onChange={(e) => applyChromaKeyPreset(e.target.value)}
-                            label="Preset"
-                          >
-                            {Object.entries(chromaKeyPresets).map(([key, preset]) => (
-                              <MenuItem key={key} value={key}>{preset.name}</MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
+                {generationMode === 'narration' && (
+                  <>
+                    <NarrationSettings
+                      narrationVideoData={narrationVideoData}
+                      handleNarrationVideoUpload={handleNarrationVideoUpload}
+                      videoScale={videoScale}
+                      setVideoScale={setVideoScale}
+                      useChromaKey={useChromaKey}
+                      setUseChromaKey={setUseChromaKey}
+                      chromaKeyColor={chromaKeyColor}
+                      setChromaKeyColor={setChromaKeyColor}
+                      chromaKeySimilarity={chromaKeySimilarity}
+                      setChromaKeySimilarity={setChromaKeySimilarity}
+                      chromaKeyBlend={chromaKeyBlend}
+                      setChromaKeyBlend={setChromaKeyBlend}
+                    />
 
-                      <Grid item xs={12} md={6}>
-                        <FormControl fullWidth sx={{ mb: 2 }}>
-                          <InputLabel>Espaço de Cor</InputLabel>
-                          <Select
-                            value={chromaKeyColorspace}
-                            onChange={(e) => setChromaKeyColorspace(e.target.value)}
-                            label="Espaço de Cor"
-                          >
-                            <MenuItem value="rgb">RGB (Colorkey)</MenuItem>
-                            <MenuItem value="yuv">YUV (Chromakey)</MenuItem>
-                          </Select>
-                        </FormControl>
-                      </Grid>
-
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="body2" sx={{ color: 'text.primary', mb: 1 }}>
-                          Supressão de Spill: {chromaKeySpillSuppress.toFixed(2)}
+                    {/* Configurações Avançadas de Chromakey */}
+                    {useChromaKey && (
+                      <Paper elevation={0} sx={{
+                        p: 2,
+                        mt: 2,
+                        backgroundColor: 'background.paper',
+                        borderRadius: 2,
+                        border: 1,
+                        borderColor: 'divider'
+                      }}>
+                        <Typography variant="h6" sx={{ mb: 2, color: 'text.primary', display: 'flex', alignItems: 'center' }}>
+                          <Palette sx={{ mr: 1 }} />
+                          Configurações Avançadas de Chromakey
                         </Typography>
-                        <Slider
-                          value={chromaKeySpillSuppress}
-                          onChange={(e, value) => setChromaKeySpillSuppress(value)}
-                          min={0}
-                          max={1}
-                          step={0.01}
-                          color="primary"
-                        />
-                      </Grid>
 
-                      <Grid item xs={12} md={6}>
-                        <Typography variant="body2" sx={{ color: 'text.primary', mb: 1 }}>
-                          Suavização de Bordas: {chromaKeyEdgeSmoothing.toFixed(2)}
-                        </Typography>
-                        <Slider
-                          value={chromaKeyEdgeSmoothing}
-                          onChange={(e, value) => setChromaKeyEdgeSmoothing(value)}
-                          min={0}
-                          max={0.5}
-                          step={0.01}
-                          color="primary"
-                        />
-                      </Grid>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} md={6}>
+                            <FormControl fullWidth sx={{ mb: 2 }}>
+                              <InputLabel>Preset</InputLabel>
+                              <Select
+                                value={chromaKeyPreset}
+                                onChange={(e) => applyChromaKeyPreset(e.target.value)}
+                                label="Preset"
+                              >
+                                {Object.entries(chromaKeyPresets).map(([key, preset]) => (
+                                  <MenuItem key={key} value={key}>{preset.name}</MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          </Grid>
 
-                      <Grid item xs={12}>
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={chromaKeyYuv}
-                              onChange={(e) => setChromaKeyYuv(e.target.checked)}
+                          <Grid item xs={12} md={6}>
+                            <FormControl fullWidth sx={{ mb: 2 }}>
+                              <InputLabel>Espaço de Cor</InputLabel>
+                              <Select
+                                value={chromaKeyColorspace}
+                                onChange={(e) => setChromaKeyColorspace(e.target.value)}
+                                label="Espaço de Cor"
+                              >
+                                <MenuItem value="rgb">RGB (Colorkey)</MenuItem>
+                                <MenuItem value="yuv">YUV (Chromakey)</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Grid>
+
+                          <Grid item xs={12} md={6}>
+                            <Typography variant="body2" sx={{ color: 'text.primary', mb: 1 }}>
+                              Supressão de Spill: {chromaKeySpillSuppress.toFixed(2)}
+                            </Typography>
+                            <Slider
+                              value={chromaKeySpillSuppress}
+                              onChange={(e, value) => setChromaKeySpillSuppress(value)}
+                              min={0}
+                              max={1}
+                              step={0.01}
                               color="primary"
                             />
-                          }
-                          label="Forçar modo YUV"
-                        />
-                      </Grid>
-                    </Grid>
-                  </Paper>
-                )}
-              </>
-            )}
-          </Paper>
+                          </Grid>
 
-          <Preview
-            imageContainerRef={imageContainerRef}
-            bgImageDimsRef={bgImageDimsRef}
-            generatedImages={generatedImages}
-            generationMode={generationMode}
-            narrationVideoData={narrationVideoData}
-            normalizedVideoPosition={normalizedVideoPosition}
-            setNormalizedVideoPosition={setNormalizedVideoPosition}
-            videoScale={videoScale}
-            useChromaKey={useChromaKey}
-            chromaKeyColor={chromaKeyColor}
-            chromaKeySimilarity={chromaKeySimilarity}
-            chromaKeyBlend={chromaKeyBlend}
-            chromaKeySpillSuppress={chromaKeySpillSuppress}
-            chromaKeyEdgeSmoothing={chromaKeyEdgeSmoothing}
-            chromaKeyYuv={chromaKeyYuv}
-            chromaKeyColorspace={chromaKeyColorspace}
-            displayedImageSize={displayedImageSize}
-          />
+                          <Grid item xs={12} md={6}>
+                            <Typography variant="body2" sx={{ color: 'text.primary', mb: 1 }}>
+                              Suavização de Bordas: {chromaKeyEdgeSmoothing.toFixed(2)}
+                            </Typography>
+                            <Slider
+                              value={chromaKeyEdgeSmoothing}
+                              onChange={(e, value) => setChromaKeyEdgeSmoothing(value)}
+                              min={0}
+                              max={0.5}
+                              step={0.01}
+                              color="primary"
+                            />
+                          </Grid>
+
+                          <Grid item xs={12}>
+                            <FormControlLabel
+                              control={
+                                <Switch
+                                  checked={chromaKeyYuv}
+                                  onChange={(e) => setChromaKeyYuv(e.target.checked)}
+                                  color="primary"
+                                />
+                              }
+                              label="Forçar modo YUV"
+                            />
+                          </Grid>
+                        </Grid>
+                      </Paper>
+                    )}
+                  </>
+                )}
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Preview
+                imageContainerRef={imageContainerRef}
+                bgImageDimsRef={bgImageDimsRef}
+                generatedImages={generatedImages}
+                generationMode={generationMode}
+                narrationVideoData={narrationVideoData}
+                normalizedVideoPosition={normalizedVideoPosition}
+                setNormalizedVideoPosition={setNormalizedVideoPosition}
+                videoScale={videoScale}
+                useChromaKey={useChromaKey}
+                chromaKeyColor={chromaKeyColor}
+                chromaKeySimilarity={chromaKeySimilarity}
+                chromaKeyBlend={chromaKeyBlend}
+                chromaKeySpillSuppress={chromaKeySpillSuppress}
+                chromaKeyEdgeSmoothing={chromaKeyEdgeSmoothing}
+                chromaKeyYuv={chromaKeyYuv}
+                chromaKeyColorspace={chromaKeyColorspace}
+                displayedImageSize={displayedImageSize}
+              />
+            </Grid>
+          </Grid>
           
           {video && (
             <Box sx={{ mt: 3 }}>

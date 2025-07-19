@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, Paper, ButtonGroup, Button, Chip } from '@mui/material';
 
 const ANCHOR_POINTS = {
@@ -104,7 +104,7 @@ const Preview = ({
   };
 
   // Função para aplicar chromakey em tempo real no canvas
-  const applyChromaKeyToCanvas = () => {
+  const applyChromaKeyToCanvas = useCallback(() => {
     if (!canvasRef.current || !videoRef.current || !useChromaKey) return;
 
     const canvas = canvasRef.current;
@@ -185,7 +185,7 @@ const Preview = ({
       
       ctx.putImageData(imageData, 0, 0);
     }
-  };
+  }, [useChromaKey, chromaKeyColor, chromaKeySimilarity, chromaKeyBlend, chromaKeySpillSuppress, chromaKeyEdgeSmoothing]);
 
   // Atualizar preview de chromakey em tempo real
   useEffect(() => {
@@ -193,7 +193,7 @@ const Preview = ({
       const interval = setInterval(applyChromaKeyToCanvas, 100); // 10 FPS para preview
       return () => clearInterval(interval);
     }
-  }, [useChromaKey, chromaKeyColor, chromaKeySimilarity, chromaKeyBlend, chromaKeySpillSuppress, chromaKeyEdgeSmoothing]);
+  }, [useChromaKey, applyChromaKeyToCanvas]);
 
   // Inicia o arrasto
   const handleDragStart = (e) => {
@@ -253,7 +253,7 @@ const Preview = ({
   const videoContainerDims = getVideoContainerDimensions();
 
   // Atualiza a posição durante o arrasto
-  const handleDrag = (e) => {
+  const handleDrag = useCallback((e) => {
     if (!isDragging || !containerRef.current) return;
     
     const container = containerRef.current;
@@ -275,12 +275,12 @@ const Preview = ({
       x: Math.max(0, Math.min(maxX, newX)),
       y: Math.max(0, Math.min(maxY, newY)),
     });
-  };
+  }, [isDragging, bgImageDims, videoContainerDims, setNormalizedVideoPosition]);
 
   // Finaliza o arrasto
-  const handleDragEnd = () => {
+  const handleDragEnd = useCallback(() => {
     setIsDragging(false);
-  };
+  }, []);
 
   // Adiciona listeners de mouse globalmente durante o arrasto
   useEffect(() => {
@@ -292,7 +292,7 @@ const Preview = ({
         window.removeEventListener('mouseup', handleDragEnd);
       };
     }
-  }, [isDragging]);
+  }, [isDragging, handleDrag, handleDragEnd]);
 
   // Aplica o ponto de ancoragem selecionado
   const applyAnchorPoint = (point) => {
