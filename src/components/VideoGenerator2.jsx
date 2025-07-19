@@ -30,8 +30,6 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [processingTime, setProcessingTime] = useState(0);
-  const [estimatedTime, setEstimatedTime] = useState(0);
   const [showTroubleshooting, setShowTroubleshooting] = useState(false);
   const [environmentChecks, setEnvironmentChecks] = useState(null);
   const [compatibilityMode, setCompatibilityMode] = useState(false);
@@ -183,19 +181,20 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
     };
 
     calculateSize();
+    const currentImageContainer = imageContainerRef.current;
+
 
     const resizeObserver = new ResizeObserver(calculateSize);
-    if (imageContainerRef.current) {
-      resizeObserver.observe(imageContainerRef.current);
+    if (currentImageContainer) {
+      resizeObserver.observe(currentImageContainer);
     }
 
     return () => {
-      if (imageContainerRef.current) {
-        resizeObserver.unobserve(imageContainerRef.current);
+      if (currentImageContainer) {
+        +        resizeObserver.unobserve(currentImageContainer);
       }
     };
-  }, [generatedImages, imageContainerRef.current]);
-
+  }, [generatedImages]);
   const handleGeneratePreview = () => {
     setCurrentImageIndex(0);
     setIsPlaying(!isPlaying);
@@ -255,15 +254,8 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
     setError(null);
     setVideo(null);
     setProgress(0);
-    setProcessingTime(0);
-    setEstimatedTime(0);
     startTimeRef.current = Date.now();
     clearInterval(progressIntervalRef.current);
-    progressIntervalRef.current = setInterval(() => {
-      if (startTimeRef.current) {
-        setProcessingTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
-      }
-    }, 1000);
 
     const ffmpeg = ffmpegRef.current;
     try {
@@ -503,7 +495,6 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
     setError(null);
     setVideo(null);
     setProgress(0);
-    setProcessingTime(0);
     startTimeRef.current = Date.now();
 
     try {
