@@ -6,7 +6,7 @@ import {
   Snackbar, CircularProgress, Tooltip, FormControlLabel,
   Switch, Slider, Select, MenuItem, FormControl, InputLabel
 } from '@mui/material';
-import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh, Download, Palette } from '@mui/icons-material';
+import { Movie, GetApp, Info, ErrorOutline, Refresh, Download, Palette } from '@mui/icons-material';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import ProgressModal from './ProgressModal';
