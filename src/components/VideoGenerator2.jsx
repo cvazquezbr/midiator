@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Box, Button, Typography, Card, CardContent, Grid,
-  Alert,
+  LinearProgress, Alert,
   Paper,
-  Snackbar, CircularProgress, Tooltip, FormControlLabel,
+  Snackbar, CircularProgress, IconButton, Tooltip, FormControlLabel,
   Switch
 } from '@mui/material';
 import { Movie, PlayArrow, GetApp, Info, ErrorOutline, Refresh, Download } from '@mui/icons-material';
@@ -30,6 +30,8 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [processingTime, setProcessingTime] = useState(0);
+  const [estimatedTime, setEstimatedTime] = useState(0);
   const [showTroubleshooting, setShowTroubleshooting] = useState(false);
   const [environmentChecks, setEnvironmentChecks] = useState(null);
   const [compatibilityMode, setCompatibilityMode] = useState(false);
@@ -237,139 +239,251 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
     setShowProgressModal(false);
   };
 
-const generateVideoWithFFmpeg = async () => {
-  const fadeSeconds = (typeof transition === "number" && transition > 0)
-    ? transition
-    : 1;
+  const generateVideoWithFFmpeg = async () => {
+    const fadeSeconds = (typeof transition === "number" && transition > 0)
+      ? transition
+      : 1;
 
     const firstImage = new Image();
     firstImage.src = generatedImages[0].url;
     await firstImage.decode();
 
-  const outW = firstImage.width;
-  const outH = firstImage.height;
+    const outW = firstImage.width;
+    const outH = firstImage.height;
 
-  setIsLoading(true);
-  setError(null);
-  setVideo(null);
-  setProgress(0);
-  startTimeRef.current = Date.now();
-  clearInterval(progressIntervalRef.current);
+    setIsLoading(true);
+    setError(null);
+    setVideo(null);
+    setProgress(0);
+    setProcessingTime(0);
+    setEstimatedTime(0);
+    startTimeRef.current = Date.now();
+    clearInterval(progressIntervalRef.current);
+    progressIntervalRef.current = setInterval(() => {
+      if (startTimeRef.current) {
+        setProcessingTime(Math.floor((Date.now() - startTimeRef.current) / 1000));
+      }
+    }, 1000);
 
-  const ffmpeg = ffmpegRef.current;
-  try {
-    await ffmpeg.deleteFile("output.mp4").catch(() => {});
+    const ffmpeg = ffmpegRef.current;
+    try {
+      await ffmpeg.deleteFile("output.mp4").catch(() => { });
+
+      for (let i = 0; i < generatedImages.length; i++) {
+        if (isCancelledRef.current) {
+          console.log('Video generation cancelled by user.');
+          return;
+        }
+        const img = generatedImages[i];
+        const fileData = await fetchFile(img.url);
+        await ffmpeg.writeFile(`img${i}.png`, fileData);
+        setProgress(i + 1);
+      }
+
+      const hasAudio = generatedAudioData && generatedAudioData.length > 0;
+      if (hasAudio) {
+        await Promise.all(
+          generatedAudioData.map(async (audio, i) => {
+            if (audio.blob) {
+              const audioData = await fetchFile(URL.createObjectURL(audio.blob));
+              await ffmpeg.writeFile(`audio${i}.mp3`, audioData);
+            }
+          })
+        );
+      }
+
+      const inputs = [];
+      generatedImages.forEach((_, i) => {
+        const duration = hasAudio && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration;
+        inputs.push("-loop", "1", "-t", duration.toString(), "-i", `img${i}.png`);
+      });
+      if (hasAudio) {
+        generatedAudioData.forEach((_, i) => {
+          if (generatedAudioData[i].blob) {
+            inputs.push("-i", `audio${i}.mp3`);
+          }
+        });
+      }
+
+      const filterParts = generatedImages.map((_, i) => {
+        const base = `[${i}:v]format=yuv420p,setsar=1,setpts=PTS-STARTPTS`;
+        return `${base},scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2[v${i}]`;
+      });
+
+      let filterComplex = "";
+      let lastVideoLabel = "";
+      let lastAudioLabel = "";
+      let totalDuration = 0;
+
+      if (transition === "none") {
+        const videoConcat = generatedImages.map((_, i) => `[v${i}]`).join("");
+        const audioConcat = hasAudio ? generatedAudioData.map((_, i) => `[${generatedImages.length + i}:a]`).join("") : "";
+        const audioOutput = hasAudio ? ":a=1[outa]" : "";
+        filterComplex = [
+          ...filterParts,
+          `${videoConcat}concat=n=${generatedImages.length}:v=1:a=0[outv]`,
+          hasAudio ? `${audioConcat}concat=n=${generatedAudioData.length}:v=0${audioOutput}` : ""
+        ].filter(Boolean).join(";");
+        lastVideoLabel = "[outv]";
+        if (hasAudio) lastAudioLabel = "[outa]";
+
+
+        totalDuration = generatedImages.reduce((acc, _, i) => {
+          const duration = hasAudio && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration;
+          return acc + duration;
+        }, 0);
+
+      } else {
+        const transitionFilters = [];
+        let previous = "v0";
+        let currentTime = 0;
+        generatedImages.slice(1).forEach((_, idx) => {
+          const next = `v${idx + 1}`;
+          const label = `xf${idx}`;
+          const duration = hasAudio && generatedAudioData[idx] ? generatedAudioData[idx].duration : slideDuration;
+          currentTime += duration;
+          const offset = currentTime;
+          transitionFilters.push(
+            `[${previous}][${next}]xfade=transition=${transition}:duration=${fadeSeconds}:offset=${offset}[${label}]`
+          );
+          previous = label;
+        });
+        filterComplex = [...filterParts, ...transitionFilters].join(";");
+        lastVideoLabel = `[${previous}]`;
+        const lastImageDuration = hasAudio && generatedAudioData[generatedImages.length - 1] ? generatedAudioData[generatedImages.length - 1].duration : slideDuration;
+        totalDuration = currentTime + lastImageDuration;
+
+        if (hasAudio) {
+          const audioConcat = generatedAudioData.map((_, i) => `[${generatedImages.length + i}:a]`).join("");
+          filterComplex += `;${audioConcat}concat=n=${generatedAudioData.length}:v=0:a=1[outa]`;
+          lastAudioLabel = "[outa]";
+        }
+      }
+
+      const cmd = [
+        "-y",
+        ...inputs,
+        "-filter_complex", filterComplex,
+        "-map", lastVideoLabel,
+      ];
+
+      if (hasAudio && lastAudioLabel) {
+        cmd.push("-map", lastAudioLabel);
+        cmd.push("-c:a", "aac");
+      }
+
+      cmd.push(
+        "-c:v", "libx264",
+        "-r", fps.toString(),
+        "-pix_fmt", "yuv420p",
+        "-t", totalDuration.toString(),
+        "-preset", "ultrafast",
+        "output.mp4"
+      );
+
+      ffmpeg.on('progress', ({ time }) => {
+        const framesProcessed = Math.round(time / 1000000 * fps);
+        setProgress(framesProcessed);
+      });
+
+      console.log("⚙️ FFmpeg cmd:", cmd.join(" "));
+      await ffmpeg.exec(cmd);
+
+      const data = await ffmpeg.readFile("output.mp4");
+      const url = URL.createObjectURL(new Blob([data.buffer], { type: "video/mp4" }));
+      setVideo(url);
+    } catch (err) {
+      console.error("Erro na geração do vídeo:", err);
+      setError(`Erro na geração do vídeo: ${err.message}`);
+      setSnackbarOpen(true);
+    } finally {
+      setIsLoading(false);
+      setProgress(0);
+      clearInterval(progressIntervalRef.current);
+      startTimeRef.current = null;
+      setShowProgressModal(false);
+    }
+  };
+
+  const generateVideoPerRecord = async () => {
+    setIsLoading(true);
+    setError(null);
+    setVideos([]);
+    startTimeRef.current = Date.now();
 
     for (let i = 0; i < generatedImages.length; i++) {
       if (isCancelledRef.current) {
         console.log('Video generation cancelled by user.');
-        return;
+        break;
       }
-      const img = generatedImages[i];
-      const fileData = await fetchFile(img.url);
-      await ffmpeg.writeFile(`img${i}.png`, fileData);
-      setProgress(i + 1);
-    }
+      setTotalFrames(Math.floor((generatedAudioData[i]?.duration || slideDuration) * fps));
+      const imageData = [generatedImages[i]];
+      const audioData = generatedAudioData[i] ? [generatedAudioData[i]] : null;
 
-    const hasAudio = generatedAudioData && generatedAudioData.length > 0;
-    if (hasAudio) {
-      await Promise.all(
-        generatedAudioData.map(async (audio, i) => {
-          if (audio.blob) {
-            const audioData = await fetchFile(URL.createObjectURL(audio.blob));
-            await ffmpeg.writeFile(`audio${i}.mp3`, audioData);
-          }
-        })
-      );
-    }
-
-    const inputs = [];
-    generatedImages.forEach((_, i) => {
-      const duration = hasAudio && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration;
-      inputs.push("-loop", "1", "-t", duration.toString(), "-i", `img${i}.png`);
-    });
-    if (hasAudio) {
-        generatedAudioData.forEach((_, i) => {
-            if (generatedAudioData[i].blob) {
-                inputs.push("-i", `audio${i}.mp3`);
-            }
-        });
-    }
-
-    const filterParts = generatedImages.map((_, i) => {
-      const base = `[${i}:v]format=yuv420p,setsar=1,setpts=PTS-STARTPTS`;
-      return `${base},scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2[v${i}]`;
-    });
-
-    let filterComplex = "";
-    let lastVideoLabel = "";
-    let lastAudioLabel = "";
-    let totalDuration = 0;
-
-    if (transition === "none") {
-      const videoConcat = generatedImages.map((_, i) => `[v${i}]`).join("");
-      const audioConcat = hasAudio ? generatedAudioData.map((_, i) => `[${generatedImages.length + i}:a]`).join("") : "";
-      const audioOutput = hasAudio ? ":a=1[outa]" : "";
-      filterComplex = [
-        ...filterParts,
-        `${videoConcat}concat=n=${generatedImages.length}:v=1:a=0[outv]`,
-        hasAudio ? `${audioConcat}concat=n=${generatedAudioData.length}:v=0${audioOutput}` : ""
-      ].filter(Boolean).join(";");
-      lastVideoLabel = "[outv]";
-      if (hasAudio) lastAudioLabel = "[outa]";
-
-
-      totalDuration = generatedImages.reduce((acc, _, i) => {
-        const duration = hasAudio && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration;
-        return acc + duration;
-      }, 0);
-
-    } else {
-      const transitionFilters = [];
-      let previous = "v0";
-      let currentTime = 0;
-      generatedImages.slice(1).forEach((_, idx) => {
-        const next = `v${idx + 1}`;
-        const label = `xf${idx}`;
-        const duration = hasAudio && generatedAudioData[idx] ? generatedAudioData[idx].duration : slideDuration;
-        currentTime += duration;
-        const offset = currentTime;
-        transitionFilters.push(
-          `[${previous}][${next}]xfade=transition=${transition}:duration=${fadeSeconds}:offset=${offset}[${label}]`
-        );
-        previous = label;
-      });
-      filterComplex = [...filterParts, ...transitionFilters].join(";");
-      lastVideoLabel = `[${previous}]`;
-      const lastImageDuration = hasAudio && generatedAudioData[generatedImages.length - 1] ? generatedAudioData[generatedImages.length - 1].duration : slideDuration;
-      totalDuration = currentTime + lastImageDuration;
-
-      if (hasAudio) {
-        const audioConcat = generatedAudioData.map((_, i) => `[${generatedImages.length + i}:a]`).join("");
-        filterComplex += `;${audioConcat}concat=n=${generatedAudioData.length}:v=0:a=1[outa]`;
-        lastAudioLabel = "[outa]";
+      try {
+        const videoBlob = await generateSingleVideo(imageData, audioData, i);
+        const videoUrl = URL.createObjectURL(videoBlob);
+        setVideos(prev => [...prev, { url: videoUrl, name: `video_${i + 1}.mp4` }]);
+      } catch (err) {
+        setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message}`);
+        setSnackbarOpen(true);
       }
     }
+
+    setIsLoading(false);
+    clearInterval(progressIntervalRef.current);
+    startTimeRef.current = null;
+    setShowProgressModal(false);
+  };
+
+  const generateSingleVideo = async (imageData, audioData, index) => {
+    const ffmpeg = ffmpegRef.current;
+    const hasAudio = audioData && audioData.length > 0 && audioData[0].blob;
+    const duration = hasAudio ? audioData[0].duration : slideDuration;
+    const outputFilename = `output_${index}.mp4`;
+
+    await ffmpeg.deleteFile(outputFilename).catch(() => { });
+
+    const imgFile = `img_${index}.png`;
+    const audioFile = `audio_${index}.mp3`;
+
+    const fileData = await fetchFile(imageData[0].url);
+    await ffmpeg.writeFile(imgFile, fileData);
+
+    const inputs = ["-loop", "1", "-t", duration.toString(), "-i", imgFile];
+    if (hasAudio) {
+      const audioBlob = await fetchFile(URL.createObjectURL(audioData[0].blob));
+      await ffmpeg.writeFile(audioFile, audioBlob);
+      inputs.push("-i", audioFile);
+    }
+
+    const firstImage = new Image();
+    firstImage.src = imageData[0].url;
+    await firstImage.decode();
+    const outW = firstImage.width;
+    const outH = firstImage.height;
+
+    const filterComplex = `[0:v]format=yuv420p,setsar=1,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2[v]`;
 
     const cmd = [
       "-y",
       ...inputs,
       "-filter_complex", filterComplex,
-      "-map", lastVideoLabel,
+      "-map", "[v]",
     ];
 
-    if (hasAudio && lastAudioLabel) {
-        cmd.push("-map", lastAudioLabel);
-        cmd.push("-c:a", "aac");
+    if (hasAudio) {
+      cmd.push("-map", "1:a");
+      cmd.push("-c:a", "aac");
     }
 
     cmd.push(
       "-c:v", "libx264",
       "-r", fps.toString(),
       "-pix_fmt", "yuv420p",
-      "-t", totalDuration.toString(),
+      "-t", duration.toString(),
       "-preset", "ultrafast",
-      "output.mp4"
+      outputFilename
     );
 
     ffmpeg.on('progress', ({ time }) => {
@@ -377,123 +491,19 @@ const generateVideoWithFFmpeg = async () => {
       setProgress(framesProcessed);
     });
 
-    console.log("⚙️ FFmpeg cmd:", cmd.join(" "));
+    console.log(`⚙️ FFmpeg cmd for video ${index}:`, cmd.join(" "));
     await ffmpeg.exec(cmd);
 
-    const data = await ffmpeg.readFile("output.mp4");
-    const url = URL.createObjectURL(new Blob([data.buffer], { type: "video/mp4" }));
-    setVideo(url);
-  } catch (err) {
-    console.error("Erro na geração do vídeo:", err);
-    setError(`Erro na geração do vídeo: ${err.message}`);
-    setSnackbarOpen(true);
-  } finally {
-    setIsLoading(false);
-    setProgress(0);
-    clearInterval(progressIntervalRef.current);
-    startTimeRef.current = null;
-    setShowProgressModal(false);
-  }
-};
-
-const generateVideoPerRecord = async () => {
-  setIsLoading(true);
-  setError(null);
-  setVideos([]);
-  startTimeRef.current = Date.now();
-
-  for (let i = 0; i < generatedImages.length; i++) {
-    if (isCancelledRef.current) {
-      console.log('Video generation cancelled by user.');
-      break;
-    }
-    setTotalFrames(Math.floor((generatedAudioData[i]?.duration || slideDuration) * fps));
-    const imageData = [generatedImages[i]];
-    const audioData = generatedAudioData[i] ? [generatedAudioData[i]] : null;
-
-    try {
-      const videoBlob = await generateSingleVideo(imageData, audioData, i);
-      const videoUrl = URL.createObjectURL(videoBlob);
-      setVideos(prev => [...prev, { url: videoUrl, name: `video_${i + 1}.mp4` }]);
-    } catch (err) {
-      setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message}`);
-      setSnackbarOpen(true);
-    }
-  }
-
-  setIsLoading(false);
-  clearInterval(progressIntervalRef.current);
-  startTimeRef.current = null;
-  setShowProgressModal(false);
-};
-
-const generateSingleVideo = async (imageData, audioData, index) => {
-  const ffmpeg = ffmpegRef.current;
-  const hasAudio = audioData && audioData.length > 0 && audioData[0].blob;
-  const duration = hasAudio ? audioData[0].duration : slideDuration;
-  const outputFilename = `output_${index}.mp4`;
-
-  await ffmpeg.deleteFile(outputFilename).catch(() => {});
-
-  const imgFile = `img_${index}.png`;
-  const audioFile = `audio_${index}.mp3`;
-
-  const fileData = await fetchFile(imageData[0].url);
-  await ffmpeg.writeFile(imgFile, fileData);
-
-  const inputs = ["-loop", "1", "-t", duration.toString(), "-i", imgFile];
-  if (hasAudio) {
-    const audioBlob = await fetchFile(URL.createObjectURL(audioData[0].blob));
-    await ffmpeg.writeFile(audioFile, audioBlob);
-    inputs.push("-i", audioFile);
-  }
-
-  const firstImage = new Image();
-  firstImage.src = imageData[0].url;
-  await firstImage.decode();
-  const outW = firstImage.width;
-  const outH = firstImage.height;
-
-  const filterComplex = `[0:v]format=yuv420p,setsar=1,setpts=PTS-STARTPTS,scale=${outW}:${outH}:force_original_aspect_ratio=decrease,pad=${outW}:${outH}:(ow-iw)/2:(oh-ih)/2[v]`;
-
-  const cmd = [
-    "-y",
-    ...inputs,
-    "-filter_complex", filterComplex,
-    "-map", "[v]",
-  ];
-
-  if (hasAudio) {
-    cmd.push("-map", "1:a");
-    cmd.push("-c:a", "aac");
-  }
-
-  cmd.push(
-    "-c:v", "libx264",
-    "-r", fps.toString(),
-    "-pix_fmt", "yuv420p",
-    "-t", duration.toString(),
-    "-preset", "ultrafast",
-    outputFilename
-  );
-
-  ffmpeg.on('progress', ({ time }) => {
-    const framesProcessed = Math.round(time / 1000000 * fps);
-    setProgress(framesProcessed);
-  });
-
-  console.log(`⚙️ FFmpeg cmd for video ${index}:`, cmd.join(" "));
-  await ffmpeg.exec(cmd);
-
-  const data = await ffmpeg.readFile(outputFilename);
-  return new Blob([data.buffer], { type: "video/mp4" });
-};
+    const data = await ffmpeg.readFile(outputFilename);
+    return new Blob([data.buffer], { type: "video/mp4" });
+  };
 
   const generateVideoWithCompatibilityMode = async () => {
     setIsLoading(true);
     setError(null);
     setVideo(null);
     setProgress(0);
+    setProcessingTime(0);
     startTimeRef.current = Date.now();
 
     try {
@@ -578,7 +588,7 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       setProgress(0);
       clearInterval(progressIntervalRef.current);
       startTimeRef.current = null;
-    setShowProgressModal(false);
+      setShowProgressModal(false);
     }
   };
 
@@ -621,22 +631,20 @@ const generateSingleVideo = async (imageData, audioData, index) => {
       const realBgWidth = firstImage.width;
       const realBgHeight = firstImage.height;
 
-      const { width: bgWidth, height: bgHeight } = bgImageDimsRef.current;
-      
       const videoAspectRatio = narrationVideoData.width / narrationVideoData.height;
       let realWidth = realBgWidth * videoScale;
-      let realHeight = realBgWidth / videoAspectRatio;
+      let realHeight = realWidth / videoAspectRatio;
 
       if (realHeight > realBgHeight * videoScale) {
         realHeight = realBgHeight * videoScale;
-        realWidth = realBgHeight * videoAspectRatio;
+        realWidth = realHeight * videoAspectRatio;
       }
-      
-      const realX = normalizedVideoPosition.x * bgWidth;
-      const realY = normalizedVideoPosition.y * bgHeight;
-      
+
+      const realX = normalizedVideoPosition.x * realBgWidth;
+      const realY = normalizedVideoPosition.y * realBgHeight;
+
       const colorHex = `0x${chromaKeyColor.replace('#', '')}`;
-      
+
       let filterComplex = `[1:v]scale=${realWidth}:${realHeight}[vid];[0:v][vid]overlay=x=${realX}:y=${realY}`;
 
       if (useChromaKey) {
@@ -924,67 +932,66 @@ const generateSingleVideo = async (imageData, audioData, index) => {
             borderRadius: 2
           }}>
             <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
-                Modo de Geração
+              Modo de Geração
             </Typography>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={generationMode === 'narration'}
-                    onChange={(e) => setGenerationMode(e.target.checked ? 'narration' : 'slides')}
-                    color="primary"
-                  />
-                }
-                label={generationMode === 'narration' ? "Narração com Vídeo" : "Apresentação de Slides"}
-              />
-
-              {generationMode === 'slides' && (
-                <SlidesSettings
-                  slideDuration={slideDuration}
-                  setSlideDuration={setSlideDuration}
-                  fps={fps}
-                  setFps={setFps}
-                  transition={transition}
-                  setTransition={setTransition}
-                  transitionOptions={transitionOptions}
-                  compatibilityMode={compatibilityMode}
-                  generatePerRecord={generatePerRecord}
-                  setGeneratePerRecord={setGeneratePerRecord}
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={generationMode === 'narration'}
+                  onChange={(e) => setGenerationMode(e.target.checked ? 'narration' : 'slides')}
+                  color="primary"
                 />
-              )}
-
-              {generationMode === 'narration' && (
-                <NarrationSettings
-                  narrationVideoData={narrationVideoData}
-                  handleNarrationVideoUpload={handleNarrationVideoUpload}
-                  videoScale={videoScale}
-                  setVideoScale={setVideoScale}
-                  useChromaKey={useChromaKey}
-                  setUseChromaKey={setUseChromaKey}
-                  chromaKeyColor={chromaKeyColor}
-                  setChromaKeyColor={setChromaKeyColor}
-                  chromaKeySimilarity={chromaKeySimilarity}
-                  setChromaKeySimilarity={setChromaKeySimilarity}
-                  chromaKeyBlend={chromaKeyBlend}
-                  setChromaKeyBlend={setChromaKeyBlend}
-                />
-              )}
-            </Paper>
-
-            <Preview
-              imageContainerRef={imageContainerRef}
-              bgImageDimsRef={bgImageDimsRef}
-              generatedImages={generatedImages}
-              generationMode={generationMode}
-              currentImageIndex={currentImageIndex}
-              narrationVideoData={narrationVideoData}
-              normalizedVideoPosition={normalizedVideoPosition}
-              setNormalizedVideoPosition={setNormalizedVideoPosition}
-              videoScale={videoScale}
-              useChromaKey={useChromaKey}
-              chromaKeyColor={chromaKeyColor}
-              displayedImageSize={displayedImageSize}
+              }
+              label={generationMode === 'narration' ? "Narração com Vídeo" : "Apresentação de Slides"}
             />
 
+            {generationMode === 'slides' && (
+              <SlidesSettings
+                slideDuration={slideDuration}
+                setSlideDuration={setSlideDuration}
+                fps={fps}
+                setFps={setFps}
+                transition={transition}
+                setTransition={setTransition}
+                transitionOptions={transitionOptions}
+                compatibilityMode={compatibilityMode}
+                generatePerRecord={generatePerRecord}
+                setGeneratePerRecord={setGeneratePerRecord}
+              />
+            )}
+
+            {generationMode === 'narration' && (
+              <NarrationSettings
+                narrationVideoData={narrationVideoData}
+                handleNarrationVideoUpload={handleNarrationVideoUpload}
+                videoScale={videoScale}
+                setVideoScale={setVideoScale}
+                useChromaKey={useChromaKey}
+                setUseChromaKey={setUseChromaKey}
+                chromaKeyColor={chromaKeyColor}
+                setChromaKeyColor={setChromaKeyColor}
+                chromaKeySimilarity={chromaKeySimilarity}
+                setChromaKeySimilarity={setChromaKeySimilarity}
+                chromaKeyBlend={chromaKeyBlend}
+                setChromaKeyBlend={setChromaKeyBlend}
+              />
+            )}
+          </Paper>
+
+          <Preview
+            imageContainerRef={imageContainerRef}
+            bgImageDimsRef={bgImageDimsRef}
+            generatedImages={generatedImages}
+            generationMode={generationMode}
+            currentImageIndex={currentImageIndex}
+            narrationVideoData={narrationVideoData}
+            normalizedVideoPosition={normalizedVideoPosition}
+            setNormalizedVideoPosition={setNormalizedVideoPosition}
+            videoScale={videoScale}
+            useChromaKey={useChromaKey}
+            chromaKeyColor={chromaKeyColor}
+            displayedImageSize={displayedImageSize}
+          />
           {video && (
             <Box sx={{ mt: 3 }}>
               <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
@@ -1003,7 +1010,6 @@ const generateSingleVideo = async (imageData, audioData, index) => {
                   justifyContent: 'center',
                   alignItems: 'center',
                   maxHeight: '500px',
-                  maxWidth: '100vw',
                 }}
               >
                 <video
@@ -1109,20 +1115,20 @@ const generateSingleVideo = async (imageData, audioData, index) => {
             </Button>
 
             {videos.length > 0 && (
-                <Button
-                  variant="contained"
-                  onClick={handleDownloadAll}
-                  disabled={isLoading}
-                  startIcon={<Download />}
-                  sx={{
-                    flex: 1,
-                    minWidth: 200,
-                    background: 'linear-gradient(45deg, #4caf50, #81c784)',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Baixar Todos
-                </Button>
+              <Button
+                variant="contained"
+                onClick={handleDownloadAll}
+                disabled={isLoading}
+                startIcon={<Download />}
+                sx={{
+                  flex: 1,
+                  minWidth: 200,
+                  background: 'linear-gradient(45deg, #4caf50, #81c784)',
+                  fontWeight: 'bold'
+                }}
+              >
+                Baixar Todos
+              </Button>
             )}
           </Box>
         </CardContent>
