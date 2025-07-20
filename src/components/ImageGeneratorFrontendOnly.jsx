@@ -321,7 +321,7 @@ const ImageGeneratorFrontendOnly = ({
             const svgImage = new Image();
             await new Promise((resolve, reject) => {
               svgImage.onload = resolve;
-              svgImage.onerror = reject;
+              svgImage.onerror = () => reject(new Error('Failed to load SVG image'));
               svgImage.src = svgUrl;
             });
 
@@ -372,7 +372,7 @@ const ImageGeneratorFrontendOnly = ({
       }
 
     } catch (error) {
-      console.error('Erro na geração de imagens:', error);
+      console.error('Detailed error in generateImages:', error);
       alert(`Erro na geração de imagens: ${error.message}`);
     } finally {
       setIsGenerating(false);
@@ -616,7 +616,7 @@ const ImageGeneratorFrontendOnly = ({
         const svgImage = new Image();
         await new Promise((resolve, reject) => {
           svgImage.onload = resolve;
-          svgImage.onerror = reject;
+          svgImage.onerror = () => reject(new Error('Failed to load SVG image'));
           svgImage.src = svgUrl;
         });
 
@@ -667,6 +667,7 @@ const ImageGeneratorFrontendOnly = ({
       });
 
     } catch (error) {
+      console.error(`Detailed error in regenerateSingleImage for index ${index}:`, error);
       alert(`Erro na regeneração da imagem (índice ${index}): ${error.message}`);
     }
   };
