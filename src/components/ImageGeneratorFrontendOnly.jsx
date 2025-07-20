@@ -233,6 +233,7 @@ const ImageGeneratorFrontendOnly = ({
     try {
       // Carregar imagem de fundo uma vez
       const img = new Image();
+      img.crossOrigin = "anonymous";
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = reject;
@@ -536,6 +537,7 @@ const ImageGeneratorFrontendOnly = ({
 
     try {
       const img = new Image();
+      img.crossOrigin = "anonymous";
       // console.log('[regenerateSingleImage] Attempting to load currentBackgroundImage:', currentBackgroundImage ? currentBackgroundImage.substring(0,100) + "..." : "null");
       await new Promise((resolve, reject) => {
         img.onload = () => {

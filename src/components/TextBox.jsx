@@ -651,7 +651,9 @@ const TextBox = ({
               width: '100%',
               height: '100%',
               fontFamily: style.fontFamily || 'Arial',
-              fontSize: `${scaledFontSize}px`, // A fonte no textarea precisa ser escalada visualmente
+              fontSize: `${baseFontSize}px`,
+              transform: `scale(${fontScale})`,
+              transformOrigin: 'top left',
               fontWeight: style.fontWeight || 'normal',
               fontStyle: style.fontStyle || 'normal',
               color: style.color || '#000000',

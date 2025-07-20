@@ -379,7 +379,7 @@ function App() {
         setBackgroundImage(imageUrl);
 
         const img = new Image();
-        img.crossOrigin = 'Anonymous';
+        img.crossOrigin = 'anonymous';
         img.onload = () => {
           setOriginalImageSize({ width: img.width, height: img.height });
           const colorThief = new ColorThief();
@@ -584,7 +584,7 @@ function App() {
               // Poderia tentar extrair da imagem carregada se backgroundImage existir
               if (loadedState.backgroundImageUrl) {
                 const img = new Image();
-                img.crossOrigin = 'Anonymous';
+                img.crossOrigin = 'anonymous';
                 img.onload = () => {
                   const colorThief = new ColorThief();
                   try {
