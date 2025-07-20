@@ -668,13 +668,10 @@ const TextBox = ({
             }}
           />
         ) : (
-          <Box sx={textContentStyle}>
-            {textLines.map((line, index) => (
-              <div key={index} style={{ marginBottom: index < textLines.length - 1 ? '2px' : 0 }}>
-                {line}
-              </div>
-            ))}
-          </Box>
+          <Box
+            sx={textContentStyle}
+            dangerouslySetInnerHTML={{ __html: editedContent }}
+          />
         )}
       </Box>
 
