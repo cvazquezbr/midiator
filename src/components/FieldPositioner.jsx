@@ -20,7 +20,7 @@ import {
   SkipNext,
   Edit
 } from '@mui/icons-material';
-import TextBox from './TextBox';
+import HtmlTextBox from './HtmlTextBox';
 import FormattingDrawer from './FormattingDrawer'; // Import the new drawer
 
 const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
@@ -62,6 +62,15 @@ const FieldPositioner = ({
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+
+  // Campos que devem usar renderização HTML
+  const htmlFields = ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'];
+
+  const isHtmlField = (fieldName) => {
+    return htmlFields.some(field => 
+      fieldName.toLowerCase().includes(field.toLowerCase())
+    );
+  };
 
   const handleFieldSelectInternal = useCallback((fieldToSelect) => {
     setSelectedField(fieldToSelect);
@@ -377,7 +386,7 @@ const FieldPositioner = ({
                   const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
 
                   return (
-                    <TextBox
+                    <HtmlTextBox
                       key={header}
                       field={header}
                       position={position}
@@ -392,6 +401,7 @@ const FieldPositioner = ({
                       rotation={position.rotation}
                       originalImageSize={originalImageSize}
                       fontScale={(imageSize.width && originalImageSize?.width) ? imageSize.width / originalImageSize.width : 1}
+                      enableHtmlRendering={isHtmlField(header)}
                     />
                   );
                 })

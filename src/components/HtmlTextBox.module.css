@@ -1,0 +1,305 @@
+/* Estilos responsivos para o HtmlTextBox */
+
+.textBox {
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  z-index: 2;
+  transition: all 0.2s ease;
+}
+
+.textBox:hover {
+  border: 2px solid #a0cfff !important;
+  background-color: rgba(33, 150, 243, 0.05) !important;
+}
+
+.textBox.selected {
+  border: 2px solid #2196f3 !important;
+  background-color: rgba(33, 150, 243, 0.1) !important;
+}
+
+.textBox.dragging {
+  cursor: grabbing;
+}
+
+.textBox.editing {
+  cursor: text;
+}
+
+.textBoxContent {
+  width: 100%;
+  height: 100%;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background-color: transparent;
+  padding: 8px;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  transition: all 0.2s ease;
+}
+
+.textBoxContent:hover {
+  border: 2px solid #a0cfff;
+  background-color: rgba(33, 150, 243, 0.05);
+}
+
+.textBoxContent.selected {
+  border: 2px solid #2196f3;
+  background-color: rgba(33, 150, 243, 0.1);
+}
+
+.textContent {
+  pointer-events: none;
+  word-wrap: break-word;
+  overflow: hidden;
+}
+
+.textContent.htmlContent {
+  width: 100%;
+  height: 100%;
+}
+
+.textContent.htmlContent ul,
+.textContent.htmlContent ol {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.textContent.htmlContent li {
+  margin-bottom: 2px;
+}
+
+.textContent.htmlContent p {
+  margin: 4px 0;
+}
+
+.textContent.htmlContent p:first-child {
+  margin-top: 0;
+}
+
+.textContent.htmlContent p:last-child {
+  margin-bottom: 0;
+}
+
+.textContent.htmlContent b,
+.textContent.htmlContent strong {
+  font-weight: bold;
+}
+
+.textContent.htmlContent i,
+.textContent.htmlContent em {
+  font-style: italic;
+}
+
+.textContent.htmlContent u {
+  text-decoration: underline;
+}
+
+.textArea {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  resize: none;
+  overflow: hidden;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.resizeHandle {
+  position: absolute;
+  background-color: #2196f3;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  pointer-events: auto;
+  z-index: 10;
+  touch-action: none;
+  transition: all 0.2s ease;
+}
+
+.resizeHandle:active {
+  background-color: #1976d2;
+  transform: scale(1.2);
+}
+
+.rotateHandle {
+  position: absolute;
+  background-color: #ff9800;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  cursor: grab;
+  pointer-events: auto;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  transition: all 0.2s ease;
+}
+
+.rotateHandle:active {
+  background-color: #f57c00;
+  cursor: grabbing;
+}
+
+/* Responsividade para dispositivos móveis */
+@media (max-width: 768px) {
+  .textBoxContent {
+    padding: 6px;
+  }
+
+  .resizeHandle {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .rotateHandle {
+    width: 36px !important;
+    height: 36px !important;
+    top: -42px !important;
+  }
+
+  .textContent.htmlContent {
+    font-size: 14px;
+    line-height: 1.3;
+  }
+
+  .textContent.htmlContent ul,
+  .textContent.htmlContent ol {
+    padding-left: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .textBoxContent {
+    padding: 4px;
+  }
+
+  .resizeHandle {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .rotateHandle {
+    width: 42px !important;
+    height: 42px !important;
+    top: -48px !important;
+  }
+
+  .textContent.htmlContent {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .textContent.htmlContent ul,
+  .textContent.htmlContent ol {
+    padding-left: 10px;
+  }
+
+  .textContent.htmlContent p {
+    margin: 2px 0;
+  }
+}
+
+/* Melhorias para touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .textBox {
+    cursor: default;
+  }
+
+  .textBox.dragging {
+    cursor: default;
+  }
+
+  .resizeHandle {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .rotateHandle {
+    width: 48px !important;
+    height: 48px !important;
+    cursor: default;
+  }
+
+  .rotateHandle:active {
+    cursor: default;
+  }
+}
+
+/* Estilos para modo escuro */
+.darkMode .textBoxContent {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.darkMode .textBoxContent:hover {
+  border-color: #64b5f6;
+  background-color: rgba(100, 181, 246, 0.1);
+}
+
+.darkMode .textBoxContent.selected {
+  border-color: #42a5f5;
+  background-color: rgba(66, 165, 245, 0.15);
+}
+
+.darkMode .resizeHandle {
+  background-color: #42a5f5;
+}
+
+.darkMode .resizeHandle:active {
+  background-color: #1e88e5;
+}
+
+.darkMode .rotateHandle {
+  background-color: #ffb74d;
+}
+
+.darkMode .rotateHandle:active {
+  background-color: #ff9800;
+}
+
+/* Animações suaves */
+.textBox,
+.textBoxContent,
+.resizeHandle,
+.rotateHandle {
+  transition: all 0.2s ease;
+}
+
+/* Melhorias de acessibilidade */
+.textBox:focus-within {
+  outline: 2px solid #2196f3;
+  outline-offset: 2px;
+}
+
+.resizeHandle:focus,
+.rotateHandle:focus {
+  outline: 2px solid #2196f3;
+  outline-offset: 2px;
+}
+
+/* Estilos para impressão */
+@media print {
+  .resizeHandle,
+  .rotateHandle {
+    display: none !important;
+  }
+  
+  .textBoxContent {
+    border: none !important;
+    background: transparent !important;
+  }
+  
+  .textBox {
+    break-inside: avoid;
+  }
+}
+

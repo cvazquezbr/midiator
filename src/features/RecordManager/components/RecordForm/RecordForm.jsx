@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import RichTextEditor from '../../../../components/RichTextEditor';
 import styles from './RecordForm.module.css';
 
 /**
@@ -62,14 +63,33 @@ const RecordForm = ({
         }
     }, [dadosIniciais, colunas, isPrimeiroRegistro]);
 
+    // Campos que devem usar o editor rich text
+    const richTextFields = ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'];
+
+    const isRichTextField = (fieldName) => {
+        return richTextFields.some(field => 
+            fieldName.toLowerCase().includes(field.toLowerCase())
+        );
+    };
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleRichTextChange = (fieldName, value) => {
+        setFormData(prev => ({ ...prev, [fieldName]: value }));
+    };
+
     const handleNovaColunaChange = (index, field, value) => {
         const updated = [...novasColunas];
         updated[index][field] = value;
+        setNovasColunas(updated);
+    };
+
+    const handleNovaColunaRichTextChange = (index, value) => {
+        const updated = [...novasColunas];
+        updated[index]['valor'] = value;
         setNovasColunas(updated);
     };
 
@@ -152,13 +172,22 @@ const RecordForm = ({
                         {/* Valor da Coluna Field */}
                         <div className={styles.formGroup}> {/* This will also be label on top of input */}
                             <label htmlFor={`novaColunaValor-${index}`}>Valor Coluna {index + 1}</label>
-                            <input
-                                type="text"
-                                id={`novaColunaValor-${index}`}
-                                value={nc.valor}
-                                onChange={(e) => handleNovaColunaChange(index, 'valor', e.target.value)}
-                                placeholder="Valor inicial"
-                            />
+                            {isRichTextField(nc.nome) ? (
+                                <RichTextEditor
+                                    value={nc.valor}
+                                    onChange={(value) => handleNovaColunaRichTextChange(index, value)}
+                                    placeholder="Valor inicial com formatação"
+                                    maxHeight={150}
+                                />
+                            ) : (
+                                <input
+                                    type="text"
+                                    id={`novaColunaValor-${index}`}
+                                    value={nc.valor}
+                                    onChange={(e) => handleNovaColunaChange(index, 'valor', e.target.value)}
+                                    placeholder="Valor inicial"
+                                />
+                            )}
                         </div>
                         {/* Botão Remover */}
                         {novasColunas.length > 1 && (
@@ -189,13 +218,22 @@ const RecordForm = ({
             {colunas.map(col => (
                 <div key={col} className={styles.formGroup}>
                     <label htmlFor={`campo-${col.replace(/\s+/g, '-')}`}>{col}:</label>
-                    <input
-                        type="text"
-                        id={`campo-${col.replace(/\s+/g, '-')}`}
-                        name={col}
-                        value={formData[col] || ''}
-                        onChange={handleChange}
-                    />
+                    {isRichTextField(col) ? (
+                        <RichTextEditor
+                            value={formData[col] || ''}
+                            onChange={(value) => handleRichTextChange(col, value)}
+                            placeholder={`Digite o conteúdo para ${col}`}
+                            maxHeight={200}
+                        />
+                    ) : (
+                        <input
+                            type="text"
+                            id={`campo-${col.replace(/\s+/g, '-')}`}
+                            name={col}
+                            value={formData[col] || ''}
+                            onChange={handleChange}
+                        />
+                    )}
                 </div>
             ))}
             <div className={styles.formActions}>

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ProgressModal from './ProgressModal';
+import { parseHtmlToFormattedText, renderFormattedTextToCanvas, containsHtml } from '../utils/htmlRenderer';
 import {
   Box,
   Button,
@@ -201,14 +202,20 @@ const ImageGeneratorFrontendOnly = ({
     }
   };
 
-  // Função para desenhar texto com efeitos
-  const drawTextWithEffects = (ctx, text, x, y, style) => {
-    // Desenha o contorno primeiro (se habilitado)
-    if (style.textStroke) {
-      ctx.strokeText(text, x, y);
+  // Função para desenhar texto com efeitos (com suporte a HTML)
+  const drawTextWithEffects = (ctx, text, x, y, style, maxWidth, maxHeight) => {
+    // Verificar se o texto contém HTML
+    if (containsHtml(text)) {
+      // Renderizar HTML formatado
+      const formattedText = parseHtmlToFormattedText(text);
+      renderFormattedTextToCanvas(ctx, formattedText, x, y, maxWidth, maxHeight, style);
+    } else {
+      // Renderização de texto simples (comportamento original)
+      if (style.textStroke) {
+        ctx.strokeText(text, x, y);
+      }
+      ctx.fillText(text, x, y);
     }
-    // Desenha o texto preenchido por cima
-    ctx.fillText(text, x, y);
   };
 
 
@@ -322,23 +329,30 @@ const ImageGeneratorFrontendOnly = ({
               currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
             }
 
-            lines.forEach((line, lineIndex) => {
-              let currentLineRenderX = textContentStartX;
-              const textMetrics = ctx.measureText(line);
-              const currentTextWidth = textMetrics.width;
+            // Verificar se o texto contém HTML para usar renderização especial
+            if (containsHtml(text)) {
+              // Para HTML, renderizar diretamente na área completa
+              drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
+            } else {
+              // Renderização de texto simples linha por linha (comportamento original)
+              lines.forEach((line, lineIndex) => {
+                let currentLineRenderX = textContentStartX;
+                const textMetrics = ctx.measureText(line);
+                const currentTextWidth = textMetrics.width;
 
-              // Ajuste de alinhamento horizontal
-              if (style.textAlign === 'center') {
-                currentLineRenderX += (effectiveTextWidth - currentTextWidth) / 2;
-              } else if (style.textAlign === 'right') {
-                currentLineRenderX += effectiveTextWidth - currentTextWidth;
-              }
+                // Ajuste de alinhamento horizontal
+                if (style.textAlign === 'center') {
+                  currentLineRenderX += (effectiveTextWidth - currentTextWidth) / 2;
+                } else if (style.textAlign === 'right') {
+                  currentLineRenderX += effectiveTextWidth - currentTextWidth;
+                }
 
-              const finalLineY = currentLineRenderY + (lineIndex * lineHeight);
+                const finalLineY = currentLineRenderY + (lineIndex * lineHeight);
 
-              // Desenhar o texto com efeitos
-              drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: fontSize });
-            });
+                // Desenhar o texto com efeitos
+                drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
+              });
+            }
             ctx.restore(); // Restaurar o estado do canvas para o próximo campo
           });
 
