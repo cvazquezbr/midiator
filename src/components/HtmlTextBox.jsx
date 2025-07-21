@@ -461,21 +461,17 @@ const HtmlTextBox = ({
 
   const handleTextareaChange = (e) => setEditedContent(e.target.value);
 
-  const commitChanges = () => {
+  const commitChanges = useCallback(() => {
     if (isEditing && onContentChange && content !== editedContent) {
       onContentChange(field, editedContent);
     }
     setIsEditing(false);
-  };
+  }, [isEditing, content, editedContent, field, onContentChange]);
 
   const handleTextareaBlur = () => {
-    if (isEditing) {
-      if (onContentChange && content !== editedContent) {
-        onContentChange(field, editedContent);
-      }
-      setIsEditing(false);
-      if (onSelect) onSelect(field);
-    }
+    // A lógica de blur será agora tratada pelo commitChanges e pelo listener de clique externo.
+    // Manter a função pode ser útil para acessibilidade, mas vamos simplificar por enquanto.
+    commitChanges();
   };
 
   const handleTextareaKeyDown = (e) => {
@@ -526,6 +522,31 @@ const HtmlTextBox = ({
       };
     }
   }, [isDragging, isResizing, isRotating, dragStart, initialPosition, initialSize, initialRotation, handleMouseMove, handleMouseUp, handleTouchEnd, handleTouchMove]);
+
+  // Efeito para lidar com cliques fora do componente durante a edição
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const handleClickOutside = (event) => {
+      if (textBoxRef.current && !textBoxRef.current.contains(event.target)) {
+        commitChanges();
+      }
+    };
+
+    // Usar timeout para evitar que o mesmo clique que ativa a edição a desative imediatamente
+    const timerId = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+    }, 0);
+
+
+    return () => {
+      clearTimeout(timerId);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isEditing, commitChanges]);
+
 
   const wrapText = (text, maxWidth, fontSize) => {
     if (!text) return [''];
