@@ -237,7 +237,7 @@ const RichTextEditor = ({
                 disabled={disabled || htmlMode}
               >
                 {React.cloneElement(button.icon, {
-                  className: darkMode ? styles.darkModeIcon : '',
+                  style: { color: darkMode ? '#fff' : 'inherit' },
                 })}
               </IconButton>
             </Tooltip>
@@ -257,7 +257,7 @@ const RichTextEditor = ({
                 disabled={disabled || htmlMode}
               >
                 {React.cloneElement(button.icon, {
-                  className: darkMode ? styles.darkModeIcon : '',
+                  style: { color: darkMode ? '#fff' : 'inherit' },
                 })}
               </IconButton>
             </Tooltip>
@@ -275,7 +275,7 @@ const RichTextEditor = ({
               onClick={insertBulletList}
               disabled={disabled}
             >
-              <FormatListBulleted className={darkMode ? styles.darkModeIcon : ''} />
+              <FormatListBulleted style={{ color: darkMode ? '#fff' : 'inherit' }} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Lista numerada">
@@ -285,7 +285,7 @@ const RichTextEditor = ({
               onClick={insertNumberedList}
               disabled={disabled}
             >
-              <FormatListNumbered className={darkMode ? styles.darkModeIcon : ''} />
+              <FormatListNumbered style={{ color: darkMode ? '#fff' : 'inherit' }} />
             </IconButton>
           </Tooltip>
         </Box>
@@ -301,7 +301,7 @@ const RichTextEditor = ({
               onClick={() => execCommand('undo')}
               disabled={disabled || htmlMode}
             >
-              <Undo className={darkMode ? styles.darkModeIcon : ''} />
+              <Undo style={{ color: darkMode ? '#fff' : 'inherit' }} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Refazer (Ctrl+Shift+Z)">
@@ -311,7 +311,7 @@ const RichTextEditor = ({
               onClick={() => execCommand('redo')}
               disabled={disabled || htmlMode}
             >
-              <Redo className={darkMode ? styles.darkModeIcon : ''} />
+              <Redo style={{ color: darkMode ? '#fff' : 'inherit' }} />
             </IconButton>
           </Tooltip>
         </Box>
@@ -328,7 +328,7 @@ const RichTextEditor = ({
                 onClick={toggleHtmlMode}
                 disabled={disabled}
               >
-                <Code className={darkMode ? styles.darkModeIcon : ''} />
+                <Code style={{ color: darkMode ? '#fff' : 'inherit' }} />
               </IconButton>
             </Tooltip>
           </>
