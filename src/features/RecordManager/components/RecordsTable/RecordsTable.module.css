@@ -19,7 +19,7 @@
     border: 1px solid #444; /* Borda mais escura para modo escuro */
 }
 .tabela.darkMode td {
-    color: #ccc; /* Texto das células em modo escuro */
+    color: #f0f0f0; /* Texto das células em modo escuro */
 }
 
 

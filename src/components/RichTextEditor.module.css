@@ -202,38 +202,42 @@
 }
 
 /* Estilos para modo escuro */
-.darkMode .toolbar {
+.richTextEditor.darkMode .toolbar {
   background-color: #2d2d2d;
   border-bottom-color: #404040;
 }
 
-.darkMode .toolbarButton {
+.richTextEditor.darkMode .toolbarButton {
   color: #ffffff;
 }
 
-.darkMode .toolbarButton:hover {
+.richTextEditor.darkMode .toolbarButton svg {
+  color: #fff;
+}
+
+.richTextEditor.darkMode .toolbarButton:hover {
   background-color: rgba(255, 255, 255, 0.08);
 }
 
-.darkMode .toolbarButton:active {
+.richTextEditor.darkMode .toolbarButton:active {
   background-color: rgba(255, 255, 255, 0.12);
 }
 
-.darkMode .divider {
+.richTextEditor.darkMode .divider {
   background-color: #404040;
 }
 
-.darkMode .editor {
+.richTextEditor.darkMode .editor {
   background-color: #1e1e1e;
   color: #ffffff;
 }
 
-.darkMode .htmlEditor {
+.richTextEditor.darkMode .htmlEditor {
   background-color: #1a1a1a;
   color: #ffffff;
 }
 
-.darkMode .editor:empty::before {
+.richTextEditor.darkMode .editor:empty::before {
   color: #666;
 }
 
