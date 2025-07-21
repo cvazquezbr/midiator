@@ -1325,8 +1325,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             flexGrow: 1,
             p: 3,
             mt: 8,
-            ml: sidebarOpen ? 0 : 0,
-            transition: 'margin-left 0.3s ease',
+            ml: sidebarOpen ? '320px' : 0,
+            mr: isMobile && isDrawerOpen ? '320px' : 0,
+            transition: 'margin-left 0.3s ease, margin-right 0.3s ease',
+            width: sidebarOpen ? 'calc(100% - 320px)' : '100%',
           }}
         >
           {/* Passo 0: Definir Dados Iniciais */}
