@@ -29,7 +29,7 @@
 
 .modalContentDarkMode {
     background-color: #1e293b; /* Dark background from App.jsx darkTheme.palette.background.paper */
-    color: hsl(var(--foreground)); /* Ensure foreground is also themed if needed, though this should be handled by .darkMode on overlay */
+    color: #f0f0f0; /* Ensure foreground is also themed if needed, though this should be handled by .darkMode on overlay */
 }
 
 /* This rule might not be needed if .modalContentDarkMode handles the text color */
