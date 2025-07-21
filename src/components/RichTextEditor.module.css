@@ -211,6 +211,10 @@
   color: #ffffff;
 }
 
+.richTextEditor.darkMode .toolbarButton svg {
+  fill: currentColor;
+}
+
 .richTextEditor.darkMode .toolbarButton:hover {
   background-color: rgba(255, 255, 255, 0.08);
 }
