@@ -236,7 +236,9 @@ const RichTextEditor = ({
                 onClick={() => execCommand(button.command)}
                 disabled={disabled || htmlMode}
               >
-                {button.icon}
+                {React.cloneElement(button.icon, {
+                  className: darkMode ? styles.darkModeIcon : '',
+                })}
               </IconButton>
             </Tooltip>
           ))}
@@ -254,7 +256,9 @@ const RichTextEditor = ({
                 onClick={() => execCommand(button.command)}
                 disabled={disabled || htmlMode}
               >
-                {button.icon}
+                {React.cloneElement(button.icon, {
+                  className: darkMode ? styles.darkModeIcon : '',
+                })}
               </IconButton>
             </Tooltip>
           ))}
@@ -271,7 +275,7 @@ const RichTextEditor = ({
               onClick={insertBulletList}
               disabled={disabled}
             >
-              <FormatListBulleted />
+              <FormatListBulleted className={darkMode ? styles.darkModeIcon : ''} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Lista numerada">
@@ -281,7 +285,7 @@ const RichTextEditor = ({
               onClick={insertNumberedList}
               disabled={disabled}
             >
-              <FormatListNumbered />
+              <FormatListNumbered className={darkMode ? styles.darkModeIcon : ''} />
             </IconButton>
           </Tooltip>
         </Box>
@@ -297,7 +301,7 @@ const RichTextEditor = ({
               onClick={() => execCommand('undo')}
               disabled={disabled || htmlMode}
             >
-              <Undo />
+              <Undo className={darkMode ? styles.darkModeIcon : ''} />
             </IconButton>
           </Tooltip>
           <Tooltip title="Refazer (Ctrl+Shift+Z)">
@@ -307,7 +311,7 @@ const RichTextEditor = ({
               onClick={() => execCommand('redo')}
               disabled={disabled || htmlMode}
             >
-              <Redo />
+              <Redo className={darkMode ? styles.darkModeIcon : ''} />
             </IconButton>
           </Tooltip>
         </Box>
@@ -324,7 +328,7 @@ const RichTextEditor = ({
                 onClick={toggleHtmlMode}
                 disabled={disabled}
               >
-                <Code />
+                <Code className={darkMode ? styles.darkModeIcon : ''} />
               </IconButton>
             </Tooltip>
           </>
