@@ -212,10 +212,6 @@
 }
 
 .richTextEditor.darkMode .toolbarButton svg {
-  fill: currentColor;
-}
-
-.darkModeIcon {
   color: #fff;
 }
 
