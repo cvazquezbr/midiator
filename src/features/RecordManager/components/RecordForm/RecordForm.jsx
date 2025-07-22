@@ -178,6 +178,7 @@ const RecordForm = ({
                                     onChange={(value) => handleNovaColunaRichTextChange(index, value)}
                                     placeholder="Valor inicial com formatação"
                                     maxHeight={150}
+                                    darkMode={darkMode}
                                 />
                             ) : (
                                 <input
@@ -224,6 +225,7 @@ const RecordForm = ({
                             onChange={(value) => handleRichTextChange(col, value)}
                             placeholder={`Digite o conteúdo para ${col}`}
                             maxHeight={200}
+                            darkMode={darkMode}
                         />
                     ) : (
                         <input
