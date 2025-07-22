@@ -148,26 +148,30 @@ const ImageGeneratorFrontendOnly = ({
     // Aplica a fonte antes de medir o texto
     ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${fontSize}px ${style.fontFamily || 'Arial'}`;
 
-    const words = text.toString().split(' ');
+    const paragraphs = text.toString().split('\n');
     const lines = [];
-    let currentLine = words[0] || '';
 
-    for (let i = 1; i < words.length; i++) {
-      const word = words[i];
-      const testLine = currentLine + ' ' + word;
-      const metrics = ctx.measureText(testLine);
+    for (const paragraph of paragraphs) {
+      const words = paragraph.split(' ');
+      let currentLine = words[0] || '';
 
-      if (metrics.width > maxWidth && currentLine !== '') {
-        lines.push(currentLine);
-        if (lines.length >= maxLines) break;
-        currentLine = word;
-      } else {
-        currentLine = testLine;
+      for (let i = 1; i < words.length; i++) {
+        const word = words[i];
+        const testLine = currentLine + ' ' + word;
+        const metrics = ctx.measureText(testLine);
+
+        if (metrics.width > maxWidth && currentLine !== '') {
+          lines.push(currentLine);
+          if (lines.length >= maxLines) return lines; // Return early if max lines reached
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
       }
-    }
-
-    if (lines.length < maxLines && currentLine) {
-      lines.push(currentLine);
+      if (lines.length < maxLines && currentLine) {
+        lines.push(currentLine);
+        if (lines.length >= maxLines) return lines; // Return early if max lines reached
+      }
     }
 
     return lines;
@@ -303,8 +307,8 @@ const ImageGeneratorFrontendOnly = ({
               ctx.translate(-centerX, -centerY);
             }
 
-            // O tamanho da fonte agora é fixo, baseado no estilo, pois estamos renderizando no canvas de tamanho original.
-            const fontSize = style.fontSize || 24;
+            const fontScale = (img.width && originalImageSize?.width) ? img.width / originalImageSize.width : 1;
+            const fontSize = (style.fontSize || 24) * fontScale;
 
             // Aplicar configurações de texto
             applyTextEffects(ctx, { ...style, fontSize: fontSize });
@@ -602,7 +606,8 @@ const ImageGeneratorFrontendOnly = ({
           ctx.translate(-centerX, -centerY);
         }
 
-        const fontSize = style.fontSize || 24;
+        const fontScale = (img.width && originalImageSize?.width) ? img.width / originalImageSize.width : 1;
+        const fontSize = (style.fontSize || 24) * fontScale;
         applyTextEffects(ctx, { ...style, fontSize: fontSize });
 
         const fixedPadding = 8; // Padding fixo de 8px, igual ao do CSS no TextBox
