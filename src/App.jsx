@@ -1325,7 +1325,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             flexGrow: 1,
             p: 3,
             mt: 8,
-            ml: sidebarOpen ? 0 : 0,
+            ml: sidebarOpen ? 0 : `-${320}px`,
             transition: 'margin-left 0.3s ease',
           }}
         >
