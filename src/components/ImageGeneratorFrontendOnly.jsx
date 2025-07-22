@@ -521,14 +521,12 @@ const ImageGeneratorFrontendOnly = ({
     }
 
     // Regerar a imagem específica com as novas posições/estilos e o record atualizado
-    // imageToRegenerate já terá o record atualizado devido ao map acima
     const imageToRegenerate = updatedImages.find(im => im.index === imageIndex);
     if (imageToRegenerate) {
-      const bgToUse = imageToRegenerate.backgroundImage || backgroundImage;
       regenerateSingleImage(
         imageIndex,
-        imageToRegenerate.record, // Passar o record atualizado de imageToRegenerate
-        bgToUse,
+        updatedCsvRecord,
+        imageToRegenerate.backgroundImage || backgroundImage,
         newPositions,
         newStyles
       );
