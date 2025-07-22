@@ -1,14 +1,14 @@
 .container {
     width: 100%;
-    max-width: none; /* Remove a largura máxima para ocupar todo o espaço */
-    margin: 0 auto; /* Mantém centralizado se houver alguma largura máxima no pai */
-    padding: 24px; /* Ajusta o padding */
-    background-color: transparent; /* Remove o fundo branco para herdar do App.jsx */
-    border-radius: 0; /* Remove o radius para um look mais integrado */
-    box-shadow: none; /* Remove a sombra, pois o Card do App.jsx pode fornecer */
+    max-width: 1200px; /* Aumenta a largura máxima */
+    margin: 0 auto;
+    padding: 24px;
+    background-color: transparent;
+    border-radius: 0;
+    box-shadow: none;
     font-family: sans-serif;
     color: #333;
-    transition: all 0.3s ease-in-out; /* Adiciona transição para o layout */
+    transition: all 0.3s ease-in-out;
 }
 
 .container.darkMode {
@@ -103,6 +103,43 @@
 .container.darkMode .btnPrimary {
     background-color: #0056b3;
     color: #e0e0e0;
+}
+
+.modalForm {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+}
+
+.formGroup label {
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.formGroup input,
+.formGroup textarea {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+.formGroup textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.formActions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
 }
 .container.darkMode .btnPrimary:hover {
     background-color: #004085;

@@ -150,47 +150,40 @@ const RecordForm = ({
         }
     };
 
-    const formClasses = `${styles.form} ${darkMode ? styles.darkMode : ''}`;
+    const formClasses = `${styles.modalForm} ${darkMode ? styles.darkMode : ''}`;
 
     if (isPrimeiroRegistro) {
         return (
             <form onSubmit={handleSubmit} className={formClasses}>
-                <p className={styles.infoText}>Como este é o primeiro registro, você definirá as colunas e seus valores iniciais.</p>
+                <p className={styles.infoText} style={{ gridColumn: '1 / -1' }}>Como este é o primeiro registro, você definirá as colunas e seus valores iniciais.</p>
                 {novasColunas.map((nc, index) => (
-                    <div key={index} className={styles.novaColunaGroup}>
-                        {/* Nome da Coluna Field */}
-                        <div className={styles.formGroup}> {/* This will now be label on top of input due to .novaColunaGroup .formGroup override */}
-                            <label htmlFor={`novaColunaNome-${index}`}>Nome Coluna {index + 1}</label>
+                    <div key={index} className={styles.formGroup}>
+                        <label htmlFor={`novaColunaNome-${index}`}>Nome Coluna {index + 1}</label>
+                        <input
+                            type="text"
+                            id={`novaColunaNome-${index}`}
+                            value={nc.nome}
+                            onChange={(e) => handleNovaColunaChange(index, 'nome', e.target.value)}
+                            placeholder="Ex: NomeCliente"
+                        />
+                        <label htmlFor={`novaColunaValor-${index}`}>Valor Coluna {index + 1}</label>
+                        {isRichTextField(nc.nome) ? (
+                            <RichTextEditor
+                                value={nc.valor}
+                                onChange={(value) => handleNovaColunaRichTextChange(index, value)}
+                                placeholder="Valor inicial com formatação"
+                                maxHeight={150}
+                                darkMode={darkMode}
+                            />
+                        ) : (
                             <input
                                 type="text"
-                                id={`novaColunaNome-${index}`}
-                                value={nc.nome}
-                                onChange={(e) => handleNovaColunaChange(index, 'nome', e.target.value)}
-                                placeholder="Ex: NomeCliente"
+                                id={`novaColunaValor-${index}`}
+                                value={nc.valor}
+                                onChange={(e) => handleNovaColunaChange(index, 'valor', e.target.value)}
+                                placeholder="Valor inicial"
                             />
-                        </div>
-                        {/* Valor da Coluna Field */}
-                        <div className={styles.formGroup}> {/* This will also be label on top of input */}
-                            <label htmlFor={`novaColunaValor-${index}`}>Valor Coluna {index + 1}</label>
-                            {isRichTextField(nc.nome) ? (
-                                <RichTextEditor
-                                    value={nc.valor}
-                                    onChange={(value) => handleNovaColunaRichTextChange(index, value)}
-                                    placeholder="Valor inicial com formatação"
-                                    maxHeight={150}
-                                    darkMode={darkMode}
-                                />
-                            ) : (
-                                <input
-                                    type="text"
-                                    id={`novaColunaValor-${index}`}
-                                    value={nc.valor}
-                                    onChange={(e) => handleNovaColunaChange(index, 'valor', e.target.value)}
-                                    placeholder="Valor inicial"
-                                />
-                            )}
-                        </div>
-                        {/* Botão Remover */}
+                        )}
                         {novasColunas.length > 1 && (
                              <button
                                 type="button"
@@ -201,12 +194,10 @@ const RecordForm = ({
                                 -
                              </button>
                         )}
-                         {/* If only one column, render a placeholder or nothing in the button's grid cell to maintain layout */}
-                         {novasColunas.length <= 1 && <div className={styles.removeButtonPlaceholder}></div>}
                     </div>
                 ))}
-                <button type="button" onClick={adicionarCampoNovaColuna} className={`${styles.btn} ${styles.btnAddField}`}>+ Adicionar Outra Coluna</button>
                 <div className={styles.formActions}>
+                    <button type="button" onClick={adicionarCampoNovaColuna} className={`${styles.btn} ${styles.btnAddField}`}>+ Adicionar Outra Coluna</button>
                     <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>Salvar e Definir Colunas</button>
                     <button type="button" onClick={onCancelar} className={`${styles.btn} ${styles.btnSecondary}`}>Cancelar</button>
                 </div>
