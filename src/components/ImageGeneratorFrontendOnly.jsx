@@ -268,10 +268,15 @@ const ImageGeneratorFrontendOnly = ({
         // Desenhar imagem de fundo
         ctx.drawImage(img, 0, 0);
 
+          // Determinar as posições e estilos a serem usados para esta imagem específica
+          const existingImageDataItem = generatedImages.find(img => img.index === i);
+          const positionsToUse = existingImageDataItem?.customFieldPositions || fieldPositions;
+          const stylesToUse = existingImageDataItem?.customFieldStyles || fieldStyles;
+
           // Desenhar campos do CSV com estilos individuais
           Object.keys(record).forEach(field => {
-            const position = fieldPositions[field];
-            const style = fieldStyles[field];
+            const position = positionsToUse[field];
+            const style = stylesToUse[field];
 
             if (!position || !position.visible || !style) return;
 
