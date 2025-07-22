@@ -252,6 +252,8 @@ const ImageGeneratorFrontendOnly = ({
         }
         const record = csvData[i];
 
+        const existingImageDataItem = generatedImages.find(img => img.index === i);
+
         // Criar canvas para cada registro
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
@@ -268,10 +270,9 @@ const ImageGeneratorFrontendOnly = ({
         // Desenhar imagem de fundo
         ctx.drawImage(img, 0, 0);
 
-          // Determinar as posições e estilos a serem usados para esta imagem específica
-          const existingImageDataItem = generatedImages.find(img => img.index === i);
           const positionsToUse = existingImageDataItem?.customFieldPositions || fieldPositions;
           const stylesToUse = existingImageDataItem?.customFieldStyles || fieldStyles;
+          const bgToUse = existingImageDataItem?.backgroundImage || backgroundImage;
 
           // Desenhar campos do CSV com estilos individuais
           Object.keys(record).forEach(field => {
@@ -365,9 +366,6 @@ const ImageGeneratorFrontendOnly = ({
         const blob = await new Promise(resolve => {
           canvas.toBlob(resolve, 'image/png', 1.0);
         });
-
-        // Try to find existing custom data for this index to preserve it
-        const existingImageDataItem = generatedImages.find(img => img.index === i);
 
         const imageData = {
           blob: blob,
