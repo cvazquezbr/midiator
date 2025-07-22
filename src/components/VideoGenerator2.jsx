@@ -17,7 +17,7 @@ import NarrationSettings from './VideoGenerator/NarrationSettings';
 import Preview from './VideoGenerator/Preview';
 import SlidesSettings from './VideoGenerator/SlidesSettings';
 
-const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
+const VideoGenerator2 = ({ generatedImages, generatedAudioData, fieldPositions, fieldStyles }) => {
   const [video, setVideo] = useState(null);
   const [videos, setVideos] = useState([]);
   const [error, setError] = useState(null);
@@ -1148,6 +1148,8 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
                 chromaKeyYuv={chromaKeyYuv}
                 chromaKeyColorspace={chromaKeyColorspace}
                 displayedImageSize={displayedImageSize}
+                fieldPositions={fieldPositions}
+                fieldStyles={fieldStyles}
               />
             </Grid>
           </Grid>

@@ -1698,6 +1698,8 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             <VideoGenerator2
               generatedImages={generatedImagesData}
               generatedAudioData={generatedAudioData}
+              fieldPositions={fieldPositions}
+              fieldStyles={fieldStyles}
             />
           )}
 

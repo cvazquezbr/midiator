@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, Paper, ButtonGroup, Button, Chip } from '@mui/material';
+import SlidePreview from './SlidePreview';
 
 const ANCHOR_POINTS = {
   'top-left': { x: 0, y: 0 },
@@ -26,6 +27,8 @@ const Preview = ({
   chromaKeyEdgeSmoothing,
   chromaKeyYuv,
   chromaKeyColorspace,
+  fieldPositions,
+  fieldStyles,
 }) => {
   const [bgImageDims, setBgImageDims] = useState({ 
     width: 0, 
@@ -453,58 +456,13 @@ const Preview = ({
         }}
         onMouseDown={handleDragStart}
       >
-        {generatedImages.length > 0 ? (
-          <img
-            ref={imgRef}
-            src={generationMode === 'slides' 
-              ? generatedImages[0].url 
-              : generatedImages[0].url}
-            alt="Background"
-            style={{
-              position: 'absolute',
-              top: `${bgImageDims.offsetY}px`,
-              left: `${bgImageDims.offsetX}px`,
-              width: `${bgImageDims.width}px`,
-              height: `${bgImageDims.height}px`,
-              transition: generationMode === 'slides' ? 'opacity 0.5s ease-in-out' : 'none',
-              objectFit: 'contain',
-              border: isDragging ? '2px solid' : 'none',
-              borderColor: isDragging ? 'primary.main' : 'transparent'
-            }}
-            onLoad={() => {
-              if (containerRef.current && imgRef.current) {
-                const container = containerRef.current;
-                const img = imgRef.current;
-                const imgRatio = img.naturalWidth / img.naturalHeight;
-                const containerRatio = container.offsetWidth / container.offsetHeight;
-
-                let width, height, offsetX, offsetY;
-                
-                if (imgRatio > containerRatio) {
-                  width = container.offsetWidth;
-                  height = width / imgRatio;
-                  offsetX = 0;
-                  offsetY = (container.offsetHeight - height) / 2;
-                } else {
-                  height = container.offsetHeight;
-                  width = height * imgRatio;
-                  offsetX = (container.offsetWidth - width) / 2;
-                  offsetY = 0;
-                }
-
-                setBgImageDims({ 
-                  width, 
-                  height, 
-                  offsetX, 
-                  offsetY,
-                  containerWidth: container.offsetWidth,
-                  containerHeight: container.offsetHeight
-                });
-                
-                // Aplica ponto de ancoragem inicial
-                applyAnchorPoint(anchorPoint);
-              }
-            }}
+        {generatedImages.length > 0 && bgImageDims.width > 0 ? (
+          <SlidePreview
+            slide={generatedImages[0]}
+            containerWidth={bgImageDims.width}
+            containerHeight={bgImageDims.height}
+            fieldPositions={fieldPositions}
+            fieldStyles={fieldStyles}
           />
         ) : (
           <Box sx={{
