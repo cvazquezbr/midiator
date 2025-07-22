@@ -32,7 +32,8 @@ const RichTextEditor = ({
   placeholder = 'Digite seu texto...',
   disabled = false,
   maxHeight = 200,
-  showHtmlToggle = true
+  showHtmlToggle = true,
+  darkMode = false
 }) => {
   const [htmlMode, setHtmlMode] = useState(false);
   const [selection, setSelection] = useState(null);
@@ -214,10 +215,10 @@ const RichTextEditor = ({
   };
 
   return (
-    <Paper 
-      elevation={1} 
-      className={styles.richTextEditor}
-      sx={{ 
+    <Paper
+      elevation={1}
+      className={`${styles.richTextEditor} ${darkMode ? styles.darkMode : ''}`}
+      sx={{
         border: '1px solid #e0e0e0',
         borderRadius: 1,
         overflow: 'hidden'

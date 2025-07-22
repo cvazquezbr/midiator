@@ -1,12 +1,14 @@
 .container {
-    max-width: 1200px;
-    margin: 20px auto;
-    padding: 20px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: none; /* Remove a largura máxima para ocupar todo o espaço */
+    margin: 0 auto; /* Mantém centralizado se houver alguma largura máxima no pai */
+    padding: 24px; /* Ajusta o padding */
+    background-color: transparent; /* Remove o fundo branco para herdar do App.jsx */
+    border-radius: 0; /* Remove o radius para um look mais integrado */
+    box-shadow: none; /* Remove a sombra, pois o Card do App.jsx pode fornecer */
     font-family: sans-serif;
-    color: #333; /* Cor de texto padrão para modo claro */
+    color: #333;
+    transition: all 0.3s ease-in-out; /* Adiciona transição para o layout */
 }
 
 .container.darkMode {
