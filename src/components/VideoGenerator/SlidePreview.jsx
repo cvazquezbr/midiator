@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Box } from '@mui/material';
-import { parseHtmlToFormattedText, renderFormattedTextToCanvas, containsHtml } from '../../../utils/htmlRenderer';
+import { parseHtmlToFormattedText, renderFormattedTextToCanvas, containsHtml } from '../../utils/htmlRenderer';
 
 const SlidePreview = ({
   slide,
