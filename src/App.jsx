@@ -207,7 +207,7 @@ function App() {
   const [anchorElMenu, setAnchorElMenu] = useState(null);
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
-  const [selectedField, setSelectedField] = useState(null);
+  const [selectedFields, setSelectedFields] = useState([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   // const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false); // Removed
   const [showGeminiAuthModal, setShowGeminiAuthModal] = useState(false);
@@ -1647,14 +1647,15 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   onImageDisplayedSizeChange={setDisplayedImageSize}
                   colorPalette={colorPalette}
                   onCsvDataUpdate={handleCsvRecordContentUpdate}
-                  onSelectFieldExternal={setSelectedField}
+                  onSelectFieldExternal={setSelectedFields}
+                  selectedFields={selectedFields}
                   originalImageSize={originalImageSize}
                 />
               </Grid>
               {!isMobile && (
                 <Grid item xs={12} md={4}>
                   <FormattingPanel
-                    selectedField={selectedField}
+                    selectedFields={selectedFields}
                     fieldStyles={fieldStyles}
                     setFieldStyles={setFieldStyles}
                     fieldPositions={fieldPositions}
@@ -1781,14 +1782,14 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             aria-label="edit"
             sx={{ position: 'fixed', bottom: 16, right: 16 }}
             onClick={() => setIsDrawerOpen(true)}
-            disabled={!selectedField}
+            disabled={selectedFields.length === 0}
           >
             <Edit />
           </Fab>
           <FormattingDrawer
             open={isDrawerOpen}
             onClose={() => setIsDrawerOpen(false)}
-            selectedField={selectedField}
+            selectedFields={selectedFields}
             fieldStyles={fieldStyles}
             setFieldStyles={setFieldStyles}
             fieldPositions={fieldPositions}

@@ -18,7 +18,13 @@ import {
   ArrowLeft,
   ArrowRight,
   SkipNext,
-  Edit
+  Edit,
+  AlignHorizontalLeft,
+  AlignHorizontalCenter,
+  AlignHorizontalRight,
+  AlignVerticalTop,
+  AlignVerticalCenter,
+  AlignVerticalBottom,
 } from '@mui/icons-material';
 import HtmlTextBox from './HtmlTextBox';
 import FormattingDrawer from './FormattingDrawer'; // Import the new drawer
@@ -55,9 +61,9 @@ const FieldPositioner = ({
   colorPalette,
   onSelectFieldExternal,
   onCsvDataUpdate, // New prop to notify App.jsx of changes
-  originalImageSize
+  originalImageSize,
+  selectedFields
 }) => {
-  const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
@@ -72,12 +78,33 @@ const FieldPositioner = ({
     );
   };
 
-  const handleFieldSelectInternal = useCallback((fieldToSelect) => {
-    setSelectedField(fieldToSelect);
-    if (onSelectFieldExternal) {
-      onSelectFieldExternal(fieldToSelect);
+  const handleFieldSelectInternal = useCallback((fieldToSelect, event) => {
+    const isMultiSelect = event.shiftKey || event.ctrlKey;
+
+    let newSelectedFields;
+
+    if (isMultiSelect) {
+      if (selectedFields.includes(fieldToSelect)) {
+        // Se já estiver selecionado com multiselect, remove
+        newSelectedFields = selectedFields.filter(f => f !== fieldToSelect);
+      } else {
+        // Se não, adiciona à seleção
+        newSelectedFields = [...selectedFields, fieldToSelect];
+      }
+    } else {
+      // Clique simples: seleciona apenas o campo clicado, a menos que já seja o único selecionado
+      if (selectedFields.length === 1 && selectedFields[0] === fieldToSelect) {
+        // Se o campo já é o único selecionado, deseleciona
+        newSelectedFields = [];
+      } else {
+        newSelectedFields = [fieldToSelect];
+      }
     }
-  }, [onSelectFieldExternal]);
+
+    if (onSelectFieldExternal) {
+      onSelectFieldExternal(newSelectedFields);
+    }
+  }, [onSelectFieldExternal, selectedFields]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -212,14 +239,69 @@ const FieldPositioner = ({
     setFieldPositions(prev => ({ ...prev, ...newPositions }));
   };
 
+  const alignFields = (alignment) => {
+    if (selectedFields.length < 2) return;
+
+    const newPositions = { ...fieldPositions };
+    const firstPos = fieldPositions[selectedFields[0]];
+
+    switch (alignment) {
+      case 'left':
+        selectedFields.forEach(field => {
+          newPositions[field] = { ...newPositions[field], x: firstPos.x };
+        });
+        break;
+      case 'center':
+        const center = firstPos.x + firstPos.width / 2;
+        selectedFields.forEach(field => {
+          const fieldPos = newPositions[field];
+          newPositions[field] = { ...fieldPos, x: center - fieldPos.width / 2 };
+        });
+        break;
+      case 'right':
+        const right = firstPos.x + firstPos.width;
+        selectedFields.forEach(field => {
+          const fieldPos = newPositions[field];
+          newPositions[field] = { ...fieldPos, x: right - fieldPos.width };
+        });
+        break;
+      case 'top':
+        selectedFields.forEach(field => {
+          newPositions[field] = { ...newPositions[field], y: firstPos.y };
+        });
+        break;
+      case 'middle':
+        const middle = firstPos.y + firstPos.height / 2;
+        selectedFields.forEach(field => {
+          const fieldPos = newPositions[field];
+          newPositions[field] = { ...fieldPos, y: middle - fieldPos.height / 2 };
+        });
+        break;
+      case 'bottom':
+        const bottom = firstPos.y + firstPos.height;
+        selectedFields.forEach(field => {
+          const fieldPos = newPositions[field];
+          newPositions[field] = { ...fieldPos, y: bottom - fieldPos.height };
+        });
+        break;
+      default:
+        break;
+    }
+    setFieldPositions(newPositions);
+  };
+
   const handleColorCircleClick = (color) => {
-    if (selectedField) {
+    if (selectedFields.length > 0) {
+      const newStyles = {};
+      selectedFields.forEach(field => {
+        newStyles[field] = {
+          ...(fieldStyles[field] || {}),
+          color: color,
+        };
+      });
       setFieldStyles(prev => ({
         ...prev,
-        [selectedField]: {
-          ...prev[selectedField],
-          color: color
-        }
+        ...newStyles
       }));
     }
   };
@@ -334,6 +416,29 @@ const FieldPositioner = ({
               </Box>
             </Box>
 
+            {selectedFields.length > 1 && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
+                <Tooltip title="Alinhar à Esquerda">
+                  <IconButton onClick={() => alignFields('left')}><AlignHorizontalLeft /></IconButton>
+                </Tooltip>
+                <Tooltip title="Centralizar Horizontalmente">
+                  <IconButton onClick={() => alignFields('center')}><AlignHorizontalCenter /></IconButton>
+                </Tooltip>
+                <Tooltip title="Alinhar à Direita">
+                  <IconButton onClick={() => alignFields('right')}><AlignHorizontalRight /></IconButton>
+                </Tooltip>
+                <Tooltip title="Alinhar ao Topo">
+                  <IconButton onClick={() => alignFields('top')}><AlignVerticalTop /></IconButton>
+                </Tooltip>
+                <Tooltip title="Centralizar Verticalmente">
+                  <IconButton onClick={() => alignFields('middle')}><AlignVerticalCenter /></IconButton>
+                </Tooltip>
+                <Tooltip title="Alinhar à Base">
+                  <IconButton onClick={() => alignFields('bottom')}><AlignVerticalBottom /></IconButton>
+                </Tooltip>
+              </Box>
+            )}
+
             {csvData.length === 0 && (
               <Alert severity="info" sx={{ mb: 2 }}>
                 Carregue um arquivo CSV para ver o preview dos dados
@@ -358,7 +463,7 @@ const FieldPositioner = ({
               }}
               onMouseDown={(e) => {
                 if (e.target.closest('.text-box')) return;
-                setSelectedField(null);
+                if (onSelectFieldExternal) onSelectFieldExternal([]);
               }}
               onTouchStart={handleContainerTouchStart}
               onTouchEnd={handleContainerTouchEnd}
@@ -392,8 +497,8 @@ const FieldPositioner = ({
                       position={position}
                       style={style}
                       content={sampleData}
-                      isSelected={selectedField === header}
-                      onSelect={handleFieldSelectInternal}
+                      isSelected={selectedFields.includes(header)}
+                      onSelect={(field, event) => handleFieldSelectInternal(field, event)}
                       onPositionChange={handlePositionChange}
                       onSizeChange={handleSizeChange}
                       containerSize={imageSize}

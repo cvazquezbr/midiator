@@ -41,7 +41,7 @@ import {
 import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
 const FormattingPanel = ({
-  selectedField,
+  selectedFields,
   fieldStyles,
   setFieldStyles,
   fieldPositions,
@@ -49,7 +49,28 @@ const FormattingPanel = ({
   csvHeaders
 }) => {
   // Log received props
-  console.log('[FormattingPanel] Received props: selectedField =', selectedField, 'fieldStyles =', fieldStyles);
+  console.log('[FormattingPanel] Received props: selectedFields =', selectedFields, 'fieldStyles =', fieldStyles);
+
+  const getCommonValue = (property, subProperty) => {
+    if (!selectedFields || selectedFields.length === 0) return '';
+
+    const firstField = selectedFields[0];
+    const sourceObject = subProperty ? (property === 'styles' ? fieldStyles[firstField] : fieldPositions[firstField]) : (property === 'styles' ? fieldStyles : fieldPositions);
+    if (!sourceObject) return '';
+
+    const firstValue = subProperty ? sourceObject[subProperty] : sourceObject[firstField];
+
+    for (let i = 1; i < selectedFields.length; i++) {
+      const field = selectedFields[i];
+      const currentObject = subProperty ? (property === 'styles' ? fieldStyles[field] : fieldPositions[field]) : (property === 'styles' ? fieldStyles : fieldPositions);
+      if (!currentObject) return '';
+      const currentValue = subProperty ? currentObject[subProperty] : currentObject[field];
+      if (currentValue !== firstValue) {
+        return ''; // Retorna string vazia para indicar valores múltiplos
+      }
+    }
+    return firstValue;
+  };
 
   const fonts = [
     'Arial',
@@ -79,34 +100,40 @@ const FormattingPanel = ({
   ];
 
 
-  const updateFieldStyle = (field, property, value) => {
-    setFieldStyles(prev => ({
-      ...prev,
-      [field]: {
-        ...prev[field],
-        [property]: value
-      }
-    }));
+  const updateFieldStyle = (property, value) => {
+    const newStyles = {};
+    selectedFields.forEach(field => {
+      newStyles[field] = {
+        ...(fieldStyles[field] || {}),
+        [property]: value,
+      };
+    });
+    setFieldStyles(prev => ({ ...prev, ...newStyles }));
   };
 
-  const updateFieldPosition = (field, property, value) => {
-    setFieldPositions(prev => ({
-      ...prev,
-      [field]: {
-        ...prev[field],
-        [property]: value
-      }
-    }));
+  const updateFieldPosition = (property, value) => {
+    const newPositions = {};
+    selectedFields.forEach(field => {
+      newPositions[field] = {
+        ...(fieldPositions[field] || {}),
+        [property]: value,
+      };
+    });
+    setFieldPositions(prev => ({ ...prev, ...newPositions }));
   };
 
-  const copyStyleToAll = (sourceField) => {
+  const copyStyleToAll = () => {
+    if (!selectedFields || selectedFields.length === 0) return;
+    const sourceField = selectedFields[0];
     const sourceStyle = fieldStyles[sourceField];
     if (!sourceStyle) return;
 
     const newStyles = {};
     csvHeaders.forEach(header => {
-      if (header !== sourceField) {
-        newStyles[header] = { ...sourceStyle };
+      // Aplica a todos, exceto ao campo de origem se essa for a lógica desejada
+      // ou simplesmente aplica a todos os outros campos
+      if (!selectedFields.includes(header)) {
+         newStyles[header] = { ...sourceStyle };
       }
     });
 
@@ -116,11 +143,16 @@ const FormattingPanel = ({
     }));
   };
 
-  const toggleFieldVisibility = (field) => {
-    updateFieldPosition(field, 'visible', !fieldPositions[field]?.visible);
+  const toggleFieldVisibility = () => {
+    if (!selectedFields || selectedFields.length === 0) return;
+    // A visibilidade é alternada para todos com base no estado do primeiro campo selecionado.
+    const isVisible = fieldPositions[selectedFields[0]]?.visible !== false;
+    selectedFields.forEach(field => {
+      updateFieldPosition(field, 'visible', !isVisible);
+    });
   };
 
-  const resetFieldStyle = (field) => {
+  const resetFieldStyle = () => {
     const defaultStyle = {
       fontFamily: 'Arial',
       fontSize: 24,
@@ -138,13 +170,18 @@ const FormattingPanel = ({
       shadowOffsetY: 2
     };
 
+    const newStyles = {};
+    selectedFields.forEach(field => {
+      newStyles[field] = defaultStyle;
+    });
+
     setFieldStyles(prev => ({
       ...prev,
-      [field]: defaultStyle
+      ...newStyles
     }));
   };
 
-  if (!selectedField) {
+  if (!selectedFields || selectedFields.length === 0) {
     return (
       <Card>
         <CardContent>
@@ -156,14 +193,14 @@ const FormattingPanel = ({
     );
   }
 
-  const style = fieldStyles[selectedField] || {};
-  const position = fieldPositions[selectedField] || {};
+  const style = fieldStyles[selectedFields[0]] || {};
+  const position = fieldPositions[selectedFields[0]] || {};
 
   // Log the resolved style object for the selected field
-  if (selectedField) {
-    console.log('[FormattingPanel] Resolved style for selectedField (' + selectedField + '):', style);
+  if (selectedFields.length > 0) {
+    console.log('[FormattingPanel] Resolved style for selectedFields (' + selectedFields.join(', ') + '):', style);
   } else {
-    console.log('[FormattingPanel] No selectedField, style object is default:', style);
+    console.log('[FormattingPanel] No selectedFields, style object is default:', style);
   }
 
   return (
@@ -171,7 +208,7 @@ const FormattingPanel = ({
       <CardContent>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
           <Chip
-            label={selectedField}
+            label={selectedFields.length > 1 ? `${selectedFields.length} campos selecionados` : selectedFields[0]}
             color="primary"
             sx={{ mr: 2 }}
           />
@@ -179,7 +216,7 @@ const FormattingPanel = ({
             control={
               <Switch
                 checked={position.visible !== false}
-                onChange={() => toggleFieldVisibility(selectedField)}
+                onChange={toggleFieldVisibility}
                 size="small"
               />
             }
@@ -208,8 +245,8 @@ const FormattingPanel = ({
                   label="X (%)"
                   type="number"
                   size="small"
-                  value={position.x?.toFixed(1) || '0.0'}
-                  onChange={(e) => updateFieldPosition(selectedField, 'x', parseFloat(e.target.value) || 0)}
+                  value={getCommonValue('positions', 'x')?.toFixed(1) || ''}
+                  onChange={(e) => updateFieldPosition('x', parseFloat(e.target.value) || 0)}
                   inputProps={{ min: 0, max: 100, step: 0.1 }}
                   fullWidth
                 />
@@ -219,8 +256,8 @@ const FormattingPanel = ({
                   label="Y (%)"
                   type="number"
                   size="small"
-                  value={position.y?.toFixed(1) || '0.0'}
-                  onChange={(e) => updateFieldPosition(selectedField, 'y', parseFloat(e.target.value) || 0)}
+                  value={getCommonValue('positions', 'y')?.toFixed(1) || ''}
+                  onChange={(e) => updateFieldPosition('y', parseFloat(e.target.value) || 0)}
                   inputProps={{ min: 0, max: 100, step: 0.1 }}
                   fullWidth
                 />
@@ -230,8 +267,8 @@ const FormattingPanel = ({
                   label="Largura (%)"
                   type="number"
                   size="small"
-                  value={position.width?.toFixed(1) || '20.0'}
-                  onChange={(e) => updateFieldPosition(selectedField, 'width', parseFloat(e.target.value) || 20)}
+                  value={getCommonValue('positions', 'width')?.toFixed(1) || ''}
+                  onChange={(e) => updateFieldPosition('width', parseFloat(e.target.value) || 20)}
                   inputProps={{ min: 5, max: 100, step: 0.1 }}
                   fullWidth
                 />
@@ -241,17 +278,17 @@ const FormattingPanel = ({
                   label="Altura (%)"
                   type="number"
                   size="small"
-                  value={position.height?.toFixed(1) || '10.0'}
-                  onChange={(e) => updateFieldPosition(selectedField, 'height', parseFloat(e.target.value) || 10)}
+                  value={getCommonValue('positions', 'height')?.toFixed(1) || ''}
+                  onChange={(e) => updateFieldPosition('height', parseFloat(e.target.value) || 10)}
                   inputProps={{ min: 3, max: 100, step: 0.1 }}
                   fullWidth
                 />
               </Grid>
               <Grid item xs={12}>
-                <Typography gutterBottom>Rotação: {position.rotation?.toFixed(0) || '0'}°</Typography>
+                <Typography gutterBottom>Rotação: {getCommonValue('positions', 'rotation')?.toFixed(0) || 'Múltiplos'}°</Typography>
                 <Slider
-                  value={position.rotation || 0}
-                  onChange={(e, value) => updateFieldPosition(selectedField, 'rotation', value)}
+                  value={getCommonValue('positions', 'rotation') || 0}
+                  onChange={(e, value) => updateFieldPosition('rotation', value)}
                   min={0}
                   max={360}
                   step={1}
@@ -270,10 +307,10 @@ const FormattingPanel = ({
                   Alinhamento do Texto na Caixa
                 </Typography>
                 <ToggleButtonGroup
-                  value={style.textAlign || 'left'}
+                  value={getCommonValue('styles', 'textAlign') || 'left'}
                   exclusive
                   onChange={(e, newAlignment) => {
-                    if (newAlignment) updateFieldStyle(selectedField, 'textAlign', newAlignment);
+                    if (newAlignment) updateFieldStyle('textAlign', newAlignment);
                   }}
                   aria-label="text alignment"
                   size="small"
@@ -292,10 +329,10 @@ const FormattingPanel = ({
               </Grid>
               <Grid item xs={12} sx={{ mt: 1 }}>
                  <ToggleButtonGroup
-                    value={style.verticalAlign || 'top'}
+                    value={getCommonValue('styles', 'verticalAlign') || 'top'}
                     exclusive
                     onChange={(e, newAlignment) => {
-                      if (newAlignment) updateFieldStyle(selectedField, 'verticalAlign', newAlignment);
+                      if (newAlignment) updateFieldStyle('verticalAlign', newAlignment);
                     }}
                     aria-label="vertical alignment"
                     size="small"
@@ -330,9 +367,9 @@ const FormattingPanel = ({
                 <FormControl fullWidth size="small">
                   <InputLabel>Fonte</InputLabel>
                   <Select
-                    value={style.fontFamily || 'Arial'}
+                    value={getCommonValue('styles', 'fontFamily') || 'Arial'}
                     label="Fonte"
-                    onChange={(e) => updateFieldStyle(selectedField, 'fontFamily', e.target.value)}
+                    onChange={(e) => updateFieldStyle('fontFamily', e.target.value)}
                   >
                     {fonts.map(font => (
                       <MenuItem key={font} value={font} style={{ fontFamily: font }}>
@@ -353,24 +390,24 @@ const FormattingPanel = ({
                     <ToggleButton
                       value="bold"
                       aria-label="bold"
-                      selected={style.fontWeight === 'bold'}
-                      onClick={() => updateFieldStyle(selectedField, 'fontWeight', style.fontWeight === 'bold' ? 'normal' : 'bold')}
+                      selected={getCommonValue('styles', 'fontWeight') === 'bold'}
+                      onClick={() => updateFieldStyle('fontWeight', getCommonValue('styles', 'fontWeight') === 'bold' ? 'normal' : 'bold')}
                     >
                       <FormatBold />
                     </ToggleButton>
                     <ToggleButton
                       value="italic"
                       aria-label="italic"
-                      selected={style.fontStyle === 'italic'}
-                      onClick={() => updateFieldStyle(selectedField, 'fontStyle', style.fontStyle === 'italic' ? 'normal' : 'italic')}
+                      selected={getCommonValue('styles', 'fontStyle') === 'italic'}
+                      onClick={() => updateFieldStyle('fontStyle', getCommonValue('styles', 'fontStyle') === 'italic' ? 'normal' : 'italic')}
                     >
                       <FormatItalic />
                     </ToggleButton>
                     <ToggleButton
                       value="underline"
                       aria-label="underline"
-                      selected={style.textDecoration === 'underline'}
-                      onClick={() => updateFieldStyle(selectedField, 'textDecoration', style.textDecoration === 'underline' ? 'none' : 'underline')}
+                      selected={getCommonValue('styles', 'textDecoration') === 'underline'}
+                      onClick={() => updateFieldStyle('textDecoration', getCommonValue('styles', 'textDecoration') === 'underline' ? 'none' : 'underline')}
                     >
                       <FormatUnderlined />
                     </ToggleButton>
@@ -379,11 +416,11 @@ const FormattingPanel = ({
 
               <Grid item xs={12}>
                 <Typography gutterBottom sx={{mt:1}}>
-                  Tamanho: {style.fontSize || 24}px
+                  Tamanho: {getCommonValue('styles', 'fontSize') || 'Múltiplos'}px
                 </Typography>
                 <Slider
-                  value={style.fontSize || 24}
-                  onChange={(e, value) => updateFieldStyle(selectedField, 'fontSize', value)}
+                  value={getCommonValue('styles', 'fontSize') || 24}
+                  onChange={(e, value) => updateFieldStyle('fontSize', value)}
                   min={8}
                   max={120}
                   valueLabelDisplay="auto"
@@ -413,9 +450,9 @@ const FormattingPanel = ({
                 <FormControl fullWidth size="small">
                   <InputLabel>Peso da Fonte</InputLabel>
                   <Select
-                    value={style.fontWeight || 'normal'}
+                    value={getCommonValue('styles', 'fontWeight') || 'normal'}
                     label="Peso da Fonte"
-                    onChange={(e) => updateFieldStyle(selectedField, 'fontWeight', e.target.value)}
+                    onChange={(e) => updateFieldStyle('fontWeight', e.target.value)}
                   >
                     <MenuItem value="100">Thin (100)</MenuItem>
                     <MenuItem value="200">Extra Light (200)</MenuItem>
@@ -433,9 +470,9 @@ const FormattingPanel = ({
                 <FormControl fullWidth size="small">
                   <InputLabel>Estilo da Fonte</InputLabel>
                   <Select
-                    value={style.fontStyle || 'normal'}
+                    value={getCommonValue('styles', 'fontStyle') || 'normal'}
                     label="Estilo da Fonte"
-                    onChange={(e) => updateFieldStyle(selectedField, 'fontStyle', e.target.value)}
+                    onChange={(e) => updateFieldStyle('fontStyle', e.target.value)}
                   >
                     <MenuItem value="normal">Normal</MenuItem>
                     <MenuItem value="italic">Itálico</MenuItem>
@@ -447,9 +484,9 @@ const FormattingPanel = ({
                 <FormControl fullWidth size="small">
                   <InputLabel>Decoração do Texto</InputLabel>
                   <Select
-                    value={style.textDecoration || 'none'}
+                    value={getCommonValue('styles', 'textDecoration') || 'none'}
                     label="Decoração do Texto"
-                    onChange={(e) => updateFieldStyle(selectedField, 'textDecoration', e.target.value)}
+                    onChange={(e) => updateFieldStyle('textDecoration', e.target.value)}
                   >
                     <MenuItem value="none">Nenhuma</MenuItem>
                     <MenuItem value="underline">Sublinhado</MenuItem>
@@ -462,8 +499,8 @@ const FormattingPanel = ({
                 <TextField
                   label="Cor"
                   type="color"
-                  value={style.color || '#000000'}
-                  onChange={(e) => updateFieldStyle(selectedField, 'color', e.target.value)}
+                  value={getCommonValue('styles', 'color') || '#000000'}
+                  onChange={(e) => updateFieldStyle('color', e.target.value)}
                   fullWidth
                   size="small"
                 />
@@ -487,31 +524,31 @@ const FormattingPanel = ({
                 <FormControlLabel
                   control={
                     <Switch
-                      checked={style.textStroke || false}
-                      onChange={(e) => updateFieldStyle(selectedField, 'textStroke', e.target.checked)}
+                      checked={getCommonValue('styles', 'textStroke') || false}
+                      onChange={(e) => updateFieldStyle('textStroke', e.target.checked)}
                       size="small"
                     />
                   }
                   label="Contorno"
                 />
 
-                {style.textStroke && (
+                {getCommonValue('styles', 'textStroke') && (
                   <Grid container spacing={2} sx={{ mt: 1 }}>
                     <Grid item xs={6}>
                       <TextField
                         label="Cor do Contorno"
                         type="color"
-                        value={style.strokeColor || '#ffffff'}
-                        onChange={(e) => updateFieldStyle(selectedField, 'strokeColor', e.target.value)}
+                        value={getCommonValue('styles', 'strokeColor') || '#ffffff'}
+                        onChange={(e) => updateFieldStyle('strokeColor', e.target.value)}
                         fullWidth
                         size="small"
                       />
                     </Grid>
                     <Grid item xs={6}>
-                      <Typography gutterBottom>Espessura: {style.strokeWidth || 2}px</Typography>
+                      <Typography gutterBottom>Espessura: {getCommonValue('styles', 'strokeWidth') || 2}px</Typography>
                       <Slider
-                        value={style.strokeWidth || 2}
-                        onChange={(e, value) => updateFieldStyle(selectedField, 'strokeWidth', value)}
+                        value={getCommonValue('styles', 'strokeWidth') || 2}
+                        onChange={(e, value) => updateFieldStyle('strokeWidth', value)}
                         min={1}
                         max={10}
                         size="small"
@@ -526,51 +563,51 @@ const FormattingPanel = ({
                 <FormControlLabel
                   control={
                     <Switch
-                      checked={style.textShadow || false}
-                      onChange={(e) => updateFieldStyle(selectedField, 'textShadow', e.target.checked)}
+                      checked={getCommonValue('styles', 'textShadow') || false}
+                      onChange={(e) => updateFieldStyle('textShadow', e.target.checked)}
                       size="small"
                     />
                   }
                   label="Sombra"
                 />
 
-                {style.textShadow && (
+                {getCommonValue('styles', 'textShadow') && (
                   <Grid container spacing={2} sx={{ mt: 1 }}>
                     <Grid item xs={6}>
                       <TextField
                         label="Cor da Sombra"
                         type="color"
-                        value={style.shadowColor || '#000000'}
-                        onChange={(e) => updateFieldStyle(selectedField, 'shadowColor', e.target.value)}
+                        value={getCommonValue('styles', 'shadowColor') || '#000000'}
+                        onChange={(e) => updateFieldStyle('shadowColor', e.target.value)}
                         fullWidth
                         size="small"
                       />
                     </Grid>
                     <Grid item xs={6}>
-                      <Typography gutterBottom>Desfoque: {style.shadowBlur || 4}px</Typography>
+                      <Typography gutterBottom>Desfoque: {getCommonValue('styles', 'shadowBlur') || 4}px</Typography>
                       <Slider
-                        value={style.shadowBlur || 4}
-                        onChange={(e, value) => updateFieldStyle(selectedField, 'shadowBlur', value)}
+                        value={getCommonValue('styles', 'shadowBlur') || 4}
+                        onChange={(e, value) => updateFieldStyle('shadowBlur', value)}
                         min={0}
                         max={20}
                         size="small"
                       />
                     </Grid>
                     <Grid item xs={6}>
-                      <Typography gutterBottom>Offset X: {style.shadowOffsetX || 2}px</Typography>
+                      <Typography gutterBottom>Offset X: {getCommonValue('styles', 'shadowOffsetX') || 2}px</Typography>
                       <Slider
-                        value={style.shadowOffsetX || 2}
-                        onChange={(e, value) => updateFieldStyle(selectedField, 'shadowOffsetX', value)}
+                        value={getCommonValue('styles', 'shadowOffsetX') || 2}
+                        onChange={(e, value) => updateFieldStyle('shadowOffsetX', value)}
                         min={-20}
                         max={20}
                         size="small"
                       />
                     </Grid>
                     <Grid item xs={6}>
-                      <Typography gutterBottom>Offset Y: {style.shadowOffsetY || 2}px</Typography>
+                      <Typography gutterBottom>Offset Y: {getCommonValue('styles', 'shadowOffsetY') || 2}px</Typography>
                       <Slider
-                        value={style.shadowOffsetY || 2}
-                        onChange={(e, value) => updateFieldStyle(selectedField, 'shadowOffsetY', value)}
+                        value={getCommonValue('styles', 'shadowOffsetY') || 2}
+                        onChange={(e, value) => updateFieldStyle('shadowOffsetY', value)}
                         min={-20}
                         max={20}
                         size="small"
@@ -591,7 +628,7 @@ const FormattingPanel = ({
             <Button
               variant="outlined"
               size="small"
-              onClick={() => copyStyleToAll(selectedField)}
+              onClick={copyStyleToAll}
               startIcon={<ContentCopy />}
               fullWidth
             >
@@ -602,7 +639,7 @@ const FormattingPanel = ({
             <Button
               variant="outlined"
               size="small"
-              onClick={() => resetFieldStyle(selectedField)}
+              onClick={resetFieldStyle}
               color="secondary"
               fullWidth
             >

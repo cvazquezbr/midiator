@@ -6,7 +6,7 @@ import FormattingPanel from './FormattingPanel';
 const FormattingDrawer = ({
   open,
   onClose,
-  selectedField,
+  selectedFields,
   fieldStyles,
   setFieldStyles,
   fieldPositions,
@@ -23,7 +23,7 @@ const FormattingDrawer = ({
           </IconButton>
         </Box>
         <FormattingPanel
-          selectedField={selectedField}
+          selectedFields={selectedFields}
           fieldStyles={fieldStyles}
           setFieldStyles={setFieldStyles}
           fieldPositions={fieldPositions}
