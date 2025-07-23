@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Box } from '@mui/material';
+import RichTextEditor from './RichTextEditor';
 import styles from './HtmlTextBox.module.css';
 
 const HtmlTextBox = ({
@@ -625,24 +626,79 @@ const HtmlTextBox = ({
         }}
       >
         {isEditing && isSelected ? (
-          <textarea
-            ref={textareaRef} 
-            value={editedContent} 
-            onChange={handleTextareaChange}
-            onBlur={handleTextareaBlur} 
-            onKeyDown={handleTextareaKeyDown}
-            className={styles.textArea}
-            style={{
-              fontFamily: style.fontFamily || 'Arial',
-              fontSize: `${scaledFontSize}px`,
-              fontWeight: style.fontWeight || 'normal',
-              fontStyle: style.fontStyle || 'normal',
-              color: style.color || '#000000',
-              lineHeight: `${scaledLineHeight}px`,
-              textDecoration: style.textDecoration || 'none',
-              textAlign: style.textAlign || 'left',
-            }}
-          />
+          enableHtmlRendering ? (
+            <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
+              <RichTextEditor
+                value={editedContent}
+                onChange={setEditedContent}
+                placeholder={`Editar ${field}...`}
+                maxHeight={pixelPosition.height - 20}
+                showHtmlToggle={true}
+                darkMode={false}
+              />
+              <Box sx={{ 
+                position: 'absolute', 
+                bottom: 0, 
+                right: 0, 
+                display: 'flex', 
+                gap: 1,
+                backgroundColor: 'rgba(255,255,255,0.9)',
+                padding: '4px',
+                borderRadius: '4px'
+              }}>
+                <button
+                  onClick={commitChanges}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    backgroundColor: '#1976d2',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Salvar
+                </button>
+                <button
+                  onClick={() => {
+                    setEditedContent(content);
+                    setIsEditing(false);
+                  }}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    backgroundColor: '#666',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+              </Box>
+            </Box>
+          ) : (
+            <textarea
+              ref={textareaRef} 
+              value={editedContent} 
+              onChange={handleTextareaChange}
+              onBlur={handleTextareaBlur} 
+              onKeyDown={handleTextareaKeyDown}
+              className={styles.textArea}
+              style={{
+                fontFamily: style.fontFamily || 'Arial',
+                fontSize: `${scaledFontSize}px`,
+                fontWeight: style.fontWeight || 'normal',
+                fontStyle: style.fontStyle || 'normal',
+                color: style.color || '#000000',
+                lineHeight: `${scaledLineHeight}px`,
+                textDecoration: style.textDecoration || 'none',
+                textAlign: style.textAlign || 'left',
+              }}
+            />
+          )
         ) : (
           <Box 
             className={`${styles.textContent} ${enableHtmlRendering ? styles.htmlContent : ''}`}

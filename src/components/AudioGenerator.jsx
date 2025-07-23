@@ -66,16 +66,26 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
     });
   };
 
-  const removeEmojis = (text) => {
-    return text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
-  };
+ const removeFormatting = (text) => {
+  // Remove emojis
+  const noEmojis = text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
+  
+  // Remove HTML tags
+  const noHtml = noEmojis.replace(/<\/?[^>]+(>|$)/g, '');
+  
+  // Remove "..':" or similar patterns
+  const cleanedText = noHtml.replace(/\.{2,}':/g, '');
+
+  return cleanedText;
+};
+
 
   const generateAudioGoogleTTS = async (text, voice) => {
     const credentials = getGoogleCloudTTSCredentials();
     if (!credentials) {
       throw new Error('Credenciais do Google Cloud TTS não configuradas.');
     }
-    const cleanText = removeEmojis(text);
+    const cleanText = removeFormatting(text);
     const audioContent = await callGoogleCloudTTSAPI(cleanText, credentials, voice);
     const blob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
     const url = URL.createObjectURL(blob);

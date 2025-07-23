@@ -26,6 +26,7 @@
     "colorthief": "^2.6.0",
     "file-saver": "^2.0.5",
     "gapi-script": "^1.2.0",
+    "html2canvas": "^1.4.1",
     "jose": "^6.0.12",
     "jszip": "^3.10.1",
     "pako": "^2.1.0",

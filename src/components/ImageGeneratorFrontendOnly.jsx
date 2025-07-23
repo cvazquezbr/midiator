@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ProgressModal from './ProgressModal';
-import { parseHtmlToFormattedText, renderFormattedTextToCanvas, containsHtml } from '../utils/htmlRenderer';
+import { containsHtml, renderHtmlToCanvas } from '../utils/htmlRenderer';
 import {
   Box,
   Button,
@@ -203,12 +203,11 @@ const ImageGeneratorFrontendOnly = ({
   };
 
   // Função para desenhar texto com efeitos (com suporte a HTML)
-  const drawTextWithEffects = (ctx, text, x, y, style, maxWidth, maxHeight) => {
+  const drawTextWithEffects = async (ctx, text, x, y, style, maxWidth, maxHeight) => {
     // Verificar se o texto contém HTML
     if (containsHtml(text)) {
-      // Renderizar HTML formatado
-      const formattedText = parseHtmlToFormattedText(text);
-      renderFormattedTextToCanvas(ctx, formattedText, x, y, maxWidth, maxHeight, style);
+      // Renderizar HTML usando html2canvas
+      await renderHtmlToCanvas(ctx, text, x, y, maxWidth, maxHeight, style);
     } else {
       // Renderização de texto simples (comportamento original)
       if (style.textStroke) {
@@ -269,14 +268,14 @@ const ImageGeneratorFrontendOnly = ({
         ctx.drawImage(img, 0, 0);
 
           // Desenhar campos do CSV com estilos individuais
-          Object.keys(record).forEach(field => {
+          for (const field of Object.keys(record)) {
             const position = fieldPositions[field];
             const style = fieldStyles[field];
 
-            if (!position || !position.visible || !style) return;
+            if (!position || !position.visible || !style) continue;
 
             const text = record[field] || "";
-            if (!text) return;
+            if (!text) continue;
 
             ctx.save(); // Salvar o estado do canvas ANTES da rotação e translação
 
@@ -332,10 +331,10 @@ const ImageGeneratorFrontendOnly = ({
             // Verificar se o texto contém HTML para usar renderização especial
             if (containsHtml(text)) {
               // Para HTML, renderizar diretamente na área completa
-              drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
+              await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
             } else {
               // Renderização de texto simples linha por linha (comportamento original)
-              lines.forEach((line, lineIndex) => {
+              for (const line of lines) {
                 let currentLineRenderX = textContentStartX;
                 const textMetrics = ctx.measureText(line);
                 const currentTextWidth = textMetrics.width;
@@ -347,14 +346,14 @@ const ImageGeneratorFrontendOnly = ({
                   currentLineRenderX += effectiveTextWidth - currentTextWidth;
                 }
 
-                const finalLineY = currentLineRenderY + (lineIndex * lineHeight);
+                const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
 
                 // Desenhar o texto com efeitos
-                drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
-              });
+                await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
+              }
             }
             ctx.restore(); // Restaurar o estado do canvas para o próximo campo
-          });
+          }
 
         // Converter canvas para blob com alta qualidade
         const blob = await new Promise(resolve => {
@@ -575,12 +574,12 @@ const ImageGeneratorFrontendOnly = ({
       ctx.textRenderingOptimization = 'optimizeQuality';
       ctx.drawImage(img, 0, 0);
 
-      Object.keys(record).forEach(field => {
+      for (const field of Object.keys(record)) {
         const position = positionsToUse[field];
         const style = stylesToUse[field];
-        if (!position || !position.visible || !style) return;
+        if (!position || !position.visible || !style) continue;
         const text = record[field] || "";
-        if (!text) return;
+        if (!text) continue;
 
         ctx.save(); // Salvar o estado do canvas ANTES da rotação e translação
 
@@ -625,22 +624,26 @@ const ImageGeneratorFrontendOnly = ({
           currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
         }
 
-        lines.forEach((line, lineIndex) => {
-          let currentLineRenderX = textContentStartX;
-          const textMetrics = ctx.measureText(line);
-          const currentTextWidth = textMetrics.width;
+        if (containsHtml(text)) {
+          await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
+        } else {
+          for (const line of lines) {
+            let currentLineRenderX = textContentStartX;
+            const textMetrics = ctx.measureText(line);
+            const currentTextWidth = textMetrics.width;
 
-          if (style.textAlign === 'center') {
-            currentLineRenderX += (effectiveTextWidth - currentTextWidth) / 2;
-          } else if (style.textAlign === 'right') {
-            currentLineRenderX += effectiveTextWidth - currentTextWidth;
+            if (style.textAlign === 'center') {
+              currentLineRenderX += (effectiveTextWidth - currentTextWidth) / 2;
+            } else if (style.textAlign === 'right') {
+              currentLineRenderX += effectiveTextWidth - currentTextWidth;
+            }
+            
+            const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
+            await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
           }
-          
-          const finalLineY = currentLineRenderY + (lineIndex * lineHeight);
-          drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: fontSize });
-        });
+        }
         ctx.restore(); // Restaurar o estado do canvas para o próximo campo
-      });
+      }
 
       const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
       // console.log('[regenerateSingleImage] Blob created. Size:', blob ? blob.size : 'null', 'Type:', blob ? blob.type : 'null');
