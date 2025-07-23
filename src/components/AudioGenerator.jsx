@@ -66,19 +66,31 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
     });
   };
 
- const removeFormatting = (text) => {
-  // Remove emojis
-  const noEmojis = text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
-  
-  // Remove HTML tags
-  const noHtml = noEmojis.replace(/<\/?[^>]+(>|$)/g, '');
-  
-  // Remove "..':" or similar patterns
-  const cleanedText = noHtml.replace(/\.{2,}':/g, '');
+  const removeFormatting = (text) => {
+    // Decodifica entidades HTML
+    const decoded = text
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
 
-  return cleanedText;
-};
+    // Remove emojis
+    const noEmojis = decoded.replace(
+      /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g,
+      ''
+    );
 
+    // Remove tags HTML
+    const noHtml = noEmojis.replace(/<\/?[^>]+(>|$)/g, '');
+
+    // Remove múltiplos pontos com ou sem espaços: ". .", "..", "... ", etc → ". "
+    const fixedDots = noHtml.replace(/(\s*\.\s*){2,}/g, '. ');
+
+    // Limpa padrões específicos indesejados, como "..':"
+    const cleanedText = fixedDots.replace(/\.{2,}':/g, '');
+
+    // Remove espaços extras
+    return cleanedText.trim();
+  };
 
   const generateAudioGoogleTTS = async (text, voice) => {
     const credentials = getGoogleCloudTTSCredentials();
@@ -91,9 +103,9 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
     return new Promise(resolve => {
-        audio.onloadedmetadata = () => {
-            resolve({ text, duration: audio.duration, blob, source: 'google-tts' });
-        };
+      audio.onloadedmetadata = () => {
+        resolve({ text, duration: audio.duration, blob, source: 'google-tts' });
+      };
     });
   };
 
@@ -327,7 +339,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
                         </ListItemIcon>
                         <ListItemText
                           primary={`Slide ${index + 1}`}
-                          secondary={audio.text}
+                          secondary={removeFormatting(audio.text)}
                           primaryTypographyProps={{
                             fontWeight: 'bold',
                             whiteSpace: 'nowrap'
