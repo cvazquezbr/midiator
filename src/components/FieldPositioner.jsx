@@ -55,7 +55,8 @@ const FieldPositioner = ({
   colorPalette,
   onSelectFieldExternal,
   onCsvDataUpdate, // New prop to notify App.jsx of changes
-  originalImageSize
+  originalImageSize,
+  darkMode
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -402,6 +403,7 @@ const FieldPositioner = ({
                       originalImageSize={originalImageSize}
                       fontScale={(imageSize.width && originalImageSize?.width) ? imageSize.width / originalImageSize.width : 1}
                       enableHtmlRendering={isHtmlField(header)}
+                      darkMode={darkMode}
                     />
                   );
                 })

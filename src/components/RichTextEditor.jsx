@@ -38,30 +38,92 @@ const RichTextEditor = ({
   const [htmlMode, setHtmlMode] = useState(false);
   const [selection, setSelection] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const editorRef = useRef(null);
   const textareaRef = useRef(null);
 
-  // Remove the useEffect that was causing the re-render on every value change
-  // useEffect(() => {
-  //   if (editorRef.current && !htmlMode) {
-  //     editorRef.current.innerHTML = value;
-  //   }
-  // }, [value, htmlMode]);
+  // Função para salvar a posição do cursor
+  const saveSelection = () => {
+    if (htmlMode || !editorRef.current) return null;
+    
+    const sel = window.getSelection();
+    if (sel.rangeCount === 0) return null;
+    
+    const range = sel.getRangeAt(0);
+    const preSelectionRange = range.cloneRange();
+    preSelectionRange.selectNodeContents(editorRef.current);
+    preSelectionRange.setEnd(range.startContainer, range.startOffset);
+    const start = preSelectionRange.toString().length;
+    
+    return {
+      start,
+      end: start + range.toString().length
+    };
+  };
 
-  // Initialize content only once or when switching from HTML mode
-  useEffect(() => {
-    if (editorRef.current && !htmlMode && editorRef.current.innerHTML !== value) {
-      editorRef.current.innerHTML = value;
+  // Função para restaurar a posição do cursor
+  const restoreSelection = (savedSelection) => {
+    if (!savedSelection || htmlMode || !editorRef.current) return;
+    
+    const range = document.createRange();
+    const sel = window.getSelection();
+    let charCount = 0;
+    let foundStart = false;
+    let foundEnd = false;
+    
+    const walker = document.createTreeWalker(
+      editorRef.current,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
+    
+    let node;
+    while (node = walker.nextNode()) {
+      const nextCharCount = charCount + node.textContent.length;
+      
+      if (!foundStart && savedSelection.start >= charCount && savedSelection.start <= nextCharCount) {
+        range.setStart(node, savedSelection.start - charCount);
+        foundStart = true;
+      }
+      
+      if (foundStart && savedSelection.end >= charCount && savedSelection.end <= nextCharCount) {
+        range.setEnd(node, savedSelection.end - charCount);
+        foundEnd = true;
+        break;
+      }
+      
+      charCount = nextCharCount;
     }
-  }, [htmlMode]); // Only depend on htmlMode to avoid re-rendering on every input
+    
+    if (foundStart) {
+      if (!foundEnd) {
+        range.setEnd(range.startContainer, range.startOffset);
+      }
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  };
 
-  // Update the DOM directly when the value prop changes, but only if the editor is not focused
-  // and the content actually differs, to prevent cursor jumps.
+  // Inicialização do conteúdo apenas uma vez
   useEffect(() => {
-    if (editorRef.current && !htmlMode && document.activeElement !== editorRef.current && editorRef.current.innerHTML !== value) {
+    if (editorRef.current && !htmlMode && !isInitialized) {
       editorRef.current.innerHTML = value;
+      setIsInitialized(true);
     }
-  }, [value, htmlMode]);
+  }, [value, htmlMode, isInitialized]);
+
+  // Atualização externa do valor (apenas quando não está focado)
+  useEffect(() => {
+    if (editorRef.current && !htmlMode && isInitialized) {
+      const isEditorFocused = document.activeElement === editorRef.current || 
+                             editorRef.current.contains(document.activeElement);
+      
+      if (!isEditorFocused && editorRef.current.innerHTML !== value) {
+        editorRef.current.innerHTML = value;
+      }
+    }
+  }, [value, htmlMode, isInitialized]);
 
   const handleSelectionChange = () => {
     if (htmlMode) return;
@@ -79,9 +141,16 @@ const RichTextEditor = ({
   const execCommand = (command, value = null) => {
     if (htmlMode) return;
     
+    const savedSelection = saveSelection();
     document.execCommand(command, false, value);
-    // editorRef.current.focus(); // Removed focus to prevent cursor jump
-    handleContentChange();
+    
+    // Permitir que o DOM se atualize antes de restaurar a seleção
+    setTimeout(() => {
+      if (savedSelection) {
+        restoreSelection(savedSelection);
+      }
+      handleContentChange();
+    }, 0);
   };
 
   const handleContentChange = useCallback(() => {
@@ -91,6 +160,11 @@ const RichTextEditor = ({
       onChange(editorRef.current.innerHTML);
     }
   }, [htmlMode, onChange]);
+
+  const handleInput = (e) => {
+    // Não fazer nada especial, apenas propagar a mudança
+    handleContentChange();
+  };
 
   const insertHtml = (html) => {
     if (htmlMode) {
@@ -103,7 +177,11 @@ const RichTextEditor = ({
       textarea.selectionStart = textarea.selectionEnd = start + html.length;
       onChange(newText);
     } else {
-      execCommand('insertHTML', html);
+      const savedSelection = saveSelection();
+      document.execCommand('insertHTML', false, html);
+      setTimeout(() => {
+        handleContentChange();
+      }, 0);
     }
   };
 
@@ -201,6 +279,7 @@ const RichTextEditor = ({
       setTimeout(() => {
         if (editorRef.current) {
           editorRef.current.innerHTML = textareaRef.current.value;
+          handleContentChange();
         }
       }, 0);
     } else {
@@ -251,6 +330,16 @@ const RichTextEditor = ({
                 size="small"
                 onClick={() => execCommand(button.command)}
                 disabled={disabled || htmlMode}
+                sx={darkMode ? {
+                  color: '#ffffff !important',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.08) !important'
+                  },
+                  '&.active': {
+                    backgroundColor: '#90caf9 !important',
+                    color: '#000000 !important'
+                  }
+                } : {}}
               >
                 {button.icon}
               </IconButton>
@@ -269,6 +358,16 @@ const RichTextEditor = ({
                 size="small"
                 onClick={() => execCommand(button.command)}
                 disabled={disabled || htmlMode}
+                sx={darkMode ? {
+                  color: '#ffffff !important',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.08) !important'
+                  },
+                  '&.active': {
+                    backgroundColor: '#90caf9 !important',
+                    color: '#000000 !important'
+                  }
+                } : {}}
               >
                 {button.icon}
               </IconButton>
@@ -286,6 +385,16 @@ const RichTextEditor = ({
               size="small"
               onClick={insertBulletList}
               disabled={disabled}
+              sx={darkMode ? {
+                color: '#ffffff !important',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.08) !important'
+                },
+                '&.active': {
+                  backgroundColor: '#90caf9 !important',
+                  color: '#000000 !important'
+                }
+              } : {}}
             >
               <FormatListBulleted />
             </IconButton>
@@ -296,6 +405,16 @@ const RichTextEditor = ({
               size="small"
               onClick={insertNumberedList}
               disabled={disabled}
+              sx={darkMode ? {
+                color: '#ffffff !important',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.08) !important'
+                },
+                '&.active': {
+                  backgroundColor: '#90caf9 !important',
+                  color: '#000000 !important'
+                }
+              } : {}}
             >
               <FormatListNumbered />
             </IconButton>
@@ -312,6 +431,16 @@ const RichTextEditor = ({
               size="small"
               onClick={() => execCommand('undo')}
               disabled={disabled || htmlMode}
+              sx={darkMode ? {
+                color: '#ffffff !important',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.08) !important'
+                },
+                '&.active': {
+                  backgroundColor: '#90caf9 !important',
+                  color: '#000000 !important'
+                }
+              } : {}}
             >
               <Undo />
             </IconButton>
@@ -322,6 +451,16 @@ const RichTextEditor = ({
               size="small"
               onClick={() => execCommand('redo')}
               disabled={disabled || htmlMode}
+              sx={darkMode ? {
+                color: '#ffffff !important',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.08) !important'
+                },
+                '&.active': {
+                  backgroundColor: '#90caf9 !important',
+                  color: '#000000 !important'
+                }
+              } : {}}
             >
               <Redo />
             </IconButton>
@@ -339,6 +478,16 @@ const RichTextEditor = ({
                 size="small"
                 onClick={toggleHtmlMode}
                 disabled={disabled}
+                sx={darkMode ? {
+                  color: '#ffffff !important',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.08) !important'
+                  },
+                  '&.active': {
+                    backgroundColor: '#90caf9 !important',
+                    color: '#000000 !important'
+                  }
+                } : {}}
               >
                 <Code />
               </IconButton>
@@ -364,9 +513,9 @@ const RichTextEditor = ({
         ) : (
           <Box
             ref={editorRef}
-            className={styles.editor}
+            className={`${styles.editor} ${darkMode ? styles.darkModeEditor : ''}`}
             contentEditable={!disabled}
-            onInput={handleContentChange}
+            onInput={handleInput}
             onMouseUp={handleSelectionChange}
             onKeyUp={handleSelectionChange}
             onKeyDown={handleKeyDown}
@@ -374,7 +523,7 @@ const RichTextEditor = ({
             style={{
               maxHeight: `${maxHeight}px`,
             }}
-            dangerouslySetInnerHTML={{ __html: value }}
+            suppressContentEditableWarning={true}
           />
         )}
       </Box>
@@ -383,5 +532,3 @@ const RichTextEditor = ({
 };
 
 export default RichTextEditor;
-
-

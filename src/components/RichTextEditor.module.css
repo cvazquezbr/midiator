@@ -1,4 +1,4 @@
-/* Estilos responsivos para o RichTextEditor */
+/* Estilos responsivos para o RichTextEditor - VERSÃO FINAL */
 
 .richTextEditor {
   width: 100%;
@@ -201,40 +201,251 @@
   }
 }
 
-/* Estilos para modo escuro */
+/* ===== DETECÇÃO AUTOMÁTICA DE DARK MODE ===== */
+
+/* Usando prefers-color-scheme para detectar tema do sistema */
+@media (prefers-color-scheme: dark) {
+  .richTextEditor {
+    background-color: #1e1e1e !important;
+    color: #ffffff !important;
+  }
+
+  .richTextEditor .toolbar {
+    background-color: #2d2d2d !important;
+    border-bottom-color: #404040 !important;
+  }
+
+  /* Botões da toolbar no dark mode automático */
+  .richTextEditor .toolbarButton,
+  .richTextEditor .MuiIconButton-root,
+  .richTextEditor .MuiButtonBase-root {
+    color: #ffffff !important;
+  }
+
+  .richTextEditor .toolbarButton:hover,
+  .richTextEditor .MuiIconButton-root:hover,
+  .richTextEditor .MuiButtonBase-root:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .richTextEditor .toolbarButton:active,
+  .richTextEditor .MuiIconButton-root:active,
+  .richTextEditor .MuiButtonBase-root:active {
+    background-color: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .richTextEditor .toolbarButton.active,
+  .richTextEditor .MuiIconButton-root.active,
+  .richTextEditor .MuiButtonBase-root.active {
+    background-color: #90caf9 !important;
+    color: #000000 !important;
+  }
+
+  .richTextEditor .MuiSvgIcon-root {
+    color: inherit !important;
+  }
+
+  .richTextEditor .divider {
+    background-color: #404040 !important;
+  }
+
+  .richTextEditor .editor {
+    background-color: #1e1e1e !important;
+    color: #ffffff !important;
+  }
+
+  .richTextEditor .htmlEditor {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+  }
+
+  /* Conteúdo formatado visível no dark mode automático */
+  .richTextEditor .editor b,
+  .richTextEditor .editor strong {
+    color: #ffffff !important;
+    font-weight: bold !important;
+  }
+
+  .richTextEditor .editor i,
+  .richTextEditor .editor em {
+    color: #ffffff !important;
+    font-style: italic !important;
+  }
+
+  .richTextEditor .editor u {
+    color: #ffffff !important;
+    text-decoration: underline !important;
+  }
+
+  .richTextEditor .editor ul,
+  .richTextEditor .editor ol,
+  .richTextEditor .editor li,
+  .richTextEditor .editor p,
+  .richTextEditor .editor div {
+    color: #ffffff !important;
+  }
+
+  .richTextEditor .editor *:not(svg):not(path) {
+    color: #ffffff !important;
+  }
+}
+
+/* ===== ESTILOS PARA MODO ESCURO MANUAL ===== */
+.richTextEditor.darkMode {
+  background-color: #1e1e1e !important;
+  color: #ffffff !important;
+}
+
 .richTextEditor.darkMode .toolbar {
-  background-color: #2d2d2d;
-  border-bottom-color: #404040;
+  background-color: #2d2d2d !important;
+  border-bottom-color: #404040 !important;
 }
 
-.richTextEditor.darkMode .toolbarButton {
-  color: #ffffff;
+/* Estilos específicos para botões do Material-UI no modo dark */
+.richTextEditor.darkMode .toolbarButton,
+.richTextEditor.darkMode .MuiIconButton-root,
+.richTextEditor.darkMode .MuiButtonBase-root {
+  color: #ffffff !important;
 }
 
-.richTextEditor.darkMode .toolbarButton:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+.richTextEditor.darkMode .toolbarButton:hover,
+.richTextEditor.darkMode .MuiIconButton-root:hover,
+.richTextEditor.darkMode .MuiButtonBase-root:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-.richTextEditor.darkMode .toolbarButton:active {
-  background-color: rgba(255, 255, 255, 0.12);
+.richTextEditor.darkMode .toolbarButton:active,
+.richTextEditor.darkMode .MuiIconButton-root:active,
+.richTextEditor.darkMode .MuiButtonBase-root:active {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.richTextEditor.darkMode .toolbarButton.active,
+.richTextEditor.darkMode .MuiIconButton-root.active,
+.richTextEditor.darkMode .MuiButtonBase-root.active {
+  background-color: #90caf9 !important;
+  color: #000000 !important;
+}
+
+/* Estilos para ícones SVG do Material-UI no modo dark */
+.richTextEditor.darkMode .MuiSvgIcon-root {
+  color: inherit !important;
 }
 
 .richTextEditor.darkMode .divider {
-  background-color: #404040;
+  background-color: #404040 !important;
 }
 
 .richTextEditor.darkMode .editor {
-  background-color: #1e1e1e;
-  color: #ffffff;
+  background-color: #1e1e1e !important;
+  color: #ffffff !important;
 }
 
 .richTextEditor.darkMode .htmlEditor {
-  background-color: #1a1a1a;
-  color: #ffffff;
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
 }
 
 .richTextEditor.darkMode .editor:empty::before {
-  color: #666;
+  color: #666 !important;
+}
+
+/* Estilos específicos para elementos formatados no modo dark com alta especificidade */
+.richTextEditor.darkMode .editor b,
+.richTextEditor.darkMode .editor strong {
+  color: #ffffff !important;
+  font-weight: bold !important;
+}
+
+.richTextEditor.darkMode .editor i,
+.richTextEditor.darkMode .editor em {
+  color: #ffffff !important;
+  font-style: italic !important;
+}
+
+.richTextEditor.darkMode .editor u {
+  color: #ffffff !important;
+  text-decoration: underline !important;
+}
+
+.richTextEditor.darkMode .editor ul,
+.richTextEditor.darkMode .editor ol {
+  color: #ffffff !important;
+}
+
+.richTextEditor.darkMode .editor li {
+  color: #ffffff !important;
+}
+
+.richTextEditor.darkMode .editor p {
+  color: #ffffff !important;
+  margin: 8px 0 !important;
+}
+
+.richTextEditor.darkMode .editor div {
+  color: #ffffff !important;
+}
+
+.richTextEditor.darkMode .editor span {
+  color: #ffffff !important;
+}
+
+/* Garantir que todos os elementos herdem a cor correta no modo dark */
+.richTextEditor.darkMode .editor *:not(svg):not(path) {
+  color: #ffffff !important;
+}
+
+/* Estilos para listas específicos no modo dark */
+.richTextEditor.darkMode .editor ul li::marker,
+.richTextEditor.darkMode .editor ol li::marker {
+  color: #ffffff !important;
+}
+
+/* Estilos para links no modo dark */
+.richTextEditor.darkMode .editor a {
+  color: #90caf9 !important;
+}
+
+.richTextEditor.darkMode .editor a:hover {
+  color: #64b5f6 !important;
+}
+
+/* Estilos para elementos de código no modo dark */
+.richTextEditor.darkMode .editor code {
+  background-color: #333333 !important;
+  color: #f8f8f2 !important;
+  padding: 2px 4px !important;
+  border-radius: 4px !important;
+  font-family: 'Courier New', monospace !important;
+}
+
+.richTextEditor.darkMode .editor pre {
+  background-color: #333333 !important;
+  color: #f8f8f2 !important;
+  padding: 12px !important;
+  border-radius: 4px !important;
+  overflow-x: auto !important;
+  font-family: 'Courier New', monospace !important;
+}
+
+/* Estilos para blockquotes no modo dark */
+.richTextEditor.darkMode .editor blockquote {
+  border-left: 4px solid #90caf9 !important;
+  margin: 0 !important;
+  padding-left: 16px !important;
+  color: #cccccc !important;
+  font-style: italic !important;
+}
+
+/* Estilos para seleção de texto no modo dark */
+.richTextEditor.darkMode .editor ::selection {
+  background-color: #90caf9 !important;
+  color: #000000 !important;
+}
+
+.richTextEditor.darkMode .editor ::-moz-selection {
+  background-color: #90caf9 !important;
+  color: #000000 !important;
 }
 
 /* Animações suaves */
@@ -244,15 +455,54 @@
   transition: all 0.2s ease;
 }
 
-/* Melhorias de acessibilidade */
-.toolbarButton:focus {
-  outline: 2px solid #1976d2;
-  outline-offset: 2px;
+/* Melhorias de acessibilidade com especificidade para modo dark */
+.toolbarButton:focus,
+.MuiIconButton-root:focus,
+.MuiButtonBase-root:focus {
+  outline: 2px solid #1976d2 !important;
+  outline-offset: 2px !important;
+}
+
+.richTextEditor.darkMode .toolbarButton:focus,
+.richTextEditor.darkMode .MuiIconButton-root:focus,
+.richTextEditor.darkMode .MuiButtonBase-root:focus {
+  outline-color: #90caf9 !important;
 }
 
 .editor:focus,
 .htmlEditor:focus {
-  box-shadow: 0 0 0 2px #1976d2;
+  box-shadow: 0 0 0 2px #1976d2 !important;
+}
+
+.richTextEditor.darkMode .editor:focus,
+.richTextEditor.darkMode .htmlEditor:focus {
+  box-shadow: 0 0 0 2px #90caf9 !important;
+}
+
+/* Sobrescrevendo estilos específicos do Material-UI */
+.richTextEditor.darkMode .MuiTouchRipple-root {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.richTextEditor.darkMode .css-8prnfn-MuiButtonBase-root-MuiIconButton-root {
+  color: #ffffff !important;
+}
+
+.richTextEditor.darkMode .css-8prnfn-MuiButtonBase-root-MuiIconButton-root:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.richTextEditor.darkMode .css-i4bv87-MuiSvgIcon-root {
+  color: inherit !important;
+}
+
+/* Estilos para modo dark em diferentes estados dos botões */
+.richTextEditor.darkMode .MuiIconButton-root.Mui-disabled {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.richTextEditor.darkMode .MuiIconButton-sizeSmall {
+  color: #ffffff !important;
 }
 
 /* Estilos para impressão */
@@ -269,3 +519,37 @@
   }
 }
 
+/* ===== FALLBACK PARA TEMAS CUSTOMIZADOS ===== */
+
+/* Se o container pai tiver classe dark ou data-theme="dark" */
+[data-theme="dark"] .richTextEditor,
+.dark .richTextEditor,
+[class*="dark"] .richTextEditor {
+  background-color: #1e1e1e !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .richTextEditor .toolbar,
+.dark .richTextEditor .toolbar,
+[class*="dark"] .richTextEditor .toolbar {
+  background-color: #2d2d2d !important;
+  border-bottom-color: #404040 !important;
+}
+
+[data-theme="dark"] .richTextEditor .toolbarButton,
+[data-theme="dark"] .richTextEditor .MuiIconButton-root,
+[data-theme="dark"] .richTextEditor .MuiButtonBase-root,
+.dark .richTextEditor .toolbarButton,
+.dark .richTextEditor .MuiIconButton-root,
+.dark .richTextEditor .MuiButtonBase-root,
+[class*="dark"] .richTextEditor .toolbarButton,
+[class*="dark"] .richTextEditor .MuiIconButton-root,
+[class*="dark"] .richTextEditor .MuiButtonBase-root {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .richTextEditor .editor *:not(svg):not(path),
+.dark .richTextEditor .editor *:not(svg):not(path),
+[class*="dark"] .richTextEditor .editor *:not(svg):not(path) {
+  color: #ffffff !important;
+}

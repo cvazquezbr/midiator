@@ -18,7 +18,8 @@ const HtmlTextBox = ({
   setIsMoving,
   originalImageSize,
   fontScale: fontScaleProp,
-  enableHtmlRendering = false
+  enableHtmlRendering = false,
+  darkMode,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -634,7 +635,7 @@ const HtmlTextBox = ({
                 placeholder={`Editar ${field}...`}
                 maxHeight={pixelPosition.height - 20}
                 showHtmlToggle={true}
-                darkMode={false}
+                darkMode={darkMode}
               />
               <Box sx={{ 
                 position: 'absolute', 
