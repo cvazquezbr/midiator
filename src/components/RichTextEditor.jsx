@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -41,8 +41,24 @@ const RichTextEditor = ({
   const editorRef = useRef(null);
   const textareaRef = useRef(null);
 
+  // Remove the useEffect that was causing the re-render on every value change
+  // useEffect(() => {
+  //   if (editorRef.current && !htmlMode) {
+  //     editorRef.current.innerHTML = value;
+  //   }
+  // }, [value, htmlMode]);
+
+  // Initialize content only once or when switching from HTML mode
   useEffect(() => {
-    if (editorRef.current && !htmlMode) {
+    if (editorRef.current && !htmlMode && editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = value;
+    }
+  }, [htmlMode]); // Only depend on htmlMode to avoid re-rendering on every input
+
+  // Update the DOM directly when the value prop changes, but only if the editor is not focused
+  // and the content actually differs, to prevent cursor jumps.
+  useEffect(() => {
+    if (editorRef.current && !htmlMode && document.activeElement !== editorRef.current && editorRef.current.innerHTML !== value) {
       editorRef.current.innerHTML = value;
     }
   }, [value, htmlMode]);
@@ -64,17 +80,17 @@ const RichTextEditor = ({
     if (htmlMode) return;
     
     document.execCommand(command, false, value);
-    editorRef.current.focus();
+    // editorRef.current.focus(); // Removed focus to prevent cursor jump
     handleContentChange();
   };
 
-  const handleContentChange = () => {
+  const handleContentChange = useCallback(() => {
     if (htmlMode) {
       onChange(textareaRef.current.value);
     } else {
       onChange(editorRef.current.innerHTML);
     }
-  };
+  }, [htmlMode, onChange]);
 
   const insertHtml = (html) => {
     if (htmlMode) {
@@ -358,7 +374,7 @@ const RichTextEditor = ({
             style={{
               maxHeight: `${maxHeight}px`,
             }}
-            dangerouslySetInnerHTML={{ __html: htmlMode ? '' : value }}
+            dangerouslySetInnerHTML={{ __html: value }}
           />
         )}
       </Box>
@@ -367,4 +383,5 @@ const RichTextEditor = ({
 };
 
 export default RichTextEditor;
+
 
