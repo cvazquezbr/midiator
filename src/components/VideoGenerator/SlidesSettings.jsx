@@ -83,6 +83,8 @@ const SlidesSettings = ({
               <MenuItem value="delay">Atraso (silêncio)</MenuItem>
               <MenuItem value="/turn-a-page-336933.mp3">Vira-página</MenuItem>
               <MenuItem value="/big-paper-103397.mp3">Papel grande</MenuItem>
+              <MenuItem value="/whoosh-cinematic-376875.mp3">Whoosh cinematográfico</MenuItem>
+              <MenuItem value="/woosh-230554.mp3">Woosh</MenuItem>
             </Select>
           </FormControl>
         </Grid>

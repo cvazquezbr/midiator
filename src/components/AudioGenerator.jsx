@@ -176,8 +176,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
       if (audio.source === 'google-tts' && audio.blob) {
         const url = URL.createObjectURL(audio.blob);
         audioRef.current = new Audio(url);
-        // Para áudios do Google TTS, aplicar velocidade via playbackRate
-        audioRef.current.playbackRate = speechRate;
+        // Para áudios do Google TTS, a velocidade já está aplicada no áudio
         audioRef.current.onended = () => {
           setCurrentlyPlaying(null);
         };
@@ -202,7 +201,6 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
       if (audio.source === 'google-tts' && audio.blob) {
         const url = URL.createObjectURL(audio.blob);
         audioRef.current = new Audio(url);
-        audioRef.current.playbackRate = speechRate;
         audioRef.current.onended = () => {
           setCurrentlyPlaying(null);
           currentTrackIndexRef.current += 1;
@@ -247,7 +245,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
       const url = URL.createObjectURL(audio.blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `audio_${index + 1}_${audio.rate}x.mp3`;
+      a.download = `audio_${index + 1}.mp3`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -260,7 +258,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
         const url = URL.createObjectURL(audio.blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `audio_${index + 1}_${audio.rate}x.mp3`;
+        a.download = `audio_${index + 1}.mp3`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -271,14 +269,11 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
   const handleSpeedChange = (event, newValue) => {
     setSpeechRate(newValue);
     
-    // Se há um áudio tocando atualmente, aplicar a nova velocidade imediatamente
+    // Se há um áudio tocando atualmente, a velocidade será aplicada na próxima reprodução.
+    // Não é possível alterar a velocidade de um áudio já gerado pelo Google TTS.
     if (currentlyPlaying !== null) {
-      const audio = audioData[currentlyPlaying];
-      if (audio.source === 'google-tts' && audioRef.current) {
-        audioRef.current.playbackRate = newValue;
-      }
-      // Para browser TTS, precisaríamos parar e reiniciar com nova velocidade
-      // mas isso pode ser intrusivo durante a reprodução
+      // Para browser TTS, precisaríamos parar e reiniciar com nova velocidade,
+      // o que pode ser intrusivo. A velocidade será aplicada na próxima vez que o áudio for reproduzido.
     }
   };
 
@@ -321,13 +316,14 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
                 <Slider
                   value={speechRate}
                   onChange={handleSpeedChange}
-                  min={1.0}
-                  max={1.5}
-                  step={0.1}
+                  min={0.5}
+                  max={2.0}
+                  step={0.05}
                   marks={[
+                    { value: 0.5, label: '0.5x' },
                     { value: 1.0, label: '1.0x' },
-                    { value: 1.25, label: '1.25x' },
-                    { value: 1.5, label: '1.5x' }
+                    { value: 1.5, label: '1.5x' },
+                    { value: 2.0, label: '2.0x' },
                   ]}
                   valueLabelDisplay="auto"
                   size="small"
