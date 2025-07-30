@@ -17,7 +17,8 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Tooltip
+  Tooltip,
+  Slider
 } from '@mui/material';
 import {
   PlayArrow,
@@ -27,7 +28,8 @@ import {
   Audiotrack,
   Timer,
   SaveAlt,
-  CloudDownload
+  CloudDownload,
+  Speed
 } from '@mui/icons-material';
 import { getGoogleCloudTTSCredentials } from '../utils/googleCloudTTSCredentials';
 import { callGoogleCloudTTSAPI } from '../utils/googleCloudTTSAPI';
@@ -39,6 +41,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
   const [audioMode, setAudioMode] = useState('browser');
+  const [speechRate, setSpeechRate] = useState(1.0); // Nova state para velocidade
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const currentTrackIndexRef = useRef(0);
@@ -49,15 +52,17 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
     setAudioData(initialAudioData || []);
   }, [initialAudioData]);
 
-  const generateAudioBrowser = async (text) => {
+  const generateAudioBrowser = async (text, rate = 1.0) => {
     return new Promise((resolve, reject) => {
       const emojiRegex = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
       const textWithoutEmojis = text.replace(emojiRegex, '');
       const utterance = new SpeechSynthesisUtterance(textWithoutEmojis);
       utterance.lang = 'pt-BR';
+      utterance.rate = rate; // Aplicar velocidade
       utterance.onend = () => {
-        const duration = textWithoutEmojis.length * 50; // Approximate duration in ms
-        resolve({ text, duration: duration / 1000, blob: null, source: 'browser' });
+        const baseDuration = textWithoutEmojis.length * 50;
+        const adjustedDuration = baseDuration / rate; // Ajustar duração baseada na velocidade
+        resolve({ text, duration: adjustedDuration / 1000, blob: null, source: 'browser', rate });
       };
       utterance.onerror = (event) => {
         reject(event.error);
@@ -92,19 +97,22 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
     return cleanedText.trim();
   };
 
-  const generateAudioGoogleTTS = async (text, voice) => {
+  const generateAudioGoogleTTS = async (text, voice, rate = 1.0) => {
     const credentials = getGoogleCloudTTSCredentials();
     if (!credentials) {
       throw new Error('Credenciais do Google Cloud TTS não configuradas.');
     }
     const cleanText = removeFormatting(text);
-    const audioContent = await callGoogleCloudTTSAPI(cleanText, credentials, voice);
+    
+    // Passar a velocidade para a API do Google Cloud TTS
+    const audioContent = await callGoogleCloudTTSAPI(cleanText, credentials, voice, rate);
     const blob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
+    
     return new Promise(resolve => {
       audio.onloadedmetadata = () => {
-        resolve({ text, duration: audio.duration, blob, source: 'google-tts' });
+        resolve({ text, duration: audio.duration, blob, source: 'google-tts', rate });
       };
     });
   };
@@ -114,6 +122,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
     setShowProgressModal(true);
     isCancelledRef.current = false;
     const generatedAudios = [];
+    
     for (let i = 0; i < csvData.length; i++) {
       if (isCancelledRef.current) {
         break;
@@ -124,12 +133,13 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
         (field) => fieldPositions[field]?.visible
       );
       const textToSpeak = visibleFields.map((field) => record[field]).join('. ');
+      
       try {
         let audio;
         if (audioMode.startsWith('google-tts')) {
-          audio = await generateAudioGoogleTTS(textToSpeak, voice);
+          audio = await generateAudioGoogleTTS(textToSpeak, voice, speechRate);
         } else {
-          audio = await generateAudioBrowser(textToSpeak);
+          audio = await generateAudioBrowser(textToSpeak, speechRate);
         }
         generatedAudios.push(audio);
       } catch (error) {
@@ -137,6 +147,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
         alert(`Erro ao gerar áudio para o slide ${i + 1}: ${error.message}`);
       }
     }
+    
     setAudioData(generatedAudios);
     onAudiosGenerated(generatedAudios);
     setIsGenerating(false);
@@ -160,17 +171,22 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
       if (audioRef.current) {
         audioRef.current.pause();
       }
+      
       const audio = audioData[index];
       if (audio.source === 'google-tts' && audio.blob) {
         const url = URL.createObjectURL(audio.blob);
         audioRef.current = new Audio(url);
+        // Para áudios do Google TTS, aplicar velocidade via playbackRate
+        audioRef.current.playbackRate = speechRate;
         audioRef.current.onended = () => {
           setCurrentlyPlaying(null);
         };
         audioRef.current.play();
       } else {
+        // Para áudios do browser, usar a velocidade original ou recriar com nova velocidade
         const utterance = new SpeechSynthesisUtterance(audio.text);
         utterance.lang = 'pt-BR';
+        utterance.rate = speechRate;
         utterance.onend = () => {
           setCurrentlyPlaying(null);
         };
@@ -186,6 +202,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
       if (audio.source === 'google-tts' && audio.blob) {
         const url = URL.createObjectURL(audio.blob);
         audioRef.current = new Audio(url);
+        audioRef.current.playbackRate = speechRate;
         audioRef.current.onended = () => {
           setCurrentlyPlaying(null);
           currentTrackIndexRef.current += 1;
@@ -195,6 +212,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
       } else {
         const utterance = new SpeechSynthesisUtterance(audio.text);
         utterance.lang = 'pt-BR';
+        utterance.rate = speechRate;
         utterance.onend = () => {
           setCurrentlyPlaying(null);
           currentTrackIndexRef.current += 1;
@@ -229,7 +247,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
       const url = URL.createObjectURL(audio.blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `audio_${index + 1}.mp3`;
+      a.download = `audio_${index + 1}_${audio.rate}x.mp3`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -242,12 +260,26 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
         const url = URL.createObjectURL(audio.blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `audio_${index + 1}.mp3`;
+        a.download = `audio_${index + 1}_${audio.rate}x.mp3`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
       }
     });
+  };
+
+  const handleSpeedChange = (event, newValue) => {
+    setSpeechRate(newValue);
+    
+    // Se há um áudio tocando atualmente, aplicar a nova velocidade imediatamente
+    if (currentlyPlaying !== null) {
+      const audio = audioData[currentlyPlaying];
+      if (audio.source === 'google-tts' && audioRef.current) {
+        audioRef.current.playbackRate = newValue;
+      }
+      // Para browser TTS, precisaríamos parar e reiniciar com nova velocidade
+      // mas isso pode ser intrusivo durante a reprodução
+    }
   };
 
   return (
@@ -258,8 +290,9 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
             <Audiotrack sx={{ mr: 1, verticalAlign: 'middle' }} />
             Gerar Áudio
           </Typography>
+          
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={3}>
               <FormControl fullWidth>
                 <InputLabel id="audio-mode-label">Modo de Áudio</InputLabel>
                 <Select
@@ -278,7 +311,31 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={8}>
+            
+            <Grid item xs={12} sm={3}>
+              <Box sx={{ px: 2 }}>
+                <Typography gutterBottom>
+                  <Speed sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  Velocidade: {speechRate}x
+                </Typography>
+                <Slider
+                  value={speechRate}
+                  onChange={handleSpeedChange}
+                  min={1.0}
+                  max={1.5}
+                  step={0.1}
+                  marks={[
+                    { value: 1.0, label: '1.0x' },
+                    { value: 1.25, label: '1.25x' },
+                    { value: 1.5, label: '1.5x' }
+                  ]}
+                  valueLabelDisplay="auto"
+                  size="small"
+                />
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
               <Button
                 variant="contained"
                 onClick={() => {
@@ -296,6 +353,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
               >
                 {isGenerating ? 'Gerando Áudios...' : 'Gerar Áudio para Todos os Slides'}
               </Button>
+              
               <Button
                 variant="outlined"
                 onClick={handlePlayAll}
@@ -305,6 +363,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
               >
                 {isPlayingAll ? 'Pausar Tudo' : 'Reproduzir Tudo'}
               </Button>
+              
               <Tooltip title="Baixar todos os áudios (somente Google TTS)">
                 <span>
                   <Button
@@ -353,7 +412,19 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
                     </Grid>
                     <Grid item xs={12} sm="auto">
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Chip icon={<Timer />} label={`${audio.duration.toFixed(1)}s`} sx={{ mr: 1 }} />
+                        <Chip 
+                          icon={<Timer />} 
+                          label={`${audio.duration.toFixed(1)}s`} 
+                          sx={{ mr: 1 }} 
+                        />
+                        {audio.rate && (
+                          <Chip 
+                            icon={<Speed />} 
+                            label={`${audio.rate}x`} 
+                            variant="outlined"
+                            sx={{ mr: 1 }} 
+                          />
+                        )}
                         <IconButton onClick={() => handlePlayPause(index)} size="small">
                           {currentlyPlaying === index ? <Pause /> : <PlayArrow />}
                         </IconButton>
@@ -367,9 +438,9 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
                           };
                           let newAudio;
                           if (audioMode.startsWith('google-tts')) {
-                            newAudio = await generateAudioGoogleTTS(audio.text, voiceMap[audioMode]);
+                            newAudio = await generateAudioGoogleTTS(audio.text, voiceMap[audioMode], speechRate);
                           } else {
-                            newAudio = await generateAudioBrowser(audio.text);
+                            newAudio = await generateAudioBrowser(audio.text, speechRate);
                           }
                           const newAudioData = [...audioData];
                           newAudioData[index] = newAudio;
@@ -394,6 +465,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
           )}
         </CardContent>
       </Card>
+      
       <ProgressModal
         open={showProgressModal}
         progress={progress}
