@@ -380,7 +380,10 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
         : 0;
 
       generatedImages.forEach((_, i) => {
-        const duration = (hasAudio && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration) + effectiveSlideDelay;
+        let duration = (hasAudio && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration) + effectiveSlideDelay;
+        if (i === generatedImages.length - 1) {
+          duration += finalSlideDelay;
+        }
         inputs.push("-loop", "1", "-t", duration.toString(), "-i", `img${i}.png`);
       });
 
@@ -426,33 +429,80 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
         videoTime += duration - fadeSeconds;
       });
 
-      const lastImageDuration = (hasAudio && generatedAudioData[generatedImages.length - 1] ? generatedAudioData[generatedImages.length - 1].duration : slideDuration) + effectiveSlideDelay;
+      const lastImageDuration = (hasAudio && generatedAudioData[generatedImages.length - 1] ? generatedAudioData[generatedImages.length - 1].duration : slideDuration) + effectiveSlideDelay + finalSlideDelay;
       totalDuration = videoTime + lastImageDuration;
       lastVideoLabel = `[${previousVideo}]`;
 
       // --- Audio Filter Chain ---
       if (hasAudio) {
-        const audioConcatParts = [];
+        const audioPreProcessingFilters = [];
+        const slideAudioStreams = []; // Will hold the label for each slide's audio stream
+
         const transitionAudioInputIndex = generatedImages.length;
         let audioInputIndex = transitionAudioInputIndex + 1;
+        let audioBlobCounter = 0;
 
-        generatedAudioData.forEach((audio, i) => {
-          if (audio.blob) {
-            audioConcatParts.push(`[${audioInputIndex}:a]`);
-            audioInputIndex++;
-            if (i < generatedAudioData.length - 1 && effectiveSlideDelay > 0) {
-              audioConcatParts.push(`[${transitionAudioInputIndex}:a]`);
-            }
+        for (let i = 0; i < generatedImages.length; i++) {
+          const audioData = generatedAudioData[i];
+          const hasNarration = audioData && audioData.blob;
+          const isLastSlide = i === generatedImages.length - 1;
+
+          let currentAudioSegment;
+          
+          // 1. Get the main audio for the slide (narration or silence)
+          if (hasNarration) {
+            currentAudioSegment = `[${audioInputIndex + audioBlobCounter}:a]`;
+            audioBlobCounter++;
+          } else {
+            // For slides without audio, create a silent segment of `slideDuration`.
+            const silenceLabel = `silence${i}`;
+            audioPreProcessingFilters.push(`anullsrc=channel_layout=stereo:sample_rate=44100:d=${slideDuration}[${silenceLabel}]`);
+            currentAudioSegment = `[${silenceLabel}]`;
           }
-        });
 
-        if (audioConcatParts.length > 0) {
-            const audioConcatFilter = `${audioConcatParts.join('')}concat=n=${audioConcatParts.length}:v=0:a=1[outa]`;
-            lastAudioLabel = "[outa]";
-            filterComplex = [...filterParts, ...transitionFilters, audioConcatFilter].join(";");
-        } else {
-            filterComplex = [...filterParts, ...transitionFilters].join(";");
+          // 2. Concatenate with transition sound if necessary
+          if (!isLastSlide && effectiveSlideDelay > 0) {
+            const transitionInput = `[${transitionAudioInputIndex}:a]`;
+            const combinedLabel = `ca${i}`;
+            audioPreProcessingFilters.push(`${currentAudioSegment}${transitionInput}concat=n=2:v=0:a=1[${combinedLabel}]`);
+            slideAudioStreams.push(`[${combinedLabel}]`);
+          } else {
+            slideAudioStreams.push(currentAudioSegment);
+          }
         }
+        
+        // 3. Chain all slide audio streams with acrossfade
+        if (slideAudioStreams.length > 0) {
+          let audioChain = slideAudioStreams[0];
+          const acrossfadeFilters = [];
+          if (slideAudioStreams.length > 1) {
+              for (let i = 1; i < slideAudioStreams.length; i++) {
+                  const nextAudio = slideAudioStreams[i];
+                  const outLabel = `aout${i-1}`;
+                  acrossfadeFilters.push(`${audioChain}${nextAudio}acrossfade=d=${fadeSeconds}[${outLabel}]`);
+                  audioChain = `[${outLabel}]`;
+              }
+          }
+          
+          if (finalSlideDelay > 0) {
+            const silenceLabel = 'final_silence';
+            const finalAudioOut = 'final_audio';
+            const finalSilenceFilter = `anullsrc=d=${finalSlideDelay}:r=44100:cl=stereo[${silenceLabel}]`;
+            const concatFilter = `${audioChain}[${silenceLabel}]concat=n=2:v=0:a=1[${finalAudioOut}]`;
+            
+            // The silence source is a pre-processing filter. The concat is a main filter.
+            audioPreProcessingFilters.push(finalSilenceFilter);
+            acrossfadeFilters.push(concatFilter);
+            audioChain = `[${finalAudioOut}]`;
+          }
+          
+          lastAudioLabel = audioChain;
+          const allAudioFilters = [...audioPreProcessingFilters, ...acrossfadeFilters];
+          filterComplex = [...filterParts, ...transitionFilters, ...allAudioFilters].join(";");
+        } else {
+          filterComplex = [...filterParts, ...transitionFilters].join(";");
+        }
+
       } else {
         filterComplex = [...filterParts, ...transitionFilters].join(";");
       }
