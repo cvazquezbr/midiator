@@ -9,6 +9,10 @@ import {
 const SlidesSettings = ({
   slideDuration,
   setSlideDuration,
+  slideDelay,
+  setSlideDelay,
+  finalSlideDelay,
+  setFinalSlideDelay,
   fps,
   setFps,
   transition,
@@ -64,6 +68,31 @@ const SlidesSettings = ({
               ))}
             </Select>
           </FormControl>
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            label="Atraso entre Slides (segundos)"
+            type="number"
+            value={slideDelay}
+            onChange={(e) => setSlideDelay(Math.max(0, Math.min(10, Number(e.target.value))))}
+            fullWidth
+            InputProps={{ style: { color: 'white' }, inputProps: { step: "0.25" } }}
+            InputLabelProps={{ style: { color: 'rgba(255,255,255,0.7)' } }}
+            variant="outlined"
+            disabled={compatibilityMode || transition === 'none'}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            label="Atraso no Slide Final (segundos)"
+            type="number"
+            value={finalSlideDelay}
+            onChange={(e) => setFinalSlideDelay(Math.max(0, Math.min(60, Number(e.target.value))))}
+            fullWidth
+            InputProps={{ style: { color: 'white' }, inputProps: { step: "0.25" } }}
+            InputLabelProps={{ style: { color: 'rgba(255,255,255,0.7)' } }}
+            variant="outlined"
+          />
         </Grid>
         <Grid item xs={12}>
           <FormControlLabel

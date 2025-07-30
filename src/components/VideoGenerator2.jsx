@@ -23,6 +23,8 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
   const [slideDuration, setSlideDuration] = useState(3);
+  const [slideDelay, setSlideDelay] = useState(1);
+  const [finalSlideDelay, setFinalSlideDelay] = useState(0);
   const [fps, setFps] = useState(24);
   const [transition, setTransition] = useState('fade');
   const [isLoading, setIsLoading] = useState(false);
@@ -362,11 +364,17 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
       }
 
       const inputs = [];
+      const effectiveSlideDelay = transition !== 'none' ? slideDelay : 0;
+
       generatedImages.forEach((_, i) => {
-        const duration = hasAudio && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration;
+        const duration = (hasAudio && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration) + effectiveSlideDelay;
         inputs.push("-loop", "1", "-t", duration.toString(), "-i", `img${i}.png`);
       });
+
       if (hasAudio) {
+        if (effectiveSlideDelay > 0) {
+          inputs.push("-f", "lavfi", "-t", effectiveSlideDelay.toString(), "-i", "anullsrc=channel_layout=stereo:sample_rate=44100");
+        }
         generatedAudioData.forEach((_, i) => {
           if (generatedAudioData[i].blob) {
             inputs.push("-i", `audio${i}.mp3`);
@@ -384,51 +392,50 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
       let lastAudioLabel = "";
       let totalDuration = 0;
 
-      if (transition === "none") {
-        const videoConcat = generatedImages.map((_, i) => `[v${i}]`).join("");
-        const audioConcat = hasAudio ? generatedAudioData.map((_, i) => `[${generatedImages.length + i}:a]`).join("") : "";
-        const audioOutput = hasAudio ? ":a=1[outa]" : "";
-        filterComplex = [
-          ...filterParts,
-          `${videoConcat}concat=n=${generatedImages.length}:v=1:a=0[outv]`,
-          hasAudio ? `${audioConcat}concat=n=${generatedAudioData.length}:v=0${audioOutput}` : ""
-        ].filter(Boolean).join(";");
-        lastVideoLabel = "[outv]";
-        if (hasAudio) lastAudioLabel = "[outa]";
+      // --- Video Filter Chain ---
+      const transitionFilters = [];
+      let previousVideo = "v0";
+      let videoTime = 0;
+      generatedImages.slice(1).forEach((_, idx) => {
+        const nextVideo = `v${idx + 1}`;
+        const label = `xf${idx}`;
+        const duration = (hasAudio && generatedAudioData[idx] ? generatedAudioData[idx].duration : slideDuration) + effectiveSlideDelay;
+        const offset = videoTime + duration - fadeSeconds;
 
-        totalDuration = generatedImages.reduce((acc, _, i) => {
-          const duration = hasAudio && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration;
-          return acc + duration;
-        }, 0);
+        transitionFilters.push(`[${previousVideo}][${nextVideo}]xfade=transition=${transition}:duration=${fadeSeconds}:offset=${offset}[${label}]`);
+        previousVideo = label;
+        videoTime += duration - fadeSeconds;
+      });
 
-      } else {
-        const transitionFilters = [];
-        let previous = "v0";
-        let currentTime = 0;
-        generatedImages.slice(1).forEach((_, idx) => {
-          const next = `v${idx + 1}`;
-          const label = `xf${idx}`;
-          
-          const duration = hasAudio && generatedAudioData[idx] ? generatedAudioData[idx].duration : slideDuration;
-          
-          const offset = currentTime + duration - fadeSeconds;
-          
-          transitionFilters.push(
-            `[${previous}][${next}]xfade=transition=${transition}:duration=${fadeSeconds}:offset=${offset}[${label}]`
-          );
-          previous = label;
-          currentTime += duration - fadeSeconds;
+      const lastImageDuration = (hasAudio && generatedAudioData[generatedImages.length - 1] ? generatedAudioData[generatedImages.length - 1].duration : slideDuration) + effectiveSlideDelay;
+      totalDuration = videoTime + lastImageDuration;
+      lastVideoLabel = `[${previousVideo}]`;
+
+      // --- Audio Filter Chain ---
+      if (hasAudio) {
+        const audioConcatParts = [];
+        const silenceInputIndex = generatedImages.length;
+        let audioInputIndex = silenceInputIndex + 1;
+
+        generatedAudioData.forEach((audio, i) => {
+          if (audio.blob) {
+            audioConcatParts.push(`[${audioInputIndex}:a]`);
+            audioInputIndex++;
+            if (i < generatedAudioData.length - 1 && effectiveSlideDelay > 0) {
+              audioConcatParts.push(`[${silenceInputIndex}:a]`);
+            }
+          }
         });
-        filterComplex = [...filterParts, ...transitionFilters].join(";");
-        lastVideoLabel = `[${previous}]`;
-        const lastImageDuration = hasAudio && generatedAudioData[generatedImages.length - 1] ? generatedAudioData[generatedImages.length - 1].duration : slideDuration;
-        totalDuration = currentTime + lastImageDuration;
 
-        if (hasAudio) {
-          const audioConcat = generatedAudioData.map((_, i) => `[${generatedImages.length + i}:a]`).join("");
-          filterComplex += `;${audioConcat}concat=n=${generatedAudioData.length}:v=0:a=1[outa]`;
-          lastAudioLabel = "[outa]";
+        if (audioConcatParts.length > 0) {
+            const audioConcatFilter = `${audioConcatParts.join('')}concat=n=${audioConcatParts.length}:v=0:a=1[outa]`;
+            lastAudioLabel = "[outa]";
+            filterComplex = [...filterParts, ...transitionFilters, audioConcatFilter].join(";");
+        } else {
+            filterComplex = [...filterParts, ...transitionFilters].join(";");
         }
+      } else {
+        filterComplex = [...filterParts, ...transitionFilters].join(";");
       }
 
       const cmd = [
@@ -1009,6 +1016,10 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
                   <SlidesSettings
                     slideDuration={slideDuration}
                     setSlideDuration={setSlideDuration}
+                    slideDelay={slideDelay}
+                    setSlideDelay={setSlideDelay}
+                    finalSlideDelay={finalSlideDelay}
+                    setFinalSlideDelay={setFinalSlideDelay}
                     fps={fps}
                     setFps={setFps}
                     transition={transition}
