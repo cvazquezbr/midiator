@@ -20,7 +20,9 @@ const SlidesSettings = ({
   transitionOptions,
   compatibilityMode,
   generatePerRecord,
-  setGeneratePerRecord
+  setGeneratePerRecord,
+  transitionSound,
+  setTransitionSound
 }) => {
   return (
     <Paper elevation={0} sx={{ p: 2, mt: 2, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
@@ -70,19 +72,36 @@ const SlidesSettings = ({
           </FormControl>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <TextField
-            label="Atraso entre Slides (segundos)"
-            type="number"
-            value={slideDelay}
-            onChange={(e) => setSlideDelay(Math.max(0, Math.min(10, Number(e.target.value))))}
-            fullWidth
-            InputProps={{ style: { color: 'white' }, inputProps: { step: "0.25" } }}
-            InputLabelProps={{ style: { color: 'rgba(255,255,255,0.7)' } }}
-            variant="outlined"
-            disabled={compatibilityMode || transition === 'none'}
-          />
+          <FormControl fullWidth>
+            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Intervalo entre Slides</InputLabel>
+            <Select
+              value={transitionSound}
+              onChange={(e) => setTransitionSound(e.target.value)}
+              sx={{ color: 'white' }}
+              disabled={compatibilityMode || transition === 'none'}
+            >
+              <MenuItem value="delay">Atraso (silêncio)</MenuItem>
+              <MenuItem value="/turn-a-page-336933.mp3">Vira-página</MenuItem>
+              <MenuItem value="/big-paper-103397.mp3">Papel grande</MenuItem>
+            </Select>
+          </FormControl>
         </Grid>
-        <Grid item xs={12} sm={6}>
+        {transitionSound === 'delay' && (
+          <Grid item xs={12} sm={6}>
+            <TextField
+              label="Atraso (segundos)"
+              type="number"
+              value={slideDelay}
+              onChange={(e) => setSlideDelay(Math.max(0, Math.min(10, Number(e.target.value))))}
+              fullWidth
+              InputProps={{ style: { color: 'white' }, inputProps: { step: "0.25" } }}
+              InputLabelProps={{ style: { color: 'rgba(255,255,255,0.7)' } }}
+              variant="outlined"
+              disabled={compatibilityMode || transition === 'none'}
+            />
+          </Grid>
+        )}
+        <Grid item xs={12} sm={transitionSound === 'delay' ? 6 : 12}>
           <TextField
             label="Atraso no Slide Final (segundos)"
             type="number"

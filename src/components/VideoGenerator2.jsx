@@ -24,6 +24,8 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
   const [progress, setProgress] = useState(0);
   const [slideDuration, setSlideDuration] = useState(3);
   const [slideDelay, setSlideDelay] = useState(1);
+  const [transitionSound, setTransitionSound] = useState('delay'); // 'delay' or audio file path
+  const [transitionSoundDuration, setTransitionSoundDuration] = useState(0);
   const [finalSlideDelay, setFinalSlideDelay] = useState(0);
   const [fps, setFps] = useState(24);
   const [transition, setTransition] = useState('fade');
@@ -123,6 +125,15 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, []);
+
+  useEffect(() => {
+    if (transitionSound !== 'delay') {
+      const audio = new Audio(transitionSound);
+      audio.addEventListener('loadedmetadata', () => {
+        setTransitionSoundDuration(audio.duration);
+      });
+    }
+  }, [transitionSound]);
 
   useEffect(() => {
     const loadFfmpeg = async () => {
@@ -364,7 +375,9 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
       }
 
       const inputs = [];
-      const effectiveSlideDelay = transition !== 'none' ? slideDelay : 0;
+      const effectiveSlideDelay = transition !== 'none'
+        ? (transitionSound === 'delay' ? slideDelay : transitionSoundDuration)
+        : 0;
 
       generatedImages.forEach((_, i) => {
         const duration = (hasAudio && generatedAudioData[i] ? generatedAudioData[i].duration : slideDuration) + effectiveSlideDelay;
@@ -373,7 +386,13 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
 
       if (hasAudio) {
         if (effectiveSlideDelay > 0) {
-          inputs.push("-f", "lavfi", "-t", effectiveSlideDelay.toString(), "-i", "anullsrc=channel_layout=stereo:sample_rate=44100");
+          if (transitionSound === 'delay') {
+            inputs.push("-f", "lavfi", "-t", effectiveSlideDelay.toString(), "-i", "anullsrc=channel_layout=stereo:sample_rate=44100");
+          } else {
+            const transitionAudioData = await fetchFile(transitionSound);
+            await ffmpeg.writeFile("transition.mp3", transitionAudioData);
+            inputs.push("-i", "transition.mp3");
+          }
         }
         generatedAudioData.forEach((_, i) => {
           if (generatedAudioData[i].blob) {
@@ -414,15 +433,15 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
       // --- Audio Filter Chain ---
       if (hasAudio) {
         const audioConcatParts = [];
-        const silenceInputIndex = generatedImages.length;
-        let audioInputIndex = silenceInputIndex + 1;
+        const transitionAudioInputIndex = generatedImages.length;
+        let audioInputIndex = transitionAudioInputIndex + 1;
 
         generatedAudioData.forEach((audio, i) => {
           if (audio.blob) {
             audioConcatParts.push(`[${audioInputIndex}:a]`);
             audioInputIndex++;
             if (i < generatedAudioData.length - 1 && effectiveSlideDelay > 0) {
-              audioConcatParts.push(`[${silenceInputIndex}:a]`);
+              audioConcatParts.push(`[${transitionAudioInputIndex}:a]`);
             }
           }
         });
@@ -1028,6 +1047,8 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
                     compatibilityMode={compatibilityMode}
                     generatePerRecord={generatePerRecord}
                     setGeneratePerRecord={setGeneratePerRecord}
+                    transitionSound={transitionSound}
+                    setTransitionSound={setTransitionSound}
                   />
                 )}
 
