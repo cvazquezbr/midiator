@@ -80,6 +80,7 @@ import { callGeminiApi } from './utils/geminiAPI';
 import GoogleIcon from '@mui/icons-material/Google';
 import pako from 'pako';
 import './App.css';
+import LoadingDialog from './components/LoadingDialog';
 
 // Temas atualizados com gradientes e cores modernas
 const lightTheme = createTheme({
@@ -938,6 +939,53 @@ function App() {
     }
   };
 
+  const handleExportHtml = () => {
+    if (!campaignContent) return;
+
+    const { titulo, conteudo, cta, hashtags } = campaignContent;
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Relatório da Campanha: ${titulo}</title>
+        <style>
+          body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+          h1, h2 { color: #8b5cf6; }
+          .container { border: 1px solid #ddd; border-radius: 8px; padding: 2rem; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+          .hashtags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+          .hashtag { background-color: #f5f3ff; color: #6d28d9; padding: 0.25rem 0.75rem; border-radius: 16px; font-size: 0.9rem; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>${titulo}</h1>
+          <h2>Conteúdo</h2>
+          <p>${conteudo.replace(/\n/g, '<br>')}</p>
+          <h2>Chamada para Ação (CTA)</h2>
+          <p>${cta.replace(/\n/g, '<br>')}</p>
+          <h2>Hashtags</h2>
+          <div class="hashtags">
+            ${hashtags.map(tag => `<span class="hashtag">${tag}</span>`).join('')}
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `campanha-${titulo.toLowerCase().replace(/\s+/g, '-')}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleGenerateIAContent = async () => {
     setIsGenerating(true);
 
@@ -1464,6 +1512,14 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
 
                 {campaignContent && (
                   <Box sx={{ mt: 4 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                      <Button
+                        variant="outlined"
+                        onClick={handleExportHtml}
+                      >
+                        Exportar como HTML
+                      </Button>
+                    </Box>
                     <Typography variant="h6" gutterBottom>Conteúdo Gerado</Typography>
                     <Grid container spacing={2}>
                       <Grid item xs={12}>
@@ -1994,6 +2050,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
         open={showCampaignPromptModal}
         onClose={() => setShowCampaignPromptModal(false)}
       />
+      <LoadingDialog open={isGeneratingCampaign} />
       {isMobile && activeStep === 4 && (
         <>
           <Fab
