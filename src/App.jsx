@@ -914,7 +914,15 @@ function App() {
         parsedContent = JSON.parse(response);
       }
 
-      setCampaignContent(parsedContent);
+      const normalizedContent = {
+        titulo: parsedContent.titulo || parsedContent.title || '',
+        conteudo: parsedContent.conteudo || parsedContent.body || '',
+        cta: parsedContent.cta || '',
+        hashtags: Array.isArray(parsedContent.hashtags) ? parsedContent.hashtags.join(', ') : (parsedContent.hashtags || ''),
+      };
+
+      console.log("Conteúdo Normalizado:", normalizedContent);
+      setCampaignContent(normalizedContent);
     } catch (error) {
       console.error("Erro ao gerar conteúdo da campanha:", error);
       alert("Ocorreu um erro ao gerar o conteúdo da campanha. Verifique o console para mais detalhes.");
