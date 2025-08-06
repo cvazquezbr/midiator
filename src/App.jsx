@@ -81,6 +81,7 @@ import GoogleIcon from '@mui/icons-material/Google';
 import pako from 'pako';
 import './App.css';
 import LoadingDialog from './components/LoadingDialog';
+import TextEditorDialog from './components/TextEditorDialog';
 
 // Temas atualizados com gradientes e cores modernas
 const lightTheme = createTheme({
@@ -224,6 +225,7 @@ function App() {
   const [solucao, setSolucao] = useState('');
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
   const [campaignContent, setCampaignContent] = useState(null);
+  const [editingField, setEditingField] = useState(null);
 
   // Estados para a Geração com IA
   const [inputMethod, setInputMethod] = useState('csv');
@@ -1537,9 +1539,11 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                           multiline
                           rows={4}
                           value={campaignContent.conteudo}
-                          onChange={(e) => setCampaignContent({ ...campaignContent, conteudo: e.target.value })}
+                          onClick={() => setEditingField('conteudo')}
+                          readOnly
                           variant="outlined"
                           fullWidth
+                          sx={{ cursor: 'pointer' }}
                         />
                       </Grid>
                       <Grid item xs={12}>
@@ -1548,14 +1552,11 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                           multiline
                           rows={2}
                           value={campaignContent.cta}
-                          onChange={(e) => setCampaignContent({ ...campaignContent, cta: e.target.value })}
+                          onClick={() => setEditingField('cta')}
+                          readOnly
                           variant="outlined"
                           fullWidth
-                          InputProps={{
-                            classes: {
-                              root: 'resizable-textarea'
-                            }
-                          }}
+                          sx={{ cursor: 'pointer' }}
                         />
                       </Grid>
                       <Grid item xs={12}>
@@ -2051,6 +2052,15 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
         onClose={() => setShowCampaignPromptModal(false)}
       />
       <LoadingDialog open={isGeneratingCampaign} />
+      <TextEditorDialog
+        open={editingField !== null}
+        title={`Editar ${editingField === 'conteudo' ? 'Conteúdo' : 'CTA'}`}
+        content={editingField ? campaignContent[editingField] : ''}
+        onSave={(newContent) => {
+          setCampaignContent({ ...campaignContent, [editingField]: newContent });
+        }}
+        onClose={() => setEditingField(null)}
+      />
       {isMobile && activeStep === 4 && (
         <>
           <Fab
