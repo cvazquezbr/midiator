@@ -8,37 +8,27 @@ const CampaignPromptDialog = ({ open, onClose }) => {
   const [usedProblema, setUsedProblema] = useState(false);
   const [usedSolucao, setUsedSolucao] = useState(false);
   const editorRef = useRef(null);
+  const [editorContent, setEditorContent] = useState('');
 
-  const updateEditorContent = (text) => {
-    const html = text
+  const getHighlightedHtml = (text) => {
+    return text
       .replace(/{{problema}}/g, '<span style="color: #ec4899; font-family: monospace;">{{problema}}</span>')
       .replace(/{{solucao}}/g, '<span style="color: #8b5cf6; font-family: monospace;">{{solucao}}</span>');
-    if (editorRef.current) {
-      editorRef.current.innerHTML = html;
-    }
   };
 
   useEffect(() => {
     if (open) {
-      const storedPrompt = getCampaignPrompt();
-      if (storedPrompt) {
-        setHasStoredPrompt(true);
-        setUsedProblema(storedPrompt.includes('{{problema}}'));
-        setUsedSolucao(storedPrompt.includes('{{solucao}}'));
-        updateEditorContent(storedPrompt);
-      } else {
-        setHasStoredPrompt(false);
-        setUsedProblema(false);
-        setUsedSolucao(false);
-        updateEditorContent('');
-      }
+      const storedPrompt = getCampaignPrompt() || '';
+      setEditorContent(storedPrompt);
+      setHasStoredPrompt(!!storedPrompt);
+      setUsedProblema(storedPrompt.includes('{{problema}}'));
+      setUsedSolucao(storedPrompt.includes('{{solucao}}'));
       setMessage('');
     }
   }, [open]);
 
   const handleSave = () => {
-    const text = editorRef.current.innerText;
-    saveCampaignPrompt(text);
+    saveCampaignPrompt(editorContent);
     setHasStoredPrompt(true);
     setMessage('Prompt de campanha salvo com sucesso!');
   };
@@ -46,35 +36,23 @@ const CampaignPromptDialog = ({ open, onClose }) => {
   const handleRemove = () => {
     removeCampaignPrompt();
     setHasStoredPrompt(false);
+    setEditorContent('');
     setUsedProblema(false);
     setUsedSolucao(false);
-    updateEditorContent('');
     setMessage('Prompt de campanha removido.');
   };
 
   const handleInsertPlaceholder = (placeholder) => {
     const placeholderText = `{{${placeholder}}}`;
-    if (editorRef.current) {
-      editorRef.current.focus();
-      const selection = window.getSelection();
-      const range = selection.getRangeAt(0);
-      range.deleteContents();
-      const textNode = document.createTextNode(placeholderText + ' ');
-      range.insertNode(textNode);
-      range.setStartAfter(textNode);
-      range.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(range);
-
-      const newText = editorRef.current.innerText;
-      if (placeholder === 'problema') setUsedProblema(true);
-      if (placeholder === 'solucao') setUsedSolucao(true);
-      updateEditorContent(newText);
-    }
+    const newContent = editorContent + placeholderText + ' ';
+    setEditorContent(newContent);
+    if (placeholder === 'problema') setUsedProblema(true);
+    if (placeholder === 'solucao') setUsedSolucao(true);
   };
 
-  const handleInput = () => {
-    const text = editorRef.current.innerText;
+  const handleInput = (e) => {
+    const text = e.currentTarget.innerText;
+    setEditorContent(text);
     if (!text.includes('{{problema}}')) setUsedProblema(false);
     if (!text.includes('{{solucao}}')) setUsedSolucao(false);
   };
@@ -82,7 +60,7 @@ const CampaignPromptDialog = ({ open, onClose }) => {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>Definir Texto de Prompt de Campanha</DialogTitle>
-      <DialogContent>
+      <DialogContent dividers>
         <Typography variant="body2" gutterBottom>
           Insira ou edite o texto base que será usado como prompt para gerar conteúdo de campanha com IA.
         </Typography>
@@ -107,6 +85,7 @@ const CampaignPromptDialog = ({ open, onClose }) => {
           ref={editorRef}
           contentEditable
           onInput={handleInput}
+          dangerouslySetInnerHTML={{ __html: getHighlightedHtml(editorContent) }}
           sx={{
             mt: 2,
             mb: 2,
@@ -114,6 +93,7 @@ const CampaignPromptDialog = ({ open, onClose }) => {
             borderRadius: '4px',
             p: 2,
             minHeight: '200px',
+            overflowY: 'auto',
             '&:focus': {
               outline: '2px solid #8b5cf6',
               borderColor: '#8b5cf6'

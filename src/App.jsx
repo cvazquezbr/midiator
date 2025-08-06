@@ -941,6 +941,12 @@ function App() {
     }
   };
 
+  const handleResetCampaign = () => {
+    setCampaignContent(null);
+    setProblema('');
+    setSolucao('');
+  };
+
   const handleExportHtml = () => {
     if (!campaignContent) return;
 
@@ -1486,6 +1492,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                       variant="outlined"
                       fullWidth
                       placeholder="Descreva o problema que sua campanha busca resolver."
+                      disabled={campaignContent !== null}
                     />
                   </Grid>
                   <Grid item xs={12} md={6}>
@@ -1498,18 +1505,28 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                       variant="outlined"
                       fullWidth
                       placeholder="Descreva a solução que sua campanha oferece."
+                      disabled={campaignContent !== null}
                     />
                   </Grid>
                 </Grid>
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 2 }}>
                   <Button
                     variant="contained"
                     size="large"
                     onClick={handleGenerateCampaignContent}
-                    disabled={!problema.trim() || !solucao.trim() || isGeneratingCampaign}
+                    disabled={!problema.trim() || !solucao.trim() || isGeneratingCampaign || campaignContent !== null}
                   >
                     {isGeneratingCampaign ? 'Gerando...' : 'Gerar conteúdo com IA'}
                   </Button>
+                  {campaignContent && (
+                    <Button
+                      variant="outlined"
+                      size="large"
+                      onClick={handleResetCampaign}
+                    >
+                      Resetar
+                    </Button>
+                  )}
                 </Box>
 
                 {campaignContent && (
