@@ -914,14 +914,20 @@ function App() {
         parsedContent = JSON.parse(response);
       }
 
+      let hashtags = [];
+      if (Array.isArray(parsedContent.hashtags)) {
+        hashtags = parsedContent.hashtags;
+      } else if (typeof parsedContent.hashtags === 'string') {
+        hashtags = parsedContent.hashtags.split(',').map(h => h.trim());
+      }
+
       const normalizedContent = {
         titulo: parsedContent.titulo || parsedContent.title || '',
         conteudo: parsedContent.conteudo || parsedContent.body || '',
         cta: parsedContent.cta || '',
-        hashtags: Array.isArray(parsedContent.hashtags) ? parsedContent.hashtags.join(', ') : (parsedContent.hashtags || ''),
+        hashtags: hashtags,
       };
 
-      console.log("Conteúdo Normalizado:", normalizedContent);
       setCampaignContent(normalizedContent);
     } catch (error) {
       console.error("Erro ao gerar conteúdo da campanha:", error);
@@ -1480,23 +1486,57 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                           fullWidth
                         />
                       </Grid>
-                      <Grid item xs={12} md={6}>
+                      <Grid item xs={12}>
                         <TextField
                           label="CTA (Chamada para Ação)"
+                          multiline
+                          rows={2}
                           value={campaignContent.cta}
                           onChange={(e) => setCampaignContent({ ...campaignContent, cta: e.target.value })}
                           variant="outlined"
                           fullWidth
+                          InputProps={{
+                            classes: {
+                              root: 'resizable-textarea'
+                            }
+                          }}
                         />
                       </Grid>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          label="Hashtags"
-                          value={campaignContent.hashtags}
-                          onChange={(e) => setCampaignContent({ ...campaignContent, hashtags: e.target.value })}
-                          variant="outlined"
-                          fullWidth
-                        />
+                      <Grid item xs={12}>
+                        <Typography variant="subtitle2" gutterBottom>Hashtags</Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                          {campaignContent.hashtags.map((tag, index) => (
+                            <Chip
+                              key={index}
+                              label={tag}
+                              onDelete={() => {
+                                const newHashtags = [...campaignContent.hashtags];
+                                newHashtags.splice(index, 1);
+                                setCampaignContent({ ...campaignContent, hashtags: newHashtags });
+                              }}
+                            />
+                          ))}
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                          <TextField
+                            label="Nova Hashtag"
+                            size="small"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && e.target.value.trim() !== '') {
+                                e.preventDefault();
+                                setCampaignContent({ ...campaignContent, hashtags: [...campaignContent.hashtags, e.target.value.trim()] });
+                                e.target.value = '';
+                              }
+                            }}
+                          />
+                           <Button onClick={() => {
+                              const newTag = document.querySelector('input[label="Nova Hashtag"]').value.trim();
+                              if (newTag) {
+                                setCampaignContent({ ...campaignContent, hashtags: [...campaignContent.hashtags, newTag] });
+                                document.querySelector('input[label="Nova Hashtag"]').value = '';
+                              }
+                           }}>Adicionar</Button>
+                        </Box>
                       </Grid>
                     </Grid>
                   </Box>
