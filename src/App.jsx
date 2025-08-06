@@ -52,7 +52,8 @@ import {
   InsertDriveFileOutlined,
   FormatBold,
   Visibility,
-  Grid3x3
+  Grid3x3,
+  Campaign,
 } from '@mui/icons-material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Papa from 'papaparse';
@@ -217,6 +218,12 @@ function App() {
   const [showGoogleCloudTTSAuthModal, setShowGoogleCloudTTSAuthModal] = useState(false);
   const [showCampaignPromptModal, setShowCampaignPromptModal] = useState(false);
 
+  // Estados para a Campanha
+  const [problema, setProblema] = useState('');
+  const [solucao, setSolucao] = useState('');
+  const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
+  const [campaignContent, setCampaignContent] = useState(null);
+
   // Estados para a Geração com IA
   const [inputMethod, setInputMethod] = useState('csv');
   // const [selectedApiModel, setSelectedApiModel] = useState('deepseek'); // Removed, defaulting to gemini
@@ -245,6 +252,11 @@ function App() {
   }, []);
 
   const steps = [
+    {
+      label: 'Campanha',
+      description: 'Criar o material de referência para a campanha.',
+      icon: Campaign,
+    },
     {
       label: 'Conteúdo',
       description: 'Carregar CSV ou criar manualmente',
@@ -339,7 +351,7 @@ function App() {
 
             setFieldPositions(updatedFieldPositions);
             setFieldStyles(updatedFieldStyles);
-            setActiveStep(1);
+            setActiveStep(2);
           }
         },
         error: (error) => {
@@ -449,13 +461,15 @@ function App() {
 
   const canProceedToStep = () => {
     switch (activeStep) {
-      case 0:
-        return true;
-      case 1:
+      case 0: // Campanha
+        return campaignContent !== null;
+      case 1: // Conteúdo
+        return true; // Pode ir para a edição mesmo sem dados, para adicionar manualmente
+      case 2: // Editar Conteúdo
         return csvData.length > 0;
-      case 2:
+      case 3: // Upload Imagem
         return backgroundImage !== null;
-      case 3:
+      case 4: // Posicionar e Formatar
         return true;
       default:
         return true;
@@ -682,12 +696,12 @@ function App() {
               if (etapaPosicionarFormatarIndex !== -1) {
                 setActiveStep(etapaPosicionarFormatarIndex);
               } else {
-                setActiveStep(3); // Fallback para o índice 3 se a busca falhar
+                setActiveStep(4); // Fallback para o índice 4 se a busca falhar
               }
             } else if (loadedState.csvHeaders.length > 0) {
-              setActiveStep(1);
+              setActiveStep(2);
             } else {
-              setActiveStep(0);
+              setActiveStep(1); // Ir para a etapa de conteúdo se não houver dados
             }
           } else {
             alert("Arquivo JSON inválido, formato incorreto ou versão incompatível.");
@@ -864,6 +878,52 @@ function App() {
     });
   }, [setCsvData]);
 
+  const handleGenerateCampaignContent = async () => {
+    setIsGeneratingCampaign(true);
+    const apiKey = getGeminiApiKey();
+
+    if (!apiKey) {
+      alert('Por favor, configure sua chave de API Gemini primeiro.');
+      setIsGeneratingCampaign(false);
+      return;
+    }
+
+    let promptTemplate = getCampaignPrompt();
+    if (!promptTemplate) {
+      promptTemplate = `Baseado no problema "{{problema}}" e na solução "{{solucao}}", gere o seguinte conteúdo para uma campanha de marketing.`;
+    }
+
+    const filledPrompt = promptTemplate
+      .replace('{{problema}}', problema)
+      .replace('{{solucao}}', solucao);
+
+    const finalPrompt = `${filledPrompt}\n\nGere uma resposta JSON com os seguintes campos: "titulo" (string), "conteudo" (string), "cta" (string), e "hashtags" (string, separadas por vírgula). A resposta deve ser apenas o JSON.`;
+
+    try {
+      const response = await callGeminiApi(finalPrompt, apiKey);
+      console.log("Resposta da IA (Campanha):", response);
+
+      // Extrair o JSON da resposta, que pode vir em um bloco de código markdown
+      const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
+      let parsedContent;
+
+      if (jsonMatch && jsonMatch[1]) {
+        parsedContent = JSON.parse(jsonMatch[1]);
+      } else {
+        // Tentar parsear diretamente se não encontrar o bloco de markdown
+        parsedContent = JSON.parse(response);
+      }
+
+      setCampaignContent(parsedContent);
+    } catch (error) {
+      console.error("Erro ao gerar conteúdo da campanha:", error);
+      alert("Ocorreu um erro ao gerar o conteúdo da campanha. Verifique o console para mais detalhes.");
+      setCampaignContent(null);
+    } finally {
+      setIsGeneratingCampaign(false);
+    }
+  };
+
   const handleGenerateIAContent = async () => {
     setIsGenerating(true);
 
@@ -984,7 +1044,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
         setFieldPositions(updatedFieldPositions);
         setFieldStyles(updatedFieldStyles);
 
-        setActiveStep(1); // Avança para Edição de Dados
+        setActiveStep(2); // Avança para Edição de Dados
       } else {
         alert('Não foi possível processar a resposta da IA para o formato de tabela. Verifique o console para a resposta bruta da IA e a saída do parser.');
         console.log(`[App] Falha no parsing ou dados vazios. Resposta da API ${apiName}:`, iaResponseText, "Resultado do Parser:", parsedResult);
@@ -1343,8 +1403,102 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             transition: 'margin-left 0.3s ease',
           }}
         >
-          {/* Passo 0: Definir Dados Iniciais */}
+          {/* Passo 0: Campanha */}
           {activeStep === 0 && (
+            <Card>
+              <CardContent sx={{ p: 4 }}>
+                <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                  <Campaign />
+                  {steps[0].label}
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Problema"
+                      multiline
+                      rows={4}
+                      value={problema}
+                      onChange={(e) => setProblema(e.target.value)}
+                      variant="outlined"
+                      fullWidth
+                      placeholder="Descreva o problema que sua campanha busca resolver."
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Solução"
+                      multiline
+                      rows={4}
+                      value={solucao}
+                      onChange={(e) => setSolucao(e.target.value)}
+                      variant="outlined"
+                      fullWidth
+                      placeholder="Descreva a solução que sua campanha oferece."
+                    />
+                  </Grid>
+                </Grid>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={handleGenerateCampaignContent}
+                    disabled={!problema.trim() || !solucao.trim() || isGeneratingCampaign}
+                  >
+                    {isGeneratingCampaign ? 'Gerando...' : 'Gerar conteúdo com IA'}
+                  </Button>
+                </Box>
+
+                {campaignContent && (
+                  <Box sx={{ mt: 4 }}>
+                    <Typography variant="h6" gutterBottom>Conteúdo Gerado</Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12}>
+                        <TextField
+                          label="Título"
+                          value={campaignContent.titulo}
+                          onChange={(e) => setCampaignContent({ ...campaignContent, titulo: e.target.value })}
+                          variant="outlined"
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          label="Conteúdo"
+                          multiline
+                          rows={4}
+                          value={campaignContent.conteudo}
+                          onChange={(e) => setCampaignContent({ ...campaignContent, conteudo: e.target.value })}
+                          variant="outlined"
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          label="CTA (Chamada para Ação)"
+                          value={campaignContent.cta}
+                          onChange={(e) => setCampaignContent({ ...campaignContent, cta: e.target.value })}
+                          variant="outlined"
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          label="Hashtags"
+                          value={campaignContent.hashtags}
+                          onChange={(e) => setCampaignContent({ ...campaignContent, hashtags: e.target.value })}
+                          variant="outlined"
+                          fullWidth
+                        />
+                      </Grid>
+                    </Grid>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Passo 1: Definir Dados Iniciais */}
+          {activeStep === 1 && (
             <Card>
               <CardContent sx={{ p: 4 }}>
                 <Typography variant="h5" gutterBottom sx={{
@@ -1354,7 +1508,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   mb: 3
                 }}>
                   <InsertDriveFileOutlined />
-                  {steps[0].label}
+                  {steps[1].label}
                 </Typography>
 
                 <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
@@ -1456,7 +1610,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                         </Typography>
                         <Button
                           variant="contained"
-                          onClick={() => setActiveStep(1)}
+                          onClick={() => setActiveStep(2)}
                           sx={{ borderRadius: 2 }}
                         >
                           Novo Registro
@@ -1547,8 +1701,8 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             </Card>
           )}
 
-          {/* Passo 1: Editar Dados */}
-          {activeStep === 1 && (
+          {/* Passo 2: Editar Dados */}
+          {activeStep === 2 && (
             <RecordManager
               registrosIniciais={csvData}
               colunasIniciais={csvHeaders}
@@ -1557,8 +1711,8 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             />
           )}
 
-          {/* Passo 2: Upload Imagem */}
-          {activeStep === 2 && (
+          {/* Passo 3: Upload Imagem */}
+          {activeStep === 3 && (
             <Card>
               <CardContent sx={{ p: 4 }}>
                 <Typography variant="h5" gutterBottom sx={{
@@ -1568,7 +1722,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   mb: 3
                 }}>
                   <ImageIcon />
-                  {steps[2].label}
+                  {steps[3].label}
                 </Typography>
 
                 <Grid container spacing={4}>
@@ -1646,8 +1800,8 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             </Card>
           )}
 
-          {/* Passo 3: Posicionamento e Formatação */}
-          {activeStep === 3 && (
+          {/* Passo 4: Posicionamento e Formatação */}
+          {activeStep === 4 && (
             <Grid container spacing={2}>
               <Grid item xs={12} md={!isMobile ? 8 : 12}>
                 <FieldPositioner
@@ -1680,8 +1834,8 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             </Grid>
           )}
 
-          {/* Passo 4: Geração */}
-          {activeStep === 4 && (
+          {/* Passo 5: Geração */}
+          {activeStep === 5 && (
             <ImageGeneratorFrontendOnly
               csvData={csvData}
               backgroundImage={backgroundImage}
@@ -1697,8 +1851,8 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             />
           )}
 
-          {/* Passo 5: Geração de Áudio */}
-          <div hidden={activeStep !== 5}>
+          {/* Passo 6: Geração de Áudio */}
+          <div hidden={activeStep !== 6}>
             <AudioGenerator
               csvData={csvData}
               fieldPositions={fieldPositions}
@@ -1707,8 +1861,8 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             />
           </div>
 
-          {/* Passo 6: Geração de Vídeo */}
-          {activeStep === 6 && (
+          {/* Passo 7: Geração de Vídeo */}
+          {activeStep === 7 && (
             <VideoGenerator2
               generatedImages={generatedImagesData}
               generatedAudioData={generatedAudioData}
@@ -1792,7 +1946,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
         open={showCampaignPromptModal}
         onClose={() => setShowCampaignPromptModal(false)}
       />
-      {isMobile && activeStep === 3 && (
+      {isMobile && activeStep === 4 && (
         <>
           <Fab
             color="primary"
