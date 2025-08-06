@@ -72,7 +72,9 @@ import CsvInfobox from './components/CsvInfobox';
 import GeminiAuthSetup from './components/GeminiAuthSetup';
 import GoogleDriveAuthModal from './components/GoogleDriveAuthModal';
 import GoogleCloudTTSAuth from './components/GoogleCloudTTSAuth';
+import CampaignPromptDialog from './components/CampaignPromptDialog';
 import { getGeminiApiKey } from './utils/geminiCredentials';
+import { getCampaignPrompt } from './utils/campaignPrompt';
 import { callGeminiApi } from './utils/geminiAPI';
 import GoogleIcon from '@mui/icons-material/Google';
 import pako from 'pako';
@@ -213,6 +215,7 @@ function App() {
   const [showGeminiAuthModal, setShowGeminiAuthModal] = useState(false);
   const [showGoogleDriveAuthModal, setShowGoogleDriveAuthModal] = useState(false);
   const [showGoogleCloudTTSAuthModal, setShowGoogleCloudTTSAuthModal] = useState(false);
+  const [showCampaignPromptModal, setShowCampaignPromptModal] = useState(false);
 
   // Estados para a Geração com IA
   const [inputMethod, setInputMethod] = useState('csv');
@@ -233,6 +236,13 @@ function App() {
       document.documentElement.classList.remove('dark-mode-active');
     }
   }, [darkMode]);
+
+  useEffect(() => {
+    const savedPrompt = getCampaignPrompt();
+    if (savedPrompt) {
+      setPromptText(savedPrompt);
+    }
+  }, []);
 
   const steps = [
     {
@@ -1226,6 +1236,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   <Audiotrack sx={{ mr: 1 }} />
                   Configurar Google Cloud TTS
                 </MenuItem>
+                <MenuItem onClick={() => { setShowCampaignPromptModal(true); handleMenuClose(); }}>
+                  <Edit sx={{ mr: 1 }} />
+                  Definir Prompt de Campanha
+                </MenuItem>
                 <MenuItem onClick={handleSaveTemplateClick}>Salvar Config. Template</MenuItem>
                 <MenuItem onClick={handleLoadTemplateClick}>Carregar Config. Template</MenuItem>
                 <MenuItem onClick={handleExportCSV} disabled={csvData.length === 0}>
@@ -1773,6 +1787,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
       <GoogleCloudTTSAuth
         open={showGoogleCloudTTSAuthModal}
         onClose={() => setShowGoogleCloudTTSAuthModal(false)}
+      />
+       <CampaignPromptDialog
+        open={showCampaignPromptModal}
+        onClose={() => setShowCampaignPromptModal(false)}
       />
       {isMobile && activeStep === 3 && (
         <>
