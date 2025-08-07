@@ -6,7 +6,7 @@
 const loadImage = (src) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'Anonymous'; // Handle CORS
+    // img.crossOrigin = 'Anonymous'; // This can cause issues with local dev servers and even some production environments. Removing it for same-origin requests.
     img.onload = () => resolve(img);
     img.onerror = (err) => reject(new Error(`Failed to load image: ${src}`, { cause: err }));
     img.src = src;
