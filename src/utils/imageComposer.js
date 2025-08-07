@@ -37,9 +37,11 @@ export const composeImage = async (backgroundImageUrl, logoUrl, companyImageUrl,
     const companyBackgroundColor = '#808080'; // A neutral gray
 
     // Handle both base64 strings and URLs for the background
-    const backgroundSrc = backgroundImageUrl.startsWith('data:')
-      ? backgroundImageUrl
-      : backgroundImageUrl;
+    let backgroundSrc = backgroundImageUrl;
+    if (!backgroundImageUrl.startsWith('data:') && !backgroundImageUrl.startsWith('http')) {
+      console.log('[composeImage] Detected raw base64 string for background. Prepending data URL prefix.');
+      backgroundSrc = `data:image/png;base64,${backgroundImageUrl}`;
+    }
 
     // Load all images in parallel
     const [bgImg, logoImg, companyImg] = await Promise.all([
