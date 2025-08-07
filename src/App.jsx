@@ -357,20 +357,22 @@ function App() {
         }
 
         setProblema(savedState.problema || '');
-      setSolucao(savedState.solucao || '');
-      setCampaignContent(savedState.campaignContent || null);
-      setPersona(savedState.persona || '');
-      setAutor(savedState.autor || '');
-      setInstrucoes(savedState.instrucoes || '');
-      setFormato(savedState.formato || '');
-      setAspectRatio(savedState.aspectRatio || '1:1');
-      setGeneratedImageUrl(savedState.generatedImageUrl || null);
-      setConteudoMedio(savedState.conteudoMedio || '');
-      setConteudoPequeno(savedState.conteudoPequeno || '');
-      setPromptText(savedState.promptText || '');
+        setSolucao(savedState.solucao || '');
+        setCampaignContent(savedState.campaignContent || null);
+        setPersona(savedState.persona || '');
+        setAutor(savedState.autor || '');
+        setInstrucoes(savedState.instrucoes || '');
+        setFormato(savedState.formato || '');
+        setAspectRatio(savedState.aspectRatio || '1:1');
+        setGeneratedImageUrl(savedState.generatedImageUrl || null);
+        setConteudoMedio(savedState.conteudoMedio || '');
+        setConteudoPequeno(savedState.conteudoPequeno || '');
+        setPromptText(savedState.promptText || '');
 
-      sessionStorage.removeItem('appState');
-    }
+        sessionStorage.removeItem('appState');
+      }
+    };
+    loadStateFromSession();
   }, []);
 
 
