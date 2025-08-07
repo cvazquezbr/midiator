@@ -1090,7 +1090,7 @@ function App() {
 
       setIsComposingImage(true);
       try {
-        const composedImageUrl = await composeImage(base64Image, '/logo.png', '/empresa.png');
+        const composedImageUrl = await composeImage(base64Image, '/LOGO.png', '/EMPRESA.png');
         setGeneratedImageUrl(composedImageUrl);
         updateImageAndPalette(composedImageUrl);
       } catch (compositionError) {
