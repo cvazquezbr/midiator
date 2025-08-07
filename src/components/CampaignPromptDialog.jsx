@@ -60,7 +60,7 @@ const CampaignPromptDialog = ({ open, onClose }) => {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>Definir Texto de Prompt de Campanha</DialogTitle>
-      <DialogContent dividers>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', p: 3 }}>
         <Typography variant="body2" gutterBottom>
           Insira ou edite o texto base que será usado como prompt para gerar conteúdo de campanha com IA.
         </Typography>
@@ -87,13 +87,12 @@ const CampaignPromptDialog = ({ open, onClose }) => {
           onInput={handleInput}
           dangerouslySetInnerHTML={{ __html: getHighlightedHtml(editorContent) }}
           sx={{
-            mt: 2,
-            mb: 2,
             border: '1px solid #ccc',
             borderRadius: '4px',
             p: 2,
-            minHeight: '200px',
+            flex: 1,
             overflowY: 'auto',
+            minHeight: '200px',
             '&:focus': {
               outline: '2px solid #8b5cf6',
               borderColor: '#8b5cf6'
@@ -106,7 +105,7 @@ const CampaignPromptDialog = ({ open, onClose }) => {
         />
 
         {message && (
-          <Typography color={message.includes('sucesso') ? 'green' : (message.includes('removido') ? 'textPrimary' : 'error')} variant="body2">
+          <Typography color={message.includes('sucesso') ? 'green' : (message.includes('removido') ? 'textPrimary' : 'error')} variant="body2" sx={{ mt: 2 }}>
             {message}
           </Typography>
         )}
