@@ -1015,8 +1015,9 @@ function App() {
           const imagePrompt = `
             Persona: ${persona}
             Autor: ${autor}
-            Resumo do Conteúdo: ${normalizedContent.titulo}. ${normalizedContent.conteudo.substring(0, 200)}...
+            Resumo do Conteúdo: ${normalizedContent.titulo}. ${normalizedContent.conteudo}
             Razão de Aspecto: ${aspectRatio}
+            IMPORTANTE: A imagem gerada não deve conter nenhum tipo de texto, escrita, letras ou palavras.
           `;
           const base64Image = await generateImage(imagePrompt, apiKey);
           setGeneratedImageUrl(`data:image/png;base64,${base64Image}`);
