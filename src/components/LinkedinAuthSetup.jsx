@@ -86,7 +86,7 @@ const LinkedinAuthSetup = ({ open, onClose }) => {
     <span>
       Como obter o Client ID e Secret do LinkedIn:
       <ol>
-        <li>Acesse: LinkedIn Developer Portal</li>
+        <li>Acesse: <a href="https://www.linkedin.com/developers/" target="_blank" rel="noopener noreferrer">LinkedIn Developer Portal</a></li>
         <li>Crie um novo aplicativo ou selecione um existente.</li>
         <li>Copie o Client ID e o Client Secret.</li>
         <li>Configure o Redirect URI para: {window.location.origin}</li>
