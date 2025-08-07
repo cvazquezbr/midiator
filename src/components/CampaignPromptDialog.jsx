@@ -2,23 +2,24 @@ import React, { useState, useEffect, useRef } from 'react';
 import { getCampaignPrompt, saveCampaignPrompt, removeCampaignPrompt } from '../utils/campaignPrompt';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box, Chip } from '@mui/material';
 
-const CampaignPromptDialog = ({ open, onClose }) => {
+const CampaignPromptDialogComponent = ({ open, onClose }) => {
   const [message, setMessage] = useState('');
   const [hasStoredPrompt, setHasStoredPrompt] = useState(false);
   const [usedProblema, setUsedProblema] = useState(false);
   const [usedSolucao, setUsedSolucao] = useState(false);
   const editorRef = useRef(null);
+  const [editorContent, setEditorContent] = useState('');
 
   const getHighlightedHtml = (text) => {
     return text
-      .replace(/{{problema}}/g, '<span style="color: #ec4899; font-family: monospace;" contenteditable="false">{{problema}}</span>')
-      .replace(/{{solucao}}/g, '<span style="color: #8b5cf6; font-family: monospace;" contenteditable="false">{{solucao}}</span>');
+      .replace(/{{problema}}/g, '<span style="color: #ec4899; font-family: monospace;">{{problema}}</span>')
+      .replace(/{{solucao}}/g, '<span style="color: #8b5cf6; font-family: monospace;">{{solucao}}</span>');
   };
 
   useEffect(() => {
-    if (open && editorRef.current) {
+    if (open) {
       const storedPrompt = getCampaignPrompt() || '';
-      editorRef.current.innerHTML = getHighlightedHtml(storedPrompt);
+      setEditorContent(storedPrompt);
       setHasStoredPrompt(!!storedPrompt);
       setUsedProblema(storedPrompt.includes('{{problema}}'));
       setUsedSolucao(storedPrompt.includes('{{solucao}}'));
@@ -27,54 +28,33 @@ const CampaignPromptDialog = ({ open, onClose }) => {
   }, [open]);
 
   const handleSave = () => {
-    if (editorRef.current) {
-      const newContent = editorRef.current.innerText;
-      saveCampaignPrompt(newContent);
-      setHasStoredPrompt(true);
-      setMessage('Prompt de campanha salvo com sucesso!');
-    }
+    saveCampaignPrompt(editorContent);
+    setHasStoredPrompt(true);
+    setMessage('Prompt de campanha salvo com sucesso!');
   };
 
   const handleRemove = () => {
     removeCampaignPrompt();
     setHasStoredPrompt(false);
-    if (editorRef.current) {
-      editorRef.current.innerHTML = '';
-    }
+    setEditorContent('');
     setUsedProblema(false);
     setUsedSolucao(false);
     setMessage('Prompt de campanha removido.');
   };
 
   const handleInsertPlaceholder = (placeholder) => {
-    if (editorRef.current) {
-      const placeholderText = `{{${placeholder}}}`;
-      const selection = window.getSelection();
-      const range = selection.getRangeAt(0);
-      range.deleteContents();
-      const span = document.createElement('span');
-      span.style.color = placeholder === 'problema' ? '#ec4899' : '#8b5cf6';
-      span.style.fontFamily = 'monospace';
-      span.setAttribute('contenteditable', 'false');
-      span.innerText = placeholderText;
-      range.insertNode(span);
-
-      // Move cursor after the inserted placeholder
-      range.setStartAfter(span);
-      range.setEndAfter(span);
-      selection.removeAllRanges();
-      selection.addRange(range);
-
-      handleInput(); // Update button states
-    }
+    const placeholderText = `{{${placeholder}}}`;
+    const newContent = editorContent + placeholderText + ' ';
+    setEditorContent(newContent);
+    if (placeholder === 'problema') setUsedProblema(true);
+    if (placeholder === 'solucao') setUsedSolucao(true);
   };
 
-  const handleInput = () => {
-    if (editorRef.current) {
-      const text = editorRef.current.innerText;
-      setUsedProblema(text.includes('{{problema}}'));
-      setUsedSolucao(text.includes('{{solucao}}'));
-    }
+  const handleInput = (e) => {
+    const text = e.currentTarget.innerText;
+    setEditorContent(text);
+    if (!text.includes('{{problema}}')) setUsedProblema(false);
+    if (!text.includes('{{solucao}}')) setUsedSolucao(false);
   };
 
   return (
@@ -105,6 +85,7 @@ const CampaignPromptDialog = ({ open, onClose }) => {
           ref={editorRef}
           contentEditable
           onInput={handleInput}
+          dangerouslySetInnerHTML={{ __html: getHighlightedHtml(editorContent) }}
           sx={{
             border: '1px solid #ccc',
             borderRadius: '4px',
@@ -147,5 +128,10 @@ const CampaignPromptDialog = ({ open, onClose }) => {
     </Dialog>
   );
 };
+
+const CampaignPromptDialog = React.memo(CampaignPromptDialogComponent, (prevProps, nextProps) => {
+  // Only re-render if the 'open' prop changes
+  return prevProps.open === nextProps.open;
+});
 
 export default CampaignPromptDialog;
