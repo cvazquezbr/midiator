@@ -274,10 +274,7 @@ function App() {
       const newPromptText = `${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`;
       setPromptText(newPromptText);
     }
-    if (activeStep === 3 && generatedImageUrl) {
-      setBackgroundImage(generatedImageUrl);
-    }
-  }, [activeStep, campaignContent, generatedImageUrl]);
+  }, [activeStep, campaignContent]);
 
   const steps = [
     {
@@ -420,24 +417,37 @@ function App() {
     setIsDraggingOverCsv(false);
   };
 
+  const updateImageAndPalette = (imageUrl) => {
+    setBackgroundImage(imageUrl);
+
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+        setOriginalImageSize({ width: img.width, height: img.height });
+        try {
+            const colorThief = new ColorThief();
+            const palette = colorThief.getPalette(img, 5);
+            setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`));
+        } catch (error) {
+            console.error("Error extracting color palette:", error);
+            setColorPalette([]);
+        }
+    };
+    img.onerror = (err) => {
+        console.error("Error loading image to extract colors:", err);
+        setBackgroundImage(null);
+        setColorPalette([]);
+    }
+    img.src = imageUrl;
+  };
+
   // Função para processar o arquivo de imagem de fundo
   const parseImageFile = (file) => {
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const imageUrl = e.target.result;
-        setBackgroundImage(imageUrl);
-
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.onload = () => {
-          setOriginalImageSize({ width: img.width, height: img.height });
-          const colorThief = new ColorThief();
-          const palette = colorThief.getPalette(img, 5);
-          setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`));
-        };
-        img.src = imageUrl;
-
+        updateImageAndPalette(imageUrl);
         const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar');
         if (etapaPosicionarFormatarIndex !== -1) {
           setActiveStep(etapaPosicionarFormatarIndex);
@@ -1020,7 +1030,9 @@ function App() {
             IMPORTANTE: A imagem gerada não deve conter nenhum tipo de texto, escrita, letras ou palavras.
           `;
           const base64Image = await generateImage(imagePrompt, apiKey);
-          setGeneratedImageUrl(`data:image/png;base64,${base64Image}`);
+          const imageUrl = `data:image/png;base64,${base64Image}`;
+          setGeneratedImageUrl(imageUrl);
+          updateImageAndPalette(imageUrl);
         } catch (imageError) {
           console.error("Erro ao gerar imagem:", imageError);
           alert("Ocorreu um erro ao gerar a imagem da campanha. Verifique o console para mais detalhes.");
@@ -1049,6 +1061,10 @@ function App() {
     if (!campaignContent) return;
 
     const { titulo, conteudo, cta, hashtags } = campaignContent;
+    const imageHtml = backgroundImage ? `
+      <h2>Imagem de Fundo</h2>
+      <img src="${backgroundImage}" alt="Imagem de Fundo da Campanha" style="max-width: 100%; border-radius: 8px; margin-bottom: 2rem;" />
+    ` : '';
 
     const html = `
       <!DOCTYPE html>
@@ -1068,6 +1084,7 @@ function App() {
       <body>
         <div class="container">
           <h1>${titulo}</h1>
+          ${imageHtml}
           <h2>Conteúdo</h2>
           <p>${conteudo.replace(/\n/g, '<br>')}</p>
           <h2>Chamada para Ação (CTA)</h2>
