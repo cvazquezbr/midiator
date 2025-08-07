@@ -238,6 +238,142 @@ function App() {
   const [showLinkedinAuthModal, setShowLinkedinAuthModal] = useState(false);
   const [showCampaignPromptModal, setShowCampaignPromptModal] = useState(false);
 
+  const saveStateToSessionStorage = async () => {
+    const blobToBase64 = (blob) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    };
+
+    const serializableGeneratedImages = await Promise.all(
+      generatedImagesData.map(async (img) => {
+        let imageBase64 = null;
+        if (img.blob) {
+          try {
+            imageBase64 = await blobToBase64(img.blob);
+          } catch (error) {
+            console.error("Erro ao converter blob para Base64:", error);
+          }
+        }
+        return {
+          ...img,
+          blob: undefined,
+          url: undefined,
+          imageBase64: imageBase64,
+        };
+      })
+    );
+
+    const serializableGeneratedAudio = await Promise.all(
+      generatedAudioData.map(async (audio) => {
+        let audioBase64 = null;
+        if (audio.blob) {
+          try {
+            audioBase64 = await blobToBase64(audio.blob);
+          } catch (error) {
+            console.error("Erro ao converter blob de áudio para Base64:", error);
+          }
+        }
+        return {
+          ...audio,
+          blob: undefined,
+          audioBase64: audioBase64,
+        };
+      })
+    );
+
+    const stateToSave = {
+      activeStep,
+      csvData,
+      csvHeaders,
+      backgroundImage,
+      colorPalette,
+      fieldPositions,
+      fieldStyles,
+      displayedImageSize,
+      originalImageSize,
+      generatedImagesData,
+      generatedAudioData,
+      problema,
+      solucao,
+      campaignContent,
+      persona,
+      autor,
+      instrucoes,
+      formato,
+      aspectRatio,
+      generatedImageUrl,
+      conteudoMedio,
+      conteudoPequeno,
+      promptText,
+    };
+    sessionStorage.setItem('appState', JSON.stringify(stateToSave));
+  };
+
+  useEffect(() => {
+    const loadStateFromSession = async () => {
+      const savedStateJSON = sessionStorage.getItem('appState');
+      if (savedStateJSON) {
+        const savedState = JSON.parse(savedStateJSON);
+
+        const base64ToBlob = async (base64) => {
+          if (!base64) return null;
+          const res = await fetch(base64);
+          const blob = await res.blob();
+          return blob;
+        };
+
+        setActiveStep(savedState.activeStep || 0);
+        setCsvData(savedState.csvData || []);
+        setCsvHeaders(savedState.csvHeaders || []);
+        setBackgroundImage(savedState.backgroundImage || null);
+        setColorPalette(savedState.colorPalette || []);
+        setFieldPositions(savedState.fieldPositions || {});
+        setFieldStyles(savedState.fieldStyles || {});
+        setDisplayedImageSize(savedState.displayedImageSize || { width: 0, height: 0 });
+        setOriginalImageSize(savedState.originalImageSize || { width: 0, height: 0 });
+
+        if (savedState.generatedImagesData) {
+          const restoredGeneratedImages = await Promise.all(
+            savedState.generatedImagesData.map(async (imgData) => {
+              const blob = await base64ToBlob(imgData.imageBase64);
+              return { ...imgData, blob, url: blob ? URL.createObjectURL(blob) : null };
+            })
+          );
+          setGeneratedImagesData(restoredGeneratedImages);
+        }
+
+        if (savedState.generatedAudioData) {
+            const restoredGeneratedAudio = await Promise.all(
+                savedState.generatedAudioData.map(async (audioData) => {
+                    const blob = await base64ToBlob(audioData.audioBase64);
+                    return { ...audioData, blob };
+                })
+            );
+            setGeneratedAudioData(restoredGeneratedAudio);
+        }
+
+        setProblema(savedState.problema || '');
+      setSolucao(savedState.solucao || '');
+      setCampaignContent(savedState.campaignContent || null);
+      setPersona(savedState.persona || '');
+      setAutor(savedState.autor || '');
+      setInstrucoes(savedState.instrucoes || '');
+      setFormato(savedState.formato || '');
+      setAspectRatio(savedState.aspectRatio || '1:1');
+      setGeneratedImageUrl(savedState.generatedImageUrl || null);
+      setConteudoMedio(savedState.conteudoMedio || '');
+      setConteudoPequeno(savedState.conteudoPequeno || '');
+      setPromptText(savedState.promptText || '');
+
+      sessionStorage.removeItem('appState');
+    }
+  }, []);
+
+
   // Estados para a Campanha
   const [problema, setProblema] = useState('');
   const [solucao, setSolucao] = useState('');
@@ -2474,6 +2610,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
       <LinkedinAuthSetup
         open={showLinkedinAuthModal}
         onClose={() => setShowLinkedinAuthModal(false)}
+        onBeforeRedirect={saveStateToSessionStorage}
       />
        <CampaignPromptDialog
         open={showCampaignPromptModal}

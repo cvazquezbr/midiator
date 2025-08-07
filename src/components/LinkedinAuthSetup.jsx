@@ -19,7 +19,7 @@ import {
   removeLinkedinConfig,
 } from '../utils/linkedinCredentials';
 
-const LinkedinAuthSetup = ({ open, onClose }) => {
+const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
   const [config, setConfig] = useState({
     clientId: '',
     clientSecret: '',
@@ -57,8 +57,12 @@ const LinkedinAuthSetup = ({ open, onClose }) => {
     if (message) setMessage('');
   };
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     if (config.clientId.trim()) {
+      if (onBeforeRedirect) {
+        await onBeforeRedirect();
+      }
+
       // Save the clientId for the callback handler
       saveLinkedinConfig({ clientId: config.clientId, clientSecret: config.clientSecret });
 
