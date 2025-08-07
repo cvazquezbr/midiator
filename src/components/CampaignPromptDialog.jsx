@@ -9,6 +9,7 @@ const CampaignPromptDialog = ({ open, onClose }) => {
   const [usedSolucao, setUsedSolucao] = useState(false);
   const editorRef = useRef(null);
   const [editorContent, setEditorContent] = useState('');
+  const [initialContent, setInitialContent] = useState('');
 
   const getHighlightedHtml = (text) => {
     return text
@@ -19,6 +20,7 @@ const CampaignPromptDialog = ({ open, onClose }) => {
   useEffect(() => {
     if (open) {
       const storedPrompt = getCampaignPrompt() || '';
+      setInitialContent(storedPrompt);
       setEditorContent(storedPrompt);
       setHasStoredPrompt(!!storedPrompt);
       setUsedProblema(storedPrompt.includes('{{problema}}'));
@@ -36,6 +38,7 @@ const CampaignPromptDialog = ({ open, onClose }) => {
   const handleRemove = () => {
     removeCampaignPrompt();
     setHasStoredPrompt(false);
+    setInitialContent('');
     setEditorContent('');
     setUsedProblema(false);
     setUsedSolucao(false);
@@ -45,6 +48,7 @@ const CampaignPromptDialog = ({ open, onClose }) => {
   const handleInsertPlaceholder = (placeholder) => {
     const placeholderText = `{{${placeholder}}}`;
     const newContent = editorContent + placeholderText + ' ';
+    setInitialContent(newContent);
     setEditorContent(newContent);
     if (placeholder === 'problema') setUsedProblema(true);
     if (placeholder === 'solucao') setUsedSolucao(true);
@@ -85,7 +89,7 @@ const CampaignPromptDialog = ({ open, onClose }) => {
           ref={editorRef}
           contentEditable
           onInput={handleInput}
-          dangerouslySetInnerHTML={{ __html: getHighlightedHtml(editorContent) }}
+          dangerouslySetInnerHTML={{ __html: getHighlightedHtml(initialContent) }}
           sx={{
             border: '1px solid #ccc',
             borderRadius: '4px',
