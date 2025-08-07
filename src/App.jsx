@@ -254,6 +254,14 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    if (activeStep === 1 && campaignContent) {
+      const { titulo, conteudo, cta } = campaignContent;
+      const newPromptText = `${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`;
+      setPromptText(newPromptText);
+    }
+  }, [activeStep, campaignContent]);
+
   const steps = [
     {
       label: 'Campanha',
