@@ -2,7 +2,7 @@ import React from 'react';
 import { Dialog, DialogContent, Typography, Box } from '@mui/material';
 import './LoadingDialog.css';
 
-const LoadingDialog = ({ open }) => {
+const LoadingDialog = ({ open, title = "Gerando conteúdo...", description = "A IA está pensando e escrevendo. Isso pode levar alguns segundos." }) => {
   return (
     <Dialog open={open} PaperProps={{ style: { borderRadius: '16px' } }}>
       <DialogContent sx={{ p: 4, textAlign: 'center' }}>
@@ -11,9 +11,9 @@ const LoadingDialog = ({ open }) => {
           <div className="dot" />
           <div className="dot" />
         </Box>
-        <Typography variant="h6">Gerando conteúdo...</Typography>
+        <Typography variant="h6">{title}</Typography>
         <Typography variant="body2" color="text.secondary">
-          A IA está pensando e escrevendo. Isso pode levar alguns segundos.
+          {description}
         </Typography>
       </DialogContent>
     </Dialog>
