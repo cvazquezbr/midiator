@@ -28,7 +28,11 @@ import {
   ListItemText,
   AppBar,
   Toolbar,
-  Fab
+  Fab,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   CloudUpload,
@@ -54,6 +58,7 @@ import {
   Visibility,
   Grid3x3,
   Campaign,
+  AspectRatio,
 } from '@mui/icons-material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Papa from 'papaparse';
@@ -230,6 +235,7 @@ function App() {
   const [autor, setAutor] = useState('');
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
+  const [aspectRatio, setAspectRatio] = useState('1:1');
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
@@ -1004,7 +1010,6 @@ function App() {
       setCampaignContent(normalizedContent);
 
       // RF-01: Gerar imagem após o conteúdo do texto
-      const { aspectRatio } = getCampaignPrompt();
       if (aspectRatio) {
         setIsGeneratingImage(true);
         try {
@@ -1601,6 +1606,21 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                       placeholder="Descreva a solução que sua campanha oferece."
                       disabled={campaignContent !== null}
                     />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <FormControl fullWidth variant="outlined" disabled={campaignContent !== null}>
+                      <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
+                      <Select
+                        labelId="aspect-ratio-label"
+                        value={aspectRatio}
+                        onChange={(e) => setAspectRatio(e.target.value)}
+                        label="Razão de Aspecto"
+                      >
+                        <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
+                        <MenuItem value="4:5">Retrato (4:5)</MenuItem>
+                        <MenuItem value="16:9">Paisagem (16:9)</MenuItem>
+                      </Select>
+                    </FormControl>
                   </Grid>
                 </Grid>
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 2 }}>

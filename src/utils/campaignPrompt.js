@@ -2,7 +2,7 @@ const CAMPAIGN_PROMPT_STORAGE_KEY = 'campaignPrompt';
 
 /**
  * Salva o objeto do prompt de campanha no localStorage.
- * @param {object} promptData - O objeto com os dados do prompt ({ persona, autor, instrucoes, formato, aspectRatio }).
+ * @param {object} promptData - O objeto com os dados do prompt ({ persona, autor, instrucoes, formato }).
  */
 export function saveCampaignPrompt(promptData) {
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -17,13 +17,13 @@ export function saveCampaignPrompt(promptData) {
 /**
  * Recupera o objeto do prompt de campanha do localStorage.
  * Lida com a migração do formato antigo (string) para o novo (JSON).
- * @returns {{persona: string, autor: string, instrucoes: string, formato: string, aspectRatio: string}|null} O objeto do prompt ou um objeto com campos vazios.
+ * @returns {{persona: string, autor: string, instrucoes: string, formato: string}|null} O objeto do prompt ou um objeto com campos vazios.
  */
 export function getCampaignPrompt() {
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
       const storedData = window.localStorage.getItem(CAMPAIGN_PROMPT_STORAGE_KEY);
-      const defaultPrompt = { persona: '', autor: '', instrucoes: '', formato: '', aspectRatio: '' };
+      const defaultPrompt = { persona: '', autor: '', instrucoes: '', formato: '' };
       if (!storedData) {
         return defaultPrompt;
       }
@@ -48,10 +48,10 @@ export function getCampaignPrompt() {
       return defaultPrompt;
     } catch (error) {
       console.error("Erro ao recuperar o prompt de campanha:", error);
-      return { persona: '', autor: '', instrucoes: '', formato: '', aspectRatio: '' };
+      return { persona: '', autor: '', instrucoes: '', formato: '' };
     }
   }
-  return { persona: '', autor: '', instrucoes: '', formato: '', aspectRatio: '' };
+  return { persona: '', autor: '', instrucoes: '', formato: '' };
 }
 
 /**
