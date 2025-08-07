@@ -475,8 +475,8 @@ function App() {
           // Compõe a imagem com o logo e a imagem da empresa
           const composedImageUrl = await composeImage(
             imageUrl,
-            `${window.location.origin}/LOGO.png`,
-            `${window.location.origin}/EMPRESA.png`
+            `${window.location.origin}/logo.png`,
+            `${window.location.origin}/empresa.png`
           );
           // Atualiza o estado com a imagem composta
           console.log('[App.jsx] Composition successful. Updating background image state.');
@@ -1125,8 +1125,8 @@ function App() {
       try {
         const composedImageUrl = await composeImage(
           base64Image,
-          `${window.location.origin}/LOGO.png`,
-          `${window.location.origin}/EMPRESA.png`
+          `${window.location.origin}/logo.png`,
+          `${window.location.origin}/empresa.png`
         );
         setGeneratedImageUrl(composedImageUrl);
         updateImageAndPalette(composedImageUrl);

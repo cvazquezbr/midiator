@@ -242,8 +242,8 @@ const ImageGeneratorFrontendOnly = ({
       console.log('[generateImages] Calling composeImage for the main generation.');
       const composedBackgroundImageUrl = await composeImage(
         backgroundImage,
-        '/LOGO.png',
-        '/EMPRESA.png',
+        '/logo.png',
+        '/empresa.png',
         imageFilters
       );
       console.log('[generateImages] composeImage finished for the main generation.');
@@ -566,8 +566,8 @@ const ImageGeneratorFrontendOnly = ({
       console.log(`[regenerateSingleImage] Calling composeImage for index ${index}.`);
       const composedBackgroundImageUrl = await composeImage(
         currentBackgroundImage,
-        '/LOGO.png',
-        '/EMPRESA.png',
+        '/logo.png',
+        '/empresa.png',
         imageFilters
       );
       console.log(`[regenerateSingleImage] composeImage finished for index ${index}.`);
