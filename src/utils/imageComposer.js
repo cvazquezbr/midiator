@@ -15,14 +15,23 @@ const loadImage = (src) => {
 
 /**
  * Composes a new image by combining a background, a logo, and a company image.
- * @param {string} base64BackgroundImage - The base64 encoded background image.
- * @param {string} logoUrl - The URL for the logo image (e.g., /logo.png).
- * @param {string} companyImageUrl - The URL for the company image (e.g., /empresa.png).
+ * This version adds a colored rectangle at the bottom matching the company image's height.
+ * @param {string} backgroundImageUrl - The URL or base64 string of the background image.
+ * @param {string} logoUrl - The URL for the logo image (e.g., /LOGO.png).
+ * @param {string} companyImageUrl - The URL for the company image (e.g., /EMPRESA.png).
  * @returns {Promise<string>} A promise that resolves with the data URL of the composed image.
  */
-export const composeImage = async (base64BackgroundImage, logoUrl, companyImageUrl) => {
+export const composeImage = async (backgroundImageUrl, logoUrl, companyImageUrl) => {
+  console.log('[composeImage] Starting composition with:', { backgroundImageUrl, logoUrl, companyImageUrl });
   try {
-    const backgroundSrc = `data:image/png;base64,${base64BackgroundImage}`;
+    // Since EMPRESA.png has a transparent background, we will use a hardcoded color
+    // for the rectangle, inspired by the text shadow in the image.
+    const companyBackgroundColor = '#808080'; // A neutral gray
+
+    // Handle both base64 strings and URLs for the background
+    const backgroundSrc = backgroundImageUrl.startsWith('data:')
+      ? backgroundImageUrl
+      : backgroundImageUrl;
 
     // Load all images in parallel
     const [bgImg, logoImg, companyImg] = await Promise.all([
@@ -34,32 +43,43 @@ export const composeImage = async (base64BackgroundImage, logoUrl, companyImageU
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    // Configure canvas dimensions based on the background image, resized to 720px height
-    const targetHeight = 720;
-    const scale = targetHeight / bgImg.height;
-    const targetWidth = bgImg.width * scale;
-
+    // Use the background image's original dimensions for the canvas
+    const targetWidth = bgImg.width;
+    const targetHeight = bgImg.height;
     canvas.width = targetWidth;
     canvas.height = targetHeight;
+    console.log('[composeImage] Canvas dimensions set to:', { targetWidth, targetHeight });
 
-    // 1. Draw background
+    // 1. Draw the main background image
     ctx.drawImage(bgImg, 0, 0, targetWidth, targetHeight);
 
-    // 2. Draw logo (top-left)
-    const logoHeight = targetHeight * 0.10; // 10% of canvas height
-    const logoScale = logoHeight / logoImg.height;
-    const logoWidth = logoImg.width * logoScale;
-    ctx.drawImage(logoImg, 0, 0, logoWidth, logoHeight);
-
-    // 3. Draw company image (bottom-right)
-    const companyImgHeight = targetHeight * 0.20; // 20% of canvas height
+    // --- Enhancement: Draw the rectangle for the company image ---
+    // First, calculate the company image's dimensions to determine the rectangle's height.
+    const companyImgHeight = targetHeight * 0.1; // Rectangle height is 10% of the canvas height
     const companyImgScale = companyImgHeight / companyImg.height;
     const companyImgWidth = companyImg.width * companyImgScale;
-    const companyImgX = targetWidth - companyImgWidth;
-    const companyImgY = targetHeight - companyImgHeight;
+    console.log('[composeImage] Company image rectangle:', { companyImgHeight, companyImgWidth });
+
+    // 2. Draw the colored rectangle at the bottom of the canvas
+    ctx.fillStyle = companyBackgroundColor;
+    ctx.fillRect(0, targetHeight - companyImgHeight, targetWidth, companyImgHeight);
+
+    // 3. Draw the logo in the top-left corner with a dynamic margin
+    const logoHeight = targetHeight * 0.1; // Logo height is 10% of canvas height
+    const logoScale = logoHeight / logoImg.height;
+    const logoWidth = logoImg.width * logoScale;
+    const margin = targetWidth * 0.02; // Use 2% of the canvas width as margin
+    console.log('[composeImage] Logo dimensions and margin:', { logoHeight, logoWidth, margin });
+    ctx.drawImage(logoImg, margin, margin, logoWidth, logoHeight);
+
+    // 4. Draw the company image on the bottom-right, over the rectangle, with the same dynamic margin
+    const companyImgX = targetWidth - companyImgWidth - margin;
+    const companyImgY = targetHeight - companyImgHeight; // Aligns with the top of the rectangle
     ctx.drawImage(companyImg, companyImgX, companyImgY, companyImgWidth, companyImgHeight);
 
-    return canvas.toDataURL('image/png');
+    const finalUrl = canvas.toDataURL('image/png');
+    console.log('[composeImage] Composition finished. Returning data URL.');
+    return finalUrl;
   } catch (error) {
     console.error('Error composing image:', error);
     // Propagate the error to be handled by the caller

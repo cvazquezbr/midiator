@@ -453,12 +453,30 @@ function App() {
   const parseImageFile = (file) => {
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const imageUrl = e.target.result;
-        updateImageAndPalette(imageUrl);
-        const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar');
-        if (etapaPosicionarFormatarIndex !== -1) {
-          setActiveStep(etapaPosicionarFormatarIndex);
+        setIsComposingImage(true); // Ativa o indicador de carregamento
+        try {
+          // Compõe a imagem com o logo e a imagem da empresa
+          const composedImageUrl = await composeImage(
+            imageUrl,
+            '/LOGO.png',
+            '/EMPRESA.png'
+          );
+          // Atualiza o estado com a imagem composta
+          console.log('[App.jsx] Composition successful. Updating background image state.');
+          updateImageAndPalette(composedImageUrl);
+          const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar');
+          if (etapaPosicionarFormatarIndex !== -1) {
+            setActiveStep(etapaPosicionarFormatarIndex);
+          }
+        } catch (error) {
+          console.error("[App.jsx] Erro ao compor a imagem de fundo:", error);
+          alert("Ocorreu um erro ao adicionar o logo e a imagem da empresa. Usando a imagem de fundo original.");
+          // Fallback: usa a imagem original se a composição falhar
+          updateImageAndPalette(imageUrl);
+        } finally {
+          setIsComposingImage(false); // Desativa o indicador de carregamento
         }
       };
       reader.readAsDataURL(file);

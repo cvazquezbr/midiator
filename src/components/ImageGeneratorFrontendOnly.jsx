@@ -38,6 +38,7 @@ import {
 import GoogleAuthSetup from './GoogleAuthSetup';
 import GeneratedImageEditor from './GeneratedImageEditor'; // Importar o novo editor
 import googleDriveAPI from '../utils/googleDriveAPI';
+import { composeImage } from '../utils/imageComposer';
 
 const ImageGeneratorFrontendOnly = ({
   csvData,
@@ -236,12 +237,21 @@ const ImageGeneratorFrontendOnly = ({
     const images = [];
 
     try {
-      // Carregar imagem de fundo uma vez
+      // 1. Compor a imagem de fundo com logo e empresa UMA VEZ
+      console.log('[generateImages] Calling composeImage for the main generation.');
+      const composedBackgroundImageUrl = await composeImage(
+        backgroundImage,
+        '/LOGO.png',
+        '/EMPRESA.png'
+      );
+      console.log('[generateImages] composeImage finished for the main generation.');
+
+      // 2. Carregar a imagem composta para ser usada no loop
       const img = new Image();
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = reject;
-        img.src = backgroundImage;
+        img.src = composedBackgroundImageUrl; // Usar a imagem composta
       });
 
       for (let i = 0; i < csvData.length; i++) {
@@ -263,7 +273,7 @@ const ImageGeneratorFrontendOnly = ({
         ctx.imageSmoothingQuality = 'high';
         ctx.textRenderingOptimization = 'optimizeQuality';
 
-        // Desenhar imagem de fundo
+        // Desenhar imagem de fundo JÁ COMPOSTA
         ctx.drawImage(img, 0, 0);
 
           // Desenhar campos do CSV com estilos individuais
@@ -550,18 +560,21 @@ const ImageGeneratorFrontendOnly = ({
     }
 
     try {
+      // 1. Compor a imagem de fundo com logo e empresa
+      console.log(`[regenerateSingleImage] Calling composeImage for index ${index}.`);
+      const composedBackgroundImageUrl = await composeImage(
+        currentBackgroundImage,
+        '/LOGO.png',
+        '/EMPRESA.png'
+      );
+      console.log(`[regenerateSingleImage] composeImage finished for index ${index}.`);
+
+      // 2. Carregar a imagem recém-composta
       const img = new Image();
-      // console.log('[regenerateSingleImage] Attempting to load currentBackgroundImage:', currentBackgroundImage ? currentBackgroundImage.substring(0,100) + "..." : "null");
       await new Promise((resolve, reject) => {
-        img.onload = () => {
-          // console.log('[regenerateSingleImage] currentBackgroundImage loaded successfully. Dimensions:', img.width, 'x', img.height);
-          resolve();
-        };
-        img.onerror = (err) => {
-          // console.error('[regenerateSingleImage] Error loading currentBackgroundImage:', err, 'src:', currentBackgroundImage ? currentBackgroundImage.substring(0,100) + "..." : "null");
-          reject(err);
-        };
-        img.src = currentBackgroundImage;
+        img.onload = resolve;
+        img.onerror = (err) => reject(new Error('Failed to load composed background for regeneration.', { cause: err }));
+        img.src = composedBackgroundImageUrl;
       });
 
       const canvas = document.createElement('canvas');
