@@ -50,7 +50,8 @@ const ImageGeneratorFrontendOnly = ({
   setGeneratedImagesData, // Setter para atualizar o estado em App.jsx
   initialGeneratedImagesData, // Dados iniciais carregados do JSON
   onThumbnailRecordTextUpdate, // <-- ADICIONADO: Callback para atualizar o CSV em App.jsx
-  originalImageSize
+  originalImageSize,
+  imageFilters
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -242,7 +243,8 @@ const ImageGeneratorFrontendOnly = ({
       const composedBackgroundImageUrl = await composeImage(
         backgroundImage,
         '/LOGO.png',
-        '/EMPRESA.png'
+        '/EMPRESA.png',
+        imageFilters
       );
       console.log('[generateImages] composeImage finished for the main generation.');
 
@@ -565,7 +567,8 @@ const ImageGeneratorFrontendOnly = ({
       const composedBackgroundImageUrl = await composeImage(
         currentBackgroundImage,
         '/LOGO.png',
-        '/EMPRESA.png'
+        '/EMPRESA.png',
+        imageFilters
       );
       console.log(`[regenerateSingleImage] composeImage finished for index ${index}.`);
 

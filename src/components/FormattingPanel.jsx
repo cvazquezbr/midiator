@@ -46,7 +46,9 @@ const FormattingPanel = ({
   setFieldStyles,
   fieldPositions,
   setFieldPositions,
-  csvHeaders
+  csvHeaders,
+  imageFilters,
+  setImageFilters
 }) => {
   // Log received props
   console.log('[FormattingPanel] Received props: selectedField =', selectedField, 'fieldStyles =', fieldStyles);
@@ -148,9 +150,29 @@ const FormattingPanel = ({
     return (
       <Card>
         <CardContent>
-          <Typography variant="h6" color="textSecondary" align="center">
+          <Typography variant="h6" color="textSecondary" align="center" gutterBottom>
             Selecione um campo de texto para editar suas propriedades
           </Typography>
+          <Divider sx={{ my: 2 }} />
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Typography variant="subtitle1">Filtros de Imagem de Fundo</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box sx={{ p: 1 }}>
+                <Typography gutterBottom>Brilho: {imageFilters.brightness}%</Typography>
+                <Slider value={imageFilters.brightness} onChange={(e, v) => setImageFilters(f => ({ ...f, brightness: v }))} min={0} max={200} step={1} />
+                <Typography gutterBottom>Contraste: {imageFilters.contrast}%</Typography>
+                <Slider value={imageFilters.contrast} onChange={(e, v) => setImageFilters(f => ({ ...f, contrast: v }))} min={0} max={200} step={1} />
+                <Typography gutterBottom>Saturação: {imageFilters.saturate}%</Typography>
+                <Slider value={imageFilters.saturate} onChange={(e, v) => setImageFilters(f => ({ ...f, saturate: v }))} min={0} max={200} step={1} />
+                <Typography gutterBottom>Desfoque: {imageFilters.blur}px</Typography>
+                <Slider value={imageFilters.blur} onChange={(e, v) => setImageFilters(f => ({ ...f, blur: v }))} min={0} max={20} step={1} />
+                <Typography gutterBottom>Opacidade: {imageFilters.opacity}%</Typography>
+                <Slider value={imageFilters.opacity} onChange={(e, v) => setImageFilters(f => ({ ...f, opacity: v }))} min={0} max={100} step={1} />
+              </Box>
+            </AccordionDetails>
+          </Accordion>
         </CardContent>
       </Card>
     );
