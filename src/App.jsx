@@ -76,7 +76,7 @@ import GoogleCloudTTSAuth from './components/GoogleCloudTTSAuth';
 import CampaignPromptDialog from './components/CampaignPromptDialog';
 import { getGeminiApiKey } from './utils/geminiCredentials';
 import { getCampaignPrompt } from './utils/campaignPrompt';
-import { callGeminiApi } from './utils/geminiAPI';
+import { callGeminiApi, generateImage } from './utils/geminiAPI';
 import GoogleIcon from '@mui/icons-material/Google';
 import pako from 'pako';
 import './App.css';
@@ -230,6 +230,8 @@ function App() {
   const [autor, setAutor] = useState('');
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
+  const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   // Estados para a Geração com IA
   const [inputMethod, setInputMethod] = useState('csv');
@@ -267,7 +269,10 @@ function App() {
       const newPromptText = `${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`;
       setPromptText(newPromptText);
     }
-  }, [activeStep, campaignContent]);
+    if (activeStep === 3 && generatedImageUrl) {
+      setBackgroundImage(generatedImageUrl);
+    }
+  }, [activeStep, campaignContent, generatedImageUrl]);
 
   const steps = [
     {
@@ -997,6 +1002,29 @@ function App() {
       };
 
       setCampaignContent(normalizedContent);
+
+      // RF-01: Gerar imagem após o conteúdo do texto
+      const { aspectRatio } = getCampaignPrompt();
+      if (aspectRatio) {
+        setIsGeneratingImage(true);
+        try {
+          const imagePrompt = `
+            Persona: ${persona}
+            Autor: ${autor}
+            Resumo do Conteúdo: ${normalizedContent.titulo}. ${normalizedContent.conteudo.substring(0, 200)}...
+            Razão de Aspecto: ${aspectRatio}
+          `;
+          const base64Image = await generateImage(imagePrompt, apiKey);
+          setGeneratedImageUrl(`data:image/png;base64,${base64Image}`);
+        } catch (imageError) {
+          console.error("Erro ao gerar imagem:", imageError);
+          alert("Ocorreu um erro ao gerar a imagem da campanha. Verifique o console para mais detalhes.");
+          setGeneratedImageUrl(null);
+        } finally {
+          setIsGeneratingImage(false);
+        }
+      }
+
     } catch (error) {
       console.error("Erro ao gerar conteúdo da campanha:", error);
       alert("Ocorreu um erro ao gerar o conteúdo da campanha. Verifique o console para mais detalhes.");
@@ -1679,6 +1707,20 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                         </Box>
                       </Grid>
                     </Grid>
+                  </Box>
+                )}
+
+                {isGeneratingImage && (
+                  <Box sx={{ mt: 4, textAlign: 'center' }}>
+                    <Typography variant="h6" gutterBottom>Gerando Imagem...</Typography>
+                    {/* Pode adicionar um componente de loading mais elaborado aqui */}
+                  </Box>
+                )}
+
+                {generatedImageUrl && !isGeneratingImage && (
+                  <Box sx={{ mt: 4 }}>
+                    <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
+                    <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', borderRadius: '8px' }} />
                   </Box>
                 )}
               </CardContent>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getCampaignPrompt, saveCampaignPrompt, removeCampaignPrompt } from '../utils/campaignPrompt';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box, TextField } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import TextEditorDialog from './TextEditorDialog';
 
 const CampaignPromptDialog = ({ open, onClose }) => {
@@ -10,22 +10,24 @@ const CampaignPromptDialog = ({ open, onClose }) => {
   const [autor, setAutor] = useState('');
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
+  const [aspectRatio, setAspectRatio] = useState('');
   const [editingField, setEditingField] = useState(null);
 
   useEffect(() => {
     if (open) {
-      const { persona, autor, instrucoes, formato } = getCampaignPrompt();
+      const { persona, autor, instrucoes, formato, aspectRatio } = getCampaignPrompt();
       setPersona(persona);
       setAutor(autor);
       setInstrucoes(instrucoes);
       setFormato(formato);
-      setHasStoredPrompt(!!(persona || autor || instrucoes || formato));
+      setAspectRatio(aspectRatio || '1:1'); // Default to 1:1 if not set
+      setHasStoredPrompt(!!(persona || autor || instrucoes || formato || aspectRatio));
       setMessage('');
     }
   }, [open]);
 
   const handleSave = () => {
-    saveCampaignPrompt({ persona, autor, instrucoes, formato });
+    saveCampaignPrompt({ persona, autor, instrucoes, formato, aspectRatio });
     setHasStoredPrompt(true);
     setMessage('Prompt de campanha salvo com sucesso!');
   };
@@ -183,6 +185,21 @@ const CampaignPromptDialog = ({ open, onClose }) => {
               sx={{ cursor: 'pointer' }}
             />
           </Box>
+
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
+            <Select
+              labelId="aspect-ratio-label"
+              id="aspect-ratio-select"
+              value={aspectRatio}
+              label="Razão de Aspecto"
+              onChange={(e) => setAspectRatio(e.target.value)}
+            >
+              <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
+              <MenuItem value="4:5">Retrato (4:5)</MenuItem>
+              <MenuItem value="16:9">Paisagem (16:9)</MenuItem>
+            </Select>
+          </FormControl>
 
           {message && (
             <Typography color={message.includes('sucesso') ? 'green' : (message.includes('removido') ? 'textPrimary' : 'error')} variant="body2" sx={{ mt: 2 }}>

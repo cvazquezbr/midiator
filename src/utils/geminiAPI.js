@@ -1,7 +1,8 @@
 // TODO: Confirmar o endpoint exato e o nome do modelo para a API gratuita do Gemini.
 // O exemplo abaixo usa um endpoint comum para gemini-pro.
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-const GEMINI_MODEL = 'gemini-2.5-pro'; // Atualizado conforme input do usuário, verificar disponibilidade.
+const GEMINI_MODEL = 'gemini-pro';
+const GEMINI_IMAGE_MODEL = 'gemini-2.0-flash-preview-image-generation';
 
 /**
  * Chama a API Gemini (Google Generative Language).
@@ -64,5 +65,65 @@ export async function callGeminiApi(promptString, apiKey) {
         throw error; // Mantém o erro específico da API
     }
     throw new Error(`Falha na comunicação com a API Gemini: ${error.message}`);
+  }
+}
+
+/**
+ * Chama a API Gemini para gerar uma imagem.
+ * @param {string} promptString - O prompt para a geração da imagem.
+ * @param {string} apiKey - A chave da API Gemini do usuário.
+ * @returns {Promise<string>} A imagem em formato base64.
+ * @throws {Error} Se a chamada da API falhar ou a resposta não contiver uma imagem.
+ */
+export async function generateImage(promptString, apiKey) {
+  if (!promptString) {
+    throw new Error('O prompt não pode ser vazio.');
+  }
+  if (!apiKey) {
+    throw new Error('A chave da API Gemini não foi fornecida.');
+  }
+
+  const apiUrl = `${GEMINI_API_BASE_URL}/${GEMINI_IMAGE_MODEL}:generateContent?key=${apiKey}`;
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: promptString
+          }]
+        }],
+        generationConfig: {
+          responseModalities: ["TEXT", "IMAGE"]
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: { message: response.statusText } }));
+      const errorMessage = errorData.error?.message || `Erro ${response.status}`;
+      console.error('Erro da API Gemini (Imagem):', errorData);
+      throw new Error(`Erro da API Gemini (Imagem): ${errorMessage}`);
+    }
+
+    const responseData = await response.json();
+
+    const imagePart = responseData.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
+    if (imagePart) {
+      return imagePart.inlineData.data;
+    } else {
+      console.error('Formato de resposta inesperado da API Gemini (Imagem):', responseData);
+      throw new Error('Nenhuma imagem foi retornada pela API.');
+    }
+  } catch (error) {
+    console.error('Erro ao chamar a API de imagem Gemini:', error);
+    if (error instanceof Error && error.message.startsWith('Erro da API Gemini')) {
+      throw error;
+    }
+    throw new Error(`Falha na comunicação com a API de imagem Gemini: ${error.message}`);
   }
 }

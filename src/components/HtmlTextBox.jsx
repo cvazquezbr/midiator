@@ -41,8 +41,8 @@ const HtmlTextBox = ({
     if (!enableHtmlRendering) return html;
     
     // Lista de tags permitidas para formatação básica
-    const allowedTags = ['b', 'strong', 'i', 'em', 'u', 'br', 'p', 'ul', 'ol', 'li'];
-    const allowedAttributes = ['style'];
+    // const allowedTags = ['b', 'strong', 'i', 'em', 'u', 'br', 'p', 'ul', 'ol', 'li'];
+    // const allowedAttributes = ['style'];
     
     // Remover scripts e outras tags perigosas
     let sanitized = html.replace(/<script[^>]*>.*?<\/script>/gi, '');
