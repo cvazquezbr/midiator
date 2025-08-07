@@ -593,8 +593,6 @@ function App() {
 
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      alert("Configuração do template salva como template_config.midiator!");
-
     } catch (error) {
       console.error("Erro ao salvar o estado:", error);
       alert("Ocorreu um erro ao salvar a configuração.");
@@ -1151,6 +1149,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
       if (apiToCall) { // Verifica se apiToCall está definida
         iaResponseText = await apiToCall(finalPrompt, apiKey);
         console.log(`Resposta da API ${apiName} (bruta):`, iaResponseText);
+        console.log("Resposta da IA (Conteúdo):", iaResponseText);
       } else {
         throw new Error("Nenhuma função de API válida foi selecionada.");
       }
