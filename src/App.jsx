@@ -229,6 +229,7 @@ function App() {
   const [persona, setPersona] = useState('');
   const [autor, setAutor] = useState('');
   const [instrucoes, setInstrucoes] = useState('');
+  const [formato, setFormato] = useState('');
 
   // Estados para a Geração com IA
   const [inputMethod, setInputMethod] = useState('csv');
@@ -253,10 +254,11 @@ function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    const { persona, autor, instrucoes } = getCampaignPrompt();
+    const { persona, autor, instrucoes, formato } = getCampaignPrompt();
     setPersona(persona);
     setAutor(autor);
     setInstrucoes(instrucoes);
+    setFormato(formato);
   }, []);
 
   useEffect(() => {
@@ -559,7 +561,7 @@ function App() {
       );
 
       const stateToSave = {
-        version: "1.3", // Nova versão para incluir os campos de prompt
+        version: "1.4", // Nova versão para incluir o campo de formato
         backgroundImageUrl: backgroundImage,
         fieldPositions: fieldPositions,
         fieldStyles: fieldStyles,
@@ -571,10 +573,10 @@ function App() {
         problema: problema,
         solucao: solucao,
         campaignContent: campaignContent,
-        // Novos campos de prompt
         persona: persona,
         autor: autor,
         instrucoes: instrucoes,
+        formato: formato,
       };
 
       const jsonString = JSON.stringify(stateToSave, null, 2);
@@ -626,7 +628,7 @@ function App() {
           };
 
           // Verificar versão e campos essenciais
-          if (loadedState.version && ["1.0", "1.1", "1.2", "1.3"].includes(loadedState.version) &&
+          if (loadedState.version && ["1.0", "1.1", "1.2", "1.3", "1.4"].includes(loadedState.version) &&
             loadedState.backgroundImageUrl !== undefined &&
             loadedState.fieldPositions &&
             loadedState.fieldStyles &&
@@ -746,6 +748,12 @@ function App() {
               setPersona('');
               setAutor('');
               setInstrucoes('');
+            }
+
+            if (parseFloat(loadedState.version) >= 1.4) {
+              setFormato(loadedState.formato || '');
+            } else {
+              setFormato('');
             }
 
             // Navegação de passo
@@ -948,11 +956,12 @@ function App() {
       return;
     }
 
-    const { persona, autor, instrucoes } = getCampaignPrompt();
+    const { persona, autor, instrucoes, formato } = getCampaignPrompt();
 
     const promptCompleto = `
       ${persona}
       ${autor}
+      Formato: ${formato}
       Problema: ${problema}
       Solução: ${solucao}
       ${instrucoes}

@@ -2,7 +2,7 @@ const CAMPAIGN_PROMPT_STORAGE_KEY = 'campaignPrompt';
 
 /**
  * Salva o objeto do prompt de campanha no localStorage.
- * @param {object} promptData - O objeto com os dados do prompt ({ persona, autor, instrucoes }).
+ * @param {object} promptData - O objeto com os dados do prompt ({ persona, autor, instrucoes, formato }).
  */
 export function saveCampaignPrompt(promptData) {
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -17,41 +17,41 @@ export function saveCampaignPrompt(promptData) {
 /**
  * Recupera o objeto do prompt de campanha do localStorage.
  * Lida com a migração do formato antigo (string) para o novo (JSON).
- * @returns {{persona: string, autor: string, instrucoes: string}|null} O objeto do prompt ou um objeto com campos vazios.
+ * @returns {{persona: string, autor: string, instrucoes: string, formato: string}|null} O objeto do prompt ou um objeto com campos vazios.
  */
 export function getCampaignPrompt() {
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
       const storedData = window.localStorage.getItem(CAMPAIGN_PROMPT_STORAGE_KEY);
+      const defaultPrompt = { persona: '', autor: '', instrucoes: '', formato: '' };
       if (!storedData) {
-        return { persona: '', autor: '', instrucoes: '' };
+        return defaultPrompt;
       }
       // Tenta parsear como JSON (novo formato)
       try {
         const parsedData = JSON.parse(storedData);
         if (typeof parsedData === 'object' && parsedData !== null) {
           return {
-            persona: parsedData.persona || '',
-            autor: parsedData.autor || '',
-            instrucoes: parsedData.instrucoes || '',
+            ...defaultPrompt,
+            ...parsedData,
           };
         }
       } catch (e) {
         // Se falhar o parse, assume que é o formato antigo (string)
         // e o coloca no campo 'instrucoes' do novo formato.
         console.log("Migrando prompt do formato antigo para o novo.");
-        const migratedData = { persona: '', autor: '', instrucoes: storedData };
+        const migratedData = { ...defaultPrompt, instrucoes: storedData };
         saveCampaignPrompt(migratedData); // Salva no novo formato
         return migratedData;
       }
       // Se o dado armazenado não for um objeto JSON válido nem uma string (caso estranho), retorna o padrão.
-      return { persona: '', autor: '', instrucoes: '' };
+      return defaultPrompt;
     } catch (error) {
       console.error("Erro ao recuperar o prompt de campanha:", error);
-      return { persona: '', autor: '', instrucoes: '' };
+      return { persona: '', autor: '', instrucoes: '', formato: '' };
     }
   }
-  return { persona: '', autor: '', instrucoes: '' };
+  return { persona: '', autor: '', instrucoes: '', formato: '' };
 }
 
 /**
