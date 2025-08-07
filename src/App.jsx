@@ -79,8 +79,10 @@ import GeminiAuthSetup from './components/GeminiAuthSetup';
 import GoogleDriveAuthModal from './components/GoogleDriveAuthModal';
 import GoogleCloudTTSAuth from './components/GoogleCloudTTSAuth';
 import WordpressAuthSetup from './components/WordpressAuthSetup';
+import LinkedinAuthSetup from './components/LinkedinAuthSetup';
 import CampaignPromptDialog from './components/CampaignPromptDialog';
 import { getGeminiApiKey } from './utils/geminiCredentials';
+import { getLinkedinConfig, saveLinkedinConfig } from './utils/linkedinCredentials';
 import { getCampaignPrompt } from './utils/campaignPrompt';
 import { callGeminiApi, generateImage } from './utils/geminiAPI';
 import { composeImage } from './utils/imageComposer';
@@ -233,6 +235,7 @@ function App() {
   const [showGoogleDriveAuthModal, setShowGoogleDriveAuthModal] = useState(false);
   const [showGoogleCloudTTSAuthModal, setShowGoogleCloudTTSAuthModal] = useState(false);
   const [showWordpressAuthModal, setShowWordpressAuthModal] = useState(false);
+  const [showLinkedinAuthModal, setShowLinkedinAuthModal] = useState(false);
   const [showCampaignPromptModal, setShowCampaignPromptModal] = useState(false);
 
   // Estados para a Campanha
@@ -284,6 +287,69 @@ function App() {
     setInstrucoes(instrucoes);
     setFormato(formato);
     setAspectRatio(aspectRatio || '1:1');
+  }, []);
+
+  useEffect(() => {
+    const handleLinkedinCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+
+      if (code) {
+        // Remove o código da URL para não ser usado novamente
+        window.history.replaceState({}, document.title, "/");
+
+        const config = getLinkedinConfig();
+        if (!config || !config.clientId || !config.clientSecret) {
+          console.error('Client ID ou Client Secret do LinkedIn não encontrado.');
+          // Talvez mostrar uma mensagem para o usuário
+          return;
+        }
+
+        const { clientId, clientSecret } = config;
+        const redirectUri = window.location.origin;
+
+        const tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
+        const body = new URLSearchParams({
+          grant_type: 'authorization_code',
+          code: code,
+          redirect_uri: redirectUri,
+          client_id: clientId,
+          client_secret: clientSecret,
+        });
+
+        try {
+          const response = await fetch(tokenUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: body,
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const { access_token, expires_in } = data;
+
+            saveLinkedinConfig({
+              ...config,
+              accessToken: access_token,
+              tokenExpiration: Date.now() + expires_in * 1000,
+              clientSecret: undefined, // Garante que o secret não seja salvo
+            });
+
+            // Abre o modal para mostrar que a conexão foi bem-sucedida
+            setShowLinkedinAuthModal(true);
+          } else {
+            console.error('Erro ao obter o token de acesso do LinkedIn:', await response.text());
+            // Tratar erro, talvez mostrar mensagem
+          }
+        } catch (error) {
+          console.error('Erro de rede ao contatar o LinkedIn:', error);
+        }
+      }
+    };
+
+    handleLinkedinCallback();
   }, []);
 
   useEffect(() => {
@@ -1626,6 +1692,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   <Language sx={{ mr: 1 }} />
                   Configurar WordPress
                 </MenuItem>
+                <MenuItem onClick={() => { setShowLinkedinAuthModal(true); handleMenuClose(); }}>
+                  <Language sx={{ mr: 1 }} />
+                  Configurar LinkedIn
+                </MenuItem>
                 <MenuItem onClick={() => { setShowCampaignPromptModal(true); handleMenuClose(); }}>
                   <Edit sx={{ mr: 1 }} />
                   Definir Prompt de Campanha
@@ -2400,6 +2470,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
       <WordpressAuthSetup
         open={showWordpressAuthModal}
         onClose={() => setShowWordpressAuthModal(false)}
+      />
+      <LinkedinAuthSetup
+        open={showLinkedinAuthModal}
+        onClose={() => setShowLinkedinAuthModal(false)}
       />
        <CampaignPromptDialog
         open={showCampaignPromptModal}
