@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getCampaignPrompt, saveCampaignPrompt, removeCampaignPrompt } from '../utils/campaignPrompt';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box, TextField } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import TextEditorDialog from './TextEditorDialog';
 
 const CampaignPromptDialog = ({ open, onClose }) => {
@@ -10,22 +10,24 @@ const CampaignPromptDialog = ({ open, onClose }) => {
   const [autor, setAutor] = useState('');
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
+  const [aspectRatio, setAspectRatio] = useState('1:1');
   const [editingField, setEditingField] = useState(null);
 
   useEffect(() => {
     if (open) {
-      const { persona, autor, instrucoes, formato } = getCampaignPrompt();
+      const { persona, autor, instrucoes, formato, aspectRatio } = getCampaignPrompt();
       setPersona(persona);
       setAutor(autor);
       setInstrucoes(instrucoes);
       setFormato(formato);
-      setHasStoredPrompt(!!(persona || autor || instrucoes || formato));
+      setAspectRatio(aspectRatio || '1:1');
+      setHasStoredPrompt(!!(persona || autor || instrucoes || formato || aspectRatio));
       setMessage('');
     }
   }, [open]);
 
   const handleSave = () => {
-    saveCampaignPrompt({ persona, autor, instrucoes, formato });
+    saveCampaignPrompt({ persona, autor, instrucoes, formato, aspectRatio });
     setHasStoredPrompt(true);
     setMessage('Prompt de campanha salvo com sucesso!');
   };
@@ -36,6 +38,7 @@ const CampaignPromptDialog = ({ open, onClose }) => {
     setAutor('');
     setInstrucoes('');
     setFormato('');
+    setAspectRatio('1:1');
     setHasStoredPrompt(false);
     setMessage('Prompt de campanha removido.');
   };
@@ -169,6 +172,20 @@ const CampaignPromptDialog = ({ open, onClose }) => {
               sx={{ cursor: 'pointer' }}
             />
           </Box>
+
+          <FormControl fullWidth margin="normal">
+            <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
+            <Select
+              labelId="aspect-ratio-label"
+              value={aspectRatio}
+              onChange={(e) => setAspectRatio(e.target.value)}
+              label="Razão de Aspecto"
+            >
+              <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
+              <MenuItem value="4:5">Retrato (4:5)</MenuItem>
+              <MenuItem value="16:9">Paisagem (16:9)</MenuItem>
+            </Select>
+          </FormControl>
 
           <Box>
             <Typography variant="subtitle1" gutterBottom>Instruções</Typography>

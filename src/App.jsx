@@ -81,6 +81,7 @@ import CampaignPromptDialog from './components/CampaignPromptDialog';
 import { getGeminiApiKey } from './utils/geminiCredentials';
 import { getCampaignPrompt } from './utils/campaignPrompt';
 import { callGeminiApi, generateImage } from './utils/geminiAPI';
+import { composeImage } from './utils/imageComposer';
 import GoogleIcon from '@mui/icons-material/Google';
 import pako from 'pako';
 import './App.css';
@@ -237,6 +238,7 @@ function App() {
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isComposingImage, setIsComposingImage] = useState(false);
   const [conteudoMedio, setConteudoMedio] = useState('');
   const [conteudoPequeno, setConteudoPequeno] = useState('');
   const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
@@ -266,11 +268,12 @@ function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    const { persona, autor, instrucoes, formato } = getCampaignPrompt();
+    const { persona, autor, instrucoes, formato, aspectRatio } = getCampaignPrompt();
     setPersona(persona);
     setAutor(autor);
     setInstrucoes(instrucoes);
     setFormato(formato);
+    setAspectRatio(aspectRatio || '1:1');
   }, []);
 
   useEffect(() => {
@@ -1084,9 +1087,23 @@ function App() {
         IMPORTANTE: A imagem gerada não deve conter nenhum tipo de texto, escrita, letras ou palavras.
       `;
       const base64Image = await generateImage(imagePrompt, apiKey);
-      const imageUrl = `data:image/png;base64,${base64Image}`;
-      setGeneratedImageUrl(imageUrl);
-      updateImageAndPalette(imageUrl);
+
+      setIsComposingImage(true);
+      try {
+        const composedImageUrl = await composeImage(base64Image, '/LOGO.png', '/EMPRESA.png');
+        setGeneratedImageUrl(composedImageUrl);
+        updateImageAndPalette(composedImageUrl);
+      } catch (compositionError) {
+        console.error("Erro ao compor a imagem:", compositionError);
+        alert("A imagem foi gerada pela IA, mas falhou ao combiná-la com o logo. Verifique se os arquivos 'logo.png' e 'empresa.png' existem na pasta 'public'. Usando a imagem original da IA.");
+        // Fallback: usa a imagem original gerada pela IA sem a composição
+        const originalImageUrl = `data:image/png;base64,${base64Image}`;
+        setGeneratedImageUrl(originalImageUrl);
+        updateImageAndPalette(originalImageUrl);
+      } finally {
+        setIsComposingImage(false);
+      }
+
     } catch (imageError) {
       console.error("Erro ao gerar imagem:", imageError);
       alert("Ocorreu um erro ao gerar a imagem da campanha. Verifique o console para mais detalhes.");
@@ -1862,18 +1879,20 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   </Box>
                 )}
 
-                {isGeneratingImage && (
+                {(isGeneratingImage || isComposingImage) && (
                   <Box sx={{ mt: 4, textAlign: 'center' }}>
-                    <Typography variant="h6" gutterBottom>Gerando Imagem...</Typography>
+                    <Typography variant="h6" gutterBottom>
+                      {isComposingImage ? 'Combinando imagens...' : 'Gerando Imagem...'}
+                    </Typography>
                     {/* Pode adicionar um componente de loading mais elaborado aqui */}
                   </Box>
                 )}
 
-                {generatedImageUrl && !isGeneratingImage && (
+                {generatedImageUrl && !isGeneratingImage && !isComposingImage && (
                   <Box sx={{ mt: 4 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
-                      <Button onClick={handleGenerateImage} disabled={isGeneratingImage}>
+                      <Button onClick={handleGenerateImage} disabled={isGeneratingImage || isComposingImage}>
                         {isGeneratingImage ? 'Gerando...' : 'Regenerar Imagem'}
                       </Button>
                     </Box>
@@ -2334,15 +2353,17 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
         onClose={() => setShowCampaignPromptModal(false)}
       />
       <LoadingDialog
-        open={isGeneratingCampaign || isSaving || isLoading}
+        open={isGeneratingCampaign || isSaving || isLoading || isComposingImage}
         title={
           isSaving ? "Salvando configuração..." :
           isLoading ? "Carregando configuração..." :
+          isComposingImage ? "Combinando imagens..." :
           "Gerando conteúdo..." // Default for isGeneratingCampaign
         }
         description={
           isSaving ? "Aguarde um momento, estamos empacotando tudo para você." :
           isLoading ? "Estamos desempacotando sua configuração. Quase pronto!" :
+          isComposingImage ? "Adicionando o logo e a imagem da empresa. Quase lá!" :
           "A IA está pensando e escrevendo. Isso pode levar alguns segundos." // Default
         }
       />
