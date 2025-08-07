@@ -63,12 +63,46 @@ const LinkedinAuthSetup = ({ open, onClose }) => {
       saveLinkedinConfig({ clientId: config.clientId, clientSecret: config.clientSecret });
 
       const redirectUri = window.location.origin;
-      const scope = 'r_liteprofile%20r_emailaddress%20w_member_social';
+      const scope = 'r_basicprofile%20w_member_social%20r_1st_connections_size';
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${config.clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
 
       window.location.href = authUrl;
     } else {
       setMessage('Por favor, preencha o Client ID.');
+    }
+  };
+
+  const handleTestConnection = async () => {
+    const { accessToken } = getLinkedinConfig() || {};
+
+    if (!accessToken) {
+      setMessage('❌ Não há uma conexão ativa para testar.');
+      return;
+    }
+
+    setMessage('Testando conexão...');
+    try {
+      const response = await fetch('https://api.linkedin.com/v2/connections?q=viewer&start=0&count=0', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessage(`✅ Conexão bem-sucedida. Você tem ${data.paging.total} conexões de 1º grau.`);
+      } else {
+        const errorData = await response.json().catch(() => ({ message: 'Não foi possível ler a resposta de erro.' }));
+        setMessage(`❌ Erro no teste: ${errorData.message || 'Ocorreu um erro desconhecido.'}`);
+        if (response.status === 401) {
+          // Token pode ter expirado
+          removeLinkedinConfig();
+          setCurrentConfig(null);
+        }
+      }
+    } catch (error) {
+      console.error('Erro no teste de conexão com LinkedIn:', error);
+      setMessage('❌ Erro de rede ao testar a conexão.');
     }
   };
 
@@ -158,9 +192,12 @@ const LinkedinAuthSetup = ({ open, onClose }) => {
       <DialogActions sx={{ pb: 2, px: 3, justifyContent: 'space-between' }}>
         <Box>
             {currentConfig && currentConfig.accessToken ? (
-                <Button onClick={handleRemove} color="error">
-                    Desconectar
-                </Button>
+                <>
+                    <Button onClick={handleTestConnection}>Testar Conexão</Button>
+                    <Button onClick={handleRemove} color="error" sx={{ ml: 1 }}>
+                        Desconectar
+                    </Button>
+                </>
             ) : (
                 <Button onClick={handleConnect} variant="contained">
                   Conectar com o LinkedIn
