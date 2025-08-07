@@ -219,6 +219,13 @@ function App() {
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [selectedField, setSelectedField] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [imageFilters, setImageFilters] = useState({
+    brightness: 100,
+    contrast: 100,
+    saturate: 100,
+    blur: 0,
+    opacity: 100,
+  });
   // const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false); // Removed
   const [showGeminiAuthModal, setShowGeminiAuthModal] = useState(false);
   const [showGoogleDriveAuthModal, setShowGoogleDriveAuthModal] = useState(false);
@@ -378,7 +385,15 @@ function App() {
               if (fieldStyles[header]) {
                 updatedFieldStyles[header] = fieldStyles[header];
               } else {
-                updatedFieldStyles[header] = { ...defaultStylesBase };
+                if (index === 0) {
+                  updatedFieldStyles[header] = {
+                    ...defaultStylesBase,
+                    fontFamily: 'Anton',
+                    fontSize: 72,
+                  };
+                } else {
+                  updatedFieldStyles[header] = { ...defaultStylesBase };
+                }
               }
             });
 
@@ -2241,6 +2256,8 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   onCsvDataUpdate={handleCsvRecordContentUpdate}
                   onSelectFieldExternal={setSelectedField}
                   originalImageSize={originalImageSize}
+                  imageFilters={imageFilters}
+                  setImageFilters={setImageFilters}
                 />
               </Grid>
               {!isMobile && (
@@ -2252,6 +2269,8 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                     fieldPositions={fieldPositions}
                     setFieldPositions={setFieldPositions}
                     csvHeaders={csvHeaders}
+                    imageFilters={imageFilters}
+                    setImageFilters={setImageFilters}
                   />
                 </Grid>
               )}
@@ -2272,6 +2291,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               initialGeneratedImagesData={generatedImagesData}
               onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
               originalImageSize={originalImageSize}
+              imageFilters={imageFilters}
             />
           )}
 

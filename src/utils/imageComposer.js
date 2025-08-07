@@ -6,7 +6,7 @@
 const loadImage = (src) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'Anonymous'; // Handle CORS
+    // img.crossOrigin = 'Anonymous'; // This can cause issues with local dev servers and even some production environments. Removing it for same-origin requests.
     img.onload = () => resolve(img);
     img.onerror = (err) => reject(new Error(`Failed to load image: ${src}`, { cause: err }));
     img.src = src;
@@ -19,10 +19,11 @@ const loadImage = (src) => {
  * @param {string} backgroundImageUrl - The URL or base64 string of the background image.
  * @param {string} logoUrl - The URL for the logo image (e.g., /LOGO.png).
  * @param {string} companyImageUrl - The URL for the company image (e.g., /EMPRESA.png).
+ * @param {object} imageFilters - An object containing filter values.
  * @returns {Promise<string>} A promise that resolves with the data URL of the composed image.
  */
-export const composeImage = async (backgroundImageUrl, logoUrl, companyImageUrl) => {
-  console.log('[composeImage] Starting composition with:', { backgroundImageUrl, logoUrl, companyImageUrl });
+export const composeImage = async (backgroundImageUrl, logoUrl, companyImageUrl, imageFilters = {}) => {
+  console.log('[composeImage] Starting composition with:', { backgroundImageUrl, logoUrl, companyImageUrl, imageFilters });
   try {
     // Since EMPRESA.png has a transparent background, we will use a hardcoded color
     // for the rectangle, inspired by the text shadow in the image.
@@ -50,8 +51,11 @@ export const composeImage = async (backgroundImageUrl, logoUrl, companyImageUrl)
     canvas.height = targetHeight;
     console.log('[composeImage] Canvas dimensions set to:', { targetWidth, targetHeight });
 
-    // 1. Draw the main background image
+    // 1. Draw the main background image with filters
+    const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = imageFilters;
+    ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
     ctx.drawImage(bgImg, 0, 0, targetWidth, targetHeight);
+    ctx.filter = 'none'; // Reset filter to not affect other elements
 
     // --- Enhancement: Draw the rectangle for the company image ---
     // First, calculate the company image's dimensions to determine the rectangle's height.

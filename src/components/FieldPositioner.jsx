@@ -56,7 +56,9 @@ const FieldPositioner = ({
   onSelectFieldExternal,
   onCsvDataUpdate, // New prop to notify App.jsx of changes
   originalImageSize,
-  darkMode
+  darkMode,
+  imageFilters,
+  setImageFilters
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -373,7 +375,8 @@ const FieldPositioner = ({
                   display: 'block',
                   pointerEvents: 'none',
                   userSelect: 'none',
-                  WebkitUserDrag: 'none'
+                  WebkitUserDrag: 'none',
+                  filter: `brightness(${imageFilters.brightness}%) contrast(${imageFilters.contrast}%) saturate(${imageFilters.saturate}%) blur(${imageFilters.blur}px) opacity(${imageFilters.opacity}%)`,
                 }}
                 draggable={false}
               />
