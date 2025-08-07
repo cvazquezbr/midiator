@@ -58,6 +58,7 @@ import {
   Grid3x3,
   Campaign,
   AspectRatio,
+  Language,
 } from '@mui/icons-material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Papa from 'papaparse';
@@ -77,6 +78,7 @@ import CsvInfobox from './components/CsvInfobox';
 import GeminiAuthSetup from './components/GeminiAuthSetup';
 import GoogleDriveAuthModal from './components/GoogleDriveAuthModal';
 import GoogleCloudTTSAuth from './components/GoogleCloudTTSAuth';
+import WordpressAuthSetup from './components/WordpressAuthSetup';
 import CampaignPromptDialog from './components/CampaignPromptDialog';
 import { getGeminiApiKey } from './utils/geminiCredentials';
 import { getCampaignPrompt } from './utils/campaignPrompt';
@@ -230,6 +232,7 @@ function App() {
   const [showGeminiAuthModal, setShowGeminiAuthModal] = useState(false);
   const [showGoogleDriveAuthModal, setShowGoogleDriveAuthModal] = useState(false);
   const [showGoogleCloudTTSAuthModal, setShowGoogleCloudTTSAuthModal] = useState(false);
+  const [showWordpressAuthModal, setShowWordpressAuthModal] = useState(false);
   const [showCampaignPromptModal, setShowCampaignPromptModal] = useState(false);
 
   // Estados para a Campanha
@@ -1619,6 +1622,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   <Audiotrack sx={{ mr: 1 }} />
                   Configurar Google Cloud TTS
                 </MenuItem>
+                <MenuItem onClick={() => { setShowWordpressAuthModal(true); handleMenuClose(); }}>
+                  <Language sx={{ mr: 1 }} />
+                  Configurar WordPress
+                </MenuItem>
                 <MenuItem onClick={() => { setShowCampaignPromptModal(true); handleMenuClose(); }}>
                   <Edit sx={{ mr: 1 }} />
                   Definir Prompt de Campanha
@@ -2389,6 +2396,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
       <GoogleCloudTTSAuth
         open={showGoogleCloudTTSAuthModal}
         onClose={() => setShowGoogleCloudTTSAuthModal(false)}
+      />
+      <WordpressAuthSetup
+        open={showWordpressAuthModal}
+        onClose={() => setShowWordpressAuthModal(false)}
       />
        <CampaignPromptDialog
         open={showCampaignPromptModal}
