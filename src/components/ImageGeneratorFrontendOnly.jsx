@@ -44,7 +44,6 @@ const ImageGeneratorFrontendOnly = ({
   backgroundImage, // Imagem de fundo global/template
   fieldPositions, // Posições globais/template
   fieldStyles, // Estilos globais/template
-  displayedImageSize, // Tamanho da imagem exibida no editor principal
   csvHeaders, // Todos os cabeçalhos CSV possíveis (para GeneratedImageEditor)
   colorPalette, // Paleta de cores global (para GeneratedImageEditor)
   setGeneratedImagesData, // Setter para atualizar o estado em App.jsx

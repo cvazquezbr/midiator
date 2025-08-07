@@ -28,7 +28,10 @@ import {
   ListItemText,
   AppBar,
   Toolbar,
-  Fab
+  Fab,
+  FormControl,
+  InputLabel,
+  Select,
 } from '@mui/material';
 import {
   CloudUpload,
@@ -54,6 +57,7 @@ import {
   Visibility,
   Grid3x3,
   Campaign,
+  AspectRatio,
 } from '@mui/icons-material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Papa from 'papaparse';
@@ -76,7 +80,7 @@ import GoogleCloudTTSAuth from './components/GoogleCloudTTSAuth';
 import CampaignPromptDialog from './components/CampaignPromptDialog';
 import { getGeminiApiKey } from './utils/geminiCredentials';
 import { getCampaignPrompt } from './utils/campaignPrompt';
-import { callGeminiApi } from './utils/geminiAPI';
+import { callGeminiApi, generateImage } from './utils/geminiAPI';
 import GoogleIcon from '@mui/icons-material/Google';
 import pako from 'pako';
 import './App.css';
@@ -230,6 +234,14 @@ function App() {
   const [autor, setAutor] = useState('');
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
+  const [aspectRatio, setAspectRatio] = useState('1:1');
+  const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [conteudoMedio, setConteudoMedio] = useState('');
+  const [conteudoPequeno, setConteudoPequeno] = useState('');
+  const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
+  const [isGeneratingSummaryPequeno, setIsGeneratingSummaryPequeno] = useState(false);
+
 
   // Estados para a Geração com IA
   const [inputMethod, setInputMethod] = useState('csv');
@@ -410,24 +422,37 @@ function App() {
     setIsDraggingOverCsv(false);
   };
 
+  const updateImageAndPalette = (imageUrl) => {
+    setBackgroundImage(imageUrl);
+
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+        setOriginalImageSize({ width: img.width, height: img.height });
+        try {
+            const colorThief = new ColorThief();
+            const palette = colorThief.getPalette(img, 5);
+            setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`));
+        } catch (error) {
+            console.error("Error extracting color palette:", error);
+            setColorPalette([]);
+        }
+    };
+    img.onerror = (err) => {
+        console.error("Error loading image to extract colors:", err);
+        setBackgroundImage(null);
+        setColorPalette([]);
+    }
+    img.src = imageUrl;
+  };
+
   // Função para processar o arquivo de imagem de fundo
   const parseImageFile = (file) => {
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const imageUrl = e.target.result;
-        setBackgroundImage(imageUrl);
-
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.onload = () => {
-          setOriginalImageSize({ width: img.width, height: img.height });
-          const colorThief = new ColorThief();
-          const palette = colorThief.getPalette(img, 5);
-          setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`));
-        };
-        img.src = imageUrl;
-
+        updateImageAndPalette(imageUrl);
         const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar');
         if (etapaPosicionarFormatarIndex !== -1) {
           setActiveStep(etapaPosicionarFormatarIndex);
@@ -561,7 +586,7 @@ function App() {
       );
 
       const stateToSave = {
-        version: "1.4", // Nova versão para incluir o campo de formato
+        version: "1.5",
         backgroundImageUrl: backgroundImage,
         fieldPositions: fieldPositions,
         fieldStyles: fieldStyles,
@@ -577,6 +602,8 @@ function App() {
         autor: autor,
         instrucoes: instrucoes,
         formato: formato,
+        conteudoMedio: conteudoMedio,
+        conteudoPequeno: conteudoPequeno,
       };
 
       const jsonString = JSON.stringify(stateToSave, null, 2);
@@ -626,7 +653,7 @@ function App() {
           };
 
           // Verificar versão e campos essenciais
-          if (loadedState.version && ["1.0", "1.1", "1.2", "1.3", "1.4"].includes(loadedState.version) &&
+          if (loadedState.version && ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5"].includes(loadedState.version) &&
             loadedState.backgroundImageUrl !== undefined &&
             loadedState.fieldPositions &&
             loadedState.fieldStyles &&
@@ -752,6 +779,14 @@ function App() {
               setFormato(loadedState.formato || '');
             } else {
               setFormato('');
+            }
+
+            if (parseFloat(loadedState.version) >= 1.5) {
+              setConteudoMedio(loadedState.conteudoMedio || '');
+              setConteudoPequeno(loadedState.conteudoPequeno || '');
+            } else {
+              setConteudoMedio('');
+              setConteudoPequeno('');
             }
 
             // Navegação de passo
@@ -944,8 +979,15 @@ function App() {
     });
   }, [setCsvData]);
 
-  const handleGenerateCampaignContent = async () => {
-    setIsGeneratingCampaign(true);
+  const handleGenerateCampaignContent = async (regenerate = false) => {
+    if (!regenerate) {
+      setIsGeneratingCampaign(true);
+    } else {
+      // Se for apenas regeneração de texto, usar um estado de loading diferente se desejar
+      // Por enquanto, vamos usar o mesmo.
+      setIsGeneratingCampaign(true);
+    }
+
     const apiKey = getGeminiApiKey();
 
     if (!apiKey) {
@@ -971,14 +1013,12 @@ function App() {
       const response = await callGeminiApi(finalPrompt, apiKey);
       console.log("Resposta da IA (Campanha):", response);
 
-      // Extrair o JSON da resposta, que pode vir em um bloco de código markdown
       const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
       let parsedContent;
 
       if (jsonMatch && jsonMatch[1]) {
         parsedContent = JSON.parse(jsonMatch[1]);
       } else {
-        // Tentar parsear diretamente se não encontrar o bloco de markdown
         parsedContent = JSON.parse(response);
       }
 
@@ -997,6 +1037,21 @@ function App() {
       };
 
       setCampaignContent(normalizedContent);
+      setConteudoMedio('');
+      setConteudoPequeno('');
+      if (!regenerate) {
+        setGeneratedImageUrl(null);
+      }
+
+      // Se não for apenas regeneração, dispara as outras gerações
+      if (!regenerate) {
+        await Promise.all([
+          handleGenerateImage(normalizedContent),
+          handleGenerateSummary(1800, normalizedContent),
+          handleGenerateSummary(130, normalizedContent)
+        ]);
+      }
+
     } catch (error) {
       console.error("Erro ao gerar conteúdo da campanha:", error);
       alert("Ocorreu um erro ao gerar o conteúdo da campanha. Verifique o console para mais detalhes.");
@@ -1006,16 +1061,91 @@ function App() {
     }
   };
 
+  const handleGenerateImage = async (content = campaignContent) => {
+    if (!content) {
+      alert("Por favor, gere o conteúdo do texto primeiro.");
+      return;
+    }
+    setIsGeneratingImage(true);
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      alert('Por favor, configure sua chave de API Gemini primeiro.');
+      setIsGeneratingImage(false);
+      return;
+    }
+
+    const { persona, autor } = getCampaignPrompt();
+    try {
+      const imagePrompt = `
+        Persona: ${persona}
+        Autor: ${autor}
+        Resumo do Conteúdo: ${content.titulo}. ${content.conteudo}
+        Razão de Aspecto: ${aspectRatio}
+        IMPORTANTE: A imagem gerada não deve conter nenhum tipo de texto, escrita, letras ou palavras.
+      `;
+      const base64Image = await generateImage(imagePrompt, apiKey);
+      const imageUrl = `data:image/png;base64,${base64Image}`;
+      setGeneratedImageUrl(imageUrl);
+      updateImageAndPalette(imageUrl);
+    } catch (imageError) {
+      console.error("Erro ao gerar imagem:", imageError);
+      alert("Ocorreu um erro ao gerar a imagem da campanha. Verifique o console para mais detalhes.");
+      setGeneratedImageUrl(null);
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  const handleGenerateSummary = async (targetLength, content = campaignContent) => {
+    if (!content?.conteudo) {
+      alert("Por favor, gere o conteúdo principal primeiro.");
+      return;
+    }
+
+    const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno;
+    setLoading(true);
+
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      alert('Por favor, configure sua chave de API Gemini primeiro.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${content.conteudo}"`;
+      const summary = await callGeminiApi(summaryPrompt, apiKey);
+
+      if (targetLength === 1800) {
+        setConteudoMedio(summary);
+      } else {
+        setConteudoPequeno(summary);
+      }
+    } catch (error) {
+      console.error(`Erro ao gerar resumo de ${targetLength} caracteres:`, error);
+      alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleResetCampaign = () => {
     setCampaignContent(null);
     setProblema('');
     setSolucao('');
+    setGeneratedImageUrl(null);
+    setConteudoMedio('');
+    setConteudoPequeno('');
   };
 
   const handleExportHtml = () => {
     if (!campaignContent) return;
 
     const { titulo, conteudo, cta, hashtags } = campaignContent;
+    const imageHtml = backgroundImage ? `
+      <h2>Imagem de Fundo</h2>
+      <img src="${backgroundImage}" alt="Imagem de Fundo da Campanha" style="max-width: 100%; border-radius: 8px; margin-bottom: 2rem;" />
+    ` : '';
 
     const html = `
       <!DOCTYPE html>
@@ -1035,6 +1165,7 @@ function App() {
       <body>
         <div class="container">
           <h1>${titulo}</h1>
+          ${imageHtml}
           <h2>Conteúdo</h2>
           <p>${conteudo.replace(/\n/g, '<br>')}</p>
           <h2>Chamada para Ação (CTA)</h2>
@@ -1043,6 +1174,8 @@ function App() {
           <div class="hashtags">
             ${hashtags.map(tag => `<span class="hashtag">${tag}</span>`).join('')}
           </div>
+          ${conteudoMedio ? `<h2>Conteúdo Médio</h2><p>${conteudoMedio.replace(/\n/g, '<br>')}</p>` : ''}
+          ${conteudoPequeno ? `<h2>Conteúdo Pequeno</h2><p>${conteudoPequeno.replace(/\n/g, '<br>')}</p>` : ''}
         </div>
       </body>
       </html>
@@ -1574,15 +1707,30 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                       disabled={campaignContent !== null}
                     />
                   </Grid>
+                  <Grid item xs={12}>
+                    <FormControl fullWidth variant="outlined" disabled={campaignContent !== null}>
+                      <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
+                      <Select
+                        labelId="aspect-ratio-label"
+                        value={aspectRatio}
+                        onChange={(e) => setAspectRatio(e.target.value)}
+                        label="Razão de Aspecto"
+                      >
+                        <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
+                        <MenuItem value="4:5">Retrato (4:5)</MenuItem>
+                        <MenuItem value="16:9">Paisagem (16:9)</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
                 </Grid>
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 2 }}>
                   <Button
                     variant="contained"
                     size="large"
-                    onClick={handleGenerateCampaignContent}
+                    onClick={() => handleGenerateCampaignContent(false)}
                     disabled={!problema.trim() || !solucao.trim() || isGeneratingCampaign || campaignContent !== null}
                   >
-                    {isGeneratingCampaign ? 'Gerando...' : 'Gerar conteúdo com IA'}
+                    {isGeneratingCampaign ? 'Gerando...' : 'Gerar Tudo com IA'}
                   </Button>
                   {campaignContent && (
                     <Button
@@ -1616,7 +1764,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                           fullWidth
                         />
                       </Grid>
-                      <Grid item xs={12}>
+                      <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <TextField
                           label="Conteúdo"
                           multiline
@@ -1628,7 +1776,39 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                           fullWidth
                           sx={{ cursor: 'pointer' }}
                         />
+                        <Button onClick={() => handleGenerateCampaignContent(true)} disabled={isGeneratingCampaign}>Regenerar</Button>
                       </Grid>
+
+                      <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <TextField
+                          label="Conteúdo Médio (máx. 1800 caracteres)"
+                          multiline
+                          rows={2}
+                          value={conteudoMedio}
+                          onChange={(e) => setConteudoMedio(e.target.value)}
+                          variant="outlined"
+                          fullWidth
+                        />
+                        <Button onClick={() => handleGenerateSummary(1800)} disabled={isGeneratingSummaryMedio || !campaignContent}>
+                          {isGeneratingSummaryMedio ? 'Gerando...' : 'Gerar'}
+                        </Button>
+                      </Grid>
+
+                      <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <TextField
+                          label="Conteúdo Pequeno (máx. 130 caracteres)"
+                          multiline
+                          rows={1}
+                          value={conteudoPequeno}
+                          onChange={(e) => setConteudoPequeno(e.target.value)}
+                          variant="outlined"
+                          fullWidth
+                        />
+                         <Button onClick={() => handleGenerateSummary(130)} disabled={isGeneratingSummaryPequeno || !campaignContent}>
+                          {isGeneratingSummaryPequeno ? 'Gerando...' : 'Gerar'}
+                        </Button>
+                      </Grid>
+
                       <Grid item xs={12}>
                         <TextField
                           label="CTA (Chamada para Ação)"
@@ -1679,6 +1859,25 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                         </Box>
                       </Grid>
                     </Grid>
+                  </Box>
+                )}
+
+                {isGeneratingImage && (
+                  <Box sx={{ mt: 4, textAlign: 'center' }}>
+                    <Typography variant="h6" gutterBottom>Gerando Imagem...</Typography>
+                    {/* Pode adicionar um componente de loading mais elaborado aqui */}
+                  </Box>
+                )}
+
+                {generatedImageUrl && !isGeneratingImage && (
+                  <Box sx={{ mt: 4 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
+                      <Button onClick={handleGenerateImage} disabled={isGeneratingImage}>
+                        {isGeneratingImage ? 'Gerando...' : 'Regenerar Imagem'}
+                      </Button>
+                    </Box>
+                    <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', borderRadius: '8px', mt: 2 }} />
                   </Box>
                 )}
               </CardContent>

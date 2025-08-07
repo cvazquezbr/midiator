@@ -36,8 +36,7 @@ const RichTextEditor = ({
   darkMode = false
 }) => {
   const [htmlMode, setHtmlMode] = useState(false);
-  const [selection, setSelection] = useState(null);
-  const [anchorEl, setAnchorEl] = useState(null);
+  const [selection, setSelection] = useState(null); // eslint-disable-line no-unused-vars
   const [isInitialized, setIsInitialized] = useState(false);
   const editorRef = useRef(null);
   const textareaRef = useRef(null);
@@ -62,6 +61,7 @@ const RichTextEditor = ({
   };
 
   // Função para restaurar a posição do cursor
+  // eslint-disable-next-line no-unused-vars
   const restoreSelection = (savedSelection) => {
     if (!savedSelection || htmlMode || !editorRef.current) return;
     
@@ -79,7 +79,7 @@ const RichTextEditor = ({
     );
     
     let node;
-    while (node = walker.nextNode()) {
+    while ((node = walker.nextNode()) !== null) {
       const nextCharCount = charCount + node.textContent.length;
       
       if (!foundStart && savedSelection.start >= charCount && savedSelection.start <= nextCharCount) {
@@ -161,7 +161,7 @@ const RichTextEditor = ({
     }
   }, [htmlMode, onChange]);
 
-  const handleInput = (e) => {
+  const handleInput = () => {
     // Não fazer nada especial, apenas propagar a mudança
     handleContentChange();
   };
@@ -180,6 +180,9 @@ const RichTextEditor = ({
       const savedSelection = saveSelection();
       document.execCommand('insertHTML', false, html);
       setTimeout(() => {
+        if (savedSelection) {
+          restoreSelection(savedSelection);
+        }
         handleContentChange();
       }, 0);
     }
@@ -227,18 +230,18 @@ const RichTextEditor = ({
     }
   ];
 
-  const listButtons = [
-    {
-      command: 'insertUnorderedList',
-      icon: <FormatListBulleted />,
-      tooltip: 'Lista com marcadores'
-    },
-    {
-      command: 'insertOrderedList',
-      icon: <FormatListNumbered />,
-      tooltip: 'Lista numerada'
-    }
-  ];
+  // const listButtons = [
+  //   {
+  //     command: 'insertUnorderedList',
+  //     icon: <FormatListBulleted />,
+  //     tooltip: 'Lista com marcadores'
+  //   },
+  //   {
+  //     command: 'insertOrderedList',
+  //     icon: <FormatListNumbered />,
+  //     tooltip: 'Lista numerada'
+  //   }
+  // ];
 
   const handleKeyDown = (e) => {
     if (htmlMode) return;

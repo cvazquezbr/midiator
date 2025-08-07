@@ -252,12 +252,12 @@ const TextBox = ({
     }
   }, [isEditing, isSelected]);
 
-  const pixelPosition = {
-    x: (position.x / 100) * (containerSize.width || 1),
-    y: (position.y / 100) * (containerSize.height || 1),
-    width: (position.width / 100) * (containerSize.width || 1),
-    height: (position.height / 100) * (containerSize.height || 1)
-  };
+  // const pixelPosition = {
+  //   x: (position.x / 100) * (containerSize.width || 1),
+  //   y: (position.y / 100) * (containerSize.height || 1),
+  //   width: (position.width / 100) * (containerSize.width || 1),
+  //   height: (position.height / 100) * (containerSize.height || 1)
+  // };
 
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
                    ('ontouchstart' in window) || 
