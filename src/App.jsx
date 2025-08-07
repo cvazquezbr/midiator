@@ -226,6 +226,9 @@ function App() {
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
   const [campaignContent, setCampaignContent] = useState(null);
   const [editingField, setEditingField] = useState(null);
+  const [persona, setPersona] = useState('');
+  const [autor, setAutor] = useState('');
+  const [instrucoes, setInstrucoes] = useState('');
 
   // Estados para a Geração com IA
   const [inputMethod, setInputMethod] = useState('csv');
@@ -233,6 +236,8 @@ function App() {
   const [promptNumRecords, setPromptNumRecords] = useState(10);
   const [promptText, setPromptText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -248,10 +253,10 @@ function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    const savedPrompt = getCampaignPrompt();
-    if (savedPrompt) {
-      setPromptText(savedPrompt);
-    }
+    const { persona, autor, instrucoes } = getCampaignPrompt();
+    setPersona(persona);
+    setAutor(autor);
+    setInstrucoes(instrucoes);
   }, []);
 
   useEffect(() => {
@@ -501,86 +506,106 @@ function App() {
   // Outras funções mantidas do código original...
 
   const handleSaveState = async () => {
-    // Função auxiliar para converter Blob para Base64
-    const blobToBase64 = (blob) => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    };
+    setIsSaving(true);
+    try {
+      // Função auxiliar para converter Blob para Base64
+      const blobToBase64 = (blob) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      };
 
-    // Mapear generatedImagesData para um formato serializável
-    const serializableGeneratedImages = await Promise.all(
-      generatedImagesData.map(async (img) => {
-        let imageBase64 = null;
-        if (img.blob) {
-          try {
-            imageBase64 = await blobToBase64(img.blob);
-          } catch (error) {
-            console.error("Erro ao converter blob para Base64:", error);
-            // Continuar mesmo se um blob falhar, para não impedir o salvamento do resto
-          }
-        }
-        return {
-          ...img,
-          blob: undefined, // Remover o blob original
-          url: undefined, // Remover o objectURL temporário
-          imageBase64: imageBase64, // Adicionar a string base64
-          // Manter: record, filename, customFieldPositions, customFieldStyles, backgroundImage (se individual)
-        };
-      })
-    );
-
-    const serializableGeneratedAudio = await Promise.all(
-        generatedAudioData.map(async (audio) => {
-            let audioBase64 = null;
-            if (audio.blob) {
-                try {
-                    audioBase64 = await blobToBase64(audio.blob);
-                } catch (error) {
-                    console.error("Erro ao converter blob de áudio para Base64:", error);
-                }
+      // Mapear generatedImagesData para um formato serializável
+      const serializableGeneratedImages = await Promise.all(
+        generatedImagesData.map(async (img) => {
+          let imageBase64 = null;
+          if (img.blob) {
+            try {
+              imageBase64 = await blobToBase64(img.blob);
+            } catch (error) {
+              console.error("Erro ao converter blob para Base64:", error);
+              // Continuar mesmo se um blob falhar, para não impedir o salvamento do resto
             }
-            return {
-                ...audio,
-                blob: undefined,
-                audioBase64: audioBase64,
-            };
+          }
+          return {
+            ...img,
+            blob: undefined, // Remover o blob original
+            url: undefined, // Remover o objectURL temporário
+            imageBase64: imageBase64, // Adicionar a string base64
+            // Manter: record, filename, customFieldPositions, customFieldStyles, backgroundImage (se individual)
+          };
         })
-    );
+      );
 
-    const stateToSave = {
-      version: "1.1", // Incrementar versão para refletir a nova estrutura
-      backgroundImageUrl: backgroundImage, // Este é o BG global/template, já é uma string (dataURL ou URL externa)
-      fieldPositions: fieldPositions,
-      fieldStyles: fieldStyles,
-      csvHeaders: csvHeaders,
-      colorPalette: colorPalette,
-      csvData: csvData,
-      generatedImages: serializableGeneratedImages, // Salvar os dados das imagens geradas
-      generatedAudio: serializableGeneratedAudio,
-    };
+      const serializableGeneratedAudio = await Promise.all(
+          generatedAudioData.map(async (audio) => {
+              let audioBase64 = null;
+              if (audio.blob) {
+                  try {
+                      audioBase64 = await blobToBase64(audio.blob);
+                  } catch (error) {
+                      console.error("Erro ao converter blob de áudio para Base64:", error);
+                  }
+              }
+              return {
+                  ...audio,
+                  blob: undefined,
+                  audioBase64: audioBase64,
+              };
+          })
+      );
 
-    const jsonString = JSON.stringify(stateToSave, null, 2);
-    const compressedData = pako.gzip(jsonString);
-    const blob = new Blob([compressedData], { type: "application/octet-stream" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "template_config.midiator";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    alert("Configuração do template salva como template_config.midiator!");
+      const stateToSave = {
+        version: "1.3", // Nova versão para incluir os campos de prompt
+        backgroundImageUrl: backgroundImage,
+        fieldPositions: fieldPositions,
+        fieldStyles: fieldStyles,
+        csvHeaders: csvHeaders,
+        colorPalette: colorPalette,
+        csvData: csvData,
+        generatedImages: serializableGeneratedImages,
+        generatedAudio: serializableGeneratedAudio,
+        problema: problema,
+        solucao: solucao,
+        campaignContent: campaignContent,
+        // Novos campos de prompt
+        persona: persona,
+        autor: autor,
+        instrucoes: instrucoes,
+      };
+
+      const jsonString = JSON.stringify(stateToSave, null, 2);
+      const compressedData = pako.gzip(jsonString);
+      const blob = new Blob([compressedData], { type: "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "template_config.midiator";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      alert("Configuração do template salva como template_config.midiator!");
+
+    } catch (error) {
+      console.error("Erro ao salvar o estado:", error);
+      alert("Ocorreu um erro ao salvar a configuração.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Função para carregar o estado do template de um arquivo
   const handleLoadStateFromFile = (event) => {
     const file = event.target.files[0];
     if (file) {
+      setIsLoading(true);
       const reader = new FileReader();
       reader.onload = async (e) => { // Tornar async para aguardar conversões
         try {
@@ -601,7 +626,7 @@ function App() {
           };
 
           // Verificar versão e campos essenciais
-          if (loadedState.version && (loadedState.version === "1.0" || loadedState.version === "1.1") &&
+          if (loadedState.version && ["1.0", "1.1", "1.2", "1.3"].includes(loadedState.version) &&
             loadedState.backgroundImageUrl !== undefined &&
             loadedState.fieldPositions &&
             loadedState.fieldStyles &&
@@ -678,7 +703,7 @@ function App() {
               setGeneratedImagesData([]); // Limpar se não houver dados ou for versão antiga
             }
 
-            if (loadedState.version === "1.1" && loadedState.generatedAudio) {
+            if (parseFloat(loadedState.version) >= 1.1 && loadedState.generatedAudio) {
                 const restoredGeneratedAudio = await Promise.all(
                     loadedState.generatedAudio.map(async (audioData) => {
                         let blob = null;
@@ -701,6 +726,28 @@ function App() {
                 setGeneratedAudioData([]);
             }
 
+            // Restaurar dados da campanha se presentes
+            if (parseFloat(loadedState.version) >= 1.2) {
+              setProblema(loadedState.problema || '');
+              setSolucao(loadedState.solucao || '');
+              setCampaignContent(loadedState.campaignContent || null);
+            } else {
+              setProblema('');
+              setSolucao('');
+              setCampaignContent(null);
+            }
+
+            // Restaurar novos campos de prompt se presentes (versão 1.3+)
+            if (parseFloat(loadedState.version) >= 1.3) {
+              setPersona(loadedState.persona || '');
+              setAutor(loadedState.autor || '');
+              setInstrucoes(loadedState.instrucoes || '');
+            } else {
+              setPersona('');
+              setAutor('');
+              setInstrucoes('');
+            }
+
             // Navegação de passo
             if (loadedState.backgroundImageUrl && loadedState.csvHeaders.length > 0) {
               const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar');
@@ -721,6 +768,8 @@ function App() {
         } catch (error) {
           console.error("Erro ao carregar o arquivo JSON:", error);
           alert("Erro ao ler o arquivo JSON.");
+        } finally {
+          setIsLoading(false);
         }
       };
       if (file.name.endsWith('.midiator')) {
@@ -899,16 +948,17 @@ function App() {
       return;
     }
 
-    let promptTemplate = getCampaignPrompt();
-    if (!promptTemplate) {
-      promptTemplate = `Baseado no problema "{{problema}}" e na solução "{{solucao}}", gere o seguinte conteúdo para uma campanha de marketing.`;
-    }
+    const { persona, autor, instrucoes } = getCampaignPrompt();
 
-    const filledPrompt = promptTemplate
-      .replace('{{problema}}', problema)
-      .replace('{{solucao}}', solucao);
+    const promptCompleto = `
+      ${persona}
+      ${autor}
+      Problema: ${problema}
+      Solução: ${solucao}
+      ${instrucoes}
+    `;
 
-    const finalPrompt = `${filledPrompt}\n\nGere uma resposta JSON com os seguintes campos: "titulo" (string), "conteudo" (string), "cta" (string), e "hashtags" (string, separadas por vírgula). A resposta deve ser apenas o JSON.`;
+    const finalPrompt = `${promptCompleto}\n\nGere uma resposta JSON com os seguintes campos: "titulo" (string), "conteudo" (string), "cta" (string), e "hashtags" (string, separadas por vírgula). A resposta deve ser apenas o JSON.`;
 
     try {
       const response = await callGeminiApi(finalPrompt, apiKey);
@@ -2076,7 +2126,19 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
         open={showCampaignPromptModal}
         onClose={() => setShowCampaignPromptModal(false)}
       />
-      <LoadingDialog open={isGeneratingCampaign} />
+      <LoadingDialog
+        open={isGeneratingCampaign || isSaving || isLoading}
+        title={
+          isSaving ? "Salvando configuração..." :
+          isLoading ? "Carregando configuração..." :
+          "Gerando conteúdo..." // Default for isGeneratingCampaign
+        }
+        description={
+          isSaving ? "Aguarde um momento, estamos empacotando tudo para você." :
+          isLoading ? "Estamos desempacotando sua configuração. Quase pronto!" :
+          "A IA está pensando e escrevendo. Isso pode levar alguns segundos." // Default
+        }
+      />
       <TextEditorDialog
         open={editingField !== null}
         title={`Editar ${editingField === 'conteudo' ? 'Conteúdo' : 'CTA'}`}
