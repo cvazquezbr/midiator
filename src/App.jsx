@@ -943,7 +943,7 @@ function App() {
             }
 
             // Restaurar generatedImages se presentes (versão 1.1+)
-            if (loadedState.version === "1.1" && loadedState.generatedImages) {
+            if (parseFloat(loadedState.version) >= 1.1 && loadedState.generatedImages) {
               const restoredGeneratedImages = await Promise.all(
                 loadedState.generatedImages.map(async (imgData) => {
                   let blob = null;
