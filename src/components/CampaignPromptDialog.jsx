@@ -11,25 +11,23 @@ const CampaignPromptDialog = ({ open, onClose }) => {
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1:1');
-  const [followup_posts_quantity, setFollowupPostsQuantity] = useState(5);
   const [editingField, setEditingField] = useState(null);
 
   useEffect(() => {
     if (open) {
-      const { persona, autor, instrucoes, formato, aspectRatio, followup_posts_quantity } = getCampaignPrompt();
+      const { persona, autor, instrucoes, formato, aspectRatio } = getCampaignPrompt();
       setPersona(persona);
       setAutor(autor);
       setInstrucoes(instrucoes);
       setFormato(formato);
       setAspectRatio(aspectRatio || '1:1');
-      setFollowupPostsQuantity(followup_posts_quantity || 5);
       setHasStoredPrompt(!!(persona || autor || instrucoes || formato || aspectRatio));
       setMessage('');
     }
   }, [open]);
 
   const handleSave = () => {
-    saveCampaignPrompt({ persona, autor, instrucoes, formato, aspectRatio, followup_posts_quantity });
+    saveCampaignPrompt({ persona, autor, instrucoes, formato, aspectRatio });
     setHasStoredPrompt(true);
     setMessage('Prompt de campanha salvo com sucesso!');
   };
@@ -41,7 +39,6 @@ const CampaignPromptDialog = ({ open, onClose }) => {
     setInstrucoes('');
     setFormato('');
     setAspectRatio('1:1');
-    setFollowupPostsQuantity(5);
     setHasStoredPrompt(false);
     setMessage('Prompt de campanha removido.');
   };
@@ -189,16 +186,6 @@ const CampaignPromptDialog = ({ open, onClose }) => {
               <MenuItem value="16:9">Paisagem (16:9)</MenuItem>
             </Select>
           </FormControl>
-
-          <TextField
-            label="Quantidade de Posts de Follow-up"
-            type="number"
-            value={followup_posts_quantity}
-            onChange={(e) => setFollowupPostsQuantity(parseInt(e.target.value, 10))}
-            fullWidth
-            margin="normal"
-            InputProps={{ inputProps: { min: 1, max: 10 } }}
-          />
 
           <Box>
             <Typography variant="subtitle1" gutterBottom>Instruções</Typography>
