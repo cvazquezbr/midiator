@@ -2726,7 +2726,6 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
           }
         }}
         onClose={() => setEditingField(null)}
-        darkMode={darkMode}
       />
       {isMobile && activeStep === 4 && (
         <>
