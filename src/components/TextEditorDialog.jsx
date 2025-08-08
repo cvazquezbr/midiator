@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box } from '@mui/material';
 import RichTextEditor from './RichTextEditor'; // Import the RichTextEditor
 
-const TextEditorDialog = ({ open, title, content, onSave, onClose, darkMode }) => {
+const TextEditorDialog = ({ open, title, content, onSave, onClose }) => {
   const [editedContent, setEditedContent] = useState(content);
 
   useEffect(() => {
@@ -25,7 +25,6 @@ const TextEditorDialog = ({ open, title, content, onSave, onClose, darkMode }) =
             value={editedContent}
             onChange={setEditedContent}
             maxHeight={400}
-            darkMode={darkMode}
           />
         </Box>
       </DialogContent>

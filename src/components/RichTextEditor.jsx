@@ -9,7 +9,8 @@ import {
   ToggleButtonGroup,
   Popover,
   Typography,
-  Button
+  Button,
+  useTheme
 } from '@mui/material';
 import {
   FormatBold,
@@ -32,9 +33,10 @@ const RichTextEditor = ({
   placeholder = 'Digite seu texto...',
   disabled = false,
   maxHeight = 200,
-  showHtmlToggle = true,
-  darkMode = false
+  showHtmlToggle = true
 }) => {
+  const theme = useTheme();
+  const darkMode = theme.palette.mode === 'dark';
   const [htmlMode, setHtmlMode] = useState(false);
   const [selection, setSelection] = useState(null); // eslint-disable-line no-unused-vars
   const [isInitialized, setIsInitialized] = useState(false);
