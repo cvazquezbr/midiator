@@ -45,7 +45,7 @@ async function handleTestConnection(request, response) {
         return response.status(400).json({ error: 'Missing accessToken for test connection.' });
     }
 
-    const testUrl = 'https://api.linkedin.com/v2/connections?q=viewer&start=0&count=0';
+    const testUrl = 'https://api.linkedin.com/v2/me';
 
     try {
         const linkedinResponse = await fetch(testUrl, {
