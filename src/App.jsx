@@ -405,6 +405,7 @@ function App() {
   const [isGeneratingConteudoFormatado, setIsGeneratingConteudoFormatado] = useState(false);
   const [followupPosts, setFollowupPosts] = useState([]);
   const [isGeneratingFollowup, setIsGeneratingFollowup] = useState(false);
+  const [followupPostsQuantity, setFollowupPostsQuantity] = useState(5);
 
 
   // Estados para a Geração com IA
@@ -1474,11 +1475,11 @@ function App() {
       return;
     }
 
-    const { persona, followup_posts_quantity } = getCampaignPrompt();
+    const { persona } = getCampaignPrompt();
 
     try {
       const prompt = `
-        Você é um especialista em marketing de conteúdo e copywriting para líderes técnicos. Sua tarefa é criar ${followup_posts_quantity} posts "isca" baseados no conteúdo principal fornecido.
+        Você é um especialista em marketing de conteúdo e copywriting para líderes técnicos. Sua tarefa é criar ${followupPostsQuantity} posts "isca" baseados no conteúdo principal fornecido.
 
         CONTEXTO:
         O conteúdo principal aborda: [${content.titulo} - ${content.conteudo}]
@@ -1561,6 +1562,7 @@ function App() {
     setConteudoPequeno('');
     setConteudoFormatado('');
     setFollowupPosts([]);
+    setFollowupPostsQuantity(5);
   };
 
   const handleExportHtml = () => {
@@ -2169,7 +2171,19 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                       disabled={campaignContent !== null}
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                        label="Quantidade de Posts de Follow-up"
+                        type="number"
+                        value={followupPostsQuantity}
+                        onChange={(e) => setFollowupPostsQuantity(parseInt(e.target.value, 10))}
+                        fullWidth
+                        variant="outlined"
+                        disabled={campaignContent !== null}
+                        InputProps={{ inputProps: { min: 1, max: 10 } }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
                     <FormControl fullWidth variant="outlined" disabled={campaignContent !== null}>
                       <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
                       <Select
@@ -2341,36 +2355,20 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   </Box>
                 )}
 
-                {(isGeneratingImage || isComposingImage) && (
-                  <Box sx={{ mt: 4, textAlign: 'center' }}>
-                    <Typography variant="h6" gutterBottom>
-                      {isComposingImage ? 'Combinando imagens...' : 'Gerando Imagem...'}
-                    </Typography>
-                    {/* Pode adicionar um componente de loading mais elaborado aqui */}
-                  </Box>
-                )}
-
-                {generatedImageUrl && !isGeneratingImage && !isComposingImage && (
-                  <Box sx={{ mt: 4 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
-                      <Button onClick={handleGenerateImage} disabled={isGeneratingImage || isComposingImage}>
-                        {isGeneratingImage ? 'Gerando...' : 'Regenerar Imagem'}
-                      </Button>
-                    </Box>
-                    <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', borderRadius: '8px', mt: 2 }} />
-                  </Box>
-                )}
-
                 {isGeneratingFollowup && (
                   <Box sx={{ mt: 4, textAlign: 'center' }}>
                     <Typography variant="h6" gutterBottom>Gerando Posts de Follow-up...</Typography>
                   </Box>
                 )}
 
-                {followupPosts.length > 0 && (
+                {followupPosts.length > 0 && !isGeneratingFollowup && (
                   <Box sx={{ mt: 4 }}>
-                    <Typography variant="h6" gutterBottom>Posts de Follow-up Gerados</Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="h6" gutterBottom>Posts de Follow-up Gerados</Typography>
+                      <Button onClick={() => handleGenerateFollowupPosts()} disabled={isGeneratingFollowup}>
+                        {isGeneratingFollowup ? 'Gerando...' : 'Regenerar Posts'}
+                      </Button>
+                    </Box>
                     {followupPosts.map((post, index) => (
                       <Accordion key={index}>
                         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -2391,6 +2389,27 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                         </AccordionDetails>
                       </Accordion>
                     ))}
+                  </Box>
+                )}
+
+                {(isGeneratingImage || isComposingImage) && (
+                  <Box sx={{ mt: 4, textAlign: 'center' }}>
+                    <Typography variant="h6" gutterBottom>
+                      {isComposingImage ? 'Combinando imagens...' : 'Gerando Imagem...'}
+                    </Typography>
+                    {/* Pode adicionar um componente de loading mais elaborado aqui */}
+                  </Box>
+                )}
+
+                {generatedImageUrl && !isGeneratingImage && !isComposingImage && (
+                  <Box sx={{ mt: 4 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
+                      <Button onClick={handleGenerateImage} disabled={isGeneratingImage || isComposingImage}>
+                        {isGeneratingImage ? 'Gerando...' : 'Regenerar Imagem'}
+                      </Button>
+                    </Box>
+                    <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', borderRadius: '8px', mt: 2 }} />
                   </Box>
                 )}
               </CardContent>
