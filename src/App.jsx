@@ -257,42 +257,42 @@ function App() {
       });
     };
 
-    const serializableGeneratedImages = await Promise.all(
-      generatedImagesData.map(async (img) => {
-        let imageBase64 = null;
-        if (img.blob) {
-          try {
-            imageBase64 = await blobToBase64(img.blob);
-          } catch (error) {
-            console.error("Erro ao converter blob para Base64:", error);
-          }
-        }
-        return {
-          ...img,
-          blob: undefined,
-          url: undefined,
-          imageBase64: imageBase64,
-        };
-      })
-    );
+    // const serializableGeneratedImages = await Promise.all(
+    //   generatedImagesData.map(async (img) => {
+    //     let imageBase64 = null;
+    //     if (img.blob) {
+    //       try {
+    //         imageBase64 = await blobToBase64(img.blob);
+    //       } catch (error) {
+    //         console.error("Erro ao converter blob para Base64:", error);
+    //       }
+    //     }
+    //     return {
+    //       ...img,
+    //       blob: undefined,
+    //       url: undefined,
+    //       imageBase64: imageBase64,
+    //     };
+    //   })
+    // );
 
-    const serializableGeneratedAudio = await Promise.all(
-      generatedAudioData.map(async (audio) => {
-        let audioBase64 = null;
-        if (audio.blob) {
-          try {
-            audioBase64 = await blobToBase64(audio.blob);
-          } catch (error) {
-            console.error("Erro ao converter blob de áudio para Base64:", error);
-          }
-        }
-        return {
-          ...audio,
-          blob: undefined,
-          audioBase64: audioBase64,
-        };
-      })
-    );
+    // const serializableGeneratedAudio = await Promise.all(
+    //   generatedAudioData.map(async (audio) => {
+    //     let audioBase64 = null;
+    //     if (audio.blob) {
+    //       try {
+    //         audioBase64 = await blobToBase64(audio.blob);
+    //       } catch (error) {
+    //         console.error("Erro ao converter blob de áudio para Base64:", error);
+    //       }
+    //     }
+    //     return {
+    //       ...audio,
+    //       blob: undefined,
+    //       audioBase64: audioBase64,
+    //     };
+    //   })
+    // );
 
     const stateToSave = {
       activeStep,
@@ -304,8 +304,9 @@ function App() {
       fieldStyles,
       displayedImageSize,
       originalImageSize,
-      generatedImagesData: serializableGeneratedImages,
-      generatedAudioData: serializableGeneratedAudio,
+      // Omit generatedImagesData and generatedAudioData to avoid QuotaExceededError
+      // generatedImagesData: serializableGeneratedImages,
+      // generatedAudioData: serializableGeneratedAudio,
       problema,
       solucao,
       campaignContent,

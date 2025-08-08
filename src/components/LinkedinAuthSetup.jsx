@@ -30,20 +30,21 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
 
   useEffect(() => {
     if (open) {
-      const storedConfig = getLinkedinConfig();
-      if (storedConfig && storedConfig.accessToken) {
+      const storedConfig = getLinkedinConfig() || {};
+
+      // Sempre preencher o Client ID se ele existir, mas manter o Secret em branco por segurança.
+      setConfig({
+        clientId: storedConfig.clientId || '',
+        clientSecret: '',
+      });
+
+      // Separadamente, determinar o status da conexão para a UI
+      if (storedConfig.accessToken) {
         setCurrentConfig(storedConfig);
-        setConfig({
-            clientId: storedConfig.clientId,
-            clientSecret: '', // Do not expose client secret
-        });
       } else {
         setCurrentConfig(null);
-        setConfig({
-            clientId: '',
-            clientSecret: '',
-        });
       }
+
       setMessage('');
     }
   }, [open]);
