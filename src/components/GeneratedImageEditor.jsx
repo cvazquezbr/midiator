@@ -66,6 +66,11 @@ const GeneratedImageEditor = ({
   const theme = useTheme();
   const isLargeScreen = useMediaQuery(theme.breakpoints.up('md'));
 
+  // Local state for image filters and toggles
+  const [editedImageFilters, setEditedImageFilters] = useState(imageFilters);
+  const [editedIncludeLogo, setEditedIncludeLogo] = useState(includeLogo);
+  const [editedIncludeEmpresa, setEditedIncludeEmpresa] = useState(includeEmpresa);
+
   const handleInternalFieldSelection = useCallback((fieldToSelect) => {
     setSelectedFieldInternal(fieldToSelect);
   }, []); // setSelectedFieldInternal is stable
@@ -98,11 +103,17 @@ const GeneratedImageEditor = ({
       });
       setEditedStyles(newEditedStyles);
       setStylesAreInitialized(true); // Mark styles as initialized and ready for rendering children
+
+      // Reset filter and toggle states when the editor is opened for a new image
+      // TODO: In the future, this could be initialized from imageData if custom filters are saved per image
+      setEditedImageFilters(imageFilters);
+      setEditedIncludeLogo(includeLogo);
+      setEditedIncludeEmpresa(includeEmpresa);
     } else {
       // If essential data is missing, ensure we are not in an initialized state.
-      setStylesAreInitialized(false); 
+      setStylesAreInitialized(false);
     }
-  }, [imageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders]); // Added globalCsvHeaders
+  }, [open, imageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, imageFilters, includeLogo, includeEmpresa]);
 
   if (!imageData) {
     return null;
@@ -169,9 +180,9 @@ const GeneratedImageEditor = ({
                 onSelectFieldExternal={handleInternalFieldSelection} // Use memoized handler
                 onCsvDataUpdate={handleFieldPositionerCsvDataUpdate} // Use memoized handler
                 originalImageSize={originalImageSize}
-                imageFilters={imageFilters}
-                includeLogo={includeLogo}
-                includeEmpresa={includeEmpresa}
+                imageFilters={editedImageFilters}
+                includeLogo={editedIncludeLogo}
+                includeEmpresa={editedIncludeEmpresa}
               />
             </Grid>
             {isLargeScreen && (
@@ -183,6 +194,12 @@ const GeneratedImageEditor = ({
                   fieldPositions={editedPositions}
                   setFieldPositions={setEditedPositions}
                   csvHeaders={editorCsvHeaders}
+                  imageFilters={editedImageFilters}
+                  setImageFilters={setEditedImageFilters}
+                  includeLogo={editedIncludeLogo}
+                  setIncludeLogo={setEditedIncludeLogo}
+                  includeEmpresa={editedIncludeEmpresa}
+                  setIncludeEmpresa={setEditedIncludeEmpresa}
                 />
               </Grid>
             )}
