@@ -1,0 +1,49 @@
+/* =================================================================
+   Modern Scrollbar Styles
+================================================================= */
+
+/* Works on Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #8b5cf6 #f8fafc;
+}
+
+.dark-mode-active * {
+    scrollbar-color: #a78bfa #0f172a;
+}
+
+/* Works on Chrome, Edge, and Safari */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+.dark-mode-active ::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  border-radius: 6px;
+  border: 3px solid #f8fafc;
+  background-clip: content-box;
+}
+
+.dark-mode-active ::-webkit-scrollbar-thumb {
+    border-color: #0f172a;
+}
+
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
+  background-clip: content-box;
+}
+
+/* Corner for when both horizontal and vertical scrollbars are present */
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
