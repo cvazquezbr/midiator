@@ -453,7 +453,7 @@ function App() {
         const redirectUri = window.location.origin;
 
         try {
-          const response = await fetch('/api/linkedin-exchange', {
+          const response = await fetch('/api/linkedin-proxy', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
