@@ -1258,7 +1258,7 @@ function App() {
     `;
 
     const finalPrompt = `${promptCompleto}\n\nGere uma resposta JSON com os seguintes campos: "titulo" (string), "conteudo" (string), "cta" (string), e "hashtags" (string, separadas por vírgula). A resposta deve ser apenas o JSON.`;
-
+console.log(finalPrompt)
     try {
       const response = await callGeminiApi(finalPrompt, apiKey);
       console.log("Resposta da IA (Campanha):", response);
