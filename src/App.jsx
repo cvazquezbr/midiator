@@ -450,36 +450,20 @@ function App() {
         // Remove o código da URL para não ser usado novamente
         window.history.replaceState({}, document.title, "/");
 
-        const config = getLinkedinConfig();
-        if (!config || !config.clientId || !config.clientSecret) {
-          console.error('Client ID ou Client Secret do LinkedIn não encontrado.');
-          // Talvez mostrar uma mensagem para o usuário
-          return;
-        }
-
-        const { clientId, clientSecret } = config;
         const redirectUri = window.location.origin;
 
-        const tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
-        const body = new URLSearchParams({
-          grant_type: 'authorization_code',
-          code: code,
-          redirect_uri: redirectUri,
-          client_id: clientId,
-          client_secret: clientSecret,
-        });
-
         try {
-          const response = await fetch(tokenUrl, {
+          const response = await fetch('/api/linkedin-exchange', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
+              'Content-Type': 'application/json',
             },
-            body: body,
+            body: JSON.stringify({ code, redirectUri }),
           });
 
+          const data = await response.json();
+
           if (response.ok) {
-            const data = await response.json();
             const { access_token, expires_in } = data;
 
             saveLinkedinConfig({
