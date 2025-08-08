@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Box } from '@mui/material';
+import RichTextEditor from './RichTextEditor'; // Import the RichTextEditor
 
-const TextEditorDialog = ({ open, title, content, onSave, onClose }) => {
+const TextEditorDialog = ({ open, title, content, onSave, onClose, darkMode }) => {
   const [editedContent, setEditedContent] = useState(content);
 
   useEffect(() => {
-    setEditedContent(content);
+    if (open) {
+      setEditedContent(content);
+    }
   }, [content, open]);
 
   const handleSave = () => {
@@ -17,15 +20,14 @@ const TextEditorDialog = ({ open, title, content, onSave, onClose }) => {
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
-        <TextField
-          multiline
-          rows={15}
-          value={editedContent}
-          onChange={(e) => setEditedContent(e.target.value)}
-          variant="outlined"
-          fullWidth
-          sx={{ mt: 2 }}
-        />
+        <Box sx={{ mt: 2 }}>
+          <RichTextEditor
+            value={editedContent}
+            onChange={setEditedContent}
+            maxHeight={400}
+            darkMode={darkMode}
+          />
+        </Box>
       </DialogContent>
       <DialogActions sx={{ pb: 2, px: 3 }}>
         <Button onClick={onClose}>Cancelar</Button>
