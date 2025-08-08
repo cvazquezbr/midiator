@@ -22,23 +22,18 @@ import {
 const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
   const [config, setConfig] = useState({
     clientId: '',
-    clientSecret: '',
   });
   const [currentConfig, setCurrentConfig] = useState(null);
-  const [showSecret, setShowSecret] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (open) {
       const storedConfig = getLinkedinConfig() || {};
 
-      // Sempre preencher o Client ID se ele existir, mas manter o Secret em branco por segurança.
       setConfig({
         clientId: storedConfig.clientId || '',
-        clientSecret: '',
       });
 
-      // Separadamente, determinar o status da conexão para a UI
       if (storedConfig.accessToken) {
         setCurrentConfig(storedConfig);
       } else {
@@ -64,8 +59,8 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
         await onBeforeRedirect();
       }
 
-      // Save the clientId for the callback handler
-      saveLinkedinConfig({ clientId: config.clientId, clientSecret: config.clientSecret });
+      // Save only the clientId. The secret is handled by the backend.
+      saveLinkedinConfig({ clientId: config.clientId });
 
       const redirectUri = window.location.origin;
       const scope = 'r_basicprofile%20w_member_social%20r_1st_connections_size';
@@ -93,7 +88,7 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          endpoint: 'https://api.linkedin.com/v2/connections?q=viewer&start=0&count=0',
+          action: 'testConnection',
           accessToken: accessToken,
         }),
       });
@@ -168,27 +163,11 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
                   />
               </Grid>
               <Grid item xs={12} sm={6}>
-                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <TextField
-                          name="clientSecret"
-                          label="Client Secret"
-                          type={showSecret ? 'text' : 'password'}
-                          value={config.clientSecret}
-                          onChange={handleChange}
-                          fullWidth
-                          required
-                          variant="outlined"
-                          disabled={currentConfig && currentConfig.accessToken}
-                      />
-                      <IconButton onClick={() => setShowSecret(!showSecret)} edge="end">
-                          {showSecret ? <VisibilityOff /> : <Visibility />}
+                  <Tooltip title={aplicationInfoTooltip}>
+                      <IconButton>
+                          <InfoOutlined />
                       </IconButton>
-                      <Tooltip title={aplicationInfoTooltip}>
-                          <IconButton>
-                              <InfoOutlined />
-                          </IconButton>
-                      </Tooltip>
-                  </Box>
+                  </Tooltip>
               </Grid>
           </Grid>
         )}

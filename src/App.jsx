@@ -458,7 +458,7 @@ function App() {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ code, redirectUri }),
+            body: JSON.stringify({ action: 'tokenExchange', code, redirectUri }),
           });
 
           const data = await response.json();

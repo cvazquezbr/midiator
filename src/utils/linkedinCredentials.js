@@ -4,19 +4,12 @@ const LINKEDIN_CONFIG_KEY = 'linkedinConfig';
  * Salva a configuração do LinkedIn no armazenamento local.
  * @param {object} config - O objeto de configuração.
  */
-export const saveLinkedinConfig = (newConfig) => {
+export const saveLinkedinConfig = (config) => {
   try {
     const existingConfig = getLinkedinConfig() || {};
-
-    // Mescla a configuração existente com a nova
-    const mergedConfig = { ...existingConfig, ...newConfig };
-
-    // Se um novo accessToken está sendo salvo, remova o clientSecret por segurança.
-    if (newConfig.accessToken) {
-      delete mergedConfig.clientSecret;
-    }
-
-    const configString = JSON.stringify(mergedConfig);
+    const newConfig = { ...existingConfig, ...config };
+    // O clientSecret não é mais tratado aqui. Ele vive apenas como uma variável de ambiente no servidor.
+    const configString = JSON.stringify(newConfig);
     localStorage.setItem(LINKEDIN_CONFIG_KEY, configString);
   } catch (error) {
     console.error('Erro ao salvar a configuração do LinkedIn:', error);
