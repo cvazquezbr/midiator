@@ -50,6 +50,7 @@ import {
   Download as DownloadIcon,
   CloudQueue,
   ChevronRight,
+  ChevronLeft,
   Check,
   Add,
   InsertDriveFileOutlined,
@@ -1838,14 +1839,6 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Tooltip title="Alternar sidebar">
-                <IconButton
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  sx={{ color: 'white' }}
-                >
-                  {sidebarOpen ? <Grid3x3 /> : <Visibility />}
-                </IconButton>
-              </Tooltip>
               <Tooltip title={darkMode ? "Alternar para modo claro" : "Alternar para modo escuro"}>
                 <IconButton
                   onClick={() => setDarkMode(!darkMode)}
@@ -1986,6 +1979,27 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             </Box>
           </Box>
         </Drawer>
+
+        <Fab
+          size="small"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          sx={{
+            position: 'fixed',
+            top: '50%',
+            left: sidebarOpen ? 320 - 20 : 0,
+            transform: 'translateY(-50%)',
+            zIndex: (theme) => theme.zIndex.drawer + 2,
+            transition: 'left 0.2s ease-in-out',
+            backgroundColor: 'background.paper',
+            border: '1px solid',
+            borderColor: 'divider',
+            '&:hover': {
+              backgroundColor: 'background.default'
+            }
+          }}
+        >
+          {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
+        </Fab>
 
         {/* Main Content */}
         <Box
