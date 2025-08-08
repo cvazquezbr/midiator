@@ -422,7 +422,7 @@ const FormattingPanel = ({
         </Accordion>
 
         {/* Detalhes de Estilo (Peso, Estilo, Decoração - Avançado) */}
-        <Accordion>
+        <Accordion defaultExpanded>
           <AccordionSummary expandIcon={<ExpandMore />}>
             <Typography variant="subtitle1">
               <Style sx={{ mr: 1, verticalAlign: 'middle' }} />
