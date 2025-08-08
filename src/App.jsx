@@ -1249,8 +1249,8 @@ function App() {
     const { persona, autor, instrucoes, formato } = getCampaignPrompt();
 
     const promptCompleto = `
-      ${persona}
-      ${autor}
+      Persona: ${persona}
+      Autor: ${autor}
       Formato: ${formato}
       Problema: ${problema}
       Solução: ${solucao}
