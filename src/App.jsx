@@ -86,7 +86,7 @@ import GoogleDriveAuthModal from './components/GoogleDriveAuthModal';
 import GoogleCloudTTSAuth from './components/GoogleCloudTTSAuth';
 import WordpressAuthSetup from './components/WordpressAuthSetup';
 import LinkedinAuthSetup from './components/LinkedinAuthSetup';
-import WordpressPublisher from './components/WordpressPublisher';
+import Publisher from './components/Publisher';
 import CampaignPromptDialog from './components/CampaignPromptDialog';
 import { getGeminiApiKey } from './utils/geminiCredentials';
 import { getLinkedinConfig, saveLinkedinConfig } from './utils/linkedinCredentials';
@@ -2754,7 +2754,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
 
           {/* Passo 6: Publicar */}
           {activeStep === 6 && (
-            <WordpressPublisher
+            <Publisher
               campaignContent={campaignContent}
               conteudoFormatado={conteudoFormatado}
               generatedImagesData={generatedImagesData}
