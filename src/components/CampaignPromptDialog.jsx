@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { getCampaignPrompt, saveCampaignPrompt, removeCampaignPrompt } from '../utils/campaignPrompt';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box, FormControl, InputLabel, Select, MenuItem, Tooltip, IconButton } from '@mui/material';
+import { InfoOutlined } from '@mui/icons-material';
 import TextEditorDialog from './TextEditorDialog';
+import HtmlDisplayField from './HtmlDisplayField';
 
 const CampaignPromptDialog = ({ open, onClose }) => {
   const [message, setMessage] = useState('');
@@ -89,23 +91,32 @@ const CampaignPromptDialog = ({ open, onClose }) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Prompt de Campanha</title>
         <style>
-          body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-          h1, h2 { color: #8b5cf6; }
-          .container { border: 1px solid #ddd; border-radius: 8px; padding: 2rem; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-          pre { background-color: #f5f3ff; padding: 1rem; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background-color: #f9f9f9; }
+          .container { background-color: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 2rem; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+          h1 { color: #5e35b1; text-align: center; border-bottom: 2px solid #5e35b1; padding-bottom: 0.5rem; margin-bottom: 2rem; }
+          h2 { color: #8b5cf6; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; margin-top: 2.5rem; }
+          h3 { color: #444; }
+          p { color: #555; }
+          ul, ol { padding-left: 20px; }
+          li { margin-bottom: 0.5rem; }
+          .field-content { margin-top: 1rem; padding: 1rem; background-color: #f5f3ff; border-radius: 8px; }
         </style>
       </head>
       <body>
         <div class="container">
           <h1>Prompt de Campanha</h1>
+
           <h2>Persona</h2>
-          <pre>${persona}</pre>
+          <div class="field-content">${persona}</div>
+
           <h2>Autor</h2>
-          <pre>${autor}</pre>
+          <div class="field-content">${autor}</div>
+
           <h2>Formato</h2>
-          <pre>${formato}</pre>
+          <div class="field-content">${formato}</div>
+
           <h2>Instruções</h2>
-          <pre>${instrucoes}</pre>
+          <div class="field-content">${instrucoes}</div>
         </div>
       </body>
       </html>
@@ -131,47 +142,47 @@ const CampaignPromptDialog = ({ open, onClose }) => {
             Insira ou edite os textos que serão usados como base para gerar o conteúdo da campanha.
           </Typography>
 
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>Persona</Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              value={persona}
-              onClick={() => handleOpenEditor('persona')}
-              readOnly
-              placeholder="Clique para editar a persona..."
-              sx={{ cursor: 'pointer' }}
-            />
-          </Box>
+          <HtmlDisplayField
+            title={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                Persona
+                <Tooltip title="Descreva a persona para quem o conteúdo se destina. Inclua detalhes demográficos, interesses e dores.">
+                  <IconButton size="small" sx={{ ml: 1 }}><InfoOutlined fontSize="small" /></IconButton>
+                </Tooltip>
+              </Box>
+            }
+            htmlContent={persona}
+            onClick={() => handleOpenEditor('persona')}
+            placeholder="Clique para editar a persona..."
+          />
 
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>Autor</Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              value={autor}
-              onClick={() => handleOpenEditor('autor')}
-              readOnly
-              placeholder="Clique para editar o autor..."
-              sx={{ cursor: 'pointer' }}
-            />
-          </Box>
+          <HtmlDisplayField
+            title={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                Autor
+                <Tooltip title="Descreva o autor ou a voz da marca que está criando o conteúdo. Qual o tom, estilo e perspectiva?">
+                  <IconButton size="small" sx={{ ml: 1 }}><InfoOutlined fontSize="small" /></IconButton>
+                </Tooltip>
+              </Box>
+            }
+            htmlContent={autor}
+            onClick={() => handleOpenEditor('autor')}
+            placeholder="Clique para editar o autor..."
+          />
 
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>Formato</Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              value={formato}
-              onClick={() => handleOpenEditor('formato')}
-              readOnly
-              placeholder="Clique para editar o formato..."
-              sx={{ cursor: 'pointer' }}
-            />
-          </Box>
+          <HtmlDisplayField
+            title={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                Formato
+                <Tooltip title="Descreva a estrutura do conteúdo. É uma lista? Um passo-a-passo? Uma história? Dê exemplos se possível.">
+                  <IconButton size="small" sx={{ ml: 1 }}><InfoOutlined fontSize="small" /></IconButton>
+                </Tooltip>
+              </Box>
+            }
+            htmlContent={formato}
+            onClick={() => handleOpenEditor('formato')}
+            placeholder="Clique para editar o formato..."
+          />
 
           <FormControl fullWidth margin="normal">
             <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
@@ -187,19 +198,19 @@ const CampaignPromptDialog = ({ open, onClose }) => {
             </Select>
           </FormControl>
 
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>Instruções</Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={5}
-              value={instrucoes}
-              onClick={() => handleOpenEditor('instrucoes')}
-              readOnly
-              placeholder="Clique para editar as instruções..."
-              sx={{ cursor: 'pointer' }}
-            />
-          </Box>
+          <HtmlDisplayField
+            title={
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                Instruções
+                <Tooltip title="Forneça instruções detalhadas para a IA. Inclua o que fazer e o que não fazer, palavras-chave, e o objetivo do conteúdo.">
+                  <IconButton size="small" sx={{ ml: 1 }}><InfoOutlined fontSize="small" /></IconButton>
+                </Tooltip>
+              </Box>
+            }
+            htmlContent={instrucoes}
+            onClick={() => handleOpenEditor('instrucoes')}
+            placeholder="Clique para editar as instruções..."
+          />
 
           {message && (
             <Typography color={message.includes('sucesso') ? 'green' : (message.includes('removido') ? 'textPrimary' : 'error')} variant="body2" sx={{ mt: 2 }}>
