@@ -29,83 +29,90 @@ const loadImage = (src) => {
  * @param {object} imageFilters - An object containing filter values.
  * @returns {Promise<string>} A promise that resolves with the data URL of the composed image.
  */
-export const composeImage = async (backgroundImageUrl, logoUrl, companyImageUrl, imageFilters = {}) => {
-  console.log('[composeImage] Starting composition with:', { backgroundImageUrl, logoUrl, companyImageUrl, imageFilters });
+export const composeImage = async (
+  backgroundImageUrl,
+  logoUrl,
+  companyImageUrl,
+  imageFilters = {},
+  includeLogo = true,
+  includeEmpresa = true
+) => {
+  console.log('[composeImage] Starting composition with:', {
+    backgroundImageUrl,
+    logoUrl,
+    companyImageUrl,
+    imageFilters,
+    includeLogo,
+    includeEmpresa
+  });
   try {
-    // Since EMPRESA.png has a transparent background, we will use a hardcoded color
-    // for the rectangle, inspired by the text shadow in the image.
     const companyBackgroundColor = '#808080'; // A neutral gray
 
-    // Handle both base64 strings and URLs for the background
     let backgroundSrc = backgroundImageUrl;
     if (!backgroundImageUrl.startsWith('data:') && !backgroundImageUrl.startsWith('http')) {
-      console.log('[composeImage] Detected raw base64 string for background. Prepending data URL prefix.');
       backgroundSrc = `data:image/png;base64,${backgroundImageUrl}`;
     }
 
-    // Load all images in parallel
-    const [bgImg, logoImg, companyImg] = await Promise.all([
-      loadImage(backgroundSrc),
-      loadImage(logoUrl),
-      loadImage(companyImageUrl)
-    ]);
+    const imagePromises = [loadImage(backgroundSrc)];
+    if (includeLogo && logoUrl) {
+      imagePromises.push(loadImage(logoUrl));
+    }
+    if (includeEmpresa && companyImageUrl) {
+      imagePromises.push(loadImage(companyImageUrl));
+    }
 
-    console.log('[composeImage] All images loaded. Dimensions:', {
-      background: { width: bgImg.width, height: bgImg.height },
-      logo: { width: logoImg.width, height: logoImg.height },
-      company: { width: companyImg.width, height: companyImg.height },
-    });
+    const images = await Promise.all(imagePromises);
+    const bgImg = images[0];
+    let logoImg = null;
+    let companyImg = null;
+    let currentImageIndex = 1;
+
+    if (includeLogo && logoUrl) {
+      logoImg = images[currentImageIndex++];
+    }
+    if (includeEmpresa && companyImageUrl) {
+      companyImg = images[currentImageIndex];
+    }
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-
-    // Use the background image's original dimensions for the canvas
     const targetWidth = bgImg.width;
     const targetHeight = bgImg.height;
     canvas.width = targetWidth;
     canvas.height = targetHeight;
-    console.log('[composeImage] Canvas dimensions set to:', { targetWidth, targetHeight });
 
-    // 1. Draw the main background image with filters
     const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = imageFilters;
     const filterString = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
-    console.log('[composeImage] Applying filter to background:', filterString);
     ctx.filter = filterString;
-    console.log('[composeImage] Drawing background image at (0, 0) with dimensions:', { targetWidth, targetHeight });
     ctx.drawImage(bgImg, 0, 0, targetWidth, targetHeight);
-    ctx.filter = 'none'; // Reset filter to not affect other elements
-    console.log('[composeImage] Resetting canvas filter.');
+    ctx.filter = 'none';
 
-    // --- Enhancement: Draw the rectangle for the company image ---
-    // First, calculate the company image's dimensions to determine the rectangle's height.
-    const companyImgHeight = targetHeight * 0.1; // Rectangle height is 10% of the canvas height
-    const companyImgScale = companyImgHeight / companyImg.height;
-    const companyImgWidth = companyImg.width * companyImgScale;
-    console.log('[composeImage] Calculated company image rectangle:', { companyImgHeight, companyImgWidth });
+    const margin = targetWidth * 0.02;
 
-    // 2. Draw the colored rectangle at the bottom of the canvas
-    console.log(`[composeImage] Drawing company background rectangle with color: ${companyBackgroundColor}`);
-    ctx.fillStyle = companyBackgroundColor;
-    ctx.fillRect(0, targetHeight - companyImgHeight, targetWidth, companyImgHeight);
+    if (includeLogo && logoImg) {
+      const logoHeight = targetHeight * 0.1;
+      const logoScale = logoHeight / logoImg.height;
+      const logoWidth = logoImg.width * logoScale;
+      ctx.drawImage(logoImg, margin, margin, logoWidth, logoHeight);
+      console.log(`[composeImage] Drawing logo at (${margin}, ${margin})`);
+    }
 
-    // 3. Draw the logo in the top-left corner with a dynamic margin
-    const logoHeight = targetHeight * 0.1; // Logo height is 10% of canvas height
-    const logoScale = logoHeight / logoImg.height;
-    const logoWidth = logoImg.width * logoScale;
-    const margin = targetWidth * 0.02; // Use 2% of the canvas width as margin
-    console.log('[composeImage] Calculated logo dimensions and margin:', { logoHeight, logoWidth, margin });
-    console.log(`[composeImage] Drawing logo at (${margin}, ${margin}) with dimensions:`, { logoWidth, logoHeight });
-    ctx.drawImage(logoImg, margin, margin, logoWidth, logoHeight);
+    if (includeEmpresa && companyImg) {
+      const companyImgHeight = targetHeight * 0.1;
+      const companyImgScale = companyImgHeight / companyImg.height;
+      const companyImgWidth = companyImg.width * companyImgScale;
 
-    // 4. Draw the company image on the bottom-right, over the rectangle, with the same dynamic margin
-    const companyImgX = targetWidth - companyImgWidth - margin;
-    const companyImgY = targetHeight - companyImgHeight; // Aligns with the top of the rectangle
-    console.log(`[composeImage] Drawing company image at (${companyImgX}, ${companyImgY}) with dimensions:`, { companyImgWidth, companyImgHeight });
-    ctx.drawImage(companyImg, companyImgX, companyImgY, companyImgWidth, companyImgHeight);
+      ctx.fillStyle = companyBackgroundColor;
+      ctx.fillRect(0, targetHeight - companyImgHeight, targetWidth, companyImgHeight);
 
-    console.log('[composeImage] Generating final data URL...');
+      const companyImgX = targetWidth - companyImgWidth - margin;
+      const companyImgY = targetHeight - companyImgHeight;
+      ctx.drawImage(companyImg, companyImgX, companyImgY, companyImgWidth, companyImgHeight);
+      console.log(`[composeImage] Drawing company image at (${companyImgX}, ${companyImgY})`);
+    }
+
     const finalUrl = canvas.toDataURL('image/png');
-    console.log('[composeImage] Composition finished. Returning data URL.');
+    console.log('[composeImage] Composition finished.');
     return finalUrl;
   } catch (error) {
     console.error('Error composing image:', error);

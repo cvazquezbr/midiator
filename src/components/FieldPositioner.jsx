@@ -43,6 +43,8 @@ const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
   shadowOffsetY: 2,
 };
 
+import { composeImage } from '../utils/imageComposer';
+
 const FieldPositioner = ({
   backgroundImage,
   csvHeaders,
@@ -58,13 +60,45 @@ const FieldPositioner = ({
   originalImageSize,
   darkMode,
   imageFilters,
-  setImageFilters
+  includeLogo,
+  includeEmpresa
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+  const [composedImageUrl, setComposedImageUrl] = useState(null);
+  const [isComposing, setIsComposing] = useState(false);
+
+  useEffect(() => {
+    if (!backgroundImage) {
+      setComposedImageUrl(null);
+      return;
+    }
+
+    const generateComposedImage = async () => {
+      setIsComposing(true);
+      try {
+        const composedUrl = await composeImage(
+          backgroundImage,
+          '/logo.png',
+          '/empresa.png',
+          imageFilters,
+          includeLogo,
+          includeEmpresa
+        );
+        setComposedImageUrl(composedUrl);
+      } catch (error) {
+        console.error("Error composing image in FieldPositioner:", error);
+        setComposedImageUrl(backgroundImage); // Fallback to original image
+      } finally {
+        setIsComposing(false);
+      }
+    };
+
+    generateComposedImage();
+  }, [backgroundImage, imageFilters, includeLogo, includeEmpresa]);
 
   // Campos que devem usar renderização HTML
   const htmlFields = ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'];
@@ -366,8 +400,13 @@ const FieldPositioner = ({
               onTouchStart={handleContainerTouchStart}
               onTouchEnd={handleContainerTouchEnd}
             >
+              {isComposing && (
+                <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white', backgroundColor: 'rgba(0,0,0,0.5)', padding: '10px', borderRadius: '8px' }}>
+                  <Typography>Atualizando...</Typography>
+                </Box>
+              )}
               <img
-                src={backgroundImage}
+                src={composedImageUrl || backgroundImage}
                 alt="Background"
                 style={{
                   width: '100%',
@@ -376,7 +415,8 @@ const FieldPositioner = ({
                   pointerEvents: 'none',
                   userSelect: 'none',
                   WebkitUserDrag: 'none',
-                  filter: `brightness(${imageFilters.brightness}%) contrast(${imageFilters.contrast}%) saturate(${imageFilters.saturate}%) blur(${imageFilters.blur}px) opacity(${imageFilters.opacity}%)`,
+                  opacity: isComposing ? 0.5 : 1,
+                  transition: 'opacity 0.3s',
                 }}
                 draggable={false}
               />
