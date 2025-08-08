@@ -38,8 +38,6 @@ import {
 import GoogleAuthSetup from './GoogleAuthSetup';
 import GeneratedImageEditor from './GeneratedImageEditor'; // Importar o novo editor
 import googleDriveAPI from '../utils/googleDriveAPI';
-import { containsHtml, renderHtmlToCanvas } from '../utils/htmlRenderer';
-
 const loadImage = (src) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
