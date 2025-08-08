@@ -59,6 +59,7 @@ import {
   Campaign,
   AspectRatio,
   Language,
+  Publish,
 } from '@mui/icons-material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Papa from 'papaparse';
@@ -80,13 +81,13 @@ import GoogleDriveAuthModal from './components/GoogleDriveAuthModal';
 import GoogleCloudTTSAuth from './components/GoogleCloudTTSAuth';
 import WordpressAuthSetup from './components/WordpressAuthSetup';
 import LinkedinAuthSetup from './components/LinkedinAuthSetup';
+import WordpressPublisher from './components/WordpressPublisher';
 import CampaignPromptDialog from './components/CampaignPromptDialog';
 import { getGeminiApiKey } from './utils/geminiCredentials';
 import { getLinkedinConfig, saveLinkedinConfig } from './utils/linkedinCredentials';
 import { getCampaignPrompt } from './utils/campaignPrompt';
 import { callGeminiApi, generateImage } from './utils/geminiAPI';
 import { composeImage } from './utils/imageComposer';
-import { publishToWordPress } from './utils/wordpressAPI';
 import GoogleIcon from '@mui/icons-material/Google';
 import pako from 'pako';
 import './App.css';
@@ -398,11 +399,6 @@ function App() {
   const [conteudoFormatado, setConteudoFormatado] = useState('');
   const [isGeneratingConteudoFormatado, setIsGeneratingConteudoFormatado] = useState(false);
 
-  // Estados para Publicação
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [publishingStatus, setPublishingStatus] = useState('');
-  const [publishedPostUrl, setPublishedPostUrl] = useState(null);
-
 
   // Estados para a Geração com IA
   const [inputMethod, setInputMethod] = useState('csv');
@@ -536,6 +532,11 @@ function App() {
       label: 'Gerar Imagens',
       description: 'Gere as imagens finais.',
       icon: FormatBold
+    },
+    {
+      label: 'Publicar',
+      description: 'Publique o conteúdo no WordPress.',
+      icon: Publish
     },
     {
       label: 'Gerar Áudio',
@@ -1516,36 +1517,6 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  const handlePublishToWordPress = async () => {
-    setIsPublishing(true);
-    setPublishingStatus('Iniciando publicação...');
-    setPublishedPostUrl(null);
-
-    try {
-      if (!campaignContent || !generatedImageUrl || !conteudoFormatado) {
-        throw new Error('Dados da campanha incompletos. Gere todo o conteúdo primeiro.');
-      }
-
-      const campaignData = {
-        campaignContent,
-        generatedImageUrl,
-        conteudoFormatado,
-      };
-
-      setPublishingStatus('Publicando no WordPress... Isso pode levar um momento.');
-      const post = await publishToWordPress(campaignData);
-
-      setPublishingStatus(`Post "${post.title.rendered}" criado como rascunho com sucesso!`);
-      setPublishedPostUrl(post.link);
-
-    } catch (error) {
-      console.error('Erro ao publicar no WordPress:', error);
-      setPublishingStatus(`Erro ao publicar: ${error.message}`);
-    } finally {
-      setIsPublishing(false);
-    }
-  };
-
   const handleGenerateIAContent = async () => {
     setIsGenerating(true);
 
@@ -2107,36 +2078,14 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
 
                 {campaignContent && (
                   <Box sx={{ mt: 4 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
                       <Button
                         variant="outlined"
                         onClick={handleExportHtml}
                       >
                         Exportar como HTML
                       </Button>
-                      <Button
-                        variant="contained"
-                        color="secondary"
-                        startIcon={<Language />}
-                        onClick={handlePublishToWordPress}
-                        disabled={isPublishing || !generatedImageUrl}
-                      >
-                        {isPublishing ? 'Publicando...' : 'Publicar no WordPress'}
-                      </Button>
                     </Box>
-
-                    {isPublishing && <LinearProgress sx={{ mb: 2 }} />}
-                    {publishingStatus && (
-                      <Alert severity={publishedPostUrl ? "success" : "info"} sx={{ mb: 2 }}>
-                        {publishingStatus}
-                        {publishedPostUrl && (
-                          <MuiLink href={publishedPostUrl} target="_blank" rel="noopener" sx={{ ml: 1 }}>
-                            Ver post
-                          </MuiLink>
-                        )}
-                      </Alert>
-                    )}
-
                     <Typography variant="h6" gutterBottom>Conteúdo Gerado</Typography>
                     <Grid container spacing={2}>
                       <Grid item xs={12}>
@@ -2646,8 +2595,17 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             />
           )}
 
-          {/* Passo 6: Geração de Áudio */}
-          <div hidden={activeStep !== 6}>
+          {/* Passo 6: Publicar */}
+          {activeStep === 6 && (
+            <WordpressPublisher
+              campaignContent={campaignContent}
+              conteudoFormatado={conteudoFormatado}
+              generatedImagesData={generatedImagesData}
+            />
+          )}
+
+          {/* Passo 7: Geração de Áudio */}
+          <div hidden={activeStep !== 7}>
             <AudioGenerator
               csvData={csvData}
               fieldPositions={fieldPositions}
@@ -2656,8 +2614,8 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             />
           </div>
 
-          {/* Passo 7: Geração de Vídeo */}
-          {activeStep === 7 && (
+          {/* Passo 8: Geração de Vídeo */}
+          {activeStep === 8 && (
             <VideoGenerator2
               generatedImages={generatedImagesData}
               generatedAudioData={generatedAudioData}
