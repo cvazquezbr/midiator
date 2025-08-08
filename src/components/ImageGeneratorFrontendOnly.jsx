@@ -138,7 +138,7 @@ const ImageGeneratorFrontendOnly = ({
     // If `generatedImages` were included, and `setGeneratedImages` was called, it could lead to
     // loops if `App.jsx` passes the same reference back. The `initialGeneratedImagesData !== generatedImages`
     // check helps, but keeping dependencies minimal for prop-driven effects is often clearer.
-  }, [initialGeneratedImagesData, generatedImages]);
+  }, [initialGeneratedImagesData]);
 
   // Função para quebrar texto em linhas dentro de uma área retangular
   const wrapTextInArea = (ctx, text, x, y, maxWidth, maxHeight, style) => {
