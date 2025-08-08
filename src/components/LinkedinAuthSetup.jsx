@@ -87,14 +87,19 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
 
     setMessage('Testando conexão...');
     try {
-      const response = await fetch('https://api.linkedin.com/v2/connections?q=viewer&start=0&count=0', {
+      const response = await fetch('/api/linkedin-proxy', {
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          endpoint: 'https://api.linkedin.com/v2/connections?q=viewer&start=0&count=0',
+          accessToken: accessToken,
+        }),
       });
 
+      const data = await response.json();
       if (response.ok) {
-        const data = await response.json();
         setMessage(`✅ Conexão bem-sucedida. Você tem ${data.paging.total} conexões de 1º grau.`);
       } else {
         const errorData = await response.json().catch(() => ({ message: 'Não foi possível ler a resposta de erro.' }));
