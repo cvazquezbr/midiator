@@ -241,6 +241,10 @@ function App() {
   const [showLinkedinAuthModal, setShowLinkedinAuthModal] = useState(false);
   const [showCampaignPromptModal, setShowCampaignPromptModal] = useState(false);
 
+  // REQ 4.1 & 4.2: State for logo and company image visibility
+  const [showLogo, setShowLogo] = useState(true);
+  const [showEmpresa, setShowEmpresa] = useState(true);
+
   const saveStateToSessionStorage = async () => {
     const blobToBase64 = (blob) => {
       return new Promise((resolve, reject) => {
@@ -685,30 +689,15 @@ function App() {
   const parseImageFile = (file) => {
     if (file) {
       const reader = new FileReader();
-      reader.onload = async (e) => {
+      reader.onload = (e) => {
         const imageUrl = e.target.result;
-        setIsComposingImage(true); // Ativa o indicador de carregamento
-        try {
-          // Compõe a imagem com o logo e a imagem da empresa
-          const composedImageUrl = await composeImage(
-            imageUrl,
-            `${window.location.origin}/logo.png`,
-            `${window.location.origin}/empresa.png`
-          );
-          // Atualiza o estado com a imagem composta
-          console.log('[App.jsx] Composition successful. Updating background image state.');
-          updateImageAndPalette(composedImageUrl);
-          const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar');
-          if (etapaPosicionarFormatarIndex !== -1) {
-            setActiveStep(etapaPosicionarFormatarIndex);
-          }
-        } catch (error) {
-          console.error("[App.jsx] Erro ao compor a imagem de fundo:", error);
-          alert("Ocorreu um erro ao adicionar o logo e a imagem da empresa. Usando a imagem de fundo original.");
-          // Fallback: usa a imagem original se a composição falhar
-          updateImageAndPalette(imageUrl);
-        } finally {
-          setIsComposingImage(false); // Desativa o indicador de carregamento
+        // REQ 2.1.1: Não combinar mais o logo e a empresa aqui.
+        // A composição será feita na etapa "Posicionar e Formatar" e na geração final.
+        console.log('[App.jsx] Skipping composition. Updating background image state with original image.');
+        updateImageAndPalette(imageUrl);
+        const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar');
+        if (etapaPosicionarFormatarIndex !== -1) {
+          setActiveStep(etapaPosicionarFormatarIndex);
         }
       };
       reader.readAsDataURL(file);
@@ -1347,25 +1336,12 @@ function App() {
       `;
       const base64Image = await generateImage(imagePrompt, apiKey);
 
-      setIsComposingImage(true);
-      try {
-        const composedImageUrl = await composeImage(
-          base64Image,
-          `${window.location.origin}/logo.png`,
-          `${window.location.origin}/empresa.png`
-        );
-        setGeneratedImageUrl(composedImageUrl);
-        updateImageAndPalette(composedImageUrl);
-      } catch (compositionError) {
-        console.error("Erro ao compor a imagem:", compositionError);
-        alert("A imagem foi gerada pela IA, mas falhou ao combiná-la com o logo. Verifique se os arquivos 'logo.png' e 'empresa.png' existem na pasta 'public'. Usando a imagem original da IA.");
-        // Fallback: usa a imagem original gerada pela IA sem a composição
-        const originalImageUrl = `data:image/png;base64,${base64Image}`;
-        setGeneratedImageUrl(originalImageUrl);
-        updateImageAndPalette(originalImageUrl);
-      } finally {
-        setIsComposingImage(false);
-      }
+      // REQ 2.1.1: Não combinar mais o logo e a empresa aqui.
+      // A composição será feita na etapa "Posicionar e Formatar" e na geração final.
+      const imageUrl = `data:image/png;base64,${base64Image}`;
+      console.log('[App.jsx] Skipping composition for AI generated image. Updating background image state with original image.');
+      setGeneratedImageUrl(imageUrl);
+      updateImageAndPalette(imageUrl);
 
     } catch (imageError) {
       console.error("Erro ao gerar imagem:", imageError);
@@ -2572,6 +2548,8 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   originalImageSize={originalImageSize}
                   imageFilters={imageFilters}
                   setImageFilters={setImageFilters}
+                  showLogo={showLogo}
+                  showEmpresa={showEmpresa}
                 />
               </Grid>
               {!isMobile && (
@@ -2585,6 +2563,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                     csvHeaders={csvHeaders}
                     imageFilters={imageFilters}
                     setImageFilters={setImageFilters}
+                    showLogo={showLogo}
+                    setShowLogo={setShowLogo}
+                    showEmpresa={showEmpresa}
+                    setShowEmpresa={setShowEmpresa}
                   />
                 </Grid>
               )}
@@ -2606,6 +2588,8 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
               originalImageSize={originalImageSize}
               imageFilters={imageFilters}
+              showLogo={showLogo}
+              showEmpresa={showEmpresa}
             />
           )}
 

@@ -58,7 +58,9 @@ const FieldPositioner = ({
   originalImageSize,
   darkMode,
   imageFilters,
-  setImageFilters
+  setImageFilters,
+  showLogo,
+  showEmpresa,
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -380,6 +382,52 @@ const FieldPositioner = ({
                 }}
                 draggable={false}
               />
+
+              {/* REQ 2.2.1: Exibir logo.png e empresa.png aqui */}
+              {showLogo && (
+                <img
+                  src="/logo.png"
+                  alt="Logo"
+                  style={{
+                    position: 'absolute',
+                    top: '2%',
+                    left: '2%',
+                    height: '10%',
+                    width: 'auto',
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}
+                />
+              )}
+
+              {showEmpresa && (
+                <>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '10%',
+                      backgroundColor: '#808080',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                  <img
+                    src="/empresa.png"
+                    alt="Empresa"
+                    style={{
+                      position: 'absolute',
+                      bottom: '0%',
+                      right: '2%',
+                      height: '10%',
+                      width: 'auto',
+                      pointerEvents: 'none',
+                      userSelect: 'none',
+                    }}
+                  />
+                </>
+              )}
 
               {csvHeaders && csvHeaders.length > 0
                 ? csvHeaders.map(header => {

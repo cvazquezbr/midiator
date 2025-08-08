@@ -38,7 +38,17 @@ import {
 import GoogleAuthSetup from './GoogleAuthSetup';
 import GeneratedImageEditor from './GeneratedImageEditor'; // Importar o novo editor
 import googleDriveAPI from '../utils/googleDriveAPI';
-import { composeImage } from '../utils/imageComposer';
+import { containsHtml, renderHtmlToCanvas } from '../utils/htmlRenderer';
+
+const loadImage = (src) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = (err) => reject(new Error(`Failed to load image: ${src}`, { cause: err }));
+    img.src = src;
+  });
+};
 
 const ImageGeneratorFrontendOnly = ({
   csvData,
@@ -51,7 +61,9 @@ const ImageGeneratorFrontendOnly = ({
   initialGeneratedImagesData, // Dados iniciais carregados do JSON
   onThumbnailRecordTextUpdate, // <-- ADICIONADO: Callback para atualizar o CSV em App.jsx
   originalImageSize,
-  imageFilters
+  imageFilters,
+  showLogo,
+  showEmpresa,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -238,45 +250,52 @@ const ImageGeneratorFrontendOnly = ({
     const images = [];
 
     try {
-      // 1. Compor a imagem de fundo com logo e empresa UMA VEZ
-      console.log('[generateImages] Calling composeImage for the main generation.');
-      const composedBackgroundImageUrl = await composeImage(
-        backgroundImage,
-        '/logo.png',
-        '/empresa.png',
-        imageFilters
-      );
-      console.log('[generateImages] composeImage finished for the main generation.');
-
-      // 2. Carregar a imagem composta para ser usada no loop
-      const img = new Image();
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = composedBackgroundImageUrl; // Usar a imagem composta
-      });
+      // 1. Carregar todas as imagens necessárias uma vez
+      const [bgImg, logoImg, companyImg] = await Promise.all([
+        loadImage(backgroundImage),
+        showLogo ? loadImage('/logo.png') : Promise.resolve(null),
+        showEmpresa ? loadImage('/empresa.png') : Promise.resolve(null)
+      ]);
 
       for (let i = 0; i < csvData.length; i++) {
-        if (isCancelledRef.current) {
-          break;
-        }
-        const record = csvData[i];
+        if (isCancelledRef.current) break;
 
-        // Criar canvas para cada registro
+        const record = csvData[i];
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-
-        // Configurar canvas com alta qualidade
-        canvas.width = img.width;
-        canvas.height = img.height;
-
-        // Melhorar qualidade de renderização
+        canvas.width = bgImg.width;
+        canvas.height = bgImg.height;
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
-        ctx.textRenderingOptimization = 'optimizeQuality';
 
-        // Desenhar imagem de fundo JÁ COMPOSTA
-        ctx.drawImage(img, 0, 0);
+        // 2. Desenhar imagem de fundo com filtros
+        const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = imageFilters;
+        ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
+        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+        ctx.filter = 'none'; // Resetar filtro
+
+        // 3. Desenhar logos condicionalmente
+        if (showLogo && logoImg) {
+            const logoHeight = canvas.height * 0.1;
+            const logoScale = logoHeight / logoImg.height;
+            const logoWidth = logoImg.width * logoScale;
+            const margin = canvas.width * 0.02;
+            ctx.drawImage(logoImg, margin, margin, logoWidth, logoHeight);
+        }
+
+        if (showEmpresa && companyImg) {
+            const companyImgHeight = canvas.height * 0.1;
+            const companyImgScale = companyImgHeight / companyImg.height;
+            const companyImgWidth = companyImg.width * companyImgScale;
+            const margin = canvas.width * 0.02;
+
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(0, canvas.height - companyImgHeight, canvas.width, companyImgHeight);
+
+            const companyImgX = canvas.width - companyImgWidth - margin;
+            const companyImgY = canvas.height - companyImgHeight;
+            ctx.drawImage(companyImg, companyImgX, companyImgY, companyImgWidth, companyImgHeight);
+        }
 
           // Desenhar campos do CSV com estilos individuais
           for (const field of Object.keys(record)) {
@@ -562,32 +581,46 @@ const ImageGeneratorFrontendOnly = ({
     }
 
     try {
-      // 1. Compor a imagem de fundo com logo e empresa
-      console.log(`[regenerateSingleImage] Calling composeImage for index ${index}.`);
-      const composedBackgroundImageUrl = await composeImage(
-        currentBackgroundImage,
-        '/logo.png',
-        '/empresa.png',
-        imageFilters
-      );
-      console.log(`[regenerateSingleImage] composeImage finished for index ${index}.`);
-
-      // 2. Carregar a imagem recém-composta
-      const img = new Image();
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = (err) => reject(new Error('Failed to load composed background for regeneration.', { cause: err }));
-        img.src = composedBackgroundImageUrl;
-      });
+      // 1. Carregar todas as imagens necessárias uma vez
+      const [bgImg, logoImg, companyImg] = await Promise.all([
+        loadImage(currentBackgroundImage),
+        showLogo ? loadImage('/logo.png') : Promise.resolve(null),
+        showEmpresa ? loadImage('/empresa.png') : Promise.resolve(null)
+      ]);
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = img.width;
-      canvas.height = img.height;
+      canvas.width = bgImg.width;
+      canvas.height = bgImg.height;
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
-      ctx.textRenderingOptimization = 'optimizeQuality';
-      ctx.drawImage(img, 0, 0);
+
+      // 2. Desenhar imagem de fundo com filtros
+      const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = imageFilters;
+      ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      ctx.filter = 'none';
+
+      // 3. Desenhar logos condicionalmente
+      if (showLogo && logoImg) {
+          const logoHeight = canvas.height * 0.1;
+          const logoScale = logoHeight / logoImg.height;
+          const logoWidth = logoImg.width * logoScale;
+          const margin = canvas.width * 0.02;
+          ctx.drawImage(logoImg, margin, margin, logoWidth, logoHeight);
+      }
+
+      if (showEmpresa && companyImg) {
+          const companyImgHeight = canvas.height * 0.1;
+          const companyImgScale = companyImgHeight / companyImg.height;
+          const companyImgWidth = companyImg.width * companyImgScale;
+          const margin = canvas.width * 0.02;
+          ctx.fillStyle = '#808080';
+          ctx.fillRect(0, canvas.height - companyImgHeight, canvas.width, companyImgHeight);
+          const companyImgX = canvas.width - companyImgWidth - margin;
+          const companyImgY = canvas.height - companyImgHeight;
+          ctx.drawImage(companyImg, companyImgX, companyImgY, companyImgWidth, companyImgHeight);
+      }
 
       for (const field of Object.keys(record)) {
         const position = positionsToUse[field];
