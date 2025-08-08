@@ -94,6 +94,7 @@ import { getCampaignPrompt } from './utils/campaignPrompt';
 import { callGeminiApi, generateImage } from './utils/geminiAPI';
 import GoogleIcon from '@mui/icons-material/Google';
 import pako from 'pako';
+import { stripHtml } from './lib/utils';
 import './App.css';
 import LoadingDialog from './components/LoadingDialog';
 import TextEditorDialog from './components/TextEditorDialog';
@@ -1249,12 +1250,12 @@ function App() {
     const { persona, autor, instrucoes, formato } = getCampaignPrompt();
 
     const promptCompleto = `
-      Persona: ${persona}
-      Autor: ${autor}
-      Formato: ${formato}
-      Problema: ${problema}
-      Solução: ${solucao}
-      ${instrucoes}
+      Persona: ${stripHtml(persona)}
+      Autor: ${stripHtml(autor)}
+      Formato: ${stripHtml(formato)}
+      Problema: ${stripHtml(problema)}
+      Solução: ${stripHtml(solucao)}
+      ${stripHtml(instrucoes)}
     `;
 
     const finalPrompt = `${promptCompleto}\n\nGere uma resposta JSON com os seguintes campos: "titulo" (string), "conteudo" (string), "cta" (string), e "hashtags" (string, separadas por vírgula). A resposta deve ser apenas o JSON.`;
@@ -1330,9 +1331,9 @@ console.log(finalPrompt)
     const { persona, autor } = getCampaignPrompt();
     try {
       const imagePrompt = `
-        Persona: ${persona}
-        Autor: ${autor}
-        Resumo do Conteúdo: ${content.titulo}. ${content.conteudo}
+        Persona: ${stripHtml(persona)}
+        Autor: ${stripHtml(autor)}
+        Resumo do Conteúdo: ${stripHtml(content.titulo)}. ${stripHtml(content.conteudo)}
         Razão de Aspecto: ${aspectRatio}
         IMPORTANTE: A imagem gerada não deve conter nenhum tipo de texto, escrita, letras ou palavras.
       `;
@@ -1371,7 +1372,7 @@ console.log(finalPrompt)
     }
 
     try {
-      const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${content.conteudo}"`;
+      const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`;
       const summary = await callGeminiApi(summaryPrompt, apiKey);
 
       if (targetLength === 1800) {
@@ -1412,9 +1413,9 @@ console.log(finalPrompt)
         ATENÇÃO aos campos que requeiram escape como aspas. Adicionalmente, o uso de &quot; é válido em HTML mas causa problemas em JSON. Atenção para evitar quebras de linha no conteúdo HTML e caracteres especiais não escapados.
         Segue o texto:
 
-        Título: ${content.titulo}
-        Conteúdo: ${content.conteudo}
-        CTA: ${content.cta}
+        Título: ${stripHtml(content.titulo)}
+        Conteúdo: ${stripHtml(content.conteudo)}
+        CTA: ${stripHtml(content.cta)}
       `;
 
       const rawContent = await callGeminiApi(prompt, apiKey);
@@ -1452,10 +1453,10 @@ console.log(finalPrompt)
         Você é um especialista em marketing de conteúdo e copywriting para líderes técnicos. Sua tarefa é criar ${followupPostsQuantity} posts "isca" baseados no conteúdo principal fornecido.
 
         CONTEXTO:
-        O conteúdo principal aborda: [${content.titulo} - ${content.conteudo}]
+        O conteúdo principal aborda: [${stripHtml(content.titulo)} - ${stripHtml(content.conteudo)}]
 
         PERSONAS-ALVO:
-        - ${persona}
+        - ${stripHtml(persona)}
 
         DIRETRIZES PARA OS POSTS:
 
@@ -1636,7 +1637,7 @@ console.log(finalPrompt)
     const finalPrompt = `A partir do TEXTO BASE fornecido abaixo, gere conteúdo para um carrossel de Instagram com ${promptNumRecords} elementos.
 
 TEXTO BASE:
-${promptText}
+${stripHtml(promptText)}
 
 INSTRUÇÕES DE FORMATAÇÃO DA SAÍDA (MUITO IMPORTANTE):
 A SUA RESPOSTA DEVE CONTER *APENAS E SOMENTE* UM BLOCO DE TEXTO FORMATADO COMO CSV, SEM NENHUM TEXTO ADICIONAL ANTES OU DEPOIS DO BLOCO CSV.
