@@ -13,8 +13,8 @@ export default async function handler(request, response) {
 
   // Case 1: OAuth Token Exchange
   if (code) {
-    const clientId = process.env.VITE_LINKEDIN_CLIENT_ID;
-    const clientSecret = process.env.VITE_LINKEDIN_CLIENT_SECRET;
+    const clientId = process.env.LINKEDIN_CLIENT_ID;
+    const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
 
     if (!redirectUri) {
       return response.status(400).json({ error: 'Redirect URI is missing for token exchange.' });
