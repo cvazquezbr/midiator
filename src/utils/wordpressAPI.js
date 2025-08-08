@@ -81,19 +81,15 @@ const _processHashtags = async (hashtags, config, headers) => {
 
 /**
  * Faz o upload de uma imagem para o WordPress e retorna os dados da mídia.
- * @param {string} imageUrl - A URL da imagem gerada (pode ser base64).
+ * @param {Blob} imageBlob - O blob da imagem a ser enviada.
  * @param {object} campaignContent - O conteúdo da campanha para metadados.
  * @param {object} config - O objeto de configuração do WordPress.
  * @param {Headers} headers - Os cabeçalhos da requisição (sem Content-Type de JSON).
  * @returns {Promise<object>} Uma promessa que resolve para o objeto da mídia criada.
  */
-const _uploadImage = async (imageUrl, campaignContent, config, headers) => {
+const _uploadImage = async (imageBlob, campaignContent, config, headers) => {
   const wordpressUrl = config.wordpressUrl.replace(/\/$/, '');
   const mediaUrl = `${wordpressUrl}${config.mediaUrl}`;
-
-  // Converter a imagem (que pode ser base64) para um Blob
-  const fetchResponse = await fetch(imageUrl);
-  const imageBlob = await fetchResponse.blob();
 
   // Criar um nome de arquivo a partir do título
   const filename = `${campaignContent.titulo.replace(/\s+/g, '-').toLowerCase()}.png`;
@@ -184,13 +180,13 @@ const _createPost = async (campaignContent, conteudoFormatado, tagIds, mediaId, 
  * Publica o conteúdo de uma campanha no WordPress.
  * @param {object} campaignData - Objeto contendo os dados da campanha.
  *   @param {object} campaignData.campaignContent - Título, conteúdo, CTA, hashtags.
- *   @param {string} campaignData.generatedImageUrl - A URL da imagem gerada.
+ *   @param {Blob} campaignData.imageBlob - O blob da imagem a ser enviada.
  *   @param {string} campaignData.conteudoFormatado - O conteúdo principal em HTML.
  * @returns {Promise<object>} Uma promessa que resolve para o objeto do post criado.
  * @throws {Error} Se a configuração do WordPress não for encontrada ou se ocorrer um erro na API.
  */
 export const publishToWordPress = async (campaignData) => {
-  const { campaignContent, generatedImageUrl, conteudoFormatado } = campaignData;
+  const { campaignContent, imageBlob, conteudoFormatado } = campaignData;
 
   const config = getWordpressConfig();
   if (!config) {
@@ -206,7 +202,7 @@ export const publishToWordPress = async (campaignData) => {
 
   // 2. Fazer Upload da Imagem
   console.log('Publicando no WordPress: Fazendo upload da imagem...');
-  const mediaObject = await _uploadImage(generatedImageUrl, campaignContent, config, headers);
+  const mediaObject = await _uploadImage(imageBlob, campaignContent, config, headers);
   const mediaId = mediaObject.id;
   const mediaUrl = mediaObject.guid.rendered;
   console.log('Publicando no WordPress: Imagem enviada. ID:', mediaId);
