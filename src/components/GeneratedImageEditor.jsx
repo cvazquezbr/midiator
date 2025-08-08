@@ -52,7 +52,10 @@ const GeneratedImageEditor = ({
   onSave, // Callback: (editedImageData) => void
   colorPalette, // Paleta de cores global
   globalBackgroundImage, // Imagem de fundo global, como fallback
-  originalImageSize
+  originalImageSize,
+  imageFilters, // Adicionado
+  includeLogo, // Adicionado
+  includeEmpresa // Adicionado
 }) => {
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
@@ -166,6 +169,9 @@ const GeneratedImageEditor = ({
                 onSelectFieldExternal={handleInternalFieldSelection} // Use memoized handler
                 onCsvDataUpdate={handleFieldPositionerCsvDataUpdate} // Use memoized handler
                 originalImageSize={originalImageSize}
+                imageFilters={imageFilters}
+                includeLogo={includeLogo}
+                includeEmpresa={includeEmpresa}
               />
             </Grid>
             {isLargeScreen && (

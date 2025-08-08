@@ -1201,6 +1201,9 @@ const ImageGeneratorFrontendOnly = ({
             colorPalette={colorPalette}
             globalBackgroundImage={backgroundImage}
             originalImageSize={originalImageSize} // Pass the prop here
+            imageFilters={imageFilters}
+            includeLogo={includeLogo}
+            includeEmpresa={includeEmpresa}
           />
         );
       })()}
