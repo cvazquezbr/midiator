@@ -829,8 +829,9 @@ function App() {
       );
 
       const stateToSave = {
-        version: "1.6",
+        version: "1.7", // Incremented version to reflect this change
         backgroundImageUrl: backgroundImage,
+        originalImageSize: originalImageSize, // <<<<<<<<<<<< SAVE
         fieldPositions: fieldPositions,
         fieldStyles: fieldStyles,
         csvHeaders: csvHeaders,
@@ -897,7 +898,7 @@ function App() {
           };
 
           // Verificar versão e campos essenciais
-          if (loadedState.version && ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6"].includes(loadedState.version) &&
+          if (loadedState.version && ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7"].includes(loadedState.version) &&
             loadedState.backgroundImageUrl !== undefined &&
             loadedState.fieldPositions &&
             loadedState.fieldStyles &&
@@ -907,6 +908,11 @@ function App() {
             setFieldPositions(loadedState.fieldPositions);
             setFieldStyles(loadedState.fieldStyles);
             setCsvHeaders(loadedState.csvHeaders);
+
+            // Restore originalImageSize if it exists in the saved file
+            if (loadedState.originalImageSize) {
+              setOriginalImageSize(loadedState.originalImageSize);
+            }
 
             if (loadedState.colorPalette) {
               setColorPalette(loadedState.colorPalette);
