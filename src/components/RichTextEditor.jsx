@@ -333,16 +333,6 @@ const RichTextEditor = ({
                 size="small"
                 onClick={() => execCommand(button.command)}
                 disabled={disabled || htmlMode}
-                sx={darkMode ? {
-                  color: '#ffffff !important',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.08) !important'
-                  },
-                  '&.active': {
-                    backgroundColor: '#90caf9 !important',
-                    color: '#000000 !important'
-                  }
-                } : {}}
               >
                 {button.icon}
               </IconButton>
@@ -361,16 +351,6 @@ const RichTextEditor = ({
                 size="small"
                 onClick={() => execCommand(button.command)}
                 disabled={disabled || htmlMode}
-                sx={darkMode ? {
-                  color: '#ffffff !important',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.08) !important'
-                  },
-                  '&.active': {
-                    backgroundColor: '#90caf9 !important',
-                    color: '#000000 !important'
-                  }
-                } : {}}
               >
                 {button.icon}
               </IconButton>
@@ -388,16 +368,6 @@ const RichTextEditor = ({
               size="small"
               onClick={insertBulletList}
               disabled={disabled}
-              sx={darkMode ? {
-                color: '#ffffff !important',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.08) !important'
-                },
-                '&.active': {
-                  backgroundColor: '#90caf9 !important',
-                  color: '#000000 !important'
-                }
-              } : {}}
             >
               <FormatListBulleted />
             </IconButton>
@@ -408,16 +378,6 @@ const RichTextEditor = ({
               size="small"
               onClick={insertNumberedList}
               disabled={disabled}
-              sx={darkMode ? {
-                color: '#ffffff !important',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.08) !important'
-                },
-                '&.active': {
-                  backgroundColor: '#90caf9 !important',
-                  color: '#000000 !important'
-                }
-              } : {}}
             >
               <FormatListNumbered />
             </IconButton>
@@ -434,16 +394,6 @@ const RichTextEditor = ({
               size="small"
               onClick={() => execCommand('undo')}
               disabled={disabled || htmlMode}
-              sx={darkMode ? {
-                color: '#ffffff !important',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.08) !important'
-                },
-                '&.active': {
-                  backgroundColor: '#90caf9 !important',
-                  color: '#000000 !important'
-                }
-              } : {}}
             >
               <Undo />
             </IconButton>
@@ -454,16 +404,6 @@ const RichTextEditor = ({
               size="small"
               onClick={() => execCommand('redo')}
               disabled={disabled || htmlMode}
-              sx={darkMode ? {
-                color: '#ffffff !important',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.08) !important'
-                },
-                '&.active': {
-                  backgroundColor: '#90caf9 !important',
-                  color: '#000000 !important'
-                }
-              } : {}}
             >
               <Redo />
             </IconButton>
@@ -481,16 +421,6 @@ const RichTextEditor = ({
                 size="small"
                 onClick={toggleHtmlMode}
                 disabled={disabled}
-                sx={darkMode ? {
-                  color: '#ffffff !important',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.08) !important'
-                  },
-                  '&.active': {
-                    backgroundColor: '#90caf9 !important',
-                    color: '#000000 !important'
-                  }
-                } : {}}
               >
                 <Code />
               </IconButton>
