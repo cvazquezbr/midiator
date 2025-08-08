@@ -2098,7 +2098,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                           fullWidth
                           sx={{ cursor: 'pointer' }}
                         />
-                        <Button onClick={() => handleGenerateCampaignContent(true)} disabled={isGeneratingCampaign}>Regenerar</Button>
+                        <Button onClick={() => handleGenerateCampaignContent(true)} disabled={isGeneratingCampaign}>Gerar</Button>
                       </Grid>
 
                       <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
