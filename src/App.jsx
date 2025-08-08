@@ -483,10 +483,8 @@ function App() {
             const { access_token, expires_in } = data;
 
             saveLinkedinConfig({
-              ...config,
               accessToken: access_token,
               tokenExpiration: Date.now() + expires_in * 1000,
-              clientSecret: undefined, // Garante que o secret não seja salvo
             });
 
             // Abre o modal para mostrar que a conexão foi bem-sucedida
