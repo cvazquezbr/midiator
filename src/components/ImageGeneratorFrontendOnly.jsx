@@ -544,10 +544,11 @@ const ImageGeneratorFrontendOnly = ({
   };
 
 
-  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse) => {
+  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null) => {
     // console.log('[regenerateSingleImage] Called for index:', index,
     //             'currentBackgroundImage (first 100 chars):', currentBackgroundImage ? currentBackgroundImage.substring(0, 100) : 'null',
-    //             'record:', record);
+    //             'record:', record,
+    //             'customSize:', customSize);
 
 
     if (!currentBackgroundImage || !record) {
@@ -679,7 +680,8 @@ const ImageGeneratorFrontendOnly = ({
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
         backgroundImage: currentBackgroundImage, // Store the background image used for this specific image
         customFieldPositions: positionsToUse,   // Preserve the positions used for this regeneration
-        customFieldStyles: stylesToUse          // Preserve the styles used for this regeneration
+        customFieldStyles: stylesToUse,         // Preserve the styles used for this regeneration
+        customOriginalImageSize: customSize,    // <<<<<<<<<<<<<<<<<<<< Store the custom size
       };
 
       setGeneratedImages(prevImages => {
@@ -721,27 +723,41 @@ const ImageGeneratorFrontendOnly = ({
       const reader = new FileReader();
       reader.onload = (e) => {
         const newBgUrl = e.target.result;
-        // console.log('[handleIndividualImageUpload reader.onload] newBgUrl (first 100 chars):', newBgUrl ? newBgUrl.substring(0, 100) : 'null');
-
         const imageToUpdate = generatedImages.find(img => img.index === replacingImageIndex);
-        // console.log('[handleIndividualImageUpload reader.onload] imageToUpdate (found by index ' + replacingImageIndex + '):', imageToUpdate ? `Index: ${imageToUpdate.index}, Filename: ${imageToUpdate.filename}`: 'null');
 
         if (imageToUpdate) {
-          // console.log('[handleIndividualImageUpload reader.onload] Calling regenerateSingleImage for index:', replacingImageIndex);
-          // Passar as posições e estilos corretos (customizados da imagem ou globais)
-          regenerateSingleImage(
-            replacingImageIndex,
-            imageToUpdate.record,
-            newBgUrl, // This is the new individual background
-            imageToUpdate.customFieldPositions || fieldPositions, // Use custom if available, else global
-            imageToUpdate.customFieldStyles || fieldStyles     // Use custom if available, else global
-          );
+          // Create a new Image object to get the dimensions of the new background
+          const img = new Image();
+          img.onload = () => {
+            const newSize = { width: img.width, height: img.height };
+            // Now, call regenerateSingleImage with the new size
+            regenerateSingleImage(
+              replacingImageIndex,
+              imageToUpdate.record,
+              newBgUrl, // This is the new individual background
+              imageToUpdate.customFieldPositions || fieldPositions, // Use custom if available, else global
+              imageToUpdate.customFieldStyles || fieldStyles,     // Use custom if available, else global
+              newSize // Pass the new dimensions
+            );
+          };
+          img.onerror = () => {
+            console.error('Failed to load the new background image to get its dimensions.');
+            // Fallback: regenerate without the new size if loading fails
+            regenerateSingleImage(
+              replacingImageIndex,
+              imageToUpdate.record,
+              newBgUrl,
+              imageToUpdate.customFieldPositions || fieldPositions,
+              imageToUpdate.customFieldStyles || fieldStyles
+            );
+          };
+          img.src = newBgUrl;
         } else {
-          // console.error('[handleIndividualImageUpload reader.onload] Could not find imageToUpdate for index:', replacingImageIndex);
+          console.error('[handleIndividualImageUpload reader.onload] Could not find imageToUpdate for index:', replacingImageIndex);
         }
       };
-      reader.onerror = () => {
-        // console.error('[handleIndividualImageUpload reader.onerror] FileReader error:', error);
+      reader.onerror = (error) => {
+        console.error('[handleIndividualImageUpload reader.onerror] FileReader error:', error);
       };
       reader.readAsDataURL(file);
     } else {
@@ -1200,7 +1216,7 @@ const ImageGeneratorFrontendOnly = ({
             onSave={handleSaveIndividualModifications}
             colorPalette={colorPalette}
             globalBackgroundImage={backgroundImage}
-            originalImageSize={originalImageSize} // Pass the prop here
+            originalImageSize={imageToEdit.customOriginalImageSize || originalImageSize} // Pass custom size if available
             imageFilters={imageFilters}
             includeLogo={includeLogo}
             includeEmpresa={includeEmpresa}
