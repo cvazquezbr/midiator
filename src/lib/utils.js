@@ -12,5 +12,12 @@ export function cn(...inputs) {
  */
 export function stripHtml(html) {
   if (!html) return "";
-  return html.replace(/<[^>]*>?/gm, '');
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return doc.body.textContent || "";
+  } catch (e) {
+    console.error("Error stripping HTML, falling back to regex", e);
+    // Fallback for environments where DOMParser might not be available or fails
+    return html.replace(/<[^>]*>?/gm, '');
+  }
 }
