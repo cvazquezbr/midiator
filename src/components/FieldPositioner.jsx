@@ -395,7 +395,7 @@ const FieldPositioner = ({
               }}
               onMouseDown={(e) => {
                 if (e.target.closest('.text-box')) return;
-                setSelectedField(null);
+                handleFieldSelectInternal(null)
               }}
               onTouchStart={handleContainerTouchStart}
               onTouchEnd={handleContainerTouchEnd}
