@@ -32,9 +32,13 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import {
   CloudUpload,
+  ExpandMore as ExpandMoreIcon,
   FileUpload,
   Settings,
   Image as ImageIcon,
@@ -399,6 +403,8 @@ function App() {
   const [isGeneratingSummaryPequeno, setIsGeneratingSummaryPequeno] = useState(false);
   const [conteudoFormatado, setConteudoFormatado] = useState('');
   const [isGeneratingConteudoFormatado, setIsGeneratingConteudoFormatado] = useState(false);
+  const [followupPosts, setFollowupPosts] = useState([]);
+  const [isGeneratingFollowup, setIsGeneratingFollowup] = useState(false);
 
 
   // Estados para a Geração com IA
@@ -1310,7 +1316,8 @@ function App() {
           handleGenerateImage(normalizedContent),
           handleGenerateSummary(1800, normalizedContent),
           handleGenerateSummary(130, normalizedContent),
-          handleGenerateFormattedContent(normalizedContent)
+          handleGenerateFormattedContent(normalizedContent),
+          handleGenerateFollowupPosts(normalizedContent)
         ]);
       }
 
@@ -1453,6 +1460,98 @@ function App() {
     }
   };
 
+  const handleGenerateFollowupPosts = async (content = campaignContent) => {
+    if (!content?.conteudo) {
+      alert("Por favor, gere o conteúdo principal primeiro.");
+      return;
+    }
+
+    setIsGeneratingFollowup(true);
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      alert('Por favor, configure sua chave de API Gemini primeiro.');
+      setIsGeneratingFollowup(false);
+      return;
+    }
+
+    const { persona, followup_posts_quantity } = getCampaignPrompt();
+
+    try {
+      const prompt = `
+        Você é um especialista em marketing de conteúdo e copywriting para líderes técnicos. Sua tarefa é criar ${followup_posts_quantity} posts "isca" baseados no conteúdo principal fornecido.
+
+        CONTEXTO:
+        O conteúdo principal aborda: [${content.titulo} - ${content.conteudo}]
+
+        PERSONAS-ALVO:
+        - ${persona}
+
+        DIRETRIZES PARA OS POSTS:
+
+        1. Ganchos Psicológicos: Use gatilhos mentais como:
+           - Dor/Problema (rotatividade, custos, pressão)
+           - Curiosidade (estatísticas, casos reais)
+           - Urgência (mercado competitivo, riscos iminentes)
+           - Autoridade (experiência, casos de sucesso)
+           - Social Proof (situações reconhecíveis)
+
+        2. Estrutura de cada post:
+           - Hook inicial (pergunta provocativa ou estatística impactante)
+           - Desenvolvimento do problema/insight
+           - Call-to-action sutil direcionando para o conteúdo completo
+
+        3. Variação de Abordagens:
+           - Post 1: Foco na dor/problema
+           - Post 2: Estatística ou dado curioso
+           - Post 3: Caso real ou situação
+           - Post 4: Pergunta reflexiva
+           - Post 5: Insight contraintuitivo
+
+        ESPECIFICAÇÕES TÉCNICAS:
+        - Cada post deve ter entre 150-250 caracteres
+        - Tom profissional mas conversacional
+        - Inclua emojis estratégicos (máximo 2 por post)
+        - CTAs variados: "Leia mais", "Descubra como", "Saiba o que fazer"
+
+        FORMATO DE RESPOSTA:
+        Retorne um array JSON com a seguinte estrutura:
+
+        \`\`\`json
+        [
+          {
+            "post_numero": 1,
+            "tipo_gancho": "dor/problema",
+            "conteudo": "Texto do post aqui...",
+            "cta": "Call-to-action específico",
+            "hashtags_sugeridas": ["#liderancatecnica", "#gestaoequipes"]
+          }
+        ]
+        \`\`\`
+
+        OBJETIVO:
+        Cada post deve despertar curiosidade e criar um gap de informação que só será preenchido ao ler o conteúdo principal completo.
+      `;
+
+      const response = await callGeminiApi(prompt, apiKey);
+      const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
+      let parsedContent;
+
+      if (jsonMatch && jsonMatch[1]) {
+        parsedContent = JSON.parse(jsonMatch[1]);
+      } else {
+        parsedContent = JSON.parse(response);
+      }
+
+      setFollowupPosts(parsedContent);
+
+    } catch (error) {
+      console.error(`Erro ao gerar posts de follow-up:`, error);
+      alert(`Ocorreu um erro ao gerar os posts de follow-up. Verifique o console.`);
+    } finally {
+      setIsGeneratingFollowup(false);
+    }
+  };
+
   const handleResetCampaign = () => {
     setCampaignContent(null);
     setProblema('');
@@ -1461,6 +1560,7 @@ function App() {
     setConteudoMedio('');
     setConteudoPequeno('');
     setConteudoFormatado('');
+    setFollowupPosts([]);
   };
 
   const handleExportHtml = () => {
@@ -1470,6 +1570,20 @@ function App() {
     const imageHtml = backgroundImage ? `
       <h2>Imagem de Fundo</h2>
       <img src="${backgroundImage}" alt="Imagem de Fundo da Campanha" style="max-width: 100%; border-radius: 8px; margin-bottom: 2rem;" />
+    ` : '';
+
+    const followupPostsHtml = followupPosts.length > 0 ? `
+      <h2>Posts de Follow-up</h2>
+      ${followupPosts.map(post => `
+        <div style="border: 1px solid #eee; padding: 1rem; margin-bottom: 1rem; border-radius: 8px;">
+          <h3>Post ${post.post_numero}: ${post.tipo_gancho}</h3>
+          <p>${post.conteudo}</p>
+          <p><strong>CTA:</strong> ${post.cta}</p>
+          <div>
+            ${post.hashtags_sugeridas.map(tag => `<span style="background-color: #f5f3ff; color: #6d28d9; padding: 0.25rem 0.75rem; border-radius: 16px; font-size: 0.9rem; margin-right: 0.5rem;">${tag}</span>`).join('')}
+          </div>
+        </div>
+      `).join('')}
     ` : '';
 
     const html = `
@@ -1502,6 +1616,7 @@ function App() {
           ${conteudoMedio ? `<h2>Conteúdo Médio</h2><p>${conteudoMedio.replace(/\n/g, '<br>')}</p>` : ''}
           ${conteudoPequeno ? `<h2>Conteúdo Pequeno</h2><p>${conteudoPequeno.replace(/\n/g, '<br>')}</p>` : ''}
           ${conteudoFormatado ? `<h2>Conteúdo Formatado</h2><div>${conteudoFormatado}</div>` : ''}
+          ${followupPostsHtml}
         </div>
       </body>
       </html>
@@ -2244,6 +2359,38 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                       </Button>
                     </Box>
                     <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', borderRadius: '8px', mt: 2 }} />
+                  </Box>
+                )}
+
+                {isGeneratingFollowup && (
+                  <Box sx={{ mt: 4, textAlign: 'center' }}>
+                    <Typography variant="h6" gutterBottom>Gerando Posts de Follow-up...</Typography>
+                  </Box>
+                )}
+
+                {followupPosts.length > 0 && (
+                  <Box sx={{ mt: 4 }}>
+                    <Typography variant="h6" gutterBottom>Posts de Follow-up Gerados</Typography>
+                    {followupPosts.map((post, index) => (
+                      <Accordion key={index}>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                          <Typography>Post {post.post_numero}: {post.tipo_gancho}</Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                            {post.conteudo}
+                          </Typography>
+                          <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+                            CTA: {post.cta}
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                            {post.hashtags_sugeridas.map((tag, i) => (
+                              <Chip key={i} label={tag} size="small" />
+                            ))}
+                          </Box>
+                        </AccordionDetails>
+                      </Accordion>
+                    ))}
                   </Box>
                 )}
               </CardContent>
