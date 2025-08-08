@@ -6,10 +6,9 @@ const LINKEDIN_CONFIG_KEY = 'linkedinConfig';
  */
 export const saveLinkedinConfig = (config) => {
   try {
-    // Não armazene o clientSecret no localStorage por motivos de segurança.
-    const { clientSecret: _clientSecret, ...configToStore } = config;
     const existingConfig = getLinkedinConfig() || {};
-    const newConfig = { ...existingConfig, ...configToStore };
+    // Garantir que o clientSecret seja mesclado apenas se for fornecido
+    const newConfig = { ...existingConfig, ...config };
     const configString = JSON.stringify(newConfig);
     localStorage.setItem(LINKEDIN_CONFIG_KEY, configString);
   } catch (error) {
