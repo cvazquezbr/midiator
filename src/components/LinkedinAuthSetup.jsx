@@ -95,7 +95,7 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
 
       const data = await response.json();
       if (response.ok) {
-        setMessage(`✅ Conexão bem-sucedida. Você tem ${data.paging.total} conexões de 1º grau.`);
+        setMessage(`✅ Conexão bem-sucedida.`);
       } else {
         const errorData = await response.json().catch(() => ({ message: 'Não foi possível ler a resposta de erro.' }));
         setMessage(`❌ Erro no teste: ${errorData.message || 'Ocorreu um erro desconhecido.'}`);
