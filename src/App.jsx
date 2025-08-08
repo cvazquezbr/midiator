@@ -394,6 +394,8 @@ function App() {
   const [conteudoPequeno, setConteudoPequeno] = useState('');
   const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
   const [isGeneratingSummaryPequeno, setIsGeneratingSummaryPequeno] = useState(false);
+  const [conteudoFormatado, setConteudoFormatado] = useState('');
+  const [isGeneratingConteudoFormatado, setIsGeneratingConteudoFormatado] = useState(false);
 
 
   // Estados para a Geração com IA
@@ -829,7 +831,7 @@ function App() {
       );
 
       const stateToSave = {
-        version: "1.5",
+        version: "1.6",
         backgroundImageUrl: backgroundImage,
         fieldPositions: fieldPositions,
         fieldStyles: fieldStyles,
@@ -847,6 +849,7 @@ function App() {
         formato: formato,
         conteudoMedio: conteudoMedio,
         conteudoPequeno: conteudoPequeno,
+        conteudoFormatado: conteudoFormatado,
       };
 
       const jsonString = JSON.stringify(stateToSave, null, 2);
@@ -896,7 +899,7 @@ function App() {
           };
 
           // Verificar versão e campos essenciais
-          if (loadedState.version && ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5"].includes(loadedState.version) &&
+          if (loadedState.version && ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6"].includes(loadedState.version) &&
             loadedState.backgroundImageUrl !== undefined &&
             loadedState.fieldPositions &&
             loadedState.fieldStyles &&
@@ -1030,6 +1033,12 @@ function App() {
             } else {
               setConteudoMedio('');
               setConteudoPequeno('');
+            }
+
+            if (parseFloat(loadedState.version) >= 1.6) {
+              setConteudoFormatado(loadedState.conteudoFormatado || '');
+            } else {
+              setConteudoFormatado('');
             }
 
             // Navegação de passo
@@ -1291,7 +1300,8 @@ function App() {
         await Promise.all([
           handleGenerateImage(normalizedContent),
           handleGenerateSummary(1800, normalizedContent),
-          handleGenerateSummary(130, normalizedContent)
+          handleGenerateSummary(130, normalizedContent),
+          handleGenerateFormattedContent(normalizedContent)
         ]);
       }
 
@@ -1390,6 +1400,47 @@ function App() {
     }
   };
 
+  const handleGenerateFormattedContent = async (content = campaignContent) => {
+    if (!content?.conteudo) {
+      alert("Por favor, gere o conteúdo principal primeiro.");
+      return;
+    }
+
+    setIsGeneratingConteudoFormatado(true);
+
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      alert('Por favor, configure sua chave de API Gemini primeiro.');
+      setIsGeneratingConteudoFormatado(false);
+      return;
+    }
+
+    try {
+      const prompt = `
+        Com o objetivo de gerar um post de blog no WordPress corporativo, Formatar o texto a seguir observando o padrão com HTML.
+        Considere que o conteúdo gerado já estará embutido em uma página no contexto de seu BODY.
+        Elabore o HTML para melhor estruturar o texto, facilitar a leitura, hierarquizar a informação conforme a importância.
+        O primeiro nível de Header que deve ser utilizado é o H3, já há H1 e H2 no contexto no qual o texto produzido se insere.
+        Elabore um resumo com os três pontos chave no texto de entrada e apresente o resumo com caixas de destaque logo no início.
+        ATENÇÃO aos campos que requeiram escape como aspas. Adicionalmente, o uso de &quot; é válido em HTML mas causa problemas em JSON. Atenção para evitar quebras de linha no conteúdo HTML e caracteres especiais não escapados.
+        Segue o texto:
+
+        Título: ${content.titulo}
+        Conteúdo: ${content.conteudo}
+        CTA: ${content.cta}
+      `;
+
+      const formattedContent = await callGeminiApi(prompt, apiKey);
+      setConteudoFormatado(formattedContent);
+
+    } catch (error) {
+      console.error(`Erro ao gerar conteúdo formatado:`, error);
+      alert(`Ocorreu um erro ao gerar o conteúdo formatado. Verifique o console.`);
+    } finally {
+      setIsGeneratingConteudoFormatado(false);
+    }
+  };
+
   const handleResetCampaign = () => {
     setCampaignContent(null);
     setProblema('');
@@ -1397,6 +1448,7 @@ function App() {
     setGeneratedImageUrl(null);
     setConteudoMedio('');
     setConteudoPequeno('');
+    setConteudoFormatado('');
   };
 
   const handleExportHtml = () => {
@@ -1437,6 +1489,7 @@ function App() {
           </div>
           ${conteudoMedio ? `<h2>Conteúdo Médio</h2><p>${conteudoMedio.replace(/\n/g, '<br>')}</p>` : ''}
           ${conteudoPequeno ? `<h2>Conteúdo Pequeno</h2><p>${conteudoPequeno.replace(/\n/g, '<br>')}</p>` : ''}
+          ${conteudoFormatado ? `<h2>Conteúdo Formatado</h2><div>${conteudoFormatado}</div>` : ''}
         </div>
       </body>
       </html>
@@ -2045,7 +2098,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                           fullWidth
                           sx={{ cursor: 'pointer' }}
                         />
-                        <Button onClick={() => handleGenerateCampaignContent(true)} disabled={isGeneratingCampaign}>Regenerar</Button>
+                        <Button onClick={() => handleGenerateCampaignContent(true)} disabled={isGeneratingCampaign}>Gerar</Button>
                       </Grid>
 
                       <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -2075,6 +2128,23 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                         />
                          <Button onClick={() => handleGenerateSummary(130)} disabled={isGeneratingSummaryPequeno || !campaignContent}>
                           {isGeneratingSummaryPequeno ? 'Gerando...' : 'Gerar'}
+                        </Button>
+                      </Grid>
+
+                      <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <TextField
+                          label="Conteúdo Formatado (HTML)"
+                          multiline
+                          rows={3}
+                          value={conteudoFormatado}
+                          onClick={() => setEditingField('conteudoFormatado')}
+                          readOnly
+                          variant="outlined"
+                          fullWidth
+                          sx={{ cursor: 'pointer' }}
+                        />
+                         <Button onClick={() => handleGenerateFormattedContent()} disabled={isGeneratingConteudoFormatado || !campaignContent}>
+                          {isGeneratingConteudoFormatado ? 'Gerando...' : 'Gerar'}
                         </Button>
                       </Grid>
 
@@ -2635,10 +2705,21 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
       />
       <TextEditorDialog
         open={editingField !== null}
-        title={`Editar ${editingField === 'conteudo' ? 'Conteúdo' : 'CTA'}`}
-        content={editingField ? campaignContent[editingField] : ''}
+        title={`Editar ${
+          editingField === 'conteudo' ? 'Conteúdo'
+          : editingField === 'cta' ? 'CTA'
+          : 'Conteúdo Formatado'
+        }`}
+        content={
+          editingField === 'conteudoFormatado' ? conteudoFormatado
+          : editingField ? campaignContent[editingField] : ''
+        }
         onSave={(newContent) => {
-          setCampaignContent({ ...campaignContent, [editingField]: newContent });
+          if (editingField === 'conteudoFormatado') {
+            setConteudoFormatado(newContent);
+          } else {
+            setCampaignContent({ ...campaignContent, [editingField]: newContent });
+          }
         }}
         onClose={() => setEditingField(null)}
       />
