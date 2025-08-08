@@ -39,6 +39,8 @@ import {
 } from '@mui/icons-material';
 import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
+import { BrandingWatermark } from '@mui/icons-material';
+
 const FormattingPanel = ({
   selectedField,
   fieldStyles,
@@ -47,7 +49,11 @@ const FormattingPanel = ({
   setFieldPositions,
   csvHeaders,
   imageFilters,
-  setImageFilters
+  setImageFilters,
+  includeLogo,
+  setIncludeLogo,
+  includeEmpresa,
+  setIncludeEmpresa
 }) => {
   const fonts = [
     'Arial', 'Helvetica', 'Times New Roman', 'Georgia', 'Verdana', 'Courier New', 'Impact', 'Comic Sans MS',
@@ -376,6 +382,27 @@ const FormattingPanel = ({
               <Slider value={imageFilters.blur} onChange={(e, v) => setImageFilters(f => ({ ...f, blur: v }))} min={0} max={20} step={1} />
               <Typography gutterBottom>Opacidade: {imageFilters.opacity}%</Typography>
               <Slider value={imageFilters.opacity} onChange={(e, v) => setImageFilters(f => ({ ...f, opacity: v }))} min={0} max={100} step={1} />
+            </Box>
+          </AccordionDetails>
+        </Accordion>
+
+        {/* Brand Elements */}
+        <Accordion>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
+              <BrandingWatermark sx={{ mr: 1 }} /> Elementos da Marca
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box sx={{ p: 1, display: 'flex', flexDirection: 'column' }}>
+              <FormControlLabel
+                control={<Switch checked={includeLogo} onChange={(e) => setIncludeLogo(e.target.checked)} />}
+                label="Incluir Logo"
+              />
+              <FormControlLabel
+                control={<Switch checked={includeEmpresa} onChange={(e) => setIncludeEmpresa(e.target.checked)} />}
+                label="Incluir Imagem da Empresa"
+              />
             </Box>
           </AccordionDetails>
         </Accordion>

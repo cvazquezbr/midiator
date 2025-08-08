@@ -51,7 +51,9 @@ const ImageGeneratorFrontendOnly = ({
   initialGeneratedImagesData, // Dados iniciais carregados do JSON
   onThumbnailRecordTextUpdate, // <-- ADICIONADO: Callback para atualizar o CSV em App.jsx
   originalImageSize,
-  imageFilters
+  imageFilters,
+  includeLogo,
+  includeEmpresa
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -111,7 +113,7 @@ const ImageGeneratorFrontendOnly = ({
     if (setGeneratedImagesData) {
       setGeneratedImagesData(generatedImages);
     }
-  }, [generatedImages]);
+  }, [generatedImages, setGeneratedImagesData]);
 
   // Efeito para sincronizar com initialGeneratedImagesData se ele mudar externamente
   // Isso é útil se o usuário carregar um novo arquivo JSON enquanto este componente já está montado.
@@ -136,7 +138,7 @@ const ImageGeneratorFrontendOnly = ({
     // If `generatedImages` were included, and `setGeneratedImages` was called, it could lead to
     // loops if `App.jsx` passes the same reference back. The `initialGeneratedImagesData !== generatedImages`
     // check helps, but keeping dependencies minimal for prop-driven effects is often clearer.
-  }, [initialGeneratedImagesData]);
+  }, [initialGeneratedImagesData, generatedImages]);
 
   // Função para quebrar texto em linhas dentro de uma área retangular
   const wrapTextInArea = (ctx, text, x, y, maxWidth, maxHeight, style) => {
@@ -244,7 +246,9 @@ const ImageGeneratorFrontendOnly = ({
         backgroundImage,
         '/logo.png',
         '/empresa.png',
-        imageFilters
+        imageFilters,
+        includeLogo,
+        includeEmpresa
       );
       console.log('[generateImages] composeImage finished for the main generation.');
 
@@ -568,7 +572,9 @@ const ImageGeneratorFrontendOnly = ({
         currentBackgroundImage,
         '/logo.png',
         '/empresa.png',
-        imageFilters
+        imageFilters,
+        includeLogo,
+        includeEmpresa
       );
       console.log(`[regenerateSingleImage] composeImage finished for index ${index}.`);
 
