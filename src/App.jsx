@@ -1431,8 +1431,11 @@ function App() {
         CTA: ${content.cta}
       `;
 
-      const formattedContent = await callGeminiApi(prompt, apiKey);
-      setConteudoFormatado(formattedContent);
+      const rawContent = await callGeminiApi(prompt, apiKey);
+      // Remove markdown code block delimiters if they exist
+      const match = rawContent.match(/^`{3}(?:html)?\s*([\s\S]+?)\s*`{3}$/);
+      const finalContent = match && match[1] ? match[1].trim() : rawContent.trim();
+      setConteudoFormatado(finalContent);
 
     } catch (error) {
       console.error(`Erro ao gerar conteúdo formatado:`, error);
