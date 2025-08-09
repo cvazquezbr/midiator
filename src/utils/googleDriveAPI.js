@@ -479,6 +479,36 @@ class GoogleDriveAPI {
   }
 
   /**
+   * Lista as pastas do Google Drive do usuário.
+   */
+  async listFolders(pageSize = 100) {
+    if (!this.isInitialized || !this.isSignedIn) {
+      throw new Error('Usuário não está logado');
+    }
+
+    try {
+      const query = "mimeType='application/vnd.google-apps.folder' and 'me' in owners and trashed=false";
+
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=${pageSize}&fields=files(id,name)&orderBy=name`, {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json();
+        const errorMessage = errorBody.error?.message || response.statusText;
+        throw new Error(`HTTP ${response.status}: ${errorMessage}`);
+      }
+
+      const result = await response.json();
+      return result.files || [];
+    } catch (error) {
+      throw new Error(`Erro ao listar pastas: ${error.message || error}`);
+    }
+  }
+
+  /**
    * Lista arquivos em uma pasta
    */
   async listFiles(folderId = null, pageSize = 10) {
