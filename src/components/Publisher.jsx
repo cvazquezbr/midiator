@@ -22,7 +22,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Language, Publish, LinkedIn } from '@mui/icons-material';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV2';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { ptBR } from 'date-fns/locale/pt-BR';

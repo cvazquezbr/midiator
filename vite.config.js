@@ -27,8 +27,7 @@ export default defineConfig({
   },
   
   optimizeDeps: {
-    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
-    include: ['@mui/x-date-pickers/internals/demo', 'date-fns']
+    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util']
   },
   
   worker: {
