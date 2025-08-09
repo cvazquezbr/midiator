@@ -1971,15 +1971,15 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   Configurar WordPress
                 </MenuItem>
                 <MenuItem onClick={() => { setShowLinkedinAuthModal(true); handleMenuClose(); }}>
-                  <Language sx={{ mr: 1 }} />
+                  <LinkedIn sx={{ mr: 1 }} />                                  
                   Configurar LinkedIn
                 </MenuItem>
                 <MenuItem onClick={() => { setShowCampaignPromptModal(true); handleMenuClose(); }}>
                   <Edit sx={{ mr: 1 }} />
                   Definir Prompt de Campanha
                 </MenuItem>
-                <MenuItem onClick={handleSaveTemplateClick}>Salvar Config. Template</MenuItem>
-                <MenuItem onClick={handleLoadTemplateClick}>Carregar Config. Template</MenuItem>
+                <MenuItem onClick={handleSaveTemplateClick}>Salvar</MenuItem>
+                <MenuItem onClick={handleLoadTemplateClick}>Carregar</MenuItem>
                 <MenuItem onClick={handleExportCSV} disabled={csvData.length === 0}>
                   <DownloadIcon sx={{ mr: 1 }} />
                   Exportar CSV
