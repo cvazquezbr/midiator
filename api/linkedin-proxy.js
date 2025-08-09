@@ -203,6 +203,7 @@ async function handleGetOrganizations(request, response) {
     }
 
     const aclData = await aclResponse.json();
+    console.log('LinkedIn ACL Data:', JSON.stringify(aclData, null, 2));
     const organizationUrns = aclData.elements?.map(el => el.organization) || [];
 
     if (organizationUrns.length === 0) {
