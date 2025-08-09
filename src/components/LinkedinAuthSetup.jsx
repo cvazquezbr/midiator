@@ -125,7 +125,7 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
       }
       saveLinkedinConfig(config);
       const redirectUri = window.location.origin;
-      const scope = 'r_basicprofile%20w_member_social%20r_1st_connections_size';
+      const scope = 'r_liteprofile%20w_member_social';
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${config.clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
       window.location.href = authUrl;
     } else {
