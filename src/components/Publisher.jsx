@@ -25,7 +25,7 @@ import { Language, Publish, LinkedIn } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { ptBR } from 'date-fns/locale';
+import { ptBR } from 'date-fns/locale/pt-BR';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
 
