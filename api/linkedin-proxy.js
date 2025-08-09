@@ -166,6 +166,8 @@ async function handleCreatePost(request, response) {
 
 
 export default async function handler(request, response) {
+  console.log(`[${new Date().toISOString()}] /api/linkedin-proxy invoked. Action: ${request.body?.action}`);
+
   if (request.method !== 'POST') {
     response.setHeader('Allow', ['POST']);
     return response.status(405).end('Method Not Allowed');
