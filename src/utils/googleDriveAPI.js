@@ -11,6 +11,9 @@ class GoogleDriveAPI {
     this.isSignedIn = false;
     this.accessToken = null;
     this.initPromise = null;
+    // Promise handlers for discrete signIn calls
+    this.signInResolver = null;
+    this.signInRejecter = null;
   }
 
   /**
@@ -62,15 +65,32 @@ class GoogleDriveAPI {
         scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets',
         callback: (response) => {
           if (response.error) {
-            reject(new Error(`Erro de autenticação: ${response.error}`));
+            const err = new Error(`Erro de autenticação: ${response.error}`);
+            if (this.signInRejecter) {
+              this.signInRejecter(err);
+              this.signInRejecter = null;
+              this.signInResolver = null;
+            }
+            reject(err); // For initialize() promise
             return;
           }
           this.accessToken = response.access_token;
           this.isSignedIn = true;
-          resolve(true);
+          if (this.signInResolver) {
+            this.signInResolver(true);
+            this.signInResolver = null;
+            this.signInRejecter = null;
+          }
+          resolve(true); // For initialize() promise
         },
         error_callback: (error) => {
-          reject(new Error(`Erro no cliente de token: ${error}`));
+          const err = new Error(`Erro no cliente de token: ${error.message || 'desconhecido'}`);
+           if (this.signInRejecter) {
+              this.signInRejecter(err);
+              this.signInRejecter = null;
+              this.signInResolver = null;
+            }
+          reject(err); // For initialize() promise
         }
       });
 
@@ -124,11 +144,19 @@ class GoogleDriveAPI {
   /**
    * Faz login do usuário
    */
-  async signIn() {
-    if (!this.tokenClient) {
-      throw new Error('API não inicializada. Chame initialize() primeiro.');
-    }
-    this.tokenClient.requestAccessToken();
+  signIn() {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized || !this.tokenClient) {
+        return reject(new Error('API não inicializada. Chame initialize() primeiro.'));
+      }
+      // Store the resolve/reject functions to be called by the central callback
+      this.signInResolver = resolve;
+      this.signInRejecter = reject;
+
+      // Prompt for consent only if necessary.
+      // An empty prompt is usually sufficient if the user has already granted consent.
+      this.tokenClient.requestAccessToken({ prompt: '' });
+    });
   }
 
   /**

@@ -11,6 +11,7 @@ import {
   IconButton,
   Tooltip,
   Grid,
+  CircularProgress,
 } from '@mui/material';
 import { InfoOutlined } from '@mui/icons-material';
 import {
@@ -19,6 +20,7 @@ import {
   removeLinkedinConfig,
 } from '../utils/linkedinCredentials';
 import GoogleDriveFolderPicker from './GoogleDriveFolderPicker';
+import googleDriveAPI from '../utils/googleDriveAPI';
 
 const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
   const [config, setConfig] = useState({
@@ -28,6 +30,7 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
   const [currentConfig, setCurrentConfig] = useState(null);
   const [message, setMessage] = useState('');
   const [isPickerOpen, setPickerOpen] = useState(false);
+  const [isDriveLoading, setIsDriveLoading] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -61,6 +64,39 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
       folderId: folder.id,
     }));
     setPickerOpen(false);
+  };
+
+  const handleBrowseDrive = async () => {
+    setMessage('');
+    setIsDriveLoading(true);
+
+    const apiKey = localStorage.getItem("google_drive_api_key");
+    const clientId = localStorage.getItem("google_drive_client_id");
+
+    if (!apiKey || !clientId) {
+      setMessage('❌ Por favor, configure a integração com o Google na página principal primeiro.');
+      setIsDriveLoading(false);
+      return;
+    }
+
+    try {
+      if (!googleDriveAPI.isInitialized) {
+        await googleDriveAPI.initialize(apiKey, clientId);
+      }
+
+      if (!googleDriveAPI.isUserSignedIn()) {
+        setMessage('Aguardando login com o Google...');
+        await googleDriveAPI.signIn();
+        setMessage('');
+      }
+
+      setPickerOpen(true);
+    } catch (error) {
+      console.error('Erro ao preparar o seletor de pastas do Google Drive:', error);
+      setMessage(`❌ Erro no Google Drive: ${error.message}`);
+    } finally {
+      setIsDriveLoading(false);
+    }
   };
 
   const handleConnect = async () => {
@@ -152,8 +188,13 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
                 helperText="Este ID de pasta será usado para monitorar novos conteúdos."
                 sx={{ mb: 2 }}
               />
-              <Button variant="outlined" onClick={() => setPickerOpen(true)}>
-                Procurar Pasta no Google Drive...
+              <Button
+                variant="outlined"
+                onClick={handleBrowseDrive}
+                disabled={isDriveLoading}
+                startIcon={isDriveLoading ? <CircularProgress size={16} /> : null}
+              >
+                {isDriveLoading ? 'Aguarde...' : 'Procurar Pasta no Google Drive...'}
               </Button>
             </Box>
           ) : (
