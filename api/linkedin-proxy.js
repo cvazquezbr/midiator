@@ -183,14 +183,15 @@ async function handleGetOrganizations(request, response) {
       name: `${profileData.localizedFirstName} ${profileData.localizedLastName} (Pessoal)`,
     }];
 
-    // 2. Find organizations the user has an approved role for.
-    const aclUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED';
+    // 2. Find organizations for which the authenticated user has an approved role.
+    const userUrn = `urn:li:person:${profileData.id}`;
+    const aclUrl = `https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(userUrn)}&state=APPROVED`;
     const aclResponse = await fetch(aclUrl, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'X-Restli-Protocol-Version': '2.0.0',
         'Content-Type': 'application/json',
-        'LinkedIn-Version': '202403', // Use a stable, recent version
+        'LinkedIn-Version': '202403',
       },
     });
 
