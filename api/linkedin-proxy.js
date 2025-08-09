@@ -185,7 +185,7 @@ async function handleGetOrganizations(request, response) {
 
     // 2. Find organizations for which the authenticated user has an approved role.
     const userUrn = `urn:li:person:${profileData.id}`;
-    const aclUrl = `https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(userUrn)}&state=APPROVED`;
+    const aclUrl = `https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(userUrn)}&state=APPROVED&role=ADMINISTRATOR,CONTENT_ADMINISTRATOR`;
     const aclResponse = await fetch(aclUrl, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
