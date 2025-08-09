@@ -446,11 +446,21 @@ function App() {
     const handleLinkedinCallback = async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get('code');
+      const error = urlParams.get('error');
+      const errorDescription = urlParams.get('error_description');
+
+      // Limpa os parâmetros da URL para evitar reprocessamento.
+      if (code || error) {
+        window.history.replaceState({}, document.title, "/");
+      }
+
+      if (error) {
+        console.error(`LinkedIn OAuth Error: ${error}. Description: ${errorDescription}`);
+        alert(`Ocorreu um erro ao conectar com o LinkedIn: ${errorDescription || error}`);
+        return;
+      }
 
       if (code) {
-        // Remove o código da URL para não ser usado novamente
-        window.history.replaceState({}, document.title, "/");
-
         const redirectUri = window.location.origin;
 
         try {
