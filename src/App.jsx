@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useIsMobile } from './hooks/use-mobile.js';
+import { LinkedIn } from '@mui/icons-material';
 import {
   Container,
   Paper,
@@ -813,8 +814,10 @@ function App() {
       );
 
       const stateToSave = {
-        version: "1.6",
+        version: "1.8", // Incremented version to reflect this change
         backgroundImageUrl: backgroundImage,
+        originalImageSize: originalImageSize,
+        imageFilters: imageFilters, // <<<<<<<<<<<< SAVE
         fieldPositions: fieldPositions,
         fieldStyles: fieldStyles,
         csvHeaders: csvHeaders,
@@ -881,7 +884,7 @@ function App() {
           };
 
           // Verificar versão e campos essenciais
-          if (loadedState.version && ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6"].includes(loadedState.version) &&
+          if (loadedState.version && ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8"].includes(loadedState.version) &&
             loadedState.backgroundImageUrl !== undefined &&
             loadedState.fieldPositions &&
             loadedState.fieldStyles &&
@@ -891,6 +894,16 @@ function App() {
             setFieldPositions(loadedState.fieldPositions);
             setFieldStyles(loadedState.fieldStyles);
             setCsvHeaders(loadedState.csvHeaders);
+
+            // Restore originalImageSize if it exists in the saved file
+            if (loadedState.originalImageSize) {
+              setOriginalImageSize(loadedState.originalImageSize);
+            }
+
+            // Restore imageFilters if they exist in the saved file
+            if (loadedState.imageFilters) {
+              setImageFilters(loadedState.imageFilters);
+            }
 
             if (loadedState.colorPalette) {
               setColorPalette(loadedState.colorPalette);
@@ -926,7 +939,7 @@ function App() {
             }
 
             // Restaurar generatedImages se presentes (versão 1.1+)
-            if (loadedState.version === "1.1" && loadedState.generatedImages) {
+            if (parseFloat(loadedState.version) >= 1.1 && loadedState.generatedImages) {
               const restoredGeneratedImages = await Promise.all(
                 loadedState.generatedImages.map(async (imgData) => {
                   let blob = null;
@@ -1509,8 +1522,8 @@ console.log(finalPrompt)
 
   const handleResetCampaign = () => {
     setCampaignContent(null);
-    setProblema('');
-    setSolucao('');
+    // setProblema(''); // Keep the problem
+    // setSolucao(''); // Keep the solution
     setGeneratedImageUrl(null);
     setConteudoMedio('');
     setConteudoPequeno('');
@@ -1959,15 +1972,15 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   Configurar WordPress
                 </MenuItem>
                 <MenuItem onClick={() => { setShowLinkedinAuthModal(true); handleMenuClose(); }}>
-                  <Language sx={{ mr: 1 }} />
+                  <LinkedIn sx={{ mr: 1 }} />                                  
                   Configurar LinkedIn
                 </MenuItem>
                 <MenuItem onClick={() => { setShowCampaignPromptModal(true); handleMenuClose(); }}>
                   <Edit sx={{ mr: 1 }} />
                   Definir Prompt de Campanha
                 </MenuItem>
-                <MenuItem onClick={handleSaveTemplateClick}>Salvar Config. Template</MenuItem>
-                <MenuItem onClick={handleLoadTemplateClick}>Carregar Config. Template</MenuItem>
+                <MenuItem onClick={handleSaveTemplateClick}>Salvar</MenuItem>
+                <MenuItem onClick={handleLoadTemplateClick}>Carregar</MenuItem>
                 <MenuItem onClick={handleExportCSV} disabled={csvData.length === 0}>
                   <DownloadIcon sx={{ mr: 1 }} />
                   Exportar CSV

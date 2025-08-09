@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -10,10 +10,24 @@ import {
   Link as MuiLink,
   Grid,
   Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
+  Switch,
+  TextField,
+  CircularProgress,
 } from '@mui/material';
 import { Language, Publish, LinkedIn } from '@mui/icons-material';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { ptBR } from 'date-fns/locale/pt-BR';
 import { publishToWordPress } from '../utils/wordpressAPI';
-import { publishToLinkedIn } from '../utils/linkedinAPI';
+import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
 
 const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData }) => {
   // State for WordPress
@@ -26,20 +40,45 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData }) 
   const [publishingStatusLi, setPublishingStatusLi] = useState('');
   const [publishedPostUrlLi, setPublishedPostUrlLi] = useState(null);
 
-  const validateData = () => {
-    if (!campaignContent || !conteudoFormatado || !generatedImagesData || generatedImagesData.length === 0) {
-      throw new Error('Dados da campanha ou imagens não estão disponíveis. Volte para as etapas anteriores.');
-    }
-    const firstImage = generatedImagesData[0];
-    if (!firstImage || !firstImage.blob) {
-      throw new Error('A primeira imagem gerada não contém um blob válido.');
-    }
-    return {
-      campaignContent,
-      conteudoFormatado,
-      imageBlob: firstImage.blob,
+  // New states for LinkedIn Publisher enhancements
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 60 * 60 * 1000)); // Default to 1 hour from now
+  const [selectedImages, setSelectedImages] = useState({}); // e.g. { 0: true, 1: false }
+  const [linkedinProfiles, setLinkedinProfiles] = useState([]);
+  const [selectedProfile, setSelectedProfile] = useState('');
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
+  const [profileError, setProfileError] = useState('');
+
+  // Fetch LinkedIn profiles on component mount
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      setIsLoadingProfiles(true);
+      setProfileError('');
+      try {
+        const profiles = await getLinkedInProfiles();
+        setLinkedinProfiles(profiles);
+        if (profiles.length > 0) {
+          setSelectedProfile(profiles[0].urn); // Default to the first profile
+        }
+      } catch (error) {
+        console.error("Erro ao buscar perfis do LinkedIn:", error);
+        setProfileError(error.message);
+      } finally {
+        setIsLoadingProfiles(false);
+      }
     };
-  };
+    fetchProfiles();
+  }, []);
+
+  // Set default image selection when images are generated
+  useEffect(() => {
+    if (generatedImagesData && generatedImagesData.length > 0) {
+      setSelectedImages({ 0: true }); // Select the first image by default
+    } else {
+      setSelectedImages({});
+    }
+  }, [generatedImagesData]);
+
 
   const handlePublishWordPress = async () => {
     setIsPublishingWp(true);
@@ -47,7 +86,18 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData }) 
     setPublishedPostUrlWp(null);
 
     try {
-      const campaignData = validateData();
+      if (!campaignContent || !conteudoFormatado || !generatedImagesData || generatedImagesData.length === 0) {
+        throw new Error('Dados da campanha ou imagens não estão disponíveis.');
+      }
+      const firstImage = generatedImagesData[0];
+      if (!firstImage || !firstImage.blob) {
+        throw new Error('A primeira imagem gerada não contém um blob válido.');
+      }
+      const campaignData = {
+        campaignContent,
+        conteudoFormatado,
+        imageBlob: firstImage.blob,
+      };
       setPublishingStatusWp('Publicando no WordPress... Isso pode levar um momento.');
       const post = await publishToWordPress(campaignData);
       setPublishingStatusWp(`Post "${post.title.rendered}" criado como rascunho com sucesso!`);
@@ -60,13 +110,46 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData }) 
     }
   };
 
+  const handleScheduleLinkedIn = () => {
+    setPublishingStatusLi(`Publicação agendada para ${scheduleDate.toLocaleString('pt-BR')}. O envio automático ainda não está implementado.`);
+    console.log('Salvando agendamento:', {
+      profile: selectedProfile,
+      images: selectedImages,
+      date: scheduleDate,
+      content: campaignContent,
+    });
+    // Here you would typically save this information to a backend or localStorage.
+  };
+
   const handlePublishLinkedIn = async () => {
+    if (isScheduled) {
+      // This case should not be reached if the button is disabled, but as a safeguard:
+      handleScheduleLinkedIn();
+      return;
+    }
+
     setIsPublishingLi(true);
     setPublishingStatusLi('Iniciando publicação...');
     setPublishedPostUrlLi(null);
 
     try {
-      const campaignData = validateData();
+      if (!campaignContent || !conteudoFormatado) {
+        throw new Error('Dados da campanha não estão disponíveis. Volte para as etapas anteriores.');
+      }
+      if (!selectedProfile) {
+        throw new Error('Nenhum perfil do LinkedIn foi selecionado.');
+      }
+
+      const imageBlobs = generatedImagesData
+        .filter((_, index) => selectedImages[index])
+        .map(img => img.blob);
+
+      const campaignData = {
+        campaignContent,
+        authorUrn: selectedProfile,
+        imageBlobs,
+      };
+
       setPublishingStatusLi('Publicando no LinkedIn... Isso pode levar um momento.');
       const post = await publishToLinkedIn(campaignData);
       setPublishingStatusLi(`Post publicado no LinkedIn com sucesso!`);
@@ -132,18 +215,85 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData }) 
                 <LinkedIn sx={{ verticalAlign: 'middle', mr: 1 }} />
                 LinkedIn
               </Typography>
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                Publica o conteúdo diretamente no LinkedIn usando a conta conectada. A primeira imagem gerada será usada no post.
+
+              {/* Profile Selection */}
+              <FormControl fullWidth sx={{ my: 2 }}>
+                <InputLabel id="linkedin-profile-select-label">Publicar como</InputLabel>
+                <Select
+                  labelId="linkedin-profile-select-label"
+                  id="linkedin-profile-select"
+                  value={selectedProfile}
+                  label="Publicar como"
+                  onChange={(e) => setSelectedProfile(e.target.value)}
+                  disabled={isLoadingProfiles || isPublishingLi}
+                >
+                  {isLoadingProfiles && <MenuItem value=""><em><CircularProgress size={20} /> Carregando perfis...</em></MenuItem>}
+                  {profileError && <MenuItem value="" disabled><em>Erro: {profileError}</em></MenuItem>}
+                  {linkedinProfiles.map((profile) => (
+                    <MenuItem key={profile.urn} value={profile.urn}>
+                      {profile.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {/* Image Selection */}
+              <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+                Selecionar Imagens
               </Typography>
+              <FormGroup row sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                {generatedImagesData && generatedImagesData.map((img, index) => (
+                  <FormControlLabel
+                    key={index}
+                    control={
+                      <Checkbox
+                        checked={!!selectedImages[index]}
+                        onChange={(e) => setSelectedImages({ ...selectedImages, [index]: e.target.checked })}
+                        name={`img-${index}`}
+                      />
+                    }
+                    label={
+                      <Box component="img" src={img.url} alt={`Generated ${index + 1}`} sx={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 1 }} />
+                    }
+                  />
+                ))}
+              </FormGroup>
+
+              {/* Scheduling */}
+              <FormControlLabel
+                control={<Switch checked={isScheduled} onChange={(e) => setIsScheduled(e.target.checked)} />}
+                label="Agendar publicação"
+                sx={{ my: 2, display: 'block' }}
+              />
+
+              {isScheduled && (
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
+                  <DateTimePicker
+                    label="Data e Hora do Agendamento"
+                    value={scheduleDate}
+                    onChange={(newValue) => setScheduleDate(newValue)}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                    minDateTime={new Date()}
+                  />
+                </LocalizationProvider>
+              )}
+
               <Button
                 variant="contained"
                 size="large"
                 color="primary"
                 onClick={handlePublishLinkedIn}
-                disabled={isPublishingLi || isPublishingWp}
+                disabled={isPublishingLi || isPublishingWp || (isScheduled) || !selectedProfile}
               >
-                {isPublishingLi ? 'Publicando...' : 'Publicar no LinkedIn'}
+                {isPublishingLi ? 'Publicando...' : 'Publicar Agora no LinkedIn'}
               </Button>
+
+              {isScheduled && (
+                <Button variant="outlined" size="large" sx={{ml: 2}} onClick={handleScheduleLinkedIn}>
+                    Salvar Agendamento
+                </Button>
+              )}
+
               {isPublishingLi && <LinearProgress sx={{ my: 2 }} />}
               {publishingStatusLi && (
                 <Alert

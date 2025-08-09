@@ -5,11 +5,9 @@ import {
   IconButton,
   Tooltip,
   Divider,
-  ToggleButton,
-  ToggleButtonGroup,
-  Popover,
-  Typography,
-  Button,
+  Select,
+  MenuItem,
+  FormControl,
   useTheme
 } from '@mui/material';
 import {
@@ -40,6 +38,7 @@ const RichTextEditor = ({
   const [htmlMode, setHtmlMode] = useState(false);
   const [selection, setSelection] = useState(null); // eslint-disable-line no-unused-vars
   const [isInitialized, setIsInitialized] = useState(false);
+  const [currentBlockStyle, setCurrentBlockStyle] = useState('p');
   const editorRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -137,6 +136,18 @@ const RichTextEditor = ({
         range: range.cloneRange(),
         text: sel.toString()
       });
+
+      // Update current block style
+      let parentNode = range.startContainer.parentNode;
+      while (parentNode && parentNode !== editorRef.current) {
+        const nodeName = parentNode.nodeName.toLowerCase();
+        if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(nodeName)) {
+          setCurrentBlockStyle(nodeName);
+          return;
+        }
+        parentNode = parentNode.parentNode;
+      }
+      setCurrentBlockStyle('p');
     }
   };
 
@@ -326,6 +337,30 @@ const RichTextEditor = ({
     >
       {/* Toolbar */}
       <Box className={styles.toolbar}>
+        {/* Estilos de Bloco */}
+        <FormControl size="small" sx={{ minWidth: 120, mr: 1 }}>
+          <Select
+            value={currentBlockStyle}
+            onChange={(e) => execCommand('formatBlock', e.target.value)}
+            disabled={disabled || htmlMode}
+            displayEmpty
+            inputProps={{ 'aria-label': 'Without label' }}
+            sx={{
+                '& .MuiSelect-select': {
+                    padding: '4px 8px',
+                    fontSize: '0.875rem'
+                }
+            }}
+          >
+            <MenuItem value="p">Parágrafo</MenuItem>
+            <MenuItem value="h1">Título 1</MenuItem>
+            <MenuItem value="h2">Título 2</MenuItem>
+            <MenuItem value="h3">Título 3</MenuItem>
+          </Select>
+        </FormControl>
+
+        <div className={styles.divider} />
+
         {/* Botões de formatação */}
         <Box className={styles.toolbarGroup}>
           {formatButtons.map((button) => (

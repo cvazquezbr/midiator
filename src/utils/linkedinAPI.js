@@ -145,7 +145,7 @@ const _uploadImage = async (accessToken, uploadUrl, imageBlob) => {
  * @param {string} assetUrn - The URN of the uploaded image.
  * @returns {Promise<object>} The created post object from the API.
  */
-const _createPost = async (accessToken, authorUrn, campaignContent, assetUrn) => {
+const _createPost = async (accessToken, authorUrn, campaignContent, assetUrns = []) => {
   const postText = [
     campaignContent.titulo.toUpperCase(),
     '',
@@ -157,28 +157,31 @@ const _createPost = async (accessToken, authorUrn, campaignContent, assetUrn) =>
     campaignContent.hashtags.join(' '),
   ].join('\n');
 
+  const shareContent = {
+    shareCommentary: {
+      text: postText,
+    },
+  };
+
+  if (assetUrns && assetUrns.length > 0) {
+    shareContent.shareMediaCategory = 'IMAGE';
+    shareContent.media = assetUrns.map(assetUrn => ({
+      status: 'READY',
+      description: {
+        text: campaignContent.titulo,
+      },
+      media: assetUrn,
+      title: {
+        text: campaignContent.titulo,
+      },
+    }));
+  }
+
   const payload = {
     author: authorUrn,
     lifecycleState: 'PUBLISHED',
     specificContent: {
-      'com.linkedin.ugc.ShareContent': {
-        shareCommentary: {
-          text: postText,
-        },
-        shareMediaCategory: 'IMAGE',
-        media: [
-          {
-            status: 'READY',
-            description: {
-              text: campaignContent.titulo,
-            },
-            media: assetUrn,
-            title: {
-              text: campaignContent.titulo,
-            },
-          },
-        ],
-      },
+      'com.linkedin.ugc.ShareContent': shareContent,
     },
     visibility: {
       'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
@@ -214,8 +217,33 @@ const _createPost = async (accessToken, authorUrn, campaignContent, assetUrn) =>
  * @returns {Promise<object>} Uma promessa que resolve para um objeto com o ID e o link do post.
  * @throws {Error} Se a configuração do LinkedIn não for encontrada ou se ocorrer um erro na API.
  */
+/**
+ * Fetches the available LinkedIn profiles (personal and organizational) for the authenticated user.
+ * @returns {Promise<Array<{urn: string, name: string}>>} A list of profiles.
+ */
+export const getLinkedInProfiles = async () => {
+  const config = getLinkedinConfig();
+  if (!config || !config.accessToken) {
+    throw new Error('Configuração do LinkedIn ou Access Token não encontrados. Por favor, conecte-se primeiro.');
+  }
+  const { accessToken } = config;
+
+  const response = await fetch('/api/linkedin-proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'getOrganizations', accessToken }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Resposta não-JSON do proxy.' }));
+    throw new Error(`Falha ao buscar perfis do LinkedIn via proxy: ${errorData.message}`);
+  }
+
+  return await response.json();
+};
+
 export const publishToLinkedIn = async (campaignData) => {
-  const { campaignContent, imageBlob } = campaignData;
+  const { campaignContent, imageBlobs = [], authorUrn: providedAuthorUrn } = campaignData;
 
   const config = getLinkedinConfig();
   if (!config || !config.accessToken) {
@@ -223,23 +251,34 @@ export const publishToLinkedIn = async (campaignData) => {
   }
   const { accessToken } = config;
 
-  // To solve the author error, we now post as the authenticated user.
-  const authorUrn = await _getProfileUrn(accessToken);
+  // Use the provided author URN, or fetch the user's personal URN as a fallback.
+  const authorUrn = providedAuthorUrn || await _getProfileUrn(accessToken);
+
+  const assetUrns = [];
+
+  if (imageBlobs && imageBlobs.length > 0) {
+    console.log(`Publicando no LinkedIn: Registrando e enviando ${imageBlobs.length} imagem(ns)...`);
+    // Process all image uploads in parallel for efficiency
+    const uploadPromises = imageBlobs.map(async (imageBlob) => {
+      // 1. Register Image Upload
+      const { uploadUrl, assetUrn } = await _registerImageUpload(accessToken, authorUrn);
+      // 2. Upload Image
+      await _uploadImage(accessToken, uploadUrl, imageBlob);
+      console.log(`Imagem com asset URN: ${assetUrn} enviada com sucesso.`);
+      return assetUrn;
+    });
+
+    const results = await Promise.all(uploadPromises);
+    assetUrns.push(...results);
+    console.log('Todas as imagens foram enviadas.');
+  } else {
+    console.log('Publicando no LinkedIn: Nenhum imagem para enviar, criando um post de texto.');
+  }
 
 
-  // 1. Register Image Upload
-  console.log('Publicando no LinkedIn: Registrando imagem via proxy...');
-  const { uploadUrl, assetUrn } = await _registerImageUpload(accessToken, authorUrn);
-  console.log('Publicando no LinkedIn: Imagem registrada. Asset URN:', assetUrn);
-
-  // 2. Upload Image
-  console.log('Publicando no LinkedIn: Fazendo upload da imagem via proxy...');
-  await _uploadImage(accessToken, uploadUrl, imageBlob);
-  console.log('Publicando no LinkedIn: Imagem enviada com sucesso.');
-
-  // 3. Create Post
+  // 3. Create Post (with multiple or no images)
   console.log('Publicando no LinkedIn: Criando o post via proxy...');
-  const postResult = await _createPost(accessToken, authorUrn, campaignContent, assetUrn);
+  const postResult = await _createPost(accessToken, authorUrn, campaignContent, assetUrns);
   console.log('Publicando no LinkedIn: Post criado com sucesso!', postResult);
 
   // The post ID is in the format "urn:li:share:xxxxx"
