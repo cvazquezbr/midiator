@@ -146,7 +146,7 @@ async function handleCreatePost(request, response) {
     return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
   }
 
-  const createPostUrl = 'https://api.linkedin.com/v2/ugcPosts';
+  const createPostUrl = 'https://api.linkedin.com/rest/posts';
 
   try {
     const linkedinResponse = await fetch(createPostUrl, {
@@ -159,8 +159,20 @@ async function handleCreatePost(request, response) {
       body: JSON.stringify(payload),
     });
 
-    const data = await linkedinResponse.json();
-    return response.status(linkedinResponse.status).json(data);
+    if (!linkedinResponse.ok) {
+        const errorData = await linkedinResponse.json().catch(() => ({ message: 'Could not parse error response from LinkedIn.' }));
+        console.error('LinkedIn Post Creation Error:', errorData);
+        return response.status(linkedinResponse.status).json(errorData);
+    }
+
+    // On success (201 Created), the new Posts API returns the ID in the header.
+    const postId = linkedinResponse.headers.get('x-restli-id');
+    if (postId) {
+        return response.status(201).json({ id: postId });
+    } else {
+        // Fallback in case the header is missing, though it shouldn't be.
+        return response.status(201).json({ id: 'urn:li:share:UNKNOWN_ID_HEADER_MISSING' });
+    }
   } catch (error) {
     console.error('Error during post creation:', error);
     return response.status(500).json({ error: 'Internal Server Error during post creation' });
