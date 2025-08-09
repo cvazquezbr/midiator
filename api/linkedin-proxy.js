@@ -31,9 +31,6 @@ async function handleTokenExchange(request, response) {
       body: params.toString(),
     });
     const data = await linkedinResponse.json();
-    if (!linkedinResponse.ok) {
-      console.error('LinkedIn API Error during token exchange:', data);
-    }
     return response.status(linkedinResponse.status).json(data);
   } catch (error) {
     console.error('Error during token exchange:', error);
@@ -65,27 +62,21 @@ async function handleGetProfile(request, response) {
     }
 }
 
-async function handleInitializeImageUpload(request, response) {
-  const { accessToken, ownerUrn } = request.body;
+async function handleRegisterUpload(request, response) {
+  const { accessToken, payload } = request.body;
 
-  if (!accessToken || !ownerUrn) {
-    return response.status(400).json({ error: 'Missing accessToken or ownerUrn for initializing upload.' });
+  if (!accessToken || !payload) {
+    return response.status(400).json({ error: 'Missing accessToken or payload for registering upload.' });
   }
 
-  const initializeUploadUrl = 'https://api.linkedin.com/rest/images?action=initializeUpload';
-  const payload = {
-    initializeUploadRequest: {
-      owner: ownerUrn,
-    },
-  };
+  const registerUploadUrl = 'https://api.linkedin.com/v2/assets?action=registerUpload';
 
   try {
-    const linkedinResponse = await fetch(initializeUploadUrl, {
+    const linkedinResponse = await fetch(registerUploadUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
-        'LinkedIn-Version': '202411',
       },
       body: JSON.stringify(payload),
     });
@@ -93,17 +84,19 @@ async function handleInitializeImageUpload(request, response) {
     const data = await linkedinResponse.json();
 
     if (!linkedinResponse.ok) {
-      console.error('LinkedIn Initialize Upload Error:', data);
-      return response.status(linkedinResponse.status).json(data);
+        return response.status(linkedinResponse.status).json(data);
     }
 
-    // The new API returns a value object with the uploadUrl and the final image URN
-    const { uploadUrl, image } = data.value;
-    return response.status(200).json({ uploadUrl, assetUrn: image });
+    // The client expects a simplified response, so we parse the complex one from LinkedIn.
+    const simplifiedData = {
+      uploadUrl: data.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl,
+      assetUrn: data.value.asset,
+    };
 
+    return response.status(200).json(simplifiedData);
   } catch (error) {
-    console.error('Error during image upload initialization:', error);
-    return response.status(500).json({ error: 'Internal Server Error during image upload initialization' });
+    console.error('Error during upload registration:', error);
+    return response.status(500).json({ error: 'Internal Server Error during upload registration' });
   }
 }
 
@@ -150,7 +143,7 @@ async function handleCreatePost(request, response) {
     return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
   }
 
-  const createPostUrl = 'https://api.linkedin.com/rest/posts';
+  const createPostUrl = 'https://api.linkedin.com/v2/ugcPosts';
 
   try {
     const linkedinResponse = await fetch(createPostUrl, {
@@ -159,25 +152,12 @@ async function handleCreatePost(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202411',
       },
       body: JSON.stringify(payload),
     });
 
-    if (!linkedinResponse.ok) {
-        const errorData = await linkedinResponse.json().catch(() => ({ message: 'Could not parse error response from LinkedIn.' }));
-        console.error('LinkedIn Post Creation Error:', errorData);
-        return response.status(linkedinResponse.status).json(errorData);
-    }
-
-    // On success (201 Created), the new Posts API returns the ID in the header.
-    const postId = linkedinResponse.headers.get('x-restli-id');
-    if (postId) {
-        return response.status(201).json({ id: postId });
-    } else {
-        // Fallback in case the header is missing, though it shouldn't be.
-        return response.status(201).json({ id: 'urn:li:share:UNKNOWN_ID_HEADER_MISSING' });
-    }
+    const data = await linkedinResponse.json();
+    return response.status(linkedinResponse.status).json(data);
   } catch (error) {
     console.error('Error during post creation:', error);
     return response.status(500).json({ error: 'Internal Server Error during post creation' });
@@ -204,14 +184,13 @@ async function handleGetOrganizations(request, response) {
     }];
 
     // 2. Find organizations the user has an approved role for.
-    // We fetch all roles and de-duplicate, as a user might have multiple roles for one page.
     const aclUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED';
     const aclResponse = await fetch(aclUrl, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'X-Restli-Protocol-Version': '2.0.0',
         'Content-Type': 'application/json',
-        'LinkedIn-Version': '202411',
+        'LinkedIn-Version': '202403', // Use a stable, recent version
       },
     });
 
@@ -272,8 +251,8 @@ export default async function handler(request, response) {
       return handleGetProfile(request, response);
     case 'getProfile':
         return handleGetProfile(request, response);
-    case 'initializeImageUpload':
-      return handleInitializeImageUpload(request, response);
+    case 'registerUpload':
+      return handleRegisterUpload(request, response);
     case 'uploadImage':
       return handleUploadImage(request, response);
     case 'createPost':
