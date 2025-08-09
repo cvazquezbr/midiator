@@ -1522,8 +1522,8 @@ console.log(finalPrompt)
 
   const handleResetCampaign = () => {
     setCampaignContent(null);
-    setProblema('');
-    setSolucao('');
+    // setProblema(''); // Keep the problem
+    // setSolucao(''); // Keep the solution
     setGeneratedImageUrl(null);
     setConteudoMedio('');
     setConteudoPequeno('');
