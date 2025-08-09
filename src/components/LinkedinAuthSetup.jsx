@@ -125,6 +125,7 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
       }
       saveLinkedinConfig(config);
       const redirectUri = window.location.origin;
+
       // Scopes updated to include organization admin permissions and newer recommended scopes.
       // r_liteprofile: Basic profile data
       // w_share: Ability to post shares
