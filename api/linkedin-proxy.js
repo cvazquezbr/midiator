@@ -191,14 +191,15 @@ async function handleGetOrganizations(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'X-Restli-Protocol-Version': '2.0.0',
         'Content-Type': 'application/json',
-        'LinkedIn-Version': '202403',
+        'LinkedIn-Version': '202405',
       },
     });
 
     if (!aclResponse.ok) {
-       // It's possible the user has no organizations, so don't throw an error, just log it.
-       console.warn(`Could not fetch organization ACLs, status: ${aclResponse.status}`);
-       return response.status(200).json(profiles); // Return at least the personal profile
+       const errorBody = await aclResponse.text();
+       console.warn(`Could not fetch organization ACLs, status: ${aclResponse.status}, body: ${errorBody}`);
+       // It's possible the user has no organizations, so don't throw an error, just return personal profile.
+       return response.status(200).json(profiles);
     }
 
     const aclData = await aclResponse.json();
