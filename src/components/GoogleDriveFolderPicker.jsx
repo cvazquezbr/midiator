@@ -13,8 +13,9 @@ import {
   TextField,
   Box,
   ListItemIcon,
+  IconButton,
 } from '@mui/material';
-import { Folder } from '@mui/icons-material';
+import { Folder, Close } from '@mui/icons-material';
 import googleDriveAPI from '../utils/googleDriveAPI';
 
 const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder }) => {
@@ -29,15 +30,14 @@ const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder }) => {
     setError('');
     try {
       if (!googleDriveAPI.isUserSignedIn()) {
-        // This is a fallback, the user should be signed in to open the picker.
-        setError('You must be signed in to Google to browse folders.');
+        setError('Você precisa estar logado no Google para procurar pastas.');
         setLoading(false);
         return;
       }
       const folderList = await googleDriveAPI.listFolders();
       setFolders(folderList);
     } catch (err) {
-      setError(`Failed to fetch folders: ${err.message}`);
+      setError(`Falha ao buscar pastas: ${err.message}`);
       console.error(err);
     } finally {
       setLoading(false);
@@ -54,20 +54,21 @@ const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder }) => {
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) {
-      setError('Please enter a name for the new folder.');
+      setError('Por favor, insira um nome para a nova pasta.');
       return;
     }
     setLoading(true);
     setError('');
     try {
       const newFolder = await googleDriveAPI.createFolder(newFolderName.trim());
-      setFolders((prevFolders) => [newFolder, ...prevFolders]);
-      setSelectedFolder(newFolder);
-      setNewFolderName('');
+      // On success, immediately select the new folder and close the dialog.
+      onSelectFolder(newFolder);
+      onClose();
     } catch (err) {
-      setError(`Failed to create folder: ${err.message}`);
+      setError(`Falha ao criar pasta: ${err.message}`);
       console.error(err);
     } finally {
+      // Reset loading state, though the component will likely be unmounted.
       setLoading(false);
     }
   };
@@ -81,11 +82,16 @@ const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder }) => {
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Select or Create a Google Drive Folder</DialogTitle>
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        Selecionar ou Criar Pasta no Google Drive
+        <IconButton aria-label="close" onClick={onClose}>
+          <Close />
+        </IconButton>
+      </DialogTitle>
       <DialogContent dividers>
         {error && <Typography color="error" gutterBottom>{error}</Typography>}
 
-        <Typography variant="subtitle1" gutterBottom>Existing Folders</Typography>
+        <Typography variant="subtitle1" gutterBottom>Pastas Existentes</Typography>
         <Box sx={{ position: 'relative', minHeight: '200px', border: '1px solid #ddd', borderRadius: 1, mb: 3 }}>
           {loading && (
             <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255, 255, 255, 0.7)' }}>
@@ -95,7 +101,7 @@ const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder }) => {
           <List sx={{ maxHeight: 300, overflow: 'auto' }}>
             {!loading && folders.length === 0 && (
               <ListItem>
-                <ListItemText primary="No folders found or you might need to sign in." />
+                <ListItemText primary="Nenhuma pasta encontrada ou você precisa fazer login." />
               </ListItem>
             )}
             {folders.map((folder) => (
@@ -114,10 +120,10 @@ const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder }) => {
           </List>
         </Box>
 
-        <Typography variant="subtitle1" gutterBottom>Create New Folder</Typography>
+        <Typography variant="subtitle1" gutterBottom>Criar Nova Pasta</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <TextField
-            label="New Folder Name"
+            label="Nome da Nova Pasta"
             value={newFolderName}
             onChange={(e) => setNewFolderName(e.target.value)}
             variant="outlined"
@@ -126,15 +132,15 @@ const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder }) => {
             disabled={loading}
           />
           <Button onClick={handleCreateFolder} variant="contained" disabled={loading || !newFolderName.trim()}>
-            Create
+            Criar
           </Button>
         </Box>
 
       </DialogContent>
       <DialogActions sx={{ p: 2 }}>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>Cancelar</Button>
         <Button onClick={handleSelect} variant="contained" disabled={!selectedFolder || loading}>
-          Select Folder
+          Selecionar Pasta
         </Button>
       </DialogActions>
     </Dialog>
