@@ -38,17 +38,17 @@ async function handleTokenExchange(request, response) {
   }
 }
 
-async function handleTestConnection(request, response) {
+async function handleGetProfile(request, response) {
     const { accessToken } = request.body;
 
     if (!accessToken) {
-        return response.status(400).json({ error: 'Missing accessToken for test connection.' });
+        return response.status(400).json({ error: 'Missing accessToken for getProfile.' });
     }
 
-    const testUrl = 'https://api.linkedin.com/v2/me';
+    const profileUrl = 'https://api.linkedin.com/v2/me';
 
     try {
-        const linkedinResponse = await fetch(testUrl, {
+        const linkedinResponse = await fetch(profileUrl, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
@@ -57,9 +57,111 @@ async function handleTestConnection(request, response) {
         const data = await linkedinResponse.json();
         return response.status(linkedinResponse.status).json(data);
     } catch (error) {
-        console.error('Error during proxied test connection:', error);
+        console.error('Error during proxied getProfile:', error);
         return response.status(500).json({ error: 'Internal Server Error during proxied API call' });
     }
+}
+
+async function handleRegisterUpload(request, response) {
+  const { accessToken, payload } = request.body;
+
+  if (!accessToken || !payload) {
+    return response.status(400).json({ error: 'Missing accessToken or payload for registering upload.' });
+  }
+
+  const registerUploadUrl = 'https://api.linkedin.com/v2/assets?action=registerUpload';
+
+  try {
+    const linkedinResponse = await fetch(registerUploadUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await linkedinResponse.json();
+
+    if (!linkedinResponse.ok) {
+        return response.status(linkedinResponse.status).json(data);
+    }
+
+    // The client expects a simplified response, so we parse the complex one from LinkedIn.
+    const simplifiedData = {
+      uploadUrl: data.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl,
+      assetUrn: data.value.asset,
+    };
+
+    return response.status(200).json(simplifiedData);
+  } catch (error) {
+    console.error('Error during upload registration:', error);
+    return response.status(500).json({ error: 'Internal Server Error during upload registration' });
+  }
+}
+
+async function handleUploadImage(request, response) {
+  const { accessToken, uploadUrl, imageBase64, imageType } = request.body;
+
+  if (!accessToken || !uploadUrl || !imageBase64 || !imageType) {
+    return response.status(400).json({ error: 'Missing parameters for image upload.' });
+  }
+
+  // Convert base64 to a Buffer for the binary upload
+  const imageBuffer = Buffer.from(imageBase64, 'base64');
+
+  try {
+    const linkedinResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        // Note: The official LinkedIn docs say to include the Bearer token, so we do.
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': imageType,
+      },
+      body: imageBuffer,
+    });
+
+    if (!linkedinResponse.ok) {
+      const errorText = await linkedinResponse.text();
+      console.error("LinkedIn Image Upload Error Body:", errorText);
+      return response.status(linkedinResponse.status).json({ message: `Falha no upload da imagem para o LinkedIn. Status: ${linkedinResponse.status}` });
+    }
+
+    // Successful upload returns 201 Created with no body.
+    return response.status(201).send();
+
+  } catch (error) {
+    console.error('Error during image upload:', error);
+    return response.status(500).json({ error: 'Internal Server Error during image upload' });
+  }
+}
+
+async function handleCreatePost(request, response) {
+  const { accessToken, payload } = request.body;
+
+  if (!accessToken || !payload) {
+    return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
+  }
+
+  const createPostUrl = 'https://api.linkedin.com/v2/ugcPosts';
+
+  try {
+    const linkedinResponse = await fetch(createPostUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await linkedinResponse.json();
+    return response.status(linkedinResponse.status).json(data);
+  } catch (error) {
+    console.error('Error during post creation:', error);
+    return response.status(500).json({ error: 'Internal Server Error during post creation' });
+  }
 }
 
 
@@ -74,8 +176,16 @@ export default async function handler(request, response) {
   switch (action) {
     case 'tokenExchange':
       return handleTokenExchange(request, response);
-    case 'testConnection':
-      return handleTestConnection(request, response);
+    case 'testConnection': // Re-route testConnection to use the same logic as getProfile
+      return handleGetProfile(request, response);
+    case 'getProfile':
+        return handleGetProfile(request, response);
+    case 'registerUpload':
+      return handleRegisterUpload(request, response);
+    case 'uploadImage':
+      return handleUploadImage(request, response);
+    case 'createPost':
+        return handleCreatePost(request, response);
     default:
       return response.status(400).json({ error: 'Invalid action specified.' });
   }
