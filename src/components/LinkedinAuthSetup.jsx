@@ -106,7 +106,11 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
       }
       saveLinkedinConfig(config);
       const redirectUri = window.location.origin;
-      const scope = 'r_basicprofile%20w_member_social%20r_1st_connections_size';
+      // Scopes updated to include organization admin permissions and newer recommended scopes.
+      // r_liteprofile: Basic profile data
+      // w_share: Ability to post shares
+      // rw_organization_admin: Read and write access to managed organization pages, required for posting on their behalf.
+      const scope = encodeURIComponent('r_liteprofile w_share rw_organization_admin');
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${config.clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
       window.location.href = authUrl;
     } else {
