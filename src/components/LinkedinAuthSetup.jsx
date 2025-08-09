@@ -13,7 +13,7 @@ import {
   Grid,
   CircularProgress,
 } from '@mui/material';
-import { InfoOutlined } from '@mui/icons-material';
+import { InfoOutlined, Close } from '@mui/icons-material';
 import {
   saveLinkedinConfig,
   getLinkedinConfig,
@@ -31,8 +31,25 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
   const [message, setMessage] = useState('');
   const [isPickerOpen, setPickerOpen] = useState(false);
   const [isDriveLoading, setIsDriveLoading] = useState(false);
+  const [connectedUser, setConnectedUser] = useState(null);
 
   useEffect(() => {
+    const fetchUserDetails = async (accessToken) => {
+      try {
+        const response = await fetch('/api/linkedin-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'getProfile', accessToken }),
+        });
+        if (!response.ok) throw new Error('Falha ao buscar detalhes do usuário.');
+        const data = await response.json();
+        setConnectedUser(data);
+      } catch (error) {
+        console.error("Erro ao buscar detalhes do usuário do LinkedIn:", error);
+        setConnectedUser({ localizedFirstName: 'Usuário', localizedLastName: 'Desconhecido' });
+      }
+    };
+
     if (open) {
       const storedConfig = getLinkedinConfig();
       setConfig({
@@ -42,8 +59,10 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
 
       if (storedConfig.accessToken) {
         setCurrentConfig(storedConfig);
+        fetchUserDetails(storedConfig.accessToken);
       } else {
         setCurrentConfig(null);
+        setConnectedUser(null);
       }
       setMessage('');
     }
@@ -150,6 +169,7 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
   const handleRemove = () => {
     removeLinkedinConfig();
     setCurrentConfig(null);
+    setConnectedUser(null); // Limpar usuário ao desconectar
     setConfig({ clientId: '', folderId: '' });
     setMessage('Configuração do LinkedIn removida.');
   };
@@ -174,31 +194,47 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle>Configurar Integração com LinkedIn</DialogTitle>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Configurar Integração com LinkedIn
+          <IconButton aria-label="close" onClick={onClose}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
         <DialogContent>
           {currentConfig && currentConfig.accessToken ? (
             <Box>
               <Typography variant="h6" color="green" sx={{ mb: 2 }}>
-                ✅ Conectado ao LinkedIn.
+                {connectedUser
+                  ? `✅ Conectado como ${connectedUser.localizedFirstName} ${connectedUser.localizedLastName}`
+                                    : '✅ Conectado. Verificando usuário...'}
               </Typography>
-              <TextField
-                name="folderId"
-                label="ID da Pasta no Google Drive (Opcional)"
-                value={config.folderId}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                placeholder="ID da pasta para a fila de publicação"
-                helperText="Este ID de pasta será usado para monitorar novos conteúdos."
-                sx={{ mb: 2 }}
-              />
+              <Grid container spacing={1} alignItems="flex-start" sx={{ mb: 2 }}>
+                <Grid item xs>
+                  <TextField
+                    name="folderId"
+                    label="ID da Pasta no Google Drive (Opcional)"
+                    value={config.folderId}
+                    onChange={handleChange}
+                    fullWidth
+                    variant="outlined"
+                    placeholder="ID da pasta para a fila de publicação"
+                  />
+                </Grid>
+                <Grid item>
+                  <Tooltip title="Essa pasta será monitorada para novas postagens. O conteúdo e as imagens para posts agendados devem ser colocados aqui.">
+                    <IconButton>
+                      <InfoOutlined />
+                    </IconButton>
+                  </Tooltip>
+                </Grid>
+              </Grid>
               <Button
                 variant="outlined"
                 onClick={handleBrowseDrive}
                 disabled={isDriveLoading}
                 startIcon={isDriveLoading ? <CircularProgress size={16} /> : null}
               >
-                {isDriveLoading ? 'Aguarde...' : 'Procurar Pasta no Google Drive...'}
+                {isDriveLoading ? 'Aguarde...' : 'Procurar no Google Drive...'}
               </Button>
             </Box>
           ) : (
