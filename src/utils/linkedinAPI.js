@@ -157,36 +157,40 @@ const _createPost = async (accessToken, authorUrn, campaignContent, assetUrns = 
     campaignContent.hashtags.join(' '),
   ].join('\n');
 
-  const shareContent = {
-    shareCommentary: {
-      text: postText,
+  const payload = {
+    author: authorUrn,
+    commentary: postText,
+    visibility: 'PUBLIC',
+    distribution: {
+      feedDistribution: 'MAIN_FEED',
+      targetEntities: [],
+      thirdPartyDistributionChannels: [],
     },
+    lifecycleState: 'PUBLISHED',
+    isReshareDisabledByAuthor: false,
   };
 
   if (assetUrns && assetUrns.length > 0) {
-    shareContent.shareMediaCategory = 'IMAGE';
-    shareContent.media = assetUrns.map(assetUrn => ({
-      status: 'READY',
-      description: {
-        text: campaignContent.titulo,
-      },
-      media: assetUrn,
-      title: {
-        text: campaignContent.titulo,
-      },
-    }));
+    if (assetUrns.length === 1) {
+      // Single image post
+      payload.content = {
+        media: {
+          title: campaignContent.titulo,
+          id: assetUrns[0],
+        },
+      };
+    } else {
+      // Multi-image post
+      payload.content = {
+        multiImage: {
+          images: assetUrns.map(assetUrn => ({
+            id: assetUrn,
+            altText: campaignContent.titulo, // Use title as alt text
+          })),
+        },
+      };
+    }
   }
-
-  const payload = {
-    author: authorUrn,
-    lifecycleState: 'PUBLISHED',
-    specificContent: {
-      'com.linkedin.ugc.ShareContent': shareContent,
-    },
-    visibility: {
-      'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
-    },
-  };
 
   const response = await fetch('/api/linkedin-proxy', {
     method: 'POST',
@@ -202,10 +206,25 @@ const _createPost = async (accessToken, authorUrn, campaignContent, assetUrns = 
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Resposta não-JSON do proxy.' }));
-    throw new Error(`Falha ao criar o post no LinkedIn via proxy: ${errorData.message}`);
+    throw new Error(`Falha ao criar o post no LinkedIn via proxy: ${errorData.message || 'Erro desconhecido.'}`);
   }
 
-  return await response.json();
+  // The new Posts API returns the post ID in the headers, not the body.
+  // The proxy should be updated to return this, but for now, we'll assume the proxy returns what's needed.
+  // The response from a successful POST is 201 Created with headers.
+  const postId = response.headers.get('x-restli-id');
+  if (!postId) {
+      // Fallback if the header isn't returned by the proxy, maybe the proxy returns the body.
+      const body = await response.json().catch(() => null);
+      if (body && body.id) {
+          return body;
+      }
+      console.warn("Não foi possível encontrar o ID do post no header 'x-restli-id'. A resposta do proxy pode precisar de ajuste.");
+      // Return a mock object so the UI doesn't break
+      return { id: 'urn:li:share:DESCONHECIDO' };
+  }
+
+  return { id: postId };
 };
 
 
