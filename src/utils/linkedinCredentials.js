@@ -21,15 +21,26 @@ export const saveLinkedinConfig = (config) => {
  * @returns {object|null} O objeto de configuração ou nulo se não for encontrado.
  */
 export const getLinkedinConfig = () => {
+  const defaultConfig = {
+    clientId: '',
+    accessToken: null,
+    expiry: null,
+    folderId: '', // Add default folderId
+  };
+
   try {
     const configString = localStorage.getItem(LINKEDIN_CONFIG_KEY);
     if (configString) {
-      return JSON.parse(configString);
+      const storedConfig = JSON.parse(configString);
+      // Merge stored config with defaults to ensure all keys are present
+      return { ...defaultConfig, ...storedConfig };
     }
-    return null;
+    // Return defaults if nothing is stored
+    return defaultConfig;
   } catch (error) {
     console.error('Erro ao obter a configuração do LinkedIn:', error);
-    return null;
+    // Return defaults on error for robustness
+    return defaultConfig;
   }
 };
 
