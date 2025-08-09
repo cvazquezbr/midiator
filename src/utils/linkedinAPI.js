@@ -66,37 +66,26 @@ const _getProfileUrn = async (accessToken) => {
  * @param {string} authorUrn - The URN of the author (person or organization).
  * @returns {Promise<{uploadUrl: string, assetUrn: string}>} The upload URL and the asset URN.
  */
-const _registerImageUpload = async (accessToken, authorUrn) => {
+const _initializeImageUpload = async (accessToken, authorUrn) => {
   const response = await fetch('/api/linkedin-proxy', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      action: 'registerUpload',
+      action: 'initializeImageUpload',
       accessToken,
-      payload: {
-        registerUploadRequest: {
-          recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
-          owner: authorUrn,
-          serviceRelationships: [
-            {
-              relationshipType: 'OWNER',
-              identifier: 'urn:li:userGeneratedContent',
-            },
-          ],
-        },
-      }
+      ownerUrn: authorUrn,
     }),
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Resposta não-JSON do proxy.' }));
-    throw new Error(`Falha ao registrar o upload da imagem via proxy: ${errorData.message}`);
+    throw new Error(`Falha ao inicializar o upload da imagem via proxy: ${errorData.message}`);
   }
 
   const data = await response.json();
-  // The proxy will return the relevant part of the response
+  // The proxy now returns an object with uploadUrl and the final image assetUrn
   return {
     uploadUrl: data.uploadUrl,
     assetUrn: data.assetUrn,
@@ -279,8 +268,8 @@ export const publishToLinkedIn = async (campaignData) => {
     console.log(`Publicando no LinkedIn: Registrando e enviando ${imageBlobs.length} imagem(ns)...`);
     // Process all image uploads in parallel for efficiency
     const uploadPromises = imageBlobs.map(async (imageBlob) => {
-      // 1. Register Image Upload
-      const { uploadUrl, assetUrn } = await _registerImageUpload(accessToken, authorUrn);
+      // 1. Initialize Image Upload
+      const { uploadUrl, assetUrn } = await _initializeImageUpload(accessToken, authorUrn);
       // 2. Upload Image
       await _uploadImage(accessToken, uploadUrl, imageBlob);
       console.log(`Imagem com asset URN: ${assetUrn} enviada com sucesso.`);
