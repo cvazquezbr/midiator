@@ -223,11 +223,8 @@ export const publishToLinkedIn = async (campaignData) => {
   }
   const { accessToken } = config;
 
-  // As per the n8n config, we post as a specific organization.
-  // In a real-world scenario, this might be fetched or configured dynamically.
-  const authorUrn = 'urn:li:organization:669250';
-  // Alternatively, to post as the user:
-  // const authorUrn = await _getProfileUrn(accessToken);
+  // To solve the author error, we now post as the authenticated user.
+  const authorUrn = await _getProfileUrn(accessToken);
 
 
   // 1. Register Image Upload
