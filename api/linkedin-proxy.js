@@ -164,6 +164,74 @@ async function handleCreatePost(request, response) {
   }
 }
 
+async function handleGetOrganizations(request, response) {
+  const { accessToken } = request.body;
+
+  if (!accessToken) {
+    return response.status(400).json({ error: 'Missing accessToken for getOrganizations.' });
+  }
+
+  try {
+    // 1. Get user's own profile to start the list
+    const profileResponse = await fetch('https://api.linkedin.com/v2/me', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!profileResponse.ok) throw new Error('Failed to fetch user profile.');
+    const profileData = await profileResponse.json();
+    const profiles = [{
+      urn: `urn:li:person:${profileData.id}`,
+      name: `${profileData.localizedFirstName} ${profileData.localizedLastName} (Pessoal)`,
+    }];
+
+    // 2. Find organizations the user is an administrator for
+    const aclUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED&role=ADMINISTRATOR';
+    const aclResponse = await fetch(aclUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'X-Restli-Protocol-Version': '2.0.0',
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!aclResponse.ok) {
+       // It's possible the user has no organizations, so don't throw an error, just log it.
+       console.warn(`Could not fetch organization ACLs, status: ${aclResponse.status}`);
+       return response.status(200).json(profiles); // Return at least the personal profile
+    }
+
+    const aclData = await aclResponse.json();
+    const organizationUrns = aclData.elements?.map(el => el.organization) || [];
+
+    if (organizationUrns.length === 0) {
+      return response.status(200).json(profiles);
+    }
+
+    // 3. Fetch details for each organization
+    const organizationPromises = organizationUrns.map(urn =>
+      fetch(`https://api.linkedin.com/v2/organizations/${urn.split(':').pop()}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }).then(res => res.ok ? res.json() : null)
+    );
+
+    const organizationResults = await Promise.all(organizationPromises);
+
+    organizationResults.forEach(orgData => {
+      if (orgData) {
+        profiles.push({
+          urn: `urn:li:organization:${orgData.id}`,
+          name: orgData.localizedName,
+        });
+      }
+    });
+
+    return response.status(200).json(profiles);
+
+  } catch (error) {
+    console.error('Error during proxied getOrganizations:', error);
+    return response.status(500).json({ error: 'Internal Server Error during proxied API call' });
+  }
+}
+
 
 export default async function handler(request, response) {
   if (request.method !== 'POST') {
@@ -186,6 +254,8 @@ export default async function handler(request, response) {
       return handleUploadImage(request, response);
     case 'createPost':
         return handleCreatePost(request, response);
+    case 'getOrganizations':
+        return handleGetOrganizations(request, response);
     default:
       return response.status(400).json({ error: 'Invalid action specified.' });
   }
