@@ -186,8 +186,9 @@ async function handleGetOrganizations(request, response) {
       name: `${profileData.localizedFirstName} ${profileData.localizedLastName} (Pessoal)`,
     }];
 
-    // 2. Find organizations the user is an administrator for
-    const aclUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED&role=ADMINISTRATOR';
+    // 2. Find organizations the user has an approved role for.
+    // We fetch all roles and de-duplicate, as a user might have multiple roles for one page.
+    const aclUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED';
     const aclResponse = await fetch(aclUrl, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
