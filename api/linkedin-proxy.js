@@ -65,17 +65,22 @@ async function handleGetProfile(request, response) {
     }
 }
 
-async function handleRegisterUpload(request, response) {
-  const { accessToken, payload } = request.body;
+async function handleInitializeImageUpload(request, response) {
+  const { accessToken, ownerUrn } = request.body;
 
-  if (!accessToken || !payload) {
-    return response.status(400).json({ error: 'Missing accessToken or payload for registering upload.' });
+  if (!accessToken || !ownerUrn) {
+    return response.status(400).json({ error: 'Missing accessToken or ownerUrn for initializing upload.' });
   }
 
-  const registerUploadUrl = 'https://api.linkedin.com/v2/assets?action=registerUpload';
+  const initializeUploadUrl = 'https://api.linkedin.com/rest/images?action=initializeUpload';
+  const payload = {
+    initializeUploadRequest: {
+      owner: ownerUrn,
+    },
+  };
 
   try {
-    const linkedinResponse = await fetch(registerUploadUrl, {
+    const linkedinResponse = await fetch(initializeUploadUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -88,19 +93,17 @@ async function handleRegisterUpload(request, response) {
     const data = await linkedinResponse.json();
 
     if (!linkedinResponse.ok) {
-        return response.status(linkedinResponse.status).json(data);
+      console.error('LinkedIn Initialize Upload Error:', data);
+      return response.status(linkedinResponse.status).json(data);
     }
 
-    // The client expects a simplified response, so we parse the complex one from LinkedIn.
-    const simplifiedData = {
-      uploadUrl: data.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl,
-      assetUrn: data.value.asset,
-    };
+    // The new API returns a value object with the uploadUrl and the final image URN
+    const { uploadUrl, image } = data.value;
+    return response.status(200).json({ uploadUrl, assetUrn: image });
 
-    return response.status(200).json(simplifiedData);
   } catch (error) {
-    console.error('Error during upload registration:', error);
-    return response.status(500).json({ error: 'Internal Server Error during upload registration' });
+    console.error('Error during image upload initialization:', error);
+    return response.status(500).json({ error: 'Internal Server Error during image upload initialization' });
   }
 }
 
@@ -269,8 +272,8 @@ export default async function handler(request, response) {
       return handleGetProfile(request, response);
     case 'getProfile':
         return handleGetProfile(request, response);
-    case 'registerUpload':
-      return handleRegisterUpload(request, response);
+    case 'initializeImageUpload':
+      return handleInitializeImageUpload(request, response);
     case 'uploadImage':
       return handleUploadImage(request, response);
     case 'createPost':
