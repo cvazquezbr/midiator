@@ -475,7 +475,7 @@ function App() {
             // Abre o modal para mostrar que a conexão foi bem-sucedida
             setShowLinkedinAuthModal(true);
           } else {
-            console.error('Erro ao obter o token de acesso do LinkedIn:', await response.text());
+            console.error('Erro ao obter o token de acesso do LinkedIn:', data);
             // Tratar erro, talvez mostrar mensagem
           }
         } catch (error) {
