@@ -184,7 +184,7 @@ async function handleGetOrganizations(request, response) {
     }];
 
     // 2. Find organizations the user administers using projection.
-    const orgsUrl = 'https://api.linkedin.com/v2/organizations?q=administeredOrganizations&projection=(elements*(organization~(id,localizedName)))';
+    const orgsUrl = 'https://api.linkedin.com/v2/organizations?q=administeredOrganization&projection=(elements*(organization~(id,localizedName)))';
     const orgsResponse = await fetch(orgsUrl, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
