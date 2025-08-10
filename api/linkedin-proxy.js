@@ -183,40 +183,27 @@ async function handleGetOrganizations(request, response) {
       name: `${profileData.localizedFirstName} ${profileData.localizedLastName} (Pessoal)`,
     }];
 
-    // 2. Find organizations for which the authenticated user has an approved role.
-    const userUrn = `urn:li:person:${profileData.id}`;
-    const aclUrl = `https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(userUrn)}&state=APPROVED&role=ADMINISTRATOR,CONTENT_ADMINISTRATOR`;
-    const aclResponse = await fetch(aclUrl, {
+    // 2. Find organizations the user administers using projection.
+    const orgsUrl = 'https://api.linkedin.com/v2/organizations?q=administeredOrganizations&projection=(elements*(organization~(id,localizedName)))';
+    const orgsResponse = await fetch(orgsUrl, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'X-Restli-Protocol-Version': '2.0.0',
         'Content-Type': 'application/json',
       },
     });
 
-    if (!aclResponse.ok) {
-       // It's possible the user has no organizations, so don't throw an error, just log it.
-       console.warn(`Could not fetch organization ACLs, status: ${aclResponse.status}`);
-       return response.status(200).json(profiles); // Return at least the personal profile
-    }
-
-    const aclData = await aclResponse.json();
-    const organizationUrns = aclData.elements?.map(el => el.organization) || [];
-
-    if (organizationUrns.length === 0) {
+    if (!orgsResponse.ok) {
+      const errorBody = await orgsResponse.text();
+      console.warn(`Could not fetch administered organizations, status: ${orgsResponse.status}, body: ${errorBody}`);
+      // If this fails, just return the personal profile.
       return response.status(200).json(profiles);
     }
 
-    // 3. Fetch details for each organization
-    const organizationPromises = organizationUrns.map(urn =>
-      fetch(`https://api.linkedin.com/v2/organizations/${urn.split(':').pop()}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }).then(res => res.ok ? res.json() : null)
-    );
+    const orgsData = await orgsResponse.json();
+    const organizations = orgsData.elements || [];
 
-    const organizationResults = await Promise.all(organizationPromises);
-
-    organizationResults.forEach(orgData => {
+    organizations.forEach(orgAcl => {
+      const orgData = orgAcl['organization~']; // Details are in the projected field
       if (orgData) {
         profiles.push({
           urn: `urn:li:organization:${orgData.id}`,
