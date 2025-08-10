@@ -157,7 +157,7 @@ async function handleGetProfile(request, response) {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202501',
+                'LinkedIn-Version': '202501'
             },
         });
         const data = await linkedinResponse.json();
@@ -184,7 +184,7 @@ async function handleRegisterUpload(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202501',
+        'LinkedIn-Version': '202501'
       },
       body: JSON.stringify(payload),
     });
@@ -260,7 +260,7 @@ async function handleCreatePost(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202501',
+        'LinkedIn-Version': '202501'
       },
       body: JSON.stringify(payload),
     });
