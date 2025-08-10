@@ -91,7 +91,6 @@ async function handleFinalizeVideoUpload(request, response) {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
-                'LinkedIn-Version': '202501',
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0'
             },
@@ -124,7 +123,6 @@ async function handleCheckVideoStatus(request, response) {
         const linkedinResponse = await fetch(statusUrl, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
-                'LinkedIn-Version': '202501',
                 'Content-Type': 'application/json'
             }
         });
@@ -153,8 +151,7 @@ async function handleGetProfile(request, response) {
     try {
         const linkedinResponse = await fetch(profileUrl, {
             headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'LinkedIn-Version': '202501',
+                Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
             },
         });
@@ -180,7 +177,6 @@ async function handleRegisterUpload(request, response) {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'LinkedIn-Version': '202501',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
@@ -255,7 +251,6 @@ async function handleCreatePost(request, response) {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'LinkedIn-Version': '202501',
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
       },
@@ -280,11 +275,7 @@ async function handleGetOrganizations(request, response) {
   try {
     // 1. Get user's own profile to start the list
     const profileResponse = await fetch('https://api.linkedin.com/v2/me', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'LinkedIn-Version': '202501',
-        'Content-Type': 'application/json'
-      },
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!profileResponse.ok) {
       // If fetching the personal profile fails, we can't proceed.
@@ -296,15 +287,21 @@ async function handleGetOrganizations(request, response) {
       name: `${profileData.localizedFirstName} ${profileData.localizedLastName} (Pessoal)`,
     }];
 
-    // 2. Find organizations the user administers using projection.
-    const orgsUrl = 'https://api.linkedin.com/v2/organizations?q=administeredOrganizations&projection=(elements*(organization~(id,localizedName)))';
-    const orgsResponse = await fetch(orgsUrl, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'LinkedIn-Version': '202501',
-        'Content-Type': 'application/json',
-      },
-    });
+    // Step 1 from user's code: Get organizations the user administers
+    const aclsUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED';
+    const aclsHeaders = {
+      'Authorization': `Bearer ${accessToken}`,
+      'X-Restli-Protocol-Version': '2.0.0',
+      'LinkedIn-Version': '202501',
+      'Content-Type': 'application/json'
+    };
+    const aclsResponse = await fetch(aclsUrl, { headers: aclsHeaders });
+
+    if (!aclsResponse.ok) {
+      const errorBody = await aclsResponse.text();
+      console.warn(`ACLs API failed: ${aclsResponse.status}, body: ${errorBody}`);
+      return response.status(200).json(profiles); // Fallback to personal profile
+    }
 
     const aclsData = await aclsResponse.json();
 
