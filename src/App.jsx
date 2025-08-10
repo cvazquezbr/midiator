@@ -296,6 +296,21 @@ function App() {
     //   })
     // );
 
+    let serializableGeneratedVideo = null;
+    if (generatedVideoData && generatedVideoData.blob) {
+      try {
+        const videoBase64 = await blobToBase64(generatedVideoData.blob);
+        serializableGeneratedVideo = {
+          ...generatedVideoData,
+          blob: undefined,
+          url: undefined,
+          videoBase64: videoBase64,
+        };
+      } catch (error) {
+        console.error("Erro ao converter blob de vídeo para Base64:", error);
+      }
+    }
+
     const stateToSave = {
       activeStep,
       csvData,
@@ -309,6 +324,7 @@ function App() {
       // Omit generatedImagesData and generatedAudioData to avoid QuotaExceededError
       // generatedImagesData: serializableGeneratedImages,
       // generatedAudioData: serializableGeneratedAudio,
+      generatedVideo: serializableGeneratedVideo,
       problema,
       solucao,
       campaignContent,
@@ -824,23 +840,8 @@ function App() {
           })
       );
 
-      let serializableGeneratedVideo = null;
-      if (generatedVideoData && generatedVideoData.blob) {
-        try {
-          const videoBase64 = await blobToBase64(generatedVideoData.blob);
-          serializableGeneratedVideo = {
-            ...generatedVideoData,
-            blob: undefined,
-            url: undefined,
-            videoBase64: videoBase64,
-          };
-        } catch (error) {
-          console.error("Erro ao converter blob de vídeo para Base64:", error);
-        }
-      }
-
       const stateToSave = {
-        version: "1.9", // Incremented version to reflect this change
+        version: "1.8", // Incremented version to reflect this change
         backgroundImageUrl: backgroundImage,
         originalImageSize: originalImageSize,
         imageFilters: imageFilters, // <<<<<<<<<<<< SAVE
@@ -851,7 +852,6 @@ function App() {
         csvData: csvData,
         generatedImages: serializableGeneratedImages,
         generatedAudio: serializableGeneratedAudio,
-        generatedVideo: serializableGeneratedVideo,
         problema: problema,
         solucao: solucao,
         campaignContent: campaignContent,
