@@ -29,7 +29,7 @@ import { ptBR } from 'date-fns/locale/pt-BR';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
 
-const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData }) => {
+const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, generatedVideoData }) => {
   // State for WordPress
   const [isPublishingWp, setIsPublishingWp] = useState(false);
   const [publishingStatusWp, setPublishingStatusWp] = useState('');
@@ -44,6 +44,7 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData }) 
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 60 * 60 * 1000)); // Default to 1 hour from now
   const [selectedImages, setSelectedImages] = useState({}); // e.g. { 0: true, 1: false }
+  const [selectedVideo, setSelectedVideo] = useState(null);
   const [linkedinProfiles, setLinkedinProfiles] = useState([]);
   const [selectedProfile, setSelectedProfile] = useState('');
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
@@ -78,6 +79,15 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData }) 
       setSelectedImages({});
     }
   }, [generatedImagesData]);
+
+  // Set default video selection when video is generated
+  useEffect(() => {
+    if (generatedVideoData) {
+      setSelectedVideo(true); // Select the video by default
+    } else {
+      setSelectedVideo(false);
+    }
+  }, [generatedVideoData]);
 
 
   const handlePublishWordPress = async () => {
@@ -144,10 +154,13 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData }) 
         .filter((_, index) => selectedImages[index])
         .map(img => img.blob);
 
+      const videoBlob = selectedVideo && generatedVideoData ? generatedVideoData.blob : null;
+
       const campaignData = {
         campaignContent,
         authorUrn: selectedProfile,
         imageBlobs,
+        videoBlob,
       };
 
       setPublishingStatusLi('Publicando no LinkedIn... Isso pode levar um momento.');
@@ -258,6 +271,33 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData }) 
                   />
                 ))}
               </FormGroup>
+
+              {/* Video Selection */}
+              {generatedVideoData && (
+                <>
+                  <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+                    Selecionar Vídeo
+                  </Typography>
+                  <FormGroup row sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={!!selectedVideo}
+                          onChange={(e) => setSelectedVideo(e.target.checked)}
+                          name="video-selection"
+                        />
+                      }
+                      label={
+                        <video
+                          src={generatedVideoData.url}
+                          muted
+                          style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: '4px' }}
+                        />
+                      }
+                    />
+                  </FormGroup>
+                </>
+              )}
 
               {/* Scheduling */}
               <FormControlLabel

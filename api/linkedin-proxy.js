@@ -38,6 +38,107 @@ async function handleTokenExchange(request, response) {
   }
 }
 
+async function handleRegisterVideoUpload(request, response) {
+  // This is very similar to handleRegisterUpload, but might have a different response structure.
+  // For now, we assume it's the same and let the frontend handle the payload.
+  return handleRegisterUpload(request, response);
+}
+
+async function handleUploadVideo(request, response) {
+  const { accessToken, uploadUrl, videoBase64, videoContentType } = request.body;
+
+  if (!accessToken || !uploadUrl || !videoBase64 || !videoContentType) {
+    return response.status(400).json({ error: 'Missing parameters for video upload.' });
+  }
+
+  const videoBuffer = Buffer.from(videoBase64, 'base64');
+
+  try {
+    const linkedinResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': videoContentType,
+      },
+      body: videoBuffer,
+    });
+
+    if (!linkedinResponse.ok) {
+      const errorText = await linkedinResponse.text();
+      console.error("LinkedIn Video Upload Error Body:", errorText);
+      return response.status(linkedinResponse.status).json({ message: `Failed to upload video to LinkedIn. Status: ${linkedinResponse.status}` });
+    }
+
+    return response.status(201).send();
+  } catch (error) {
+    console.error('Error during video upload:', error);
+    return response.status(500).json({ error: 'Internal Server Error during video upload' });
+  }
+}
+
+async function handleFinalizeVideoUpload(request, response) {
+    const { accessToken, assetUrn } = request.body;
+    if (!assetUrn) {
+        return response.status(400).json({ error: 'Missing assetUrn' });
+    }
+
+    //The URN needs to be URL-encoded for the API call.
+    const encodedUrn = encodeURIComponent(assetUrn);
+    const finalizeUrl = `https://api.linkedin.com/v2/assets/${encodedUrn}?action=completeUpload`;
+
+    try {
+        const linkedinResponse = await fetch(finalizeUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'X-Restli-Protocol-Version': '2.0.0'
+            },
+            body: JSON.stringify({
+                "completeUploadRequest": {}
+            })
+        });
+
+        if (!linkedinResponse.ok) {
+            const errorText = await linkedinResponse.text();
+            console.error("LinkedIn Finalize Upload Error:", errorText);
+            return response.status(linkedinResponse.status).json({ message: 'Failed to finalize video upload.' });
+        }
+        return response.status(200).send();
+    } catch (error) {
+        console.error('Error finalizing video upload:', error);
+        return response.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+
+async function handleCheckVideoStatus(request, response) {
+    const { accessToken, assetUrn } = request.body;
+    if (!assetUrn) {
+        return response.status(400).json({ error: 'Missing assetUrn' });
+    }
+    const encodedUrn = encodeURIComponent(assetUrn);
+    const statusUrl = `https://api.linkedin.com/v2/assets/${encodedUrn}`;
+
+    try {
+        const linkedinResponse = await fetch(statusUrl, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!linkedinResponse.ok) {
+            const errorText = await linkedinResponse.text();
+            return response.status(linkedinResponse.status).json({ message: 'Failed to check video status.', details: errorText });
+        }
+        const data = await linkedinResponse.json();
+        // We only need to return the status field
+        return response.status(200).json({ status: data.recipes[0].status });
+    } catch (error) {
+        console.error('Error checking video status:', error);
+        return response.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+
 async function handleGetProfile(request, response) {
     const { accessToken } = request.body;
 
@@ -276,6 +377,14 @@ export default async function handler(request, response) {
         return handleCreatePost(request, response);
     case 'getOrganizations':
         return handleGetOrganizations(request, response);
+    case 'registerVideoUpload':
+        return handleRegisterVideoUpload(request, response);
+    case 'uploadVideo':
+        return handleUploadVideo(request, response);
+    case 'finalizeVideoUpload':
+        return handleFinalizeVideoUpload(request, response);
+    case 'checkVideoStatus':
+        return handleCheckVideoStatus(request, response);
     default:
       return response.status(400).json({ error: 'Invalid action specified.' });
   }

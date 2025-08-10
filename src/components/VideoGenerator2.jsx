@@ -17,7 +17,7 @@ import NarrationSettings from './VideoGenerator/NarrationSettings';
 import Preview from './VideoGenerator/Preview';
 import SlidesSettings from './VideoGenerator/SlidesSettings';
 
-const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
+const VideoGenerator2 = ({ generatedImages, generatedAudioData, onVideoGenerated }) => {
   const [video, setVideo] = useState(null);
   const [videos, setVideos] = useState([]);
   const [error, setError] = useState(null);
@@ -537,8 +537,12 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
       await ffmpeg.exec(cmd);
 
       const data = await ffmpeg.readFile("output.mp4");
-      const url = URL.createObjectURL(new Blob([data.buffer], { type: "video/mp4" }));
+      const blob = new Blob([data.buffer], { type: 'video/mp4' });
+      const url = URL.createObjectURL(blob);
       setVideo(url);
+      if (onVideoGenerated) {
+        onVideoGenerated({ blob, url, name: `video-${Date.now()}.mp4` });
+      }
     } catch (err) {
       console.error("Erro na geração do vídeo:", err);
       setError(`Erro na geração do vídeo: ${err.message}`);
@@ -558,6 +562,7 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
     setVideos([]);
     startTimeRef.current = Date.now();
 
+    const allGeneratedVideos = [];
     for (let i = 0; i < generatedImages.length; i++) {
       if (isCancelledRef.current) {
         console.log('Video generation cancelled by user.');
@@ -570,11 +575,18 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
       try {
         const videoBlob = await generateSingleVideo(imageData, audioData, i);
         const videoUrl = URL.createObjectURL(videoBlob);
+        const newVideoData = { blob: videoBlob, url: videoUrl, name: `video_${i + 1}.mp4` };
+        allGeneratedVideos.push(newVideoData);
         setVideos(prev => [...prev, { url: videoUrl, name: `video_${i + 1}.mp4` }]);
       } catch (err) {
         setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message}`);
         setSnackbarOpen(true);
       }
+    }
+    if (onVideoGenerated && allGeneratedVideos.length > 0) {
+      // For now, we only support publishing a single video.
+      // We pass the first one to the publisher.
+      onVideoGenerated(allGeneratedVideos[0]);
     }
 
     setIsLoading(false);
@@ -682,6 +694,9 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
         const blob = new Blob(chunks, { type: 'video/webm' });
         const videoUrl = URL.createObjectURL(blob);
         setVideo(videoUrl);
+        if (onVideoGenerated) {
+          onVideoGenerated({ blob, url: videoUrl, name: `video-compat-${Date.now()}.webm` });
+        }
       };
 
       recorder.start();
@@ -819,8 +834,12 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData }) => {
       await ffmpeg.exec(cmd);
 
       const data = await ffmpeg.readFile('output.mp4');
-      const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+      const blob = new Blob([data.buffer], { type: 'video/mp4' });
+      const url = URL.createObjectURL(blob);
       setVideo(url);
+      if (onVideoGenerated) {
+        onVideoGenerated({ blob, url, name: `video-narrado-${Date.now()}.mp4` });
+      }
 
     } catch (err) {
       console.error("Erro na geração do vídeo de narração:", err);
