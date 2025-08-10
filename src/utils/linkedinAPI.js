@@ -3,75 +3,47 @@ import { getLinkedinConfig } from './linkedinCredentials';
 // Helper to convert Blob to Base64
 const blobToBase64 = (blob) => new Promise((resolve, reject) => {
     const reader = new FileReader();
-    // The result includes the data URL prefix (e.g., "data:image/png;base64,"), which we will handle before sending.
     reader.onloadend = () => resolve(reader.result);
     reader.onerror = reject;
     reader.readAsDataURL(blob);
 });
 
+// Helper to slice a blob
+const sliceBlob = (blob, start, end) => {
+    return blob.slice(start, end, blob.type);
+}
 
-/**
- * Converts Markdown to plain text for LinkedIn.
- * @param {string} markdown - The Markdown string.
- * @returns {string} Plain text.
- */
 const markdownToLinkedinText = (markdown) => {
   if (!markdown) return '';
-
   let text = markdown;
-
-  // Basic HTML tag stripping first
   text = text.replace(/<[^>]*>/g, '');
-  // Remove bold and italics
   text = text.replace(/\*\*(.*?)\*\*|\*(.*?)\*/g, '$1$2');
-  // Remove headers
   text = text.replace(/^#+\s/gm, '');
-  // Remove blockquotes
   text = text.replace(/^>\s/gm, '');
-  // Replace links with "text (link)"
   text = text.replace(/\[(.*?)\]\((.*?)\)/g, '$1 ($2)');
-  // Replace list items
   text = text.replace(/^\s*[-*]\s/gm, '');
-  // Trim and clean up newlines
   text = text.trim().replace(/\n{3,}/g, '\n\n');
-
   return text;
 };
 
-/**
- * Fetches the URN of the authenticated user via the proxy.
- * @param {string} accessToken - The LinkedIn access token.
- * @returns {Promise<string>} The user's URN (e.g., "urn:li:person:xxxx").
- */
 const _getProfileUrn = async (accessToken) => {
     const response = await fetch('/api/linkedin-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'getProfile', accessToken }),
     });
-
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Resposta não-JSON do proxy.' }));
-        throw new Error(`Falha ao buscar perfil do LinkedIn via proxy: ${errorData.message}`);
+        const errorData = await response.json().catch(() => ({ message: 'Proxy response was not valid JSON.' }));
+        throw new Error(`Failed to fetch LinkedIn profile via proxy: ${errorData.message || 'Unknown error'}`);
     }
-
     const profileData = await response.json();
     return `urn:li:person:${profileData.id}`;
 };
 
-
-/**
- * Registers an image upload with LinkedIn via the proxy.
- * @param {string} accessToken - The LinkedIn access token.
- * @param {string} authorUrn - The URN of the author (person or organization).
- * @returns {Promise<{uploadUrl: string, assetUrn: string}>} The upload URL and the asset URN.
- */
 const _registerImageUpload = async (accessToken, authorUrn) => {
   const response = await fetch('/api/linkedin-proxy', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       action: 'registerUpload',
       accessToken,
@@ -79,46 +51,26 @@ const _registerImageUpload = async (accessToken, authorUrn) => {
         registerUploadRequest: {
           recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
           owner: authorUrn,
-          serviceRelationships: [
-            {
-              relationshipType: 'OWNER',
-              identifier: 'urn:li:userGeneratedContent',
-            },
-          ],
+          serviceRelationships: [{
+            relationshipType: 'OWNER',
+            identifier: 'urn:li:userGeneratedContent',
+          }],
         },
       }
     }),
   });
-
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'Resposta não-JSON do proxy.' }));
-    throw new Error(`Falha ao registrar o upload da imagem via proxy: ${errorData.message}`);
+    const errorData = await response.json().catch(() => ({ message: 'Proxy response was not valid JSON.' }));
+    throw new Error(`Failed to register image upload via proxy: ${errorData.message || 'Unknown error'}`);
   }
-
-  const data = await response.json();
-  // The proxy will return the relevant part of the response
-  return {
-    uploadUrl: data.uploadUrl,
-    assetUrn: data.assetUrn,
-  };
+  return await response.json();
 };
 
-/**
- * Uploads the image binary to the provided URL via the proxy.
- * @param {string} accessToken - The LinkedIn access token.
- * @param {string} uploadUrl - The URL to upload the image to.
- * @param {Blob} imageBlob - The blob of the image to upload.
- */
 const _uploadImage = async (accessToken, uploadUrl, imageBlob) => {
-  const base64StringWithPrefix = await blobToBase64(imageBlob);
-  // Remove the data URL prefix (e.g., "data:image/png;base64,")
-  const imageBase64 = base64StringWithPrefix.substring(base64StringWithPrefix.indexOf(',') + 1);
-
+  const imageBase64 = (await blobToBase64(imageBlob)).substring((await blobToBase64(imageBlob)).indexOf(',') + 1);
   const response = await fetch('/api/linkedin-proxy', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       action: 'uploadImage',
       accessToken,
@@ -127,40 +79,75 @@ const _uploadImage = async (accessToken, uploadUrl, imageBlob) => {
       imageType: imageBlob.type,
     }),
   });
-
   if (!response.ok) {
     const errorText = await response.text();
     console.error("Proxy Image Upload Error Body:", errorText);
-    throw new Error(`Falha no upload da imagem para o LinkedIn via proxy. Status: ${response.status}`);
+    throw new Error(`Failed to upload image to LinkedIn via proxy. Status: ${response.status}`);
   }
-   // A successful PUT to the upload URL returns a 201 Created with no body.
-   // So we just check for the ok status.
 };
 
-/**
- * Creates the post on LinkedIn via the proxy.
- * @param {string} accessToken - The LinkedIn access token.
- * @param {string} authorUrn - The URN of the author.
- * @param {object} campaignContent - The campaign content.
- * @param {string} assetUrn - The URN of the uploaded image.
- * @returns {Promise<object>} The created post object from the API.
- */
-const _registerVideoUpload = async (accessToken, authorUrn) => {
+// New Video API Functions
+const _initializeVideoUpload = async (accessToken, authorUrn, videoSize) => {
   const response = await fetch('/api/linkedin-proxy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      action: 'registerVideoUpload',
+      action: 'initializeVideoUpload',
       accessToken,
       payload: {
-        registerUploadRequest: {
+        initializeUploadRequest: {
           owner: authorUrn,
-          recipes: ['urn:li:digitalmediaRecipe:feedshare-video'],
-          serviceRelationships: [{
-            relationshipType: 'OWNER',
-            identifier: 'urn:li:userGeneratedContent',
-          }],
-          supportedUploadMechanism: ['SINGLE_REQUEST_UPLOAD']
+          fileSizeBytes: videoSize,
+        },
+      },
+    }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Proxy response was not valid JSON.' }));
+    throw new Error(`Failed to initialize video upload: ${errorData.message || 'Unknown error'}`);
+  }
+  return await response.json();
+};
+
+const _uploadVideoParts = async (videoBlob, uploadInstructions) => {
+    const uploadedPartIds = [];
+    for (const instruction of uploadInstructions) {
+        const { uploadUrl, firstByte, lastByte } = instruction;
+        const chunk = sliceBlob(videoBlob, firstByte, lastByte + 1);
+        const chunkBase64 = (await blobToBase64(chunk)).split(',')[1];
+
+        const response = await fetch('/api/linkedin-proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'uploadVideo',
+                uploadUrl: uploadUrl,
+                videoBase64: chunkBase64,
+                videoContentType: videoBlob.type
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to upload video part. Status: ${response.status}`);
+        }
+        const { eTag } = await response.json();
+        uploadedPartIds.push(eTag);
+    }
+    return uploadedPartIds;
+};
+
+const _finalizeVideoUpload = async (accessToken, videoUrn, uploadToken, uploadedPartIds) => {
+  const response = await fetch('/api/linkedin-proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'finalizeVideoUpload',
+      accessToken,
+      payload: {
+        finalizeUploadRequest: {
+          video: videoUrn,
+          uploadToken,
+          uploadedPartIds,
         },
       },
     }),
@@ -168,61 +155,26 @@ const _registerVideoUpload = async (accessToken, authorUrn) => {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Proxy response was not valid JSON.' }));
-    throw new Error(`Failed to register video upload via proxy: ${errorData.message}`);
-  }
-
-  const data = await response.json();
-  return {
-    uploadUrl: data.uploadUrl,
-    assetUrn: data.assetUrn,
-  };
-};
-
-const _uploadVideo = async (accessToken, uploadUrl, videoBlob) => {
-  // This will be a simple pass-through to the proxy, which handles the streaming.
-  const response = await fetch('/api/linkedin-proxy', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'uploadVideo',
-      accessToken,
-      uploadUrl,
-      videoContentType: videoBlob.type,
-      // We send the blob to the proxy as a base64 string
-      videoBase64: await blobToBase64(videoBlob),
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to upload video via proxy. Status: ${response.status}`);
+    throw new Error(`Failed to finalize video upload: ${errorData.message || 'Unknown error'}`);
   }
 };
 
-const _finalizeVideoUpload = async (accessToken, assetUrn) => {
-  await fetch('/api/linkedin-proxy', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'finalizeVideoUpload',
-      accessToken,
-      assetUrn,
-    }),
-  });
-};
-
-const _pollVideoStatus = async (accessToken, assetUrn) => {
+const _pollVideoStatus = async (accessToken, videoUrn) => {
   const MAX_POLLS = 10;
-  const DELAY_MS = 5000; // 5 seconds
+  const DELAY_MS = 5000;
 
   for (let i = 0; i < MAX_POLLS; i++) {
+    await new Promise(resolve => setTimeout(resolve, DELAY_MS));
     const response = await fetch('/api/linkedin-proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'checkVideoStatus', accessToken, assetUrn }),
+      body: JSON.stringify({ action: 'checkVideoStatus', accessToken, videoUrn }),
     });
 
     if (!response.ok) {
-      throw new Error('Failed to poll video status.');
+        // Don't throw an error, just log it and continue polling
+        console.warn(`Polling video status failed with status ${response.status}. Retrying...`);
+        continue;
     }
 
     const data = await response.json();
@@ -231,13 +183,12 @@ const _pollVideoStatus = async (accessToken, assetUrn) => {
       return;
     }
     console.log(`Polling video status (${i + 1}/${MAX_POLLS}): ${data.status}`);
-    await new Promise(resolve => setTimeout(resolve, DELAY_MS));
   }
 
-  throw new Error('Video processing timed out.');
+  throw new Error('Video processing timed out or failed to become available.');
 };
 
-const _createPost = async (accessToken, authorUrn, campaignContent, assetUrns = [], videoAssetUrn = null) => {
+const _createPost = async (accessToken, authorUrn, campaignContent, assetUrns = [], videoUrn = null) => {
   const postText = [
     campaignContent.titulo.toUpperCase(),
     '',
@@ -250,81 +201,53 @@ const _createPost = async (accessToken, authorUrn, campaignContent, assetUrns = 
   ].join('\n');
 
   const shareContent = {
-    shareCommentary: {
-      text: postText,
-    },
+    shareCommentary: { text: postText },
+    shareMediaCategory: 'NONE',
   };
 
-  if (videoAssetUrn) {
+  if (videoUrn) {
     shareContent.shareMediaCategory = 'VIDEO';
     shareContent.media = [{
       status: 'READY',
       description: { text: campaignContent.titulo },
-      media: videoAssetUrn,
+      media: videoUrn,
       title: { text: campaignContent.titulo },
     }];
   } else if (assetUrns && assetUrns.length > 0) {
     shareContent.shareMediaCategory = 'IMAGE';
     shareContent.media = assetUrns.map(assetUrn => ({
       status: 'READY',
-      description: {
-        text: campaignContent.titulo,
-      },
+      description: { text: campaignContent.titulo },
       media: assetUrn,
-      title: {
-        text: campaignContent.titulo,
-      },
+      title: { text: campaignContent.titulo },
     }));
   }
 
   const payload = {
     author: authorUrn,
     lifecycleState: 'PUBLISHED',
-    specificContent: {
-      'com.linkedin.ugc.ShareContent': shareContent,
-    },
-    visibility: {
-      'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
-    },
+    specificContent: { 'com.linkedin.ugc.ShareContent': shareContent },
+    visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
   };
 
   const response = await fetch('/api/linkedin-proxy', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      action: 'createPost',
-      accessToken,
-      payload,
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'createPost', accessToken, payload }),
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'Resposta não-JSON do proxy.' }));
-    throw new Error(`Falha ao criar o post no LinkedIn via proxy: ${errorData.message}`);
+    const errorData = await response.json().catch(() => ({ message: 'Proxy response was not valid JSON.' }));
+    throw new Error(`Failed to create post on LinkedIn via proxy: ${errorData.message || 'Unknown error'}`);
   }
 
   return await response.json();
 };
 
-
-/**
- * Publica o conteúdo de uma campanha no LinkedIn.
- * @param {object} campaignData - Objeto contendo os dados da campanha.
- *   @param {object} campaignData.campaignContent - Título, conteúdo, CTA, hashtags.
- *   @param {Blob} campaignData.imageBlob - O blob da imagem a ser enviada.
- * @returns {Promise<object>} Uma promessa que resolve para um objeto com o ID e o link do post.
- * @throws {Error} Se a configuração do LinkedIn não for encontrada ou se ocorrer um erro na API.
- */
-/**
- * Fetches the available LinkedIn profiles (personal and organizational) for the authenticated user.
- * @returns {Promise<Array<{urn: string, name: string}>>} A list of profiles.
- */
 export const getLinkedInProfiles = async () => {
   const config = getLinkedinConfig();
   if (!config || !config.accessToken) {
-    throw new Error('Configuração do LinkedIn ou Access Token não encontrados. Por favor, conecte-se primeiro.');
+    throw new Error('LinkedIn configuration or Access Token not found. Please connect first.');
   }
   const { accessToken } = config;
 
@@ -335,8 +258,8 @@ export const getLinkedInProfiles = async () => {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'Resposta não-JSON do proxy.' }));
-    throw new Error(`Falha ao buscar perfis do LinkedIn via proxy: ${errorData.message}`);
+    const errorData = await response.json().catch(() => ({ message: 'Proxy response was not valid JSON.' }));
+    throw new Error(`Failed to fetch LinkedIn profiles via proxy: ${errorData.message || 'Unknown error'}`);
   }
 
   return await response.json();
@@ -344,58 +267,58 @@ export const getLinkedInProfiles = async () => {
 
 export const publishToLinkedIn = async (campaignData) => {
   const { campaignContent, imageBlobs = [], videoBlob, authorUrn: providedAuthorUrn } = campaignData;
-
   const config = getLinkedinConfig();
   if (!config || !config.accessToken) {
-    throw new Error('Configuração do LinkedIn ou Access Token não encontrados. Por favor, conecte-se primeiro.');
+    throw new Error('LinkedIn configuration or Access Token not found. Please connect first.');
   }
   const { accessToken } = config;
 
-  // Use the provided author URN, or fetch the user's personal URN as a fallback.
   const authorUrn = providedAuthorUrn || await _getProfileUrn(accessToken);
-
   let postResult;
 
   if (videoBlob) {
-    console.log('Publicando no LinkedIn: Iniciando processo de upload de vídeo...');
-    // 1. Register Video Upload
-    const { uploadUrl, assetUrn: videoAssetUrn } = await _registerVideoUpload(accessToken, authorUrn, videoBlob.size);
-    // 2. Upload Video
-    await _uploadVideo(accessToken, uploadUrl, videoBlob);
-    // 3. Finalize Upload
-    await _finalizeVideoUpload(accessToken, videoAssetUrn);
+    console.log('Publishing to LinkedIn: Starting new video upload process...');
+    // 1. Initialize
+    const initData = await _initializeVideoUpload(accessToken, authorUrn, videoBlob.size);
+    const { video: videoUrn, uploadInstructions, uploadToken } = initData;
+    console.log(`Video initialized. URN: ${videoUrn}`);
+
+    // 2. Upload parts
+    const uploadedPartIds = await _uploadVideoParts(videoBlob, uploadInstructions);
+    console.log('All video parts uploaded successfully.');
+
+    // 3. Finalize
+    await _finalizeVideoUpload(accessToken, videoUrn, uploadToken, uploadedPartIds);
+    console.log('Video upload finalized.');
+
     // 4. Poll for status
-    await _pollVideoStatus(accessToken, videoAssetUrn);
-    console.log(`Vídeo com asset URN: ${videoAssetUrn} enviado e processado com sucesso.`);
+    await _pollVideoStatus(accessToken, videoUrn);
+    console.log(`Video with URN: ${videoUrn} is processed and ready.`);
+
     // 5. Create Post
-    postResult = await _createPost(accessToken, authorUrn, campaignContent, [], videoAssetUrn);
+    postResult = await _createPost(accessToken, authorUrn, campaignContent, [], videoUrn);
 
   } else if (imageBlobs && imageBlobs.length > 0) {
-    console.log(`Publicando no LinkedIn: Registrando e enviando ${imageBlobs.length} imagem(ns)...`);
+    console.log(`Publishing to LinkedIn: Registering and uploading ${imageBlobs.length} image(s)...`);
     const assetUrns = [];
-    const uploadPromises = imageBlobs.map(async (imageBlob) => {
-      const { uploadUrl, assetUrn } = await _registerImageUpload(accessToken, authorUrn);
-      await _uploadImage(accessToken, uploadUrl, imageBlob);
-      console.log(`Imagem com asset URN: ${assetUrn} enviada com sucesso.`);
-      return assetUrn;
-    });
-    const results = await Promise.all(uploadPromises);
-    assetUrns.push(...results);
-    console.log('Todas as imagens foram enviadas.');
+    for (const imageBlob of imageBlobs) {
+        const { uploadUrl, assetUrn } = await _registerImageUpload(accessToken, authorUrn);
+        await _uploadImage(accessToken, uploadUrl, imageBlob);
+        console.log(`Image with asset URN: ${assetUrn} uploaded successfully.`);
+        assetUrns.push(assetUrn);
+    }
+    console.log('All images uploaded.');
     postResult = await _createPost(accessToken, authorUrn, campaignContent, assetUrns);
 
   } else {
-    console.log('Publicando no LinkedIn: Nenhum anexo para enviar, criando um post de texto.');
+    console.log('Publishing to LinkedIn: Creating text-only post.');
     postResult = await _createPost(accessToken, authorUrn, campaignContent);
   }
 
-  console.log('Publicando no LinkedIn: Post criado com sucesso!', postResult);
-
-  // The post ID is in the format "urn:li:share:xxxxx"
+  console.log('Post created successfully on LinkedIn!', postResult);
   const postId = postResult.id;
   return {
     id: postId,
-    // Construct the link to the post
     link: `https://www.linkedin.com/feed/update/${postId}/`,
   };
 };
