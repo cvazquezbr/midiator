@@ -209,30 +209,42 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
         setPublishingStatusLi(`Criando pasta "${campaignTitle}" no Google Drive...`);
         const campaignFolder = await googleDriveAPI.createFolder(campaignTitle, driveFolderId);
 
+        // Lida com upload de imagens
         const imagesToUpload = generatedImagesData.filter((_, index) => selectedImages[index]);
-
+        const uploadedImageIds = [];
         if (imagesToUpload.length > 0) {
             setPublishingStatusLi(`Fazendo upload de ${imagesToUpload.length} imagens...`);
+            for (const image of imagesToUpload) {
+                const fileName = `imagem_${imagesToUpload.indexOf(image) + 1}.png`;
+                const uploadedFile = await googleDriveAPI.uploadFile(image.blob, fileName, campaignFolder.id);
+                uploadedImageIds.push(uploadedFile.id);
+            }
         }
-        const uploadedImageLinks = [];
-        for (let i = 0; i < imagesToUpload.length; i++) {
-            const image = imagesToUpload[i];
-            const fileName = `imagem_${i + 1}.png`;
-            const uploadedFile = await googleDriveAPI.uploadFile(image.blob, fileName, campaignFolder.id);
-            // We need to get a shareable link, this part might need adjustment in googleDriveAPI utility
-            uploadedImageLinks.push(uploadedFile.id); // Storing ID for now
+
+        // Lida com upload de vídeo
+        const videosToUpload = generatedVideosData.filter((_, index) => selectedVideos[index]);
+        let uploadedVideoId = '';
+        if (videosToUpload.length > 0) {
+            setPublishingStatusLi(`Fazendo upload do vídeo...`);
+            const video = videosToUpload[0];
+            const fileName = `video.mp4`; // ou o tipo de arquivo apropriado
+            const uploadedFile = await googleDriveAPI.uploadFile(video.blob, fileName, campaignFolder.id);
+            uploadedVideoId = uploadedFile.id;
         }
 
         setPublishingStatusLi('Criando planilha de controle no Google Drive...');
 
-        const headers = ['Data de Publicação', 'Título', 'Conteúdo', 'Convite', 'Hashtags', 'Imagem Principal (ID no Drive)'];
+        const headers = ['Data de Publicação', 'Author URN', 'Título', 'Conteúdo', 'Convite (CTA)', 'Hashtags', 'Imagens (IDs no Drive)', 'Video (ID no Drive)'];
+
         const mainPostRow = [
             scheduleDate.toLocaleString('pt-BR'),
+            selectedProfile,
             campaignContent?.titulo || '',
             campaignContent?.conteudo || '',
             campaignContent?.cta || '',
             campaignContent?.hashtags?.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') || '',
-            uploadedImageLinks.join(', ')
+            uploadedImageIds.join(', '),
+            uploadedVideoId
         ];
 
         const sheetData = [headers, mainPostRow];
@@ -244,11 +256,13 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
 
                 const followupRow = [
                     followupDate.toLocaleString('pt-BR'),
+                    selectedProfile,
                     post.tipo_gancho || '', // Usando tipo_gancho como título
                     post.conteudo || '',
                     post.cta || '',
                     post.hashtags_sugeridas?.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') || '',
-                    '' // Sem imagem para follow-up posts
+                    '', // Sem imagem para follow-up
+                    ''  // Sem vídeo para follow-up
                 ];
                 sheetData.push(followupRow);
             });
