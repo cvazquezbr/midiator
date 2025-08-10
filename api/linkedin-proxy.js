@@ -91,6 +91,7 @@ async function handleFinalizeVideoUpload(request, response) {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
+                'LinkedIn-Version': '202501',
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0'
             },
@@ -123,6 +124,7 @@ async function handleCheckVideoStatus(request, response) {
         const linkedinResponse = await fetch(statusUrl, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
+                'LinkedIn-Version': '202501',
                 'Content-Type': 'application/json'
             }
         });
@@ -151,7 +153,8 @@ async function handleGetProfile(request, response) {
     try {
         const linkedinResponse = await fetch(profileUrl, {
             headers: {
-                Authorization: `Bearer ${accessToken}`,
+                'Authorization': `Bearer ${accessToken}`,
+                'LinkedIn-Version': '202501',
                 'Content-Type': 'application/json',
             },
         });
@@ -177,6 +180,7 @@ async function handleRegisterUpload(request, response) {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        'LinkedIn-Version': '202501',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
@@ -251,6 +255,7 @@ async function handleCreatePost(request, response) {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        'LinkedIn-Version': '202501',
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
       },
@@ -275,7 +280,11 @@ async function handleGetOrganizations(request, response) {
   try {
     // 1. Get user's own profile to start the list
     const profileResponse = await fetch('https://api.linkedin.com/v2/me', {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'LinkedIn-Version': '202501',
+        'Content-Type': 'application/json'
+      },
     });
     if (!profileResponse.ok) throw new Error('Failed to fetch user profile.');
     const profileData = await profileResponse.json();
@@ -289,6 +298,7 @@ async function handleGetOrganizations(request, response) {
     const orgsResponse = await fetch(orgsUrl, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
+        'LinkedIn-Version': '202501',
         'Content-Type': 'application/json',
       },
     });
