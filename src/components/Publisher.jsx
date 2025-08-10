@@ -210,11 +210,10 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
         const campaignFolder = await googleDriveAPI.createFolder(campaignTitle, driveFolderId);
 
         const imagesToUpload = generatedImagesData.filter((_, index) => selectedImages[index]);
-        if (imagesToUpload.length === 0) {
-            throw new Error("Nenhuma imagem selecionada para upload.");
-        }
 
-        setPublishingStatusLi(`Fazendo upload de ${imagesToUpload.length} imagens...`);
+        if (imagesToUpload.length > 0) {
+            setPublishingStatusLi(`Fazendo upload de ${imagesToUpload.length} imagens...`);
+        }
         const uploadedImageLinks = [];
         for (let i = 0; i < imagesToUpload.length; i++) {
             const image = imagesToUpload[i];

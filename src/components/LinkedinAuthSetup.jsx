@@ -170,6 +170,7 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
 
   const handleRemove = () => {
     removeLinkedinConfig();
+    sessionStorage.removeItem('linkedin_profiles_cache');
     setCurrentConfig(null);
     setConnectedUser(null); // Limpar usuário ao desconectar
     setConfig({ clientId: '', folderId: '' });

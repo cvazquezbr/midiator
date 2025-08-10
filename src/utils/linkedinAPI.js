@@ -246,6 +246,21 @@ const _createPost = async (accessToken, authorUrn, campaignContent, assetUrns = 
 };
 
 export const getLinkedInProfiles = async () => {
+  const cacheKey = 'linkedin_profiles_cache';
+  const cachedData = sessionStorage.getItem(cacheKey);
+
+  if (cachedData) {
+    try {
+      const profiles = JSON.parse(cachedData);
+      console.log('Returning cached LinkedIn profiles.');
+      return profiles;
+    } catch (e) {
+      console.error('Failed to parse cached LinkedIn profiles, fetching again.', e);
+      sessionStorage.removeItem(cacheKey);
+    }
+  }
+
+  console.log('Fetching fresh LinkedIn profiles from API.');
   const config = getLinkedinConfig();
   if (!config || !config.accessToken) {
     throw new Error('LinkedIn configuration or Access Token not found. Please connect first.');
@@ -263,7 +278,15 @@ export const getLinkedInProfiles = async () => {
     throw new Error(`Failed to fetch LinkedIn profiles via proxy: ${errorData.message || 'Unknown error'}`);
   }
 
-  return await response.json();
+  const profiles = await response.json();
+
+  try {
+    sessionStorage.setItem(cacheKey, JSON.stringify(profiles));
+  } catch (e) {
+    console.error('Failed to cache LinkedIn profiles.', e);
+  }
+
+  return profiles;
 };
 
 export const publishToLinkedIn = async (campaignData) => {
