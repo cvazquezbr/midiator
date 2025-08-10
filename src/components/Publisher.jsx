@@ -58,7 +58,7 @@ function TabPanel(props) {
   );
 }
 
-const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, generatedVideosData }) => {
+const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, generatedVideosData, followupPosts }) => {
   const [tabValue, setTabValue] = React.useState(0);
 
   const handleTabChange = (event, newValue) => {
@@ -225,15 +225,35 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
         }
 
         setPublishingStatusLi('Criando planilha de controle no Google Drive...');
-        const sheetData = [
-            ['Título da Campanha', campaignTitle],
-            ['Data do Agendamento', scheduleDate.toLocaleString('pt-BR')],
-            ['Perfil do LinkedIn', selectedProfile],
-            ['Conteúdo do Post', campaignContent?.conteudo],
-            ['CTA', campaignContent?.cta],
-            ['Hashtags', campaignContent?.hashtags.join(' ')],
-            ['Imagens (IDs no Drive)', uploadedImageLinks.join(', ')]
+
+        const headers = ['Data de Publicação', 'Título', 'Conteúdo', 'CTA', 'Hashtags', 'Imagem Principal (ID no Drive)'];
+        const mainPostRow = [
+            scheduleDate.toLocaleString('pt-BR'),
+            campaignContent?.titulo || '',
+            campaignContent?.conteudo || '',
+            campaignContent?.cta || '',
+            campaignContent?.hashtags?.join(' ') || '',
+            uploadedImageLinks.join(', ')
         ];
+
+        const sheetData = [headers, mainPostRow];
+
+        if (followupPosts && followupPosts.length > 0) {
+            followupPosts.forEach((post, index) => {
+                const followupDate = new Date(scheduleDate);
+                followupDate.setDate(scheduleDate.getDate() + index + 1);
+
+                const followupRow = [
+                    followupDate.toLocaleString('pt-BR'),
+                    post.tipo_gancho || '', // Usando tipo_gancho como título
+                    post.conteudo || '',
+                    post.cta || '',
+                    post.hashtags_sugeridas?.join(' ') || '',
+                    '' // Sem imagem para follow-up posts
+                ];
+                sheetData.push(followupRow);
+            });
+        }
 
         const spreadsheet = await googleDriveAPI.createSpreadsheet(
             `Controle - ${campaignTitle}`,
