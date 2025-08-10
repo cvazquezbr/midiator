@@ -176,40 +176,70 @@ async function handleGetOrganizations(request, response) {
     const profileResponse = await fetch('https://api.linkedin.com/v2/me', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!profileResponse.ok) throw new Error('Failed to fetch user profile.');
+    if (!profileResponse.ok) {
+      // If fetching the personal profile fails, we can't proceed.
+      throw new Error(`Failed to fetch user profile: ${profileResponse.status}`);
+    }
     const profileData = await profileResponse.json();
     const profiles = [{
       urn: `urn:li:person:${profileData.id}`,
       name: `${profileData.localizedFirstName} ${profileData.localizedLastName} (Pessoal)`,
     }];
 
-    // 2. Find organizations the user administers using projection.
-    const orgsUrl = 'https://api.linkedin.com/v2/organizations?q=administeredOrganization&projection=(elements*(organization~(id,localizedName)))';
-    const orgsResponse = await fetch(orgsUrl, {
+    // Step 1 from user's code: Get organizations the user administers
+    const aclsUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED';
+    const aclsResponse = await fetch(aclsUrl, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
+        'X-Restli-Protocol-Version': '2.0.0',
+        'Content-Type': 'application/json'
+      }
     });
 
-    if (!orgsResponse.ok) {
-      const errorBody = await orgsResponse.text();
-      console.warn(`Could not fetch administered organizations, status: ${orgsResponse.status}, body: ${errorBody}`);
-      // If this fails, just return the personal profile.
+    if (!aclsResponse.ok) {
+      const errorBody = await aclsResponse.text();
+      console.warn(`ACLs API failed: ${aclsResponse.status}, body: ${errorBody}`);
+      // If this fails, just return the personal profile as a fallback.
       return response.status(200).json(profiles);
     }
 
-    const orgsData = await orgsResponse.json();
-    const organizations = orgsData.elements || [];
+    const aclsData = await aclsResponse.json();
 
-    organizations.forEach(orgAcl => {
-      const orgData = orgAcl['organization~']; // Details are in the projected field
-      if (orgData) {
-        profiles.push({
-          urn: `urn:li:organization:${orgData.id}`,
-          name: orgData.localizedName,
-        });
+    // Extract organization IDs from URNs
+    const orgIds = (aclsData.elements || [])
+      .map(acl => acl.organization)
+      .map(urn => urn.split(':')[3]);
+
+    if (orgIds.length === 0) {
+      // No organizations found, return just the personal profile.
+      return response.status(200).json(profiles);
+    }
+
+    // Step 2 from user's code: Get details for the found organizations
+    const orgDetailsUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
+    const orgDetailsResponse = await fetch(orgDetailsUrl, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'X-Restli-Protocol-Version': '2.0.0',
+        'Content-Type': 'application/json'
       }
+    });
+
+    if (!orgDetailsResponse.ok) {
+      const errorBody = await orgDetailsResponse.text();
+      console.warn(`Organizations API failed: ${orgDetailsResponse.status}, body: ${errorBody}`);
+      // If this fails, just return the personal profile as a fallback.
+      return response.status(200).json(profiles);
+    }
+
+    const orgDetailsData = await orgDetailsResponse.json();
+
+    // Format the response for the "publish as" dropdown
+    Object.values(orgDetailsData.results || {}).forEach(org => {
+      profiles.push({
+        urn: `urn:li:organization:${org.id}`,
+        name: org.localizedName || org.name?.localized?.en_US,
+      });
     });
 
     return response.status(200).json(profiles);
