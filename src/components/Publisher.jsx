@@ -85,9 +85,18 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
   const [unifiedMedia, setUnifiedMedia] = useState([]);
   const [previewedMedia, setPreviewedMedia] = useState(null);
 
+  const formatBytes = (bytes, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
+
   useEffect(() => {
-    const images = (generatedImagesData || []).map((img, index) => ({ ...img, type: 'image', id: `image-${index}` }));
-    const videos = (generatedVideosData || []).map((vid, index) => ({ ...vid, type: 'video', id: `video-${index}` }));
+    const images = (generatedImagesData || []).map((img, index) => ({ ...img, type: 'image', id: `image-${index}`, fileSize: img.blob ? formatBytes(img.blob.size) : 'N/A', fileType: img.blob ? img.blob.type : 'N/A' }));
+    const videos = (generatedVideosData || []).map((vid, index) => ({ ...vid, type: 'video', id: `video-${index}`, fileSize: vid.blob ? formatBytes(vid.blob.size) : 'N/A', fileType: vid.blob ? vid.blob.type : 'N/A' }));
     const allMedia = [...images, ...videos];
     setUnifiedMedia(allMedia);
     if (allMedia.length > 0) {
@@ -309,13 +318,25 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
                   </Paper>
                 </Grid>
                 <Grid item xs={12} md={8}>
-                  <Paper sx={{ height: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 1 }}>
+                  <Paper sx={{ height: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 1 }}>
                     {previewedMedia ? (
-                      previewedMedia.type === 'image' ? (
-                        <img src={previewedMedia.url} alt="Preview" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
-                      ) : (
-                        <video src={previewedMedia.url} controls style={{ maxHeight: '100%', maxWidth: '100%' }} />
-                      )
+                      <>
+                        <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '90%' }}>
+                          {previewedMedia.type === 'image' ? (
+                            <img src={previewedMedia.url} alt="Preview" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                          ) : (
+                            <video src={previewedMedia.url} controls style={{ maxHeight: '100%', maxWidth: '100%' }} />
+                          )}
+                        </Box>
+                        <Box sx={{ mt: 1, textAlign: 'center' }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Tipo: {previewedMedia.fileType}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                            Tamanho: {previewedMedia.fileSize}
+                          </Typography>
+                        </Box>
+                      </>
                     ) : (
                       <Typography>Selecione uma mídia para visualizar</Typography>
                     )}
