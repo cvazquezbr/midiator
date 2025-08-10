@@ -159,7 +159,8 @@ const _registerVideoUpload = async (accessToken, authorUrn) => {
           serviceRelationships: [{
             relationshipType: 'OWNER',
             identifier: 'urn:li:userGeneratedContent',
-          }]
+          }],
+          supportedUploadMechanism: ['SINGLE_REQUEST_UPLOAD']
         },
       },
     }),
