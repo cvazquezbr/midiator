@@ -226,13 +226,13 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
 
         setPublishingStatusLi('Criando planilha de controle no Google Drive...');
 
-        const headers = ['Data de Publicação', 'Título', 'Conteúdo', 'CTA', 'Hashtags', 'Imagem Principal (ID no Drive)'];
+        const headers = ['Data de Publicação', 'Título', 'Conteúdo', 'Convite', 'Hashtags', 'Imagem Principal (ID no Drive)'];
         const mainPostRow = [
             scheduleDate.toLocaleString('pt-BR'),
             campaignContent?.titulo || '',
             campaignContent?.conteudo || '',
             campaignContent?.cta || '',
-            campaignContent?.hashtags?.join(' ') || '',
+            campaignContent?.hashtags?.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') || '',
             uploadedImageLinks.join(', ')
         ];
 
@@ -248,7 +248,7 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
                     post.tipo_gancho || '', // Usando tipo_gancho como título
                     post.conteudo || '',
                     post.cta || '',
-                    post.hashtags_sugeridas?.join(' ') || '',
+                    post.hashtags_sugeridas?.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') || '',
                     '' // Sem imagem para follow-up posts
                 ];
                 sheetData.push(followupRow);
