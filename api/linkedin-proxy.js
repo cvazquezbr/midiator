@@ -176,77 +176,107 @@ async function handleGetOrganizations(request, response) {
     const profileResponse = await fetch('https://api.linkedin.com/v2/me', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+    
     if (!profileResponse.ok) {
-      // If fetching the personal profile fails, we can't proceed.
+      const profileError = await profileResponse.text();
+      console.error(`Failed to fetch user profile: ${profileResponse.status}, body: ${profileError}`);
       throw new Error(`Failed to fetch user profile: ${profileResponse.status}`);
     }
+    
     const profileData = await profileResponse.json();
     const profiles = [{
       urn: `urn:li:person:${profileData.id}`,
       name: `${profileData.localizedFirstName} ${profileData.localizedLastName} (Pessoal)`,
+      type: 'personal'
     }];
 
-    // Step 1 from user's code: Get organizations the user administers
+    // Step 1: Get organizations the user administers
     const aclsUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED';
-    const aclsHeaders = {
+    const commonHeaders = {
       'Authorization': `Bearer ${accessToken}`,
       'X-Restli-Protocol-Version': '2.0.0',
       'LinkedIn-Version': '202501',
       'Content-Type': 'application/json'
     };
-    const aclsResponse = await fetch(aclsUrl, { headers: aclsHeaders });
+    
+    console.log('Fetching ACLs with headers:', JSON.stringify(commonHeaders, null, 2));
+    
+    const aclsResponse = await fetch(aclsUrl, { headers: commonHeaders });
 
     if (!aclsResponse.ok) {
       const errorBody = await aclsResponse.text();
-      console.warn(`ACLs API failed: ${aclsResponse.status}, body: ${errorBody}`);
+      console.error(`ACLs API failed: ${aclsResponse.status}, body: ${errorBody}`);
+      
+      // Try to parse error details if available
+      try {
+        const errorData = JSON.parse(errorBody);
+        console.error('Parsed error:', errorData);
+      } catch (e) {
+        console.error('Could not parse error body as JSON');
+      }
+      
       return response.status(200).json(profiles); // Fallback to personal profile
     }
 
     const aclsData = await aclsResponse.json();
+    console.log('ACLs response:', JSON.stringify(aclsData, null, 2));
 
-    // Extract organization IDs from URNs
+    // Extract organization IDs from URNs - with better error handling
     const orgIds = (aclsData.elements || [])
-      .map(acl => acl.organization)
-      .map(urn => urn.split(':')[3]);
+      .map(acl => {
+        try {
+          const urn = acl.organization || acl.organizationTarget; // Handle both possible field names
+          return urn ? urn.split(':')[3] : null;
+        } catch (e) {
+          console.warn('Could not parse organization URN:', acl);
+          return null;
+        }
+      })
+      .filter(id => id !== null);
+
+    console.log('Extracted organization IDs:', orgIds);
 
     if (orgIds.length === 0) {
+      console.log('No organizations found, returning personal profile only');
       return response.status(200).json(profiles);
     }
 
-    // Step 2 from user's code: Get details for the found organizations
+    // Step 2: Get details for the found organizations
     const orgDetailsUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
-    const orgDetailsHeaders = {
-        'Authorization': `Bearer ${accessToken}`,
-        'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202501',
-        'Content-Type': 'application/json'
-    };
-    const orgDetailsResponse = await fetch(orgDetailsUrl, { headers: orgDetailsHeaders });
+    console.log('Fetching organization details from:', orgDetailsUrl);
+    
+    const orgDetailsResponse = await fetch(orgDetailsUrl, { headers: commonHeaders });
 
     if (!orgDetailsResponse.ok) {
       const errorBody = await orgDetailsResponse.text();
-      console.warn(`Organizations API failed: ${orgDetailsResponse.status}, body: ${errorBody}`);
+      console.error(`Organizations API failed: ${orgDetailsResponse.status}, body: ${errorBody}`);
       return response.status(200).json(profiles); // Fallback to personal profile
     }
 
     const orgDetailsData = await orgDetailsResponse.json();
+    console.log('Organization details response:', JSON.stringify(orgDetailsData, null, 2));
 
-    // Format the response for the "publish as" dropdown
-    Object.values(orgDetailsData.results || {}).forEach(org => {
-      profiles.push({
-        urn: `urn:li:organization:${org.id}`,
-        name: org.localizedName || org.name?.localized?.en_US,
-      });
+    // Format the response for the "publish as" dropdown - with better error handling
+    const orgResults = orgDetailsData.results || {};
+    Object.values(orgResults).forEach(org => {
+      if (org && org.id) {
+        profiles.push({
+          urn: `urn:li:organization:${org.id}`,
+          name: org.localizedName || org.name?.localized?.en_US || `Organization ${org.id}`,
+          type: 'organization',
+          vanityName: org.vanityName
+        });
+      }
     });
 
+    console.log('Final profiles list:', JSON.stringify(profiles, null, 2));
     return response.status(200).json(profiles);
 
   } catch (error) {
     console.error('Error during proxied getOrganizations:', error);
-    return response.status(500).json({ error: 'Internal Server Error during proxied API call' });
+    return response.status(500).json({ error: 'Internal Server Error during proxied API call', details: error.message });
   }
 }
-
 
 export default async function handler(request, response) {
   console.log(`[${new Date().toISOString()}] /api/linkedin-proxy invoked. Action: ${request.body?.action}`);
