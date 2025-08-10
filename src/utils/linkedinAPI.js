@@ -196,7 +196,7 @@ const _createPost = async (accessToken, authorUrn, campaignContent, assetUrns = 
     '----',
     campaignContent.cta,
     '----',
-    campaignContent.hashtags.join(' '),
+    campaignContent.hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' '),
   ].join('\n');
 
   const shareContent = {
