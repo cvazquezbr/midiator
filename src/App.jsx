@@ -538,11 +538,6 @@ function App() {
       icon: FormatBold
     },
     {
-      label: 'Publicar',
-      description: 'Publique o conteúdo no WordPress.',
-      icon: Publish
-    },
-    {
       label: 'Gerar Áudio',
       description: 'Crie a narração para os slides.',
       icon: Audiotrack
@@ -551,6 +546,11 @@ function App() {
       label: 'Gerar Vídeo',
       description: 'Crie um vídeo a partir das imagens geradas.',
       icon: Movie
+    },
+    {
+      label: 'Publicar',
+      description: 'Publique o conteúdo no WordPress.',
+      icon: Publish
     }
   ];
   // Função para ler arquivo CSV
@@ -2800,18 +2800,8 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             />
           )}
 
-          {/* Passo 6: Publicar */}
-          {activeStep === 6 && (
-            <Publisher
-              campaignContent={campaignContent}
-              conteudoFormatado={conteudoFormatado}
-              generatedImagesData={generatedImagesData}
-              generatedVideoData={generatedVideoData}
-            />
-          )}
-
-          {/* Passo 7: Geração de Áudio */}
-          <div hidden={activeStep !== 7}>
+          {/* Passo 6: Geração de Áudio */}
+          <div hidden={activeStep !== 6}>
             <AudioGenerator
               csvData={csvData}
               fieldPositions={fieldPositions}
@@ -2820,12 +2810,22 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             />
           </div>
 
-          {/* Passo 8: Geração de Vídeo */}
-          {activeStep === 8 && (
+          {/* Passo 7: Geração de Vídeo */}
+          {activeStep === 7 && (
             <VideoGenerator2
               generatedImages={generatedImagesData}
               generatedAudioData={generatedAudioData}
               onVideoGenerated={(videoData) => setGeneratedVideoData(videoData)}
+            />
+          )}
+
+          {/* Passo 8: Publicar */}
+          {activeStep === 8 && (
+            <Publisher
+              campaignContent={campaignContent}
+              conteudoFormatado={conteudoFormatado}
+              generatedImagesData={generatedImagesData}
+              generatedVideoData={generatedVideoData}
             />
           )}
 
