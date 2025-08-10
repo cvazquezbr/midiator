@@ -878,7 +878,7 @@ function App() {
       );
 
       const stateToSave = {
-        version: "1.9", // Version bump to save videos
+        version: "2.0", // Version bump to save followup posts
         backgroundImageUrl: backgroundImage,
         originalImageSize: originalImageSize,
         imageFilters: imageFilters,
@@ -900,6 +900,7 @@ function App() {
         conteudoMedio: conteudoMedio,
         conteudoPequeno: conteudoPequeno,
         conteudoFormatado: conteudoFormatado,
+        followupPosts: followupPosts,
       };
 
       const jsonString = JSON.stringify(stateToSave, null, 2);
@@ -1125,6 +1126,12 @@ function App() {
               setConteudoFormatado(loadedState.conteudoFormatado || '');
             } else {
               setConteudoFormatado('');
+            }
+
+            if (parseFloat(loadedState.version) >= 2.0) {
+              setFollowupPosts(loadedState.followupPosts || []);
+            } else {
+              setFollowupPosts([]);
             }
 
             // Navegação de passo
