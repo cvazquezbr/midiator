@@ -205,11 +205,13 @@ const _createPost = async (accessToken, authorUrn, campaignContent, assetUrns = 
   };
 
   if (videoUrn) {
+    // The UGC Posts API expects the classic 'digitalmediaAsset' URN, not the new 'video' URN.
+    const assetUrn = videoUrn.replace('urn:li:video:', 'urn:li:digitalmediaAsset:');
     shareContent.shareMediaCategory = 'VIDEO';
     shareContent.media = [{
       status: 'READY',
       description: { text: campaignContent.titulo },
-      media: videoUrn,
+      media: assetUrn,
       title: { text: campaignContent.titulo },
     }];
   } else if (assetUrns && assetUrns.length > 0) {
