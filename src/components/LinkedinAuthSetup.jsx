@@ -131,7 +131,7 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
       // w_member_social: To post, comment, and like on behalf of a member.
       // w_organization_social: To post, comment, and like on behalf of an organization. Replaces w_share.
       // rw_organization_admin: For managing organization pages.
-      const scope = encodeURIComponent('r_basicprofile w_member_social w_organization_social rw_organization_admin');
+      const scope = encodeURIComponent('r_basicprofile w_member_social w_organization_social rw_organization_admin r_organization_admin');
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${config.clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
       window.location.href = authUrl;
     } else {
