@@ -286,7 +286,10 @@ async function handleGetOrganizations(request, response) {
         'Content-Type': 'application/json'
       },
     });
-    if (!profileResponse.ok) throw new Error('Failed to fetch user profile.');
+    if (!profileResponse.ok) {
+      // If fetching the personal profile fails, we can't proceed.
+      throw new Error(`Failed to fetch user profile: ${profileResponse.status}`);
+    }
     const profileData = await profileResponse.json();
     const profiles = [{
       urn: `urn:li:person:${profileData.id}`,
@@ -303,24 +306,41 @@ async function handleGetOrganizations(request, response) {
       },
     });
 
-    if (!orgsResponse.ok) {
-      const errorBody = await orgsResponse.text();
-      console.warn(`Could not fetch administered organizations, status: ${orgsResponse.status}, body: ${errorBody}`);
-      // If this fails, just return the personal profile.
+    const aclsData = await aclsResponse.json();
+
+    // Extract organization IDs from URNs
+    const orgIds = (aclsData.elements || [])
+      .map(acl => acl.organization)
+      .map(urn => urn.split(':')[3]);
+
+    if (orgIds.length === 0) {
       return response.status(200).json(profiles);
     }
 
-    const orgsData = await orgsResponse.json();
-    const organizations = orgsData.elements || [];
+    // Step 2 from user's code: Get details for the found organizations
+    const orgDetailsUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
+    const orgDetailsHeaders = {
+        'Authorization': `Bearer ${accessToken}`,
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': '202501',
+        'Content-Type': 'application/json'
+    };
+    const orgDetailsResponse = await fetch(orgDetailsUrl, { headers: orgDetailsHeaders });
 
-    organizations.forEach(orgAcl => {
-      const orgData = orgAcl['organization~']; // Details are in the projected field
-      if (orgData) {
-        profiles.push({
-          urn: `urn:li:organization:${orgData.id}`,
-          name: orgData.localizedName,
-        });
-      }
+    if (!orgDetailsResponse.ok) {
+      const errorBody = await orgDetailsResponse.text();
+      console.warn(`Organizations API failed: ${orgDetailsResponse.status}, body: ${errorBody}`);
+      return response.status(200).json(profiles); // Fallback to personal profile
+    }
+
+    const orgDetailsData = await orgDetailsResponse.json();
+
+    // Format the response for the "publish as" dropdown
+    Object.values(orgDetailsData.results || {}).forEach(org => {
+      profiles.push({
+        urn: `urn:li:organization:${org.id}`,
+        name: org.localizedName || org.name?.localized?.en_US,
+      });
     });
 
     return response.status(200).json(profiles);
