@@ -274,6 +274,9 @@ export const publishToLinkedIn = async (campaignData) => {
 
   const authorUrn = providedAuthorUrn || await _getProfileUrn(accessToken);
 
+  console.log('--- LinkedIn Publishing Debug ---');
+  console.log('Using URN for both Asset Owner and Post Author:', authorUrn);
+
   let postResult;
 
   if (videoBlob) {
