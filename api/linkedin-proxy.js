@@ -176,60 +176,67 @@ async function handleGetOrganizations(request, response) {
     const profileResponse = await fetch('https://api.linkedin.com/v2/me', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!profileResponse.ok) throw new Error('Failed to fetch user profile.');
+    if (!profileResponse.ok) {
+      // If fetching the personal profile fails, we can't proceed.
+      throw new Error(`Failed to fetch user profile: ${profileResponse.status}`);
+    }
     const profileData = await profileResponse.json();
     const profiles = [{
       urn: `urn:li:person:${profileData.id}`,
       name: `${profileData.localizedFirstName} ${profileData.localizedLastName} (Pessoal)`,
     }];
 
-    // 2. Find organizations for which the authenticated user has an approved role.
-    const userUrn = `urn:li:person:${profileData.id}`;
-    const aclUrl = `https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&roleAssignee=${encodeURIComponent(userUrn)}&state=APPROVED`;
-    const requestHeaders = {
+    // Step 1 from user's code: Get organizations the user administers
+    const aclsUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED';
+    const aclsHeaders = {
       'Authorization': `Bearer ${accessToken}`,
       'X-Restli-Protocol-Version': '2.0.0',
-      'Content-Type': 'application/json',
-      'LinkedIn-Version': '202403',
+      'LinkedIn-Version': '202501',
+      'Content-Type': 'application/json'
     };
+    const aclsResponse = await fetch(aclsUrl, { headers: aclsHeaders });
 
-    console.log('[DEBUG] LinkedIn ACL Request URL:', aclUrl);
-    console.log('[DEBUG] LinkedIn ACL Request Headers:', JSON.stringify(requestHeaders, null, 2));
-
-    const aclResponse = await fetch(aclUrl, { headers: requestHeaders });
-
-    const responseBody = await aclResponse.text();
-    console.log('[DEBUG] LinkedIn ACL Response Status:', aclResponse.status);
-    console.log('[DEBUG] LinkedIn ACL Response Body:', responseBody);
-
-    if (!aclResponse.ok) {
-       console.warn(`Could not fetch organization ACLs, status: ${aclResponse.status}`);
-       return response.status(200).json(profiles);
+    if (!aclsResponse.ok) {
+      const errorBody = await aclsResponse.text();
+      console.warn(`ACLs API failed: ${aclsResponse.status}, body: ${errorBody}`);
+      return response.status(200).json(profiles); // Fallback to personal profile
     }
 
-    const aclData = JSON.parse(responseBody);
-    const organizationUrns = aclData.elements?.map(el => el.organization) || [];
+    const aclsData = await aclsResponse.json();
 
-    if (organizationUrns.length === 0) {
+    // Extract organization IDs from URNs
+    const orgIds = (aclsData.elements || [])
+      .map(acl => acl.organization)
+      .map(urn => urn.split(':')[3]);
+
+    if (orgIds.length === 0) {
       return response.status(200).json(profiles);
     }
 
-    // 3. Fetch details for each organization
-    const organizationPromises = organizationUrns.map(urn =>
-      fetch(`https://api.linkedin.com/v2/organizations/${urn.split(':').pop()}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }).then(res => res.ok ? res.json() : null)
-    );
+    // Step 2 from user's code: Get details for the found organizations
+    const orgDetailsUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
+    const orgDetailsHeaders = {
+        'Authorization': `Bearer ${accessToken}`,
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': '202501',
+        'Content-Type': 'application/json'
+    };
+    const orgDetailsResponse = await fetch(orgDetailsUrl, { headers: orgDetailsHeaders });
 
-    const organizationResults = await Promise.all(organizationPromises);
+    if (!orgDetailsResponse.ok) {
+      const errorBody = await orgDetailsResponse.text();
+      console.warn(`Organizations API failed: ${orgDetailsResponse.status}, body: ${errorBody}`);
+      return response.status(200).json(profiles); // Fallback to personal profile
+    }
 
-    organizationResults.forEach(orgData => {
-      if (orgData) {
-        profiles.push({
-          urn: `urn:li:organization:${orgData.id}`,
-          name: orgData.localizedName,
-        });
-      }
+    const orgDetailsData = await orgDetailsResponse.json();
+
+    // Format the response for the "publish as" dropdown
+    Object.values(orgDetailsData.results || {}).forEach(org => {
+      profiles.push({
+        urn: `urn:li:organization:${org.id}`,
+        name: org.localizedName || org.name?.localized?.en_US,
+      });
     });
 
     return response.status(200).json(profiles);
