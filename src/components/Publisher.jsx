@@ -35,6 +35,8 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
+import { getLinkedinConfig } from '../utils/linkedinCredentials';
+import googleDriveAPI from '../utils/googleDriveAPI';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -176,15 +178,68 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
     }
   };
 
-  const handleScheduleLinkedIn = () => {
-    setPublishingStatusLi(`Publicação agendada para ${scheduleDate.toLocaleString('pt-BR')}. O envio automático ainda não está implementado.`);
-    console.log('Salvando agendamento:', {
-      profile: selectedProfile,
-      images: selectedImages,
-      date: scheduleDate,
-      content: campaignContent,
-    });
-    // Here you would typically save this information to a backend or localStorage.
+  const handleScheduleLinkedIn = async () => {
+    setIsPublishingLi(true);
+    setPublishingStatusLi('Iniciando agendamento e upload para o Google Drive...');
+    try {
+        const linkedinConfig = getLinkedinConfig();
+        const driveFolderId = linkedinConfig?.folderId;
+
+        if (!driveFolderId) {
+            throw new Error('O ID da Pasta no Google Drive não está configurado na autenticação do LinkedIn.');
+        }
+
+        if (!googleDriveAPI.isUserSignedIn()) {
+            setPublishingStatusLi('Fazendo login no Google Drive...');
+            await googleDriveAPI.signIn();
+        }
+
+        const campaignTitle = campaignContent?.titulo || `Campanha Sem Título - ${new Date().toISOString()}`;
+
+        setPublishingStatusLi(`Criando pasta "${campaignTitle}" no Google Drive...`);
+        const campaignFolder = await googleDriveAPI.createFolder(campaignTitle, driveFolderId);
+
+        const imagesToUpload = generatedImagesData.filter((_, index) => selectedImages[index]);
+        if (imagesToUpload.length === 0) {
+            throw new Error("Nenhuma imagem selecionada para upload.");
+        }
+
+        setPublishingStatusLi(`Fazendo upload de ${imagesToUpload.length} imagens...`);
+        const uploadedImageLinks = [];
+        for (let i = 0; i < imagesToUpload.length; i++) {
+            const image = imagesToUpload[i];
+            const fileName = `imagem_${i + 1}.png`;
+            const uploadedFile = await googleDriveAPI.uploadFile(image.blob, fileName, campaignFolder.id);
+            // We need to get a shareable link, this part might need adjustment in googleDriveAPI utility
+            uploadedImageLinks.push(uploadedFile.id); // Storing ID for now
+        }
+
+        setPublishingStatusLi('Criando planilha de controle no Google Drive...');
+        const sheetData = [
+            ['Título da Campanha', campaignTitle],
+            ['Data do Agendamento', scheduleDate.toLocaleString('pt-BR')],
+            ['Perfil do LinkedIn', selectedProfile],
+            ['Conteúdo do Post', campaignContent?.conteudo],
+            ['CTA', campaignContent?.cta],
+            ['Hashtags', campaignContent?.hashtags.join(' ')],
+            ['Imagens (IDs no Drive)', uploadedImageLinks.join(', ')]
+        ];
+
+        const spreadsheet = await googleDriveAPI.createSpreadsheet(
+            `Controle - ${campaignTitle}`,
+            sheetData,
+            campaignFolder.id
+        );
+
+        setPublishingStatusLi(`Agendamento salvo! Arquivos no Google Drive na pasta "${campaignTitle}". Planilha: ${spreadsheet.spreadsheetUrl}`);
+        setPublishedPostUrlLi(spreadsheet.spreadsheetUrl);
+
+    } catch (error) {
+        console.error('Erro ao salvar agendamento no Google Drive:', error);
+        setPublishingStatusLi(`Erro no agendamento: ${error.message}`);
+    } finally {
+        setIsPublishingLi(false);
+    }
   };
 
   const handlePublishLinkedIn = async () => {
@@ -298,10 +353,24 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
                               edge="start"
                               checked={media.type === 'image' ? !!selectedImages[index] : !!selectedVideos[index - generatedImagesData.length]}
                               onChange={(e) => {
+                                const isChecked = e.target.checked;
                                 if (media.type === 'image') {
-                                  setSelectedImages({ ...selectedImages, [index]: e.target.checked });
-                                } else {
-                                  setSelectedVideos({ ...selectedVideos, [index - generatedImagesData.length]: e.target.checked });
+                                  // Se uma imagem é selecionada, desmarca qualquer vídeo
+                                  if (isChecked) {
+                                    setSelectedVideos({});
+                                  }
+                                  setSelectedImages(prev => ({ ...prev, [index]: isChecked }));
+                                } else { // media.type === 'video'
+                                  const videoIndex = index - generatedImagesData.length;
+                                  // Se um vídeo é selecionado
+                                  if (isChecked) {
+                                    // Desmarca todas as imagens e outros vídeos
+                                    setSelectedImages({});
+                                    setSelectedVideos({ [videoIndex]: true });
+                                  } else {
+                                    // Desmarca o vídeo atual
+                                    setSelectedVideos({ [videoIndex]: false });
+                                  }
                                 }
                               }}
                             />

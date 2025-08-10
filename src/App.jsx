@@ -99,7 +99,6 @@ import { stripHtml } from './lib/utils';
 import './App.css';
 import LoadingDialog from './components/LoadingDialog';
 import TextEditorDialog from './components/TextEditorDialog';
-import { version } from '../package.json';
 
 // Temas atualizados com gradientes e cores modernas
 const lightTheme = createTheme({
@@ -2024,9 +2023,6 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             }}>
               {/* New SVG Logo */}
               <img src="/logo.svg" alt="Midiator Logo" style={{ height: '40px' }} />
-              <Typography variant="caption" sx={{ color: 'white', opacity: 0.7 }}>
-                v{version}
-              </Typography>
               {/* Text is now part of the SVG, so no separate text elements needed here. */}
             </Box>
 
