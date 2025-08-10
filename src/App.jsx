@@ -225,6 +225,7 @@ function App() {
   const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 });
   const [generatedImagesData, setGeneratedImagesData] = useState([]);
   const [generatedAudioData, setGeneratedAudioData] = useState([]);
+  const [generatedVideoData, setGeneratedVideoData] = useState(null);
   const isMobile = useIsMobile();
   const [anchorElMenu, setAnchorElMenu] = useState(null);
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
@@ -2765,6 +2766,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               campaignContent={campaignContent}
               conteudoFormatado={conteudoFormatado}
               generatedImagesData={generatedImagesData}
+              generatedVideoData={generatedVideoData}
             />
           )}
 
@@ -2783,6 +2785,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             <VideoGenerator2
               generatedImages={generatedImagesData}
               generatedAudioData={generatedAudioData}
+              onVideoGenerated={(videoData) => setGeneratedVideoData(videoData)}
             />
           )}
 
