@@ -90,7 +90,7 @@ import LinkedinAuthSetup from './components/LinkedinAuthSetup';
 import Publisher from './components/Publisher';
 import CampaignPromptDialog from './components/CampaignPromptDialog';
 import { getGeminiApiKey } from './utils/geminiCredentials';
-import { getLinkedinConfig, saveLinkedinConfig } from './utils/linkedinCredentials';
+import { saveLinkedinConfig } from './utils/linkedinCredentials';
 import { getCampaignPrompt } from './utils/campaignPrompt';
 import { callGeminiApi, generateImage } from './utils/geminiAPI';
 import GoogleIcon from '@mui/icons-material/Google';
@@ -99,6 +99,7 @@ import { stripHtml } from './lib/utils';
 import './App.css';
 import LoadingDialog from './components/LoadingDialog';
 import TextEditorDialog from './components/TextEditorDialog';
+import { version } from '../package.json';
 
 // Temas atualizados com gradientes e cores modernas
 const lightTheme = createTheme({
@@ -225,7 +226,7 @@ function App() {
   const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 });
   const [generatedImagesData, setGeneratedImagesData] = useState([]);
   const [generatedAudioData, setGeneratedAudioData] = useState([]);
-  const [generatedVideoData, setGeneratedVideoData] = useState(null);
+  const [generatedVideosData, setGeneratedVideosData] = useState([]);
   const isMobile = useIsMobile();
   const [anchorElMenu, setAnchorElMenu] = useState(null);
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
@@ -296,20 +297,24 @@ function App() {
     //   })
     // );
 
-    let serializableGeneratedVideo = null;
-    if (generatedVideoData && generatedVideoData.blob) {
-      try {
-        const videoBase64 = await blobToBase64(generatedVideoData.blob);
-        serializableGeneratedVideo = {
-          ...generatedVideoData,
+    const serializableGeneratedVideos = await Promise.all(
+      generatedVideosData.map(async (video) => {
+        let videoBase64 = null;
+        if (video.blob) {
+          try {
+            videoBase64 = await blobToBase64(video.blob);
+          } catch (error) {
+            console.error("Erro ao converter blob de vídeo para Base64:", error);
+          }
+        }
+        return {
+          ...video,
           blob: undefined,
           url: undefined,
           videoBase64: videoBase64,
         };
-      } catch (error) {
-        console.error("Erro ao converter blob de vídeo para Base64:", error);
-      }
-    }
+      })
+    );
 
     const stateToSave = {
       activeStep,
@@ -321,10 +326,7 @@ function App() {
       fieldStyles,
       displayedImageSize,
       originalImageSize,
-      // Omit generatedImagesData and generatedAudioData to avoid QuotaExceededError
-      // generatedImagesData: serializableGeneratedImages,
-      // generatedAudioData: serializableGeneratedAudio,
-      generatedVideo: serializableGeneratedVideo,
+      generatedVideosData: serializableGeneratedVideos,
       problema,
       solucao,
       campaignContent,
@@ -397,11 +399,27 @@ function App() {
         setConteudoPequeno(savedState.conteudoPequeno || '');
         setPromptText(savedState.promptText || '');
 
+        if (savedState.generatedVideosData) {
+          const restoredGeneratedVideos = await Promise.all(
+            savedState.generatedVideosData.map(async (videoData) => {
+              const blob = await base64ToBlob(videoData.videoBase64);
+              return { ...videoData, blob, url: blob ? URL.createObjectURL(blob) : null };
+            })
+          );
+          setGeneratedVideosData(restoredGeneratedVideos);
+        }
+
         sessionStorage.removeItem('appState');
       }
     };
     loadStateFromSession();
   }, []);
+
+  useEffect(() => {
+    if (generatedVideosData.length > 0) {
+      saveStateToSessionStorage();
+    }
+  }, [generatedVideosData]);
 
 
   // Estados para a Campanha
@@ -1040,9 +1058,9 @@ function App() {
                   videoBase64: undefined,
                 };
               })();
-              setGeneratedVideoData(restoredGeneratedVideo);
+              setGeneratedVideosData(restoredGeneratedVideo ? [restoredGeneratedVideo] : []);
             } else {
-              setGeneratedVideoData(null);
+              setGeneratedVideosData([]);
             }
 
             // Restaurar dados da campanha se presentes
@@ -1977,6 +1995,9 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             }}>
               {/* New SVG Logo */}
               <img src="/logo.svg" alt="Midiator Logo" style={{ height: '40px' }} />
+              <Typography variant="caption" sx={{ color: 'white', opacity: 0.7 }}>
+                v{version}
+              </Typography>
               {/* Text is now part of the SVG, so no separate text elements needed here. */}
             </Box>
 
@@ -2815,7 +2836,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
             <VideoGenerator2
               generatedImages={generatedImagesData}
               generatedAudioData={generatedAudioData}
-              onVideoGenerated={(videoData) => setGeneratedVideoData(videoData)}
+              onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)}
             />
           )}
 
@@ -2825,7 +2846,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               campaignContent={campaignContent}
               conteudoFormatado={conteudoFormatado}
               generatedImagesData={generatedImagesData}
-              generatedVideoData={generatedVideoData}
+              generatedVideosData={generatedVideosData}
             />
           )}
 

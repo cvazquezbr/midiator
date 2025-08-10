@@ -6,6 +6,12 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 export default [
   { ignores: ['dist', 'public/ffmpeg/ffmpeg-core.js'] },
   {
+    files: ['api/**/*.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
       ecmaVersion: 2020,

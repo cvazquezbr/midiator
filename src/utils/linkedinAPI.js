@@ -31,7 +31,7 @@ const markdownToLinkedinText = (markdown) => {
   // Replace links with "text (link)"
   text = text.replace(/\[(.*?)\]\((.*?)\)/g, '$1 ($2)');
   // Replace list items
-  text = text.replace(/^\s*[\-\*]\s/gm, '');
+  text = text.replace(/^\s*[-*]\s/gm, '');
   // Trim and clean up newlines
   text = text.trim().replace(/\n{3,}/g, '\n\n');
 
@@ -145,7 +145,7 @@ const _uploadImage = async (accessToken, uploadUrl, imageBlob) => {
  * @param {string} assetUrn - The URN of the uploaded image.
  * @returns {Promise<object>} The created post object from the API.
  */
-const _registerVideoUpload = async (accessToken, authorUrn, fileSize) => {
+const _registerVideoUpload = async (accessToken, authorUrn) => {
   const response = await fetch('/api/linkedin-proxy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
