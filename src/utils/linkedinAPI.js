@@ -159,10 +159,7 @@ const _registerVideoUpload = async (accessToken, authorUrn) => {
           serviceRelationships: [{
             relationshipType: 'OWNER',
             identifier: 'urn:li:userGeneratedContent',
-          }],
-          videoPlayStats: {
-            videoPlayStatsType: 'PER_VIEWER_STATS'
-          }
+          }]
         },
       },
     }),
