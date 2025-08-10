@@ -337,6 +337,9 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
               <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
                 Selecionar Mídia
               </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                Regra do LinkedIn: Você pode selecionar várias imagens ou apenas um vídeo por post.
+              </Typography>
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid item xs={12} md={4}>
                   <Paper sx={{ height: 400, overflow: 'auto', p: 1 }}>
