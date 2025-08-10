@@ -824,8 +824,23 @@ function App() {
           })
       );
 
+      let serializableGeneratedVideo = null;
+      if (generatedVideoData && generatedVideoData.blob) {
+        try {
+          const videoBase64 = await blobToBase64(generatedVideoData.blob);
+          serializableGeneratedVideo = {
+            ...generatedVideoData,
+            blob: undefined,
+            url: undefined,
+            videoBase64: videoBase64,
+          };
+        } catch (error) {
+          console.error("Erro ao converter blob de vídeo para Base64:", error);
+        }
+      }
+
       const stateToSave = {
-        version: "1.8", // Incremented version to reflect this change
+        version: "1.9", // Incremented version to reflect this change
         backgroundImageUrl: backgroundImage,
         originalImageSize: originalImageSize,
         imageFilters: imageFilters, // <<<<<<<<<<<< SAVE
@@ -836,6 +851,7 @@ function App() {
         csvData: csvData,
         generatedImages: serializableGeneratedImages,
         generatedAudio: serializableGeneratedAudio,
+        generatedVideo: serializableGeneratedVideo,
         problema: problema,
         solucao: solucao,
         campaignContent: campaignContent,
@@ -895,7 +911,7 @@ function App() {
           };
 
           // Verificar versão e campos essenciais
-          if (loadedState.version && ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8"].includes(loadedState.version) &&
+          if (loadedState.version && ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9"].includes(loadedState.version) &&
             loadedState.backgroundImageUrl !== undefined &&
             loadedState.fieldPositions &&
             loadedState.fieldStyles &&
@@ -1003,6 +1019,30 @@ function App() {
                 setGeneratedAudioData(restoredGeneratedAudio);
             } else {
                 setGeneratedAudioData([]);
+            }
+
+            if (parseFloat(loadedState.version) >= 1.9 && loadedState.generatedVideo) {
+              const restoredGeneratedVideo = await (async () => {
+                let blob = null;
+                let url = null;
+                if (loadedState.generatedVideo.videoBase64) {
+                  try {
+                    blob = await base64ToBlob(loadedState.generatedVideo.videoBase64);
+                    url = URL.createObjectURL(blob);
+                  } catch (error) {
+                    console.error("Erro ao converter base64 para blob de vídeo ao carregar:", error);
+                  }
+                }
+                return {
+                  ...loadedState.generatedVideo,
+                  blob: blob,
+                  url: url,
+                  videoBase64: undefined,
+                };
+              })();
+              setGeneratedVideoData(restoredGeneratedVideo);
+            } else {
+              setGeneratedVideoData(null);
             }
 
             // Restaurar dados da campanha se presentes
