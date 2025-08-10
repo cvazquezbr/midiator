@@ -541,7 +541,7 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData, onVideoGenerated
       const url = URL.createObjectURL(blob);
       setVideo(url);
       if (onVideoGenerated) {
-        onVideoGenerated({ blob, url, name: `video-${Date.now()}.mp4` });
+        onVideoGenerated([{ blob, url, name: `video-${Date.now()}.mp4` }]);
       }
     } catch (err) {
       console.error("Erro na geração do vídeo:", err);
@@ -584,9 +584,7 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData, onVideoGenerated
       }
     }
     if (onVideoGenerated && allGeneratedVideos.length > 0) {
-      // For now, we only support publishing a single video.
-      // We pass the first one to the publisher.
-      onVideoGenerated(allGeneratedVideos[0]);
+      onVideoGenerated(allGeneratedVideos);
     }
 
     setIsLoading(false);
@@ -695,7 +693,7 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData, onVideoGenerated
         const videoUrl = URL.createObjectURL(blob);
         setVideo(videoUrl);
         if (onVideoGenerated) {
-          onVideoGenerated({ blob, url: videoUrl, name: `video-compat-${Date.now()}.webm` });
+          onVideoGenerated([{ blob, url: videoUrl, name: `video-compat-${Date.now()}.webm` }]);
         }
       };
 
@@ -838,7 +836,7 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData, onVideoGenerated
       const url = URL.createObjectURL(blob);
       setVideo(url);
       if (onVideoGenerated) {
-        onVideoGenerated({ blob, url, name: `video-narrado-${Date.now()}.mp4` });
+        onVideoGenerated([{ blob, url, name: `video-narrado-${Date.now()}.mp4` }]);
       }
 
     } catch (err) {

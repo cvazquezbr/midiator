@@ -20,21 +20,20 @@ import {
   Switch,
   TextField,
   CircularProgress,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Paper,
 } from '@mui/material';
 import { Language, Publish, LinkedIn } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { ptBR } from 'date-fns/locale/pt-BR';
-import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
 
-const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, generatedVideoData }) => {
-  // State for WordPress
-  const [isPublishingWp, setIsPublishingWp] = useState(false);
-  const [publishingStatusWp, setPublishingStatusWp] = useState('');
-  const [publishedPostUrlWp, setPublishedPostUrlWp] = useState(null);
-
+const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, generatedVideosData }) => {
   // State for LinkedIn
   const [isPublishingLi, setIsPublishingLi] = useState(false);
   const [publishingStatusLi, setPublishingStatusLi] = useState('');
@@ -44,11 +43,25 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 60 * 60 * 1000)); // Default to 1 hour from now
   const [selectedImages, setSelectedImages] = useState({}); // e.g. { 0: true, 1: false }
-  const [selectedVideo, setSelectedVideo] = useState(null);
+  const [selectedVideos, setSelectedVideos] = useState({});
   const [linkedinProfiles, setLinkedinProfiles] = useState([]);
   const [selectedProfile, setSelectedProfile] = useState('');
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [profileError, setProfileError] = useState('');
+  const [unifiedMedia, setUnifiedMedia] = useState([]);
+  const [previewedMedia, setPreviewedMedia] = useState(null);
+
+  useEffect(() => {
+    const images = (generatedImagesData || []).map((img, index) => ({ ...img, type: 'image', id: `image-${index}` }));
+    const videos = (generatedVideosData || []).map((vid, index) => ({ ...vid, type: 'video', id: `video-${index}` }));
+    const allMedia = [...images, ...videos];
+    setUnifiedMedia(allMedia);
+    if (allMedia.length > 0) {
+      setPreviewedMedia(allMedia[0]);
+    } else {
+      setPreviewedMedia(null);
+    }
+  }, [generatedImagesData, generatedVideosData]);
 
   // Fetch LinkedIn profiles on component mount
   useEffect(() => {
@@ -80,45 +93,14 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
     }
   }, [generatedImagesData]);
 
-  // Set default video selection when video is generated
+  // Set default video selection when videos are generated
   useEffect(() => {
-    if (generatedVideoData) {
-      setSelectedVideo(true); // Select the video by default
+    if (generatedVideosData && generatedVideosData.length > 0) {
+      setSelectedVideos({ 0: true }); // Select the first video by default
     } else {
-      setSelectedVideo(false);
+      setSelectedVideos({});
     }
-  }, [generatedVideoData]);
-
-
-  const handlePublishWordPress = async () => {
-    setIsPublishingWp(true);
-    setPublishingStatusWp('Iniciando publicação...');
-    setPublishedPostUrlWp(null);
-
-    try {
-      if (!campaignContent || !conteudoFormatado || !generatedImagesData || generatedImagesData.length === 0) {
-        throw new Error('Dados da campanha ou imagens não estão disponíveis.');
-      }
-      const firstImage = generatedImagesData[0];
-      if (!firstImage || !firstImage.blob) {
-        throw new Error('A primeira imagem gerada não contém um blob válido.');
-      }
-      const campaignData = {
-        campaignContent,
-        conteudoFormatado,
-        imageBlob: firstImage.blob,
-      };
-      setPublishingStatusWp('Publicando no WordPress... Isso pode levar um momento.');
-      const post = await publishToWordPress(campaignData);
-      setPublishingStatusWp(`Post "${post.title.rendered}" criado como rascunho com sucesso!`);
-      setPublishedPostUrlWp(post.link);
-    } catch (error) {
-      console.error('Erro ao publicar no WordPress:', error);
-      setPublishingStatusWp(`Erro ao publicar: ${error.message}`);
-    } finally {
-      setIsPublishingWp(false);
-    }
-  };
+  }, [generatedVideosData]);
 
   const handleScheduleLinkedIn = () => {
     setPublishingStatusLi(`Publicação agendada para ${scheduleDate.toLocaleString('pt-BR')}. O envio automático ainda não está implementado.`);
@@ -154,7 +136,11 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
         .filter((_, index) => selectedImages[index])
         .map(img => img.blob);
 
-      const videoBlob = selectedVideo && generatedVideoData ? generatedVideoData.blob : null;
+      const videoBlobs = generatedVideosData
+        .filter((_, index) => selectedVideos[index])
+        .map(vid => vid.blob);
+
+      const videoBlob = videoBlobs.length > 0 ? videoBlobs[0] : null;
 
       const campaignData = {
         campaignContent,
@@ -183,46 +169,8 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
           Publicar Conteúdo
         </Typography>
         <Grid container spacing={4}>
-          {/* WordPress Publisher */}
-          <Grid item xs={12} md={6}>
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                <Language sx={{ verticalAlign: 'middle', mr: 1 }} />
-                WordPress
-              </Typography>
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                Envia o conteúdo para o seu site WordPress como um post em rascunho. A primeira imagem gerada será usada como imagem destacada.
-              </Typography>
-              <Button
-                variant="contained"
-                size="large"
-                color="secondary"
-                onClick={handlePublishWordPress}
-                disabled={isPublishingWp || isPublishingLi}
-              >
-                {isPublishingWp ? 'Publicando...' : 'Publicar no WordPress'}
-              </Button>
-              {isPublishingWp && <LinearProgress sx={{ my: 2 }} />}
-              {publishingStatusWp && (
-                <Alert
-                  severity={publishedPostUrlWp ? 'success' : (publishingStatusWp.startsWith('Erro') ? 'error' : 'info')}
-                  sx={{ mt: 2 }}
-                >
-                  {publishingStatusWp}
-                  {publishedPostUrlWp && (
-                    <MuiLink href={publishedPostUrlWp} target="_blank" rel="noopener" sx={{ display: 'block', mt: 1 }}>
-                      Visualizar rascunho do post
-                    </MuiLink>
-                  )}
-                </Alert>
-              )}
-            </Box>
-          </Grid>
-
-          <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
-
           {/* LinkedIn Publisher */}
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12}>
             <Box>
               <Typography variant="h6" gutterBottom>
                 <LinkedIn sx={{ verticalAlign: 'middle', mr: 1 }} />
@@ -250,54 +198,59 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
                 </Select>
               </FormControl>
 
-              {/* Image Selection */}
+              {/* Media Selection */}
               <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-                Selecionar Imagens
+                Selecionar Mídia
               </Typography>
-              <FormGroup row sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                {generatedImagesData && generatedImagesData.map((img, index) => (
-                  <FormControlLabel
-                    key={index}
-                    control={
-                      <Checkbox
-                        checked={!!selectedImages[index]}
-                        onChange={(e) => setSelectedImages({ ...selectedImages, [index]: e.target.checked })}
-                        name={`img-${index}`}
-                      />
-                    }
-                    label={
-                      <Box component="img" src={img.url} alt={`Generated ${index + 1}`} sx={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 1 }} />
-                    }
-                  />
-                ))}
-              </FormGroup>
-
-              {/* Video Selection */}
-              {generatedVideoData && (
-                <>
-                  <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-                    Selecionar Vídeo
-                  </Typography>
-                  <FormGroup row sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                    <FormControlLabel
-                      control={
-                        <Checkbox
-                          checked={!!selectedVideo}
-                          onChange={(e) => setSelectedVideo(e.target.checked)}
-                          name="video-selection"
-                        />
-                      }
-                      label={
-                        <video
-                          src={generatedVideoData.url}
-                          muted
-                          style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: '4px' }}
-                        />
-                      }
-                    />
-                  </FormGroup>
-                </>
-              )}
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                <Grid item xs={12} md={4}>
+                  <Paper sx={{ height: 400, overflow: 'auto', p: 1 }}>
+                    <List>
+                      {unifiedMedia.map((media, index) => (
+                        <ListItem
+                          key={media.id}
+                          button
+                          onClick={() => setPreviewedMedia(media)}
+                          selected={previewedMedia && previewedMedia.id === media.id}
+                        >
+                          <ListItemIcon>
+                            <Checkbox
+                              edge="start"
+                              checked={media.type === 'image' ? !!selectedImages[index] : !!selectedVideos[index - generatedImagesData.length]}
+                              onChange={(e) => {
+                                if (media.type === 'image') {
+                                  setSelectedImages({ ...selectedImages, [index]: e.target.checked });
+                                } else {
+                                  setSelectedVideos({ ...selectedVideos, [index - generatedImagesData.length]: e.target.checked });
+                                }
+                              }}
+                            />
+                          </ListItemIcon>
+                          <ListItemText primary={`${media.type === 'image' ? 'Imagem' : 'Vídeo'} ${media.type === 'image' ? index + 1 : index - generatedImagesData.length + 1}`} />
+                          {media.type === 'image' ? (
+                            <Box component="img" src={media.url} sx={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 1 }} />
+                          ) : (
+                            <video src={media.url} muted style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 1 }} />
+                          )}
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} md={8}>
+                  <Paper sx={{ height: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 1 }}>
+                    {previewedMedia ? (
+                      previewedMedia.type === 'image' ? (
+                        <img src={previewedMedia.url} alt="Preview" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                      ) : (
+                        <video src={previewedMedia.url} controls style={{ maxHeight: '100%', maxWidth: '100%' }} />
+                      )
+                    ) : (
+                      <Typography>Selecione uma mídia para visualizar</Typography>
+                    )}
+                  </Paper>
+                </Grid>
+              </Grid>
 
               {/* Scheduling */}
               <FormControlLabel
@@ -323,7 +276,7 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
                 size="large"
                 color="primary"
                 onClick={handlePublishLinkedIn}
-                disabled={isPublishingLi || isPublishingWp || (isScheduled) || !selectedProfile}
+                disabled={isPublishingLi || (isScheduled) || !selectedProfile}
               >
                 {isPublishingLi ? 'Publicando...' : 'Publicar Agora no LinkedIn'}
               </Button>
