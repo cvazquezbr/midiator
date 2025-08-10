@@ -92,7 +92,8 @@ async function handleFinalizeVideoUpload(request, response) {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
-                'X-Restli-Protocol-Version': '2.0.0'
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': '202501'
             },
             body: JSON.stringify({
                 "completeUploadRequest": {}
@@ -123,7 +124,9 @@ async function handleCheckVideoStatus(request, response) {
         const linkedinResponse = await fetch(statusUrl, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': '202501'
             }
         });
         if (!linkedinResponse.ok) {
@@ -153,6 +156,8 @@ async function handleGetProfile(request, response) {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': '202501',
             },
         });
         const data = await linkedinResponse.json();
@@ -178,6 +183,8 @@ async function handleRegisterUpload(request, response) {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': '202501',
       },
       body: JSON.stringify(payload),
     });
@@ -253,6 +260,7 @@ async function handleCreatePost(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': '202501',
       },
       body: JSON.stringify(payload),
     });
@@ -275,7 +283,12 @@ async function handleGetOrganizations(request, response) {
   try {
     // 1. Get user's own profile to start the list
     const profileResponse = await fetch('https://api.linkedin.com/v2/me', {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': '202501'
+      },
     });
     if (!profileResponse.ok) {
       // If fetching the personal profile fails, we can't proceed.
