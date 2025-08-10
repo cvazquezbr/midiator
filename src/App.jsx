@@ -2872,6 +2872,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               conteudoFormatado={conteudoFormatado}
               generatedImagesData={generatedImagesData}
               generatedVideosData={generatedVideosData}
+              followupPosts={followupPosts}
             />
           )}
 
