@@ -87,8 +87,11 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
     // Remove tags HTML
     const noHtml = noEmojis.replace(/<\/?[^>]+(>|$)/g, '');
 
+    // Substituir &nbsp; por espaço normal
+    const noNbsp = noHtml.replace(/&nbsp;/g, ' ');
+
     // Remove múltiplos pontos com ou sem espaços: ". .", "..", "... ", etc → ". "
-    const fixedDots = noHtml.replace(/(\s*\.\s*){2,}/g, '. ');
+    const fixedDots = noNbsp.replace(/(\s*\.\s*){2,}/g, '. ');
 
     // Limpa padrões específicos indesejados, como "..':"
     const cleanedText = fixedDots.replace(/\.{2,}':/g, '');
