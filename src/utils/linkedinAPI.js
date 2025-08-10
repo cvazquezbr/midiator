@@ -172,7 +172,6 @@ const _pollVideoStatus = async (accessToken, videoUrn) => {
     });
 
     if (!response.ok) {
-        // Don't throw an error, just log it and continue polling
         console.warn(`Polling video status failed with status ${response.status}. Retrying...`);
         continue;
     }
@@ -273,13 +272,16 @@ export const publishToLinkedIn = async (campaignData) => {
   }
   const { accessToken } = config;
 
-  const authorUrn = providedAuthorUrn || await _getProfileUrn(accessToken);
+  const personalUrn = await _getProfileUrn(accessToken);
+  const authorUrn = providedAuthorUrn || personalUrn; // The author of the POST
+  const assetOwnerUrn = personalUrn; // The owner of the ASSET is always the authenticated user
+
   let postResult;
 
   if (videoBlob) {
     console.log('Publishing to LinkedIn: Starting new video upload process...');
     // 1. Initialize
-    const initData = await _initializeVideoUpload(accessToken, authorUrn, videoBlob.size);
+    const initData = await _initializeVideoUpload(accessToken, assetOwnerUrn, videoBlob.size);
     const { video: videoUrn, uploadInstructions, uploadToken } = initData;
     console.log(`Video initialized. URN: ${videoUrn}`);
 
@@ -302,7 +304,7 @@ export const publishToLinkedIn = async (campaignData) => {
     console.log(`Publishing to LinkedIn: Registering and uploading ${imageBlobs.length} image(s)...`);
     const assetUrns = [];
     for (const imageBlob of imageBlobs) {
-        const { uploadUrl, assetUrn } = await _registerImageUpload(accessToken, authorUrn);
+        const { uploadUrl, assetUrn } = await _registerImageUpload(accessToken, assetOwnerUrn);
         await _uploadImage(accessToken, uploadUrl, imageBlob);
         console.log(`Image with asset URN: ${assetUrn} uploaded successfully.`);
         assetUrns.push(assetUrn);
