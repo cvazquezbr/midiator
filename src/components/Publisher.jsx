@@ -25,15 +25,49 @@ import {
   ListItemIcon,
   ListItemText,
   Paper,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { Language, Publish, LinkedIn } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { ptBR } from 'date-fns/locale/pt-BR';
+import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
 
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
 const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, generatedVideosData }) => {
+  const [tabValue, setTabValue] = React.useState(0);
+
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+  };
+
+  // State for WordPress
+  const [isPublishingWp, setIsPublishingWp] = useState(false);
+  const [publishingStatusWp, setPublishingStatusWp] = useState('');
+  const [publishedPostUrlWp, setPublishedPostUrlWp] = useState(null);
+
   // State for LinkedIn
   const [isPublishingLi, setIsPublishingLi] = useState(false);
   const [publishingStatusLi, setPublishingStatusLi] = useState('');
@@ -102,6 +136,37 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
     }
   }, [generatedVideosData]);
 
+
+  const handlePublishWordPress = async () => {
+    setIsPublishingWp(true);
+    setPublishingStatusWp('Iniciando publicação...');
+    setPublishedPostUrlWp(null);
+
+    try {
+      if (!campaignContent || !conteudoFormatado || !generatedImagesData || generatedImagesData.length === 0) {
+        throw new Error('Dados da campanha ou imagens não estão disponíveis.');
+      }
+      const firstImage = generatedImagesData[0];
+      if (!firstImage || !firstImage.blob) {
+        throw new Error('A primeira imagem gerada não contém um blob válido.');
+      }
+      const campaignData = {
+        campaignContent,
+        conteudoFormatado,
+        imageBlob: firstImage.blob,
+      };
+      setPublishingStatusWp('Publicando no WordPress... Isso pode levar um momento.');
+      const post = await publishToWordPress(campaignData);
+      setPublishingStatusWp(`Post "${post.title.rendered}" criado como rascunho com sucesso!`);
+      setPublishedPostUrlWp(post.link);
+    } catch (error) {
+      console.error('Erro ao publicar no WordPress:', error);
+      setPublishingStatusWp(`Erro ao publicar: ${error.message}`);
+    } finally {
+      setIsPublishingWp(false);
+    }
+  };
+
   const handleScheduleLinkedIn = () => {
     setPublishingStatusLi(`Publicação agendada para ${scheduleDate.toLocaleString('pt-BR')}. O envio automático ainda não está implementado.`);
     console.log('Salvando agendamento:', {
@@ -168,9 +233,15 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
           <Publish />
           Publicar Conteúdo
         </Typography>
-        <Grid container spacing={4}>
-          {/* LinkedIn Publisher */}
-          <Grid item xs={12}>
+        <Box sx={{ width: '100%' }}>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs value={tabValue} onChange={handleTabChange} aria-label="basic tabs example">
+              <Tab label="LinkedIn" />
+              <Tab label="WordPress" />
+            </Tabs>
+          </Box>
+          <TabPanel value={tabValue} index={0}>
+            {/* LinkedIn Publisher */}
             <Box>
               <Typography variant="h6" gutterBottom>
                 <LinkedIn sx={{ verticalAlign: 'middle', mr: 1 }} />
@@ -302,8 +373,42 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
                 </Alert>
               )}
             </Box>
-          </Grid>
-        </Grid>
+          </TabPanel>
+          <TabPanel value={tabValue} index={1}>
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                <Language sx={{ verticalAlign: 'middle', mr: 1 }} />
+                WordPress
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                Envia o conteúdo para o seu site WordPress como um post em rascunho. A primeira imagem gerada será usada como imagem destacada.
+              </Typography>
+              <Button
+                variant="contained"
+                size="large"
+                color="secondary"
+                onClick={handlePublishWordPress}
+                disabled={isPublishingWp || isPublishingLi}
+              >
+                {isPublishingWp ? 'Publicando...' : 'Publicar no WordPress'}
+              </Button>
+              {isPublishingWp && <LinearProgress sx={{ my: 2 }} />}
+              {publishingStatusWp && (
+                <Alert
+                  severity={publishedPostUrlWp ? 'success' : (publishingStatusWp.startsWith('Erro') ? 'error' : 'info')}
+                  sx={{ mt: 2 }}
+                >
+                  {publishingStatusWp}
+                  {publishedPostUrlWp && (
+                    <MuiLink href={publishedPostUrlWp} target="_blank" rel="noopener" sx={{ display: 'block', mt: 1 }}>
+                      Visualizar rascunho do post
+                    </MuiLink>
+                  )}
+                </Alert>
+              )}
+            </Box>
+          </TabPanel>
+        </Box>
       </CardContent>
     </Card>
   );
