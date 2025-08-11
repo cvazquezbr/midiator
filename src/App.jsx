@@ -66,6 +66,8 @@ import {
   AspectRatio,
   Language,
   Publish,
+  SaveAlt as SaveAltIcon,
+  FileUpload as FileUploadIcon,
 } from '@mui/icons-material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Papa from 'papaparse';
@@ -73,7 +75,10 @@ import ColorThief from 'colorthief';
 import { Menu, MenuItem } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { Toaster, toast } from 'sonner';
 
+import { saveCredentialsToFile, loadCredentialsFromFile } from './utils/credentialsManager';
+import PasswordDialog from './components/PasswordDialog';
 import FieldPositioner from './components/FieldPositioner';
 import FormattingPanel from './components/FormattingPanel';
 import FormattingDrawer from './components/FormattingDrawer';
@@ -248,6 +253,9 @@ function App() {
   const [showWordpressAuthModal, setShowWordpressAuthModal] = useState(false);
   const [showLinkedinAuthModal, setShowLinkedinAuthModal] = useState(false);
   const [showCampaignPromptModal, setShowCampaignPromptModal] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [passwordDialogAction, setPasswordDialogAction] = useState(null); // 'save' or 'load'
+  const [credentialsPassword, setCredentialsPassword] = useState('');
 
   const saveStateToSessionStorage = async () => {
     const blobToBase64 = (blob) => {
@@ -465,6 +473,7 @@ function App() {
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const loadStateInputRef = useRef(null);
+  const loadCredentialsInputRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
@@ -1248,6 +1257,52 @@ function App() {
   const handleSaveTemplateClick = () => {
     handleMenuClose();
     handleSaveState();
+  };
+
+  const handleSaveCredentialsClick = () => {
+    setPasswordDialogAction('save');
+    setShowPasswordDialog(true);
+    handleMenuClose();
+  };
+
+  const handleLoadCredentialsClick = () => {
+    setPasswordDialogAction('load');
+    setShowPasswordDialog(true);
+    handleMenuClose();
+  };
+
+  const handlePasswordConfirm = async (password) => {
+    setShowPasswordDialog(false);
+    if (passwordDialogAction === 'save') {
+      try {
+        await saveCredentialsToFile(password);
+        toast.success('Arquivo de credenciais salvo com sucesso!');
+      } catch (error) {
+        toast.error(`Erro ao salvar credenciais: ${error.message}`);
+      }
+    } else if (passwordDialogAction === 'load') {
+      setCredentialsPassword(password);
+      loadCredentialsInputRef.current.click();
+    }
+  };
+
+  const handleLoadCredentialsFileChange = async (event) => {
+    const file = event.target.files[0];
+    if (file && credentialsPassword) {
+      try {
+        await loadCredentialsFromFile(file, credentialsPassword);
+        toast.success('Credenciais carregadas com sucesso! A página será recarregada.');
+        setTimeout(() => window.location.reload(), 2000);
+      } catch (error) {
+        toast.error(`Erro ao carregar credenciais: ${error.message}`);
+      } finally {
+        setCredentialsPassword('');
+        // Reset file input
+        if (loadCredentialsInputRef.current) {
+          loadCredentialsInputRef.current.value = '';
+        }
+      }
+    }
   };
 
   const handleExportCSV = () => {
@@ -2040,6 +2095,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
   return (
     <ThemeProvider theme={currentTheme}>
       <CssBaseline />
+      <Toaster richColors position="top-center" />
       <Box sx={{ display: 'flex', minHeight: '100vh' }}>
         {/* Header moderno com gradiente */}
         <AppBar
@@ -2112,8 +2168,22 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   <Edit sx={{ mr: 1 }} />
                   Definir Prompt de Campanha
                 </MenuItem>
-                <MenuItem onClick={handleSaveTemplateClick}>Salvar</MenuItem>
-                <MenuItem onClick={handleLoadTemplateClick}>Carregar</MenuItem>
+                <MenuItem onClick={handleSaveTemplateClick}>
+                  <DownloadIcon sx={{ mr: 1 }} />
+                  Salvar Template
+                </MenuItem>
+                <MenuItem onClick={handleLoadTemplateClick}>
+                  <FileUploadIcon sx={{ mr: 1 }} />
+                  Carregar Template
+                </MenuItem>
+                <MenuItem onClick={handleSaveCredentialsClick}>
+                  <SaveAltIcon sx={{ mr: 1 }} />
+                  Salvar Credenciais
+                </MenuItem>
+                <MenuItem onClick={handleLoadCredentialsClick}>
+                  <FileUploadIcon sx={{ mr: 1 }} />
+                  Carregar Credenciais
+                </MenuItem>
                 <MenuItem onClick={handleExportCSV} disabled={csvData.length === 0}>
                   <DownloadIcon sx={{ mr: 1 }} />
                   Exportar CSV
@@ -2125,6 +2195,13 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                 accept=".json,.midiator"
                 onChange={handleLoadStateFromFile}
                 ref={loadStateInputRef}
+              />
+              <input
+                type="file"
+                hidden
+                accept=".midiatorsetup"
+                onChange={handleLoadCredentialsFileChange}
+                ref={loadCredentialsInputRef}
               />
             </Box>
           </Toolbar>
@@ -3042,6 +3119,17 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
           }
         }}
         onClose={() => setEditingField(null)}
+      />
+      <PasswordDialog
+        open={showPasswordDialog}
+        onClose={() => setShowPasswordDialog(false)}
+        onConfirm={handlePasswordConfirm}
+        title={passwordDialogAction === 'save' ? 'Salvar Credenciais' : 'Carregar Credenciais'}
+        description={
+          passwordDialogAction === 'save'
+            ? 'Digite uma senha para criptografar o arquivo de credenciais.'
+            : 'Digite a senha para descriptografar o arquivo de credenciais.'
+        }
       />
       {isMobile && activeStep === 4 && (
         <>
