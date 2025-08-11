@@ -45,6 +45,38 @@ const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
 
 import { composeImage } from '../utils/imageComposer';
 
+// Helper function to find the best font size to fit text within a box
+const findBestFitFontSize = (text, fontFamily, fontWeight, boxWidth, boxHeight) => {
+  if (!text || !boxWidth || !boxHeight) {
+    return 24; // Return a default size if inputs are invalid
+  }
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  let minFontSize = 8;
+  let maxFontSize = 300; // A reasonable max size
+  let bestSize = minFontSize;
+
+  // Use binary search to find the best font size efficiently
+  while (minFontSize <= maxFontSize) {
+    const currentSize = Math.floor((minFontSize + maxFontSize) / 2);
+    if (currentSize <= minFontSize) break; // Avoid infinite loop
+
+    ctx.font = `${fontWeight} ${currentSize}px ${fontFamily}`;
+    const metrics = ctx.measureText(text);
+
+    // A simple check: does it fit horizontally and vertically?
+    // Add a small buffer for vertical fit.
+    if (metrics.width < boxWidth && currentSize < boxHeight) {
+      bestSize = currentSize; // This size is valid, try for a larger one
+      minFontSize = currentSize + 1;
+    } else {
+      maxFontSize = currentSize - 1; // It's too big, try a smaller size
+    }
+  }
+  return bestSize;
+};
+
+
 const FieldPositioner = ({
   backgroundImage,
   csvHeaders,
@@ -235,7 +267,6 @@ const FieldPositioner = ({
       right: 5, // 5%
     };
 
-    // Define field roles based on order. Handle cases with fewer than 3 fields.
     const titleField = csvHeaders.length > 0 ? csvHeaders[0] : null;
     const subtitleField = csvHeaders.length > 1 ? csvHeaders[1] : null;
     const sideLabelField = csvHeaders.length > 2 ? csvHeaders[2] : null;
@@ -258,6 +289,7 @@ const FieldPositioner = ({
     if (titleField) {
       const titleHeight = bandHeight - (innerMargin * 2);
       const titleWidth = safeZone.width - (innerMargin * 2);
+
       newPositions[titleField] = {
         ...(newPositions[titleField] || {}),
         x: safeZone.x + innerMargin,
@@ -267,11 +299,30 @@ const FieldPositioner = ({
         rotation: 0,
         visible: true,
       };
+
+      const titleBoxWidthPx = (titleWidth / 100) * (originalImageSize?.width || imageSize.width);
+      const titleBoxHeightPx = (titleHeight / 100) * (originalImageSize?.height || imageSize.height);
+      const titleText = csvData[currentPreviewIndex]?.[titleField] || `[${titleField}]`;
+
+      const bestFontSize = findBestFitFontSize(
+        titleText,
+        'Anton',
+        'normal',
+        titleBoxWidthPx,
+        titleBoxHeightPx
+      );
+
       newStyles[titleField] = {
         ...(newStyles[titleField] || {}),
         fontFamily: 'Anton',
+        fontSize: bestFontSize,
         textAlign: 'center',
         verticalAlign: 'middle',
+        textShadow: true,
+        shadowColor: '#000000',
+        shadowBlur: 5,
+        shadowOffsetX: 2,
+        shadowOffsetY: 2,
       };
     }
 
@@ -297,13 +348,9 @@ const FieldPositioner = ({
 
     // Rule for Side Label Field (Bottom-Right Corner)
     if (sideLabelField) {
-      // Proportional to the side of the safe zone
       const labelHeight = safeZone.height * 0.7; // 70% of safe zone height
-      const labelWidth = safeZone.height * 0.1; // Make it slim
+      const labelWidth = labelHeight * 0.5; // Width is 50% of the height
 
-      // The position (x, y) is for the TOP-LEFT corner of the UNROTATED box.
-      // The rotation happens around the center of this box.
-      // We calculate the desired center of the unrotated box to align it correctly after rotation.
       const centerX = (safeZone.x + safeZone.width - labelHeight / 2) - innerMargin;
       const centerY = (safeZone.y + safeZone.height - labelWidth / 2) - innerMargin;
 
@@ -328,7 +375,7 @@ const FieldPositioner = ({
 
     // Hide other fields
     csvHeaders.forEach((header, index) => {
-      if (index > 2) { // Assuming first 3 fields are the main ones
+      if (index > 2) {
         if (newPositions[header]) {
           newPositions[header].visible = false;
         }
