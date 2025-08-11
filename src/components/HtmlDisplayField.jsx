@@ -1,12 +1,19 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Box, Typography, useTheme, Tooltip, IconButton } from '@mui/material';
 import { InfoOutlined } from '@mui/icons-material';
 
 const HtmlDisplayField = ({ title, htmlContent, onClick, placeholder, tooltip }) => {
   const theme = useTheme();
   const darkMode = theme.palette.mode === 'dark';
+  const contentRef = useRef(null);
 
   const backgroundColor = darkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.innerHTML = htmlContent || '';
+    }
+  }, [htmlContent]);
 
   return (
     <Box>
@@ -34,7 +41,7 @@ const HtmlDisplayField = ({ title, htmlContent, onClick, placeholder, tooltip })
         }}
       >
         {htmlContent ? (
-          <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+          <div ref={contentRef} />
         ) : (
           <Typography color="textSecondary">{placeholder}</Typography>
         )}
