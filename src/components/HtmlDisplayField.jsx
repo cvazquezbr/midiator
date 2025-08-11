@@ -9,9 +9,25 @@ const HtmlDisplayField = ({ title, htmlContent, onClick, placeholder, tooltip })
 
   const backgroundColor = darkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
 
+  const decodeHtml = (html) => {
+    if (typeof DOMParser === 'undefined') {
+        // Fallback for environments without DOMParser (e.g., some server-side rendering)
+        // This is a simple fallback and might not cover all cases.
+        return html
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'");
+    }
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return doc.documentElement.textContent;
+  }
+
   useEffect(() => {
     if (contentRef.current) {
-      contentRef.current.innerHTML = htmlContent || '';
+      const decodedContent = decodeHtml(htmlContent || '');
+      contentRef.current.innerHTML = decodedContent;
     }
   }, [htmlContent]);
 
