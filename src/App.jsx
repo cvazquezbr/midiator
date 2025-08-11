@@ -448,6 +448,9 @@ function App() {
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)); // Default to tomorrow
   const [weeklySchedule, setWeeklySchedule] = useState({}); // { 0: '09:00', 1: '10:00', ... }
+  const [selectedProfile, setSelectedProfile] = useState('');
+  const [selectedImages, setSelectedImages] = useState({});
+  const [selectedVideos, setSelectedVideos] = useState({});
 
 
   // Estados para a Geração com IA
@@ -909,6 +912,10 @@ function App() {
         isScheduled: isScheduled,
         scheduleDate: scheduleDate,
         weeklySchedule: weeklySchedule,
+        // Add other publisher state
+        selectedProfile: selectedProfile,
+        selectedImages: selectedImages,
+        selectedVideos: selectedVideos,
       };
 
       const jsonString = JSON.stringify(stateToSave, null, 2);
@@ -1151,6 +1158,15 @@ function App() {
             }
             if (loadedState.weeklySchedule) {
               setWeeklySchedule(loadedState.weeklySchedule);
+            }
+            if (loadedState.selectedProfile) {
+              setSelectedProfile(loadedState.selectedProfile);
+            }
+            if (loadedState.selectedImages) {
+              setSelectedImages(loadedState.selectedImages);
+            }
+            if (loadedState.selectedVideos) {
+              setSelectedVideos(loadedState.selectedVideos);
             }
 
             // Navegação de passo
@@ -2899,6 +2915,12 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               setScheduleDate={setScheduleDate}
               weeklySchedule={weeklySchedule}
               setWeeklySchedule={setWeeklySchedule}
+              selectedProfile={selectedProfile}
+              setSelectedProfile={setSelectedProfile}
+              selectedImages={selectedImages}
+              setSelectedImages={setSelectedImages}
+              selectedVideos={selectedVideos}
+              setSelectedVideos={setSelectedVideos}
             />
           )}
 
