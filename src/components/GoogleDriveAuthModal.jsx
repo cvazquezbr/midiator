@@ -140,12 +140,12 @@ const GoogleDriveAuthModal = () => {
         </Typography>
 
         <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Button onClick={handleClear} color="error">
-            Limpar Salvas
+          <Button onClick={handleTestConnection} disabled={isTesting}>
+            {isTesting ? 'Testando...' : 'Testar Conexão'}
           </Button>
           <Box>
-            <Button onClick={handleTestConnection} disabled={isTesting}>
-              {isTesting ? 'Testando...' : 'Testar Conexão'}
+            <Button onClick={handleClear} color="error">
+              Remover
             </Button>
             <Button onClick={handleSave} variant="contained" sx={{ ml: 1 }}>
               Salvar

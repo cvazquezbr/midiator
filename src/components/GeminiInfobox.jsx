@@ -17,7 +17,7 @@ const steps = [
     description: (
       <Typography variant="body2">
         Abra o{' '}
-        <Link href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">
+        <Link href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" sx={{ color: 'primary.main' }}>
           Google AI Studio
         </Link>{' '}
         e faça login com sua conta Google.

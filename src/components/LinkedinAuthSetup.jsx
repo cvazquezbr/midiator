@@ -243,17 +243,16 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
         )}
 
         <Box sx={{ pt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box>
+          {currentConfig && currentConfig.accessToken ? (
+            <Button onClick={handleTestConnection}>Testar Conexão</Button>
+          ) : (
             <Button onClick={handleSave} variant="outlined">Salvar Configuração</Button>
-          </Box>
+          )}
           <Box>
             {currentConfig && currentConfig.accessToken ? (
-              <>
-                <Button onClick={handleTestConnection}>Testar Conexão</Button>
-                <Button onClick={handleRemove} color="error" sx={{ ml: 1 }}>
-                  Desconectar
-                </Button>
-              </>
+              <Button onClick={handleRemove} color="error">
+                Desconectar
+              </Button>
             ) : (
               <Button onClick={handleConnect} variant="contained">
                 Conectar com o LinkedIn

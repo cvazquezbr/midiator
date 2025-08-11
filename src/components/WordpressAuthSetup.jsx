@@ -235,19 +235,19 @@ const WordpressAuthSetup = () => {
           <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
         )}
         <Box sx={{ pt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box>
-              <Button onClick={handleTestConnection} disabled={isTesting}>
-                {isTesting ? 'Testando...' : 'Testar Conexão'}
-              </Button>
-              {currentConfig && (
-                  <Button onClick={handleRemove} color="error" sx={{ ml: 1 }}>
-                      Remover
-                  </Button>
-              )}
-          </Box>
-          <Button onClick={handleSave} variant="contained">
-            Salvar
+          <Button onClick={handleTestConnection} disabled={isTesting}>
+            {isTesting ? 'Testando...' : 'Testar Conexão'}
           </Button>
+          <Box>
+            {currentConfig && (
+              <Button onClick={handleRemove} color="error">
+                Remover
+              </Button>
+            )}
+            <Button onClick={handleSave} variant="contained" sx={{ ml: 1 }}>
+              Salvar
+            </Button>
+          </Box>
         </Box>
       </Box>
 
