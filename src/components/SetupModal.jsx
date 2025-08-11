@@ -141,9 +141,9 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
               },
             }}
           >
-            <Tab icon={<GoogleIcon />} iconPosition="start" label="API Gemini" {...a11yProps(0)} />
-            <Tab icon={<CloudQueue />} iconPosition="start" label="API Google Drive" {...a11yProps(1)} />
-            <Tab icon={<Audiotrack />} iconPosition="start" label="Google Cloud TTS" {...a11yProps(2)} />
+            <Tab icon={<GoogleIcon />} iconPosition="start" label="Gemini" {...a11yProps(0)} />
+            <Tab icon={<CloudQueue />} iconPosition="start" label="Google Drive" {...a11yProps(1)} />
+            <Tab icon={<Audiotrack />} iconPosition="start" label="Google TTS" {...a11yProps(2)} />
             <Tab icon={<Language />} iconPosition="start" label="WordPress" {...a11yProps(3)} />
             <Tab icon={<LinkedIn />} iconPosition="start" label="LinkedIn" {...a11yProps(4)} />
             <Tab icon={<Security />} iconPosition="start" label="Credenciais" {...a11yProps(5)} />
