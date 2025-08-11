@@ -70,7 +70,13 @@ const Publisher = ({
   scheduleDate,
   setScheduleDate,
   weeklySchedule,
-  setWeeklySchedule
+  setWeeklySchedule,
+  selectedProfile,
+  setSelectedProfile,
+  selectedImages,
+  setSelectedImages,
+  selectedVideos,
+  setSelectedVideos
 }) => {
   const [tabValue, setTabValue] = React.useState(0);
 
@@ -89,10 +95,7 @@ const Publisher = ({
   const [publishedPostUrlLi, setPublishedPostUrlLi] = useState(null);
 
   // Local states for Publisher component
-  const [selectedImages, setSelectedImages] = useState({}); // e.g. { 0: true, 1: false }
-  const [selectedVideos, setSelectedVideos] = useState({});
   const [linkedinProfiles, setLinkedinProfiles] = useState([]);
-  const [selectedProfile, setSelectedProfile] = useState('');
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [profileError, setProfileError] = useState('');
   const [unifiedMedia, setUnifiedMedia] = useState([]);
