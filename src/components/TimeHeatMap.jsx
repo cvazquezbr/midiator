@@ -2,19 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { Grid, Typography, ButtonBase, Paper } from '@mui/material';
 
 const heatMapData = {
-    // Data provided by user
-    '00:00': [0, 0, 0, 0, 0, 0, 0], '01:00': [0, 0, 0, 0, 0, 0, 0],
-    '02:00': [0, 0, 0, 0, 0, 0, 0], '03:00': [0, 0, 0, 0, 0, 0, 0],
-    '04:00': [0, 0, 0, 0, 0, 0, 0], '05:00': [0, 0, 0, 0, 0, 0, 0],
-    '06:00': [0, 0, 0, 0, 0, 0, 0], '07:00': [0, 0, 0, 0, 0, 0, 0],
-    '08:00': [0, 67, 67, 31, 0, 0, 0], '09:00': [33, 100, 100, 65, 33, 0, 0],
-    '10:00': [26, 100, 100, 100, 0, 15, 9], '11:00': [26, 100, 100, 100, 0, 15, 9],
-    '12:00': [26, 65, 65, 65, 0, 15, 9], '13:00': [0, 31, 31, 31, 0, 0, 0],
-    '14:00': [33, 65, 65, 65, 33, 0, 0], '15:00': [0, 0, 0, 0, 0, 0, 0],
-    '16:00': [0, 0, 0, 0, 0, 0, 0], '17:00': [0, 0, 0, 0, 0, 0, 0],
-    '18:00': [0, 0, 0, 0, 0, 0, 0], '19:00': [0, 0, 0, 0, 0, 0, 0],
-    '20:00': [0, 0, 0, 0, 0, 0, 0], '21:00': [0, 0, 0, 0, 0, 0, 0],
-    '22:00': [0, 0, 0, 0, 0, 0, 0], '23:00': [0, 0, 0, 0, 0, 0, 0],
+    '00:00': [0, 0, 0, 0, 0, 0, 0],
+    '01:00': [0, 0, 1, 1, 1, 1, 0],
+    '02:00': [0, 1, 3, 5, 4, 3, 0],
+    '03:00': [0, 1, 3, 5, 4, 3, 0],
+    '04:00': [0, 1, 4, 5, 4, 3, 0],
+    '05:00': [0, 1, 4, 6, 4, 3, 0],
+    '06:00': [0, 2, 6, 6, 6, 4, 0],
+    '07:00': [1, 4, 8, 7, 8, 4, 0],
+    '08:00': [4, 7, 10, 9, 9, 5, 1],
+    '09:00': [6, 8, 10, 9, 9, 5, 2],
+    '10:00': [6, 8, 9, 9, 9, 5, 3],
+    '11:00': [5, 7, 8, 8, 8, 5, 3],
+    '12:00': [4, 5, 7, 7, 7, 4, 2],
+    '13:00': [3, 4, 6, 6, 6, 4, 2],
+    '14:00': [2, 4, 5, 6, 6, 3, 1],
+    '15:00': [3, 4, 5, 6, 6, 3, 1],
+    '16:00': [3, 4, 5, 5, 6, 3, 1],
+    '17:00': [2, 3, 4, 4, 5, 2, 1],
+    '18:00': [2, 3, 4, 4, 5, 2, 1],
+    '19:00': [2, 3, 4, 4, 4, 2, 1],
+    '20:00': [1, 2, 3, 3, 4, 2, 1],
+    '21:00': [1, 2, 3, 3, 3, 1, 1],
+    '22:00': [1, 1, 2, 2, 3, 1, 1],
+    '23:00': [0, 1, 2, 2, 2, 1, 0],
 };
 
 // Days of week for display: Dom, Seg, Ter, Qua, Qui, Sex, Sab
@@ -27,11 +38,11 @@ const hours = Object.keys(heatMapData);
 
 const getColor = (value) => {
     if (value === 0) return '#e0e0e0'; // A slightly darker grey for zero values
-    const intensity = value / 100;
-    // Using a blue color scale this time for variety
-    const h = 210; // Hue for blue
+    const intensity = value / 10; // New scale is 0-10
+    // Using a green color scale for better legibility
+    const h = 120; // Hue for green
     const s = 100; // Saturation
-    const l = 95 - (50 * intensity); // Lightness from 95% (very light blue) to 45% (deep blue)
+    const l = 95 - (50 * intensity); // Lightness from 95% (light green) to 45% (deep green)
     return `hsl(${h}, ${s}%, ${l}%)`;
 };
 
@@ -66,7 +77,7 @@ const TimeHeatMap = ({ weeklySchedule = {}, onScheduleChange }) => {
                 {hours.map((hour) => (
                     <React.Fragment key={hour}>
                         <Grid item xs={1.5} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Typography variant="caption">{hour}</Typography>
+                            <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>{hour}</Typography>
                         </Grid>
                         {displayDays.map((day, displayIndex) => {
                             // displayIndex is 0 for Sun, 1 for Mon, etc.
@@ -81,7 +92,7 @@ const TimeHeatMap = ({ weeklySchedule = {}, onScheduleChange }) => {
                                         onClick={() => handleTimeSelect(displayIndex, hour)}
                                         sx={{
                                             width: '100%',
-                                            height: '30px',
+                                            height: '22px', // Reduced height
                                             backgroundColor: isSelected ? selectedColor : getColor(value),
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
@@ -98,7 +109,8 @@ const TimeHeatMap = ({ weeklySchedule = {}, onScheduleChange }) => {
                                         <Typography
                                             variant="caption"
                                             sx={{
-                                                color: value > 60 ? 'white' : 'black',
+                                                fontSize: '0.7rem', // Reduced font size
+                                                color: value > 5 ? 'white' : 'black', // Adjusted for new 0-10 scale
                                                 fontWeight: isSelected ? 'bold' : 'normal'
                                             }}>
                                             {value > 0 ? value : ''}
