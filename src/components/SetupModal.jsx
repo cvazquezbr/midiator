@@ -110,10 +110,10 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
   };
 
   const a11yProps = (index) => {
-      return {
-          id: `vertical-tab-${index}`,
-          'aria-controls': `vertical-tabpanel-${index}`,
-      };
+    return {
+      id: `vertical-tab-${index}`,
+      'aria-controls': `vertical-tabpanel-${index}`,
+    };
   };
 
   return (
@@ -138,12 +138,12 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
               minWidth: 200,
             }}
           >
-            <Tab icon={<GoogleIcon />} iconPosition= "start" label="Gemini" {...a11yProps(0)} />
-            <Tab icon={<CloudQueue />} iconPosition= "start" label="Google Drive" {...a11yProps(1)} />
-            <Tab icon={<Audiotrack />} iconPosition= "start" label="Cloud TTS" {...a11yProps(2)} />
-            <Tab icon={<Language />} iconPosition= "start" label="WordPress" {...a11yProps(3)} />
-            <Tab icon={<LinkedIn />} iconPosition= "start" label="LinkedIn" {...a11yProps(4)} />
-            <Tab icon={<Security />} iconPosition= "start" label="Credenciais" {...a11yProps(5)} />
+            <Tab icon={<GoogleIcon />} iconPosition="start" label="Gemini" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(0)} />
+            <Tab icon={<CloudQueue />} iconPosition="start" label="Google Drive" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(1)} />
+            <Tab icon={<Audiotrack />} iconPosition="start" label="Cloud TTS" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(2)} />
+            <Tab icon={<Language />} iconPosition="start" label="WordPress" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(3)} />
+            <Tab icon={<LinkedIn />} iconPosition="start" label="LinkedIn" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(4)} />
+            <Tab icon={<Security />} iconPosition="start" label="Credenciais" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(5)} />
           </Tabs>
           <TabPanel value={value} index={0}>
             <GeminiAuthSetup />
