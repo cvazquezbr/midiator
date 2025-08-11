@@ -227,26 +227,116 @@ const FieldPositioner = ({
   };
 
   const autoArrangeFields = () => {
-    const newPositions = {};
-    const cols = 2;
-    const fieldWidth = 40;
-    const fieldHeight = 15;
-    const spacing = 5;
+    // 1. Define Safe Zone and Field Roles
+    const safeZoneMargins = {
+      top: 10, // 10%
+      bottom: 10, // 10%
+      left: 5, // 5%
+      right: 5, // 5%
+    };
 
-    csvHeaders.forEach((header, index) => {
-      const col = index % cols;
-      const row = Math.floor(index / cols);
+    // Define field roles based on order. Handle cases with fewer than 3 fields.
+    const titleField = csvHeaders.length > 0 ? csvHeaders[0] : null;
+    const subtitleField = csvHeaders.length > 1 ? csvHeaders[1] : null;
+    const sideLabelField = csvHeaders.length > 2 ? csvHeaders[2] : null;
 
-      newPositions[header] = {
-        ...fieldPositions[header],
-        x: 10 + col * (fieldWidth + spacing),
-        y: 10 + row * (fieldHeight + spacing),
-        width: fieldWidth,
-        height: fieldHeight
+    const newPositions = { ...fieldPositions };
+    const newStyles = { ...fieldStyles };
+
+    // 2. Calculate Safe Zone and Bands
+    const safeZone = {
+      x: safeZoneMargins.left,
+      y: safeZoneMargins.top,
+      width: 100 - safeZoneMargins.left - safeZoneMargins.right,
+      height: 100 - safeZoneMargins.top - safeZoneMargins.bottom,
+    };
+
+    const bandHeight = safeZone.height / 3;
+    const innerMargin = 2; // 2% margin inside bands/safezone
+
+    // Rule for Title Field (Top Band)
+    if (titleField) {
+      const titleHeight = bandHeight - (innerMargin * 2);
+      const titleWidth = safeZone.width - (innerMargin * 2);
+      newPositions[titleField] = {
+        ...(newPositions[titleField] || {}),
+        x: safeZone.x + innerMargin,
+        y: safeZone.y + innerMargin,
+        width: titleWidth,
+        height: titleHeight,
+        rotation: 0,
+        visible: true,
       };
+      newStyles[titleField] = {
+        ...(newStyles[titleField] || {}),
+        fontFamily: 'Anton',
+        textAlign: 'center',
+        verticalAlign: 'middle',
+      };
+    }
+
+    // Rule for Subtitle Field (Third Band)
+    if (subtitleField) {
+      const subtitleHeight = bandHeight - (innerMargin * 2);
+      const subtitleWidth = safeZone.width - (innerMargin * 2);
+      newPositions[subtitleField] = {
+        ...(newPositions[subtitleField] || {}),
+        x: safeZone.x + innerMargin,
+        y: safeZone.y + (bandHeight * 2) + innerMargin,
+        width: subtitleWidth,
+        height: subtitleHeight,
+        rotation: 0,
+        visible: true,
+      };
+      newStyles[subtitleField] = {
+        ...(newStyles[subtitleField] || {}),
+        textAlign: 'center',
+        verticalAlign: 'middle',
+      };
+    }
+
+    // Rule for Side Label Field (Bottom-Right Corner)
+    if (sideLabelField) {
+      // Proportional to the side of the safe zone
+      const labelHeight = safeZone.height * 0.7; // 70% of safe zone height
+      const labelWidth = safeZone.height * 0.1; // Make it slim
+
+      // The position (x, y) is for the TOP-LEFT corner of the UNROTATED box.
+      // The rotation happens around the center of this box.
+      // We calculate the desired center of the unrotated box to align it correctly after rotation.
+      const centerX = (safeZone.x + safeZone.width - labelHeight / 2) - innerMargin;
+      const centerY = (safeZone.y + safeZone.height - labelWidth / 2) - innerMargin;
+
+      const x = centerX - labelWidth / 2;
+      const y = centerY - labelHeight / 2;
+
+      newPositions[sideLabelField] = {
+        ...(newPositions[sideLabelField] || {}),
+        x: x,
+        y: y,
+        width: labelWidth,
+        height: labelHeight,
+        rotation: 270,
+        visible: true,
+      };
+      newStyles[sideLabelField] = {
+        ...(newStyles[sideLabelField] || {}),
+        textAlign: 'center',
+        verticalAlign: 'middle',
+      };
+    }
+
+    // Hide other fields
+    csvHeaders.forEach((header, index) => {
+      if (index > 2) { // Assuming first 3 fields are the main ones
+        if (newPositions[header]) {
+          newPositions[header].visible = false;
+        }
+      }
     });
 
-    setFieldPositions(prev => ({ ...prev, ...newPositions }));
+    setFieldPositions(newPositions);
+    setFieldStyles(newStyles);
   };
 
   const handleColorCircleClick = (color) => {
