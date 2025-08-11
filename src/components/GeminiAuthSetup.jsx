@@ -5,7 +5,7 @@ import { Visibility, VisibilityOff, InfoOutlined as InfoIcon, Close as CloseIcon
 import { toast } from 'sonner';
 import GeminiInfobox from './GeminiInfobox';
 
-const GeminiAuthSetup = ({ open, onClose }) => {
+const GeminiAuthSetup = () => {
   const [apiKey, setApiKey] = useState('');
   const [currentStoredKey, setCurrentStoredKey] = useState(null);
   const [showKey, setShowKey] = useState(false);
@@ -13,19 +13,17 @@ const GeminiAuthSetup = ({ open, onClose }) => {
   const [showInfobox, setShowInfobox] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      const storedKey = getGeminiApiKey();
-      setCurrentStoredKey(storedKey);
-      setApiKey(storedKey || '');
-      setError('');
-    }
-  }, [open]);
+    const storedKey = getGeminiApiKey();
+    setCurrentStoredKey(storedKey);
+    setApiKey(storedKey || '');
+    setError('');
+  }, []);
 
   const handleSave = () => {
     if (apiKey.trim()) {
       saveGeminiApiKey(apiKey.trim());
+      setCurrentStoredKey(apiKey.trim());
       toast.success('Chave da API Gemini salva com sucesso!');
-      onClose();
     } else {
       setError('Por favor, insira uma chave da API Gemini válida.');
     }
@@ -49,57 +47,49 @@ const GeminiAuthSetup = ({ open, onClose }) => {
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                Configurar Chave da API Gemini
-                <Box>
-                    <IconButton onClick={() => setShowInfobox(true)}>
-                        <InfoIcon />
-                    </IconButton>
-                    <IconButton onClick={onClose}>
-                        <CloseIcon />
-                    </IconButton>
-                </Box>
-            </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" gutterBottom>
-            Insira sua chave da API Gemini (Google AI Studio). Esta chave será armazenada localmente no seu navegador.
-          </Typography>
-
-          {currentStoredKey && (
-            <Typography variant="caption" color="textSecondary" gutterBottom>
-              Chave atual configurada: {getMaskedKey(currentStoredKey)}
-            </Typography>
-          )}
-
-          <Box sx={{ display: 'flex', alignItems: 'center', mt: currentStoredKey ? 1 : 2, mb: 2 }}>
-            <TextField
-              autoFocus
-              margin="dense"
-              id="gemini-api-key"
-              label="Chave da API Gemini"
-              type={showKey ? 'text' : 'password'}
-              fullWidth
-              variant="outlined"
-              value={apiKey}
-              onChange={(e) => {
-                setApiKey(e.target.value);
-                if (error) setError('');
-              }}
-              placeholder="Sua chave da API Gemini..."
-            />
-            <IconButton onClick={toggleShowKey} edge="end" sx={{ ml: 1 }}>
-              {showKey ? <VisibilityOff /> : <Visibility />}
+      <Box sx={{ p: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="h6">API Gemini</Typography>
+            <IconButton onClick={() => setShowInfobox(true)}>
+                <InfoIcon />
             </IconButton>
-          </Box>
+        </Box>
+        <Typography variant="body2" gutterBottom sx={{mt: 2}}>
+          Insira sua chave da API Gemini (Google AI Studio). Esta chave será armazenada localmente no seu navegador.
+        </Typography>
 
-          {error && (
-            <Alert severity="error">{error}</Alert>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ pb: 2, px: 3, justifyContent: 'space-between' }}>
+        {currentStoredKey && (
+          <Typography variant="caption" color="textSecondary" gutterBottom>
+            Chave atual configurada: {getMaskedKey(currentStoredKey)}
+          </Typography>
+        )}
+
+        <Box sx={{ display: 'flex', alignItems: 'center', mt: currentStoredKey ? 1 : 2, mb: 2 }}>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="gemini-api-key"
+            label="Chave da API Gemini"
+            type={showKey ? 'text' : 'password'}
+            fullWidth
+            variant="outlined"
+            value={apiKey}
+            onChange={(e) => {
+              setApiKey(e.target.value);
+              if (error) setError('');
+            }}
+            placeholder="Sua chave da API Gemini..."
+          />
+          <IconButton onClick={toggleShowKey} edge="end" sx={{ ml: 1 }}>
+            {showKey ? <VisibilityOff /> : <Visibility />}
+          </IconButton>
+        </Box>
+
+        {error && (
+          <Alert severity="error">{error}</Alert>
+        )}
+
+        <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between' }}>
           <Box>
             {currentStoredKey && (
               <Button onClick={handleRemove} color="error">
@@ -108,13 +98,12 @@ const GeminiAuthSetup = ({ open, onClose }) => {
             )}
           </Box>
           <Box>
-            <Button onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleSave} variant="contained" sx={{ ml: 1 }}>
+            <Button onClick={handleSave} variant="contained">
               Salvar Chave
             </Button>
           </Box>
-        </DialogActions>
-      </Dialog>
+        </Box>
+      </Box>
 
       <Dialog open={showInfobox} onClose={() => setShowInfobox(false)} fullWidth maxWidth="lg">
         <DialogTitle>

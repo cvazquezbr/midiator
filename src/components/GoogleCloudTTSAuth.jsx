@@ -5,27 +5,31 @@ import { InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-materia
 import { toast } from 'sonner';
 import GoogleCloudTTSInfobox from './GoogleCloudTTSInfobox';
 
-const GoogleCloudTTSAuth = ({ open, onClose }) => {
+const GoogleCloudTTSAuth = () => {
   const [credentials, setCredentials] = useState('');
   const [currentStoredCredentials, setCurrentStoredCredentials] = useState(null);
   const [error, setError] = useState('');
   const [showInfobox, setShowInfobox] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      const storedCredentials = getGoogleCloudTTSCredentials();
-      setCurrentStoredCredentials(storedCredentials);
-      setCredentials(storedCredentials ? JSON.stringify(storedCredentials, null, 2) : '');
-      setError('');
-    }
-  }, [open]);
+    const storedCredentials = getGoogleCloudTTSCredentials();
+    setCurrentStoredCredentials(storedCredentials);
+    setCredentials(storedCredentials ? JSON.stringify(storedCredentials, null, 2) : '');
+    setError('');
+  }, []);
 
   const handleSave = () => {
     try {
+      if (!credentials.trim()) {
+        removeGoogleCloudTTSCredentials();
+        setCurrentStoredCredentials(null);
+        toast.info('Credenciais removidas pois o campo estava vazio.');
+        return;
+      }
       const parsedCredentials = JSON.parse(credentials);
       saveGoogleCloudTTSCredentials(parsedCredentials);
+      setCurrentStoredCredentials(parsedCredentials);
       toast.success('Credenciais do Google Cloud TTS salvas com sucesso!');
-      onClose();
     } catch (err) {
       setError('JSON de credenciais inválido. Por favor, verifique o formato e cole o conteúdo completo do arquivo.');
     }
@@ -40,71 +44,59 @@ const GoogleCloudTTSAuth = ({ open, onClose }) => {
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            Configurar Credenciais do Google Cloud TTS
-            <Box>
-              <IconButton onClick={() => setShowInfobox(true)}>
-                <InfoIcon />
-              </IconButton>
-              <IconButton onClick={onClose}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" gutterBottom>
-            Cole o conteúdo do seu arquivo JSON de credenciais de conta de serviço do Google Cloud.
+      <Box sx={{ p: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6">Google Cloud TTS</Typography>
+          <IconButton onClick={() => setShowInfobox(true)}>
+            <InfoIcon />
+          </IconButton>
+        </Box>
+        <Typography variant="body2" gutterBottom sx={{ mt: 2 }}>
+          Cole o conteúdo do seu arquivo JSON de credenciais de conta de serviço do Google Cloud.
+        </Typography>
+
+        {currentStoredCredentials && (
+          <Typography variant="caption" color="textSecondary" gutterBottom>
+            Credenciais configuradas para: {currentStoredCredentials.client_email}
           </Typography>
+        )}
 
-          {currentStoredCredentials && (
-            <Typography variant="caption" color="textSecondary" gutterBottom>
-              Credenciais configuradas para: {currentStoredCredentials.client_email}
-            </Typography>
-          )}
+        <Box sx={{ mt: currentStoredCredentials ? 1 : 2, mb: 2 }}>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="google-cloud-tts-credentials"
+            label="JSON de Credenciais"
+            type="text"
+            fullWidth
+            multiline
+            rows={10}
+            variant="outlined"
+            value={credentials}
+            onChange={(e) => {
+              setCredentials(e.target.value);
+              if (error) setError('');
+            }}
+            placeholder="Cole o JSON de credenciais aqui..."
+          />
+        </Box>
 
-          <Box sx={{ mt: currentStoredCredentials ? 1 : 2, mb: 2 }}>
-            <TextField
-              autoFocus
-              margin="dense"
-              id="google-cloud-tts-credentials"
-              label="JSON de Credenciais"
-              type="text"
-              fullWidth
-              multiline
-              rows={10}
-              variant="outlined"
-              value={credentials}
-              onChange={(e) => {
-                setCredentials(e.target.value);
-                if (error) setError('');
-              }}
-              placeholder="Cole o JSON de credenciais aqui..."
-            />
-          </Box>
-
-          {error && (
-            <Alert severity="error">{error}</Alert>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ pb: 2, px: 3, justifyContent: 'space-between' }}>
+        {error && (
+          <Alert severity="error">{error}</Alert>
+        )}
+        <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between' }}>
           <Box>
             {currentStoredCredentials && (
               <Button onClick={handleRemove} color="error">
-                Remover Credenciais
+                Remover
               </Button>
             )}
           </Box>
-          <Box>
-            <Button onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleSave} variant="contained" sx={{ ml: 1 }}>
-              Salvar Credenciais
-            </Button>
-          </Box>
-        </DialogActions>
-      </Dialog>
+          <Button onClick={handleSave} variant="contained">
+            Salvar
+          </Button>
+        </Box>
+      </Box>
 
       <Dialog open={showInfobox} onClose={() => setShowInfobox(false)} fullWidth maxWidth="lg">
         <DialogTitle>

@@ -25,7 +25,7 @@ import GoogleDriveFolderPicker from './GoogleDriveFolderPicker';
 import googleDriveAPI from '../utils/googleDriveAPI';
 import LinkedinInfobox from './LinkedinInfobox';
 
-const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
+const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   const [config, setConfig] = useState({ clientId: '', folderId: '' });
   const [currentConfig, setCurrentConfig] = useState(null);
   const [isPickerOpen, setPickerOpen] = useState(false);
@@ -51,23 +51,21 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
       }
     };
 
-    if (open) {
-      const storedConfig = getLinkedinConfig();
-      setConfig({
-        clientId: storedConfig.clientId || '',
-        folderId: storedConfig.folderId || '',
-      });
+    const storedConfig = getLinkedinConfig();
+    setConfig({
+      clientId: storedConfig.clientId || '',
+      folderId: storedConfig.folderId || '',
+    });
 
-      if (storedConfig.accessToken) {
-        setCurrentConfig(storedConfig);
-        fetchUserDetails(storedConfig.accessToken);
-      } else {
-        setCurrentConfig(null);
-        setConnectedUser(null);
-      }
-      setError('');
+    if (storedConfig.accessToken) {
+      setCurrentConfig(storedConfig);
+      fetchUserDetails(storedConfig.accessToken);
+    } else {
+      setCurrentConfig(null);
+      setConnectedUser(null);
     }
-  }, [open]);
+    setError('');
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -112,7 +110,10 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
 
   const handleConnect = async () => {
     if (config.clientId.trim()) {
+      // The onBeforeRedirect logic should be handled by the parent component if needed.
+      // For instance, the parent could save the app state before initiating the connection.
       if (onBeforeRedirect) await onBeforeRedirect();
+
       saveLinkedinConfig(config);
       const redirectUri = window.location.origin;
       const scope = encodeURIComponent('r_basicprofile w_member_social w_organization_social rw_organization_admin');
@@ -166,110 +167,101 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
   const handleSave = () => {
     saveLinkedinConfig(config);
     toast.success('Configuração salva com sucesso!');
-    onClose();
   };
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            Configurar Integração com LinkedIn
-            <Box>
-              <IconButton onClick={() => setShowInfobox(true)}>
+      <Box sx={{ p: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6">LinkedIn</Typography>
+          <IconButton onClick={() => setShowInfobox(true)}>
+            <InfoIcon />
+          </IconButton>
+        </Box>
+
+        {currentConfig && currentConfig.accessToken && (
+          <Typography variant="h6" color="green" sx={{ my: 2 }}>
+            {connectedUser
+              ? `✅ Conectado como ${connectedUser.localizedFirstName} ${connectedUser.localizedLastName}`
+              : '✅ Conectado. Verificando usuário...'}
+          </Typography>
+        )}
+
+        <Grid container spacing={1} alignItems="flex-start" sx={{ mb: 2, mt: 2 }}>
+          <Grid item xs>
+            <TextField
+              name="folderId"
+              label="ID da Pasta no Google Drive (Opcional)"
+              value={config.folderId}
+              onChange={handleChange}
+              fullWidth
+              variant="outlined"
+              placeholder="ID da pasta para a fila de publicação"
+            />
+          </Grid>
+          <Grid item>
+            <Tooltip title="Essa pasta será monitorada para novas postagens. O conteúdo e as imagens para posts agendados devem ser colocados aqui.">
+              <IconButton>
                 <InfoIcon />
               </IconButton>
-              <IconButton onClick={onClose}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          {currentConfig && currentConfig.accessToken && (
-            <Typography variant="h6" color="green" sx={{ mb: 2 }}>
-              {connectedUser
-                ? `✅ Conectado como ${connectedUser.localizedFirstName} ${connectedUser.localizedLastName}`
-                : '✅ Conectado. Verificando usuário...'}
-            </Typography>
-          )}
+            </Tooltip>
+          </Grid>
+        </Grid>
+        <Button
+          variant="outlined"
+          onClick={handleBrowseDrive}
+          disabled={isDriveLoading}
+          startIcon={isDriveLoading ? <CircularProgress size={16} /> : null}
+        >
+          {isDriveLoading ? 'Aguarde...' : 'Procurar no Google Drive...'}
+        </Button>
 
-          <Grid container spacing={1} alignItems="flex-start" sx={{ mb: 2 }}>
-            <Grid item xs>
+        {(!currentConfig || !currentConfig.accessToken) && (
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <Typography variant="body2" gutterBottom>
+                Insira seu Client ID para conectar sua conta do LinkedIn.
+              </Typography>
+            </Grid>
+            <Grid item xs={12}>
               <TextField
-                name="folderId"
-                label="ID da Pasta no Google Drive (Opcional)"
-                value={config.folderId}
+                name="clientId"
+                label="Client ID"
+                value={config.clientId}
                 onChange={handleChange}
                 fullWidth
+                required
                 variant="outlined"
-                placeholder="ID da pasta para a fila de publicação"
+                placeholder="Seu Client ID do LinkedIn"
               />
             </Grid>
-            <Grid item>
-              <Tooltip title="Essa pasta será monitorada para novas postagens. O conteúdo e as imagens para posts agendados devem ser colocados aqui.">
-                <IconButton>
-                  <InfoIcon />
-                </IconButton>
-              </Tooltip>
-            </Grid>
           </Grid>
-          <Button
-            variant="outlined"
-            onClick={handleBrowseDrive}
-            disabled={isDriveLoading}
-            startIcon={isDriveLoading ? <CircularProgress size={16} /> : null}
-          >
-            {isDriveLoading ? 'Aguarde...' : 'Procurar no Google Drive...'}
-          </Button>
+        )}
 
-          {(!currentConfig || !currentConfig.accessToken) && (
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <Typography variant="body2" gutterBottom>
-                  Insira seu Client ID para conectar sua conta do LinkedIn.
-                </Typography>
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  name="clientId"
-                  label="Client ID"
-                  value={config.clientId}
-                  onChange={handleChange}
-                  fullWidth
-                  required
-                  variant="outlined"
-                  placeholder="Seu Client ID do LinkedIn"
-                />
-              </Grid>
-            </Grid>
-          )}
+        {error && (
+          <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
+        )}
 
-          {error && (
-            <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ pb: 2, px: 3, justifyContent: 'space-between' }}>
+        <Box sx={{ pt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
-            <Button onClick={handleSave} variant="contained">Salvar</Button>
+            <Button onClick={handleSave} variant="outlined">Salvar Configuração</Button>
+          </Box>
+          <Box>
             {currentConfig && currentConfig.accessToken ? (
               <>
-                <Button onClick={handleTestConnection} sx={{ ml: 1 }}>Testar Conexão</Button>
+                <Button onClick={handleTestConnection}>Testar Conexão</Button>
                 <Button onClick={handleRemove} color="error" sx={{ ml: 1 }}>
                   Desconectar
                 </Button>
               </>
             ) : (
-              <Button onClick={handleConnect} variant="contained" sx={{ ml: 1 }}>
+              <Button onClick={handleConnect} variant="contained">
                 Conectar com o LinkedIn
               </Button>
             )}
           </Box>
-          <Box>
-            <Button onClick={onClose}>Fechar</Button>
-          </Box>
-        </DialogActions>
-      </Dialog>
+        </Box>
+      </Box>
 
       <GoogleDriveFolderPicker
         open={isPickerOpen}
