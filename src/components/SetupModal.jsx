@@ -141,12 +141,12 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
               },
             }}
           >
-            <Tab sx={{ justifyContent: 'flex-start' }} icon={<GoogleIcon />} iconPosition="start" label="API Gemini" {...a11yProps(0)} />
-            <Tab sx={{ justifyContent: 'flex-start' }} icon={<CloudQueue />} iconPosition="start" label="API Google Drive" {...a11yProps(1)} />
-            <Tab sx={{ justifyContent: 'flex-start' }} icon={<Audiotrack />} iconPosition="start" label="Google Cloud TTS" {...a11yProps(2)} />
-            <Tab sx={{ justifyContent: 'flex-start' }} icon={<Language />} iconPosition="start" label="WordPress" {...a11yProps(3)} />
-            <Tab sx={{ justifyContent: 'flex-start' }} icon={<LinkedIn />} iconPosition="start" label="LinkedIn" {...a11yProps(4)} />
-            <Tab sx={{ justifyContent: 'flex-start' }} icon={<Security />} iconPosition="start" label="Credenciais" {...a11yProps(5)} />
+            <Tab icon={<GoogleIcon />} iconPosition="start" label="API Gemini" {...a11yProps(0)} />
+            <Tab icon={<CloudQueue />} iconPosition="start" label="API Google Drive" {...a11yProps(1)} />
+            <Tab icon={<Audiotrack />} iconPosition="start" label="Google Cloud TTS" {...a11yProps(2)} />
+            <Tab icon={<Language />} iconPosition="start" label="WordPress" {...a11yProps(3)} />
+            <Tab icon={<LinkedIn />} iconPosition="start" label="LinkedIn" {...a11yProps(4)} />
+            <Tab icon={<Security />} iconPosition="start" label="Credenciais" {...a11yProps(5)} />
           </Tabs>
           <TabPanel value={value} index={0}>
             <GeminiAuthSetup />

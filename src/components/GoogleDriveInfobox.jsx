@@ -21,7 +21,7 @@ const steps = [
     description: (
       <Typography variant="body2">
         Abra o{' '}
-        <Link href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" sx={{ color: 'primary.main' }}>
+        <Link href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" sx={{ color: '#90caf9' }}>
           Google Cloud Console
         </Link>{' '}
         e faça login com sua conta Google. Se você não tiver um projeto, crie um novo clicando no seletor de projetos no topo da página e depois em "Novo projeto".
@@ -40,7 +40,7 @@ const steps = [
                     <ListItemText
                         primary="Google Drive API"
                         secondary={
-                            <Link href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener noreferrer" sx={{ display: 'flex', alignItems: 'center', color: 'primary.main' }}>
+                            <Link href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" rel="noopener noreferrer" sx={{ display: 'flex', alignItems: 'center', color: '#90caf9' }}>
                                 Ativar API do Google Drive <OpenInNew sx={{ ml: 0.5, fontSize: 14 }} />
                             </Link>
                         }
@@ -50,7 +50,7 @@ const steps = [
                     <ListItemText
                         primary="Google Sheets API"
                         secondary={
-                            <Link href="https://console.cloud.google.com/apis/library/sheets.googleapis.com" target="_blank" rel="noopener noreferrer" sx={{ display: 'flex', alignItems: 'center', color: 'primary.main' }}>
+                            <Link href="https://console.cloud.google.com/apis/library/sheets.googleapis.com" target="_blank" rel="noopener noreferrer" sx={{ display: 'flex', alignItems: 'center', color: '#90caf9' }}>
                                 Ativar API do Google Sheets <OpenInNew sx={{ ml: 0.5, fontSize: 14 }} />
                             </Link>
                         }
