@@ -132,7 +132,14 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
             value={value}
             onChange={handleChange}
             aria-label="Vertical tabs example"
-            sx={{ borderRight: 1, borderColor: 'divider', minWidth: 200 }}
+            sx={{
+              borderRight: 1,
+              borderColor: 'divider',
+              minWidth: 200,
+              '& .MuiTabs-flexContainerVertical': {
+                alignItems: 'flex-start',
+              },
+            }}
           >
             <Tab sx={{ justifyContent: 'flex-start' }} icon={<GoogleIcon />} iconPosition="start" label="API Gemini" {...a11yProps(0)} />
             <Tab sx={{ justifyContent: 'flex-start' }} icon={<CloudQueue />} iconPosition="start" label="API Google Drive" {...a11yProps(1)} />
