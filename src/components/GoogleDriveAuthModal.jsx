@@ -16,12 +16,14 @@ import {
 import { CloudQueue, OpenInNew, VpnKey, PersonPin, InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import GoogleDriveInfobox from './GoogleDriveInfobox';
+import googleDriveAPI from '../utils/googleDriveAPI';
 
 const GoogleDriveAuthModal = ({ open, onClose }) => {
   const [apiKey, setApiKey] = useState('');
   const [clientId, setClientId] = useState('');
   const [error, setError] = useState('');
   const [showInfobox, setShowInfobox] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -52,6 +54,39 @@ const GoogleDriveAuthModal = ({ open, onClose }) => {
     setClientId('');
     setError('');
     toast.info('Credenciais do Google Drive removidas.');
+  };
+
+  const handleTestConnection = async () => {
+    if (!apiKey.trim() || !clientId.trim()) {
+      setError('Por favor, preencha a API Key e o Client ID para testar.');
+      return;
+    }
+
+    setIsTesting(true);
+    setError('');
+
+    try {
+      if (!googleDriveAPI.isInitialized) {
+        toast.info('Inicializando API do Google...');
+        await googleDriveAPI.initialize(apiKey, clientId);
+      }
+
+      if (!googleDriveAPI.isUserSignedIn()) {
+        toast.info('Aguardando login com o Google...');
+        await googleDriveAPI.signIn();
+      }
+
+      toast.info('Buscando pastas no Google Drive...');
+      await googleDriveAPI.listFolders(1); // Apenas busca 1 para testar
+
+      toast.success('Conexão com Google Drive bem-sucedida!');
+
+    } catch (err) {
+      console.error("Erro no teste de conexão com Google Drive:", err);
+      toast.error(`Falha na conexão: ${err.message}`);
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return (
@@ -123,6 +158,9 @@ const GoogleDriveAuthModal = ({ open, onClose }) => {
         <DialogActions sx={{ p: '16px 24px' }}>
           <Button onClick={handleClear} color="error">
             Limpar Salvas
+          </Button>
+          <Button onClick={handleTestConnection} disabled={isTesting}>
+            {isTesting ? 'Testando...' : 'Testar Conexão'}
           </Button>
           <Box sx={{ flex: '1 0 0' }} />
           <Button onClick={onClose}>Cancelar</Button>
