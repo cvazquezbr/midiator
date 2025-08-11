@@ -89,7 +89,7 @@ import RecordManager from './features/RecordManager/RecordManager';
 import CsvInfobox from './components/CsvInfobox';
 import Publisher from './components/Publisher';
 import SetupModal from './components/SetupModal';
-import CampaignPromptDialog from './components/CampaignPromptDialog';
+import CampaignStandardsModal from './components/CampaignStandardsModal';
 import { getGeminiApiKey } from './utils/geminiCredentials';
 import { saveLinkedinConfig } from './utils/linkedinCredentials';
 import { getCampaignPrompt } from './utils/campaignPrompt';
@@ -243,7 +243,7 @@ function App() {
   const [includeLogo, setIncludeLogo] = useState(true);
   const [includeEmpresa, setIncludeEmpresa] = useState(true);
   const [showSetupModal, setShowSetupModal] = useState(false);
-  const [showCampaignPromptModal, setShowCampaignPromptModal] = useState(false);
+  const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [passwordDialogAction, setPasswordDialogAction] = useState(null); // 'save' or 'load'
   const [credentialsPassword, setCredentialsPassword] = useState('');
@@ -2131,9 +2131,9 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                 open={Boolean(anchorElMenu)}
                 onClose={handleMenuClose}
               >
-                <MenuItem onClick={() => { setShowCampaignPromptModal(true); handleMenuClose(); }}>
+                <MenuItem onClick={() => { setShowCampaignStandardsModal(true); handleMenuClose(); }}>
                   <Edit sx={{ mr: 1 }} />
-                  Definir Prompt de Campanha
+                  Padrões de Campanha
                 </MenuItem>
                 <MenuItem onClick={handleSaveTemplateClick}>
                   <DownloadIcon sx={{ mr: 1 }} />
@@ -3022,9 +3022,9 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
         onClose={() => setShowSetupModal(false)}
         onBeforeLinkedinRedirect={saveStateToSessionStorage}
       />
-       <CampaignPromptDialog
-        open={showCampaignPromptModal}
-        onClose={() => setShowCampaignPromptModal(false)}
+       <CampaignStandardsModal
+        open={showCampaignStandardsModal}
+        onClose={() => setShowCampaignStandardsModal(false)}
       />
       <LoadingDialog
         open={isGeneratingCampaign || isSaving || isLoading}
