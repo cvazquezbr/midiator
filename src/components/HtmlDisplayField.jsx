@@ -1,7 +1,8 @@
 import React from 'react';
-import { Box, Typography, useTheme } from '@mui/material';
+import { Box, Typography, useTheme, Tooltip, IconButton } from '@mui/material';
+import { InfoOutlined } from '@mui/icons-material';
 
-const HtmlDisplayField = ({ title, htmlContent, onClick, placeholder }) => {
+const HtmlDisplayField = ({ title, htmlContent, onClick, placeholder, tooltip }) => {
   const theme = useTheme();
   const darkMode = theme.palette.mode === 'dark';
 
@@ -9,9 +10,14 @@ const HtmlDisplayField = ({ title, htmlContent, onClick, placeholder }) => {
 
   return (
     <Box>
-      <Typography variant="subtitle1" gutterBottom>
-        {title}
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Typography variant="subtitle1" gutterBottom>
+          {title}
+        </Typography>
+        <Tooltip title={tooltip}>
+          <IconButton size="small" sx={{ ml: 1 }}><InfoOutlined fontSize="small" /></IconButton>
+        </Tooltip>
+      </Box>
       <Box
         onClick={onClick}
         sx={{

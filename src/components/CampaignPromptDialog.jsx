@@ -143,42 +143,27 @@ const CampaignPromptDialog = ({ open, onClose }) => {
           </Typography>
 
           <HtmlDisplayField
-            title={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                Persona
-                <Tooltip title="Descreva a persona para quem o conteúdo se destina. Inclua detalhes demográficos, interesses e dores.">
-                  <IconButton size="small" sx={{ ml: 1 }}><InfoOutlined fontSize="small" /></IconButton>
-                </Tooltip>
-              </Box>
-            }
+            key="persona"
+            title="Persona"
+            tooltip="Descreva a persona para quem o conteúdo se destina. Inclua detalhes demográficos, interesses e dores."
             htmlContent={persona}
             onClick={() => handleOpenEditor('persona')}
             placeholder="Clique para editar a persona..."
           />
 
           <HtmlDisplayField
-            title={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                Autor
-                <Tooltip title="Descreva o autor ou a voz da marca que está criando o conteúdo. Qual o tom, estilo e perspectiva?">
-                  <IconButton size="small" sx={{ ml: 1 }}><InfoOutlined fontSize="small" /></IconButton>
-                </Tooltip>
-              </Box>
-            }
+            key="autor"
+            title="Autor"
+            tooltip="Descreva o autor ou a voz da marca que está criando o conteúdo. Qual o tom, estilo e perspectiva?"
             htmlContent={autor}
             onClick={() => handleOpenEditor('autor')}
             placeholder="Clique para editar o autor..."
           />
 
           <HtmlDisplayField
-            title={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                Formato
-                <Tooltip title="Descreva a estrutura do conteúdo. É uma lista? Um passo-a-passo? Uma história? Dê exemplos se possível.">
-                  <IconButton size="small" sx={{ ml: 1 }}><InfoOutlined fontSize="small" /></IconButton>
-                </Tooltip>
-              </Box>
-            }
+            key="formato"
+            title="Formato"
+            tooltip="Descreva a estrutura do conteúdo. É uma lista? Um passo-a-passo? Uma história? Dê exemplos se possível."
             htmlContent={formato}
             onClick={() => handleOpenEditor('formato')}
             placeholder="Clique para editar o formato..."
@@ -199,14 +184,9 @@ const CampaignPromptDialog = ({ open, onClose }) => {
           </FormControl>
 
           <HtmlDisplayField
-            title={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                Instruções
-                <Tooltip title="Forneça instruções detalhadas para a IA. Inclua o que fazer e o que não fazer, palavras-chave, e o objetivo do conteúdo.">
-                  <IconButton size="small" sx={{ ml: 1 }}><InfoOutlined fontSize="small" /></IconButton>
-                </Tooltip>
-              </Box>
-            }
+            key="instrucoes"
+            title="Instruções"
+            tooltip="Forneça instruções detalhadas para a IA. Inclua o que fazer e o que não fazer, palavras-chave, e o objetivo do conteúdo."
             htmlContent={instrucoes}
             onClick={() => handleOpenEditor('instrucoes')}
             placeholder="Clique para editar as instruções..."

@@ -21,7 +21,11 @@ import {
   FormatListNumbered,
   Undo,
   Redo,
-  Code
+  Code,
+  FormatQuote,
+  FormatIndentIncrease,
+  FormatIndentDecrease,
+  Palette
 } from '@mui/icons-material';
 import styles from './RichTextEditor.module.css';
 
@@ -393,6 +397,64 @@ const RichTextEditor = ({
               </IconButton>
             </Tooltip>
           ))}
+        </Box>
+
+        <div className={styles.divider} />
+
+        {/* Color Picker */}
+        <Box className={styles.toolbarGroup}>
+            <Tooltip title="Cor da fonte">
+                <IconButton
+                    className={styles.toolbarButton}
+                    size="small"
+                    onClick={() => document.getElementById('rte-color-picker').click()}
+                    disabled={disabled || htmlMode}
+                >
+                    <Palette />
+                    <input
+                        type="color"
+                        id="rte-color-picker"
+                        style={{ display: 'none' }}
+                        onChange={(e) => execCommand('foreColor', e.target.value)}
+                    />
+                </IconButton>
+            </Tooltip>
+        </Box>
+
+        <div className={styles.divider} />
+
+        {/* Indent and Quote */}
+        <Box className={styles.toolbarGroup}>
+            <Tooltip title="Aumentar recuo">
+                <IconButton
+                    className={styles.toolbarButton}
+                    size="small"
+                    onClick={() => execCommand('indent')}
+                    disabled={disabled || htmlMode}
+                >
+                    <FormatIndentIncrease />
+                </IconButton>
+            </Tooltip>
+            <Tooltip title="Diminuir recuo">
+                <IconButton
+                    className={styles.toolbarButton}
+                    size="small"
+                    onClick={() => execCommand('outdent')}
+                    disabled={disabled || htmlMode}
+                >
+                    <FormatIndentDecrease />
+                </IconButton>
+            </Tooltip>
+            <Tooltip title="Citação">
+                <IconButton
+                    className={styles.toolbarButton}
+                    size="small"
+                    onClick={() => execCommand('formatBlock', 'blockquote')}
+                    disabled={disabled || htmlMode}
+                >
+                    <FormatQuote />
+                </IconButton>
+            </Tooltip>
         </Box>
 
         <div className={styles.divider} />

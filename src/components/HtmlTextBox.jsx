@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Box } from '@mui/material';
 import RichTextEditor from './RichTextEditor';
 import styles from './HtmlTextBox.module.css';
+import TextEditorDialog from './TextEditorDialog';
 
 const HtmlTextBox = ({
   field,
@@ -24,7 +25,7 @@ const HtmlTextBox = ({
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
   const [editedContent, setEditedContent] = useState(content);
   const [resizeHandle, setResizeHandle] = useState(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -229,17 +230,10 @@ const HtmlTextBox = ({
   };
 
   useEffect(() => {
-    if (!isEditing) {
+    if (!isEditorModalOpen) {
       setEditedContent(content);
     }
-  }, [content, isEditing]);
-
-  useEffect(() => {
-    if (isEditing && isSelected && textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.select();
-    }
-  }, [isEditing, isSelected]);
+  }, [content, isEditorModalOpen]);
 
   const pixelPosition = {
     x: (position.x / 100) * (containerSize.width || 1),
@@ -458,52 +452,29 @@ const HtmlTextBox = ({
   }, []);
 
   const handleDoubleClick = () => {
-    if (isSelected) setIsEditing(true);
+    if (isSelected && enableHtmlRendering) {
+      setIsEditorModalOpen(true);
+    }
   };
 
-  const handleTextareaChange = (e) => setEditedContent(e.target.value);
-
-  const commitChanges = useCallback(() => {
-    if (isEditing && onContentChange && content !== editedContent) {
-      onContentChange(field, editedContent);
+  const handleEditorSave = (newContent) => {
+    setEditedContent(newContent);
+    if (onContentChange) {
+      onContentChange(field, newContent);
     }
-    setIsEditing(false);
-  }, [isEditing, content, editedContent, field, onContentChange]);
-
-  const handleTextareaBlur = () => {
-    // A lógica de blur será agora tratada pelo commitChanges e pelo listener de clique externo.
-    // Manter a função pode ser útil para acessibilidade, mas vamos simplificar por enquanto.
-    commitChanges();
+    setIsEditorModalOpen(false);
   };
 
-  const handleTextareaKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault(); commitChanges(); onSelect(field);
-      textareaRef.current?.blur();
-    } else if (e.key === 'Escape') {
-      e.preventDefault(); setEditedContent(content); setIsEditing(false);
-      onSelect(field);
-      textareaRef.current?.blur();
-    }
+  const handleEditorClose = () => {
+    setEditedContent(content); // Reverte para o conteúdo original
+    setIsEditorModalOpen(false);
   };
 
   const effectiveHandleMouseDown = (e, type, handle = null) => {
-    if (isEditing) {
-      if (e.target === textareaRef.current) return;
-      textareaRef.current?.blur();
-      e.stopPropagation();
-      return;
-    }
     doHandleMouseDown(e, type, handle);
   };
 
   const effectiveHandleTouchStart = (e, type, handle = null) => {
-    if (isEditing) {
-       if (e.target === textareaRef.current) return;
-      textareaRef.current?.blur();
-      e.stopPropagation();
-      return;
-    }
     handleTouchStart(e, type, handle);
   };
 
@@ -524,31 +495,6 @@ const HtmlTextBox = ({
       };
     }
   }, [isDragging, isResizing, isRotating, dragStart, initialPosition, initialSize, initialRotation, handleMouseMove, handleMouseUp, handleTouchEnd, handleTouchMove]);
-
-  // Efeito para lidar com cliques fora do componente durante a edição
-  useEffect(() => {
-    if (!isEditing) return;
-
-    const handleClickOutside = (event) => {
-      if (textBoxRef.current && !textBoxRef.current.contains(event.target)) {
-        commitChanges();
-      }
-    };
-
-    // Usar timeout para evitar que o mesmo clique que ativa a edição a desative imediatamente
-    const timerId = setTimeout(() => {
-        document.addEventListener('mousedown', handleClickOutside);
-        document.addEventListener('touchstart', handleClickOutside);
-    }, 0);
-
-
-    return () => {
-      clearTimeout(timerId);
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
-  }, [isEditing, commitChanges]);
-
 
   const wrapText = (text, maxWidth, fontSize) => {
     if (!text) return [''];
@@ -600,108 +546,30 @@ const HtmlTextBox = ({
   };
 
   return (
-    <Box
-      ref={textBoxRef}
-      className={`${styles.textBox} ${isDragging ? styles.dragging : ''} ${isSelected ? styles.selected : ''} ${isEditing ? styles.editing : ''}`}
-      sx={{
-        left: `${position.x}%`, 
-        top: `${position.y}%`,
-        width: `${position.width}%`, 
-        height: `${position.height}%`,
-        transform: `rotate(${rotation || 0}deg)`,
-      }}
-      onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
-      onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
-      onClick={(e) => {
-        if (!isEditing || e.target !== textareaRef.current) {
-          onSelect(field);
-        }
-      }}
-      onDoubleClick={handleDoubleClick}
-    >
+    <>
       <Box
-        className={`${styles.textBoxContent} ${isSelected ? styles.selected : ''}`}
+        ref={textBoxRef}
+        className={`${styles.textBox} ${isDragging ? styles.dragging : ''} ${isSelected ? styles.selected : ''}`}
         sx={{
-          justifyContent: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
-          alignItems: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
+          left: `${position.x}%`,
+          top: `${position.y}%`,
+          width: `${position.width}%`,
+          height: `${position.height}%`,
+          transform: `rotate(${rotation || 0}deg)`,
         }}
+        onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
+        onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
+        onClick={() => onSelect(field)}
+        onDoubleClick={handleDoubleClick}
       >
-        {isEditing && isSelected ? (
-          enableHtmlRendering ? (
-            <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
-              <RichTextEditor
-                value={editedContent}
-                onChange={setEditedContent}
-                placeholder={`Editar ${field}...`}
-                maxHeight={pixelPosition.height - 20}
-                showHtmlToggle={true}
-                darkMode={darkMode}
-              />
-              <Box sx={{ 
-                position: 'absolute', 
-                bottom: 0, 
-                right: 0, 
-                display: 'flex', 
-                gap: 1,
-                backgroundColor: 'rgba(255,255,255,0.9)',
-                padding: '4px',
-                borderRadius: '4px'
-              }}>
-                <button
-                  onClick={commitChanges}
-                  style={{
-                    padding: '4px 8px',
-                    fontSize: '12px',
-                    backgroundColor: '#1976d2',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Salvar
-                </button>
-                <button
-                  onClick={() => {
-                    setEditedContent(content);
-                    setIsEditing(false);
-                  }}
-                  style={{
-                    padding: '4px 8px',
-                    fontSize: '12px',
-                    backgroundColor: '#666',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Cancelar
-                </button>
-              </Box>
-            </Box>
-          ) : (
-            <textarea
-              ref={textareaRef} 
-              value={editedContent} 
-              onChange={handleTextareaChange}
-              onBlur={handleTextareaBlur} 
-              onKeyDown={handleTextareaKeyDown}
-              className={styles.textArea}
-              style={{
-                fontFamily: style.fontFamily || 'Arial',
-                fontSize: `${scaledFontSize}px`,
-                fontWeight: style.fontWeight || 'normal',
-                fontStyle: style.fontStyle || 'normal',
-                color: style.color || '#000000',
-                lineHeight: `${scaledLineHeight}px`,
-                textDecoration: style.textDecoration || 'none',
-                textAlign: style.textAlign || 'left',
-              }}
-            />
-          )
-        ) : (
-          <Box 
+        <Box
+          className={`${styles.textBoxContent} ${isSelected ? styles.selected : ''}`}
+          sx={{
+            justifyContent: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
+            alignItems: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
+          }}
+        >
+          <Box
             className={`${styles.textContent} ${enableHtmlRendering ? styles.htmlContent : ''}`}
             sx={textContentStyle}
           >
@@ -715,42 +583,52 @@ const HtmlTextBox = ({
               ))
             )}
           </Box>
+        </Box>
+
+        {/* Handles de redimensionamento e rotação */}
+        {isSelected && (
+          <>
+            {resizeHandles.map((handle) => (
+              <Box
+                key={handle.name}
+                className={styles.resizeHandle}
+                sx={{
+                  left: `calc(${handle.x * 100}% - ${handleSize / 2}px)`,
+                  top: `calc(${handle.y * 100}% - ${handleSize / 2}px)`,
+                  width: `${handleSize}px`,
+                  height: `${handleSize}px`,
+                  cursor: handle.cursor,
+                }}
+                onMouseDown={(e) => effectiveHandleMouseDown(e, 'resize', handle)}
+                onTouchStart={(e) => effectiveHandleTouchStart(e, 'resize', handle)}
+              />
+            ))}
+            <Box
+              className={styles.rotateHandle}
+              sx={{
+                top: `-${handleSize * 2.5}px`,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: `${handleSize * 1.5}px`,
+                height: `${handleSize * 1.5}px`,
+              }}
+              onMouseDown={(e) => effectiveHandleMouseDown(e, 'rotate')}
+              onTouchStart={(e) => effectiveHandleTouchStart(e, 'rotate')}
+            />
+          </>
         )}
       </Box>
 
-      {/* Handles de redimensionamento e rotação */}
-      {isSelected && !isEditing && (
-        <>
-          {resizeHandles.map((handle) => (
-            <Box
-              key={handle.name}
-              className={styles.resizeHandle}
-              sx={{
-                left: `calc(${handle.x * 100}% - ${handleSize / 2}px)`,
-                top: `calc(${handle.y * 100}% - ${handleSize / 2}px)`,
-                width: `${handleSize}px`,
-                height: `${handleSize}px`,
-                cursor: handle.cursor,
-              }}
-              onMouseDown={(e) => effectiveHandleMouseDown(e, 'resize', handle)}
-              onTouchStart={(e) => effectiveHandleTouchStart(e, 'resize', handle)}
-            />
-          ))}
-          <Box
-            className={styles.rotateHandle}
-            sx={{
-              top: `-${handleSize * 2.5}px`,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: `${handleSize * 1.5}px`,
-              height: `${handleSize * 1.5}px`,
-            }}
-            onMouseDown={(e) => effectiveHandleMouseDown(e, 'rotate')}
-            onTouchStart={(e) => effectiveHandleTouchStart(e, 'rotate')}
-          />
-        </>
+      {isEditorModalOpen && (
+        <TextEditorDialog
+          open={isEditorModalOpen}
+          title={`Editar ${field}`}
+          content={editedContent}
+          onSave={handleEditorSave}
+          onClose={handleEditorClose}
+        />
       )}
-    </Box>
+    </>
   );
 };
 
