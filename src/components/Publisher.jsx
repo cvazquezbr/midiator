@@ -31,8 +31,9 @@ import {
 import { Language, Publish, LinkedIn } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { DateTimePicker, DatePicker } from '@mui/x-date-pickers';
 import { ptBR } from 'date-fns/locale/pt-BR';
+import TimeHeatMap from './TimeHeatMap';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
 import { getLinkedinConfig } from '../utils/linkedinCredentials';
@@ -78,6 +79,7 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
   // New states for LinkedIn Publisher enhancements
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 60 * 60 * 1000)); // Default to 1 hour from now
+  const [selectedTime, setSelectedTime] = useState(null);
   const [selectedImages, setSelectedImages] = useState({}); // e.g. { 0: true, 1: false }
   const [selectedVideos, setSelectedVideos] = useState({});
   const [linkedinProfiles, setLinkedinProfiles] = useState([]);
@@ -468,13 +470,38 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
 
               {isScheduled && (
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
-                  <DateTimePicker
-                    label="Data e Hora do Agendamento"
-                    value={scheduleDate}
-                    onChange={(newValue) => setScheduleDate(newValue)}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
-                    minDateTime={new Date()}
-                  />
+                  <Grid container spacing={2} sx={{ mt: 1 }}>
+                    <Grid item xs={12} md={4}>
+                      <DatePicker
+                        label="Data do Agendamento"
+                        value={scheduleDate}
+                        onChange={(newDate) => {
+                          const newScheduleDate = new Date(scheduleDate);
+                          newScheduleDate.setFullYear(newDate.getFullYear());
+                          newScheduleDate.setMonth(newDate.getMonth());
+                          newScheduleDate.setDate(newDate.getDate());
+                          setScheduleDate(newScheduleDate);
+                        }}
+                        renderInput={(params) => <TextField {...params} fullWidth />}
+                        minDate={new Date()}
+                      />
+                    </Grid>
+                    <Grid item xs={12} md={8}>
+                        <Typography variant="subtitle2" gutterBottom>Selecione o Horário</Typography>
+                        <TimeHeatMap
+                            selectedDate={scheduleDate}
+                            selectedTime={selectedTime}
+                            onTimeSelect={(hour) => {
+                                setSelectedTime(hour);
+                                const newScheduleDate = new Date(scheduleDate);
+                                const [hours, minutes] = hour.split(':');
+                                newScheduleDate.setHours(parseInt(hours, 10));
+                                newScheduleDate.setMinutes(parseInt(minutes, 10));
+                                setScheduleDate(newScheduleDate);
+                            }}
+                        />
+                    </Grid>
+                  </Grid>
                 </LocalizationProvider>
               )}
 
