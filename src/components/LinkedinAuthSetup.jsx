@@ -12,8 +12,10 @@ import {
   Tooltip,
   Grid,
   CircularProgress,
+  Alert,
 } from '@mui/material';
-import { InfoOutlined, Close } from '@mui/icons-material';
+import { InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
+import { toast } from 'sonner';
 import {
   saveLinkedinConfig,
   getLinkedinConfig,
@@ -21,17 +23,16 @@ import {
 } from '../utils/linkedinCredentials';
 import GoogleDriveFolderPicker from './GoogleDriveFolderPicker';
 import googleDriveAPI from '../utils/googleDriveAPI';
+import LinkedinInfobox from './LinkedinInfobox';
 
 const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
-  const [config, setConfig] = useState({
-    clientId: '',
-    folderId: '',
-  });
+  const [config, setConfig] = useState({ clientId: '', folderId: '' });
   const [currentConfig, setCurrentConfig] = useState(null);
-  const [message, setMessage] = useState('');
   const [isPickerOpen, setPickerOpen] = useState(false);
   const [isDriveLoading, setIsDriveLoading] = useState(false);
   const [connectedUser, setConnectedUser] = useState(null);
+  const [showInfobox, setShowInfobox] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchUserDetails = async (accessToken) => {
@@ -44,8 +45,8 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
         if (!response.ok) throw new Error('Falha ao buscar detalhes do usuário.');
         const data = await response.json();
         setConnectedUser(data);
-      } catch (error) {
-        console.error("Erro ao buscar detalhes do usuário do LinkedIn:", error);
+      } catch (err) {
+        console.error("Erro ao buscar detalhes do usuário do LinkedIn:", err);
         setConnectedUser({ localizedFirstName: 'Usuário', localizedLastName: 'Desconhecido' });
       }
     };
@@ -64,36 +65,30 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
         setCurrentConfig(null);
         setConnectedUser(null);
       }
-      setMessage('');
+      setError('');
     }
   }, [open]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setConfig((prevConfig) => ({
-      ...prevConfig,
-      [name]: value,
-    }));
-    if (message) setMessage('');
+    setConfig((prevConfig) => ({ ...prevConfig, [name]: value }));
+    if (error) setError('');
   };
 
   const handleSelectFolder = (folder) => {
-    setConfig((prevConfig) => ({
-      ...prevConfig,
-      folderId: folder.id,
-    }));
+    setConfig((prevConfig) => ({ ...prevConfig, folderId: folder.id }));
     setPickerOpen(false);
   };
 
   const handleBrowseDrive = async () => {
-    setMessage('');
+    setError('');
     setIsDriveLoading(true);
 
     const apiKey = localStorage.getItem("google_drive_api_key");
     const clientId = localStorage.getItem("google_drive_client_id");
 
     if (!apiKey || !clientId) {
-      setMessage('❌ Por favor, configure a integração com o Google na página principal primeiro.');
+      toast.error('Por favor, configure a integração com o Google Drive primeiro.');
       setIsDriveLoading(false);
       return;
     }
@@ -102,17 +97,14 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
       if (!googleDriveAPI.isInitialized) {
         await googleDriveAPI.initialize(apiKey, clientId);
       }
-
       if (!googleDriveAPI.isUserSignedIn()) {
-        setMessage('Aguardando login com o Google...');
+        toast.info('Aguardando login com o Google...');
         await googleDriveAPI.signIn();
-        setMessage('');
       }
-
       setPickerOpen(true);
-    } catch (error) {
-      console.error('Erro ao preparar o seletor de pastas do Google Drive:', error);
-      setMessage(`❌ Erro no Google Drive: ${error.message}`);
+    } catch (err) {
+      console.error('Erro ao preparar o seletor de pastas do Google Drive:', err);
+      toast.error(`Erro no Google Drive: ${err.message}`);
     } finally {
       setIsDriveLoading(false);
     }
@@ -120,51 +112,45 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
 
   const handleConnect = async () => {
     if (config.clientId.trim()) {
-      if (onBeforeRedirect) {
-        await onBeforeRedirect();
-      }
+      if (onBeforeRedirect) await onBeforeRedirect();
       saveLinkedinConfig(config);
       const redirectUri = window.location.origin;
-
-      // Scopes updated to include organization admin permissions and newer recommended scopes.
-      // r_basicprofile: For basic profile data.
-      // w_member_social: To post, comment, and like on behalf of a member.
-      // w_organization_social: To post, comment, and like on behalf of an organization. Replaces w_share.
-      // rw_organization_admin: For managing organization pages.
       const scope = encodeURIComponent('r_basicprofile w_member_social w_organization_social rw_organization_admin');
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${config.clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
       window.location.href = authUrl;
     } else {
-      setMessage('Por favor, preencha o Client ID.');
+      setError('Por favor, preencha o Client ID.');
     }
   };
 
   const handleTestConnection = async () => {
     const { accessToken } = getLinkedinConfig();
     if (!accessToken) {
-      setMessage('❌ Não há uma conexão ativa para testar.');
+      toast.error('Não há uma conexão ativa para testar.');
       return;
     }
-    setMessage('Testando conexão...');
+    toast.loading('Testando conexão...');
     try {
       const response = await fetch('/api/linkedin-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'testConnection', accessToken }),
       });
+      toast.dismiss();
       if (response.ok) {
-        setMessage(`✅ Conexão bem-sucedida.`);
+        toast.success('Conexão bem-sucedida.');
       } else {
         const errorData = await response.json().catch(() => ({ message: 'Não foi possível ler a resposta de erro.' }));
-        setMessage(`❌ Erro no teste: ${errorData.message || 'Ocorreu um erro desconhecido.'}`);
+        toast.error(`Erro no teste: ${errorData.message || 'Ocorreu um erro desconhecido.'}`);
         if (response.status === 401) {
           removeLinkedinConfig();
           setCurrentConfig(null);
         }
       }
-    } catch (error) {
-      console.error('Erro no teste de conexão com LinkedIn:', error);
-      setMessage('❌ Erro de rede ao testar a conexão.');
+    } catch (err) {
+      console.error('Erro no teste de conexão com LinkedIn:', err);
+      toast.dismiss();
+      toast.error('Erro de rede ao testar a conexão.');
     }
   };
 
@@ -172,36 +158,32 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
     removeLinkedinConfig();
     sessionStorage.removeItem('linkedin_profiles_cache');
     setCurrentConfig(null);
-    setConnectedUser(null); // Limpar usuário ao desconectar
+    setConnectedUser(null);
     setConfig({ clientId: '', folderId: '' });
-    setMessage('Configuração do LinkedIn removida.');
+    toast.info('Configuração do LinkedIn removida.');
   };
 
   const handleSave = () => {
     saveLinkedinConfig(config);
-    setMessage('✅ Configuração salva com sucesso!');
+    toast.success('Configuração salva com sucesso!');
+    onClose();
   };
-
-  const aplicationInfoTooltip = (
-    <span>
-      Como obter o Client ID do LinkedIn:
-      <ol>
-        <li>Acesse: <a href="https://www.linkedin.com/developers/" target="_blank" rel="noopener noreferrer">LinkedIn Developer Portal</a></li>
-        <li>Crie um novo aplicativo ou selecione um existente.</li>
-        <li>Na aba "Auth", copie o Client ID.</li>
-        <li>Adicione o seguinte URI à sua lista de "Authorized redirect URIs": {window.location.origin}</li>
-      </ol>
-    </span>
-  );
 
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Configurar Integração com LinkedIn
-          <IconButton aria-label="close" onClick={onClose}>
-            <Close />
-          </IconButton>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            Configurar Integração com LinkedIn
+            <Box>
+              <IconButton onClick={() => setShowInfobox(true)}>
+                <InfoIcon />
+              </IconButton>
+              <IconButton onClick={onClose}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+          </Box>
         </DialogTitle>
         <DialogContent>
           {currentConfig && currentConfig.accessToken && (
@@ -227,7 +209,7 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
             <Grid item>
               <Tooltip title="Essa pasta será monitorada para novas postagens. O conteúdo e as imagens para posts agendados devem ser colocados aqui.">
                 <IconButton>
-                  <InfoOutlined />
+                  <InfoIcon />
                 </IconButton>
               </Tooltip>
             </Grid>
@@ -248,7 +230,7 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
                   Insira seu Client ID para conectar sua conta do LinkedIn.
                 </Typography>
               </Grid>
-              <Grid item xs={11}>
+              <Grid item xs={12}>
                 <TextField
                   name="clientId"
                   label="Client ID"
@@ -260,20 +242,11 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
                   placeholder="Seu Client ID do LinkedIn"
                 />
               </Grid>
-              <Grid item xs={1} sx={{ display: 'flex', alignItems: 'center' }}>
-                <Tooltip title={aplicationInfoTooltip}>
-                  <IconButton>
-                    <InfoOutlined />
-                  </IconButton>
-                </Tooltip>
-              </Grid>
             </Grid>
           )}
 
-          {message && (
-            <Typography color={message.includes('sucesso') || message.includes('Conectado') ? 'green' : 'error'} variant="body2" sx={{ mt: 2 }}>
-              {message}
-            </Typography>
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
           )}
         </DialogContent>
         <DialogActions sx={{ pb: 2, px: 3, justifyContent: 'space-between' }}>
@@ -297,11 +270,29 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
           </Box>
         </DialogActions>
       </Dialog>
+
       <GoogleDriveFolderPicker
         open={isPickerOpen}
         onClose={() => setPickerOpen(false)}
         onSelectFolder={handleSelectFolder}
       />
+
+      <Dialog open={showInfobox} onClose={() => setShowInfobox(false)} fullWidth maxWidth="lg">
+        <DialogTitle>
+           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            Instruções de Configuração
+            <IconButton onClick={() => setShowInfobox(false)}>
+                <CloseIcon />
+            </IconButton>
+           </Box>
+        </DialogTitle>
+        <DialogContent>
+          <LinkedinInfobox />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowInfobox(false)}>Fechar</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };
