@@ -175,20 +175,16 @@ const Publisher = ({
     fetchProfiles();
   }, []);
 
-  // Set default image selection when images are generated, only if no selection exists
+  // Effect to clear selection if media data is removed.
   useEffect(() => {
-    if (generatedImagesData && generatedImagesData.length > 0 && !Object.values(selectedImages).some(v => v)) {
-      setSelectedImages({ 0: true });
-    } else if (!generatedImagesData || generatedImagesData.length === 0) {
+    if (!generatedImagesData || generatedImagesData.length === 0) {
       setSelectedImages({});
     }
   }, [generatedImagesData]);
 
-  // Set default video selection when videos are generated, only if no selection exists
+  // Effect to clear selection if media data is removed.
   useEffect(() => {
-    if (generatedVideosData && generatedVideosData.length > 0 && !Object.values(selectedVideos).some(v => v)) {
-      setSelectedVideos({ 0: true });
-    } else if (!generatedVideosData || generatedVideosData.length === 0) {
+    if (!generatedVideosData || generatedVideosData.length === 0) {
       setSelectedVideos({});
     }
   }, [generatedVideosData]);
