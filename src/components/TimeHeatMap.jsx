@@ -78,6 +78,7 @@ const TimeHeatMap = ({ onScheduleChange }) => {
                             const dataIndex = dayIndexMapping[displayIndex];
                             const value = heatMapData[hour][dataIndex];
                             const isSelected = weeklySchedule[displayIndex] === hour;
+                            const selectedColor = '#ffc107'; // Amber color for selection
 
                             return (
                                 <Grid item xs={1.5} key={`${day}-${hour}`}>
@@ -86,16 +87,16 @@ const TimeHeatMap = ({ onScheduleChange }) => {
                                         sx={{
                                             width: '100%',
                                             height: '30px',
-                                            backgroundColor: getColor(value),
+                                            backgroundColor: isSelected ? selectedColor : getColor(value),
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
                                             boxSizing: 'border-box',
                                             ...(isSelected && {
-                                                border: '3px solid #0d47a1', // Dark blue border for selected
+                                                border: '2px solid #b28704', // Darker amber border
                                                 zIndex: 1,
                                             }),
                                             '&:hover': {
-                                                border: '2px solid #1565c0', // Medium blue on hover
+                                                border: `2px solid ${isSelected ? '#b28704' : '#1565c0'}`,
                                             },
                                         }}
                                     >
