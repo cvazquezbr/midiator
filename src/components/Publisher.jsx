@@ -568,7 +568,10 @@ const Publisher = ({
                     {/* Right Column */}
                     <Grid item xs={12} md={7}>
                         <Typography variant="h6" gutterBottom>2. Horários da Semana</Typography>
-                        <TimeHeatMap onScheduleChange={setWeeklySchedule} />
+                        <TimeHeatMap
+                            weeklySchedule={weeklySchedule}
+                            onScheduleChange={setWeeklySchedule}
+                        />
                     </Grid>
                   </Grid>
                 </LocalizationProvider>
