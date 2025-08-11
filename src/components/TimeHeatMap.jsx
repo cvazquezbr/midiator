@@ -52,7 +52,7 @@ const TimeHeatMap = ({ onScheduleChange }) => {
     };
 
     return (
-        <Paper elevation={2} sx={{ p: 2 }}>
+        <Paper elevation={2} sx={{ p: 2, maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
             <Typography variant="subtitle1" gutterBottom align="center">
                 Defina o horário de postagem para cada dia da semana
             </Typography>
