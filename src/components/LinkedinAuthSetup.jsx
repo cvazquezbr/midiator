@@ -204,43 +204,44 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
           </IconButton>
         </DialogTitle>
         <DialogContent>
-          {currentConfig && currentConfig.accessToken ? (
-            <Box>
-              <Typography variant="h6" color="green" sx={{ mb: 2 }}>
-                {connectedUser
-                  ? `✅ Conectado como ${connectedUser.localizedFirstName} ${connectedUser.localizedLastName}`
-                                    : '✅ Conectado. Verificando usuário...'}
-              </Typography>
-              <Grid container spacing={1} alignItems="flex-start" sx={{ mb: 2 }}>
-                <Grid item xs>
-                  <TextField
-                    name="folderId"
-                    label="ID da Pasta no Google Drive (Opcional)"
-                    value={config.folderId}
-                    onChange={handleChange}
-                    fullWidth
-                    variant="outlined"
-                    placeholder="ID da pasta para a fila de publicação"
-                  />
-                </Grid>
-                <Grid item>
-                  <Tooltip title="Essa pasta será monitorada para novas postagens. O conteúdo e as imagens para posts agendados devem ser colocados aqui.">
-                    <IconButton>
-                      <InfoOutlined />
-                    </IconButton>
-                  </Tooltip>
-                </Grid>
-              </Grid>
-              <Button
+          {currentConfig && currentConfig.accessToken && (
+            <Typography variant="h6" color="green" sx={{ mb: 2 }}>
+              {connectedUser
+                ? `✅ Conectado como ${connectedUser.localizedFirstName} ${connectedUser.localizedLastName}`
+                : '✅ Conectado. Verificando usuário...'}
+            </Typography>
+          )}
+
+          <Grid container spacing={1} alignItems="flex-start" sx={{ mb: 2 }}>
+            <Grid item xs>
+              <TextField
+                name="folderId"
+                label="ID da Pasta no Google Drive (Opcional)"
+                value={config.folderId}
+                onChange={handleChange}
+                fullWidth
                 variant="outlined"
-                onClick={handleBrowseDrive}
-                disabled={isDriveLoading}
-                startIcon={isDriveLoading ? <CircularProgress size={16} /> : null}
-              >
-                {isDriveLoading ? 'Aguarde...' : 'Procurar no Google Drive...'}
-              </Button>
-            </Box>
-          ) : (
+                placeholder="ID da pasta para a fila de publicação"
+              />
+            </Grid>
+            <Grid item>
+              <Tooltip title="Essa pasta será monitorada para novas postagens. O conteúdo e as imagens para posts agendados devem ser colocados aqui.">
+                <IconButton>
+                  <InfoOutlined />
+                </IconButton>
+              </Tooltip>
+            </Grid>
+          </Grid>
+          <Button
+            variant="outlined"
+            onClick={handleBrowseDrive}
+            disabled={isDriveLoading}
+            startIcon={isDriveLoading ? <CircularProgress size={16} /> : null}
+          >
+            {isDriveLoading ? 'Aguarde...' : 'Procurar no Google Drive...'}
+          </Button>
+
+          {(!currentConfig || !currentConfig.accessToken) && (
             <Grid container spacing={2} sx={{ mt: 1 }}>
               <Grid item xs={12}>
                 <Typography variant="body2" gutterBottom>
@@ -277,16 +278,16 @@ const LinkedinAuthSetup = ({ open, onClose, onBeforeRedirect }) => {
         </DialogContent>
         <DialogActions sx={{ pb: 2, px: 3, justifyContent: 'space-between' }}>
           <Box>
+            <Button onClick={handleSave} variant="contained">Salvar</Button>
             {currentConfig && currentConfig.accessToken ? (
               <>
-                <Button onClick={handleSave} variant="contained">Salvar</Button>
                 <Button onClick={handleTestConnection} sx={{ ml: 1 }}>Testar Conexão</Button>
                 <Button onClick={handleRemove} color="error" sx={{ ml: 1 }}>
                   Desconectar
                 </Button>
               </>
             ) : (
-              <Button onClick={handleConnect} variant="contained">
+              <Button onClick={handleConnect} variant="contained" sx={{ ml: 1 }}>
                 Conectar com o LinkedIn
               </Button>
             )}

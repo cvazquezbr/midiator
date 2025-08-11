@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { getGoogleCloudTTSCredentials, saveGoogleCloudTTSCredentials, removeGoogleCloudTTSCredentials } from '../utils/googleCloudTTSCredentials';
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, Link } from '@mui/material';
-import { Info } from '@mui/icons-material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton } from '@mui/material';
+import { InfoOutlined as InfoIcon } from '@mui/icons-material';
+import GoogleCloudTTSInfobox from './GoogleCloudTTSInfobox';
 
 const GoogleCloudTTSAuth = ({ open, onClose }) => {
   const [credentials, setCredentials] = useState('');
   const [currentStoredCredentials, setCurrentStoredCredentials] = useState(null);
   const [message, setMessage] = useState('');
+  const [showInfobox, setShowInfobox] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -38,7 +40,14 @@ const GoogleCloudTTSAuth = ({ open, onClose }) => {
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Configurar Credenciais do Google Cloud TTS</DialogTitle>
+        <DialogTitle>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                Configurar Credenciais do Google Cloud TTS
+                <IconButton onClick={() => setShowInfobox(true)}>
+                    <InfoIcon />
+                </IconButton>
+            </Box>
+        </DialogTitle>
         <DialogContent>
           <Typography variant="body2" gutterBottom>
             Cole o conteúdo do seu arquivo JSON de credenciais de conta de serviço do Google Cloud.
@@ -92,6 +101,15 @@ const GoogleCloudTTSAuth = ({ open, onClose }) => {
         </Box>
       </DialogActions>
     </Dialog>
+
+    <Dialog open={showInfobox} onClose={() => setShowInfobox(false)} fullWidth maxWidth="lg">
+        <DialogContent>
+          <GoogleCloudTTSInfobox />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowInfobox(false)}>Fechar</Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };
