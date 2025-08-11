@@ -3,22 +3,20 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogContentText,
   DialogTitle,
   TextField,
   Button,
   Box,
   Typography,
-  Link,
   Alert,
   IconButton,
 } from '@mui/material';
-import { CloudQueue, OpenInNew, VpnKey, PersonPin, InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
+import { VpnKey, PersonPin, InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import GoogleDriveInfobox from './GoogleDriveInfobox';
 import googleDriveAPI from '../utils/googleDriveAPI';
 
-const GoogleDriveAuthModal = ({ open, onClose }) => {
+const GoogleDriveAuthModal = () => {
   const [apiKey, setApiKey] = useState('');
   const [clientId, setClientId] = useState('');
   const [error, setError] = useState('');
@@ -26,14 +24,12 @@ const GoogleDriveAuthModal = ({ open, onClose }) => {
   const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      const storedApiKey = localStorage.getItem('google_drive_api_key');
-      const storedClientId = localStorage.getItem('google_drive_client_id');
-      if (storedApiKey) setApiKey(storedApiKey);
-      if (storedClientId) setClientId(storedClientId);
-      setError('');
-    }
-  }, [open]);
+    const storedApiKey = localStorage.getItem('google_drive_api_key');
+    const storedClientId = localStorage.getItem('google_drive_client_id');
+    if (storedApiKey) setApiKey(storedApiKey);
+    if (storedClientId) setClientId(storedClientId);
+    setError('');
+  }, []);
 
   const handleSave = () => {
     if (!apiKey.trim() || !clientId.trim()) {
@@ -44,7 +40,6 @@ const GoogleDriveAuthModal = ({ open, onClose }) => {
     localStorage.setItem('google_drive_client_id', clientId.trim());
     setError('');
     toast.success('Credenciais do Google Drive salvas com sucesso!');
-    onClose();
   };
 
   const handleClear = () => {
@@ -91,84 +86,73 @@ const GoogleDriveAuthModal = ({ open, onClose }) => {
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <CloudQueue sx={{ mr: 1, color: 'primary.main' }} />
-              Configurar API do Google Drive
-            </Box>
-            <Box>
-              <IconButton onClick={() => setShowInfobox(true)}>
-                <InfoIcon />
-              </IconButton>
-              <IconButton onClick={onClose}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ mb: 2 }}>
-            Para integrar com o Google Drive, você precisará de uma API Key e um Client ID
-            do seu projeto no Google Cloud Console.
-          </DialogContentText>
+      <Box sx={{ p: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6">API do Google Drive</Typography>
+          <IconButton onClick={() => setShowInfobox(true)}>
+            <InfoIcon />
+          </IconButton>
+        </Box>
+        <Typography variant="body2" sx={{ mb: 2, mt: 2 }}>
+          Para integrar com o Google Drive, você precisará de uma API Key e um Client ID
+          do seu projeto no Google Cloud Console.
+        </Typography>
 
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <VpnKey sx={{ color: 'action.active', mr: 1, my: 0.5 }} />
-            <TextField
-              autoFocus
-              margin="dense"
-              id="google-drive-api-key"
-              label="API Key do Google Drive"
-              type="text"
-              fullWidth
-              variant="outlined"
-              value={apiKey}
-              onChange={(e) => {
-                setApiKey(e.target.value);
-                setError('');
-              }}
-              placeholder="Cole sua API Key aqui"
-            />
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <PersonPin sx={{ color: 'action.active', mr: 1, my: 0.5 }} />
-            <TextField
-              margin="dense"
-              id="google-drive-client-id"
-              label="Client ID do Google Drive"
-              type="text"
-              fullWidth
-              variant="outlined"
-              value={clientId}
-              onChange={(e) => {
-                setClientId(e.target.value);
-                setError('');
-              }}
-              placeholder="Cole seu Client ID aqui"
-            />
-          </Box>
-          <Typography variant="caption" display="block" gutterBottom sx={{ mt: -1, ml: '40px' }}>
-            Suas credenciais são salvas localmente no seu navegador.
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: '16px 24px' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <VpnKey sx={{ color: 'action.active', mr: 1, my: 0.5 }} />
+          <TextField
+            autoFocus
+            margin="dense"
+            id="google-drive-api-key"
+            label="API Key do Google Drive"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={apiKey}
+            onChange={(e) => {
+              setApiKey(e.target.value);
+              setError('');
+            }}
+            placeholder="Cole sua API Key aqui"
+          />
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <PersonPin sx={{ color: 'action.active', mr: 1, my: 0.5 }} />
+          <TextField
+            margin="dense"
+            id="google-drive-client-id"
+            label="Client ID do Google Drive"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={clientId}
+            onChange={(e) => {
+              setClientId(e.target.value);
+              setError('');
+            }}
+            placeholder="Cole seu Client ID aqui"
+          />
+        </Box>
+        <Typography variant="caption" display="block" gutterBottom sx={{ mt: -1, ml: '40px' }}>
+          Suas credenciais são salvas localmente no seu navegador.
+        </Typography>
+
+        <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Button onClick={handleClear} color="error">
             Limpar Salvas
           </Button>
-          <Button onClick={handleTestConnection} disabled={isTesting}>
-            {isTesting ? 'Testando...' : 'Testar Conexão'}
-          </Button>
-          <Box sx={{ flex: '1 0 0' }} />
-          <Button onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave} variant="contained">
-            Salvar Credenciais
-          </Button>
-        </DialogActions>
-      </Dialog>
+          <Box>
+            <Button onClick={handleTestConnection} disabled={isTesting}>
+              {isTesting ? 'Testando...' : 'Testar Conexão'}
+            </Button>
+            <Button onClick={handleSave} variant="contained" sx={{ ml: 1 }}>
+              Salvar
+            </Button>
+          </Box>
+        </Box>
+      </Box>
 
       <Dialog open={showInfobox} onClose={() => setShowInfobox(false)} fullWidth maxWidth="lg">
         <DialogTitle>

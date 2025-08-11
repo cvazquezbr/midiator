@@ -87,12 +87,8 @@ import AudioGenerator from './components/AudioGenerator';
 import VideoGenerator2 from './components/VideoGenerator2';
 import RecordManager from './features/RecordManager/RecordManager';
 import CsvInfobox from './components/CsvInfobox';
-import GeminiAuthSetup from './components/GeminiAuthSetup';
-import GoogleDriveAuthModal from './components/GoogleDriveAuthModal';
-import GoogleCloudTTSAuth from './components/GoogleCloudTTSAuth';
-import WordpressAuthSetup from './components/WordpressAuthSetup';
-import LinkedinAuthSetup from './components/LinkedinAuthSetup';
 import Publisher from './components/Publisher';
+import SetupModal from './components/SetupModal';
 import CampaignPromptDialog from './components/CampaignPromptDialog';
 import { getGeminiApiKey } from './utils/geminiCredentials';
 import { saveLinkedinConfig } from './utils/linkedinCredentials';
@@ -246,12 +242,7 @@ function App() {
   });
   const [includeLogo, setIncludeLogo] = useState(true);
   const [includeEmpresa, setIncludeEmpresa] = useState(true);
-  // const [showDeepSeekAuthModal, setShowDeepSeekAuthModal] = useState(false); // Removed
-  const [showGeminiAuthModal, setShowGeminiAuthModal] = useState(false);
-  const [showGoogleDriveAuthModal, setShowGoogleDriveAuthModal] = useState(false);
-  const [showGoogleCloudTTSAuthModal, setShowGoogleCloudTTSAuthModal] = useState(false);
-  const [showWordpressAuthModal, setShowWordpressAuthModal] = useState(false);
-  const [showLinkedinAuthModal, setShowLinkedinAuthModal] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignPromptModal, setShowCampaignPromptModal] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [passwordDialogAction, setPasswordDialogAction] = useState(null); // 'save' or 'load'
@@ -933,7 +924,8 @@ function App() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "template_config.midiator";
+      const safeTitle = campaignContent?.titulo?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'sem-titulo';
+      link.download = `${safeTitle}.midiator`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -1257,18 +1249,6 @@ function App() {
   const handleSaveTemplateClick = () => {
     handleMenuClose();
     handleSaveState();
-  };
-
-  const handleSaveCredentialsClick = () => {
-    setPasswordDialogAction('save');
-    setShowPasswordDialog(true);
-    handleMenuClose();
-  };
-
-  const handleLoadCredentialsClick = () => {
-    setPasswordDialogAction('load');
-    setShowPasswordDialog(true);
-    handleMenuClose();
   };
 
   const handlePasswordConfirm = async (password) => {
@@ -2127,10 +2107,20 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   {darkMode ? <Brightness7 /> : <Brightness4 />}
                 </IconButton>
               </Tooltip>
+              <Tooltip title="Configurações">
+                <IconButton
+                  onClick={() => setShowSetupModal(true)}
+                  sx={{ color: 'white' }}
+                  aria-label="Configurações"
+                >
+                  <Settings />
+                </IconButton>
+              </Tooltip>
               <Tooltip title="Mais ações">
                 <IconButton
                   onClick={handleMenuOpen}
                   sx={{ color: 'white' }}
+                  aria-label="Mais ações"
                 >
                   <MoreVert />
                 </IconButton>
@@ -2140,49 +2130,17 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                 open={Boolean(anchorElMenu)}
                 onClose={handleMenuClose}
               >
-                {/* <MenuItem onClick={() => { setShowDeepSeekAuthModal(true); handleMenuClose(); }}>
-                  <VpnKeyIcon sx={{ mr: 1 }} />
-                  Configurar API DeepSeek
-                </MenuItem> */}
-                <MenuItem onClick={() => { setShowGeminiAuthModal(true); handleMenuClose(); }}>
-                  <GoogleIcon sx={{ mr: 1 }} />
-                  Configurar API Gemini
-                </MenuItem>
-                <MenuItem onClick={() => { setShowGoogleDriveAuthModal(true); handleMenuClose(); }}>
-                  <CloudQueue sx={{ mr: 1 }} />
-                  Configurar API Google Drive
-                </MenuItem>
-                <MenuItem onClick={() => { setShowGoogleCloudTTSAuthModal(true); handleMenuClose(); }}>
-                  <Audiotrack sx={{ mr: 1 }} />
-                  Configurar Google Cloud TTS
-                </MenuItem>
-                <MenuItem onClick={() => { setShowWordpressAuthModal(true); handleMenuClose(); }}>
-                  <Language sx={{ mr: 1 }} />
-                  Configurar WordPress
-                </MenuItem>
-                <MenuItem onClick={() => { setShowLinkedinAuthModal(true); handleMenuClose(); }}>
-                  <LinkedIn sx={{ mr: 1 }} />                                  
-                  Configurar LinkedIn
-                </MenuItem>
                 <MenuItem onClick={() => { setShowCampaignPromptModal(true); handleMenuClose(); }}>
                   <Edit sx={{ mr: 1 }} />
                   Definir Prompt de Campanha
                 </MenuItem>
                 <MenuItem onClick={handleSaveTemplateClick}>
                   <DownloadIcon sx={{ mr: 1 }} />
-                  Salvar Template
+                  Salvar Campanha
                 </MenuItem>
                 <MenuItem onClick={handleLoadTemplateClick}>
                   <FileUploadIcon sx={{ mr: 1 }} />
-                  Carregar Template
-                </MenuItem>
-                <MenuItem onClick={handleSaveCredentialsClick}>
-                  <SaveAltIcon sx={{ mr: 1 }} />
-                  Salvar Credenciais
-                </MenuItem>
-                <MenuItem onClick={handleLoadCredentialsClick}>
-                  <FileUploadIcon sx={{ mr: 1 }} />
-                  Carregar Credenciais
+                  Carregar Campanha
                 </MenuItem>
                 <MenuItem onClick={handleExportCSV} disabled={csvData.length === 0}>
                   <DownloadIcon sx={{ mr: 1 }} />
@@ -3058,30 +3016,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
       </Box>
 
       {/* Modals */}
-      {/* <DeepSeekAuthSetup
-        open={showDeepSeekAuthModal}
-        onClose={() => setShowDeepSeekAuthModal(false)}
-      /> */}
-      <GeminiAuthSetup
-        open={showGeminiAuthModal}
-        onClose={() => setShowGeminiAuthModal(false)}
-      />
-      <GoogleDriveAuthModal
-        open={showGoogleDriveAuthModal}
-        onClose={() => setShowGoogleDriveAuthModal(false)}
-      />
-      <GoogleCloudTTSAuth
-        open={showGoogleCloudTTSAuthModal}
-        onClose={() => setShowGoogleCloudTTSAuthModal(false)}
-      />
-      <WordpressAuthSetup
-        open={showWordpressAuthModal}
-        onClose={() => setShowWordpressAuthModal(false)}
-      />
-      <LinkedinAuthSetup
-        open={showLinkedinAuthModal}
-        onClose={() => setShowLinkedinAuthModal(false)}
-        onBeforeRedirect={saveStateToSessionStorage}
+      <SetupModal
+        open={showSetupModal}
+        onClose={() => setShowSetupModal(false)}
+        onBeforeLinkedinRedirect={saveStateToSessionStorage}
       />
        <CampaignPromptDialog
         open={showCampaignPromptModal}

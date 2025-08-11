@@ -21,7 +21,7 @@ import {
 } from '../utils/wordpressCredentials';
 import WordpressInfobox from './WordpressInfobox';
 
-const WordpressAuthSetup = ({ open, onClose }) => {
+const WordpressAuthSetup = () => {
   const [config, setConfig] = useState({
     username: '',
     password: '',
@@ -37,27 +37,25 @@ const WordpressAuthSetup = ({ open, onClose }) => {
   const [showInfobox, setShowInfobox] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      const storedConfig = getWordpressConfig();
-      const initialConfig = {
-        username: '',
-        password: '',
-        wordpressUrl: '',
-        tagsUrl: '/wp-json/wp/v2/tags',
-        mediaUrl: '/wp-json/wp/v2/media',
-        postsUrl: '/wp-json/wp/v2/posts',
-      };
+    const storedConfig = getWordpressConfig();
+    const initialConfig = {
+      username: '',
+      password: '',
+      wordpressUrl: '',
+      tagsUrl: '/wp-json/wp/v2/tags',
+      mediaUrl: '/wp-json/wp/v2/media',
+      postsUrl: '/wp-json/wp/v2/posts',
+    };
 
-      if (storedConfig) {
-        setCurrentConfig(storedConfig);
-        setConfig({ ...initialConfig, ...storedConfig });
-      } else {
-        setCurrentConfig(null);
-        setConfig(initialConfig);
-      }
-      setError('');
+    if (storedConfig) {
+      setCurrentConfig(storedConfig);
+      setConfig({ ...initialConfig, ...storedConfig });
+    } else {
+      setCurrentConfig(null);
+      setConfig(initialConfig);
     }
-  }, [open]);
+    setError('');
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -71,8 +69,8 @@ const WordpressAuthSetup = ({ open, onClose }) => {
   const handleSave = () => {
     if (config.username.trim() && config.password.trim() && config.wordpressUrl.trim()) {
       saveWordpressConfig(config);
+      setCurrentConfig(config);
       toast.success('Configuração do WordPress salva com sucesso!');
-      onClose();
     } else {
       setError('Por favor, preencha a URL, o nome de usuário e a senha de aplicação.');
     }
@@ -137,133 +135,121 @@ const WordpressAuthSetup = ({ open, onClose }) => {
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            Configurar Integração com WordPress
-            <Box>
-              <IconButton onClick={() => setShowInfobox(true)}>
-                <InfoIcon />
-              </IconButton>
-              <IconButton onClick={onClose}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" gutterBottom>
-            Insira suas credenciais e URLs de endpoints do WordPress. A senha de aplicação será armazenada localmente no seu navegador.
+      <Box sx={{ p: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="h6">WordPress</Typography>
+          <IconButton onClick={() => setShowInfobox(true)}>
+            <InfoIcon />
+          </IconButton>
+        </Box>
+        <Typography variant="body2" gutterBottom sx={{ mt: 2 }}>
+          Insira suas credenciais e URLs de endpoints do WordPress. A senha de aplicação será armazenada localmente no seu navegador.
+        </Typography>
+
+        {currentConfig && (
+          <Typography variant="caption" color="textSecondary" gutterBottom>
+            Configuração atual salva para o site: {currentConfig.wordpressUrl}
           </Typography>
+        )}
 
-          {currentConfig && (
-            <Typography variant="caption" color="textSecondary" gutterBottom>
-              Configuração atual salva para o site: {currentConfig.wordpressUrl}
-            </Typography>
-          )}
+        <Grid container spacing={2} sx={{ mt: 2 }}>
+            <Grid item xs={12} sm={6}>
+                <TextField
+                    name="wordpressUrl"
+                    label="URL do WordPress"
+                    value={config.wordpressUrl}
+                    onChange={handleChange}
+                    fullWidth
+                    required
+                    variant="outlined"
+                    placeholder="https://seu-site.com"
+                />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+                <TextField
+                    name="username"
+                    label="Nome de usuário do WordPress"
+                    value={config.username}
+                    onChange={handleChange}
+                    fullWidth
+                    required
+                    variant="outlined"
+                />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <TextField
+                        name="password"
+                        label="Senha de Aplicação"
+                        type={showPassword ? 'text' : 'password'}
+                        value={config.password}
+                        onChange={handleChange}
+                        fullWidth
+                        required
+                        variant="outlined"
+                    />
+                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                </Box>
+            </Grid>
+        </Grid>
 
-          <Grid container spacing={2} sx={{ mt: 2 }}>
-              <Grid item xs={12} sm={6}>
-                  <TextField
-                      name="wordpressUrl"
-                      label="URL do WordPress"
-                      value={config.wordpressUrl}
-                      onChange={handleChange}
-                      fullWidth
-                      required
-                      variant="outlined"
-                      placeholder="https://seu-site.com"
-                  />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                  <TextField
-                      name="username"
-                      label="Nome de usuário do WordPress"
-                      value={config.username}
-                      onChange={handleChange}
-                      fullWidth
-                      required
-                      variant="outlined"
-                  />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <TextField
-                          name="password"
-                          label="Senha de Aplicação"
-                          type={showPassword ? 'text' : 'password'}
-                          value={config.password}
-                          onChange={handleChange}
-                          fullWidth
-                          required
-                          variant="outlined"
-                      />
-                      <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                  </Box>
-              </Grid>
-          </Grid>
+        <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
+          Endpoints da API (Opcional)
+        </Typography>
+        <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+                <TextField
+                    name="tagsUrl"
+                    label="URL para incluir tag"
+                    value={config.tagsUrl}
+                    onChange={handleChange}
+                    fullWidth
+                    variant="outlined"
+                />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+                <TextField
+                    name="mediaUrl"
+                    label="URL para subir mídia"
+                    value={config.mediaUrl}
+                    onChange={handleChange}
+                    fullWidth
+                    variant="outlined"
+                />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+                <TextField
+                    name="postsUrl"
+                    label="URL para enviar post"
+                    value={config.postsUrl}
+                    onChange={handleChange}
+                    fullWidth
+                    variant="outlined"
+                />
+            </Grid>
+        </Grid>
 
-          <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
-            Endpoints da API (Opcional)
-          </Typography>
-          <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                  <TextField
-                      name="tagsUrl"
-                      label="URL para incluir tag"
-                      value={config.tagsUrl}
-                      onChange={handleChange}
-                      fullWidth
-                      variant="outlined"
-                  />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                  <TextField
-                      name="mediaUrl"
-                      label="URL para subir mídia"
-                      value={config.mediaUrl}
-                      onChange={handleChange}
-                      fullWidth
-                      variant="outlined"
-                  />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                  <TextField
-                      name="postsUrl"
-                      label="URL para enviar post"
-                      value={config.postsUrl}
-                      onChange={handleChange}
-                      fullWidth
-                      variant="outlined"
-                  />
-              </Grid>
-          </Grid>
-
-          {error && (
-            <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ pb: 2, px: 3, justifyContent: 'space-between' }}>
+        {error && (
+          <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
+        )}
+        <Box sx={{ pt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
               <Button onClick={handleTestConnection} disabled={isTesting}>
                 {isTesting ? 'Testando...' : 'Testar Conexão'}
               </Button>
               {currentConfig && (
-                  <Button onClick={handleRemove} color="error">
+                  <Button onClick={handleRemove} color="error" sx={{ ml: 1 }}>
                       Remover
                   </Button>
               )}
           </Box>
-          <Box>
-            <Button onClick={onClose}>Cancelar</Button>
-            <Button onClick={handleSave} variant="contained" sx={{ ml: 1 }}>
-              Salvar
-            </Button>
-          </Box>
-        </DialogActions>
-      </Dialog>
+          <Button onClick={handleSave} variant="contained">
+            Salvar
+          </Button>
+        </Box>
+      </Box>
 
       <Dialog open={showInfobox} onClose={() => setShowInfobox(false)} fullWidth maxWidth="lg">
         <DialogTitle>
