@@ -102,13 +102,13 @@ const steps = [
         <Typography variant="body2" sx={{ mb: 1 }}>
             <b>1. Em "Origens JavaScript autorizadas", adicione:</b>
         </Typography>
-        <Paper variant="outlined" sx={{ p: 1, mb: 2, bgcolor: 'grey.100' }}>
+        <Paper variant="outlined" sx={{ p: 1, mb: 2, bgcolor: 'background.default' }}>
             <Typography variant="body2" component="code">{window.location.origin}</Typography>
         </Paper>
         <Typography variant="body2" sx={{ mb: 1 }}>
             <b>2. Em "URIs de redirecionamento autorizados", adicione o mesmo endereço:</b>
         </Typography>
-        <Paper variant="outlined" sx={{ p: 1, mb: 2, bgcolor: 'grey.100' }}>
+        <Paper variant="outlined" sx={{ p: 1, mb: 2, bgcolor: 'background.default' }}>
              <Typography variant="body2" component="code">{window.location.origin}</Typography>
         </Paper>
         <Typography variant="body2">
