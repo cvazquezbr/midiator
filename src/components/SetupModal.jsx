@@ -136,17 +136,14 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
               borderRight: 1,
               borderColor: 'divider',
               minWidth: 200,
-              '& .MuiTabs-flexContainerVertical': {
-                alignItems: 'flex-start',
-              },
             }}
           >
-            <Tab icon={<GoogleIcon />} iconPosition="start" label="API Gemini" {...a11yProps(0)} />
-            <Tab icon={<CloudQueue />} iconPosition="start" label="API Google Drive" {...a11yProps(1)} />
-            <Tab icon={<Audiotrack />} iconPosition="start" label="Google Cloud TTS" {...a11yProps(2)} />
-            <Tab icon={<Language />} iconPosition="start" label="WordPress" {...a11yProps(3)} />
-            <Tab icon={<LinkedIn />} iconPosition="start" label="LinkedIn" {...a11yProps(4)} />
-            <Tab icon={<Security />} iconPosition="start" label="Credenciais" {...a11yProps(5)} />
+            <Tab icon={<GoogleIcon />} label="API Gemini" {...a11yProps(0)} />
+            <Tab icon={<CloudQueue />} label="API Google Drive" {...a11yProps(1)} />
+            <Tab icon={<Audiotrack />} label="Google Cloud TTS" {...a11yProps(2)} />
+            <Tab icon={<Language />} label="WordPress" {...a11yProps(3)} />
+            <Tab icon={<LinkedIn />} label="LinkedIn" {...a11yProps(4)} />
+            <Tab icon={<Security />} label="Credenciais" {...a11yProps(5)} />
           </Tabs>
           <TabPanel value={value} index={0}>
             <GeminiAuthSetup />

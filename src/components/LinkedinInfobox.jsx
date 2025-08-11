@@ -60,7 +60,7 @@ const steps = [
         <Typography variant="body2" sx={{ mb: 1 }}>
           Em <b>"Authorized redirect URIs for your app"</b>, você deve adicionar o endereço exato onde o Midiator está rodando.
         </Typography>
-        <Paper variant="outlined" sx={{ p: 1, mb: 2, bgcolor: 'grey.100' }}>
+        <Paper variant="outlined" sx={{ p: 1, mb: 2, bgcolor: 'background.default' }}>
             <Typography variant="body2" component="code">{window.location.origin}</Typography>
         </Paper>
         <Typography variant="body2">
