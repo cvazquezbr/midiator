@@ -1507,14 +1507,19 @@ console.log(finalPrompt)
       return;
     }
 
-    const { persona, autor } = getCampaignPrompt();
+    const { persona, autor, colors } = getCampaignPrompt();
     try {
+      const colorPalettePrompt = colors && colors.length > 0
+        ? `A imagem deve usar predominantemente a seguinte paleta de cores: ${colors.join(', ')}.`
+        : '';
+
       const imagePrompt = `
         Persona: ${stripHtml(persona)}
         Autor: ${stripHtml(autor)}
         Resumo do Conteúdo: ${stripHtml(content.titulo)}. ${stripHtml(content.conteudo)}
         Razão de Aspecto: ${aspectRatio}
-        IMPORTANTE: A imagem gerada não deve conter nenhum tipo de texto, escrita, letras ou palavras.
+        ${colorPalettePrompt}
+        ATENÇÃO: A imagem gerada não deve conter, sob NENHUMA CIRCUNSTÂNCIA, qualquer tipo de texto, escrita, letras, números ou palavras. A imagem deve ser puramente visual.
       `;
       const base64Image = await generateImage(imagePrompt, apiKey);
 
