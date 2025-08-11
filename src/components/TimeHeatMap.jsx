@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Grid, Typography, ButtonBase, Paper } from '@mui/material';
+import { Grid, Typography, ButtonBase, Paper, Box } from '@mui/material';
+import chroma from 'chroma-js';
 
 const heatMapData = {
     '00:00': [0, 0, 0, 0, 0, 0, 0],
@@ -36,14 +37,11 @@ const dayIndexMapping = [6, 0, 1, 2, 3, 4, 5]; // getDay() index -> data index
 
 const hours = Object.keys(heatMapData);
 
+const colorScale = chroma.scale(['#d73027', '#fee08b', '#1a9850']).domain([0, 5, 10]);
+
 const getColor = (value) => {
-    if (value === 0) return '#e0e0e0'; // A slightly darker grey for zero values
-    const intensity = value / 10; // New scale is 0-10
-    // Using a green color scale for better legibility
-    const h = 120; // Hue for green
-    const s = 100; // Saturation
-    const l = 95 - (50 * intensity); // Lightness from 95% (light green) to 45% (deep green)
-    return `hsl(${h}, ${s}%, ${l}%)`;
+    if (value === 0) return '#e0e0e0';
+    return colorScale(value).hex();
 };
 
 const TimeHeatMap = ({ weeklySchedule = {}, onScheduleChange }) => {
@@ -85,6 +83,8 @@ const TimeHeatMap = ({ weeklySchedule = {}, onScheduleChange }) => {
                             const value = heatMapData[hour][dataIndex];
                             const isSelected = weeklySchedule[displayIndex] === hour;
                             const selectedColor = '#ffc107'; // Amber color for selection
+                            const bgColor = isSelected ? selectedColor : getColor(value);
+                            const textColor = chroma(bgColor).luminance() > 0.4 ? 'black' : 'white';
 
                             return (
                                 <Grid item xs={1.5} key={`${day}-${hour}`}>
@@ -93,7 +93,7 @@ const TimeHeatMap = ({ weeklySchedule = {}, onScheduleChange }) => {
                                         sx={{
                                             width: '100%',
                                             height: '22px', // Reduced height
-                                            backgroundColor: isSelected ? selectedColor : getColor(value),
+                                            backgroundColor: bgColor,
                                             border: '1px solid #ccc',
                                             borderRadius: '4px',
                                             boxSizing: 'border-box',
@@ -110,7 +110,7 @@ const TimeHeatMap = ({ weeklySchedule = {}, onScheduleChange }) => {
                                             variant="caption"
                                             sx={{
                                                 fontSize: '0.7rem', // Reduced font size
-                                                color: value > 5 ? 'white' : 'black', // Adjusted for new 0-10 scale
+                                                color: textColor,
                                                 fontWeight: isSelected ? 'bold' : 'normal'
                                             }}>
                                             {value > 0 ? value : ''}
