@@ -35,17 +35,12 @@ const getColor = (value) => {
     return `hsl(${h}, ${s}%, ${l}%)`;
 };
 
-const TimeHeatMap = ({ onScheduleChange }) => {
-    // State to store the selected hour for each day of the week.
-    // Key is the JS getDay() index (0=Sun, 1=Mon, ...).
-    const [weeklySchedule, setWeeklySchedule] = useState({});
-
+const TimeHeatMap = ({ weeklySchedule = {}, onScheduleChange }) => {
     const handleTimeSelect = (dayIndex, hour) => {
         const newSchedule = {
             ...weeklySchedule,
             [dayIndex]: hour,
         };
-        setWeeklySchedule(newSchedule);
         if (onScheduleChange) {
             onScheduleChange(newSchedule);
         }
