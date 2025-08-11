@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useIsMobile } from './hooks/use-mobile.js';
 import { LinkedIn } from '@mui/icons-material';
 import {
