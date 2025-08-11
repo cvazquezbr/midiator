@@ -59,7 +59,19 @@ function TabPanel(props) {
   );
 }
 
-const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, generatedVideosData, followupPosts }) => {
+const Publisher = ({
+  campaignContent,
+  conteudoFormatado,
+  generatedImagesData,
+  generatedVideosData,
+  followupPosts,
+  isScheduled,
+  setIsScheduled,
+  scheduleDate,
+  setScheduleDate,
+  weeklySchedule,
+  setWeeklySchedule
+}) => {
   const [tabValue, setTabValue] = React.useState(0);
 
   const handleTabChange = (event, newValue) => {
@@ -76,10 +88,7 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
   const [publishingStatusLi, setPublishingStatusLi] = useState('');
   const [publishedPostUrlLi, setPublishedPostUrlLi] = useState(null);
 
-  // New states for LinkedIn Publisher enhancements
-  const [isScheduled, setIsScheduled] = useState(false);
-  const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)); // Default to tomorrow
-  const [weeklySchedule, setWeeklySchedule] = useState({}); // { 0: '09:00', 1: '10:00', ... }
+  // Local states for Publisher component
   const [selectedImages, setSelectedImages] = useState({}); // e.g. { 0: true, 1: false }
   const [selectedVideos, setSelectedVideos] = useState({});
   const [linkedinProfiles, setLinkedinProfiles] = useState([]);
@@ -88,6 +97,37 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
   const [profileError, setProfileError] = useState('');
   const [unifiedMedia, setUnifiedMedia] = useState([]);
   const [previewedMedia, setPreviewedMedia] = useState(null);
+  const [schedulePreview, setSchedulePreview] = useState([]);
+
+  useEffect(() => {
+    if (!followupPosts || followupPosts.length === 0) {
+      setSchedulePreview([]);
+      return;
+    }
+
+    const daysOfWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+    const getScheduledTime = (date) => {
+      const dayIndex = date.getDay();
+      return weeklySchedule[dayIndex] || 'N/A';
+    };
+
+    const preview = followupPosts.map((post, index) => {
+      const postDate = new Date(scheduleDate);
+      postDate.setDate(postDate.getDate() + index + 1);
+
+      return {
+        key: `followup-${index}`,
+        date: postDate.toLocaleDateString('pt-BR'),
+        day: daysOfWeek[postDate.getDay()],
+        time: getScheduledTime(postDate),
+        title: post.tipo_gancho || `Follow-up ${index + 1}`
+      };
+    });
+
+    setSchedulePreview(preview);
+
+  }, [followupPosts, scheduleDate, weeklySchedule]);
 
   const formatBytes = (bytes, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
@@ -497,9 +537,32 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
                             Esta é a data do primeiro post. Os posts de follow-up serão agendados nos dias seguintes.
                         </Typography>
                     </Grid>
-                    <Grid item xs={12} md={8}>
+                    <Grid item xs={12} md={5}>
                         <Typography variant="h6" gutterBottom>2. Horários da Semana</Typography>
                         <TimeHeatMap onScheduleChange={setWeeklySchedule} />
+                    </Grid>
+                    <Grid item xs={12} md={3}>
+                        <Typography variant="h6" gutterBottom>3. Prévia do Agendamento</Typography>
+                        <Paper sx={{ p: 2, height: '100%', overflowY: 'auto' }}>
+                            {schedulePreview.length > 0 ? (
+                                <List dense>
+                                    {schedulePreview.map(item => (
+                                        <ListItem key={item.key} disablePadding sx={{ mb: 1 }}>
+                                            <ListItemText
+                                                primary={`${item.date} (${item.day}) às ${item.time}`}
+                                                secondary={item.title}
+                                                primaryTypographyProps={{ variant: 'body2', fontWeight: 'bold' }}
+                                                secondaryTypographyProps={{ variant: 'caption' }}
+                                            />
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            ) : (
+                                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 2 }}>
+                                    Nenhum post de follow-up para exibir.
+                                </Typography>
+                            )}
+                        </Paper>
                     </Grid>
                   </Grid>
                 </LocalizationProvider>

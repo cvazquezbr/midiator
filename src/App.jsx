@@ -444,6 +444,11 @@ function App() {
   const [isGeneratingFollowup, setIsGeneratingFollowup] = useState(false);
   const [followupPostsQuantity, setFollowupPostsQuantity] = useState(5);
 
+  // Publisher State
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)); // Default to tomorrow
+  const [weeklySchedule, setWeeklySchedule] = useState({}); // { 0: '09:00', 1: '10:00', ... }
+
 
   // Estados para a Geração com IA
   const [inputMethod, setInputMethod] = useState('csv');
@@ -900,6 +905,10 @@ function App() {
         conteudoPequeno: conteudoPequeno,
         conteudoFormatado: conteudoFormatado,
         followupPosts: followupPosts,
+        // Add scheduling state
+        isScheduled: isScheduled,
+        scheduleDate: scheduleDate,
+        weeklySchedule: weeklySchedule,
       };
 
       const jsonString = JSON.stringify(stateToSave, null, 2);
@@ -1131,6 +1140,17 @@ function App() {
               setFollowupPosts(loadedState.followupPosts || []);
             } else {
               setFollowupPosts([]);
+            }
+
+            // Restore scheduling state (add a version check if this feature is versioned)
+            if (loadedState.isScheduled !== undefined) {
+              setIsScheduled(loadedState.isScheduled);
+            }
+            if (loadedState.scheduleDate) {
+              setScheduleDate(new Date(loadedState.scheduleDate));
+            }
+            if (loadedState.weeklySchedule) {
+              setWeeklySchedule(loadedState.weeklySchedule);
             }
 
             // Navegação de passo
@@ -2873,6 +2893,12 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
               generatedImagesData={generatedImagesData}
               generatedVideosData={generatedVideosData}
               followupPosts={followupPosts}
+              isScheduled={isScheduled}
+              setIsScheduled={setIsScheduled}
+              scheduleDate={scheduleDate}
+              setScheduleDate={setScheduleDate}
+              weeklySchedule={weeklySchedule}
+              setWeeklySchedule={setWeeklySchedule}
             />
           )}
 
