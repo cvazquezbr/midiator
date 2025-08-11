@@ -220,6 +220,21 @@ function App() {
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [backgroundImage, setBackgroundImage] = useState(null);
   const [colorPalette, setColorPalette] = useState([]);
+  const [campaignColors, setCampaignColors] = useState([]);
+
+  const loadCampaignColors = useCallback(() => {
+    const { colors } = getCampaignPrompt();
+    setCampaignColors(colors || []);
+  }, []);
+
+  useEffect(() => {
+    loadCampaignColors();
+  }, [loadCampaignColors]);
+
+  const combinedPalette = useMemo(() => {
+    const allColors = [...(colorPalette || []), ...(campaignColors || [])];
+    return [...new Set(allColors)];
+  }, [colorPalette, campaignColors]);
   const [fieldPositions, setFieldPositions] = useState({});
   const [fieldStyles, setFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
@@ -2868,7 +2883,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                   setFieldStyles={setFieldStyles}
                   csvData={csvData}
                   onImageDisplayedSizeChange={setDisplayedImageSize}
-                  colorPalette={colorPalette}
+                  colorPalette={combinedPalette}
                   onCsvDataUpdate={handleCsvRecordContentUpdate}
                   onSelectFieldExternal={setSelectedField}
                   originalImageSize={originalImageSize}
@@ -3024,7 +3039,10 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
       />
        <CampaignStandardsModal
         open={showCampaignStandardsModal}
-        onClose={() => setShowCampaignStandardsModal(false)}
+        onClose={() => {
+          setShowCampaignStandardsModal(false);
+          loadCampaignColors();
+        }}
       />
       <LoadingDialog
         open={isGeneratingCampaign || isSaving || isLoading}
