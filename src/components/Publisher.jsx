@@ -524,45 +524,51 @@ const Publisher = ({
               {isScheduled && (
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
                   <Grid container spacing={3} sx={{ mt: 1 }}>
-                    <Grid item xs={12} md={4}>
-                        <Typography variant="h6" gutterBottom>1. Data de Início da Campanha</Typography>
-                        <DatePicker
-                            label="Selecione a data inicial"
-                            value={scheduleDate}
-                            onChange={(newDate) => setScheduleDate(newDate)}
-                            renderInput={(params) => <TextField {...params} fullWidth />}
-                            minDate={new Date()}
-                        />
-                         <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                            Esta é a data do primeiro post. Os posts de follow-up serão agendados nos dias seguintes.
-                        </Typography>
-                    </Grid>
+                    {/* Left Column */}
                     <Grid item xs={12} md={5}>
+                      <Grid container direction="column" spacing={3}>
+                        <Grid item>
+                          <Typography variant="h6" gutterBottom>1. Data de Início da Campanha</Typography>
+                          <DatePicker
+                              label="Selecione a data inicial"
+                              value={scheduleDate}
+                              onChange={(newDate) => setScheduleDate(newDate)}
+                              renderInput={(params) => <TextField {...params} fullWidth />}
+                              minDate={new Date()}
+                          />
+                          <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                              Esta é a data do primeiro post. Os posts de follow-up serão agendados nos dias seguintes.
+                          </Typography>
+                        </Grid>
+                        <Grid item>
+                          <Typography variant="h6" gutterBottom>3. Prévia do Agendamento</Typography>
+                          <Paper sx={{ p: 2, maxHeight: 300, overflowY: 'auto' }}>
+                              {schedulePreview.length > 0 ? (
+                                  <List dense>
+                                      {schedulePreview.map(item => (
+                                          <ListItem key={item.key} disablePadding sx={{ mb: 1 }}>
+                                              <ListItemText
+                                                  primary={`${item.date} (${item.day}) às ${item.time}`}
+                                                  secondary={item.title}
+                                                  primaryTypographyProps={{ variant: 'body2', fontWeight: 'bold' }}
+                                                  secondaryTypographyProps={{ variant: 'caption' }}
+                                              />
+                                          </ListItem>
+                                      ))}
+                                  </List>
+                              ) : (
+                                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 2 }}>
+                                      Nenhum post de follow-up para exibir.
+                                  </Typography>
+                              )}
+                          </Paper>
+                        </Grid>
+                      </Grid>
+                    </Grid>
+                    {/* Right Column */}
+                    <Grid item xs={12} md={7}>
                         <Typography variant="h6" gutterBottom>2. Horários da Semana</Typography>
                         <TimeHeatMap onScheduleChange={setWeeklySchedule} />
-                    </Grid>
-                    <Grid item xs={12} md={3}>
-                        <Typography variant="h6" gutterBottom>3. Prévia do Agendamento</Typography>
-                        <Paper sx={{ p: 2, height: '100%', overflowY: 'auto' }}>
-                            {schedulePreview.length > 0 ? (
-                                <List dense>
-                                    {schedulePreview.map(item => (
-                                        <ListItem key={item.key} disablePadding sx={{ mb: 1 }}>
-                                            <ListItemText
-                                                primary={`${item.date} (${item.day}) às ${item.time}`}
-                                                secondary={item.title}
-                                                primaryTypographyProps={{ variant: 'body2', fontWeight: 'bold' }}
-                                                secondaryTypographyProps={{ variant: 'caption' }}
-                                            />
-                                        </ListItem>
-                                    ))}
-                                </List>
-                            ) : (
-                                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 2 }}>
-                                    Nenhum post de follow-up para exibir.
-                                </Typography>
-                            )}
-                        </Paper>
                     </Grid>
                   </Grid>
                 </LocalizationProvider>
