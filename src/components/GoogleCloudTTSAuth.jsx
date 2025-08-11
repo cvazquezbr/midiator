@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getGoogleCloudTTSCredentials, saveGoogleCloudTTSCredentials, removeGoogleCloudTTSCredentials } from '../utils/googleCloudTTSCredentials';
+import { callGoogleCloudTTSAPI } from '../utils/googleCloudTTSAPI';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Alert } from '@mui/material';
 import { InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
@@ -10,6 +11,7 @@ const GoogleCloudTTSAuth = () => {
   const [currentStoredCredentials, setCurrentStoredCredentials] = useState(null);
   const [error, setError] = useState('');
   const [showInfobox, setShowInfobox] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
     const storedCredentials = getGoogleCloudTTSCredentials();
@@ -40,6 +42,24 @@ const GoogleCloudTTSAuth = () => {
     setCurrentStoredCredentials(null);
     setCredentials('');
     toast.info('Credenciais do Google Cloud TTS removidas.');
+  };
+
+  const handleTestConnection = async () => {
+    if (!credentials.trim()) {
+      toast.error('Por favor, insira as credenciais para testar.');
+      return;
+    }
+    setIsTesting(true);
+    try {
+      const parsedCredentials = JSON.parse(credentials);
+      await callGoogleCloudTTSAPI('teste', parsedCredentials);
+      toast.success('Conexão com a API Google Cloud TTS bem-sucedida!');
+    } catch (err) {
+      console.error('Erro no teste de conexão com Google Cloud TTS:', err);
+      toast.error(`Falha na conexão: ${err.message}`);
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return (
@@ -84,17 +104,20 @@ const GoogleCloudTTSAuth = () => {
         {error && (
           <Alert severity="error">{error}</Alert>
         )}
-        <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between' }}>
+        <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Button onClick={handleTestConnection} disabled={isTesting}>
+            {isTesting ? 'Testando...' : 'Testar Conexão'}
+          </Button>
           <Box>
             {currentStoredCredentials && (
               <Button onClick={handleRemove} color="error">
                 Remover
               </Button>
             )}
+            <Button onClick={handleSave} variant="contained" sx={{ ml: 1 }}>
+              Salvar
+            </Button>
           </Box>
-          <Button onClick={handleSave} variant="contained">
-            Salvar
-          </Button>
         </Box>
       </Box>
 

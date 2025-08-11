@@ -17,7 +17,7 @@ const steps = [
     description: (
       <Typography variant="body2">
         Abra o{' '}
-        <Link href="https://www.linkedin.com/developers/apps/" target="_blank" rel="noopener noreferrer">
+        <Link href="https://www.linkedin.com/developers/apps/" target="_blank" rel="noopener noreferrer" sx={{ color: 'primary.main' }}>
           LinkedIn Developer Portal
         </Link>{' '}
         e faça login com sua conta do LinkedIn.

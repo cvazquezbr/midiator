@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getGeminiApiKey, saveGeminiApiKey, removeGeminiApiKey } from '../utils/geminiCredentials';
+import { callGeminiApi } from '../utils/geminiAPI';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Alert } from '@mui/material';
 import { Visibility, VisibilityOff, InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
@@ -11,6 +12,7 @@ const GeminiAuthSetup = () => {
   const [showKey, setShowKey] = useState(false);
   const [error, setError] = useState('');
   const [showInfobox, setShowInfobox] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
     const storedKey = getGeminiApiKey();
@@ -34,6 +36,23 @@ const GeminiAuthSetup = () => {
     setCurrentStoredKey(null);
     setApiKey('');
     toast.info('Chave da API Gemini removida.');
+  };
+
+  const handleTestConnection = async () => {
+    if (!apiKey.trim()) {
+      toast.error('Por favor, insira uma chave de API para testar.');
+      return;
+    }
+    setIsTesting(true);
+    try {
+      await callGeminiApi('Diga "Olá, mundo!" em português.', apiKey.trim());
+      toast.success('Conexão com a API Gemini bem-sucedida!');
+    } catch (err) {
+      console.error('Erro no teste de conexão com Gemini:', err);
+      toast.error(`Falha na conexão: ${err.message}`);
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   const toggleShowKey = () => {
@@ -89,17 +108,18 @@ const GeminiAuthSetup = () => {
           <Alert severity="error">{error}</Alert>
         )}
 
-        <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between' }}>
+        <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Button onClick={handleTestConnection} disabled={isTesting}>
+            {isTesting ? 'Testando...' : 'Testar Conexão'}
+          </Button>
           <Box>
             {currentStoredKey && (
               <Button onClick={handleRemove} color="error">
-                Remover Chave
+                Remover
               </Button>
             )}
-          </Box>
-          <Box>
-            <Button onClick={handleSave} variant="contained">
-              Salvar Chave
+            <Button onClick={handleSave} variant="contained" sx={{ ml: 1 }}>
+              Salvar
             </Button>
           </Box>
         </Box>
