@@ -21,7 +21,7 @@ const steps = [
       <>
         <Typography variant="body2" sx={{ mb: 1 }}>
           Abra o{' '}
-          <Link href="https://console.cloud.google.com/apis/library/texttospeech.googleapis.com" target="_blank" rel="noopener noreferrer" sx={{ color: 'primary.main' }}>
+          <Link href="https://console.cloud.google.com/apis/library/texttospeech.googleapis.com" target="_blank" rel="noopener noreferrer" sx={{ color: '#90caf9' }}>
             Cloud Text-to-Speech API
           </Link>{' '}
           no Google Cloud Console.

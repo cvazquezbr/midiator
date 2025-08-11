@@ -2103,6 +2103,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                 <IconButton
                   onClick={() => setDarkMode(!darkMode)}
                   sx={{ color: 'white' }}
+                  aria-label="toggle-dark-mode"
                 >
                   {darkMode ? <Brightness7 /> : <Brightness4 />}
                 </IconButton>
