@@ -31,7 +31,7 @@ import {
 import { Language, Publish, LinkedIn } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DateTimePicker, DatePicker } from '@mui/x-date-pickers';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import TimeHeatMap from './TimeHeatMap';
 import { publishToWordPress } from '../utils/wordpressAPI';
@@ -78,8 +78,8 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
 
   // New states for LinkedIn Publisher enhancements
   const [isScheduled, setIsScheduled] = useState(false);
-  const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 60 * 60 * 1000)); // Default to 1 hour from now
-  const [selectedTime, setSelectedTime] = useState(null);
+  const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)); // Default to tomorrow
+  const [weeklySchedule, setWeeklySchedule] = useState({}); // { 0: '09:00', 1: '10:00', ... }
   const [selectedImages, setSelectedImages] = useState({}); // e.g. { 0: true, 1: false }
   const [selectedVideos, setSelectedVideos] = useState({});
   const [linkedinProfiles, setLinkedinProfiles] = useState([]);
@@ -236,10 +236,22 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
 
         setPublishingStatusLi('Criando planilha de controle no Google Drive...');
 
-        const headers = ['Data de Publicação', 'Author URN', 'Título', 'Conteúdo', 'Convite (CTA)', 'Hashtags', 'Imagens (IDs no Drive)', 'Video (ID no Drive)'];
+        const headers = ['Data', 'Horário', 'Author URN', 'Título', 'Conteúdo', 'Convite (CTA)', 'Hashtags', 'Imagens (IDs no Drive)', 'Video (ID no Drive)'];
+
+        const formatDate = (date) => date.toLocaleDateString('pt-BR');
+        const getScheduledTime = (date) => {
+            const dayIndex = date.getDay(); // 0 for Sunday, 1 for Monday, etc.
+            const time = weeklySchedule[dayIndex];
+            if (!time) {
+                console.warn(`Nenhum horário agendado para o dia ${dayIndex}. Usando 12:00 como padrão.`);
+                return '12:00';
+            }
+            return time;
+        };
 
         const mainPostRow = [
-            scheduleDate.toLocaleString('pt-BR'),
+            formatDate(scheduleDate),
+            getScheduledTime(scheduleDate),
             selectedProfile,
             campaignContent?.titulo || '',
             campaignContent?.conteudo || '',
@@ -257,7 +269,8 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
                 followupDate.setDate(scheduleDate.getDate() + index + 1);
 
                 const followupRow = [
-                    followupDate.toLocaleString('pt-BR'),
+                    formatDate(followupDate),
+                    getScheduledTime(followupDate),
                     selectedProfile,
                     post.tipo_gancho || '', // Usando tipo_gancho como título
                     post.conteudo || '',
@@ -470,36 +483,23 @@ const Publisher = ({ campaignContent, conteudoFormatado, generatedImagesData, ge
 
               {isScheduled && (
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
-                  <Grid container spacing={2} sx={{ mt: 1 }}>
+                  <Grid container spacing={3} sx={{ mt: 1 }}>
                     <Grid item xs={12} md={4}>
-                      <DatePicker
-                        label="Data do Agendamento"
-                        value={scheduleDate}
-                        onChange={(newDate) => {
-                          const newScheduleDate = new Date(scheduleDate);
-                          newScheduleDate.setFullYear(newDate.getFullYear());
-                          newScheduleDate.setMonth(newDate.getMonth());
-                          newScheduleDate.setDate(newDate.getDate());
-                          setScheduleDate(newScheduleDate);
-                        }}
-                        renderInput={(params) => <TextField {...params} fullWidth />}
-                        minDate={new Date()}
-                      />
+                        <Typography variant="h6" gutterBottom>1. Data de Início da Campanha</Typography>
+                        <DatePicker
+                            label="Selecione a data inicial"
+                            value={scheduleDate}
+                            onChange={(newDate) => setScheduleDate(newDate)}
+                            renderInput={(params) => <TextField {...params} fullWidth />}
+                            minDate={new Date()}
+                        />
+                         <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                            Esta é a data do primeiro post. Os posts de follow-up serão agendados nos dias seguintes.
+                        </Typography>
                     </Grid>
                     <Grid item xs={12} md={8}>
-                        <Typography variant="subtitle2" gutterBottom>Selecione o Horário</Typography>
-                        <TimeHeatMap
-                            selectedDate={scheduleDate}
-                            selectedTime={selectedTime}
-                            onTimeSelect={(hour) => {
-                                setSelectedTime(hour);
-                                const newScheduleDate = new Date(scheduleDate);
-                                const [hours, minutes] = hour.split(':');
-                                newScheduleDate.setHours(parseInt(hours, 10));
-                                newScheduleDate.setMinutes(parseInt(minutes, 10));
-                                setScheduleDate(newScheduleDate);
-                            }}
-                        />
+                        <Typography variant="h6" gutterBottom>2. Horários da Semana</Typography>
+                        <TimeHeatMap onScheduleChange={setWeeklySchedule} />
                     </Grid>
                   </Grid>
                 </LocalizationProvider>
