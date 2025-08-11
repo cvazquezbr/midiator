@@ -161,8 +161,9 @@ const Publisher = ({
       try {
         const profiles = await getLinkedInProfiles();
         setLinkedinProfiles(profiles);
-        if (profiles.length > 0) {
-          setSelectedProfile(profiles[0].urn); // Default to the first profile
+        // Only set a default profile if one isn't already selected (e.g., from a loaded state)
+        if (profiles.length > 0 && !selectedProfile) {
+          setSelectedProfile(profiles[0].urn);
         }
       } catch (error) {
         console.error("Erro ao buscar perfis do LinkedIn:", error);
@@ -174,20 +175,20 @@ const Publisher = ({
     fetchProfiles();
   }, []);
 
-  // Set default image selection when images are generated
+  // Set default image selection when images are generated, only if no selection exists
   useEffect(() => {
-    if (generatedImagesData && generatedImagesData.length > 0) {
-      setSelectedImages({ 0: true }); // Select the first image by default
-    } else {
+    if (generatedImagesData && generatedImagesData.length > 0 && !Object.values(selectedImages).some(v => v)) {
+      setSelectedImages({ 0: true });
+    } else if (!generatedImagesData || generatedImagesData.length === 0) {
       setSelectedImages({});
     }
   }, [generatedImagesData]);
 
-  // Set default video selection when videos are generated
+  // Set default video selection when videos are generated, only if no selection exists
   useEffect(() => {
-    if (generatedVideosData && generatedVideosData.length > 0) {
-      setSelectedVideos({ 0: true }); // Select the first video by default
-    } else {
+    if (generatedVideosData && generatedVideosData.length > 0 && !Object.values(selectedVideos).some(v => v)) {
+      setSelectedVideos({ 0: true });
+    } else if (!generatedVideosData || generatedVideosData.length === 0) {
       setSelectedVideos({});
     }
   }, [generatedVideosData]);
