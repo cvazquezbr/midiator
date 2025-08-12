@@ -540,6 +540,7 @@ const HtmlTextBox = ({
     color: style.color || '#000000',
     textDecoration: style.textDecoration || 'none',
     lineHeight: `${scaledLineHeight}px`,
+    textAlign: style.textAlign || 'left',
     textShadow: style.textShadow ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}` : 'none',
     WebkitTextStroke: style.textStroke ? `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}` : 'none',
     pointerEvents: 'none',
