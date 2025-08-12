@@ -13,6 +13,16 @@ import {
   Tooltip,
   Chip,
   Link as MuiLink,
+  TextField,
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  CircularProgress,
+  Card,
+  CardContent,
+  Divider,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -21,6 +31,7 @@ import {
   InfoOutlined as InfoOutlinedIcon,
   UploadFile as UploadFileIcon,
   Link as LinkIcon,
+  AutoAwesome as AutoAwesomeIcon,
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 import ColorThief from 'colorthief';
@@ -42,7 +53,7 @@ function TabPanel(props) {
       {...other}
     >
       {value === index && (
-        <Box sx={{ p: 3, width: '100%' }}>
+        <Box sx={{ p: 3, width: '100%', overflowY: 'auto' }}>
           {children}
         </Box>
       )}
@@ -50,7 +61,14 @@ function TabPanel(props) {
   );
 }
 
-const CampaignStandardsModal = ({ open, onClose }) => {
+const briefingOptions = {
+  objective: ['Branding', 'Site', 'Produto', 'Campanha de Marketing'],
+  targetAudience: ['Mulheres 30-45 anos', 'Jovens Gamers', 'Executivos C-Level', 'Famílias com Crianças'],
+  mainMessage: ['Confiança', 'Inovação', 'Sustentabilidade', 'Acessibilidade', 'Luxo'],
+  atmosphere: ['Calmo e Sereno', 'Energético e Vibrante', 'Premium e Sofisticado', 'Divertido e Descontraído'],
+};
+
+const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const [value, setValue] = useState(0);
   const [hasStoredPrompt, setHasStoredPrompt] = useState(false);
   const [persona, setPersona] = useState('');
@@ -60,6 +78,51 @@ const CampaignStandardsModal = ({ open, onClose }) => {
   const [colors, setColors] = useState([]);
   const [editingField, setEditingField] = useState(null);
   const imageInputRef = useRef(null);
+
+  // State for AI Palette Generation
+  const [briefing, setBriefing] = useState({
+    objective: '',
+    targetAudience: '',
+    mainMessage: '',
+    atmosphere: '',
+    details: '',
+  });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedPalette, setGeneratedPalette] = useState(null);
+
+  const handleBriefingChange = (e) => {
+    const { name, value } = e.target;
+    setBriefing(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleGenerateClick = async () => {
+    setIsGenerating(true);
+    setGeneratedPalette(null);
+    try {
+      const fullBriefing = `
+- Objetivo: ${briefing.objective}
+- Público-alvo: ${briefing.targetAudience}
+- Mensagem principal: ${briefing.mainMessage}
+- Atmosfera desejada: ${briefing.atmosphere}
+- Detalhes adicionais: ${briefing.details}
+      `;
+      const result = await onGeneratePalette(fullBriefing.trim());
+      setGeneratedPalette(result);
+    } catch (error) {
+      toast.error('Erro ao gerar paleta de cores. Tente novamente.');
+      console.error("Error generating color palette:", error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const applyGeneratedPalette = () => {
+    if (generatedPalette && generatedPalette.palette) {
+      const newColors = generatedPalette.palette.map(p => p.hex);
+      setColors(newColors);
+      toast.success('Paleta de cores aplicada!');
+    }
+  };
 
   useEffect(() => {
     if (open) {
@@ -289,6 +352,73 @@ const CampaignStandardsModal = ({ open, onClose }) => {
                   sx={{ mr: 1, mb: 1 }}
                 />
               ))}
+            </Box>
+
+            <Divider sx={{ my: 4 }} />
+
+            {/* AI Palette Generator */}
+            <Box>
+              <Typography variant="h6" gutterBottom>Gerar Paleta com IA</Typography>
+              <Grid container spacing={2}>
+                {Object.keys(briefingOptions).map(key => (
+                  <Grid item xs={12} sm={6} key={key}>
+                    <FormControl fullWidth>
+                      <InputLabel>{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}</InputLabel>
+                      <Select
+                        name={key}
+                        value={briefing[key]}
+                        label={key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}
+                        onChange={handleBriefingChange}
+                      >
+                        {briefingOptions[key].map(option => (
+                          <MenuItem key={option} value={option}>{option}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                ))}
+              </Grid>
+              <TextField
+                name="details"
+                label="Detalhes Adicionais do Briefing"
+                multiline
+                rows={4}
+                value={briefing.details}
+                onChange={handleBriefingChange}
+                fullWidth
+                placeholder="INCLUINDO:
+- Quaisquer cores proibidas ou obrigatórias"
+                margin="normal"
+              />
+              <Button
+                variant="contained"
+                startIcon={<AutoAwesomeIcon />}
+                onClick={handleGenerateClick}
+                disabled={isGenerating || !onGeneratePalette}
+              >
+                {isGenerating ? <CircularProgress size={24} /> : 'Gerar Paleta'}
+              </Button>
+
+              {generatedPalette && (
+                <Card sx={{ mt: 3 }}>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>Paleta Gerada ({generatedPalette.harmony})</Typography>
+                    {generatedPalette.palette.map((color, index) => (
+                      <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                        <Box sx={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: color.hex, border: '1px solid #ddd' }} />
+                        <Box>
+                          <Typography variant="body1" sx={{ fontWeight: 'bold' }}>{color.name} ({color.role})</Typography>
+                          <Typography variant="body2" color="text.secondary">{color.hex} | {color.rgb}</Typography>
+                          <Typography variant="caption">{color.justification}</Typography>
+                        </Box>
+                      </Box>
+                    ))}
+                    <Button variant="outlined" sx={{ mt: 2 }} onClick={applyGeneratedPalette}>
+                      Aplicar Paleta
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </Box>
           </TabPanel>
         </DialogContent>
