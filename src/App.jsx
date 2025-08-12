@@ -642,7 +642,7 @@ A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação mark
     {
       label: 'Campanha',
       description: 'Criar o material de referência para a campanha.',
-      icon: Campaign,
+      icon: CampaignIcon,
     },
     {
       label: 'Conteúdo',
