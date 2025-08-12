@@ -772,6 +772,7 @@ function App() {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleLoadStateFromFile = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -1513,4 +1514,3 @@ function App() {
 }
 
 export default App;
-
