@@ -22,13 +22,6 @@ import {
   ToggleButtonGroup,
   TextField,
   Link as MuiLink,
-  Drawer,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  AppBar,
-  Toolbar,
   Fab,
   FormControl,
   InputLabel,
@@ -77,6 +70,8 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Toaster, toast } from 'sonner';
 
+import MainAppBar from './components/MainAppBar';
+import Sidebar from './components/Sidebar';
 import FieldPositioner from './components/FieldPositioner';
 import FormattingPanel from './components/FormattingPanel';
 import FormattingDrawer from './components/FormattingDrawer';
@@ -1110,217 +1105,40 @@ function App() {
 
   const currentTheme = darkMode ? darkTheme : lightTheme;
 
-  // Componente do indicador de step moderno
-  const StepIndicator = ({ step, isActive, isCompleted, onClick }) => {
-    const Icon = step.icon;
-    return (
-      <ListItem
-        button
-        onClick={onClick}
-        sx={{
-          borderRadius: 3,
-          mb: 1,
-          background: isActive
-            ? 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)'
-            : isCompleted
-              ? 'rgba(34, 197, 94, 0.1)'
-              : 'transparent',
-          color: isActive ? 'white' : 'inherit',
-          '&:hover': {
-            backgroundColor: isActive ? undefined : 'rgba(139, 92, 246, 0.1)',
-          },
-          transition: 'all 0.3s ease',
-          px: 2,
-          py: 1.5
-        }}
-      >
-        <ListItemIcon sx={{
-          color: isActive ? 'white' : isCompleted ? '#22c55e' : 'inherit',
-          minWidth: 40
-        }}>
-          {isCompleted && !isActive ? <Check /> : <Icon />}
-        </ListItemIcon>
-        <ListItemText
-          primary={step.label}
-          secondary={step.description}
-          primaryTypographyProps={{
-            sx: {
-              fontWeight: isActive ? 600 : 500,
-              fontSize: '0.95rem'
-            }
-          }}
-          secondaryTypographyProps={{
-            sx: {
-              color: isActive ? 'rgba(255,255,255,0.8)' : 'text.secondary',
-              fontSize: '0.75rem'
-            }
-          }}
-        />
-        {isActive && <ChevronRight sx={{ color: 'white' }} />}
-      </ListItem>
-    );
-  };
-
   return (
     <ThemeProvider theme={currentTheme}>
       <CssBaseline />
       <Toaster richColors position="top-center" />
       <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-        {/* Header moderno com gradiente */}
-        <AppBar
-          position="fixed"
-          sx={{
-            zIndex: (theme) => theme.zIndex.drawer + 1,
-            background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
-            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-          }}
-        >
-          <Toolbar>
-            <Box sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1, // Adjusted gap to accommodate the wider logo text
-              flexGrow: 1
-            }}>
-              {/* New SVG Logo */}
-              <img src="/logo.svg" alt="Midiator Logo" style={{ height: '40px' }} />
-              {/* Text is now part of the SVG, so no separate text elements needed here. */}
-            </Box>
+        <MainAppBar
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+          setShowSetupModal={setShowSetupModal}
+          handleMenuOpen={handleMenuOpen}
+          handleMenuClose={handleMenuClose}
+          anchorElMenu={anchorElMenu}
+          setShowCampaignStandardsModal={setShowCampaignStandardsModal}
+          handleSaveTemplateClick={handleSaveTemplateClick}
+          handleLoadTemplateClick={handleLoadTemplateClick}
+          exportCsv={exportCsv}
+          csvData={csvData}
+          csvHeaders={csvHeaders}
+          loadStateInputRef={loadStateInputRef}
+          handleLoadStateFromFile={handleLoadStateFromFile}
+        />
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Tooltip title={darkMode ? "Alternar para modo claro" : "Alternar para modo escuro"}>
-                <IconButton
-                  onClick={() => setDarkMode(!darkMode)}
-                  sx={{ color: 'white' }}
-                  aria-label="toggle-dark-mode"
-                >
-                  {darkMode ? <Brightness7 /> : <Brightness4 />}
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Configurações">
-                <IconButton
-                  onClick={() => setShowSetupModal(true)}
-                  sx={{ color: 'white' }}
-                  aria-label="Configurações"
-                >
-                  <Settings />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Mais ações">
-                <IconButton
-                  onClick={handleMenuOpen}
-                  sx={{ color: 'white' }}
-                  aria-label="Mais ações"
-                >
-                  <MoreVert />
-                </IconButton>
-              </Tooltip>
-              <Menu
-                anchorEl={anchorElMenu}
-                open={Boolean(anchorElMenu)}
-                onClose={handleMenuClose}
-              >
-                <MenuItem onClick={() => { setShowCampaignStandardsModal(true); handleMenuClose(); }}>
-                  <Edit sx={{ mr: 1 }} />
-                  Padrões de Campanha
-                </MenuItem>
-                <MenuItem onClick={handleSaveTemplateClick}>
-                  <DownloadIcon sx={{ mr: 1 }} />
-                  Salvar Campanha
-                </MenuItem>
-                <MenuItem onClick={handleLoadTemplateClick}>
-                  <FileUploadIcon sx={{ mr: 1 }} />
-                  Carregar Campanha
-                </MenuItem>
-                <MenuItem onClick={() => { exportCsv(csvData, csvHeaders); handleMenuClose(); }} disabled={csvData.length === 0}>
-                  <DownloadIcon sx={{ mr: 1 }} />
-                  Exportar CSV
-                </MenuItem>
-              </Menu>
-              <input
-                type="file"
-                hidden
-                accept=".json,.midiator"
-                onChange={handleLoadStateFromFile}
-                ref={loadStateInputRef}
-              />
-            </Box>
-          </Toolbar>
-        </AppBar>
-
-        {/* Sidebar moderna */}
-        <Drawer
-          variant="persistent"
-          anchor="left"
-          open={sidebarOpen}
-          sx={{
-            width: sidebarOpen ? 320 : 0,
-            flexShrink: 0,
-            '& .MuiDrawer-paper': {
-              width: 320,
-              boxSizing: 'border-box',
-              mt: 8,
-              borderRight: '1px solid',
-              borderColor: 'divider',
-              background: darkMode ? '#1e293b' : '#ffffff'
-            },
-          }}
-        >
-          <Box sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
-              Etapas do Processo
-            </Typography>
-            <List sx={{ p: 0 }}>
-              {steps.map((step, index) => (
-                <StepIndicator
-                  key={index}
-                  step={step}
-                  index={index}
-                  isActive={activeStep === index}
-                  isCompleted={index < activeStep}
-                  onClick={() => setActiveStep(index)}
-                />
-              ))}
-            </List>
-
-            {/* Indicadores de status */}
-            <Box sx={{ mt: 4 }}>
-              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
-                Status do Projeto
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <Chip
-                  icon={<FileUpload />}
-                  label={`${csvData.length} registros`}
-                  color={csvData.length > 0 ? 'success' : 'default'}
-                  variant={csvData.length > 0 ? 'filled' : 'outlined'}
-                  size="small"
-                />
-                <Chip
-                  icon={<ImageIcon />}
-                  label="Imagem de fundo"
-                  color={backgroundImage ? 'success' : 'default'}
-                  variant={backgroundImage ? 'filled' : 'outlined'}
-                  size="small"
-                />
-                <Chip
-                  icon={<Settings />}
-                  label={`${visibleFields}/${totalFields} campos`}
-                  color={visibleFields > 0 ? 'info' : 'default'}
-                  variant="filled"
-                  size="small"
-                />
-                <Chip
-                  icon={<Palette />}
-                  label={`${styledFields} estilos`}
-                  color={styledFields > 0 ? 'secondary' : 'default'}
-                  variant="filled"
-                  size="small"
-                />
-              </Box>
-            </Box>
-          </Box>
-        </Drawer>
+        <Sidebar
+          sidebarOpen={sidebarOpen}
+          darkMode={darkMode}
+          steps={steps}
+          activeStep={activeStep}
+          setActiveStep={setActiveStep}
+          csvData={csvData}
+          backgroundImage={backgroundImage}
+          visibleFields={visibleFields}
+          totalFields={totalFields}
+          styledFields={styledFields}
+        />
 
         <Fab
           size="small"
