@@ -2343,7 +2343,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
           component="main"
           sx={{
             flexGrow: 1,
-            p: 3,
+            p: { xs: 1, sm: 2, md: 3 },
             mt: 8,
             ml: sidebarOpen ? 0 : 0,
             transition: 'margin-left 0.3s ease',
@@ -2352,7 +2352,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
           {/* Passo 0: Campanha */}
           {activeStep === 0 && (
             <Card>
-              <CardContent sx={{ p: 4 }}>
+              <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 4 } }}>
                 <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
                   <Campaign />
                   {steps[0].label}
@@ -2632,7 +2632,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
           {/* Passo 1: Definir Dados Iniciais */}
           {activeStep === 1 && (
             <Card>
-              <CardContent sx={{ p: 4 }}>
+              <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 4 } }}>
                 <Typography variant="h5" gutterBottom sx={{
                   display: 'flex',
                   alignItems: 'center',
@@ -2675,7 +2675,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                           border: isDraggingOverCsv ? '2px dashed #8b5cf6' : '2px dashed #d1d5db',
                           backgroundColor: isDraggingOverCsv ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
                           textAlign: 'center',
-                          p: 4,
+                          p: { xs: 1.5, sm: 2, md: 4 },
                           cursor: 'pointer',
                           transition: 'all 0.3s ease',
                           '&:hover': {
@@ -2727,7 +2727,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                         border: '2px dashed #d1d5db',
                         backgroundColor: 'transparent',
                         textAlign: 'center',
-                        p: 4,
+                        p: { xs: 1.5, sm: 2, md: 4 },
                         cursor: 'pointer',
                         transition: 'all 0.3s ease',
                         '&:hover': {
@@ -2846,7 +2846,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
           {/* Passo 3: Upload Imagem */}
           {activeStep === 3 && (
             <Card>
-              <CardContent sx={{ p: 4 }}>
+              <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 4 } }}>
                 <Typography variant="h5" gutterBottom sx={{
                   display: 'flex',
                   alignItems: 'center',
@@ -2864,7 +2864,7 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
                         border: isDraggingOverImage ? '2px dashed #8b5cf6' : '2px dashed #d1d5db',
                         backgroundColor: isDraggingOverImage ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
                         textAlign: 'center',
-                        p: 4,
+                        p: { xs: 1.5, sm: 2, md: 4 },
                         cursor: 'pointer',
                         transition: 'all 0.3s ease',
                         '&:hover': {
