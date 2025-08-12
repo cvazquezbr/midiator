@@ -8,7 +8,7 @@ import {
   Button,
 } from '@mui/material';
 import {
-  ImageIcon,
+  Image as ImageIcon,
   Visibility,
 } from '@mui/icons-material';
 
