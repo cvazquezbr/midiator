@@ -27,6 +27,9 @@ import {
   Checkbox,
   FormGroup,
   FormControlLabel,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import RichTextEditor from './RichTextEditor';
 import {
@@ -34,6 +37,7 @@ import {
   TextFields as TextFieldsIcon,
   Palette as PaletteIcon,
   InfoOutlined as InfoOutlinedIcon,
+  ExpandMore as ExpandMoreIcon,
   UploadFile as UploadFileIcon,
   Link as LinkIcon,
   AutoAwesome as AutoAwesomeIcon,
@@ -148,7 +152,6 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
 
   const handleSave = () => {
     saveCampaignPrompt({ persona, autor, instrucoes, formato, colors });
-    setHasStoredPrompt(true);
     toast.success('Padrões de campanha salvos com sucesso!');
     onClose();
   };
