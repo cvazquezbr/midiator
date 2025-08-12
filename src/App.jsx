@@ -106,6 +106,7 @@ import {
   generateFollowupPosts,
   generateIAContent,
 } from './utils/generationHandlers.js';
+import { saveCampaignState, loadCampaignState } from './utils/campaignState.js';
 
 // Temas atualizados com gradientes e cores modernas
 const lightTheme = createTheme({
@@ -913,391 +914,104 @@ A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação mark
   const handleSaveState = async () => {
     setIsSaving(true);
     try {
-      // Função auxiliar para converter Blob para Base64
-      const blobToBase64 = (blob) => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      };
-
-      // Mapear generatedImagesData para um formato serializável
-      const serializableGeneratedImages = await Promise.all(
-        generatedImagesData.map(async (img) => {
-          let imageBase64 = null;
-          if (img.blob) {
-            try {
-              imageBase64 = await blobToBase64(img.blob);
-            } catch (error) {
-              console.error("Erro ao converter blob para Base64:", error);
-              // Continuar mesmo se um blob falhar, para não impedir o salvamento do resto
-            }
-          }
-          return {
-            ...img,
-            blob: undefined, // Remover o blob original
-            url: undefined, // Remover o objectURL temporário
-            imageBase64: imageBase64, // Adicionar a string base64
-            // Manter: record, filename, customFieldPositions, customFieldStyles, backgroundImage (se individual)
-          };
-        })
-      );
-
-      const serializableGeneratedAudio = await Promise.all(
-          generatedAudioData.map(async (audio) => {
-              let audioBase64 = null;
-              if (audio.blob) {
-                  try {
-                      audioBase64 = await blobToBase64(audio.blob);
-                  } catch (error) {
-                      console.error("Erro ao converter blob de áudio para Base64:", error);
-                  }
-              }
-              return {
-                  ...audio,
-                  blob: undefined,
-                  audioBase64: audioBase64,
-              };
-          })
-      );
-
-      const serializableGeneratedVideos = await Promise.all(
-        generatedVideosData.map(async (video) => {
-          let videoBase64 = null;
-          if (video.blob) {
-            try {
-              videoBase64 = await blobToBase64(video.blob);
-            } catch (error) {
-              console.error("Erro ao converter blob de vídeo para Base64:", error);
-            }
-          }
-          return {
-            ...video,
-            blob: undefined,
-            url: undefined,
-            videoBase64: videoBase64,
-          };
-        })
-      );
-
       const stateToSave = {
-        version: "2.0", // Version bump to save followup posts
         backgroundImageUrl: backgroundImage,
-        originalImageSize: originalImageSize,
-        imageFilters: imageFilters,
-        fieldPositions: fieldPositions,
-        fieldStyles: fieldStyles,
-        csvHeaders: csvHeaders,
-        colorPalette: colorPalette,
-        csvData: csvData,
-        generatedImages: serializableGeneratedImages,
-        generatedAudio: serializableGeneratedAudio,
-        generatedVideos: serializableGeneratedVideos,
-        problema: problema,
-        solucao: solucao,
-        campaignContent: campaignContent,
-        persona: persona,
-        autor: autor,
-        instrucoes: instrucoes,
-        formato: formato,
-        conteudoMedio: conteudoMedio,
-        conteudoPequeno: conteudoPequeno,
-        conteudoFormatado: conteudoFormatado,
-        followupPosts: followupPosts,
-        // Add scheduling state
-        isScheduled: isScheduled,
-        scheduleDate: scheduleDate,
-        weeklySchedule: weeklySchedule,
-        // Add other publisher state
-        selectedProfile: selectedProfile,
-        selectedImages: selectedImages,
-        selectedVideos: selectedVideos,
+        originalImageSize,
+        imageFilters,
+        fieldPositions,
+        fieldStyles,
+        csvHeaders,
+        colorPalette,
+        csvData,
+        generatedImagesData,
+        generatedAudioData,
+        generatedVideosData,
+        problema,
+        solucao,
+        campaignContent,
+        persona,
+        autor,
+        instrucoes,
+        formato,
+        conteudoMedio,
+        conteudoPequeno,
+        conteudoFormatado,
+        followupPosts,
+        isScheduled,
+        scheduleDate,
+        weeklySchedule,
+        selectedProfile,
+        selectedImages,
+        selectedVideos,
       };
-
-      const jsonString = JSON.stringify(stateToSave, null, 2);
-      const compressedData = pako.gzip(jsonString);
-      const blob = new Blob([compressedData], { type: "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      const safeTitle = campaignContent?.titulo?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'sem-titulo';
-      link.download = `${safeTitle}.midiator`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-
+      await saveCampaignState(stateToSave);
+      toast.success("Campanha salva com sucesso!");
     } catch (error) {
       console.error("Erro ao salvar o estado:", error);
-      alert("Ocorreu um erro ao salvar a configuração.");
+      toast.error(`Ocorreu um erro ao salvar a configuração: ${error.message}`);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Função para carregar o estado do template de um arquivo
-  const handleLoadStateFromFile = (event) => {
+  const handleLoadStateFromFile = async (event) => {
     const file = event.target.files[0];
-    if (file) {
-      setIsLoading(true);
-      const reader = new FileReader();
-      reader.onload = async (e) => { // Tornar async para aguardar conversões
-        try {
-          let loadedState;
-          if (file.name.endsWith('.midiator')) {
-            const compressedData = new Uint8Array(e.target.result);
-            const decompressedData = pako.ungzip(compressedData, { to: 'string' });
-            loadedState = JSON.parse(decompressedData);
-          } else {
-            loadedState = JSON.parse(e.target.result);
-          }
+    if (!file) return;
 
-          // Função auxiliar para converter Base64 para Blob
-          const base64ToBlob = async (base64) => {
-            const res = await fetch(base64);
-            const blob = await res.blob();
-            return blob;
-          };
+    setIsLoading(true);
+    try {
+      const loadedState = await loadCampaignState(file);
 
-          // Verificar versão e campos essenciais
-          if (loadedState.version && ["1.0", "1.1", "1.2", "1.3", "1.4", "1.5", "1.6", "1.7", "1.8", "1.9", "2.0"].includes(loadedState.version) &&
-            loadedState.backgroundImageUrl !== undefined &&
-            loadedState.fieldPositions &&
-            loadedState.fieldStyles &&
-            loadedState.csvHeaders) {
+      // Restore state from the loaded object
+      setBackgroundImage(loadedState.backgroundImageUrl);
+      setFieldPositions(loadedState.fieldPositions);
+      setFieldStyles(loadedState.fieldStyles);
+      setCsvHeaders(loadedState.csvHeaders);
+      setOriginalImageSize(loadedState.originalImageSize || { width: 0, height: 0 });
+      setImageFilters(loadedState.imageFilters || { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 });
+      setColorPalette(loadedState.colorPalette || []);
+      setCsvData(loadedState.csvData || []);
+      setGeneratedImagesData(loadedState.generatedImagesData || []);
+      setGeneratedAudioData(loadedState.generatedAudioData || []);
+      setGeneratedVideosData(loadedState.generatedVideosData || []);
+      setProblema(loadedState.problema || '');
+      setSolucao(loadedState.solucao || '');
+      setCampaignContent(loadedState.campaignContent || null);
+      setPersona(loadedState.persona || '');
+      setAutor(loadedState.autor || '');
+      setInstrucoes(loadedState.instrucoes || '');
+      setFormato(loadedState.formato || '');
+      setConteudoMedio(loadedState.conteudoMedio || '');
+      setConteudoPequeno(loadedState.conteudoPequeno || '');
+      setConteudoFormatado(loadedState.conteudoFormatado || '');
+      setFollowupPosts(loadedState.followupPosts || []);
+      setIsScheduled(loadedState.isScheduled || false);
+      setScheduleDate(loadedState.scheduleDate ? new Date(loadedState.scheduleDate) : new Date());
+      setWeeklySchedule(loadedState.weeklySchedule || {});
+      setSelectedProfile(loadedState.selectedProfile || '');
+      setSelectedImages(loadedState.selectedImages || {});
+      setSelectedVideos(loadedState.selectedVideos || {});
 
-            setBackgroundImage(loadedState.backgroundImageUrl);
-            setFieldPositions(loadedState.fieldPositions);
-            setFieldStyles(loadedState.fieldStyles);
-            setCsvHeaders(loadedState.csvHeaders);
-
-            // Restore originalImageSize if it exists in the saved file
-            if (loadedState.originalImageSize) {
-              setOriginalImageSize(loadedState.originalImageSize);
-            }
-
-            // Restore imageFilters if they exist in the saved file
-            if (loadedState.imageFilters) {
-              setImageFilters(loadedState.imageFilters);
-            }
-
-            if (loadedState.colorPalette) {
-              setColorPalette(loadedState.colorPalette);
-            } else {
-              // Fallback se a paleta não estiver no JSON (templates antigos)
-              // Poderia tentar extrair da imagem carregada se backgroundImage existir
-              if (loadedState.backgroundImageUrl) {
-                const img = new Image();
-                img.crossOrigin = 'Anonymous';
-                img.onload = () => {
-                  const colorThief = new ColorThief();
-                  try {
-                    const palette = colorThief.getPalette(img, 5);
-                    setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`));
-                  } catch (error) {
-                    console.warn("Não foi possível extrair paleta da imagem carregada no JSON.", error);
-                    setColorPalette([]); // Reset ou paleta padrão
-                  }
-                };
-                img.src = loadedState.backgroundImageUrl;
-              } else {
-                setColorPalette([]); // Reset ou paleta padrão
-              }
-            }
-
-            if (loadedState.csvData) {
-              setCsvData(loadedState.csvData);
-              // Se csvHeaders não vierem explicitamente ou forem inconsistentes,
-              // poderíamos derivá-los de loadedState.csvData[0] aqui,
-              // mas como loadedState.csvHeaders é obrigatório, confiamos nele.
-            } else {
-              setCsvData([]);
-            }
-
-            // Restaurar generatedImages se presentes (versão 1.1+)
-            if (parseFloat(loadedState.version) >= 1.1 && loadedState.generatedImages) {
-              const restoredGeneratedImages = await Promise.all(
-                loadedState.generatedImages.map(async (imgData) => {
-                  let blob = null;
-                  let url = null;
-                  if (imgData.imageBase64) {
-                    try {
-                      blob = await base64ToBlob(imgData.imageBase64);
-                      url = URL.createObjectURL(blob);
-                    } catch (error) {
-                      console.error("Erro ao converter base64 para blob ao carregar:", error);
-                    }
-                  }
-                  return {
-                    ...imgData,
-                    blob: blob,
-                    url: url,
-                    imageBase64: undefined, // Remover para não manter em memória desnecessariamente
-                  };
-                })
-              );
-              // console.log("App.jsx - handleLoadStateFromFile - BEFORE setGeneratedImagesData - restoredGeneratedImages:", JSON.stringify(restoredGeneratedImages, null, 2)); // LOG REMOVED
-              // Example to check a specific item if you know its expected index, e.g., 7 for thumbnail #8
-              // if (restoredGeneratedImages && restoredGeneratedImages.length > 7) {
-              //   console.log("App.jsx - handleLoadStateFromFile - restoredGeneratedImages[7]:", JSON.stringify(restoredGeneratedImages[7], null, 2));
-              // }
-              setGeneratedImagesData(restoredGeneratedImages);
-            } else {
-              // console.log("App.jsx - handleLoadStateFromFile - No generatedImages in JSON or old version, clearing generatedImagesData."); // LOG REMOVED
-              setGeneratedImagesData([]); // Limpar se não houver dados ou for versão antiga
-            }
-
-            if (parseFloat(loadedState.version) >= 1.1 && loadedState.generatedAudio) {
-                const restoredGeneratedAudio = await Promise.all(
-                    loadedState.generatedAudio.map(async (audioData) => {
-                        let blob = null;
-                        if (audioData.audioBase64) {
-                            try {
-                                blob = await base64ToBlob(audioData.audioBase64);
-                            } catch (error) {
-                                console.error("Erro ao converter base64 para blob de áudio ao carregar:", error);
-                            }
-                        }
-                        return {
-                            ...audioData,
-                            blob: blob,
-                            audioBase64: undefined,
-                        };
-                    })
-                );
-                setGeneratedAudioData(restoredGeneratedAudio);
-            } else {
-                setGeneratedAudioData([]);
-            }
-
-            if (parseFloat(loadedState.version) >= 1.9 && loadedState.generatedVideos) {
-              const restoredGeneratedVideos = await Promise.all(
-                loadedState.generatedVideos.map(async (videoData) => {
-                  let blob = null;
-                  let url = null;
-                  if (videoData.videoBase64) {
-                    try {
-                      blob = await base64ToBlob(videoData.videoBase64);
-                      url = URL.createObjectURL(blob);
-                    } catch (error) {
-                      console.error("Erro ao converter base64 para blob de vídeo ao carregar:", error);
-                    }
-                  }
-                  return {
-                    ...videoData,
-                    blob: blob,
-                    url: url,
-                    videoBase64: undefined,
-                  };
-                })
-              );
-              setGeneratedVideosData(restoredGeneratedVideos);
-            } else {
-              setGeneratedVideosData([]);
-            }
-
-            // Restaurar dados da campanha se presentes
-            if (parseFloat(loadedState.version) >= 1.2) {
-              setProblema(loadedState.problema || '');
-              setSolucao(loadedState.solucao || '');
-              setCampaignContent(loadedState.campaignContent || null);
-            } else {
-              setProblema('');
-              setSolucao('');
-              setCampaignContent(null);
-            }
-
-            // Restaurar novos campos de prompt se presentes (versão 1.3+)
-            if (parseFloat(loadedState.version) >= 1.3) {
-              setPersona(loadedState.persona || '');
-              setAutor(loadedState.autor || '');
-              setInstrucoes(loadedState.instrucoes || '');
-            } else {
-              setPersona('');
-              setAutor('');
-              setInstrucoes('');
-            }
-
-            if (parseFloat(loadedState.version) >= 1.4) {
-              setFormato(loadedState.formato || '');
-            } else {
-              setFormato('');
-            }
-
-            if (parseFloat(loadedState.version) >= 1.5) {
-              setConteudoMedio(loadedState.conteudoMedio || '');
-              setConteudoPequeno(loadedState.conteudoPequeno || '');
-            } else {
-              setConteudoMedio('');
-              setConteudoPequeno('');
-            }
-
-            if (parseFloat(loadedState.version) >= 1.6) {
-              setConteudoFormatado(loadedState.conteudoFormatado || '');
-            } else {
-              setConteudoFormatado('');
-            }
-
-            if (parseFloat(loadedState.version) >= 2.0) {
-              setFollowupPosts(loadedState.followupPosts || []);
-            } else {
-              setFollowupPosts([]);
-            }
-
-            // Restore scheduling state (add a version check if this feature is versioned)
-            if (loadedState.isScheduled !== undefined) {
-              setIsScheduled(loadedState.isScheduled);
-            }
-            if (loadedState.scheduleDate) {
-              setScheduleDate(new Date(loadedState.scheduleDate));
-            }
-            if (loadedState.weeklySchedule) {
-              setWeeklySchedule(loadedState.weeklySchedule);
-            }
-            if (loadedState.selectedProfile) {
-              setSelectedProfile(loadedState.selectedProfile);
-            }
-            if (loadedState.selectedImages) {
-              setSelectedImages(loadedState.selectedImages);
-            }
-            if (loadedState.selectedVideos) {
-              setSelectedVideos(loadedState.selectedVideos);
-            }
-
-            // Navegação de passo
-            if (loadedState.backgroundImageUrl && loadedState.csvHeaders.length > 0) {
-              const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar');
-              if (etapaPosicionarFormatarIndex !== -1) {
-                setActiveStep(etapaPosicionarFormatarIndex);
-              } else {
-                setActiveStep(4); // Fallback para o índice 4 se a busca falhar
-              }
-            } else if (loadedState.csvHeaders.length > 0) {
-              setActiveStep(2);
-            } else {
-              setActiveStep(1); // Ir para a etapa de conteúdo se não houver dados
-            }
-          } else {
-            alert("Arquivo JSON inválido, formato incorreto ou versão incompatível.");
-            console.log("Loaded state:", loadedState); // Adicionar log para depuração
-          }
-        } catch (error) {
-          console.error("Erro ao carregar o arquivo JSON:", error);
-          alert("Erro ao ler o arquivo JSON.");
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      if (file.name.endsWith('.midiator')) {
-        reader.readAsArrayBuffer(file);
+      // Navigate to the appropriate step
+      if (loadedState.backgroundImageUrl && loadedState.csvHeaders.length > 0) {
+        const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar');
+        setActiveStep(etapaPosicionarFormatarIndex !== -1 ? etapaPosicionarFormatarIndex : 4);
+      } else if (loadedState.csvHeaders.length > 0) {
+        setActiveStep(2);
       } else {
-        reader.readAsText(file);
+        setActiveStep(1);
       }
-      event.target.value = null;
+      toast.success("Campanha carregada com sucesso!");
+
+    } catch (error) {
+      console.error("Erro ao carregar o arquivo de estado:", error);
+      toast.error(`Erro ao carregar o arquivo: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+      // Reset file input value to allow loading the same file again
+      if (event.target) {
+        event.target.value = null;
+      }
     }
   };
 
