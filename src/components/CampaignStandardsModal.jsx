@@ -41,6 +41,7 @@ import {
   UploadFile as UploadFileIcon,
   Link as LinkIcon,
   AutoAwesome as AutoAwesomeIcon,
+  Description as DescriptionIcon,
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 import ColorThief from 'colorthief';
@@ -49,6 +50,8 @@ import TextEditorDialog from './TextEditorDialog';
 import HtmlDisplayField from './HtmlDisplayField';
 import PaletteReportModal from './PaletteReportModal';
 import PersonaGenerationModal from './PersonaGenerationModal';
+import PersonaWizard from './PersonaWizard';
+import MemorialDescritivoModal from './MemorialDescritivoModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
 import { callGeminiApi } from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
@@ -107,13 +110,15 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const [personaDescription, setPersonaDescription] = useState('');
   const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
   const [showPersonaGenModal, setShowPersonaGenModal] = useState(false);
+  const [showPersonaWizard, setShowPersonaWizard] = useState(false);
+  const [showMemorialModal, setShowMemorialModal] = useState(false);
 
   const handleBriefingChange = (e) => {
     const { name, value } = e.target;
     setBriefing(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleGeneratePersonaWithAI = async () => {
+  const handleGeneratePersonaWithAI = async (description, callback) => {
     const apiKey = getGeminiApiKey();
     if (!apiKey) {
       toast.error('Chave de API do Gemini não configurada.');
@@ -124,7 +129,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
     const prompt = `
 A partir da seguinte descrição de persona, preencha os campos do objeto JSON abaixo. Use exatamente os nomes de chave em camelCase fornecidos. Se a informação para algum campo não estiver na descrição, use um array vazio [] ou uma string vazia "".
 
-Descrição: ${personaDescription}
+Descrição: ${description}
 
 Campos para preencher (use exatamente estes nomes de chave):
 - nome: (string)
@@ -153,10 +158,15 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       }
 
       const generatedPersona = JSON.parse(cleanedResponse);
-      setPersona(prev => ({ ...prev, ...generatedPersona }));
 
-      toast.success('Persona gerada com sucesso! Revise os campos preenchidos.');
-      setShowPersonaGenModal(false);
+      if(callback) {
+        callback(generatedPersona);
+      } else {
+        setPersona(prev => ({ ...prev, ...generatedPersona }));
+        toast.success('Persona gerada com sucesso! Revise os campos preenchidos.');
+        setShowPersonaGenModal(false);
+      }
+
     } catch (error) {
       console.error("Erro ao gerar ou processar persona com IA:", error);
       toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console do navegador para detalhes.');
@@ -367,7 +377,18 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
     <>
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Padrões de Campanha
+            <Box>
+                Padrões de Campanha
+                <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<DescriptionIcon />}
+                    onClick={() => setShowMemorialModal(true)}
+                    sx={{ ml: 2 }}
+                >
+                    Gerar Memorial Descritivo
+                </Button>
+            </Box>
           <IconButton onClick={onClose}>
             <CloseIcon />
           </IconButton>
@@ -393,13 +414,20 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
           </Tabs>
 
           <TabPanel value={value} index={0}>
-            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
                 <Button
-                    variant="contained"
+                    variant="outlined"
                     startIcon={<AutoAwesomeIcon />}
                     onClick={() => setShowPersonaGenModal(true)}
                 >
-                    Gerar com IA
+                    Gerar com IA (Simples)
+                </Button>
+                <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={() => setShowPersonaWizard(true)}
+                >
+                    Criar Nova Persona
                 </Button>
             </Box>
             <Grid container spacing={3}>
@@ -747,10 +775,28 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       <PersonaGenerationModal
         open={showPersonaGenModal}
         onClose={() => setShowPersonaGenModal(false)}
-        onGenerate={handleGeneratePersonaWithAI}
+        onGenerate={() => handleGeneratePersonaWithAI(personaDescription)}
         description={personaDescription}
         setDescription={setPersonaDescription}
         isLoading={isGeneratingPersona}
+      />
+
+      <PersonaWizard
+        open={showPersonaWizard}
+        onClose={() => setShowPersonaWizard(false)}
+        onSave={(newPersona) => {
+            setPersona(newPersona);
+            setShowPersonaWizard(false);
+            toast.success('Persona salva com sucesso!');
+        }}
+        onGenerate={handleGeneratePersonaWithAI}
+        isGeneratingPersona={isGeneratingPersona}
+      />
+
+      <MemorialDescritivoModal
+        open={showMemorialModal}
+        onClose={() => setShowMemorialModal(false)}
+        personas={[{ id: 1, nome: persona.nome || 'Persona Atual' }]} // Placeholder
       />
     </>
   );
