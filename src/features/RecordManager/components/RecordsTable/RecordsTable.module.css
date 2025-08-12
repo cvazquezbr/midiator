@@ -63,3 +63,57 @@
 .tabela.darkMode .noDataCell {
     color: #aaa; /* Mensagem "sem dados" mais clara */
 }
+
+/* Estilos Responsivos para Telas Pequenas */
+@media screen and (max-width: 768px) {
+    .tabela thead {
+        /* Esconde o cabeçalho da tabela em telas pequenas, pois os rótulos estarão nas células */
+        display: none;
+    }
+
+    .tabela, .tabela tbody, .tabela tr, .tabela td {
+        display: block;
+        width: 100%;
+    }
+
+    .tabela tr {
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .tabela.darkMode tr {
+        border: 1px solid #444;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+
+    .tabela td {
+        display: flex;
+        justify-content: space-between; /* Alinha o rótulo e o valor */
+        align-items: center;
+        padding: 10px;
+        text-align: right; /* Alinha o valor à direita */
+        border: none;
+        border-bottom: 1px solid #eee;
+    }
+    .tabela.darkMode td {
+        border-bottom: 1px solid #3a3a3a;
+    }
+
+    .tabela tr td:last-child {
+        border-bottom: none;
+    }
+
+    .tabela td::before {
+        content: attr(data-label); /* Pega o nome da coluna do atributo data-label */
+        font-weight: bold;
+        text-align: left; /* Alinha o rótulo à esquerda */
+        margin-right: 10px;
+        color: #333;
+    }
+
+    .tabela.darkMode td::before {
+        color: #f0f0f0;
+    }
+}
