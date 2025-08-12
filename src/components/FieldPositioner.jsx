@@ -247,15 +247,17 @@ const FieldPositioner = ({
   };
 
   const centerAllFields = () => {
-    const newPositions = {};
-    csvHeaders.forEach((header, index) => {
-      newPositions[header] = {
-        ...fieldPositions[header],
-        x: 50 - 12.5,
-        y: 20 + index * 20
-      };
+    const newPositions = { ...fieldPositions };
+    csvHeaders.forEach((header) => {
+      if (newPositions[header]) {
+        const fieldWidth = newPositions[header].width || 25; // Usa 25 como padrão se a largura não estiver definida
+        newPositions[header] = {
+          ...newPositions[header],
+          x: 50 - (fieldWidth / 2),
+        };
+      }
     });
-    setFieldPositions(prev => ({ ...prev, ...newPositions }));
+    setFieldPositions(newPositions);
   };
 
   const autoArrangeFields = () => {
