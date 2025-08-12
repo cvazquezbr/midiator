@@ -104,6 +104,7 @@ import {
   generateFormattedContent,
   generateFollowupPosts,
   generateIAContent,
+  generateColorPalette,
 } from './utils/generationHandlers.js';
 import { saveCampaignState, loadCampaignState } from './utils/campaignState.js';
 import { exportCsv, exportHtml } from './utils/exportUtils.js';
@@ -309,62 +310,6 @@ function App() {
   const [includeEmpresa, setIncludeEmpresa] = useState(true);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
-  const handleGenerateColorPalette = async (briefing) => {
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
-      toast.error('Por favor, configure sua chave de API Gemini primeiro.');
-      throw new Error('Missing API Key');
-    }
-
-    const prompt = `Crie uma paleta harmoniosa de 5 cores baseada no briefing abaixo, aplicando princípios da psicologia das cores na cultura ocidental.
-
-**Briefing do Cliente:**
-${briefing}
-
-**Diretrizes de Psicologia das Cores (Cultura Ocidental):**
-- Considere estas associações-chave:
-  * **Vermelho:** Energia, paixão, urgência (comida, liquidações), perigo.
-  * **Azul:** Confiança, segurança, calma, profissionalismo (bancos, saúde, tech).
-  * **Verde:** Natureza, crescimento, sustentabilidade, saúde, tranquilidade.
-  * **Amarelo:** Otimismo, criatividade, atenção (uso moderado), cautela.
-  * **Roxo:** Luxo, criatividade, espiritualidade, realeza (beleza, artes).
-  * **Laranja:** Entusiasmo, jovialidade, acessibilidade (diversão, calls-to-action).
-  * **Rosa:** Feminilidade, ternura, compaixão (beleza, infantil).
-  * **Preto:** Sofisticação, poder, elegância (luxo, moda).
-  * **Branco:** Pureza, simplicidade, limpeza (saúde, minimalismo).
-  * **Cinza:** Neutralidade, equilíbrio, modernidade (tecnologia, corporativo).
-  * **Marrom:** Solidez, confiabilidade, natureza (orgânico, artesanal).
-- Tons **pastéis** transmitem suavidade; **vibrantes** geram impacto.
-- Evite combinações culturalmente negativas (ex: vermelho+puro preto = agressão/extremismo).
-
-**Formato de Saída OBRIGATÓRIO:**
-A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação markdown (como \`\`\`json) antes ou depois. O JSON deve ter a seguinte estrutura:
-{
-  "palette": [
-    {
-      "hex": "#RRGGBB",
-      "rgb": "RGB(R, G, B)",
-      "name": "Nome da Cor",
-      "role": "Primária | Secundária | Acento | Neutro Claro | Neutro Escuro",
-      "justification": "Explicação psicológica em uma frase."
-    }
-  ],
-  "harmony": "Nome da Harmonia (Análoga, Complementar, Triádica, etc.)"
-}
-`;
-
-    try {
-      const response = await callGeminiApi(prompt, apiKey);
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch && jsonMatch[0]) {
-        return JSON.parse(jsonMatch[0]);
-      }
-      throw new Error("Não foi possível extrair o JSON da resposta da IA.");
-    } catch (error) {
-      console.error("Erro ao gerar paleta de cores com IA:", error);
-      throw error;
-    }
-  };
 
   const saveStateToSessionStorage = useCallback(async () => {
     const blobToBase64 = (blob) => {
@@ -2055,7 +2000,16 @@ A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação mark
           setShowCampaignStandardsModal(false);
           loadCampaignColors();
         }}
-        onGeneratePalette={handleGenerateColorPalette}
+        onGeneratePalette={async (briefing) => {
+          try {
+            const palette = await generateColorPalette(briefing);
+            return palette;
+          } catch (error) {
+            toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores.");
+            // Re-throw to be caught by the modal's internal state
+            throw error;
+          }
+        }}
       />
       <LoadingDialog
         open={isGeneratingCampaign || isSaving || isLoading}
