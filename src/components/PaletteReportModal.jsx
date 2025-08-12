@@ -75,7 +75,7 @@ const PaletteReportModal = ({ open, onClose, paletteData, onApplyPalette, briefi
             <Typography variant="body1" paragraph>
               A paleta de cores a seguir foi gerada com base nos seguintes parâmetros criativos fornecidos:
             </Typography>
-            <Paper variant="outlined" sx={{ p: 2, backgroundColor: '#f9f9f9' }}>
+            <Paper variant="outlined" sx={{ p: 2, backgroundColor: 'background.default' }}>
               <Typography variant="body2"><strong>Objetivo:</strong> {briefing.objective}</Typography>
               <Typography variant="body2"><strong>Público-alvo:</strong> {briefing.targetAudience}</Typography>
               <Typography variant="body2"><strong>Mensagem Principal:</strong> {briefing.mainMessage}</Typography>
