@@ -122,45 +122,44 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
 
     setIsGeneratingPersona(true);
     const prompt = `
-A partir da seguinte descrição de persona, preencha os campos abaixo com as informações correspondentes. Retorne a resposta em formato JSON para cada campo. Se a informação para algum campo não estiver na descrição, use um array vazio [] ou uma string vazia "".
+A partir da seguinte descrição de persona, preencha os campos do objeto JSON abaixo. Use exatamente os nomes de chave em camelCase fornecidos. Se a informação para algum campo não estiver na descrição, use um array vazio [] ou uma string vazia "".
 
 Descrição: ${personaDescription}
 
-Campos para preencher:
-- Nome da Persona: (string)
-- Posição/Cargo: (array de strings, ex: ["CTO", "Diretor de Tecnologia"])
-- Segmento da Empresa: (array de strings, ex: ["Tecnologia", "SaaS"])
-- Responsabilidades-Chave: (array de strings, ex: ["Gerenciamento de Orçamento", "Inovação de Produtos"])
-- Dores e Desafios: (objeto JSON, com as categorias como chaves e os desafios como arrays. As chaves devem ser: 'doresEstrategicos', 'doresOperacionais', 'doresPessoas', 'doresRegulatorios'. Ex: {"doresEstrategicos": ["Adoção de IA"], "doresOperacionais": ["Segurança de Dados"]})
-- Gatilhos de Compra: (array de strings, nome do campo 'gatilhosCompra')
-- Barreiras de Adoção: (array de strings, nome do campo 'barreirasAdocao')
-- Mentalidade e Valores: (string, nome do campo 'mentalidadeValores')
-- Contexto Cultural: (string, nome do campo 'contextoCultural')
+Campos para preencher (use exatamente estes nomes de chave):
+- nome: (string)
+- posicaoCargo: (array de strings)
+- segmentoEmpresa: (array de strings)
+- responsabilidadesChave: (array de strings)
+- doresEstrategicos: (array de strings)
+- doresOperacionais: (array de strings)
+- doresPessoas: (array de strings)
+- doresRegulatorios: (array de strings)
+- gatilhosCompra: (array de strings)
+- barreirasAdocao: (array de strings)
+- mentalidadeValores: (string)
+- contextoCultural: (string)
 
-Retorne apenas o objeto JSON sem texto adicional, markdown, ou qualquer outra formatação.
+Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, markdown, ou qualquer outra formatação.
     `;
 
     try {
       const response = await callGeminiApi(prompt, apiKey);
-      console.log("Resposta recebida da API Gemini:", response);
-
       const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
+
       if (!cleanedResponse) {
-          console.log("Resposta da IA estava vazia após a limpeza.");
-          toast.error('A IA retornou uma resposta vazia.');
-          return;
+        toast.error('A IA retornou uma resposta vazia.');
+        return;
       }
 
       const generatedPersona = JSON.parse(cleanedResponse);
-      console.log("Objeto de persona parseado:", generatedPersona);
-
       setPersona(prev => ({ ...prev, ...generatedPersona }));
 
       toast.success('Persona gerada com sucesso! Revise os campos preenchidos.');
       setShowPersonaGenModal(false);
     } catch (error) {
-      console.error("Erro detalhado ao gerar persona com IA:", error);
-      toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console para mais detalhes.');
+      console.error("Erro ao gerar ou processar persona com IA:", error);
+      toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console do navegador para detalhes.');
     } finally {
       setIsGeneratingPersona(false);
     }
