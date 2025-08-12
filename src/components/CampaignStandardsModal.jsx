@@ -423,6 +423,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
         onClose={() => setShowReportModal(false)}
         paletteData={generatedPalette}
         onApplyPalette={applyGeneratedPalette}
+        briefing={briefing}
       />
     </>
   );
