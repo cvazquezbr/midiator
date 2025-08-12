@@ -1176,8 +1176,6 @@ function App() {
           {/* Passo 0: Campanha */}
           {activeStep === 0 && (
             <Campaign
-              personaFields={personaFields}
-              setPersonaFields={setPersonaFields}
               steps={steps}
               problema={problema}
               setProblema={setProblema}
