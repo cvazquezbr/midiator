@@ -48,7 +48,10 @@ import ColorThief from 'colorthief';
 import TextEditorDialog from './TextEditorDialog';
 import HtmlDisplayField from './HtmlDisplayField';
 import PaletteReportModal from './PaletteReportModal';
+import PersonaGenerationModal from './PersonaGenerationModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
+import { callGeminiApi } from '../utils/geminiAPI';
+import { getGeminiApiKey } from '../utils/geminiCredentials';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -100,9 +103,60 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const [generatedPalette, setGeneratedPalette] = useState(null);
   const [showReportModal, setShowReportModal] = useState(false);
 
+  // State for AI Persona Generation
+  const [personaDescription, setPersonaDescription] = useState('');
+  const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
+  const [showPersonaGenModal, setShowPersonaGenModal] = useState(false);
+
   const handleBriefingChange = (e) => {
     const { name, value } = e.target;
     setBriefing(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleGeneratePersonaWithAI = async () => {
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      toast.error('Chave de API do Gemini não configurada.');
+      return;
+    }
+
+    setIsGeneratingPersona(true);
+    const prompt = `
+A partir da seguinte descrição de persona, preencha os campos abaixo com as informações correspondentes. Retorne a resposta em formato JSON para cada campo. Se a informação para algum campo não estiver na descrição, use um array vazio [] ou uma string vazia "".
+
+Descrição: ${personaDescription}
+
+Campos para preencher:
+- Nome da Persona: (string)
+- Posição/Cargo: (array de strings, ex: ["CTO", "Diretor de Tecnologia"])
+- Segmento da Empresa: (array de strings, ex: ["Tecnologia", "SaaS"])
+- Responsabilidades-Chave: (array de strings, ex: ["Gerenciamento de Orçamento", "Inovação de Produtos"])
+- Dores e Desafios: (objeto JSON, com as categorias como chaves e os desafios como arrays. As chaves devem ser: 'doresEstrategicos', 'doresOperacionais', 'doresPessoas', 'doresRegulatorios'. Ex: {"doresEstrategicos": ["Adoção de IA"], "doresOperacionais": ["Segurança de Dados"]})
+- Gatilhos de Compra: (array de strings, nome do campo 'gatilhosCompra')
+- Barreiras de Adoção: (array de strings, nome do campo 'barreirasAdocao')
+- Mentalidade e Valores: (string, nome do campo 'mentalidadeValores')
+- Contexto Cultural: (string, nome do campo 'contextoCultural')
+
+Retorne apenas o objeto JSON sem texto adicional, markdown, ou qualquer outra formatação.
+    `;
+
+    try {
+      const response = await callGeminiApi(prompt, apiKey);
+      // Clean the response to ensure it's valid JSON
+      const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
+      const generatedPersona = JSON.parse(cleanedResponse);
+
+      // Merge with existing persona data, overwriting fields that the AI provided
+      setPersona(prev => ({ ...prev, ...generatedPersona }));
+
+      toast.success('Persona gerada com sucesso! Revise os campos preenchidos.');
+      setShowPersonaGenModal(false);
+    } catch (error) {
+      console.error("Erro ao gerar persona com IA:", error);
+      toast.error('Ocorreu um erro ao gerar a persona. Verifique o formato da resposta da IA ou tente novamente.');
+    } finally {
+      setIsGeneratingPersona(false);
+    }
   };
 
   const handleGenerateClick = async () => {
@@ -333,6 +387,15 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
           </Tabs>
 
           <TabPanel value={value} index={0}>
+            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button
+                    variant="contained"
+                    startIcon={<AutoAwesomeIcon />}
+                    onClick={() => setShowPersonaGenModal(true)}
+                >
+                    Gerar com IA
+                </Button>
+            </Box>
             <Grid container spacing={3}>
                 {/* Nome da Persona */}
                 <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center' }}>
@@ -673,6 +736,15 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
         paletteData={generatedPalette}
         onApplyPalette={applyGeneratedPalette}
         briefing={briefing}
+      />
+
+      <PersonaGenerationModal
+        open={showPersonaGenModal}
+        onClose={() => setShowPersonaGenModal(false)}
+        onGenerate={handleGeneratePersonaWithAI}
+        description={personaDescription}
+        setDescription={setPersonaDescription}
+        isLoading={isGeneratingPersona}
       />
     </>
   );
