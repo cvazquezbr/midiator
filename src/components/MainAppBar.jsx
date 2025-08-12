@@ -32,6 +32,7 @@ const MainAppBar = ({
   csvData,
   csvHeaders,
   loadStateInputRef,
+  handleLoadStateFromFile,
 }) => {
   return (
     <AppBar
@@ -108,7 +109,7 @@ const MainAppBar = ({
             type="file"
             hidden
             accept=".json,.midiator"
-            onChange={handleLoadTemplateClick}
+            onChange={handleLoadStateFromFile}
             ref={loadStateInputRef}
           />
         </Box>
