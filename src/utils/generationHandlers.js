@@ -37,10 +37,10 @@ export const generateCampaignContent = async ({ problema, solucao }) => {
   } else {
     // Attempt to parse directly if no markdown block is found
     try {
-        parsedContent = JSON.parse(response);
-    } catch(e) {
-        console.error("Failed to parse campaign content response as JSON:", response);
-        throw new Error("A resposta da IA para o conteúdo da campanha não estava em um formato JSON válido.");
+      parsedContent = JSON.parse(response);
+    } catch (e) {
+      console.error("Failed to parse campaign content response as JSON:", response);
+      throw new Error("A resposta da IA para o conteúdo da campanha não estava em um formato JSON válido.");
     }
   }
 
@@ -94,14 +94,14 @@ export const generateCampaignImage = async ({ content, aspectRatio }) => {
  * Generates formatted HTML content for the campaign post.
  */
 export const generateFormattedContent = async ({ content }) => {
-    if (!content?.conteudo) {
-        throw new Error("Conteúdo principal deve ser gerado primeiro.");
-    }
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
-        throw new Error('Chave de API Gemini não configurada.');
-    }
-    const prompt = `
+  if (!content?.conteudo) {
+    throw new Error("Conteúdo principal deve ser gerado primeiro.");
+  }
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Chave de API Gemini não configurada.');
+  }
+  const prompt = `
       Com o objetivo de gerar um post de blog no WordPress corporativo, Formatar o texto a seguir observando o padrão com HTML.
       Considere que o conteúdo gerado já estará embutido em uma página no contexto de seu BODY.
       Elabore o HTML para melhor estruturar o texto, facilitar a leitura, hierarquizar a informação conforme a importância.
@@ -115,9 +115,9 @@ export const generateFormattedContent = async ({ content }) => {
       CTA: ${stripHtml(content.cta)}
     `;
 
-    const rawContent = await callGeminiApi(prompt, apiKey);
-    const match = rawContent.match(/^`{3}(?:html)?\s*([\s\S]+?)\s*`{3}$/);
-    return match && match[1] ? match[1].trim() : rawContent.trim();
+  const rawContent = await callGeminiApi(prompt, apiKey);
+  const match = rawContent.match(/^`{3}(?:html)?\s*([\s\S]+?)\s*`{3}$/);
+  return match && match[1] ? match[1].trim() : rawContent.trim();
 };
 
 
@@ -125,50 +125,57 @@ export const generateFormattedContent = async ({ content }) => {
  * Generates follow-up posts for the campaign.
  */
 export const generateFollowupPosts = async ({ content, followupPostsQuantity }) => {
-    if (!content?.conteudo) {
-        throw new Error("Conteúdo principal deve ser gerado primeiro.");
-    }
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
-        throw new Error('Chave de API Gemini não configurada.');
-    }
+  if (!content?.conteudo) {
+    throw new Error("Conteúdo principal deve ser gerado primeiro.");
+  }
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Chave de API Gemini não configurada.');
+  }
 
-    const { persona } = getCampaignPrompt();
-    const prompt = `
-      Você é um especialista em marketing de conteúdo e copywriting para líderes técnicos. Sua tarefa é criar ${followupPostsQuantity} posts "isca" baseados no conteúdo principal fornecido.
+  const { persona } = getCampaignPrompt();
+  const prompt = 
+  `Você é um especialista em marketing de conteúdo e copywriting.
+Sua tarefa é criar ${followupPostsQuantity} posts sequenciais seguindo o modelo AIDA (Atenção → Interesse → Desejo → Ação), usando o conteúdo principal como base.
 
-      CONTEXTO:
-      O conteúdo principal aborda: [${stripHtml(content.titulo)} - ${stripHtml(content.conteudo)}]
+CONTEÚDO PRINCIPAL:
+O tema abordado é: [${stripHtml(content.titulo)} - ${stripHtml(content.conteudo)}]
 
-      PERSONAS-ALVO:
-      - ${stripHtml(persona)}
+PERSONAS-ALVO:
 
-      DIRETRIZES PARA OS POSTS:
+${stripHtml(persona)}
 
-      1. Ganchos Psicológicos: Use gatilhos mentais como:
-         - Dor/Problema (rotatividade, custos, pressão)
-         - Curiosidade (estatísticas, casos reais)
-         - Urgência (mercado competitivo, riscos iminentes)
-         - Autoridade (experiência, casos de sucesso)
-         - Social Proof (situações reconhecíveis)
+ESTRUTURA DA SEQUÊNCIA (AIDA + formatos variados):
+Post 1 — Atenção (Gancho Impactante)
 
-      2. Estrutura de cada post:
-         - Hook inicial (pergunta provocativa ou estatística impactante)
-         - Desenvolvimento do problema/insight
-         - Call-to-action sutil direcionando para o conteúdo completo
+Objetivo: quebrar o padrão e despertar curiosidade.
+Formato: dado estatístico ou insight contraintuitivo.
+Gatilhos: curiosidade, surpresa, urgência leve.
 
-      3. Variação de Abordagens:
-         - Post 1: Foco na dor/problema
-         - Post 2: Estatística ou dado curioso
-         - Post 3: Caso real ou situação
-         - Post 4: Pergunta reflexiva
-         - Post 5: Insight contraintuitivo
+Post 2 — Interesse (Problema/Oportunidade)
 
-      ESPECIFICAÇÕES TÉCNICAS:
-      - Cada post deve ter entre 150-250 caracteres
-      - Tom profissional mas conversacional
-      - Inclua emojis estratégicos (máximo 2 por post)
-      - CTAs variados: "Leia mais", "Descubra como", "Saiba o que fazer"
+Objetivo: mostrar relevância e conexão com a dor ou desejo da persona.
+Formato: situação real ou pergunta reflexiva.
+Gatilhos: dor/problema, urgência, identificação.
+
+Post 3 — Desejo (Transformação/Benefício)
+
+Objetivo: criar desejo pela solução ou mudança.
+Formato: caso real ou prova social (autoridade, sucesso de clientes).
+Gatilhos: prova social, autoridade, ganho futuro.
+
+Post 4 — Ação (Call-to-Action Direto)
+
+Objetivo: levar a persona a interagir com o conteúdo completo.
+Formato: frase de impacto + CTA.
+Gatilhos: urgência, exclusividade, clareza na próxima etapa.
+
+REGRAS GERAIS PARA TODOS OS POSTS:
+Cada post deve ter entre 150–250 caracteres.
+Tom profissional, porém conversacional.
+Inclua até 2 emojis estratégicos por post.
+Cada post deve funcionar de forma independente, mas também fazer sentido como parte de uma sequência lógica.
+CTAs variados, como: “Leia mais”, “Descubra como”, “Saiba o que fazer”, “Baixe agora”.
 
       FORMATO DE RESPOSTA:
       Retorne um array JSON com a seguinte estrutura:
@@ -189,36 +196,36 @@ export const generateFollowupPosts = async ({ content, followupPostsQuantity }) 
       Cada post deve despertar curiosidade e criar um gap de informação que só será preenchido ao ler o conteúdo principal completo.
     `;
 
-    const response = await callGeminiApi(prompt, apiKey);
-    const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
-    if (jsonMatch && jsonMatch[1]) {
-        return JSON.parse(jsonMatch[1]);
-    }
-    // Attempt to parse directly if no markdown block is found
-    try {
-        return JSON.parse(response);
-    } catch(e) {
-        console.error("Failed to parse follow-up posts response as JSON:", response);
-        throw new Error("A resposta da IA para os posts de follow-up não estava em um formato JSON válido.");
-    }
+  const response = await callGeminiApi(prompt, apiKey);
+  const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
+  if (jsonMatch && jsonMatch[1]) {
+    return JSON.parse(jsonMatch[1]);
+  }
+  // Attempt to parse directly if no markdown block is found
+  try {
+    return JSON.parse(response);
+  } catch (e) {
+    console.error("Failed to parse follow-up posts response as JSON:", response);
+    throw new Error("A resposta da IA para os posts de follow-up não estava em um formato JSON válido.");
+  }
 };
 
 /**
  * Generates CSV data content from a text prompt using an AI API.
  */
 export const generateIAContent = async ({ promptText, promptNumRecords }) => {
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
-        throw new Error('Chave de API Gemini não configurada.');
-    }
-    if (!promptText.trim()) {
-        throw new Error('Por favor, forneça um texto descritivo para o prompt.');
-    }
-    if (promptNumRecords <= 0) {
-        throw new Error('A quantidade de registros a gerar deve ser maior que zero.');
-    }
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Chave de API Gemini não configurada.');
+  }
+  if (!promptText.trim()) {
+    throw new Error('Por favor, forneça um texto descritivo para o prompt.');
+  }
+  if (promptNumRecords <= 0) {
+    throw new Error('A quantidade de registros a gerar deve ser maior que zero.');
+  }
 
-    const finalPrompt = `A partir do TEXTO BASE fornecido abaixo, gere conteúdo para um carrossel de Instagram com ${promptNumRecords} elementos.
+  const finalPrompt = `A partir do TEXTO BASE fornecido abaixo, gere conteúdo para um carrossel de Instagram com ${promptNumRecords} elementos.
 
 TEXTO BASE:
 ${stripHtml(promptText)}
@@ -269,8 +276,8 @@ Titulo;Texto Principal;Ponte para o Próximo
 \`\`\`
 Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` com os dados.`;
 
-    console.log("Gerando conteúdo de IA com prompt:", finalPrompt);
-    const iaResponseText = await callGeminiApi(finalPrompt, apiKey);
-    console.log("Resposta da IA (Conteúdo):", iaResponseText);
-    return iaResponseText;
+  console.log("Gerando conteúdo de IA com prompt:", finalPrompt);
+  const iaResponseText = await callGeminiApi(finalPrompt, apiKey);
+  console.log("Resposta da IA (Conteúdo):", iaResponseText);
+  return iaResponseText;
 };
