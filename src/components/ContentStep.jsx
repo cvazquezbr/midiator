@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -23,11 +23,8 @@ const ContentStep = ({
   steps,
   inputMethod,
   setInputMethod,
-  isDraggingOverCsv,
-  handleDrop,
-  handleDragOver,
-  handleDragEnter,
-  handleDragLeave,
+  handleDrop: handleDropProp,
+  handleDragOver: handleDragOverProp,
   fileInputRef,
   handleCSVUpload,
   downloadExampleCsv,
@@ -43,6 +40,27 @@ const ContentStep = ({
   csvData,
   csvHeaders,
 }) => {
+  const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
+
+  const handleDragEnter = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOverCsv(true);
+  };
+
+  const handleDragLeave = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOverCsv(false);
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOverCsv(false);
+    handleDropProp(event);
+  };
+
   return (
     <Card>
       <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 4 } }}>
@@ -97,7 +115,7 @@ const ContentStep = ({
                   }
                 }}
                 onDrop={handleDrop}
-                onDragOver={handleDragOver}
+                onDragOver={handleDragOverProp}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
               >
