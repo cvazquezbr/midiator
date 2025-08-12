@@ -350,15 +350,15 @@ const ImageGeneratorFrontendOnly = ({
             } else {
               // Renderização de texto simples linha por linha (comportamento original)
               for (const line of lines) {
-                let currentLineRenderX = textContentStartX;
-                const textMetrics = ctx.measureText(line);
-                const currentTextWidth = textMetrics.width;
+                let currentLineRenderX;
 
                 // Ajuste de alinhamento horizontal
                 if (style.textAlign === 'center') {
-                  currentLineRenderX += (effectiveTextWidth - currentTextWidth) / 2;
+                  currentLineRenderX = textContentStartX + effectiveTextWidth / 2;
                 } else if (style.textAlign === 'right') {
-                  currentLineRenderX += effectiveTextWidth - currentTextWidth;
+                  currentLineRenderX = textContentStartX + effectiveTextWidth;
+                } else {
+                  currentLineRenderX = textContentStartX;
                 }
 
                 const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
@@ -650,14 +650,14 @@ const ImageGeneratorFrontendOnly = ({
           await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
         } else {
           for (const line of lines) {
-            let currentLineRenderX = textContentStartX;
-            const textMetrics = ctx.measureText(line);
-            const currentTextWidth = textMetrics.width;
+            let currentLineRenderX;
 
             if (style.textAlign === 'center') {
-              currentLineRenderX += (effectiveTextWidth - currentTextWidth) / 2;
+              currentLineRenderX = textContentStartX + effectiveTextWidth / 2;
             } else if (style.textAlign === 'right') {
-              currentLineRenderX += effectiveTextWidth - currentTextWidth;
+              currentLineRenderX = textContentStartX + effectiveTextWidth;
+            } else {
+              currentLineRenderX = textContentStartX;
             }
             
             const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
