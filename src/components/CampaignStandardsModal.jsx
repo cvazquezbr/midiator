@@ -142,19 +142,25 @@ Retorne apenas o objeto JSON sem texto adicional, markdown, ou qualquer outra fo
 
     try {
       const response = await callGeminiApi(prompt, apiKey);
-      toast.info(`Resposta da IA (copie e cole para o dev): ${response}`);
-      // Clean the response to ensure it's valid JSON
-      const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
-      const generatedPersona = JSON.parse(cleanedResponse);
+      console.log("Resposta recebida da API Gemini:", response);
 
-      // Merge with existing persona data, overwriting fields that the AI provided
+      const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
+      if (!cleanedResponse) {
+          console.log("Resposta da IA estava vazia após a limpeza.");
+          toast.error('A IA retornou uma resposta vazia.');
+          return;
+      }
+
+      const generatedPersona = JSON.parse(cleanedResponse);
+      console.log("Objeto de persona parseado:", generatedPersona);
+
       setPersona(prev => ({ ...prev, ...generatedPersona }));
 
       toast.success('Persona gerada com sucesso! Revise os campos preenchidos.');
       setShowPersonaGenModal(false);
     } catch (error) {
-      console.error("Erro ao gerar persona com IA:", error);
-      toast.error('Ocorreu um erro ao gerar a persona. Verifique o formato da resposta da IA ou tente novamente.');
+      console.error("Erro detalhado ao gerar persona com IA:", error);
+      toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console para mais detalhes.');
     } finally {
       setIsGeneratingPersona(false);
     }
