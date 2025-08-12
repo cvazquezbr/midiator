@@ -72,7 +72,8 @@ const briefingOptions = {
 const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const [value, setValue] = useState(0);
   const [hasStoredPrompt, setHasStoredPrompt] = useState(false);
-  const [persona, setPersona] = useState('');
+  const [persona, setPersona] = useState(''); // This will now hold the summary string for display
+  const [personaObj, setPersonaObj] = useState({}); // This will hold the actual persona object
   const [autor, setAutor] = useState('');
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
@@ -129,13 +130,20 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
 
   useEffect(() => {
     if (open) {
-      const { persona, autor, instrucoes, formato, colors } = getCampaignPrompt();
-      setPersona(persona);
+      const { persona: personaObject, autor, instrucoes, formato, colors } = getCampaignPrompt();
+      setPersonaObj(personaObject); // Store the full object
+
+      // Create a summary string for display
+      const personaSummary = personaObject?.nome
+        ? `Persona: "${personaObject.nome}". (Detalhes definidos na tela de Campanha)`
+        : 'Nenhuma persona definida. Defina na tela principal da Campanha.';
+      setPersona(personaSummary);
+
       setAutor(autor);
       setInstrucoes(instrucoes);
       setFormato(formato);
       setColors(colors || []);
-      setHasStoredPrompt(!!(persona || autor || instrucoes || formato || (colors && colors.length > 0)));
+      setHasStoredPrompt(!!(personaObject?.nome || autor || instrucoes || formato || (colors && colors.length > 0)));
     }
   }, [open]);
 
@@ -144,7 +152,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   };
 
   const handleSave = () => {
-    saveCampaignPrompt({ persona, autor, instrucoes, formato, colors });
+    saveCampaignPrompt({ persona: personaObj, autor, instrucoes, formato, colors });
     setHasStoredPrompt(true);
     toast.success('Padrões de campanha salvos com sucesso!');
     onClose();
@@ -159,9 +167,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   };
 
   const handleSaveEditor = (newContent) => {
-    if (editingField === 'persona') {
-      setPersona(newContent);
-    } else if (editingField === 'autor') {
+    if (editingField === 'autor') {
       setAutor(newContent);
     } else if (editingField === 'instrucoes') {
       setInstrucoes(newContent);
@@ -172,7 +178,6 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   };
 
   const getCurrentContent = () => {
-    if (editingField === 'persona') return persona;
     if (editingField === 'autor') return autor;
     if (editingField === 'instrucoes') return instrucoes;
     if (editingField === 'formato') return formato;
@@ -180,7 +185,6 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   };
 
   const getEditorTitle = () => {
-      if (editingField === 'persona') return 'Editar Persona';
       if (editingField === 'autor') return 'Editar Autor';
       if (editingField === 'instrucoes') return 'Editar Instruções';
       if (editingField === 'formato') return 'Editar Formato';
@@ -267,10 +271,10 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
           <TabPanel value={value} index={0}>
             <HtmlDisplayField
               title="Persona"
-              tooltip="Descreva a persona para quem o conteúdo se destina. Inclua detalhes demográficos, interesses e dores."
+              tooltip="A persona agora é definida em detalhes na tela principal da campanha. Aqui você vê apenas um resumo."
               htmlContent={persona}
-              onClick={() => handleOpenEditor('persona')}
-              placeholder="Clique para editar a persona..."
+              onClick={null} // Desabilita a edição
+              placeholder="Defina a persona na tela principal da Campanha."
             />
           </TabPanel>
           <TabPanel value={value} index={1}>
