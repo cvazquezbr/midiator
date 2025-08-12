@@ -350,8 +350,12 @@ const FieldPositioner = ({
 
     // Rule for Side Label Field (Bottom-Right Corner)
     if (sideLabelField) {
+      const sideLabelStyle = newStyles[sideLabelField] || COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER;
+      const fontSizePx = sideLabelStyle.fontSize || 24;
+      const labelWidthPercent = (fontSizePx / (originalImageSize?.width || imageSize.width || 1)) * 100;
+
       const labelHeight = safeZone.height * 0.7; // 70% of safe zone height
-      const labelWidth = labelHeight * 0.5; // Width is 50% of the height
+      const labelWidth = labelWidthPercent; // Use the calculated width
 
       const centerX = (safeZone.x + safeZone.width - labelHeight / 2) - innerMargin;
       const centerY = (safeZone.y + safeZone.height - labelWidth / 2) - innerMargin;
