@@ -42,6 +42,7 @@ import {
   Link as LinkIcon,
   AutoAwesome as AutoAwesomeIcon,
   Description as DescriptionIcon,
+  Add,
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 import ColorThief from 'colorthief';
