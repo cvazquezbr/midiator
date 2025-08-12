@@ -352,10 +352,11 @@ const FieldPositioner = ({
     if (sideLabelField) {
       const sideLabelStyle = newStyles[sideLabelField] || COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER;
       const fontSizePx = sideLabelStyle.fontSize || 24;
-      const labelWidthPercent = (fontSizePx / (originalImageSize?.width || imageSize.width || 1)) * 100;
 
-      const labelHeight = safeZone.height * 0.7; // 70% of safe zone height
-      const labelWidth = labelWidthPercent; // Use the calculated width
+      // A altura da caixa de texto é baseada na altura da fonte
+      const labelHeight = (fontSizePx / (originalImageSize?.height || imageSize.height || 1)) * 100 * 1.5; // 150% da altura da fonte
+      // A largura da caixa de texto é 70% da altura da safeZone
+      const labelWidth = safeZone.height * 0.7;
 
       const centerX = (safeZone.x + safeZone.width - labelHeight / 2) - innerMargin;
       const centerY = (safeZone.y + safeZone.height - labelWidth / 2) - innerMargin;
