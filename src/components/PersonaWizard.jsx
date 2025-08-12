@@ -1,0 +1,369 @@
+import React, { useState, useMemo } from 'react';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Stepper,
+  Step,
+  StepLabel,
+  Box,
+  TextField,
+  Typography,
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  Checkbox,
+  ListItemText,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  FormGroup,
+  FormControlLabel,
+  CircularProgress,
+  Alert,
+} from '@mui/material';
+import {
+    ExpandMore as ExpandMoreIcon,
+} from '@mui/icons-material';
+import RichTextEditor from './RichTextEditor';
+
+// Constants for Persona fields (copied from CampaignStandardsModal)
+const POSICOES_CARGOS = ['Liderança Executiva: CEO, Diretor Executivo, Sócio', 'Gestão de Tecnologia: CTO, Head de Engenharia, Gerente de TI', 'Gestão de Marketing: Gerente de Marketing, Coordenador de Marketing', 'Gestão de Vendas: Gerente de Vendas, Diretor Comercial', 'Gestão de Recursos Humanos: Head de RH, Analista de RH', 'Outro(s)'];
+const SEGMENTOS_EMPRESA = ['Tecnologia (Software, SaaS, Hardware)', 'Serviços Financeiros (Fintech)', 'E-commerce e Varejo', 'Saúde (Healthtech, Farmacêutica)', 'Manufatura', 'Consultoria e Serviços', 'Outro(s)'];
+const RESPONSABILIDADES_CHAVE = ['Gerenciamento de Orçamento', 'Tomada de Decisão Estratégica', 'Gestão de Equipes', 'Inovação de Produtos', 'Garantir a Operação e Estabilidade', 'Compliance e Governança', 'Outro(s)'];
+const DORES_DESAFIOS = {
+    'doresEstrategicos': { label: 'Estratégicos', items: ['ROI de Inovação', 'Dependência de Fornecedores', 'Escalabilidade de Negócios', 'Outro(s)']},
+    'doresOperacionais': { label: 'Operacionais', items: ['Manutenção de Sistemas Legados', 'Custos Operacionais', 'Segurança de Dados', 'Interoperabilidade de Sistemas', 'Outro(s)']},
+    'doresPessoas': { label: 'Pessoas e Cultura', items: ['Retenção de Talentos', 'Alinhamento de Equipes', 'Resistência à Mudança', 'Treinamento e Capacitação', 'Outro(s)']},
+    'doresRegulatorios': { label: 'Regulatórios e Métricas', items: ['Compliance (LGPD, etc.)', 'Medição de Valor (ROI)', 'Prioridades Conflitantes', 'Outro(s)']},
+};
+const GATILHOS_BARREIRAS = {
+    'gatilhosCompra': { label: 'Gatilhos de Compra', items: ['Problema técnico urgente', 'Pressão do board', 'Necessidade de redução de custos', 'Vantagem competitiva', 'Outro(s)']},
+    'barreirasAdocao': { label: 'Barreiras de Adoção', items: ['Orçamento limitado', 'Resistência à mudança da equipe', 'Preocupação com segurança e compliance', 'Dificuldade de integração', 'Outro(s)']},
+};
+
+
+const steps = [
+  'Início Rápido com IA',
+  'Revisão Básica',
+  'Responsabilidades',
+  'Dores e Desafios',
+  'Gatilhos e Barreiras',
+  'Mentalidade e Cultura',
+];
+
+const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona }) => {
+  const [activeStep, setActiveStep] = useState(0);
+  const [personaData, setPersonaData] = useState({
+      description: '',
+      nome: '',
+      posicaoCargo: [],
+      segmentoEmpresa: [],
+      responsabilidadesChave: [],
+      doresEstrategicos: [],
+      doresOperacionais: [],
+      doresPessoas: [],
+      doresRegulatorios: [],
+      gatilhosCompra: [],
+      barreirasAdocao: [],
+      mentalidadeValores: '',
+      contextoCultural: '',
+  });
+
+  const handleNext = () => {
+    if (activeStep === 0) { // Step "Início Rápido com IA"
+        onGenerate(personaData.description, (generatedPersona) => {
+            setPersonaData(prev => ({...prev, ...generatedPersona}));
+            setActiveStep(1);
+        });
+    } else {
+        setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    }
+  };
+
+  const handleBack = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep - 1);
+  };
+
+  const handleSave = () => {
+    onSave(personaData);
+    onClose();
+  };
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setPersonaData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleMultiSelectChange = (event) => {
+      const { name, value } = event.target;
+      setPersonaData(prev => ({
+          ...prev,
+          [name]: typeof value === 'string' ? value.split(',') : value,
+      }));
+  };
+
+    const handleCheckboxChange = (category, field) => (event) => {
+        const { checked } = event.target;
+        setPersonaData(prev => {
+            const currentValues = prev[category] || [];
+            let newValues;
+            if (checked) {
+                newValues = [...currentValues, field];
+            } else {
+                newValues = currentValues.filter(item => item !== field);
+            }
+            return { ...prev, [category]: newValues };
+        });
+    };
+
+    const handleChipDelete = (fieldName, valueToDelete) => {
+        setPersonaData(prev => {
+            const currentValues = prev[fieldName] || [];
+            const newValues = currentValues.filter(item => item !== valueToDelete);
+            return { ...prev, [fieldName]: newValues };
+        });
+    };
+
+  const handleRichTextChange = (name, value) => {
+      setPersonaData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const getStepContent = (step) => {
+    switch (step) {
+      case 0:
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>Descreva a persona para começar</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Explique o que é uma persona no contexto do marketing de conteúdo e as informações chave em um vocabulário simples.
+            </Typography>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Forneça uma breve descrição do perfil. A IA irá usar essa informação para preencher os primeiros campos automaticamente. Ex: 'CTO de uma startup de tecnologia que precisa inovar rapidamente e reduzir custos com a nuvem.'
+            </Alert>
+            <TextField
+              name="description"
+              label="Descrição da Persona"
+              multiline
+              rows={6}
+              fullWidth
+              value={personaData.description}
+              onChange={handleChange}
+              placeholder="Ex: 'CTO de uma startup de tecnologia que precisa inovar rapidamente e reduzir custos com a nuvem.'"
+              disabled={isGeneratingPersona}
+            />
+          </Box>
+        );
+      case 1:
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>Revisão e Detalhamento Básico</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              A IA preencheu os campos abaixo com base na sua descrição. Revise e ajuste se necessário.
+            </Typography>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <TextField
+                  label="Nome da Persona"
+                  name="nome"
+                  value={personaData.nome || ''}
+                  onChange={handleChange}
+                  fullWidth
+                  required
+                  variant="outlined"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Posição/Cargo</InputLabel>
+                  <Select
+                    multiple
+                    name="posicaoCargo"
+                    value={personaData.posicaoCargo || []}
+                    onChange={handleMultiSelectChange}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip
+                            key={value}
+                            label={value}
+                            onDelete={() => handleChipDelete('posicaoCargo', value)}
+                            onMouseDown={(event) => event.stopPropagation()}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                    label="Posição/Cargo"
+                  >
+                    {POSICOES_CARGOS.map((pos) => (
+                      <MenuItem key={pos} value={pos}>
+                        <Checkbox checked={(personaData.posicaoCargo || []).indexOf(pos) > -1} />
+                        <ListItemText primary={pos} />
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Segmento da Empresa</InputLabel>
+                  <Select
+                    multiple
+                    name="segmentoEmpresa"
+                    value={personaData.segmentoEmpresa || []}
+                    onChange={handleMultiSelectChange}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                          <Chip
+                            key={value}
+                            label={value}
+                            onDelete={() => handleChipDelete('segmentoEmpresa', value)}
+                            onMouseDown={(event) => event.stopPropagation()}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                    label="Segmento da Empresa"
+                  >
+                    {SEGMENTOS_EMPRESA.map((seg) => (<MenuItem key={seg} value={seg}><Checkbox checked={(personaData.segmentoEmpresa || []).indexOf(seg) > -1} /><ListItemText primary={seg} /></MenuItem>))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </Box>
+        );
+      case 2:
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>Responsabilidades-Chave</Typography>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Responsabilidades-Chave</InputLabel>
+              <Select
+                multiple
+                name="responsabilidadesChave"
+                value={personaData.responsabilidadesChave || []}
+                onChange={handleMultiSelectChange}
+                renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {selected.map((value) => (
+                            <Chip
+                                key={value}
+                                label={value}
+                                onDelete={() => handleChipDelete('responsabilidadesChave', value)}
+                                onMouseDown={(event) => event.stopPropagation()}
+                            />
+                        ))}
+                    </Box>
+                )}
+                label="Responsabilidades-Chave"
+              >
+                {RESPONSABILIDADES_CHAVE.map((resp) => (<MenuItem key={resp} value={resp}><Checkbox checked={(personaData.responsabilidadesChave || []).indexOf(resp) > -1} /><ListItemText primary={resp} /></MenuItem>))}
+              </Select>
+            </FormControl>
+          </Box>
+        );
+      case 3:
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>Dores e Desafios</Typography>
+             {Object.entries(DORES_DESAFIOS).map(([key, { label, items }]) => (
+                <Accordion key={key} defaultExpanded>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
+                    <AccordionDetails>
+                        <FormGroup>
+                            {items.map((item) => (<FormControlLabel key={item} control={<Checkbox checked={(personaData[key] || []).includes(item)} onChange={handleCheckboxChange(key, item)} />} label={item} />))}
+                        </FormGroup>
+                    </AccordionDetails>
+                </Accordion>
+            ))}
+          </Box>
+        );
+      case 4:
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>Gatilhos de Compra e Barreiras de Adoção</Typography>
+            {Object.entries(GATILHOS_BARREIRAS).map(([key, { label, items }]) => (
+                <Accordion key={key} defaultExpanded>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
+                    <AccordionDetails>
+                        <FormGroup>
+                            {items.map((item) => (<FormControlLabel key={item} control={<Checkbox checked={(personaData[key] || []).includes(item)} onChange={handleCheckboxChange(key, item)} />} label={item} />))}
+                        </FormGroup>
+                    </AccordionDetails>
+                </Accordion>
+            ))}
+          </Box>
+        );
+      case 5:
+        return (
+          <Box>
+            <Typography variant="h6" gutterBottom>Mentalidade e Valores</Typography>
+            <RichTextEditor
+                value={personaData.mentalidadeValores || ''}
+                onChange={(value) => handleRichTextChange('mentalidadeValores', value)}
+            />
+            <Typography variant="h6" gutterBottom sx={{mt: 3}}>Contexto Cultural</Typography>
+            <RichTextEditor
+                value={personaData.contextoCultural || ''}
+                onChange={(value) => handleRichTextChange('contextoCultural', value)}
+            />
+          </Box>
+        );
+      default:
+        return 'Unknown step';
+    }
+  };
+
+  const isNextDisabled = () => {
+    if (activeStep === 0 && !personaData.description.trim()) {
+        return true;
+    }
+    if (activeStep === 1 && !personaData.nome.trim()) {
+        return true;
+    }
+    return false;
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <DialogTitle>
+        Criar Nova Persona
+        <Typography variant="body2">Passo {activeStep + 1} de {steps.length}</Typography>
+      </DialogTitle>
+      <DialogContent sx={{ minHeight: '50vh' }}>
+        <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+        {getStepContent(activeStep)}
+      </DialogContent>
+      <DialogActions sx={{ p: 3 }}>
+        <Button onClick={onClose}>Cancelar</Button>
+        <Button onClick={handleSave} color="secondary">Salvar e Sair</Button>
+        <Box sx={{ flex: '1 1 auto' }} />
+        <Button onClick={handleBack} disabled={activeStep === 0}>
+          Voltar
+        </Button>
+        <Button
+            onClick={handleNext}
+            variant="contained"
+            disabled={isNextDisabled() || isGeneratingPersona}
+        >
+          {isGeneratingPersona && activeStep === 0 && <CircularProgress size={24} />}
+          {!isGeneratingPersona && (activeStep === 0 ? 'Gerar com IA' : activeStep === steps.length - 1 ? 'Finalizar' : 'Continuar')}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+export default PersonaWizard;
