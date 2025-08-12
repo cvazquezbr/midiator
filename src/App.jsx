@@ -221,6 +221,47 @@ function App() {
   const [colorPalette, setColorPalette] = useState([]);
   const [campaignColors, setCampaignColors] = useState([]);
 
+  // Estados para a Campanha
+  const [problema, setProblema] = useState('');
+  const [solucao, setSolucao] = useState('');
+  const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
+  const [campaignContent, setCampaignContent] = useState(null);
+  const [editingField, setEditingField] = useState(null);
+  const [persona, setPersona] = useState('');
+  const [autor, setAutor] = useState('');
+  const [instrucoes, setInstrucoes] = useState('');
+  const [formato, setFormato] = useState('');
+  const [aspectRatio, setAspectRatio] = useState('1:1');
+  const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [conteudoMedio, setConteudoMedio] = useState('');
+  const [conteudoPequeno, setConteudoPequeno] = useState('');
+  const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
+  const [isGeneratingSummaryPequeno, setIsGeneratingSummaryPequeno] = useState(false);
+  const [conteudoFormatado, setConteudoFormatado] = useState('');
+  const [isGeneratingConteudoFormatado, setIsGeneratingConteudoFormatado] = useState(false);
+  const [followupPosts, setFollowupPosts] = useState([]);
+  const [isGeneratingFollowup, setIsGeneratingFollowup] = useState(false);
+  const [followupPostsQuantity, setFollowupPostsQuantity] = useState(5);
+
+  // Publisher State
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)); // Default to tomorrow
+  const [weeklySchedule, setWeeklySchedule] = useState({}); // { 0: '09:00', 1: '10:00', ... }
+  const [selectedProfile, setSelectedProfile] = useState('');
+  const [selectedImages, setSelectedImages] = useState({});
+  const [selectedVideos, setSelectedVideos] = useState({});
+
+
+  // Estados para a Geração com IA
+  const [inputMethod, setInputMethod] = useState('csv');
+  // const [selectedApiModel, setSelectedApiModel] = useState('deepseek'); // Removed, defaulting to gemini
+  const [promptNumRecords, setPromptNumRecords] = useState(10);
+  const [promptText, setPromptText] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
   const loadCampaignColors = useCallback(() => {
     const { colors } = getCampaignPrompt();
     setCampaignColors(colors || []);
@@ -510,46 +551,7 @@ A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação mark
   }, [generatedVideosData, saveStateToSessionStorage]);
 
 
-  // Estados para a Campanha
-  const [problema, setProblema] = useState('');
-  const [solucao, setSolucao] = useState('');
-  const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
-  const [campaignContent, setCampaignContent] = useState(null);
-  const [editingField, setEditingField] = useState(null);
-  const [persona, setPersona] = useState('');
-  const [autor, setAutor] = useState('');
-  const [instrucoes, setInstrucoes] = useState('');
-  const [formato, setFormato] = useState('');
-  const [aspectRatio, setAspectRatio] = useState('1:1');
-  const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [conteudoMedio, setConteudoMedio] = useState('');
-  const [conteudoPequeno, setConteudoPequeno] = useState('');
-  const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
-  const [isGeneratingSummaryPequeno, setIsGeneratingSummaryPequeno] = useState(false);
-  const [conteudoFormatado, setConteudoFormatado] = useState('');
-  const [isGeneratingConteudoFormatado, setIsGeneratingConteudoFormatado] = useState(false);
-  const [followupPosts, setFollowupPosts] = useState([]);
-  const [isGeneratingFollowup, setIsGeneratingFollowup] = useState(false);
-  const [followupPostsQuantity, setFollowupPostsQuantity] = useState(5);
 
-  // Publisher State
-  const [isScheduled, setIsScheduled] = useState(false);
-  const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)); // Default to tomorrow
-  const [weeklySchedule, setWeeklySchedule] = useState({}); // { 0: '09:00', 1: '10:00', ... }
-  const [selectedProfile, setSelectedProfile] = useState('');
-  const [selectedImages, setSelectedImages] = useState({});
-  const [selectedVideos, setSelectedVideos] = useState({});
-
-
-  // Estados para a Geração com IA
-  const [inputMethod, setInputMethod] = useState('csv');
-  // const [selectedApiModel, setSelectedApiModel] = useState('deepseek'); // Removed, defaulting to gemini
-  const [promptNumRecords, setPromptNumRecords] = useState(10);
-  const [promptText, setPromptText] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
