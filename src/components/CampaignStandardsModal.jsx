@@ -258,6 +258,14 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
       });
   };
 
+  const handlePersonaChipDelete = (fieldName, valueToDelete) => {
+    setPersona(prev => {
+        const currentValues = prev[fieldName] || [];
+        const newValues = currentValues.filter(item => item !== valueToDelete);
+        return { ...prev, [fieldName]: newValues };
+    });
+  };
+
   // Constants for Persona fields
   const POSICOES_CARGOS = ['Liderança Executiva: CEO, Diretor Executivo, Sócio', 'Gestão de Tecnologia: CTO, Head de Engenharia, Gerente de TI', 'Gestão de Marketing: Gerente de Marketing, Coordenador de Marketing', 'Gestão de Vendas: Gerente de Vendas, Diretor Comercial', 'Gestão de Recursos Humanos: Head de RH, Analista de RH', 'Outro(s)'];
   const SEGMENTOS_EMPRESA = ['Tecnologia (Software, SaaS, Hardware)', 'Serviços Financeiros (Fintech)', 'E-commerce e Varejo', 'Saúde (Healthtech, Farmacêutica)', 'Manufatura', 'Consultoria e Serviços', 'Outro(s)'];
@@ -349,7 +357,18 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
                             name="posicaoCargo"
                             value={persona?.posicaoCargo || []}
                             onChange={handlePersonaMultiSelectChange}
-                            renderValue={(selected) => selected.join(', ')}
+                            renderValue={(selected) => (
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                    {selected.map((value) => (
+                                        <Chip
+                                            key={value}
+                                            label={value}
+                                            onDelete={() => handlePersonaChipDelete('posicaoCargo', value)}
+                                            onMouseDown={(event) => event.stopPropagation()}
+                                        />
+                                    ))}
+                                </Box>
+                            )}
                             label="Posição/Cargo"
                         >
                             {POSICOES_CARGOS.map((pos) => (
@@ -372,7 +391,25 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
                 <Grid item xs={12} md={(persona?.segmentoEmpresa || []).includes('Outro(s)') ? 6 : 12} sx={{ display: 'flex', alignItems: 'center' }}>
                     <FormControl fullWidth variant="outlined">
                         <InputLabel>Segmento da Empresa</InputLabel>
-                        <Select multiple name="segmentoEmpresa" value={persona?.segmentoEmpresa || []} onChange={handlePersonaMultiSelectChange} renderValue={(selected) => selected.join(', ')} label="Segmento da Empresa">
+                        <Select
+                            multiple
+                            name="segmentoEmpresa"
+                            value={persona?.segmentoEmpresa || []}
+                            onChange={handlePersonaMultiSelectChange}
+                            renderValue={(selected) => (
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                    {selected.map((value) => (
+                                        <Chip
+                                            key={value}
+                                            label={value}
+                                            onDelete={() => handlePersonaChipDelete('segmentoEmpresa', value)}
+                                            onMouseDown={(event) => event.stopPropagation()}
+                                        />
+                                    ))}
+                                </Box>
+                            )}
+                            label="Segmento da Empresa"
+                        >
                             {SEGMENTOS_EMPRESA.map((seg) => (<MenuItem key={seg} value={seg}><Checkbox checked={(persona?.segmentoEmpresa || []).indexOf(seg) > -1} /><ListItemText primary={seg} /></MenuItem>))}
                         </Select>
                     </FormControl>
@@ -388,7 +425,25 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
                 <Grid item xs={12} md={(persona?.responsabilidadesChave || []).includes('Outro(s)') ? 6 : 12} sx={{ display: 'flex', alignItems: 'center' }}>
                     <FormControl fullWidth variant="outlined">
                         <InputLabel>Responsabilidades-Chave</InputLabel>
-                        <Select multiple name="responsabilidadesChave" value={persona?.responsabilidadesChave || []} onChange={handlePersonaMultiSelectChange} renderValue={(selected) => selected.join(', ')} label="Responsabilidades-Chave">
+                        <Select
+                            multiple
+                            name="responsabilidadesChave"
+                            value={persona?.responsabilidadesChave || []}
+                            onChange={handlePersonaMultiSelectChange}
+                            renderValue={(selected) => (
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                    {selected.map((value) => (
+                                        <Chip
+                                            key={value}
+                                            label={value}
+                                            onDelete={() => handlePersonaChipDelete('responsabilidadesChave', value)}
+                                            onMouseDown={(event) => event.stopPropagation()}
+                                        />
+                                    ))}
+                                </Box>
+                            )}
+                            label="Responsabilidades-Chave"
+                        >
                             {RESPONSABILIDADES_CHAVE.map((resp) => (<MenuItem key={resp} value={resp}><Checkbox checked={(persona?.responsabilidadesChave || []).indexOf(resp) > -1} /><ListItemText primary={resp} /></MenuItem>))}
                         </Select>
                     </FormControl>
