@@ -97,6 +97,7 @@ import { callGeminiApi, generateImage } from './utils/geminiAPI';
 import GoogleIcon from '@mui/icons-material/Google';
 import pako from 'pako';
 import { stripHtml } from './lib/utils';
+import { handleGenerateColorPalette, exportCsv, exportHtml, handleDownloadExampleCSV } from './lib/helpers';
 import './App.css';
 import LoadingDialog from './components/LoadingDialog';
 import TextEditorDialog from './components/TextEditorDialog';
@@ -262,63 +263,6 @@ function App() {
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [passwordDialogAction, setPasswordDialogAction] = useState(null); // 'save' or 'load'
   const [credentialsPassword, setCredentialsPassword] = useState('');
-
-  const handleGenerateColorPalette = async (briefing) => {
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
-      toast.error('Por favor, configure sua chave de API Gemini primeiro.');
-      throw new Error('Missing API Key');
-    }
-
-    const prompt = `Crie uma paleta harmoniosa de 5 cores baseada no briefing abaixo, aplicando princípios da psicologia das cores na cultura ocidental.
-
-**Briefing do Cliente:**
-${briefing}
-
-**Diretrizes de Psicologia das Cores (Cultura Ocidental):**
-- Considere estas associações-chave:
-  * **Vermelho:** Energia, paixão, urgência (comida, liquidações), perigo.
-  * **Azul:** Confiança, segurança, calma, profissionalismo (bancos, saúde, tech).
-  * **Verde:** Natureza, crescimento, sustentabilidade, saúde, tranquilidade.
-  * **Amarelo:** Otimismo, criatividade, atenção (uso moderado), cautela.
-  * **Roxo:** Luxo, criatividade, espiritualidade, realeza (beleza, artes).
-  * **Laranja:** Entusiasmo, jovialidade, acessibilidade (diversão, calls-to-action).
-  * **Rosa:** Feminilidade, ternura, compaixão (beleza, infantil).
-  * **Preto:** Sofisticação, poder, elegância (luxo, moda).
-  * **Branco:** Pureza, simplicidade, limpeza (saúde, minimalismo).
-  * **Cinza:** Neutralidade, equilíbrio, modernidade (tecnologia, corporativo).
-  * **Marrom:** Solidez, confiabilidade, natureza (orgânico, artesanal).
-- Tons **pastéis** transmitem suavidade; **vibrantes** geram impacto.
-- Evite combinações culturalmente negativas (ex: vermelho+puro preto = agressão/extremismo).
-
-**Formato de Saída OBRIGATÓRIO:**
-A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação markdown (como \`\`\`json) antes ou depois. O JSON deve ter a seguinte estrutura:
-{
-  "palette": [
-    {
-      "hex": "#RRGGBB",
-      "rgb": "RGB(R, G, B)",
-      "name": "Nome da Cor",
-      "role": "Primária | Secundária | Acento | Neutro Claro | Neutro Escuro",
-      "justification": "Explicação psicológica em uma frase."
-    }
-  ],
-  "harmony": "Nome da Harmonia (Análoga, Complementar, Triádica, etc.)"
-}
-`;
-
-    try {
-      const response = await callGeminiApi(prompt, apiKey);
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch && jsonMatch[0]) {
-        return JSON.parse(jsonMatch[0]);
-      }
-      throw new Error("Não foi possível extrair o JSON da resposta da IA.");
-    } catch (error) {
-      console.error("Erro ao gerar paleta de cores com IA:", error);
-      throw error;
-    }
-  };
 
   const saveStateToSessionStorage = async () => {
     const blobToBase64 = (blob) => {
@@ -1283,32 +1227,6 @@ A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação mark
     setAnchorElMenu(null);
   };
 
-  const handleDownloadExampleCSV = useCallback(async () => {
-    try {
-      const response = await fetch("/exemplo_posts.csv");
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const csvText = await response.text();
-
-      // Adicionar BOM UTF-8
-      const csvWithBOM = "\uFEFF" + csvText;
-
-      const blob = new Blob([csvWithBOM], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "exemplo_posts.csv";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Erro ao baixar o CSV de exemplo:", error);
-      alert("Não foi possível baixar o arquivo CSV de exemplo. Verifique o console para mais detalhes.");
-    }
-  }, []);
 
   const handleLoadTemplateClick = () => {
     handleMenuClose();
@@ -1358,33 +1276,8 @@ A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação mark
   };
 
   const handleExportCSV = () => {
-    if (csvData.length === 0) {
-      alert("Não há dados para exportar.");
-      return;
-    }
-
-    // Papa.unparse espera um array de objetos ou um array de arrays.
-    // Se csvHeaders for usado, ele garante a ordem das colunas.
-    // Se csvData já for um array de objetos com as chaves corretas,
-    // Papa.unparse(csvData) pode ser suficiente, mas usar 'fields' garante a ordem.
-    const config = {
-      quotes: true, // Adiciona aspas em todos os campos
-      delimiter: ";", // Usa ponto e vírgula como delimitador
-      header: true, // Inclui a linha de cabeçalho
-      fields: csvHeaders // Garante a ordem das colunas e quais incluir
-    };
-    const csvString = Papa.unparse(csvData, config);
-
-    const blob = new Blob([`\uFEFF${csvString}`], { type: "text/csv;charset=utf-8;" }); // Adiciona BOM para UTF-8 Excel
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "dados_exportados.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    handleMenuClose(); // Fechar o menu após a ação
+    exportCsv(csvData, csvHeaders, "dados_exportados");
+    handleMenuClose();
   };
   const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
     setCsvData(novosRegistros);
@@ -1778,73 +1671,7 @@ console.log(finalPrompt)
   };
 
   const handleExportHtml = () => {
-    if (!campaignContent) return;
-
-    const { titulo, conteudo, cta, hashtags } = campaignContent;
-    const imageHtml = backgroundImage ? `
-      <h2>Imagem de Fundo</h2>
-      <img src="${backgroundImage}" alt="Imagem de Fundo da Campanha" style="max-width: 100%; border-radius: 8px; margin-bottom: 2rem;" />
-    ` : '';
-
-    const followupPostsHtml = followupPosts.length > 0 ? `
-      <h2>Posts de Follow-up</h2>
-      ${followupPosts.map(post => `
-        <div style="border: 1px solid #eee; padding: 1rem; margin-bottom: 1rem; border-radius: 8px;">
-          <h3>Post ${post.post_numero}: ${post.tipo_gancho}</h3>
-          <p>${post.conteudo}</p>
-          <p><strong>CTA:</strong> ${post.cta}</p>
-          <div>
-            ${post.hashtags_sugeridas.map(tag => `<span style="background-color: #f5f3ff; color: #6d28d9; padding: 0.25rem 0.75rem; border-radius: 16px; font-size: 0.9rem; margin-right: 0.5rem;">${tag}</span>`).join('')}
-          </div>
-        </div>
-      `).join('')}
-    ` : '';
-
-    const html = `
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Relatório da Campanha: ${titulo}</title>
-        <style>
-          body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-          h1, h2 { color: #8b5cf6; }
-          .container { border: 1px solid #ddd; border-radius: 8px; padding: 2rem; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-          .hashtags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
-          .hashtag { background-color: #f5f3ff; color: #6d28d9; padding: 0.25rem 0.75rem; border-radius: 16px; font-size: 0.9rem; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1>${titulo}</h1>
-          ${imageHtml}
-          <h2>Conteúdo</h2>
-          <p>${conteudo.replace(/\n/g, '<br>')}</p>
-          <h2>Chamada para Ação (CTA)</h2>
-          <p>${cta.replace(/\n/g, '<br>')}</p>
-          <h2>Hashtags</h2>
-          <div class="hashtags">
-            ${hashtags.map(tag => `<span class="hashtag">${tag}</span>`).join('')}
-          </div>
-          ${conteudoMedio ? `<h2>Conteúdo Médio</h2><p>${conteudoMedio.replace(/\n/g, '<br>')}</p>` : ''}
-          ${conteudoPequeno ? `<h2>Conteúdo Pequeno</h2><p>${conteudoPequeno.replace(/\n/g, '<br>')}</p>` : ''}
-          ${conteudoFormatado ? `<h2>Conteúdo Formatado</h2><div>${conteudoFormatado}</div>` : ''}
-          ${followupPostsHtml}
-        </div>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `campanha-${titulo.toLowerCase().replace(/\s+/g, '-')}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    exportHtml(campaignContent, backgroundImage, followupPosts, conteudoMedio, conteudoPequeno, conteudoFormatado);
   };
 
   const handleGenerateIAContent = async () => {
@@ -3105,7 +2932,16 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
           setShowCampaignStandardsModal(false);
           loadCampaignColors();
         }}
-        onGeneratePalette={handleGenerateColorPalette}
+        onGeneratePalette={async (briefing) => {
+          try {
+            const apiKey = getGeminiApiKey();
+            const palette = await handleGenerateColorPalette(briefing, apiKey, callGeminiApi);
+            return palette;
+          } catch (error) {
+            toast.error('Por favor, configure sua chave de API Gemini primeiro.');
+            throw error;
+          }
+        }}
       />
       <LoadingDialog
         open={isGeneratingCampaign || isSaving || isLoading}
