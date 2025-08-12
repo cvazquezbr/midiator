@@ -23,7 +23,12 @@ import {
   Card,
   CardContent,
   Divider,
+  ListItemText,
+  Checkbox,
+  FormGroup,
+  FormControlLabel,
 } from '@mui/material';
+import RichTextEditor from './RichTextEditor';
 import {
   Close as CloseIcon,
   TextFields as TextFieldsIcon,
@@ -71,9 +76,7 @@ const briefingOptions = {
 
 const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const [value, setValue] = useState(0);
-  const [hasStoredPrompt, setHasStoredPrompt] = useState(false);
-  const [persona, setPersona] = useState(''); // This will now hold the summary string for display
-  const [personaObj, setPersonaObj] = useState({}); // This will hold the actual persona object
+  const [persona, setPersona] = useState({});
   const [autor, setAutor] = useState('');
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
@@ -130,20 +133,12 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
 
   useEffect(() => {
     if (open) {
-      const { persona: personaObject, autor, instrucoes, formato, colors } = getCampaignPrompt();
-      setPersonaObj(personaObject); // Store the full object
-
-      // Create a summary string for display
-      const personaSummary = personaObject?.nome
-        ? `Persona: "${personaObject.nome}". (Detalhes definidos na tela de Campanha)`
-        : 'Nenhuma persona definida. Defina na tela principal da Campanha.';
-      setPersona(personaSummary);
-
+      const { persona, autor, instrucoes, formato, colors } = getCampaignPrompt();
+      setPersona(persona);
       setAutor(autor);
       setInstrucoes(instrucoes);
       setFormato(formato);
       setColors(colors || []);
-      setHasStoredPrompt(!!(personaObject?.nome || autor || instrucoes || formato || (colors && colors.length > 0)));
     }
   }, [open]);
 
@@ -152,7 +147,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   };
 
   const handleSave = () => {
-    saveCampaignPrompt({ persona: personaObj, autor, instrucoes, formato, colors });
+    saveCampaignPrompt({ persona, autor, instrucoes, formato, colors });
     setHasStoredPrompt(true);
     toast.success('Padrões de campanha salvos com sucesso!');
     onClose();
@@ -167,7 +162,9 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   };
 
   const handleSaveEditor = (newContent) => {
-    if (editingField === 'autor') {
+    if (editingField === 'persona') {
+      setPersona(newContent);
+    } else if (editingField === 'autor') {
       setAutor(newContent);
     } else if (editingField === 'instrucoes') {
       setInstrucoes(newContent);
@@ -178,6 +175,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   };
 
   const getCurrentContent = () => {
+    if (editingField === 'persona') return persona;
     if (editingField === 'autor') return autor;
     if (editingField === 'instrucoes') return instrucoes;
     if (editingField === 'formato') return formato;
@@ -185,6 +183,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   };
 
   const getEditorTitle = () => {
+      if (editingField === 'persona') return 'Editar Persona';
       if (editingField === 'autor') return 'Editar Autor';
       if (editingField === 'instrucoes') return 'Editar Instruções';
       if (editingField === 'formato') return 'Editar Formato';
@@ -224,6 +223,60 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
       reader.readAsDataURL(file);
     }
   };
+
+  const handlePersonaChange = (event) => {
+      const { name, value } = event.target;
+      setPersona(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePersonaMultiSelectChange = (event) => {
+      const { name, value } = event.target;
+      setPersona(prev => ({
+          ...prev,
+          [name]: typeof value === 'string' ? value.split(',') : value,
+      }));
+  };
+
+  const handlePersonaRichTextChange = (name, value) => {
+      setPersona(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePersonaCheckboxChange = (category, field) => (event) => {
+      const { checked } = event.target;
+      setPersona(prev => {
+          const currentValues = prev[category] || [];
+          let newValues;
+          if (checked) {
+              newValues = [...currentValues, field];
+          } else {
+              newValues = currentValues.filter(item => item !== field);
+          }
+          return { ...prev, [category]: newValues };
+      });
+  };
+
+  // Constants for Persona fields
+  const POSICOES_CARGOS = ['Liderança Executiva: CEO, Diretor Executivo, Sócio', 'Gestão de Tecnologia: CTO, Head de Engenharia, Gerente de TI', 'Gestão de Marketing: Gerente de Marketing, Coordenador de Marketing', 'Gestão de Vendas: Gerente de Vendas, Diretor Comercial', 'Gestão de Recursos Humanos: Head de RH, Analista de RH', 'Outro(s)'];
+  const SEGMENTOS_EMPRESA = ['Tecnologia (Software, SaaS, Hardware)', 'Serviços Financeiros (Fintech)', 'E-commerce e Varejo', 'Saúde (Healthtech, Farmacêutica)', 'Manufatura', 'Consultoria e Serviços', 'Outro(s)'];
+  const RESPONSABILIDADES_CHAVE = ['Gerenciamento de Orçamento', 'Tomada de Decisão Estratégica', 'Gestão de Equipes', 'Inovação de Produtos', 'Garantir a Operação e Estabilidade', 'Compliance e Governança', 'Outro(s)'];
+  const DORES_DESAFIOS = {
+      'doresEstrategicos': { label: 'Estratégicos', items: ['ROI de Inovação', 'Dependência de Fornecedores', 'Escalabilidade de Negócios', 'Outro(s)']},
+      'doresOperacionais': { label: 'Operacionais', items: ['Manutenção de Sistemas Legados', 'Custos Operacionais', 'Segurança de Dados', 'Interoperabilidade de Sistemas', 'Outro(s)']},
+      'doresPessoas': { label: 'Pessoas e Cultura', items: ['Retenção de Talentos', 'Alinhamento de Equipes', 'Resistência à Mudança', 'Treinamento e Capacitação', 'Outro(s)']},
+      'doresRegulatorios': { label: 'Regulatórios e Métricas', items: ['Compliance (LGPD, etc.)', 'Medição de Valor (ROI)', 'Prioridades Conflitantes', 'Outro(s)']},
+  };
+  const GATILHOS_BARREIRAS = {
+      'gatilhosCompra': { label: 'Gatilhos de Compra', items: ['Problema técnico urgente', 'Pressão do board', 'Necessidade de redução de custos', 'Vantagem competitiva', 'Outro(s)']},
+      'barreirasAdocao': { label: 'Barreiras de Adoção', items: ['Orçamento limitado', 'Resistência à mudança da equipe', 'Preocupação com segurança e compliance', 'Dificuldade de integração', 'Outro(s)']},
+  };
+
+  const InfoTooltip = ({ title, url }) => (
+      <Tooltip title={<Typography variant="body2" sx={{ p: 1 }}>{title} {url && <MuiLink href={url} target="_blank" rel="noopener noreferrer" sx={{ color: 'cyan', display: 'block', mt: 1 }}>Saiba mais</MuiLink>}</Typography>}>
+          <IconButton>
+              <InfoOutlinedIcon sx={{ color: 'text.secondary', fontSize: '1rem' }} />
+          </IconButton>
+      </Tooltip>
+  );
 
   const a11yProps = (index) => {
     return {
@@ -269,13 +322,147 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
           </Tabs>
 
           <TabPanel value={value} index={0}>
-            <HtmlDisplayField
-              title="Persona"
-              tooltip="A persona agora é definida em detalhes na tela principal da campanha. Aqui você vê apenas um resumo."
-              htmlContent={persona}
-              onClick={null} // Desabilita a edição
-              placeholder="Defina a persona na tela principal da Campanha."
-            />
+            <Grid container spacing={3}>
+                {/* Nome da Persona */}
+                <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center' }}>
+                    <TextField
+                        label="Nome da Persona"
+                        name="nome"
+                        value={persona?.nome || ''}
+                        onChange={handlePersonaChange}
+                        fullWidth
+                        required
+                        variant="outlined"
+                    />
+                    <InfoTooltip title="É a identificação clara e concisa do perfil de cliente ideal que você está descrevendo. Ajuda a humanizar o perfil, tornando-o mais fácil de ser compreendido por toda a equipe." />
+                </Grid>
+
+                {/* Posição/Cargo */}
+                <Grid item xs={12} md={(persona?.posicaoCargo || []).includes('Outro(s)') ? 6 : 12} sx={{ display: 'flex', alignItems: 'center' }}>
+                    <FormControl fullWidth variant="outlined">
+                        <InputLabel>Posição/Cargo</InputLabel>
+                        <Select
+                            multiple
+                            name="posicaoCargo"
+                            value={persona?.posicaoCargo || []}
+                            onChange={handlePersonaMultiSelectChange}
+                            renderValue={(selected) => selected.join(', ')}
+                            label="Posição/Cargo"
+                        >
+                            {POSICOES_CARGOS.map((pos) => (
+                                <MenuItem key={pos} value={pos}>
+                                    <Checkbox checked={(persona?.posicaoCargo || []).indexOf(pos) > -1} />
+                                    <ListItemText primary={pos} />
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    <InfoTooltip title="Este campo identifica a função formal da persona dentro da empresa. A posição define a autoridade de decisão, as responsabilidades e as métricas de sucesso que a persona utiliza." url="https://www.google.com/search?q=https://www.linkedin.com/business/talent/blog/talent-acquisition/types-of-job-titles" />
+                </Grid>
+                {(persona?.posicaoCargo || []).includes('Outro(s)') && (
+                    <Grid item xs={12} md={6}>
+                        <TextField label="Especifique Outro Cargo" name="posicaoCargoOutro" value={persona?.posicaoCargoOutro || ''} onChange={handlePersonaChange} fullWidth required variant="outlined"/>
+                    </Grid>
+                )}
+
+                {/* Segmento da Empresa */}
+                <Grid item xs={12} md={(persona?.segmentoEmpresa || []).includes('Outro(s)') ? 6 : 12} sx={{ display: 'flex', alignItems: 'center' }}>
+                    <FormControl fullWidth variant="outlined">
+                        <InputLabel>Segmento da Empresa</InputLabel>
+                        <Select multiple name="segmentoEmpresa" value={persona?.segmentoEmpresa || []} onChange={handlePersonaMultiSelectChange} renderValue={(selected) => selected.join(', ')} label="Segmento da Empresa">
+                            {SEGMENTOS_EMPRESA.map((seg) => (<MenuItem key={seg} value={seg}><Checkbox checked={(persona?.segmentoEmpresa || []).indexOf(seg) > -1} /><ListItemText primary={seg} /></MenuItem>))}
+                        </Select>
+                    </FormControl>
+                    <InfoTooltip title="Este campo classifica a indústria ou setor de atuação da empresa. O segmento de mercado influencia diretamente os desafios, a cultura e as regulamentações que a persona enfrenta." url="https://www.google.com/search?q=https://blog.hubspot.com/marketing/market-segmentation-guide" />
+                </Grid>
+                {(persona?.segmentoEmpresa || []).includes('Outro(s)') && (
+                    <Grid item xs={12} md={6}>
+                        <TextField label="Especifique Outro Segmento" name="segmentoEmpresaOutro" value={persona?.segmentoEmpresaOutro || ''} onChange={handlePersonaChange} fullWidth required variant="outlined"/>
+                    </Grid>
+                )}
+
+                {/* Responsabilidades-Chave */}
+                <Grid item xs={12} md={(persona?.responsabilidadesChave || []).includes('Outro(s)') ? 6 : 12} sx={{ display: 'flex', alignItems: 'center' }}>
+                    <FormControl fullWidth variant="outlined">
+                        <InputLabel>Responsabilidades-Chave</InputLabel>
+                        <Select multiple name="responsabilidadesChave" value={persona?.responsabilidadesChave || []} onChange={handlePersonaMultiSelectChange} renderValue={(selected) => selected.join(', ')} label="Responsabilidades-Chave">
+                            {RESPONSABILIDADES_CHAVE.map((resp) => (<MenuItem key={resp} value={resp}><Checkbox checked={(persona?.responsabilidadesChave || []).indexOf(resp) > -1} /><ListItemText primary={resp} /></MenuItem>))}
+                        </Select>
+                    </FormControl>
+                    <InfoTooltip title="Detalha as principais tarefas e áreas de atuação da persona. Entender suas responsabilidades ajuda a identificar como sua solução pode facilitar o trabalho dela ou ajudá-la a atingir metas específicas." />
+                </Grid>
+                {(persona?.responsabilidadesChave || []).includes('Outro(s)') && (
+                    <Grid item xs={12} md={6}>
+                        <TextField label="Especifique Outra Responsabilidade" name="responsabilidadesChaveOutro" value={persona?.responsabilidadesChaveOutro || ''} onChange={handlePersonaChange} fullWidth required variant="outlined"/>
+                    </Grid>
+                )}
+
+                {/* Dores e Desafios */}
+                <Grid item xs={12}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="subtitle1">Dores e Desafios</Typography>
+                        <InfoTooltip title="Esta seção descreve os problemas e obstáculos que a persona enfrenta. Compreender suas dores permite que você posicione sua solução como uma resposta direta a um problema real." url="https://www.google.com/search?q=https://blog.hotmart.com/pt-br/dor-do-cliente/" />
+                    </Box>
+                    {Object.entries(DORES_DESAFIOS).map(([key, { label, items }]) => (
+                        <Accordion key={key}>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
+                            <AccordionDetails>
+                                <FormGroup>
+                                    {items.map((item) => (<FormControlLabel key={item} control={<Checkbox checked={(persona?.[key] || []).includes(item)} onChange={handlePersonaCheckboxChange(key, item)} />} label={item} />))}
+                                </FormGroup>
+                                {(persona?.[key] || []).includes('Outro(s)') && (
+                                    <TextField label={`Especifique Outra Dor (${label})`} name={`${key}Outro`} value={persona?.[`${key}Outro`] || ''} onChange={handlePersonaChange} fullWidth required variant="outlined" sx={{ mt: 2 }}/>
+                                )}
+                            </AccordionDetails>
+                        </Accordion>
+                    ))}
+                </Grid>
+
+                {/* Gatilhos de Compra e Barreiras de Adoção */}
+                <Grid item xs={12}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="subtitle1">Gatilhos de Compra e Barreira de Adoção</Typography>
+                        <InfoTooltip title="Detalha os fatores que levam a persona a buscar uma solução (gatilhos) e os obstáculos que podem atrasar ou impedir a decisão de compra (barreiras)." />
+                    </Box>
+                    {Object.entries(GATILHOS_BARREIRAS).map(([key, { label, items }]) => (
+                        <Accordion key={key}>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
+                            <AccordionDetails>
+                                <FormGroup>
+                                    {items.map((item) => (<FormControlLabel key={item} control={<Checkbox checked={(persona?.[key] || []).includes(item)} onChange={handlePersonaCheckboxChange(key, item)} />} label={item} />))}
+                                </FormGroup>
+                                {(persona?.[key] || []).includes('Outro(s)') && (
+                                    <TextField label={`Especifique Outro(a) (${label})`} name={`${key}Outro`} value={persona?.[`${key}Outro`] || ''} onChange={handlePersonaChange} fullWidth required variant="outlined" sx={{ mt: 2 }}/>
+                                )}
+                            </AccordionDetails>
+                        </Accordion>
+                    ))}
+                </Grid>
+
+                {/* Mentalidade e Valores */}
+                <Grid item xs={12}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="subtitle1">Mentalidade e Valores</Typography>
+                        <InfoTooltip title="Descreve a forma de pensar, os valores e a atitude da persona em relação ao trabalho e às decisões. Esta informação é fundamental para adaptar a linguagem e o tom da comunicação." />
+                    </Box>
+                    <RichTextEditor
+                        value={persona?.mentalidadeValores || ''}
+                        onChange={(value) => handlePersonaRichTextChange('mentalidadeValores', value)}
+                    />
+                </Grid>
+
+                {/* Contexto Cultural */}
+                <Grid item xs={12}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="subtitle1">Contexto Cultural</Typography>
+                        <InfoTooltip title="Aqui é detalhado o ambiente de trabalho e a cultura organizacional na qual a persona está inserida. Isso inclui o contexto interno, como a convivência com processos antigos, a pressão por inovação ou a colaboração entre equipes." />
+                    </Box>
+                    <RichTextEditor
+                        value={persona?.contextoCultural || ''}
+                        onChange={(value) => handlePersonaRichTextChange('contextoCultural', value)}
+                    />
+                </Grid>
+            </Grid>
           </TabPanel>
           <TabPanel value={value} index={1}>
             <HtmlDisplayField
