@@ -110,6 +110,7 @@ import { saveCampaignState, loadCampaignState } from './utils/campaignState.js';
 import { exportCsv, exportHtml } from './utils/exportUtils.js';
 import { downloadExampleCsv } from './utils/fileUtils.js';
 import { parseIaResponseToCsvData } from './utils/iaResponseParser.js';
+import { parseCsv } from './utils/csvParser.js';
 
 // Temas atualizados com gradientes e cores modernas
 const lightTheme = createTheme({
@@ -641,79 +642,73 @@ function App() {
     }
   ];
   // Função para ler arquivo CSV
-  const parseCsvFile = (file) => {
-    if (file) {
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          if (results.data && results.data.length > 0) {
-            const newCsvData = results.data;
-            const newHeaders = Object.keys(newCsvData[0] || {});
+  const parseCsvFile = async (file) => {
+    if (!file) return;
 
-            setCsvData(newCsvData);
-            setCsvHeaders(newHeaders);
+    try {
+      const { data: newCsvData, headers: newHeaders } = await parseCsv(file);
 
-            const updatedFieldPositions = {};
-            const updatedFieldStyles = {};
+      if (newCsvData && newCsvData.length > 0) {
+        setCsvData(newCsvData);
+        setCsvHeaders(newHeaders);
 
-            const defaultStylesBase = {
-              fontFamily: 'Inter',
-              fontSize: 24,
-              fontWeight: 'normal',
-              fontStyle: 'normal',
-              textDecoration: 'none',
-              color: '#000000',
-              textStroke: false,
-              strokeColor: '#ffffff',
-              strokeWidth: 2,
-              textShadow: false,
-              shadowColor: '#000000',
-              shadowBlur: 4,
-              shadowOffsetX: 2,
-              shadowOffsetY: 2,
-              textAlign: 'left',
-              verticalAlign: 'top'
+        const updatedFieldPositions = {};
+        const updatedFieldStyles = {};
+
+        const defaultStylesBase = {
+          fontFamily: 'Inter',
+          fontSize: 24,
+          fontWeight: 'normal',
+          fontStyle: 'normal',
+          textDecoration: 'none',
+          color: '#000000',
+          textStroke: false,
+          strokeColor: '#ffffff',
+          strokeWidth: 2,
+          textShadow: false,
+          shadowColor: '#000000',
+          shadowBlur: 4,
+          shadowOffsetX: 2,
+          shadowOffsetY: 2,
+          textAlign: 'left',
+          verticalAlign: 'top'
+        };
+
+        newHeaders.forEach((header, index) => {
+          if (fieldPositions[header]) {
+            updatedFieldPositions[header] = fieldPositions[header];
+          } else {
+            updatedFieldPositions[header] = {
+              x: 10 + (index % 5) * 18,
+              y: 10 + Math.floor(index / 5) * 12,
+              width: 15,
+              height: 10,
+              visible: true
             };
-
-            newHeaders.forEach((header, index) => {
-              if (fieldPositions[header]) {
-                updatedFieldPositions[header] = fieldPositions[header];
-              } else {
-                updatedFieldPositions[header] = {
-                  x: 10 + (index % 5) * 18,
-                  y: 10 + Math.floor(index / 5) * 12,
-                  width: 15,
-                  height: 10,
-                  visible: true
-                };
-              }
-
-              if (fieldStyles[header]) {
-                updatedFieldStyles[header] = fieldStyles[header];
-              } else {
-                if (index === 0) {
-                  updatedFieldStyles[header] = {
-                    ...defaultStylesBase,
-                    fontFamily: 'Anton',
-                    fontSize: 72,
-                  };
-                } else {
-                  updatedFieldStyles[header] = { ...defaultStylesBase };
-                }
-              }
-            });
-
-            setFieldPositions(updatedFieldPositions);
-            setFieldStyles(updatedFieldStyles);
-            setActiveStep(2);
           }
-        },
-        error: (error) => {
-          console.error('Erro ao ler CSV:', error);
-          alert('Erro ao ler o arquivo CSV. Verifique se o formato está correto.');
-        }
-      });
+
+          if (fieldStyles[header]) {
+            updatedFieldStyles[header] = fieldStyles[header];
+          } else {
+            if (index === 0) {
+              updatedFieldStyles[header] = {
+                ...defaultStylesBase,
+                fontFamily: 'Anton',
+                fontSize: 72,
+              };
+            } else {
+              updatedFieldStyles[header] = { ...defaultStylesBase };
+            }
+          }
+        });
+
+        setFieldPositions(updatedFieldPositions);
+        setFieldStyles(updatedFieldStyles);
+        setActiveStep(2);
+      }
+    } catch (error) {
+      console.error('Erro ao processar CSV:', error);
+      toast.error(error.message || 'Ocorreu um erro desconhecido ao processar o arquivo CSV.');
     }
   };
 
