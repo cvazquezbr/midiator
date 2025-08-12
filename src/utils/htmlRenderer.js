@@ -38,8 +38,14 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
   tempDiv.style.fontWeight = style.fontWeight || 'normal';
   tempDiv.style.fontStyle = style.fontStyle || 'normal';
   tempDiv.style.color = style.color || '#000000';
-  tempDiv.style.textAlign = style.textAlign || 'left';
   tempDiv.style.lineHeight = style.lineHeightMultiplier ? `${style.lineHeightMultiplier * (style.fontSize || 24)}px` : 'normal';
+
+  // Replicar o layout flexbox para alinhamento
+  tempDiv.style.display = 'flex';
+  tempDiv.style.flexDirection = 'column'; // Assume vertical layout for lines of text
+  tempDiv.style.justifyContent = style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end';
+  tempDiv.style.alignItems = style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end';
+  tempDiv.style.textAlign = style.textAlign || 'left';
 
   // Text shadow
   if (style.textShadow) {
