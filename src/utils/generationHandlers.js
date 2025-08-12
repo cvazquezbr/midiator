@@ -281,3 +281,67 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
   console.log("Resposta da IA (Conteúdo):", iaResponseText);
   return iaResponseText;
 };
+
+/**
+ * Generates a color palette from a briefing using an AI API.
+ * @param {string} briefing - The user's briefing for the color palette.
+ * @returns {Promise<Object>} A promise that resolves to the generated palette object.
+ */
+export const generateColorPalette = async (briefing) => {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    // The original function used toast, but in a util file, it's better to throw.
+    // The calling component will be responsible for catching the error and showing a toast.
+    throw new Error('Por favor, configure sua chave de API Gemini primeiro.');
+  }
+
+  const prompt = `Crie uma paleta harmoniosa de 5 cores baseada no briefing abaixo, aplicando princípios da psicologia das cores na cultura ocidental.
+
+**Briefing do Cliente:**
+${briefing}
+
+**Diretrizes de Psicologia das Cores (Cultura Ocidental):**
+- Considere estas associações-chave:
+  * **Vermelho:** Energia, paixão, urgência (comida, liquidações), perigo.
+  * **Azul:** Confiança, segurança, calma, profissionalismo (bancos, saúde, tech).
+  * **Verde:** Natureza, crescimento, sustentabilidade, saúde, tranquilidade.
+  * **Amarelo:** Otimismo, criatividade, atenção (uso moderado), cautela.
+  * **Roxo:** Luxo, criatividade, espiritualidade, realeza (beleza, artes).
+  * **Laranja:** Entusiasmo, jovialidade, acessibilidade (diversão, calls-to-action).
+  * **Rosa:** Feminilidade, ternura, compaixão (beleza, infantil).
+  * **Preto:** Sofisticação, poder, elegância (luxo, moda).
+  * **Branco:** Pureza, simplicidade, limpeza (saúde, minimalismo).
+  * **Cinza:** Neutralidade, equilíbrio, modernidade (tecnologia, corporativo).
+  * **Marrom:** Solidez, confiabilidade, natureza (orgânico, artesanal).
+- Tons **pastéis** transmitem suavidade; **vibrantes** geram impacto.
+- Evite combinações culturalmente negativas (ex: vermelho+puro preto = agressão/extremismo).
+
+**Formato de Saída OBRIGATÓRIO:**
+A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação markdown (como \`\`\`json) antes ou depois. O JSON deve ter a seguinte estrutura:
+{
+  "palette": [
+    {
+      "hex": "#RRGGBB",
+      "rgb": "RGB(R, G, B)",
+      "name": "Nome da Cor",
+      "role": "Primária | Secundária | Acento | Neutro Claro | Neutro Escuro",
+      "justification": "Explicação psicológica em uma frase."
+    }
+  ],
+  "harmony": "Nome da Harmonia (Análoga, Complementar, Triádica, etc.)"
+}
+`;
+
+  try {
+    const response = await callGeminiApi(prompt, apiKey);
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch && jsonMatch[0]) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    throw new Error("Não foi possível extrair o JSON da resposta da IA.");
+  } catch (error) {
+    console.error("Erro ao gerar paleta de cores com IA:", error);
+    // Re-throw the error to be handled by the calling component
+    throw error;
+  }
+};
