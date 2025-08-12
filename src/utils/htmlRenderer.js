@@ -28,52 +28,49 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
   tempDiv.style.left = '-9999px'; // Move off-screen
   tempDiv.style.top = '-9999px';
   tempDiv.style.width = `${maxWidth}px`;
-  tempDiv.style.height = `${maxHeight}px`;
-  tempDiv.style.overflow = 'hidden'; // Clip content if it exceeds bounds
-  tempDiv.style.boxSizing = 'border-box'; // Include padding and border in width/height
+  tempDiv.style.height = 'auto'; // Altura automática para medir o conteúdo
+  tempDiv.style.boxSizing = 'border-box';
 
-  // Apply styles from the 'style' object
+  // Aplicar estilos para medição
   tempDiv.style.fontFamily = style.fontFamily || 'Arial';
   tempDiv.style.fontSize = `${style.fontSize || 24}px`;
   tempDiv.style.fontWeight = style.fontWeight || 'normal';
   tempDiv.style.fontStyle = style.fontStyle || 'normal';
   tempDiv.style.color = style.color || '#000000';
+  tempDiv.style.textAlign = style.textAlign || 'left';
   tempDiv.style.lineHeight = style.lineHeightMultiplier ? `${style.lineHeightMultiplier * (style.fontSize || 24)}px` : 'normal';
 
-  // Replicar o layout flexbox para alinhamento
-  tempDiv.style.display = 'flex';
-  tempDiv.style.flexDirection = 'column'; // Assume vertical layout for lines of text
-  tempDiv.style.justifyContent = style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end';
-  tempDiv.style.alignItems = style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end';
-  tempDiv.style.textAlign = style.textAlign || 'left';
-
-  // Text shadow
+  // Sombra de texto
   if (style.textShadow) {
-    const shadowColor = style.shadowColor || '#000000';
-    const shadowBlur = style.shadowBlur || 4;
-    const shadowOffsetX = style.shadowOffsetX || 2;
-    const shadowOffsetY = style.shadowOffsetY || 2;
-    tempDiv.style.textShadow = `${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px ${shadowColor}`;
-  } else {
-    tempDiv.style.textShadow = 'none';
+    tempDiv.style.textShadow = `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}`;
   }
-
-  // Text stroke is not directly supported by html2canvas in this manner.
-  // If critical, a more complex solution (e.g., SVG text) would be needed.
 
   tempDiv.innerHTML = htmlContent;
   document.body.appendChild(tempDiv);
 
+  // Forçar o navegador a calcular o layout para obter a largura real do conteúdo
+  const contentWidth = tempDiv.scrollWidth;
+
+  // Ajustar a posição X com base no alinhamento
+  let adjustedX = x;
+  if (style.textAlign === 'center') {
+    adjustedX = x + (maxWidth - contentWidth) / 2;
+  } else if (style.textAlign === 'right') {
+    adjustedX = x + (maxWidth - contentWidth);
+  }
+
+  // Agora, ajuste a altura do div para a altura máxima para o html2canvas
+  tempDiv.style.height = `${maxHeight}px`;
+  tempDiv.style.width = `${maxWidth}px`;
+
   try {
     const canvasFromHtml = await html2canvas(tempDiv, {
-      backgroundColor: null, // Transparent background
-      width: maxWidth,
-      height: maxHeight,
+      backgroundColor: null,
       useCORS: true,
     });
 
-    // Draw the generated canvas onto the main canvas context
-    ctx.drawImage(canvasFromHtml, x, y, maxWidth, maxHeight);
+    // Desenhar o canvas gerado no canvas principal na posição X ajustada
+    ctx.drawImage(canvasFromHtml, adjustedX, y);
   } catch (error) {
     console.error('Erro ao renderizar HTML para canvas com html2canvas:', error);
   } finally {
@@ -81,8 +78,8 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
   }
 };
 
-// These functions are now deprecated for HTML rendering to canvas.
-// They are kept as placeholders or for non-HTML text rendering if needed elsewhere.
+// ... (o resto do arquivo permanece o mesmo)
+
 export const parseHtmlToFormattedText = (html) => {
   return [{ text: html, format: {} }];
 };
@@ -102,4 +99,3 @@ export const stripHtml = (html) => {
   tempDiv.innerHTML = html;
   return tempDiv.textContent || tempDiv.innerText || '';
 };
-
