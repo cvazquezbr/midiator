@@ -16,9 +16,8 @@ import {
 import { Close as CloseIcon, Print as PrintIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 
-const PaletteReportModal = ({ open, onClose, paletteData, onApplyPalette }) => {
+const PaletteReportModal = ({ open, onClose, paletteData, onApplyPalette, briefing }) => {
   const handlePrint = () => {
-    // Temporarily hide buttons for printing
     const printSection = document.querySelector('.printable-section');
     if (printSection) {
       window.print();
@@ -27,7 +26,7 @@ const PaletteReportModal = ({ open, onClose, paletteData, onApplyPalette }) => {
     }
   };
 
-  if (!paletteData) return null;
+  if (!paletteData || !briefing) return null;
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
@@ -72,13 +71,27 @@ const PaletteReportModal = ({ open, onClose, paletteData, onApplyPalette }) => {
           <Divider sx={{ my: 3 }} />
 
           <Box sx={{ mb: 4 }}>
-            <Typography variant="h5" gutterBottom sx={{ fontFamily: 'Georgia, serif' }}>1. Harmonia da Paleta</Typography>
+            <Typography variant="h5" gutterBottom sx={{ fontFamily: 'Georgia, serif' }}>1. Briefing Criativo</Typography>
+            <Typography variant="body1" paragraph>
+              A paleta de cores a seguir foi gerada com base nos seguintes parâmetros criativos fornecidos:
+            </Typography>
+            <Paper variant="outlined" sx={{ p: 2, backgroundColor: '#f9f9f9' }}>
+              <Typography variant="body2"><strong>Objetivo:</strong> {briefing.objective}</Typography>
+              <Typography variant="body2"><strong>Público-alvo:</strong> {briefing.targetAudience}</Typography>
+              <Typography variant="body2"><strong>Mensagem Principal:</strong> {briefing.mainMessage}</Typography>
+              <Typography variant="body2"><strong>Atmosfera Desejada:</strong> {briefing.atmosphere}</Typography>
+              {briefing.details && <Typography variant="body2"><strong>Detalhes Adicionais:</strong> {briefing.details}</Typography>}
+            </Paper>
+          </Box>
+
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h5" gutterBottom sx={{ fontFamily: 'Georgia, serif' }}>2. Harmonia da Paleta</Typography>
             <Typography variant="body1">
               A harmonia de cores selecionada foi a <strong>{paletteData.harmony}</strong>. Esta escolha visa criar um equilíbrio visual coeso e psicologicamente alinhado aos objetivos do briefing.
             </Typography>
           </Box>
 
-          <Typography variant="h5" gutterBottom sx={{ fontFamily: 'Georgia, serif' }}>2. Detalhamento da Paleta</Typography>
+          <Typography variant="h5" gutterBottom sx={{ fontFamily: 'Georgia, serif' }}>3. Detalhamento da Paleta</Typography>
           <Grid container spacing={3}>
             {paletteData.palette.map((color, index) => (
               <Grid item xs={12} key={index}>
