@@ -38,6 +38,7 @@ import ColorThief from 'colorthief';
 
 import TextEditorDialog from './TextEditorDialog';
 import HtmlDisplayField from './HtmlDisplayField';
+import PaletteReportModal from './PaletteReportModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
 
 function TabPanel(props) {
@@ -89,6 +90,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPalette, setGeneratedPalette] = useState(null);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const handleBriefingChange = (e) => {
     const { name, value } = e.target;
@@ -108,6 +110,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
       `;
       const result = await onGeneratePalette(fullBriefing.trim());
       setGeneratedPalette(result);
+      setShowReportModal(true); // Open the report modal
     } catch (error) {
       toast.error('Erro ao gerar paleta de cores. Tente novamente.');
       console.error("Error generating color palette:", error);
@@ -398,27 +401,6 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
               >
                 {isGenerating ? <CircularProgress size={24} /> : 'Gerar Paleta'}
               </Button>
-
-              {generatedPalette && (
-                <Card sx={{ mt: 3 }}>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>Paleta Gerada ({generatedPalette.harmony})</Typography>
-                    {generatedPalette.palette.map((color, index) => (
-                      <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                        <Box sx={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: color.hex, border: '1px solid #ddd' }} />
-                        <Box>
-                          <Typography variant="body1" sx={{ fontWeight: 'bold' }}>{color.name} ({color.role})</Typography>
-                          <Typography variant="body2" color="text.secondary">{color.hex} | {color.rgb}</Typography>
-                          <Typography variant="caption">{color.justification}</Typography>
-                        </Box>
-                      </Box>
-                    ))}
-                    <Button variant="outlined" sx={{ mt: 2 }} onClick={applyGeneratedPalette}>
-                      Aplicar Paleta
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
             </Box>
           </TabPanel>
         </DialogContent>
@@ -434,6 +416,13 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
         content={getCurrentContent()}
         onSave={handleSaveEditor}
         onClose={handleCloseEditor}
+      />
+
+      <PaletteReportModal
+        open={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        paletteData={generatedPalette}
+        onApplyPalette={applyGeneratedPalette}
       />
     </>
   );
