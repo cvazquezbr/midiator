@@ -348,21 +348,21 @@ const FieldPositioner = ({
       };
     }
 
-    // Rule for Side Label Field (Bottom-Right Corner)
+    // Rule for Side Label Field (Right Side, Vertical)
     if (sideLabelField) {
       const sideLabelStyle = newStyles[sideLabelField] || COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER;
       const fontSizePx = sideLabelStyle.fontSize || 24;
 
-      // A altura da caixa de texto é baseada na altura da fonte
-      const labelHeight = (fontSizePx / (originalImageSize?.height || imageSize.height || 1)) * 100 * 1.5; // 150% da altura da fonte
-      // A largura da caixa de texto é 70% da altura da safeZone
+      // A altura da caixa (que se torna a largura do texto após rotação) é baseada na altura da fonte.
+      const labelHeight = (fontSizePx / (originalImageSize?.height || imageSize.height || 1)) * 100 * 1.5;
+      // A largura da caixa (que se torna a altura do texto) é uma grande parte da altura da zona segura.
       const labelWidth = safeZone.height * 0.7;
 
-      const centerX = (safeZone.x + safeZone.width - labelHeight / 2) - innerMargin;
-      const centerY = (safeZone.y + safeZone.height - labelWidth / 2) - innerMargin;
-
-      const x = centerX - labelWidth / 2;
-      const y = centerY - labelHeight / 2;
+      // Posicionar a caixa de texto no lado direito, centralizada verticalmente.
+      // O 'x' é calculado para que a borda direita da caixa de texto encoste na borda direita da safeZone.
+      const x = safeZone.x + safeZone.width - labelWidth - innerMargin;
+      // O 'y' é calculado para centralizar a caixa verticalmente.
+      const y = safeZone.y + (safeZone.height - labelHeight) / 2;
 
       newPositions[sideLabelField] = {
         ...(newPositions[sideLabelField] || {}),
