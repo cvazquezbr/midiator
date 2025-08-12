@@ -142,6 +142,7 @@ Retorne apenas o objeto JSON sem texto adicional, markdown, ou qualquer outra fo
 
     try {
       const response = await callGeminiApi(prompt, apiKey);
+      toast.info(`Resposta da IA (copie e cole para o dev): ${response}`);
       // Clean the response to ensure it's valid JSON
       const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
       const generatedPersona = JSON.parse(cleanedResponse);
