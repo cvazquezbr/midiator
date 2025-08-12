@@ -16,47 +16,58 @@ export function saveCampaignPrompt(promptData) {
 
 /**
  * Recupera o objeto do prompt de campanha do localStorage.
- * Lida com a migração do formato antigo (string) para o novo (JSON).
- * @returns {{persona: string, autor: string, instrucoes: string, formato: string, colors: string[]}|null} O objeto do prompt ou um objeto com campos vazios.
+ * Lida com a migração de formatos de dados antigos.
+ * @returns {{persona: object, autor: string, instrucoes: string, formato: string, colors: string[]}} O objeto do prompt ou um objeto com campos vazios.
  */
 export function getCampaignPrompt() {
+  const defaultPrompt = { persona: {}, autor: '', instrucoes: '', formato: '', colors: [] };
+
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
       const storedData = window.localStorage.getItem(CAMPAIGN_PROMPT_STORAGE_KEY);
-      const defaultPrompt = { persona: '', autor: '', instrucoes: '', formato: '', colors: [] };
       if (!storedData) {
         return defaultPrompt;
       }
-      // Tenta parsear como JSON (novo formato)
+
+      let parsedData;
       try {
-        const parsedData = JSON.parse(storedData);
-        if (typeof parsedData === 'object' && parsedData !== null) {
-          // Remover aspectRatio se existir em dados antigos
-          if (parsedData.aspectRatio) {
-            delete parsedData.aspectRatio;
-            saveCampaignPrompt(parsedData);
-          }
-          return {
-            ...defaultPrompt,
-            ...parsedData,
-          };
-        }
+        parsedData = JSON.parse(storedData);
       } catch (e) {
-        // Se falhar o parse, assume que é o formato antigo (string)
-        // e o coloca no campo 'instrucoes' do novo formato.
-        console.log("Migrando prompt do formato antigo para o novo.");
+        // Lida com o caso em que storedData não é um JSON válido (formato antigo de string)
+        console.log("Migrando prompt do formato antigo (string) para o novo (objeto).");
         const migratedData = { ...defaultPrompt, instrucoes: storedData };
-        saveCampaignPrompt(migratedData); // Salva no novo formato
+        saveCampaignPrompt(migratedData);
         return migratedData;
       }
-      // Se o dado armazenado não for um objeto JSON válido nem uma string (caso estranho), retorna o padrão.
-      return defaultPrompt;
+
+      if (typeof parsedData !== 'object' || parsedData === null) {
+        // O valor armazenado é JSON válido, mas não um objeto (ex: "null", "true", "123")
+        return defaultPrompt;
+      }
+
+      // Migração para o campo persona: se não for um objeto não nulo, reseta.
+      if (typeof parsedData.persona !== 'object' || parsedData.persona === null) {
+        parsedData.persona = {};
+      }
+
+      // Migração para remover o campo aspectRatio
+      if (parsedData.aspectRatio) {
+        delete parsedData.aspectRatio;
+        // O objeto atualizado será salvo na próxima vez que o usuário salvar.
+      }
+
+      // Mescla com os padrões para garantir que todas as chaves estejam presentes
+      return {
+        ...defaultPrompt,
+        ...parsedData,
+      };
+
     } catch (error) {
       console.error("Erro ao recuperar o prompt de campanha:", error);
-      return { persona: '', autor: '', instrucoes: '', formato: '', colors: [] };
+      return defaultPrompt;
     }
   }
-  return { persona: '', autor: '', instrucoes: '', formato: '', colors: [] };
+  return defaultPrompt;
 }
 
 /**

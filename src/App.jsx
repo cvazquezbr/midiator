@@ -129,7 +129,7 @@ function App() {
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
   const [campaignContent, setCampaignContent] = useState(null);
   const [editingField, setEditingField] = useState(null);
-  const [persona, setPersona] = useState('');
+  const [personaFields, setPersonaFields] = useState({});
   const [autor, setAutor] = useState('');
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
@@ -281,7 +281,7 @@ function App() {
       problema,
       solucao,
       campaignContent,
-      persona,
+      personaFields,
       autor,
       instrucoes,
       formato,
@@ -306,7 +306,7 @@ function App() {
     problema,
     solucao,
     campaignContent,
-    persona,
+    personaFields,
     autor,
     instrucoes,
     formato,
@@ -363,7 +363,7 @@ function App() {
         setProblema(savedState.problema || '');
         setSolucao(savedState.solucao || '');
         setCampaignContent(savedState.campaignContent || null);
-        setPersona(savedState.persona || '');
+        setPersonaFields(savedState.personaFields || {});
         setAutor(savedState.autor || '');
         setInstrucoes(savedState.instrucoes || '');
         setFormato(savedState.formato || '');
@@ -412,8 +412,8 @@ function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    const { persona, autor, instrucoes, formato, aspectRatio } = getCampaignPrompt();
-    setPersona(persona);
+    const { persona: personaData, autor, instrucoes, formato, aspectRatio } = getCampaignPrompt();
+    setPersonaFields(personaData || {});
     setAutor(autor);
     setInstrucoes(instrucoes);
     setFormato(formato);
@@ -747,7 +747,7 @@ function App() {
         problema,
         solucao,
         campaignContent,
-        persona,
+        personaFields,
         autor,
         instrucoes,
         formato,
@@ -796,7 +796,7 @@ function App() {
       setProblema(loadedState.problema || '');
       setSolucao(loadedState.solucao || '');
       setCampaignContent(loadedState.campaignContent || null);
-      setPersona(loadedState.persona || '');
+      setPersonaFields(loadedState.personaFields || {});
       setAutor(loadedState.autor || '');
       setInstrucoes(loadedState.instrucoes || '');
       setFormato(loadedState.formato || '');
@@ -1176,6 +1176,8 @@ function App() {
           {/* Passo 0: Campanha */}
           {activeStep === 0 && (
             <Campaign
+              personaFields={personaFields}
+              setPersonaFields={setPersonaFields}
               steps={steps}
               problema={problema}
               setProblema={setProblema}
