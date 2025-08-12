@@ -69,7 +69,8 @@ const HtmlTextBox = ({
           height: '100%',
           overflow: 'hidden',
           wordWrap: 'break-word',
-          pointerEvents: 'none'
+        pointerEvents: 'none',
+        textAlign: style.textAlign || 'left',
         }}
       />
     );
