@@ -33,6 +33,7 @@ export const generateCampaignContent = async ({ problema, solucao }) => {
   const autorString = formatObjectForPrompt(autor);
 
   const promptCompleto = `
+  Você deve gerar conteúdo para posts no LinkeIn, considerando como destinatário a Persona a seguir qualificada e como emissor o Autor a seguir também qualificado.
     Persona: ${personaString}
     Autor: ${autorString}
     Formato: ${stripHtml(formato)}
@@ -192,8 +193,8 @@ Formato: frase de impacto + CTA.
 Gatilhos: urgência, exclusividade, clareza na próxima etapa.
 
 REGRAS GERAIS PARA TODOS OS POSTS:
-Cada post deve ter entre 150–250 caracteres.
-Tom profissional, porém conversacional.
+Cada post deve ter entre 400–600 caracteres.
+Tom profissional, porém conversacional, refletindo depoimento ou experiência.
 Inclua até 2 emojis estratégicos por post.
 Cada post deve funcionar de forma independente, mas também fazer sentido como parte de uma sequência lógica.
 CTAs variados, como: “Leia mais”, “Descubra como”, “Saiba o que fazer”, “Baixe agora”.
