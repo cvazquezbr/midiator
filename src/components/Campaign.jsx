@@ -69,7 +69,7 @@ const Campaign = ({
                     {steps[0].label}
                 </Typography>
                 <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12}>
                         <TextField
                             label="Problema"
                             multiline
@@ -82,28 +82,29 @@ const Campaign = ({
                             disabled={campaignContent !== null}
                         />
                     </Grid>
-                    <Grid item xs={12} md={6}>
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                            <TextField
-                                label="Solução"
-                                multiline
-                                rows={4}
-                                value={solucao}
-                                onChange={(e) => setSolucao(e.target.value)}
-                                variant="outlined"
-                                fullWidth
-                                placeholder="Descreva a solução que sua campanha oferece."
-                                disabled={campaignContent !== null}
-                            />
-                            <Button
-                                variant="contained"
-                                onClick={handleGenerateSolucao}
-                                disabled={isGeneratingSolucao || !problema.trim() || campaignContent !== null}
-                                sx={{ height: '56px', alignSelf: 'center' }}
-                            >
-                                {isGeneratingSolucao ? 'Gerando...' : 'Gerar'}
-                            </Button>
-                        </Box>
+
+                    <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center' }}>
+                        <Button
+                            variant="contained"
+                            onClick={handleGenerateSolucao}
+                            disabled={isGeneratingSolucao || !problema.trim() || (solucao && solucao.trim() !== '')}
+                        >
+                            {isGeneratingSolucao ? 'Gerando...' : 'Gerar Solução'}
+                        </Button>
+                    </Grid>
+
+                    <Grid item xs={12}>
+                        <TextField
+                            label="Solução"
+                            multiline
+                            rows={4}
+                            value={solucao}
+                            onChange={(e) => setSolucao(e.target.value)}
+                            variant="outlined"
+                            fullWidth
+                            placeholder="Descreva a solução que sua campanha oferece."
+                            disabled={campaignContent !== null}
+                        />
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <TextField
