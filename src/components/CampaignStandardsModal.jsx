@@ -783,7 +783,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       <PersonaGenerationModal
         open={showPersonaGenModal}
         onClose={() => setShowPersonaGenModal(false)}
-        onGenerate={handleGeneratePersonaWithAI}
+        onGenerate={() => handleGeneratePersonaWithAI(personaDescription)}
         description={personaDescription}
         setDescription={setPersonaDescription}
         isLoading={isGeneratingPersona}
