@@ -163,7 +163,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
       const generatedPersona = JSON.parse(cleanedResponse);
 
-      if(callback) {
+      if (callback) {
         callback(generatedPersona);
       } else {
         setPersona(prev => ({ ...prev, ...generatedPersona }));
@@ -260,11 +260,11 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
   };
 
   const getEditorTitle = () => {
-      if (editingField === 'persona') return 'Editar Persona';
-      if (editingField === 'autor') return 'Editar Autor';
-      if (editingField === 'instrucoes') return 'Editar Instruções';
-      if (editingField === 'formato') return 'Editar Formato';
-      return 'Editar';
+    if (editingField === 'persona') return 'Editar Persona';
+    if (editingField === 'autor') return 'Editar Autor';
+    if (editingField === 'instrucoes') return 'Editar Instruções';
+    if (editingField === 'formato') return 'Editar Formato';
+    return 'Editar';
   };
 
   const handleColorChange = (index, newColor) => {
@@ -302,41 +302,41 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
   };
 
   const handlePersonaChange = (event) => {
-      const { name, value } = event.target;
-      setPersona(prev => ({ ...prev, [name]: value }));
+    const { name, value } = event.target;
+    setPersona(prev => ({ ...prev, [name]: value }));
   };
 
   const handlePersonaMultiSelectChange = (event) => {
-      const { name, value } = event.target;
-      setPersona(prev => ({
-          ...prev,
-          [name]: typeof value === 'string' ? value.split(',') : value,
-      }));
+    const { name, value } = event.target;
+    setPersona(prev => ({
+      ...prev,
+      [name]: typeof value === 'string' ? value.split(',') : value,
+    }));
   };
 
   const handlePersonaRichTextChange = (name, value) => {
-      setPersona(prev => ({ ...prev, [name]: value }));
+    setPersona(prev => ({ ...prev, [name]: value }));
   };
 
   const handlePersonaCheckboxChange = (category, field) => (event) => {
-      const { checked } = event.target;
-      setPersona(prev => {
-          const currentValues = prev[category] || [];
-          let newValues;
-          if (checked) {
-              newValues = [...currentValues, field];
-          } else {
-              newValues = currentValues.filter(item => item !== field);
-          }
-          return { ...prev, [category]: newValues };
-      });
+    const { checked } = event.target;
+    setPersona(prev => {
+      const currentValues = prev[category] || [];
+      let newValues;
+      if (checked) {
+        newValues = [...currentValues, field];
+      } else {
+        newValues = currentValues.filter(item => item !== field);
+      }
+      return { ...prev, [category]: newValues };
+    });
   };
 
   const handlePersonaChipDelete = (fieldName, valueToDelete) => {
     setPersona(prev => {
-        const currentValues = prev[fieldName] || [];
-        const newValues = currentValues.filter(item => item !== valueToDelete);
-        return { ...prev, [fieldName]: newValues };
+      const currentValues = prev[fieldName] || [];
+      const newValues = currentValues.filter(item => item !== valueToDelete);
+      return { ...prev, [fieldName]: newValues };
     });
   };
 
@@ -345,110 +345,85 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
   const SEGMENTOS_EMPRESA = ['Tecnologia (Software, SaaS, Hardware)', 'Serviços Financeiros (Fintech)', 'E-commerce e Varejo', 'Saúde (Healthtech, Farmacêutica)', 'Manufatura', 'Consultoria e Serviços', 'Outro(s)'];
   const RESPONSABILIDADES_CHAVE = ['Gerenciamento de Orçamento', 'Tomada de Decisão Estratégica', 'Gestão de Equipes', 'Inovação de Produtos', 'Garantir a Operação e Estabilidade', 'Compliance e Governança', 'Outro(s)'];
   const DORES_DESAFIOS = {
-  "doresEstrategicos": {
-    "label": "Estratégicos",
-    "items": [
-      {
-        "nome": "ROI de Inovação",
-        "descricao": "Dificuldade em medir o retorno financeiro de novas tecnologias e inovações."
-      },
-      {
-        "nome": "Dependência de Fornecedores",
-        "descricao": "Risco e inflexibilidade causados pela alta dependência de um único fornecedor de tecnologia."
-      },
-      {
-        "nome": "Escalabilidade de Negócios",
-        "descricao": "Barreiras para expandir as operações de forma eficiente e sustentável."
-      },
-      {
-        "nome": "Outro(s)",
-        "descricao": "Outros desafios estratégicos não listados."
-      }
-    ]
-  },
-  "doresOperacionais": {
-    "label": "Operacionais",
-    "items": [
-      {
-        "nome": "Manutenção de Sistemas Legados",
-        "descricao": "Custo e complexidade na manutenção de sistemas antigos que limitam a modernização."
-      },
-      {
-        "nome": "Custos Operacionais",
-        "descricao": "Gastos elevados com a operação diária que afetam a lucratividade."
-      },
-      {
-        "nome": "Segurança de Dados",
-        "descricao": "Vulnerabilidades e ameaças à segurança de informações sensíveis da empresa e dos clientes."
-      },
-      {
-        "nome": "Interoperabilidade de Sistemas",
-        "descricao": "Sistemas que não se comunicam entre si, criando silos de dados e ineficiência."
-      },
-      {
-        "nome": "Outro(s)",
-        "descricao": "Outros desafios operacionais não listados."
-      }
-    ]
-  },
-  "doresPessoas": {
-    "label": "Pessoas e Cultura",
-    "items": [
-      {
-        "nome": "Retenção de Talentos",
-        "descricao": "Dificuldade em manter profissionais qualificados na equipe, resultando em alta rotatividade."
-      },
-      {
-        "nome": "Alinhamento de Equipes",
-        "descricao": "Falta de comunicação e colaboração entre diferentes times, prejudicando o alcance de metas em comum."
-      },
-      {
-        "nome": "Resistência à Mudança",
-        "descricao": "Dificuldade dos colaboradores em se adaptar a novas tecnologias ou processos, impactando a adoção de inovações."
-      },
-      {
-        "nome": "Treinamento e Capacitação",
-        "descricao": "Defasagem nas habilidades da equipe, que não acompanha a evolução tecnológica do mercado."
-      },
-      {
-        "nome": "Outro(s)",
-        "descricao": "Outros desafios relacionados a pessoas e cultura não listados."
-      }
-    ]
-  },
-  "doresRegulatorios": {
-    "label": "Regulatórios e Métricas",
-    "items": [
-      {
-        "nome": "Compliance (LGPD, etc.)",
-        "descricao": "Necessidade de adequação a normas e regulamentações, como a LGPD, para evitar multas e problemas legais."
-      },
-      {
-        "nome": "Medição de Valor (ROI)",
-        "descricao": "Dificuldade em mensurar o retorno sobre o investimento de iniciativas e projetos, impactando a tomada de decisões."
-      },
-      {
-        "nome": "Prioridades Conflitantes",
-        "descricao": "Divergência entre as prioridades internas da empresa e as exigências do mercado ou regulamentação."
-      },
-      {
-        "nome": "Outro(s)",
-        "descricao": "Outros desafios de regulamentação ou métricas não listados."
-      }
-    ]
-  }
-};
-  const GATILHOS_BARREIRAS = {
-      'gatilhosCompra': { label: 'Gatilhos de Compra', items: ['Problema técnico urgente', 'Pressão do board', 'Necessidade de redução de custos', 'Vantagem competitiva', 'Outro(s)']},
-      'barreirasAdocao': { label: 'Barreiras de Adoção', items: ['Orçamento limitado', 'Resistência à mudança da equipe', 'Preocupação com segurança e compliance', 'Dificuldade de integração', 'Outro(s)']},
+    "doresEstrategicos": {
+      "label": "Estratégicos",
+      "items": [
+        {
+          "nome": "Dificuldade em Crescer",
+          "descricao": "A persona se sente estagnada, com pouco ou nenhum avanço em seus objetivos. O desafio é encontrar um caminho claro para a expansão e o sucesso."
+        },
+        {
+          "nome": "Posicionamento de Mercado Fraco",
+          "descricao": "A persona não consegue se diferenciar da concorrência. Sua marca não é reconhecida, e a proposta de valor não é clara para o público."
+        },
+        {
+          "nome": "Falta de Direção Clara",
+          "descricao": "A persona não tem um plano de longo prazo definido. Ela age por impulso, o que resulta em esforços dispersos e resultados inconsistentes."
+        }
+      ]
+    },
+    "doresOperacionais": {
+      "label": "Operacionais",
+      "items": [
+        {
+          "nome": "Processos Ineficientes",
+          "descricao": "A rotina de trabalho é desorganizada, com falhas na comunicação e falta de automação. A persona perde tempo em tarefas manuais que poderiam ser otimizadas."
+        },
+        {
+          "nome": "Falta de Ferramentas Adequadas",
+          "descricao": "A persona utiliza tecnologias e softwares desatualizados que a impedem de ser produtiva, criando gargalos no fluxo de trabalho."
+        },
+        {
+          "nome": "Orçamento Limitado",
+          "descricao": "A necessidade de maximizar os resultados com poucos recursos financeiros, exigindo um alto retorno sobre o investimento (ROI) para justificar os gastos."
+        }
+      ]
+    },
+    "doresPessoas": {
+      "label": "Pessoas e Cultura",
+      "items": [
+        {
+          "nome": "Clima Organizacional Tóxico",
+          "descricao": "O ambiente de trabalho é negativo, com baixa motivação e conflitos interpessoais. O desafio é construir um espaço de trabalho saudável e colaborativo."
+        },
+        {
+          "nome": "Dificuldade em Atrair e Reter Talentos",
+          "descricao": "A persona tem problemas para encontrar profissionais qualificados e, quando os encontra, não consegue mantê-los. Isso gera um ciclo constante de recrutamento."
+        },
+        {
+          "nome": "Falta de Alinhamento e Engajamento",
+          "descricao": "A equipe não está alinhada aos valores e à visão da empresa, o que pode levar a um desempenho abaixo do esperado."
+        }
+      ]
+    },
+    "doresRegulatorios": {
+      "label": "Regulatórios e Métricas",
+      "items": [
+        {
+          "nome": "Falta de Conformidade Legal",
+          "descricao": "A persona não está atualizada sobre as leis e regulamentos do seu setor, o que pode levar a multas, penalidades e problemas legais. O desafio é garantir que todas as operações estejam de acordo com a legislação."
+        },
+        {
+          "nome": "Análise de Dados Complexa",
+          "descricao": "A persona coleta muitos dados, mas não sabe como interpretá-los para extrair insights valiosos. Ela tem dificuldade em identificar o que está funcionando e o que precisa ser melhorado."
+        },
+        {
+          "nome": "Definição de KPIs Inadequados",
+          "descricao": "Os indicadores de desempenho (KPIs) usados não refletem os objetivos estratégicos da persona. Os números não contam a história completa, o que resulta em decisões equivocadas."
+        }
+      ]
+    }
+  }; const GATILHOS_BARREIRAS = {
+    'gatilhosCompra': { label: 'Gatilhos de Compra', items: ['Problema técnico urgente', 'Pressão do board', 'Necessidade de redução de custos', 'Vantagem competitiva', 'Outro(s)'] },
+    'barreirasAdocao': { label: 'Barreiras de Adoção', items: ['Orçamento limitado', 'Resistência à mudança da equipe', 'Preocupação com segurança e compliance', 'Dificuldade de integração', 'Outro(s)'] },
   };
 
   const InfoTooltip = ({ title, url }) => (
-      <Tooltip title={<Typography variant="body2" sx={{ p: 1 }}>{title} {url && <MuiLink href={url} target="_blank" rel="noopener noreferrer" sx={{ color: 'cyan', display: 'block', mt: 1 }}>Saiba mais</MuiLink>}</Typography>}>
-          <IconButton>
-              <InfoOutlinedIcon sx={{ color: 'text.secondary', fontSize: '1rem' }} />
-          </IconButton>
-      </Tooltip>
+    <Tooltip title={<Typography variant="body2" sx={{ p: 1 }}>{title} {url && <MuiLink href={url} target="_blank" rel="noopener noreferrer" sx={{ color: 'cyan', display: 'block', mt: 1 }}>Saiba mais</MuiLink>}</Typography>}>
+      <IconButton>
+        <InfoOutlinedIcon sx={{ color: 'text.secondary', fontSize: '1rem' }} />
+      </IconButton>
+    </Tooltip>
   );
 
   const a11yProps = (index) => {
@@ -475,18 +450,18 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         fullScreen={isMobile}
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-                Padrões de Campanha
-                <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<DescriptionIcon />}
-                    onClick={() => setShowMemorialModal(true)}
-                    sx={{ ml: 2 }}
-                >
-                    Gerar Memorial Descritivo
-                </Button>
-            </Box>
+          <Box>
+            Padrões de Campanha
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<DescriptionIcon />}
+              onClick={() => setShowMemorialModal(true)}
+              sx={{ ml: 2 }}
+            >
+              Gerar Memorial Descritivo
+            </Button>
+          </Box>
           <IconButton onClick={onClose} aria-label="Fechar">
             <CloseIcon />
           </IconButton>
@@ -509,368 +484,368 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
           </Box>
           <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
             <TabPanel value={value} index={0}>
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={2}
-              sx={{ mb: 2, alignItems: 'flex-start' }}
-            >
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={2}
+                sx={{ mb: 2, alignItems: 'flex-start' }}
+              >
                 <Button
-                    variant="outlined"
-                    startIcon={<AutoAwesomeIcon />}
-                    onClick={() => setShowPersonaGenModal(true)}
+                  variant="outlined"
+                  startIcon={<AutoAwesomeIcon />}
+                  onClick={() => setShowPersonaGenModal(true)}
                 >
-                    Gerar com IA (Simples)
+                  Gerar com IA (Simples)
                 </Button>
                 <Button
-                    variant="contained"
-                    startIcon={<Add />}
-                    onClick={() => setShowPersonaWizard(true)}
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={() => setShowPersonaWizard(true)}
                 >
-                    Assistente de Criação de Persona
+                  Assistente de Criação de Persona
                 </Button>
-            </Stack>
-            <Grid container spacing={3}>
+              </Stack>
+              <Grid container spacing={3}>
                 {/* Nome da Persona */}
                 <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center' }}>
-                    <TextField
-                        label="Nome da Persona"
-                        name="nome"
-                        value={persona?.nome || ''}
-                        onChange={handlePersonaChange}
-                        fullWidth
-                        required
-                        variant="outlined"
-                    />
-                    <InfoTooltip title="É a identificação clara e concisa do perfil de cliente ideal que você está descrevendo. Ajuda a humanizar o perfil, tornando-o mais fácil de ser compreendido por toda a equipe." />
+                  <TextField
+                    label="Nome da Persona"
+                    name="nome"
+                    value={persona?.nome || ''}
+                    onChange={handlePersonaChange}
+                    fullWidth
+                    required
+                    variant="outlined"
+                  />
+                  <InfoTooltip title="É a identificação clara e concisa do perfil de cliente ideal que você está descrevendo. Ajuda a humanizar o perfil, tornando-o mais fácil de ser compreendido por toda a equipe." />
                 </Grid>
 
                 {/* Posição/Cargo */}
                 <Grid item xs={12} md={(persona?.posicaoCargo || []).includes('Outro(s)') ? 6 : 12} sx={{ display: 'flex', alignItems: 'center' }}>
-                    <FormControl fullWidth variant="outlined">
-                        <InputLabel>Posição/Cargo</InputLabel>
-                        <Select
-                            multiple
-                            name="posicaoCargo"
-                            value={persona?.posicaoCargo || []}
-                            onChange={handlePersonaMultiSelectChange}
-                            renderValue={(selected) => (
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                    {selected.map((value) => (
-                                        <Chip
-                                            key={value}
-                                            label={value}
-                                            onDelete={() => handlePersonaChipDelete('posicaoCargo', value)}
-                                            onMouseDown={(event) => event.stopPropagation()}
-                                        />
-                                    ))}
-                                </Box>
-                            )}
-                            label="Posição/Cargo"
-                        >
-                            {POSICOES_CARGOS.map((pos) => (
-                                <MenuItem key={pos} value={pos}>
-                                    <Checkbox checked={(persona?.posicaoCargo || []).indexOf(pos) > -1} />
-                                    <ListItemText primary={pos} />
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    <InfoTooltip title="Este campo identifica a função formal da persona dentro da empresa. A posição define a autoridade de decisão, as responsabilidades e as métricas de sucesso que a persona utiliza." url="https://www.google.com/search?q=https://www.linkedin.com/business/talent/blog/talent-acquisition/types-of-job-titles" />
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Posição/Cargo</InputLabel>
+                    <Select
+                      multiple
+                      name="posicaoCargo"
+                      value={persona?.posicaoCargo || []}
+                      onChange={handlePersonaMultiSelectChange}
+                      renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {selected.map((value) => (
+                            <Chip
+                              key={value}
+                              label={value}
+                              onDelete={() => handlePersonaChipDelete('posicaoCargo', value)}
+                              onMouseDown={(event) => event.stopPropagation()}
+                            />
+                          ))}
+                        </Box>
+                      )}
+                      label="Posição/Cargo"
+                    >
+                      {POSICOES_CARGOS.map((pos) => (
+                        <MenuItem key={pos} value={pos}>
+                          <Checkbox checked={(persona?.posicaoCargo || []).indexOf(pos) > -1} />
+                          <ListItemText primary={pos} />
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <InfoTooltip title="Este campo identifica a função formal da persona dentro da empresa. A posição define a autoridade de decisão, as responsabilidades e as métricas de sucesso que a persona utiliza." url="https://www.google.com/search?q=https://www.linkedin.com/business/talent/blog/talent-acquisition/types-of-job-titles" />
                 </Grid>
                 {(persona?.posicaoCargo || []).includes('Outro(s)') && (
-                    <Grid item xs={12} md={6}>
-                        <TextField label="Especifique Outro Cargo" name="posicaoCargoOutro" value={persona?.posicaoCargoOutro || ''} onChange={handlePersonaChange} fullWidth required variant="outlined"/>
-                    </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField label="Especifique Outro Cargo" name="posicaoCargoOutro" value={persona?.posicaoCargoOutro || ''} onChange={handlePersonaChange} fullWidth required variant="outlined" />
+                  </Grid>
                 )}
 
                 {/* Segmento da Empresa */}
                 <Grid item xs={12} md={(persona?.segmentoEmpresa || []).includes('Outro(s)') ? 6 : 12} sx={{ display: 'flex', alignItems: 'center' }}>
-                    <FormControl fullWidth variant="outlined">
-                        <InputLabel>Segmento da Empresa</InputLabel>
-                        <Select
-                            multiple
-                            name="segmentoEmpresa"
-                            value={persona?.segmentoEmpresa || []}
-                            onChange={handlePersonaMultiSelectChange}
-                            renderValue={(selected) => (
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                    {selected.map((value) => (
-                                        <Chip
-                                            key={value}
-                                            label={value}
-                                            onDelete={() => handlePersonaChipDelete('segmentoEmpresa', value)}
-                                            onMouseDown={(event) => event.stopPropagation()}
-                                        />
-                                    ))}
-                                </Box>
-                            )}
-                            label="Segmento da Empresa"
-                        >
-                            {SEGMENTOS_EMPRESA.map((seg) => (<MenuItem key={seg} value={seg}><Checkbox checked={(persona?.segmentoEmpresa || []).indexOf(seg) > -1} /><ListItemText primary={seg} /></MenuItem>))}
-                        </Select>
-                    </FormControl>
-                    <InfoTooltip title="Este campo classifica a indústria ou setor de atuação da empresa. O segmento de mercado influencia diretamente os desafios, a cultura e as regulamentações que a persona enfrenta." url="https://www.google.com/search?q=https://blog.hubspot.com/marketing/market-segmentation-guide" />
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Segmento da Empresa</InputLabel>
+                    <Select
+                      multiple
+                      name="segmentoEmpresa"
+                      value={persona?.segmentoEmpresa || []}
+                      onChange={handlePersonaMultiSelectChange}
+                      renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {selected.map((value) => (
+                            <Chip
+                              key={value}
+                              label={value}
+                              onDelete={() => handlePersonaChipDelete('segmentoEmpresa', value)}
+                              onMouseDown={(event) => event.stopPropagation()}
+                            />
+                          ))}
+                        </Box>
+                      )}
+                      label="Segmento da Empresa"
+                    >
+                      {SEGMENTOS_EMPRESA.map((seg) => (<MenuItem key={seg} value={seg}><Checkbox checked={(persona?.segmentoEmpresa || []).indexOf(seg) > -1} /><ListItemText primary={seg} /></MenuItem>))}
+                    </Select>
+                  </FormControl>
+                  <InfoTooltip title="Este campo classifica a indústria ou setor de atuação da empresa. O segmento de mercado influencia diretamente os desafios, a cultura e as regulamentações que a persona enfrenta." url="https://www.google.com/search?q=https://blog.hubspot.com/marketing/market-segmentation-guide" />
                 </Grid>
                 {(persona?.segmentoEmpresa || []).includes('Outro(s)') && (
-                    <Grid item xs={12} md={6}>
-                        <TextField label="Especifique Outro Segmento" name="segmentoEmpresaOutro" value={persona?.segmentoEmpresaOutro || ''} onChange={handlePersonaChange} fullWidth required variant="outlined"/>
-                    </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField label="Especifique Outro Segmento" name="segmentoEmpresaOutro" value={persona?.segmentoEmpresaOutro || ''} onChange={handlePersonaChange} fullWidth required variant="outlined" />
+                  </Grid>
                 )}
 
                 {/* Responsabilidades-Chave */}
                 <Grid item xs={12} md={(persona?.responsabilidadesChave || []).includes('Outro(s)') ? 6 : 12} sx={{ display: 'flex', alignItems: 'center' }}>
-                    <FormControl fullWidth variant="outlined">
-                        <InputLabel>Responsabilidades-Chave</InputLabel>
-                        <Select
-                            multiple
-                            name="responsabilidadesChave"
-                            value={persona?.responsabilidadesChave || []}
-                            onChange={handlePersonaMultiSelectChange}
-                            renderValue={(selected) => (
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                    {selected.map((value) => (
-                                        <Chip
-                                            key={value}
-                                            label={value}
-                                            onDelete={() => handlePersonaChipDelete('responsabilidadesChave', value)}
-                                            onMouseDown={(event) => event.stopPropagation()}
-                                        />
-                                    ))}
-                                </Box>
-                            )}
-                            label="Responsabilidades-Chave"
-                        >
-                            {RESPONSABILIDADES_CHAVE.map((resp) => (<MenuItem key={resp} value={resp}><Checkbox checked={(persona?.responsabilidadesChave || []).indexOf(resp) > -1} /><ListItemText primary={resp} /></MenuItem>))}
-                        </Select>
-                    </FormControl>
-                    <InfoTooltip title="Detalha as principais tarefas e áreas de atuação da persona. Entender suas responsabilidades ajuda a identificar como sua solução pode facilitar o trabalho dela ou ajudá-la a atingir metas específicas." />
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Responsabilidades-Chave</InputLabel>
+                    <Select
+                      multiple
+                      name="responsabilidadesChave"
+                      value={persona?.responsabilidadesChave || []}
+                      onChange={handlePersonaMultiSelectChange}
+                      renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {selected.map((value) => (
+                            <Chip
+                              key={value}
+                              label={value}
+                              onDelete={() => handlePersonaChipDelete('responsabilidadesChave', value)}
+                              onMouseDown={(event) => event.stopPropagation()}
+                            />
+                          ))}
+                        </Box>
+                      )}
+                      label="Responsabilidades-Chave"
+                    >
+                      {RESPONSABILIDADES_CHAVE.map((resp) => (<MenuItem key={resp} value={resp}><Checkbox checked={(persona?.responsabilidadesChave || []).indexOf(resp) > -1} /><ListItemText primary={resp} /></MenuItem>))}
+                    </Select>
+                  </FormControl>
+                  <InfoTooltip title="Detalha as principais tarefas e áreas de atuação da persona. Entender suas responsabilidades ajuda a identificar como sua solução pode facilitar o trabalho dela ou ajudá-la a atingir metas específicas." />
                 </Grid>
                 {(persona?.responsabilidadesChave || []).includes('Outro(s)') && (
-                    <Grid item xs={12} md={6}>
-                        <TextField label="Especifique Outra Responsabilidade" name="responsabilidadesChaveOutro" value={persona?.responsabilidadesChaveOutro || ''} onChange={handlePersonaChange} fullWidth required variant="outlined"/>
-                    </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField label="Especifique Outra Responsabilidade" name="responsabilidadesChaveOutro" value={persona?.responsabilidadesChaveOutro || ''} onChange={handlePersonaChange} fullWidth required variant="outlined" />
+                  </Grid>
                 )}
 
                 {/* Dores e Desafios */}
                 <Grid item xs={12}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="subtitle1">Dores e Desafios</Typography>
-                        <InfoTooltip title="Esta seção descreve os problemas e obstáculos que a persona enfrenta. Compreender suas dores permite que você posicione sua solução como uma resposta direta a um problema real." url="https://www.google.com/search?q=https://blog.hotmart.com/pt-br/dor-do-cliente/" />
-                    </Box>
-                    {Object.entries(DORES_DESAFIOS).map(([key, { label, items }]) => (
-                        <Accordion key={key}>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
-                            <AccordionDetails>
-                                <FormGroup>
-                                    {items.map((item) => (
-                                        <Box key={item.nome} sx={{ display: 'flex', alignItems: 'center' }}>
-                                            <FormControlLabel
-                                                control={<Checkbox checked={(persona?.[key] || []).includes(item.nome)} onChange={handlePersonaCheckboxChange(key, item.nome)} />}
-                                                label={item.nome}
-                                            />
-                                            <InfoTooltip title={item.descricao} />
-                                        </Box>
-                                    ))}
-                                </FormGroup>
-                                {(persona?.[key] || []).includes('Outro(s)') && (
-                                    <TextField label={`Especifique Outra Dor (${label})`} name={`${key}Outro`} value={persona?.[`${key}Outro`] || ''} onChange={handlePersonaChange} fullWidth required variant="outlined" sx={{ mt: 2 }}/>
-                                )}
-                            </AccordionDetails>
-                        </Accordion>
-                    ))}
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle1">Dores e Desafios</Typography>
+                    <InfoTooltip title="Esta seção descreve os problemas e obstáculos que a persona enfrenta. Compreender suas dores permite que você posicione sua solução como uma resposta direta a um problema real." url="https://www.google.com/search?q=https://blog.hotmart.com/pt-br/dor-do-cliente/" />
+                  </Box>
+                  {Object.entries(DORES_DESAFIOS).map(([key, { label, items }]) => (
+                    <Accordion key={key}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
+                      <AccordionDetails>
+                        <FormGroup>
+                          {items.map((item) => (
+                            <Box key={item.nome} sx={{ display: 'flex', alignItems: 'center' }}>
+                              <FormControlLabel
+                                control={<Checkbox checked={(persona?.[key] || []).includes(item.nome)} onChange={handlePersonaCheckboxChange(key, item.nome)} />}
+                                label={item.nome}
+                              />
+                              <InfoTooltip title={item.descricao} />
+                            </Box>
+                          ))}
+                        </FormGroup>
+                        {(persona?.[key] || []).includes('Outro(s)') && (
+                          <TextField label={`Especifique Outra Dor (${label})`} name={`${key}Outro`} value={persona?.[`${key}Outro`] || ''} onChange={handlePersonaChange} fullWidth required variant="outlined" sx={{ mt: 2 }} />
+                        )}
+                      </AccordionDetails>
+                    </Accordion>
+                  ))}
                 </Grid>
 
                 {/* Gatilhos de Compra e Barreiras de Adoção */}
                 <Grid item xs={12}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="subtitle1">Gatilhos de Compra e Barreira de Adoção</Typography>
-                        <InfoTooltip title="Detalha os fatores que levam a persona a buscar uma solução (gatilhos) e os obstáculos que podem atrasar ou impedir a decisão de compra (barreiras)." />
-                    </Box>
-                    {Object.entries(GATILHOS_BARREIRAS).map(([key, { label, items }]) => (
-                        <Accordion key={key}>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
-                            <AccordionDetails>
-                                <FormGroup>
-                                    {items.map((item) => (
-                                        <FormControlLabel
-                                            key={item}
-                                            control={<Checkbox checked={(persona?.[key] || []).includes(item)} onChange={handlePersonaCheckboxChange(key, item)} />}
-                                            label={item}
-                                        />
-                                    ))}
-                                </FormGroup>
-                                {(persona?.[key] || []).includes('Outro(s)') && (
-                                    <TextField
-                                        label={`Especifique Outro(a) (${label})`}
-                                        name={`${key}Outro`}
-                                        value={persona?.[`${key}Outro`] || ''}
-                                        onChange={handlePersonaChange}
-                                        fullWidth
-                                        required
-                                        variant="outlined"
-                                        sx={{ mt: 2 }}
-                                    />
-                                )}
-                            </AccordionDetails>
-                        </Accordion>
-                    ))}
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle1">Gatilhos de Compra e Barreira de Adoção</Typography>
+                    <InfoTooltip title="Detalha os fatores que levam a persona a buscar uma solução (gatilhos) e os obstáculos que podem atrasar ou impedir a decisão de compra (barreiras)." />
+                  </Box>
+                  {Object.entries(GATILHOS_BARREIRAS).map(([key, { label, items }]) => (
+                    <Accordion key={key}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
+                      <AccordionDetails>
+                        <FormGroup>
+                          {items.map((item) => (
+                            <FormControlLabel
+                              key={item}
+                              control={<Checkbox checked={(persona?.[key] || []).includes(item)} onChange={handlePersonaCheckboxChange(key, item)} />}
+                              label={item}
+                            />
+                          ))}
+                        </FormGroup>
+                        {(persona?.[key] || []).includes('Outro(s)') && (
+                          <TextField
+                            label={`Especifique Outro(a) (${label})`}
+                            name={`${key}Outro`}
+                            value={persona?.[`${key}Outro`] || ''}
+                            onChange={handlePersonaChange}
+                            fullWidth
+                            required
+                            variant="outlined"
+                            sx={{ mt: 2 }}
+                          />
+                        )}
+                      </AccordionDetails>
+                    </Accordion>
+                  ))}
                 </Grid>
 
                 {/* Mentalidade e Valores */}
                 <Grid item xs={12}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="subtitle1">Mentalidade e Valores</Typography>
-                        <InfoTooltip title="Descreve a forma de pensar, os valores e a atitude da persona em relação ao trabalho e às decisões. Esta informação é fundamental para adaptar a linguagem e o tom da comunicação." />
-                    </Box>
-                    <RichTextEditor
-                        value={persona?.mentalidadeValores || ''}
-                        onChange={(value) => handlePersonaRichTextChange('mentalidadeValores', value)}
-                    />
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle1">Mentalidade e Valores</Typography>
+                    <InfoTooltip title="Descreve a forma de pensar, os valores e a atitude da persona em relação ao trabalho e às decisões. Esta informação é fundamental para adaptar a linguagem e o tom da comunicação." />
+                  </Box>
+                  <RichTextEditor
+                    value={persona?.mentalidadeValores || ''}
+                    onChange={(value) => handlePersonaRichTextChange('mentalidadeValores', value)}
+                  />
                 </Grid>
 
                 {/* Contexto Cultural */}
                 <Grid item xs={12}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="subtitle1">Contexto Cultural</Typography>
-                        <InfoTooltip title="Aqui é detalhado o ambiente de trabalho e a cultura organizacional na qual a persona está inserida. Isso inclui o contexto interno, como a convivência com processos antigos, a pressão por inovação ou a colaboração entre equipes." />
-                    </Box>
-                    <RichTextEditor
-                        value={persona?.contextoCultural || ''}
-                        onChange={(value) => handlePersonaRichTextChange('contextoCultural', value)}
-                    />
-                </Grid>
-            </Grid>
-          </TabPanel>
-          <TabPanel value={value} index={1}>
-            <HtmlDisplayField
-              title="Autor"
-              tooltip="Descreva o autor ou a voz da marca que está criando o conteúdo. Qual o tom, estilo e perspectiva?"
-              htmlContent={autor}
-              onClick={() => handleOpenEditor('autor')}
-              placeholder="Clique para editar o autor..."
-            />
-          </TabPanel>
-          <TabPanel value={value} index={2}>
-            <HtmlDisplayField
-              title="Formato"
-              tooltip="Descreva a estrutura do conteúdo. É uma lista? Um passo-a-passo? Uma história? Dê exemplos se possível."
-              htmlContent={formato}
-              onClick={() => handleOpenEditor('formato')}
-              placeholder="Clique para editar o formato..."
-            />
-          </TabPanel>
-          <TabPanel value={value} index={3}>
-            <HtmlDisplayField
-              title="Instruções"
-              tooltip="Forneça instruções detalhadas para a IA. Inclua o que fazer e o que não fazer, palavras-chave, e o objetivo do conteúdo."
-              htmlContent={instrucoes}
-              onClick={() => handleOpenEditor('instrucoes')}
-              placeholder="Clique para editar as instruções..."
-            />
-          </TabPanel>
-
-          <TabPanel value={value} index={4}>
-            <Typography variant="h6" gutterBottom>Cores da Campanha</Typography>
-            <Typography variant="body2" gutterBottom>
-              Defina até 5 cores de referência para a campanha.
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, mt: 2, alignItems: 'center' }}>
-              {colors.map((color, index) => (
-                <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <input
-                    type="color"
-                    value={color}
-                    onChange={(e) => handleColorChange(index, e.target.value)}
-                    style={{ width: '50px', height: '50px', border: 'none', background: 'none', cursor: 'pointer' }}
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="subtitle1">Contexto Cultural</Typography>
+                    <InfoTooltip title="Aqui é detalhado o ambiente de trabalho e a cultura organizacional na qual a persona está inserida. Isso inclui o contexto interno, como a convivência com processos antigos, a pressão por inovação ou a colaboração entre equipes." />
+                  </Box>
+                  <RichTextEditor
+                    value={persona?.contextoCultural || ''}
+                    onChange={(value) => handlePersonaRichTextChange('contextoCultural', value)}
                   />
-                  <Button size="small" onClick={() => removeColor(index)}>Remover</Button>
-                </Box>
-              ))}
-              {colors.length < 5 && (
-                <Button variant="outlined" onClick={addColor}>Adicionar Cor</Button>
-              )}
-            </Box>
-
-            <Box sx={{ mt: 4 }}>
-              <Typography variant="h6" gutterBottom>Extrair Cores de Imagem</Typography>
-              <Button
-                variant="outlined"
-                startIcon={<UploadFileIcon />}
-                onClick={() => imageInputRef.current.click()}
-              >
-                Upload de Imagem
-              </Button>
-              <input
-                type="file"
-                hidden
-                accept="image/*"
-                ref={imageInputRef}
-                onChange={handleImageUpload}
-              />
-            </Box>
-
-            <Box sx={{ mt: 4 }}>
-              <Typography variant="h6" gutterBottom>Inspiração de Paletas de Cores</Typography>
-              {colorPalettes.map((palette) => (
-                <Chip
-                  key={palette.name}
-                  icon={<LinkIcon />}
-                  label={palette.name}
-                  component="a"
-                  href={palette.url}
-                  target="_blank"
-                  clickable
-                  sx={{ mr: 1, mb: 1 }}
-                />
-              ))}
-            </Box>
-
-            <Divider sx={{ my: 4 }} />
-
-            {/* AI Palette Generator */}
-            <Box>
-              <Typography variant="h6" gutterBottom>Gerar Paleta com IA</Typography>
-              <Grid container spacing={2}>
-                {Object.keys(briefingOptions).map(key => (
-                  <Grid item xs={12} sm={6} key={key}>
-                    <FormControl fullWidth>
-                      <InputLabel>{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}</InputLabel>
-                      <Select
-                        name={key}
-                        value={briefing[key]}
-                        label={key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}
-                        onChange={handleBriefingChange}
-                      >
-                        {briefingOptions[key].map(option => (
-                          <MenuItem key={option} value={option}>{option}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                ))}
+                </Grid>
               </Grid>
-              <TextField
-                name="details"
-                label="Detalhes Adicionais do Briefing"
-                multiline
-                rows={4}
-                value={briefing.details}
-                onChange={handleBriefingChange}
-                fullWidth
-                placeholder="INCLUINDO:
-- Quaisquer cores proibidas ou obrigatórias"
-                margin="normal"
+            </TabPanel>
+            <TabPanel value={value} index={1}>
+              <HtmlDisplayField
+                title="Autor"
+                tooltip="Descreva o autor ou a voz da marca que está criando o conteúdo. Qual o tom, estilo e perspectiva?"
+                htmlContent={autor}
+                onClick={() => handleOpenEditor('autor')}
+                placeholder="Clique para editar o autor..."
               />
-              <Button
-                variant="contained"
-                startIcon={<AutoAwesomeIcon />}
-                onClick={handleGenerateClick}
-                disabled={isGenerating || !onGeneratePalette}
-              >
-                {isGenerating ? <CircularProgress size={24} /> : 'Gerar Paleta'}
-              </Button>
-            </Box>
-          </TabPanel>
+            </TabPanel>
+            <TabPanel value={value} index={2}>
+              <HtmlDisplayField
+                title="Formato"
+                tooltip="Descreva a estrutura do conteúdo. É uma lista? Um passo-a-passo? Uma história? Dê exemplos se possível."
+                htmlContent={formato}
+                onClick={() => handleOpenEditor('formato')}
+                placeholder="Clique para editar o formato..."
+              />
+            </TabPanel>
+            <TabPanel value={value} index={3}>
+              <HtmlDisplayField
+                title="Instruções"
+                tooltip="Forneça instruções detalhadas para a IA. Inclua o que fazer e o que não fazer, palavras-chave, e o objetivo do conteúdo."
+                htmlContent={instrucoes}
+                onClick={() => handleOpenEditor('instrucoes')}
+                placeholder="Clique para editar as instruções..."
+              />
+            </TabPanel>
+
+            <TabPanel value={value} index={4}>
+              <Typography variant="h6" gutterBottom>Cores da Campanha</Typography>
+              <Typography variant="body2" gutterBottom>
+                Defina até 5 cores de referência para a campanha.
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, mt: 2, alignItems: 'center' }}>
+                {colors.map((color, index) => (
+                  <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <input
+                      type="color"
+                      value={color}
+                      onChange={(e) => handleColorChange(index, e.target.value)}
+                      style={{ width: '50px', height: '50px', border: 'none', background: 'none', cursor: 'pointer' }}
+                    />
+                    <Button size="small" onClick={() => removeColor(index)}>Remover</Button>
+                  </Box>
+                ))}
+                {colors.length < 5 && (
+                  <Button variant="outlined" onClick={addColor}>Adicionar Cor</Button>
+                )}
+              </Box>
+
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="h6" gutterBottom>Extrair Cores de Imagem</Typography>
+                <Button
+                  variant="outlined"
+                  startIcon={<UploadFileIcon />}
+                  onClick={() => imageInputRef.current.click()}
+                >
+                  Upload de Imagem
+                </Button>
+                <input
+                  type="file"
+                  hidden
+                  accept="image/*"
+                  ref={imageInputRef}
+                  onChange={handleImageUpload}
+                />
+              </Box>
+
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="h6" gutterBottom>Inspiração de Paletas de Cores</Typography>
+                {colorPalettes.map((palette) => (
+                  <Chip
+                    key={palette.name}
+                    icon={<LinkIcon />}
+                    label={palette.name}
+                    component="a"
+                    href={palette.url}
+                    target="_blank"
+                    clickable
+                    sx={{ mr: 1, mb: 1 }}
+                  />
+                ))}
+              </Box>
+
+              <Divider sx={{ my: 4 }} />
+
+              {/* AI Palette Generator */}
+              <Box>
+                <Typography variant="h6" gutterBottom>Gerar Paleta com IA</Typography>
+                <Grid container spacing={2}>
+                  {Object.keys(briefingOptions).map(key => (
+                    <Grid item xs={12} sm={6} key={key}>
+                      <FormControl fullWidth>
+                        <InputLabel>{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}</InputLabel>
+                        <Select
+                          name={key}
+                          value={briefing[key]}
+                          label={key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}
+                          onChange={handleBriefingChange}
+                        >
+                          {briefingOptions[key].map(option => (
+                            <MenuItem key={option} value={option}>{option}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  ))}
+                </Grid>
+                <TextField
+                  name="details"
+                  label="Detalhes Adicionais do Briefing"
+                  multiline
+                  rows={4}
+                  value={briefing.details}
+                  onChange={handleBriefingChange}
+                  fullWidth
+                  placeholder="INCLUINDO:
+- Quaisquer cores proibidas ou obrigatórias"
+                  margin="normal"
+                />
+                <Button
+                  variant="contained"
+                  startIcon={<AutoAwesomeIcon />}
+                  onClick={handleGenerateClick}
+                  disabled={isGenerating || !onGeneratePalette}
+                >
+                  {isGenerating ? <CircularProgress size={24} /> : 'Gerar Paleta'}
+                </Button>
+              </Box>
+            </TabPanel>
           </Box>
         </DialogContent>
         <DialogActions>
@@ -909,9 +884,9 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         onClose={() => setShowPersonaWizard(false)}
         persona={persona}
         onSave={(newPersona) => {
-            setPersona(newPersona);
-            setShowPersonaWizard(false);
-            toast.success('Persona salva com sucesso!');
+          setPersona(newPersona);
+          setShowPersonaWizard(false);
+          toast.success('Persona salva com sucesso!');
         }}
         onGenerate={handleGeneratePersonaWithAI}
         isGeneratingPersona={isGeneratingPersona}
