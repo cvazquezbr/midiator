@@ -340,7 +340,7 @@ const RichTextEditor = ({
       }}
     >
       {/* Toolbar */}
-      <Box className={styles.toolbar}>
+      <Box className={styles.toolbar} data-testid="richtext-editor-toolbar">
         {/* Estilos de Bloco */}
         <FormControl size="small" sx={{ minWidth: 120, mr: 1 }}>
           <Select

@@ -171,35 +171,6 @@
   }
 }
 
-@media (max-width: 480px) {
-  .toolbar {
-    padding: 4px;
-    gap: 1px;
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .toolbarGroup {
-    justify-content: center;
-    margin: 2px 0;
-  }
-
-  .toolbarButton {
-    min-width: 40px;
-    min-height: 40px;
-    padding: 8px;
-  }
-
-  .divider {
-    display: none; /* Ocultar divisores em telas muito pequenas */
-  }
-
-  .editor,
-  .htmlEditor {
-    padding: 8px;
-    min-height: 80px;
-  }
-}
 
 /* ===== DETECÇÃO AUTOMÁTICA DE DARK MODE ===== */
 
