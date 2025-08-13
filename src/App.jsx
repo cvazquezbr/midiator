@@ -124,8 +124,8 @@ function App() {
   const [csvData, setCsvData] = useState([]);
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [backgroundImage, setBackgroundImage] = useState(null);
-  const [colorPalette, setColorPalette] = useState([]);
-  const [campaignColors, setCampaignColors] = useState([]);
+  const [colorPalette, setColorPalette] = useState([]); // Colors from image
+  const [standardsColors, setStandardsColors] = useState([]); // Colors from campaign standards
 
   // Estados para a Campanha
   const [problema, setProblema] = useState('');
@@ -135,8 +135,8 @@ function App() {
   const [campaignGenerationFailed, setCampaignGenerationFailed] = useState(false);
   const [generationError, setGenerationError] = useState('');
   const [editingField, setEditingField] = useState(null);
-  const [personaFields, setPersonaFields] = useState({});
-  const [autor, setAutor] = useState('');
+  const [persona, setPersona] = useState({});
+  const [autor, setAutor] = useState({});
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1:1');
@@ -170,19 +170,25 @@ function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const loadCampaignColors = useCallback(() => {
-    const { colors } = getCampaignPrompt();
-    setCampaignColors(colors || []);
+  const loadCampaignStandards = useCallback(() => {
+    const { persona: personaData, autor: autorData, instrucoes: instrucoesData, formato: formatoData, colors: colorsData } = getCampaignPrompt();
+    setPersona(personaData || {});
+    setAutor(autorData || {});
+    setInstrucoes(instrucoesData || '');
+    setFormato(formatoData || '');
+    setStandardsColors(colorsData || []);
   }, []);
 
   useEffect(() => {
-    loadCampaignColors();
-  }, [loadCampaignColors]);
+    loadCampaignStandards();
+  }, [loadCampaignStandards]);
 
   const combinedPalette = useMemo(() => {
-    const allColors = [...(colorPalette || []), ...(campaignColors || [])];
+    // This palette is used for the color picker in the field formatter.
+    // It should combine colors from the standards and colors extracted from the image.
+    const allColors = [...(standardsColors.map(c => c.hex) || []), ...(colorPalette || [])];
     return [...new Set(allColors)];
-  }, [colorPalette, campaignColors]);
+  }, [colorPalette, standardsColors]);
   const [fieldPositions, setFieldPositions] = useState({});
   const [fieldStyles, setFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
@@ -287,7 +293,7 @@ function App() {
       problema,
       solucao,
       campaignContent,
-      personaFields,
+      persona,
       autor,
       instrucoes,
       formato,
@@ -369,7 +375,7 @@ function App() {
         setProblema(savedState.problema || '');
         setSolucao(savedState.solucao || '');
         setCampaignContent(savedState.campaignContent || null);
-        setPersonaFields(savedState.personaFields || {});
+        setPersona(savedState.persona || {});
         setAutor(savedState.autor || '');
         setInstrucoes(savedState.instrucoes || '');
         setFormato(savedState.formato || '');
@@ -422,15 +428,6 @@ function App() {
       setSidebarOpen(false);
     }
   }, [isMobile]);
-
-  useEffect(() => {
-    const { persona: personaData, autor, instrucoes, formato, aspectRatio } = getCampaignPrompt();
-    setPersonaFields(personaData || {});
-    setAutor(autor);
-    setInstrucoes(instrucoes);
-    setFormato(formato);
-    setAspectRatio(aspectRatio || '1:1');
-  }, []);
 
   useEffect(() => {
     const handleLinkedinCallback = async () => {
@@ -1134,13 +1131,13 @@ function App() {
     problema,
     solucao,
     campaignContent,
-    personaFields,
+    persona,
     autor,
     formato,
+    instrucoes,
     aspectRatio,
     followupPosts,
-    colorPalette,
-    campaignColors,
+    colors: standardsColors,
   };
 
   return (
@@ -1498,8 +1495,9 @@ function App() {
         open={showCampaignStandardsModal}
         onClose={() => {
           setShowCampaignStandardsModal(false);
-          loadCampaignColors();
+          loadCampaignStandards();
         }}
+        onShowMemorial={() => setShowMemorialDescritivoModal(true)}
         onGeneratePalette={async (briefing) => {
           try {
             const palette = await generateColorPalette(briefing);

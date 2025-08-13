@@ -16,6 +16,7 @@ const DetailItem = ({ title, value, isHtml = false }) => {
         pl: 2,
         '& p, & li': { mb: 1.5 },
         '& ul, & ol': { pl: 2.5 },
+        whiteSpace: 'pre-wrap'
       }}>
         {isHtml && typeof value === 'string' ? <Typography component="div" variant="body1">{parse(value)}</Typography> : <Typography variant="body1">{value}</Typography>}
       </Box>
@@ -23,37 +24,21 @@ const DetailItem = ({ title, value, isHtml = false }) => {
   );
 };
 
-const AuthorSection = ({ author }) => {
-  if (!author) {
+
+const InstructionsSection = ({ formato, instrucoes }) => {
+  if (!formato && !instrucoes) {
     return null;
   }
-
-  const {
-    identidade,
-    descricao,
-    tipo,
-    objetivoEstrategico,
-    objetivoEngajamento,
-    dominioReferencia,
-    siteExclusao,
-  } = author;
 
   return (
     <SectionCard>
       <Typography variant="h4" component="h2" sx={{ mb: 4 }}>
-        Definições do Autor
+        Diretrizes de Geração
       </Typography>
-
-      <DetailItem title="Identidade / Quem está falando?" value={identidade} />
-      <DetailItem title="Descrição" value={descricao} isHtml={true} />
-      <DetailItem title="Tipo de Autor" value={tipo} />
-      <DetailItem title="Objetivo Estratégico" value={objetivoEstrategico} isHtml={true} />
-      <DetailItem title="Objetivo de Engajamento" value={objetivoEngajamento} isHtml={true} />
-      <DetailItem title="Domínio de Referência" value={dominioReferencia} />
-      <DetailItem title="Site para Exclusão de Referência" value={siteExclusao} />
-
+      <DetailItem title="Formato do Conteúdo" value={formato} isHtml={true} />
+      <DetailItem title="Instruções para a IA" value={instrucoes} isHtml={true} />
     </SectionCard>
   );
 };
 
-export default AuthorSection;
+export default InstructionsSection;
