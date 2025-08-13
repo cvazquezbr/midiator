@@ -345,11 +345,99 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
   const SEGMENTOS_EMPRESA = ['Tecnologia (Software, SaaS, Hardware)', 'Serviços Financeiros (Fintech)', 'E-commerce e Varejo', 'Saúde (Healthtech, Farmacêutica)', 'Manufatura', 'Consultoria e Serviços', 'Outro(s)'];
   const RESPONSABILIDADES_CHAVE = ['Gerenciamento de Orçamento', 'Tomada de Decisão Estratégica', 'Gestão de Equipes', 'Inovação de Produtos', 'Garantir a Operação e Estabilidade', 'Compliance e Governança', 'Outro(s)'];
   const DORES_DESAFIOS = {
-      'doresEstrategicos': { label: 'Estratégicos', items: ['ROI de Inovação', 'Dependência de Fornecedores', 'Escalabilidade de Negócios', 'Outro(s)']},
-      'doresOperacionais': { label: 'Operacionais', items: ['Manutenção de Sistemas Legados', 'Custos Operacionais', 'Segurança de Dados', 'Interoperabilidade de Sistemas', 'Outro(s)']},
-      'doresPessoas': { label: 'Pessoas e Cultura', items: ['Retenção de Talentos', 'Alinhamento de Equipes', 'Resistência à Mudança', 'Treinamento e Capacitação', 'Outro(s)']},
-      'doresRegulatorios': { label: 'Regulatórios e Métricas', items: ['Compliance (LGPD, etc.)', 'Medição de Valor (ROI)', 'Prioridades Conflitantes', 'Outro(s)']},
-  };
+  "doresEstrategicos": {
+    "label": "Estratégicos",
+    "items": [
+      {
+        "nome": "ROI de Inovação",
+        "descricao": "Dificuldade em medir o retorno financeiro de novas tecnologias e inovações."
+      },
+      {
+        "nome": "Dependência de Fornecedores",
+        "descricao": "Risco e inflexibilidade causados pela alta dependência de um único fornecedor de tecnologia."
+      },
+      {
+        "nome": "Escalabilidade de Negócios",
+        "descricao": "Barreiras para expandir as operações de forma eficiente e sustentável."
+      },
+      {
+        "nome": "Outro(s)",
+        "descricao": "Outros desafios estratégicos não listados."
+      }
+    ]
+  },
+  "doresOperacionais": {
+    "label": "Operacionais",
+    "items": [
+      {
+        "nome": "Manutenção de Sistemas Legados",
+        "descricao": "Custo e complexidade na manutenção de sistemas antigos que limitam a modernização."
+      },
+      {
+        "nome": "Custos Operacionais",
+        "descricao": "Gastos elevados com a operação diária que afetam a lucratividade."
+      },
+      {
+        "nome": "Segurança de Dados",
+        "descricao": "Vulnerabilidades e ameaças à segurança de informações sensíveis da empresa e dos clientes."
+      },
+      {
+        "nome": "Interoperabilidade de Sistemas",
+        "descricao": "Sistemas que não se comunicam entre si, criando silos de dados e ineficiência."
+      },
+      {
+        "nome": "Outro(s)",
+        "descricao": "Outros desafios operacionais não listados."
+      }
+    ]
+  },
+  "doresPessoas": {
+    "label": "Pessoas e Cultura",
+    "items": [
+      {
+        "nome": "Retenção de Talentos",
+        "descricao": "Dificuldade em manter profissionais qualificados na equipe, resultando em alta rotatividade."
+      },
+      {
+        "nome": "Alinhamento de Equipes",
+        "descricao": "Falta de comunicação e colaboração entre diferentes times, prejudicando o alcance de metas em comum."
+      },
+      {
+        "nome": "Resistência à Mudança",
+        "descricao": "Dificuldade dos colaboradores em se adaptar a novas tecnologias ou processos, impactando a adoção de inovações."
+      },
+      {
+        "nome": "Treinamento e Capacitação",
+        "descricao": "Defasagem nas habilidades da equipe, que não acompanha a evolução tecnológica do mercado."
+      },
+      {
+        "nome": "Outro(s)",
+        "descricao": "Outros desafios relacionados a pessoas e cultura não listados."
+      }
+    ]
+  },
+  "doresRegulatorios": {
+    "label": "Regulatórios e Métricas",
+    "items": [
+      {
+        "nome": "Compliance (LGPD, etc.)",
+        "descricao": "Necessidade de adequação a normas e regulamentações, como a LGPD, para evitar multas e problemas legais."
+      },
+      {
+        "nome": "Medição de Valor (ROI)",
+        "descricao": "Dificuldade em mensurar o retorno sobre o investimento de iniciativas e projetos, impactando a tomada de decisões."
+      },
+      {
+        "nome": "Prioridades Conflitantes",
+        "descricao": "Divergência entre as prioridades internas da empresa e as exigências do mercado ou regulamentação."
+      },
+      {
+        "nome": "Outro(s)",
+        "descricao": "Outros desafios de regulamentação ou métricas não listados."
+      }
+    ]
+  }
+};
   const GATILHOS_BARREIRAS = {
       'gatilhosCompra': { label: 'Gatilhos de Compra', items: ['Problema técnico urgente', 'Pressão do board', 'Necessidade de redução de custos', 'Vantagem competitiva', 'Outro(s)']},
       'barreirasAdocao': { label: 'Barreiras de Adoção', items: ['Orçamento limitado', 'Resistência à mudança da equipe', 'Preocupação com segurança e compliance', 'Dificuldade de integração', 'Outro(s)']},
@@ -574,7 +662,15 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                             <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
                             <AccordionDetails>
                                 <FormGroup>
-                                    {items.map((item) => (<FormControlLabel key={item} control={<Checkbox checked={(persona?.[key] || []).includes(item)} onChange={handlePersonaCheckboxChange(key, item)} />} label={item} />))}
+                                    {items.map((item) => (
+                                        <Box key={item.nome} sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <FormControlLabel
+                                                control={<Checkbox checked={(persona?.[key] || []).includes(item.nome)} onChange={handlePersonaCheckboxChange(key, item.nome)} />}
+                                                label={item.nome}
+                                            />
+                                            <InfoTooltip title={item.descricao} />
+                                        </Box>
+                                    ))}
                                 </FormGroup>
                                 {(persona?.[key] || []).includes('Outro(s)') && (
                                     <TextField label={`Especifique Outra Dor (${label})`} name={`${key}Outro`} value={persona?.[`${key}Outro`] || ''} onChange={handlePersonaChange} fullWidth required variant="outlined" sx={{ mt: 2 }}/>
