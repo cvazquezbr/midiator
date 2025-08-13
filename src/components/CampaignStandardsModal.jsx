@@ -30,6 +30,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Stack,
 } from '@mui/material';
 import RichTextEditor from './RichTextEditor';
 import {
@@ -56,6 +57,7 @@ import MemorialDescritivoModal from './MemorialDescritivoModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
 import { callGeminiApi } from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
+import { useIsMobile } from '../hooks/use-mobile.js';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -86,6 +88,7 @@ const briefingOptions = {
 };
 
 const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
+  const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
   const [persona, setPersona] = useState({});
   const [autor, setAutor] = useState('');
@@ -394,28 +397,31 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ display: 'flex', p: 0, minHeight: '500px' }}>
+        <DialogContent sx={{ display: isMobile ? 'block' : 'flex', p: 0, minHeight: '500px' }}>
           <Tabs
-            orientation="vertical"
+            orientation={isMobile ? 'horizontal' : 'vertical'}
             variant="scrollable"
             value={value}
             onChange={handleChange}
             aria-label="Padrões de Campanha"
-            sx={{
-              borderRight: 1,
-              borderColor: 'divider',
-              minWidth: 200,
-            }}
+            sx={isMobile ?
+              { borderBottom: 1, borderColor: 'divider' } :
+              { borderRight: 1, borderColor: 'divider', minWidth: 200 }
+            }
           >
-            <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Persona" sx={{ justifyContent: 'flex-start' }} {...a11yProps(0)} />
-            <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Autor" sx={{ justifyContent: 'flex-start' }} {...a11yProps(1)} />
-            <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Formato" sx={{ justifyContent: 'flex-start' }} {...a11yProps(2)} />
-            <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Instruções" sx={{ justifyContent: 'flex-start' }} {...a11yProps(3)} />
-            <Tab icon={<PaletteIcon />} iconPosition="start" label="Cores" sx={{ justifyContent: 'flex-start' }} {...a11yProps(4)} />
+            <Tab icon={<TextFieldsIcon />} iconPosition={isMobile ? undefined : "start"} label="Persona" sx={{ justifyContent: isMobile ? 'center' : 'flex-start' }} {...a11yProps(0)} />
+            <Tab icon={<TextFieldsIcon />} iconPosition={isMobile ? undefined : "start"} label="Autor" sx={{ justifyContent: isMobile ? 'center' : 'flex-start' }} {...a11yProps(1)} />
+            <Tab icon={<TextFieldsIcon />} iconPosition={isMobile ? undefined : "start"} label="Formato" sx={{ justifyContent: isMobile ? 'center' : 'flex-start' }} {...a11yProps(2)} />
+            <Tab icon={<TextFieldsIcon />} iconPosition={isMobile ? undefined : "start"} label="Instruções" sx={{ justifyContent: isMobile ? 'center' : 'flex-start' }} {...a11yProps(3)} />
+            <Tab icon={<PaletteIcon />} iconPosition={isMobile ? undefined : "start"} label="Cores" sx={{ justifyContent: isMobile ? 'center' : 'flex-start' }} {...a11yProps(4)} />
           </Tabs>
-
+          <Box sx={{width: '100%', overflow: 'auto'}}>
           <TabPanel value={value} index={0}>
-            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={2}
+              sx={{ mb: 2, alignItems: 'flex-start' }}
+            >
                 <Button
                     variant="outlined"
                     startIcon={<AutoAwesomeIcon />}
@@ -430,7 +436,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                 >
                     Criar Nova Persona
                 </Button>
-            </Box>
+            </Stack>
             <Grid container spacing={3}>
                 {/* Nome da Persona */}
                 <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center' }}>
@@ -750,6 +756,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
               </Button>
             </Box>
           </TabPanel>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancelar</Button>
@@ -799,6 +806,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         onClose={() => setShowMemorialModal(false)}
         personas={[{ id: 1, nome: persona.nome || 'Persona Atual' }]} // Placeholder
       />
+      </Box>
     </>
   );
 };
