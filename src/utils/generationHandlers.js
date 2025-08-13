@@ -3,6 +3,21 @@ import { callGeminiApi, generateImage } from './geminiAPI.js';
 import { getGeminiApiKey } from './geminiCredentials.js';
 import { stripHtml } from '../lib/utils.js';
 
+const formatObjectForPrompt = (obj) => {
+  if (!obj || typeof obj !== 'object') return '';
+  return Object.entries(obj)
+    .map(([key, value]) => {
+      if (!value) return null;
+      const formattedValue = Array.isArray(value) ? value.join(', ') : value;
+      if (!formattedValue) return null;
+      const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
+      return `${formattedKey}: ${stripHtml(formattedValue)}`;
+    })
+    .filter(Boolean)
+    .join('\n');
+};
+
+
 /**
  * Generates the main campaign content using an AI API.
  */
@@ -14,9 +29,12 @@ export const generateCampaignContent = async ({ problema, solucao }) => {
 
   const { persona, autor, instrucoes, formato } = getCampaignPrompt();
 
+  const personaString = formatObjectForPrompt(persona);
+  const autorString = formatObjectForPrompt(autor);
+
   const promptCompleto = `
-    Persona: ${stripHtml(persona)}
-    Autor: ${stripHtml(autor)}
+    Persona: ${personaString}
+    Autor: ${autorString}
     Formato: ${stripHtml(formato)}
     Problema: ${stripHtml(problema)}
     Solução: ${stripHtml(solucao)}
@@ -72,13 +90,16 @@ export const generateCampaignImage = async ({ content, aspectRatio }) => {
   }
 
   const { persona, autor, colors } = getCampaignPrompt();
+  const personaString = formatObjectForPrompt(persona);
+  const autorString = formatObjectForPrompt(autor);
+
   const colorPalettePrompt = colors && colors.length > 0
     ? `A imagem deve usar predominantemente a seguinte paleta de cores: ${colors.join(', ')}.`
     : '';
 
   const imagePrompt = `
-    Persona: ${stripHtml(persona)}
-    Autor: ${stripHtml(autor)}
+    Persona: ${personaString}
+    Autor: ${autorString}
     Resumo do Conteúdo: ${stripHtml(content.titulo)}. ${stripHtml(content.conteudo)}
     Razão de Aspecto: ${aspectRatio}
     ${colorPalettePrompt}
@@ -134,6 +155,8 @@ export const generateFollowupPosts = async ({ content, followupPostsQuantity }) 
   }
 
   const { persona } = getCampaignPrompt();
+  const personaString = formatObjectForPrompt(persona);
+
   const prompt = 
   `Você é um especialista em marketing de conteúdo e copywriting.
 Sua tarefa é criar ${followupPostsQuantity} posts sequenciais seguindo o modelo AIDA (Atenção → Interesse → Desejo → Ação), usando o conteúdo principal como base.
@@ -143,7 +166,7 @@ O tema abordado é: [${stripHtml(content.titulo)} - ${stripHtml(content.conteudo
 
 PERSONAS-ALVO:
 
-${stripHtml(persona)}
+${personaString}
 
 ESTRUTURA DA SEQUÊNCIA (AIDA + formatos variados):
 Post 1 — Atenção (Gancho Impactante)

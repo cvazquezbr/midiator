@@ -59,7 +59,7 @@ const MemorialDescritivoModal = ({ open, onClose, campaignData }) => {
 
   if (!campaignData) return null;
 
-  const { persona = {}, autor = '', formato = '', instrucoes = '', colors = [], briefing = {} } = campaignData;
+  const { persona = {}, autor = {}, formato = '', instrucoes = '', colors = [], briefing = {} } = campaignData;
 
   const renderPersonaField = (label, value, explanation) => {
     let displayValue = 'Não definido';
@@ -151,9 +151,11 @@ const MemorialDescritivoModal = ({ open, onClose, campaignData }) => {
           </Section>
 
           <Section title="2.2. Autor (Voz da Marca)" subtitle="O tom, estilo e perspectiva que a marca usará.">
-             <Box sx={{ mt: 1 }}>
-                {autor ? parse(autor) : <Typography variant="body2">Não definido</Typography>}
-             </Box>
+            <Field label="Identidade do Autor" value={autor.identidade} explanation="O nome da empresa ou marca que está publicando o conteúdo." />
+            <Field label="Descrição da Empresa" value={autor.descricao} explanation="Detalhes sobre a área de atuação, especializações e foco do negócio." />
+            <Field label="Tipo de Organização" value={autor.tipo} explanation="A natureza da empresa (ex: 'braço de tecnologia', 'agência de marketing')." />
+            <Field label="Objetivo Estratégico" value={autor.objetivoEstrategico} explanation="A meta de longo prazo da mensagem." />
+            <Field label="Objetivo de Engajamento" value={autor.objetivoEngajamento} explanation="O tipo de interação que a mensagem deve estimular no público." />
           </Section>
 
           <Section title="2.3. Formato do Conteúdo" subtitle="A estrutura e o layout das peças de conteúdo.">
@@ -169,10 +171,10 @@ const MemorialDescritivoModal = ({ open, onClose, campaignData }) => {
           </Section>
 
           <Section title="2.5. Briefing da Paleta de Cores" subtitle="Os parâmetros usados para a geração da paleta de cores com IA.">
-            <Field label="Objetivo" value={briefing.objective} explanation="O principal objetivo da campanha (ex: Branding, Vendas)." />
-            <Field label="Público-alvo" value={briefing.targetAudience} explanation="O grupo demográfico ou perfil de cliente que a campanha visa atingir." />
-            <Field label="Mensagem Principal" value={briefing.mainMessage} explanation="A ideia central ou o sentimento que a campanha deve comunicar." />
-            <Field label="Atmosfera Desejada" value={briefing.atmosphere} explanation="A sensação ou o ambiente que o design visual deve criar." />
+            <Field label="Objetivo" value={briefing.objetivo} explanation="O principal objetivo da campanha (ex: Branding, Vendas)." />
+            <Field label="Público-alvo" value={briefing.publicoAlvo} explanation="O grupo demográfico ou perfil de cliente que a campanha visa atingir." />
+            <Field label="Mensagem Principal" value={briefing.mensagemPrincipal} explanation="A ideia central ou o sentimento que a campanha deve comunicar." />
+            <Field label="Atmosfera Desejada" value={briefing.atmosfera} explanation="A sensação ou o ambiente que o design visual deve criar." />
             <Field label="Detalhes Adicionais" value={briefing.details} explanation="Quaisquer outras instruções, como cores proibidas ou obrigatórias." />
           </Section>
 

@@ -20,7 +20,21 @@ export function saveCampaignPrompt(promptData) {
  * @returns {{persona: object, autor: string, instrucoes: string, formato: string, colors: string[]}} O objeto do prompt ou um objeto com campos vazios.
  */
 export function getCampaignPrompt() {
-  const defaultPrompt = { persona: {}, autor: '', instrucoes: '', formato: '', colors: [] };
+  const defaultPrompt = {
+    persona: {},
+    autor: {
+      identidade: '',
+      descricao: '',
+      tipo: '',
+      objetivoEstrategico: '',
+      objetivoEngajamento: '',
+      dominioReferencia: '',
+      siteExclusao: '',
+    },
+    instrucoes: '',
+    formato: '',
+    colors: []
+  };
 
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
@@ -33,7 +47,6 @@ export function getCampaignPrompt() {
       try {
         parsedData = JSON.parse(storedData);
       } catch (e) {
-        // Lida com o caso em que storedData não é um JSON válido (formato antigo de string)
         console.log("Migrando prompt do formato antigo (string) para o novo (objeto).");
         const migratedData = { ...defaultPrompt, instrucoes: storedData };
         saveCampaignPrompt(migratedData);
@@ -41,7 +54,6 @@ export function getCampaignPrompt() {
       }
 
       if (typeof parsedData !== 'object' || parsedData === null) {
-        // O valor armazenado é JSON válido, mas não um objeto (ex: "null", "true", "123")
         return defaultPrompt;
       }
 
@@ -50,35 +62,34 @@ export function getCampaignPrompt() {
         parsedData.persona = {};
       }
 
+      // Migração para o campo autor: se for uma string, converte para o novo formato de objeto.
+      if (typeof parsedData.autor === 'string') {
+        console.log("Migrando autor do formato antigo (string) para o novo (objeto).");
+        parsedData.autor = {
+          ...defaultPrompt.autor,
+          identidade: parsedData.autor,
+        };
+      } else if (typeof parsedData.autor !== 'object' || parsedData.autor === null) {
+        parsedData.autor = { ...defaultPrompt.autor };
+      }
+
+
       // Migração para remover o campo aspectRatio
       if (parsedData.aspectRatio) {
         delete parsedData.aspectRatio;
-        // O objeto atualizado será salvo na próxima vez que o usuário salvar.
-      }
-
-      const finalData = {
-        ...defaultPrompt,
-        ...parsedData,
-      };
-
-      if (finalData.persona && typeof finalData.persona === 'object') {
-        const personaString = Object.entries(finalData.persona)
-          .map(([key, value]) => {
-            if (!value) return null; // Ignora campos vazios, nulos ou undefined
-            const formattedValue = Array.isArray(value) ? value.join(', ') : value;
-            if (!formattedValue) return null; // Ignora se o valor formatado for vazio
-            // Formata a chave para ser mais legível (ex: 'posicaoCargo' -> 'Posição/Cargo')
-            const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
-            return `${formattedKey}: ${formattedValue}`;
-          })
-          .filter(Boolean) // Remove entradas nulas
-          .join('\n');
-        finalData.persona = personaString;
-      } else {
-        finalData.persona = '';
       }
 
       // Mescla com os padrões para garantir que todas as chaves estejam presentes
+      const finalData = {
+        ...defaultPrompt,
+        ...parsedData,
+        // Garante que a estrutura aninhada de autor também seja mesclada
+        autor: {
+          ...defaultPrompt.autor,
+          ...(parsedData.autor || {}),
+        },
+      };
+
       return finalData;
 
     } catch (error) {
