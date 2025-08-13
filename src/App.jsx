@@ -964,15 +964,21 @@ function App() {
         setConteudoFormatado('');
         setGeneratedImageUrl(null);
 
-        await Promise.all([
+        const [imageSuccess] = await Promise.all([
           handleGenerateImage(normalizedContent),
           handleGenerateSummary(1800, normalizedContent),
           handleGenerateSummary(130, normalizedContent),
           handleGenerateFormattedContent(normalizedContent),
           handleGenerateFollowupPosts(normalizedContent),
         ]);
+
+        if (!imageSuccess) {
+          setCampaignGenerationFailed(true);
+          setGenerationError("A geração de texto foi bem-sucedida, mas a criação da imagem falhou. Você pode tentar gerar a imagem novamente.");
+        }
       }
     } catch (error) {
+      // This will now only catch errors from text generation
       console.error("Erro ao gerar conteúdo da campanha:", error);
       const errorMessage = error.message || 'Ocorreu um erro desconhecido.';
       toast.error(`Ocorreu um erro ao gerar o conteúdo da campanha: ${errorMessage}`);
@@ -987,17 +993,19 @@ function App() {
   const handleGenerateImage = async (content = campaignContent) => {
     if (!content) {
       toast.error("Por favor, gere o conteúdo do texto primeiro.");
-      return;
+      return false;
     }
     setIsGeneratingImage(true);
     try {
       const imageUrl = await generateCampaignImage({ content, aspectRatio });
       setGeneratedImageUrl(imageUrl);
       updateImageAndPalette(imageUrl);
+      return true;
     } catch (imageError) {
       console.error("Erro ao gerar imagem:", imageError);
       toast.error(`Ocorreu um erro ao gerar a imagem da campanha: ${imageError.message}`);
       setGeneratedImageUrl(null);
+      return false;
     } finally {
       setIsGeneratingImage(false);
     }
