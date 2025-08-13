@@ -153,6 +153,7 @@ function App() {
   const [followupPosts, setFollowupPosts] = useState([]);
   const [isGeneratingFollowup, setIsGeneratingFollowup] = useState(false);
   const [followupPostsQuantity, setFollowupPostsQuantity] = useState(5);
+  const [editingFollowup, setEditingFollowup] = useState(null);
 
   // Publisher State
   const [isScheduled, setIsScheduled] = useState(false);
@@ -1095,6 +1096,23 @@ function App() {
     setFollowupPostsQuantity(5);
   };
 
+  const handleEditFollowup = (index, content) => {
+    setEditingFollowup({ index, content });
+  };
+
+  const handleSaveFollowup = (newContent) => {
+    if (editingFollowup === null) return;
+
+    const updatedPosts = followupPosts.map((post, index) => {
+      if (index === editingFollowup.index) {
+        return { ...post, conteudo: newContent };
+      }
+      return post;
+    });
+    setFollowupPosts(updatedPosts);
+    setEditingFollowup(null);
+  };
+
   const handleGenerateSolucao = async () => {
     setIsGeneratingSolucao(true);
     try {
@@ -1299,6 +1317,7 @@ function App() {
               isGeneratingImage={isGeneratingImage}
               handleGenerateImage={handleGenerateImage}
               setCampaignContent={setCampaignContent}
+              onEditFollowup={handleEditFollowup}
             />
             </Container>
           )}
@@ -1557,24 +1576,45 @@ function App() {
         }
       />
       <TextEditorDialog
-        open={editingField !== null}
-        title={`Editar ${
-          editingField === 'conteudo' ? 'Conteúdo'
-          : editingField === 'cta' ? 'CTA'
-          : 'Conteúdo Formatado'
-        }`}
-        content={
-          editingField === 'conteudoFormatado' ? conteudoFormatado
-          : editingField ? campaignContent[editingField] : ''
+        open={editingField !== null || editingFollowup !== null}
+        title={
+          editingFollowup !== null
+            ? `Editar Post de Follow-up ${editingFollowup.index + 1}`
+            : `Editar ${
+                editingField === 'conteudo'
+                  ? 'Conteúdo'
+                  : editingField === 'cta'
+                  ? 'CTA'
+                  : 'Conteúdo Formatado'
+              }`
         }
-        onSave={(newContent) => {
-          if (editingField === 'conteudoFormatado') {
-            setConteudoFormatado(newContent);
-          } else {
-            setCampaignContent({ ...campaignContent, [editingField]: newContent });
-          }
+        content={
+          editingFollowup !== null
+            ? editingFollowup.content
+            : editingField === 'conteudoFormatado'
+            ? conteudoFormatado
+            : editingField
+            ? campaignContent[editingField]
+            : ''
+        }
+        onSave={
+          editingFollowup !== null
+            ? handleSaveFollowup
+            : (newContent) => {
+                if (editingField === 'conteudoFormatado') {
+                  setConteudoFormatado(newContent);
+                } else {
+                  setCampaignContent({
+                    ...campaignContent,
+                    [editingField]: newContent,
+                  });
+                }
+              }
+        }
+        onClose={() => {
+          setEditingField(null);
+          setEditingFollowup(null);
         }}
-        onClose={() => setEditingField(null)}
       />
       {isMobile && activeStep === 4 && (
         <>
