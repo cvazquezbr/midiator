@@ -1,6 +1,5 @@
 import React from 'react';
 import { Typography, Box } from '@mui/material';
-import SectionCard from '../common/SectionCard';
 import parse from 'html-react-parser';
 
 const DetailItem = ({ title, value, isHtml = false }) => {
@@ -31,13 +30,13 @@ const InstructionsSection = ({ formato, instrucoes }) => {
   }
 
   return (
-    <SectionCard>
+    <Box>
       <Typography variant="h4" component="h2" sx={{ mb: 4 }}>
         Diretrizes de Geração
       </Typography>
       <DetailItem title="Formato do Conteúdo" value={formato} isHtml={true} />
       <DetailItem title="Instruções para a IA" value={instrucoes} isHtml={true} />
-    </SectionCard>
+    </Box>
   );
 };
 

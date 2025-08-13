@@ -318,7 +318,7 @@ function App() {
     problema,
     solucao,
     campaignContent,
-    personaFields,
+    persona,
     autor,
     instrucoes,
     formato,
@@ -756,7 +756,7 @@ function App() {
         problema,
         solucao,
         campaignContent,
-        personaFields,
+        persona,
         autor,
         instrucoes,
         formato,
@@ -805,7 +805,7 @@ function App() {
       setProblema(loadedState.problema || '');
       setSolucao(loadedState.solucao || '');
       setCampaignContent(loadedState.campaignContent || null);
-      setPersonaFields(loadedState.personaFields || {});
+      setPersona(loadedState.persona || {});
       setAutor(loadedState.autor || '');
       setInstrucoes(loadedState.instrucoes || '');
       setFormato(loadedState.formato || '');

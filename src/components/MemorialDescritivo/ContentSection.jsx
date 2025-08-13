@@ -1,6 +1,5 @@
 import React from 'react';
 import { Typography, Box, Paper } from '@mui/material';
-import SectionCard from '../common/SectionCard';
 import parse from 'html-react-parser';
 
 const DetailItem = ({ title, value, isHtml = false, sx = {} }) => {
@@ -34,17 +33,17 @@ const ContentSection = ({
 
   return (
     <>
-      <SectionCard>
+      <Box>
         <Typography variant="h4" component="h2" sx={{ mb: 4 }}>
           Diretrizes da Campanha
         </Typography>
         <DetailItem title="Problema / Dor" value={problema} />
         <DetailItem title="Solução / Proposta" value={solucao} />
         <DetailItem title="Proporção" value={aspectRatio} />
-      </SectionCard>
+      </Box>
 
       {hasCampaignContent && (
-        <SectionCard>
+        <Box sx={{ mt: 4 }}>
           <Typography variant="h4" component="h2" sx={{ mb: 4 }}>
             Conteúdo Principal Gerado
           </Typography>
@@ -54,11 +53,11 @@ const ContentSection = ({
            {campaignContent.hashtags && campaignContent.hashtags.length > 0 &&
              <DetailItem title="Hashtags" value={campaignContent.hashtags.join(', ')} />
            }
-        </SectionCard>
+        </Box>
       )}
 
       {followupPosts && followupPosts.length > 0 && (
-        <SectionCard>
+        <Box sx={{ mt: 4 }}>
           <Typography variant="h4" component="h2" sx={{ mb: 4 }}>
             Posts de Acompanhamento
           </Typography>
@@ -71,7 +70,7 @@ const ContentSection = ({
                 {post.cta && <Typography variant="caption" color="text.secondary">CTA: {post.cta}</Typography>}
             </Paper>
           ))}
-        </SectionCard>
+        </Box>
       )}
     </>
   );

@@ -1,6 +1,5 @@
 import React from 'react';
 import { Typography, Box, Grid, List, ListItem, ListItemIcon, ListItemText, Chip } from '@mui/material';
-import SectionCard from '../common/SectionCard';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import parse from 'html-react-parser';
 
@@ -70,10 +69,10 @@ const PersonaSection = ({ persona }) => {
     return result.charAt(0).toUpperCase() + result.slice(1);
   };
 
-  const htmlFields = ['mentalidadeValores', 'contextoCultural'];
+  const htmlFields = ['mentalidadeValores', 'contextoCultural', 'dores', 'necessidades', 'motivacoes', 'crencasLimitantes', 'sonhosAspiracoes', 'jornada'];
 
   return (
-    <SectionCard>
+    <Box>
       <Typography variant="h4" component="h2" sx={{ mb: 4 }}>
         Persona
       </Typography>
@@ -87,7 +86,7 @@ const PersonaSection = ({ persona }) => {
           />
         ))}
       </Grid>
-    </SectionCard>
+    </Box>
   );
 };
 
