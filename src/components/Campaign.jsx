@@ -345,24 +345,44 @@ const Campaign = ({
                     </Box>
                 )}
 
-                {isGeneratingImage && (
-                    <Box sx={{ mt: 4, textAlign: 'center' }}>
-                        <Typography variant="h6" gutterBottom>
-                            Gerando Imagem...
-                        </Typography>
-                        {/* Pode adicionar um componente de loading mais elaborado aqui */}
-                    </Box>
-                )}
-
-                {generatedImageUrl && !isGeneratingImage && (
+                {/* Bloco de Geração e Exibição de Imagem */}
+                {campaignContent && (
                     <Box sx={{ mt: 4 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
-                            <Button onClick={handleGenerateImage} disabled={isGeneratingImage}>
-                                {isGeneratingImage ? 'Gerando...' : 'Regenerar Imagem'}
-                            </Button>
-                        </Box>
-                        <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', borderRadius: '8px', mt: 2 }} />
+                        {/* Se a imagem já foi gerada, exibe */}
+                        {generatedImageUrl && !isGeneratingImage && (
+                            <Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
+                                    <Button onClick={handleGenerateImage} disabled={isGeneratingImage}>
+                                        {isGeneratingImage ? 'Gerando...' : 'Regenerar Imagem'}
+                                    </Button>
+                                </Box>
+                                <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', borderRadius: '8px', mt: 2 }} />
+                            </Box>
+                        )}
+
+                        {/* Se está gerando a imagem, mostra o loading */}
+                        {isGeneratingImage && (
+                            <Box sx={{ textAlign: 'center' }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Gerando Imagem...
+                                </Typography>
+                            </Box>
+                        )}
+
+                        {/* Se AINDA NÃO tem imagem e NÃO está gerando, mostra o botão para gerar */}
+                        {!generatedImageUrl && !isGeneratingImage && (
+                            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                                <Button
+                                    variant="contained"
+                                    color="secondary"
+                                    onClick={handleGenerateImage}
+                                    startIcon={<ImageIcon />}
+                                >
+                                    Gerar Imagem
+                                </Button>
+                            </Box>
+                        )}
                     </Box>
                 )}
             </CardContent>
