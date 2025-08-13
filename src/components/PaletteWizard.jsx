@@ -75,7 +75,7 @@ const PaletteWizard = ({ open, onClose, onSave, onGenerate, isGenerating }) => {
         setActiveStep(1);
       });
     } else {
-      onSave(generatedPalette.palette.map(p => p.hex));
+      onSave(generatedPalette.palette);
       onClose();
     }
   };
