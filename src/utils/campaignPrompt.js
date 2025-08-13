@@ -56,11 +56,30 @@ export function getCampaignPrompt() {
         // O objeto atualizado será salvo na próxima vez que o usuário salvar.
       }
 
-      // Mescla com os padrões para garantir que todas as chaves estejam presentes
-      return {
+      const finalData = {
         ...defaultPrompt,
         ...parsedData,
       };
+
+      if (finalData.persona && typeof finalData.persona === 'object') {
+        const personaString = Object.entries(finalData.persona)
+          .map(([key, value]) => {
+            if (!value) return null; // Ignora campos vazios, nulos ou undefined
+            const formattedValue = Array.isArray(value) ? value.join(', ') : value;
+            if (!formattedValue) return null; // Ignora se o valor formatado for vazio
+            // Formata a chave para ser mais legível (ex: 'posicaoCargo' -> 'Posição/Cargo')
+            const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
+            return `${formattedKey}: ${formattedValue}`;
+          })
+          .filter(Boolean) // Remove entradas nulas
+          .join('\n');
+        finalData.persona = personaString;
+      } else {
+        finalData.persona = '';
+      }
+
+      // Mescla com os padrões para garantir que todas as chaves estejam presentes
+      return finalData;
 
     } catch (error) {
       console.error("Erro ao recuperar o prompt de campanha:", error);
