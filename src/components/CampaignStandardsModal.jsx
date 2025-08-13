@@ -800,7 +800,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       <MemorialDescritivoModal
         open={showMemorialModal}
         onClose={() => setShowMemorialModal(false)}
-        campaignData={{ persona, autor, instrucoes, formato, colors }}
+        campaignData={{ persona, autor, instrucoes, formato, colors, briefing }}
       />
     </>
   );
