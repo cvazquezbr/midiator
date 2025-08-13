@@ -2,15 +2,18 @@ import React from 'react';
 import { Typography, Box, Grid, List, ListItem, ListItemIcon, ListItemText, Chip } from '@mui/material';
 import SectionCard from '../common/SectionCard';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import parse from 'html-react-parser';
 
-const DetailItem = ({ title, value }) => {
+const DetailItem = ({ title, value, isHtml = false }) => {
   if (!value || (Array.isArray(value) && value.length === 0)) {
     return null;
   }
 
   const renderValue = () => {
+    if (isHtml && typeof value === 'string') {
+        return <Typography component="div" variant="body1">{parse(value)}</Typography>;
+    }
     if (Array.isArray(value)) {
-      // Check if it's a list of strings to be rendered as chips
       if (value.every(item => typeof item === 'string' && !item.includes(' '))) {
          return (
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -20,7 +23,6 @@ const DetailItem = ({ title, value }) => {
           </Box>
         );
       }
-      // Otherwise, render as a list
       return (
         <List dense sx={{ p: 0 }}>
           {value.map((item, index) => (
@@ -34,7 +36,6 @@ const DetailItem = ({ title, value }) => {
         </List>
       );
     }
-    // Render simple string value
     return <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{value}</Typography>;
   };
 
@@ -48,6 +49,8 @@ const DetailItem = ({ title, value }) => {
                 borderLeft: '3px solid',
                 borderColor: 'primary.light',
                 pl: 2,
+                 '& p, & li': { mb: 1.5 },
+                 '& ul, & ol': { pl: 2.5 },
             }}>
                 {renderValue()}
             </Box>
@@ -62,11 +65,12 @@ const PersonaSection = ({ persona }) => {
     return null;
   }
 
-  // Create a more readable title from a camelCase key
   const formatTitle = (key) => {
     const result = key.replace(/([A-Z])/g, ' $1');
     return result.charAt(0).toUpperCase() + result.slice(1);
   };
+
+  const htmlFields = ['mentalidadeValores', 'contextoCultural'];
 
   return (
     <SectionCard>
@@ -79,6 +83,7 @@ const PersonaSection = ({ persona }) => {
             key={key}
             title={formatTitle(key)}
             value={value}
+            isHtml={htmlFields.includes(key)}
           />
         ))}
       </Grid>
