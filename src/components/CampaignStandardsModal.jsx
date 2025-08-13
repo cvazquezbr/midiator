@@ -81,7 +81,7 @@ function TabPanel(props) {
   );
 }
 
-const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
+const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemorial }) => {
   const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
   const [persona, setPersona] = useState({});
@@ -100,7 +100,6 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
   const [showPersonaGenModal, setShowPersonaGenModal] = useState(false);
   const [showPersonaWizard, setShowPersonaWizard] = useState(false);
-  const [showMemorialModal, setShowMemorialModal] = useState(false);
 
   // State for AI Autor Generation
   const [isGeneratingAutor, setIsGeneratingAutor] = useState(false);
@@ -506,10 +505,10 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
               size="small"
               variant="outlined"
               startIcon={<DescriptionIcon />}
-              onClick={() => setShowMemorialModal(true)}
+              onClick={onShowMemorial}
               sx={{ ml: 2 }}
             >
-              Gerar Memorial Descritivo
+              Ver Memorial Descritivo
             </Button>
           </Box>
           <IconButton onClick={onClose} aria-label="Fechar">
@@ -977,11 +976,6 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         isGenerating={isGenerating}
       />
 
-      <MemorialDescritivoModal
-        open={showMemorialModal}
-        onClose={() => setShowMemorialModal(false)}
-        campaignData={{ persona, autor, instrucoes, formato, colors }}
-      />
     </>
   );
 };

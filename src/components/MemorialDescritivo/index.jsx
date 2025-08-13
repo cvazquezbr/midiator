@@ -4,6 +4,7 @@ import Header from './Header';
 import PersonaSection from './PersonaSection';
 import AuthorSection from './AuthorSection';
 import ContentSection from './ContentSection';
+import InstructionsSection from './InstructionsSection';
 import ColorPalette from './ColorPalette';
 
 const MemorialDescritivo = ({ campaignData }) => {
@@ -15,17 +16,18 @@ const MemorialDescritivo = ({ campaignData }) => {
     problema,
     solucao,
     campaignContent,
-    personaFields,
+    persona,
     autor,
     formato,
+    instrucoes,
     aspectRatio,
     followupPosts,
-    colorPalette,
-    campaignColors
+    colors,
   } = campaignData;
 
-  const combinedColors = [...(colorPalette || []), ...(campaignColors || [])];
-  const uniqueColors = [...new Set(combinedColors)];
+  // In the new structure, `colors` is the primary array of color objects.
+  // The old `colorPalette` and `campaignColors` are deprecated.
+  const uniqueColors = colors || [];
 
   return (
     <Container maxWidth="md" sx={{ py: { xs: 3, md: 6 } }}>
@@ -36,7 +38,6 @@ const MemorialDescritivo = ({ campaignData }) => {
           problema={problema}
           solucao={solucao}
           campaignContent={campaignContent}
-          formato={formato}
           aspectRatio={aspectRatio}
           followupPosts={followupPosts}
         />
@@ -45,7 +46,13 @@ const MemorialDescritivo = ({ campaignData }) => {
       <Divider sx={{ my: 6 }} />
 
       <Box sx={{ my: 4 }}>
-        <PersonaSection persona={personaFields} />
+        <InstructionsSection formato={formato} instrucoes={instrucoes} />
+      </Box>
+
+      <Divider sx={{ my: 6 }} />
+
+      <Box sx={{ my: 4 }}>
+        <PersonaSection persona={persona} />
       </Box>
 
       <Divider sx={{ my: 6 }} />
