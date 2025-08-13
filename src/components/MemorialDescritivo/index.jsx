@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Container, Divider } from '@mui/material';
+import { Box, Container, Divider, Typography } from '@mui/material';
 import Header from './Header';
 import PersonaSection from './PersonaSection';
 import AuthorSection from './AuthorSection';
