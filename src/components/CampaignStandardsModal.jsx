@@ -317,6 +317,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
   };
 
   const getCurrentContent = () => {
+    if (!editingField) return '';
     if (editingField === 'persona') return persona;
     if (editingField.startsWith('autor.')) {
         const fieldName = editingField.split('.')[1];
