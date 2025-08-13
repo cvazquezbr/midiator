@@ -39,8 +39,11 @@ const AuthorSection = ({ author }) => {
 
   return (
     <Box>
-      <Typography variant="h4" component="h2" sx={{ mb: 4 }}>
+      <Typography variant="h4" component="h2" sx={{ mb: 2 }}>
         Definições do Autor
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 4, color: 'text.secondary' }}>
+        O autor representa a voz da nossa marca. Definir quem está falando, qual o seu tom e seus objetivos é crucial para construir uma identidade consistente e gerar confiança. Esta seção estabelece a personalidade da nossa comunicação.
       </Typography>
 
       <DetailItem title="Identidade / Quem está falando?" value={identidade} />
