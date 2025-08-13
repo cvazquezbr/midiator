@@ -75,32 +75,46 @@ const Sidebar = ({
   darkMode,
   steps,
   activeStep,
-  setActiveStep,
   csvData,
   backgroundImage,
   visibleFields,
   totalFields,
   styledFields,
+  variant,
+  onClose,
+  onStepClick,
 }) => {
+  const drawerWidth = 320;
+
+  const handleStepClick = (index) => {
+    onStepClick(index);
+  };
+
   return (
     <Drawer
-      variant="persistent"
+      variant={variant}
       anchor="left"
       open={sidebarOpen}
+      onClose={onClose}
       sx={{
-        width: sidebarOpen ? 320 : 0,
+        width: variant === 'persistent' && sidebarOpen ? drawerWidth : 0,
         flexShrink: 0,
         '& .MuiDrawer-paper': {
-          width: 320,
+          width: drawerWidth,
           boxSizing: 'border-box',
-          mt: 8,
+          mt: { xs: 0, sm: 8 },
           borderRight: '1px solid',
           borderColor: 'divider',
           background: darkMode ? '#1e293b' : '#ffffff',
+          height: { xs: '100%', sm: 'calc(100% - 64px)' },
+          top: { xs: 0, sm: 64 },
         },
       }}
+      ModalProps={{
+        keepMounted: true, // Better open performance on mobile.
+      }}
     >
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ p: 3, mt: { xs: 8, sm: 0 } }}>
         <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
           Etapas do Processo
         </Typography>
@@ -109,15 +123,14 @@ const Sidebar = ({
             <StepIndicator
               key={index}
               step={step}
-              index={index}
               isActive={activeStep === index}
               isCompleted={index < activeStep}
-              onClick={() => setActiveStep(index)}
+              onClick={() => handleStepClick(index)}
             />
           ))}
         </List>
 
-        <Box sx={{ mt: 4 }}>
+        <Box sx={{ mt: 4, display: { xs: 'none', sm: 'block' } }}>
           <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
             Status do Projeto
           </Typography>

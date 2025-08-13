@@ -16,12 +16,15 @@ import {
   Edit,
   Download as DownloadIcon,
   FileUpload as FileUploadIcon,
+  Menu as MenuIcon,
 } from '@mui/icons-material';
+import { useIsMobile } from '../hooks/use-mobile';
 
 const MainAppBar = ({
   darkMode,
   setDarkMode,
   setShowSetupModal,
+  onMenuClick,
   handleMenuOpen,
   handleMenuClose,
   anchorElMenu,
@@ -34,6 +37,7 @@ const MainAppBar = ({
   loadStateInputRef,
   handleLoadStateFromFile,
 }) => {
+  const isMobile = useIsMobile();
   return (
     <AppBar
       position="fixed"
@@ -44,18 +48,22 @@ const MainAppBar = ({
       }}
     >
       <Toolbar>
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            flexGrow: 1,
-          }}
-        >
+        <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+          {isMobile && (
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={onMenuClick}
+              sx={{ mr: 2 }}
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
           <img src="/logo.svg" alt="Midiator Logo" style={{ height: '40px' }} />
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 1 } }}>
           <Tooltip title={darkMode ? 'Alternar para modo claro' : 'Alternar para modo escuro'}>
             <IconButton
               onClick={() => setDarkMode(!darkMode)}

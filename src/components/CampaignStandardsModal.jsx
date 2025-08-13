@@ -58,7 +58,6 @@ import MemorialDescritivoModal from './MemorialDescritivoModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
 import { callGeminiApi } from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
-import { useIsMobile } from '../hooks/use-mobile.js';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -117,7 +116,6 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const [showPersonaGenModal, setShowPersonaGenModal] = useState(false);
   const [showPersonaWizard, setShowPersonaWizard] = useState(false);
   const [showMemorialModal, setShowMemorialModal] = useState(false);
-  const isMobile = useIsMobile();
 
   const handleBriefingChange = (e) => {
     const { name, value } = e.target;
