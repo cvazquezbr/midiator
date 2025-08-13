@@ -1,6 +1,5 @@
 import React from 'react';
 import { Typography, Box } from '@mui/material';
-import SectionCard from '../common/SectionCard';
 import parse from 'html-react-parser';
 
 const DetailItem = ({ title, value, isHtml = false }) => {
@@ -39,7 +38,7 @@ const AuthorSection = ({ author }) => {
   } = author;
 
   return (
-    <SectionCard>
+    <Box>
       <Typography variant="h4" component="h2" sx={{ mb: 4 }}>
         Definições do Autor
       </Typography>
@@ -52,7 +51,7 @@ const AuthorSection = ({ author }) => {
       <DetailItem title="Domínio de Referência" value={dominioReferencia} />
       <DetailItem title="Site para Exclusão de Referência" value={siteExclusao} />
 
-    </SectionCard>
+    </Box>
   );
 };
 
