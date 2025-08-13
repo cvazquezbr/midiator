@@ -60,6 +60,7 @@ const Campaign = ({
     isGeneratingImage,
     handleGenerateImage,
     setCampaignContent,
+    onEditFollowup,
 }) => {
     return (
         <Card>
@@ -327,7 +328,7 @@ const Campaign = ({
                                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                                     <Typography>Post {post.post_numero}: {post.tipo_gancho}</Typography>
                                 </AccordionSummary>
-                                <AccordionDetails>
+                                <AccordionDetails sx={{ cursor: 'pointer' }} onClick={() => onEditFollowup(index, post.conteudo)}>
                                     <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                                         {post.conteudo}
                                     </Typography>
