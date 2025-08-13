@@ -54,6 +54,7 @@ import HtmlDisplayField from './HtmlDisplayField';
 import PaletteReportModal from './PaletteReportModal';
 import PersonaGenerationModal from './PersonaGenerationModal';
 import PersonaWizard from './PersonaWizard';
+import AutorWizard from './AutorWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
 import { callGeminiApi } from '../utils/geminiAPI';
@@ -98,7 +99,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
   const [persona, setPersona] = useState({});
-  const [autor, setAutor] = useState('');
+  const [autor, setAutor] = useState({});
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
   const [colors, setColors] = useState([]);
@@ -123,6 +124,10 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const [showPersonaGenModal, setShowPersonaGenModal] = useState(false);
   const [showPersonaWizard, setShowPersonaWizard] = useState(false);
   const [showMemorialModal, setShowMemorialModal] = useState(false);
+
+  // State for AI Autor Generation
+  const [isGeneratingAutor, setIsGeneratingAutor] = useState(false);
+  const [showAutorWizard, setShowAutorWizard] = useState(false);
 
   const handleBriefingChange = (e) => {
     const { name, value } = e.target;
@@ -183,6 +188,58 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console do navegador para detalhes.');
     } finally {
       setIsGeneratingPersona(false);
+    }
+  };
+
+  const handleGenerateAutorWithAI = async (descricaoGeral, dominioReferencia, siteExclusao, callback) => {
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      toast.error('Chave de API do Gemini não configurada.');
+      return;
+    }
+
+    setIsGeneratingAutor(true);
+    const prompt = `
+      Com base na descrição do autor, preencha os campos do objeto JSON abaixo.
+
+      **Descrição do Autor:**
+      ${descricaoGeral}
+
+      **Instruções Adicionais:**
+      - Use o site ${dominioReferencia ? `\`${dominioReferencia}\`` : 'fornecido'} como principal fonte de referência para entender o tom, a linguagem e a área de atuação.
+      - ${siteExclusao ? `NÃO use o site \`${siteExclusao}\` como referência.` : ''}
+      - As respostas devem ser concisas e diretas.
+
+      **Campos para preencher (use exatamente estes nomes de chave):**
+      - identidade: (string) O nome da empresa ou marca.
+      - descricao: (string em HTML) Uma breve descrição da empresa, detalhando sua área de atuação, especializações e foco.
+      - tipo: (string) Uma classificação da natureza da empresa (ex: "Braço de tecnologia", "Agência de marketing", "Consultoria").
+      - objetivoEstrategico: (string em HTML) A meta de longo prazo da mensagem (posicionamento da marca, construção de autoridade, etc.).
+      - objetivoEngajamento: (string em HTML) O tipo de interação que a mensagem deve estimular (gerar comentários, compartilhamentos, etc.).
+
+      Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, markdown, ou qualquer outra formatação.
+    `;
+
+    try {
+      const response = await callGeminiApi(prompt, apiKey);
+      const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
+
+      if (!cleanedResponse) {
+        toast.error('A IA retornou uma resposta vazia.');
+        return;
+      }
+
+      const generatedAutor = JSON.parse(cleanedResponse);
+
+      if (callback) {
+        callback(generatedAutor);
+      }
+
+    } catch (error) {
+      console.error("Erro ao gerar ou processar autor com IA:", error);
+      toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console do navegador para detalhes.');
+    } finally {
+      setIsGeneratingAutor(false);
     }
   };
 
@@ -248,8 +305,9 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
   const handleSaveEditor = (newContent) => {
     if (editingField === 'persona') {
       setPersona(newContent);
-    } else if (editingField === 'autor') {
-      setAutor(newContent);
+    } else if (editingField.startsWith('autor.')) {
+      const fieldName = editingField.split('.')[1];
+      setAutor(prev => ({ ...prev, [fieldName]: newContent }));
     } else if (editingField === 'instrucoes') {
       setInstrucoes(newContent);
     } else if (editingField === 'formato') {
@@ -260,7 +318,10 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
   const getCurrentContent = () => {
     if (editingField === 'persona') return persona;
-    if (editingField === 'autor') return autor;
+    if (editingField.startsWith('autor.')) {
+        const fieldName = editingField.split('.')[1];
+        return autor[fieldName] || '';
+    }
     if (editingField === 'instrucoes') return instrucoes;
     if (editingField === 'formato') return formato;
     return '';
@@ -268,7 +329,11 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
   const getEditorTitle = () => {
     if (editingField === 'persona') return 'Editar Persona';
-    if (editingField === 'autor') return 'Editar Autor';
+    if (editingField === 'autor.identidade') return 'Editar Identidade do Autor';
+    if (editingField === 'autor.descricao') return 'Editar Descrição da Empresa';
+    if (editingField === 'autor.tipo') return 'Editar Tipo de Organização';
+    if (editingField === 'autor.objetivoEstrategico') return 'Editar Objetivo Estratégico';
+    if (editingField === 'autor.objetivoEngajamento') return 'Editar Objetivo de Engajamento';
     if (editingField === 'instrucoes') return 'Editar Instruções';
     if (editingField === 'formato') return 'Editar Formato';
     return 'Editar';
@@ -724,13 +789,52 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
               </Grid>
             </TabPanel>
             <TabPanel value={value} index={1}>
-              <HtmlDisplayField
-                title="Autor"
-                tooltip="Descreva o autor ou a voz da marca que está criando o conteúdo. Qual o tom, estilo e perspectiva?"
-                htmlContent={autor}
-                onClick={() => handleOpenEditor('autor')}
-                placeholder="Clique para editar o autor..."
-              />
+              <Stack spacing={2}>
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={() => setShowAutorWizard(true)}
+                  sx={{ alignSelf: 'flex-start' }}
+                >
+                  Assistente de Criação de Autor
+                </Button>
+
+                <HtmlDisplayField
+                  title="Identidade do Autor"
+                  tooltip="O nome da empresa ou marca que está publicando o conteúdo. Ex: ACME Corporation."
+                  htmlContent={autor?.identidade}
+                  onClick={() => handleOpenEditor('autor.identidade')}
+                  placeholder="Clique para editar a identidade..."
+                />
+                <HtmlDisplayField
+                  title="Descrição da Empresa"
+                  tooltip="Uma breve descrição que detalha a área de atuação, as especializações e o foco do negócio."
+                  htmlContent={autor?.descricao}
+                  onClick={() => handleOpenEditor('autor.descricao')}
+                  placeholder="Clique para editar a descrição..."
+                />
+                <HtmlDisplayField
+                  title="Tipo de Organização"
+                  tooltip="Uma classificação que define a natureza da empresa (ex: 'braço de tecnologia', 'agência de marketing')."
+                  htmlContent={autor?.tipo}
+                  onClick={() => handleOpenEditor('autor.tipo')}
+                  placeholder="Clique para editar o tipo..."
+                />
+                <HtmlDisplayField
+                  title="Objetivo Estratégico"
+                  tooltip="A meta de longo prazo da mensagem (posicionamento da marca, construção de autoridade, etc.)."
+                  htmlContent={autor?.objetivoEstrategico}
+                  onClick={() => handleOpenEditor('autor.objetivoEstrategico')}
+                  placeholder="Clique para editar o objetivo estratégico..."
+                />
+                <HtmlDisplayField
+                  title="Objetivo de Engajamento"
+                  tooltip="O tipo de interação que a mensagem deve estimular no público."
+                  htmlContent={autor?.objetivoEngajamento}
+                  onClick={() => handleOpenEditor('autor.objetivoEngajamento')}
+                  placeholder="Clique para editar o objetivo de engajamento..."
+                />
+              </Stack>
             </TabPanel>
             <TabPanel value={value} index={2}>
               <HtmlDisplayField
@@ -897,6 +1001,19 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         }}
         onGenerate={handleGeneratePersonaWithAI}
         isGeneratingPersona={isGeneratingPersona}
+      />
+
+      <AutorWizard
+        open={showAutorWizard}
+        onClose={() => setShowAutorWizard(false)}
+        autor={autor}
+        onSave={(newAutor) => {
+          setAutor(newAutor);
+          setShowAutorWizard(false);
+          toast.success('Autor salvo com sucesso!');
+        }}
+        onGenerate={handleGenerateAutorWithAI}
+        isGeneratingAutor={isGeneratingAutor}
       />
 
       <MemorialDescritivoModal
