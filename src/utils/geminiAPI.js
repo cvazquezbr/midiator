@@ -11,13 +11,17 @@ const GEMINI_IMAGE_MODEL = 'gemini-2.0-flash-preview-image-generation';
  * @returns {Promise<string>} O texto da mensagem de resposta da IA.
  * @throws {Error} Se a chamada da API falhar ou a resposta não estiver no formato esperado.
  */
-export async function callGeminiApi(promptString, apiKey) {
+export async function callGeminiApi(promptString, apiKey, purpose = 'Chamada Genérica') {
   if (!promptString) {
     throw new Error('O prompt não pode ser vazio.');
   }
   if (!apiKey) {
     throw new Error('A chave da API Gemini não foi fornecida.');
   }
+
+  console.log(`[${purpose}] Iniciando chamada à API Gemini.`);
+  console.log(`[${purpose}] Prompt:`, promptString);
+
 
   const apiUrl = `${GEMINI_API_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
 
@@ -49,12 +53,15 @@ export async function callGeminiApi(promptString, apiKey) {
     }
 
     const responseData = await response.json();
+    console.log(`[${purpose}] Resposta da API Gemini (bruta):`, responseData);
 
     // A estrutura da resposta do Gemini pode variar, mas geralmente o texto está em candidates[0].content.parts[0].text
     if (responseData.candidates && responseData.candidates.length > 0 &&
         responseData.candidates[0].content && responseData.candidates[0].content.parts &&
         responseData.candidates[0].content.parts.length > 0 && responseData.candidates[0].content.parts[0].text) {
-      return responseData.candidates[0].content.parts[0].text.trim();
+      const resultText = responseData.candidates[0].content.parts[0].text.trim();
+      console.log(`[${purpose}] Resposta extraída:`, resultText);
+      return resultText;
     } else {
       console.error('Formato de resposta inesperado da API Gemini:', responseData);
       throw new Error('Formato de resposta inesperado da API Gemini.');
@@ -75,13 +82,16 @@ export async function callGeminiApi(promptString, apiKey) {
  * @returns {Promise<string>} A imagem em formato base64.
  * @throws {Error} Se a chamada da API falhar ou a resposta não contiver uma imagem.
  */
-export async function generateImage(promptString, apiKey) {
+export async function generateImage(promptString, apiKey, purpose = 'Geração de Imagem') {
   if (!promptString) {
     throw new Error('O prompt não pode ser vazio.');
   }
   if (!apiKey) {
     throw new Error('A chave da API Gemini não foi fornecida.');
   }
+
+  console.log(`[${purpose}] Iniciando chamada à API de Imagem Gemini.`);
+  console.log(`[${purpose}] Prompt:`, promptString);
 
   const apiUrl = `${GEMINI_API_BASE_URL}/${GEMINI_IMAGE_MODEL}:generateContent?key=${apiKey}`;
 
@@ -111,9 +121,11 @@ export async function generateImage(promptString, apiKey) {
     }
 
     const responseData = await response.json();
+    console.log(`[${purpose}] Resposta da API de Imagem Gemini (bruta):`, responseData);
 
     const imagePart = responseData.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
     if (imagePart) {
+      console.log(`[${purpose}] Imagem Base64 recebida (tamanho: ${imagePart.inlineData.data.length} bytes).`);
       return imagePart.inlineData.data;
     } else {
       console.error('Formato de resposta inesperado da API Gemini (Imagem):', responseData);

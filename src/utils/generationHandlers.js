@@ -43,9 +43,7 @@ export const generateCampaignContent = async ({ problema, solucao }) => {
 
   const finalPrompt = `${promptCompleto}\n\nGere uma resposta JSON com os seguintes campos: "titulo" (string), "conteudo" (string), "cta" (string), e "hashtags" (string, separadas por vírgula). A resposta deve ser apenas o JSON.`;
 
-  console.log("Gerando conteúdo da campanha com prompt:", finalPrompt);
-  const response = await callGeminiApi(finalPrompt, apiKey);
-  console.log("Resposta da IA (Campanha):", response);
+  const response = await callGeminiApi(finalPrompt, apiKey, 'Geração de Conteúdo de Campanha');
 
   const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
   let parsedContent;
@@ -106,7 +104,7 @@ export const generateCampaignImage = async ({ content, aspectRatio }) => {
     ATENÇÃO: A imagem gerada não deve conter, sob NENHUMA CIRCUNSTÂNCIA, qualquer tipo de texto, escrita, letras, números ou palavras. A imagem deve ser puramente visual.
   `;
 
-  const base64Image = await generateImage(imagePrompt, apiKey);
+  const base64Image = await generateImage(imagePrompt, apiKey, 'Geração de Imagem de Campanha');
   return `data:image/png;base64,${base64Image}`;
 };
 
@@ -136,7 +134,7 @@ export const generateFormattedContent = async ({ content }) => {
       CTA: ${stripHtml(content.cta)}
     `;
 
-  const rawContent = await callGeminiApi(prompt, apiKey);
+  const rawContent = await callGeminiApi(prompt, apiKey, 'Formatação de Conteúdo para HTML');
   const match = rawContent.match(/^`{3}(?:html)?\s*([\s\S]+?)\s*`{3}$/);
   return match && match[1] ? match[1].trim() : rawContent.trim();
 };
@@ -219,7 +217,7 @@ CTAs variados, como: “Leia mais”, “Descubra como”, “Saiba o que fazer�
       Cada post deve despertar curiosidade e criar um gap de informação que só será preenchido ao ler o conteúdo principal completo.
     `;
 
-  const response = await callGeminiApi(prompt, apiKey);
+  const response = await callGeminiApi(prompt, apiKey, 'Geração de Posts de Acompanhamento');
   const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
   if (jsonMatch && jsonMatch[1]) {
     return JSON.parse(jsonMatch[1]);
@@ -299,9 +297,7 @@ Titulo;Texto Principal;Ponte para o Próximo
 \`\`\`
 Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` com os dados.`;
 
-  console.log("Gerando conteúdo de IA com prompt:", finalPrompt);
-  const iaResponseText = await callGeminiApi(finalPrompt, apiKey);
-  console.log("Resposta da IA (Conteúdo):", iaResponseText);
+  const iaResponseText = await callGeminiApi(finalPrompt, apiKey, 'Geração de Conteúdo CSV com IA');
   return iaResponseText;
 };
 
@@ -356,7 +352,7 @@ A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação mark
 `;
 
   try {
-    const response = await callGeminiApi(prompt, apiKey);
+    const response = await callGeminiApi(prompt, apiKey, 'Geração de Paleta de Cores');
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (jsonMatch && jsonMatch[0]) {
       return JSON.parse(jsonMatch[0]);
