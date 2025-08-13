@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useIsMobile } from '../hooks/use-mobile';
+import { useIsMobile } from '../hooks/use-mobile.js';
 import {
   Dialog,
   DialogTitle,
@@ -393,7 +393,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                     Gerar Memorial Descritivo
                 </Button>
             </Box>
-          <IconButton onClick={onClose}>
+          <IconButton onClick={onClose} aria-label="Fechar">
             <CloseIcon />
           </IconButton>
         </DialogTitle>
