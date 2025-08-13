@@ -30,6 +30,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Toolbar,
 } from '@mui/material';
 import {
   CloudUpload,
@@ -1247,13 +1248,12 @@ function App() {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.leavingScreen,
             }),
-            marginLeft: !isMobile && sidebarOpen ? `${320}px` : 0,
-            paddingTop: '64px'
           }}
         >
+          <Toolbar />
           {/* Passo 0: Campanha */}
           {activeStep === 0 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Container maxWidth="lg">
               <Campaign
                 steps={steps}
                 problema={problema}
@@ -1300,7 +1300,7 @@ function App() {
               handleGenerateImage={handleGenerateImage}
               setCampaignContent={setCampaignContent}
             />
-            </Box>
+            </Container>
           )}
 
           {/* Passo 1: Definir Dados Iniciais */}
