@@ -117,6 +117,7 @@ function App() {
     return savedMode ? JSON.parse(savedMode) : window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const isMobile = useIsMobile();
   const [csvData, setCsvData] = useState([]);
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [backgroundImage, setBackgroundImage] = useState(null);
@@ -184,7 +185,6 @@ function App() {
   const [generatedImagesData, setGeneratedImagesData] = useState([]);
   const [generatedAudioData, setGeneratedAudioData] = useState([]);
   const [generatedVideosData, setGeneratedVideosData] = useState([]);
-  const isMobile = useIsMobile();
   const [anchorElMenu, setAnchorElMenu] = useState(null);
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [selectedField, setSelectedField] = useState(null);
@@ -410,6 +410,12 @@ function App() {
       document.documentElement.classList.remove('dark-mode-active');
     }
   }, [darkMode]);
+
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     const { persona: personaData, autor, instrucoes, formato, aspectRatio } = getCampaignPrompt();
@@ -842,6 +848,13 @@ function App() {
     setAnchorElMenu(null);
   };
 
+  const handleSidebarStepClick = (index) => {
+    setActiveStep(index);
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  };
+
   const handleLoadTemplateClick = () => {
     handleMenuClose();
     // Acionar o clique no input de arquivo escondido
@@ -1126,6 +1139,7 @@ function App() {
           csvHeaders={csvHeaders}
           loadStateInputRef={loadStateInputRef}
           handleLoadStateFromFile={handleLoadStateFromFile}
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
         />
 
         <Sidebar
@@ -1139,38 +1153,49 @@ function App() {
           visibleFields={visibleFields}
           totalFields={totalFields}
           styledFields={styledFields}
+          variant={isMobile ? 'temporary' : 'persistent'}
+          onClose={() => setSidebarOpen(false)}
+          onStepClick={handleSidebarStepClick}
         />
 
-        <Fab
-          size="small"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          sx={{
-            position: 'fixed',
-            top: '50%',
-            left: sidebarOpen ? 320 - 20 : 0,
-            transform: 'translateY(-50%)',
-            zIndex: (theme) => theme.zIndex.drawer + 2,
-            transition: 'left 0.2s ease-in-out',
-            backgroundColor: 'background.paper',
-            border: '1px solid',
-            borderColor: 'divider',
-            '&:hover': {
-              backgroundColor: 'background.default'
-            }
-          }}
-        >
-          {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
-        </Fab>
+        {!isMobile && (
+          <Fab
+            size="small"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            sx={{
+              position: 'fixed',
+              top: '50%',
+              left: sidebarOpen ? 320 - 20 : 0,
+              transform: 'translateY(-50%)',
+              zIndex: (theme) => theme.zIndex.drawer + 1,
+              transition: 'left 0.2s ease-in-out',
+              backgroundColor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              '&:hover': {
+                backgroundColor: 'background.default',
+              },
+            }}
+          >
+            {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
+          </Fab>
+        )}
 
         {/* Main Content */}
         <Box
+          key={isMobile ? 'mobile' : 'desktop'}
           component="main"
           sx={{
             flexGrow: 1,
             p: { xs: 1, sm: 2, md: 3 },
-            mt: 8,
-            ml: sidebarOpen ? 0 : 0,
-            transition: 'margin-left 0.3s ease',
+            mt: { xs: 8, sm: 8 },
+            ml: !isMobile && sidebarOpen ? `${320}px` : 0,
+            transition: (theme) =>
+              theme.transitions.create('margin', {
+                easing: theme.transitions.easing.sharp,
+                duration: theme.transitions.duration.leavingScreen,
+              }),
+            width: `calc(100% - ${!isMobile && sidebarOpen ? '320px' : '0px'})`,
           }}
         >
           {/* Passo 0: Campanha */}
