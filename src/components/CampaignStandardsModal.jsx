@@ -117,7 +117,9 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemori
 
     setIsGeneratingPersona(true);
     const prompt = `
-A partir da seguinte descrição de persona, preencha os campos do objeto JSON abaixo. Use exatamente os nomes de chave em camelCase fornecidos. Se a informação para algum campo não estiver na descrição, use um array vazio [] ou uma string vazia "".
+A partir da seguinte descrição de persona, preencha os campos do objeto JSON abaixo. 
+Use exatamente os nomes de chave em camelCase fornecidos. 
+Se a informação para algum campo não estiver na descrição, use um array vazio [] ou uma string vazia "".
 
 Descrição: ${description}
 
@@ -174,25 +176,25 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
     setIsGeneratingAutor(true);
     const prompt = `
-      Com base na descrição do autor, preencha os campos do objeto JSON abaixo.
+Com base na descrição do autor, preencha os campos do objeto JSON abaixo.
 
-      **Descrição do Autor:**
-      ${descricaoGeral}
+**Descrição do Autor:**
+${descricaoGeral}
 
-      **Instruções Adicionais:**
-      - Use o site ${dominioReferencia ? `\`${dominioReferencia}\`` : 'fornecido'} como principal fonte de referência para entender o tom, a linguagem e a área de atuação.
-      - ${siteExclusao ? `NÃO use o site \`${siteExclusao}\` como referência.` : ''}
-      - As respostas devem ser concisas e diretas.
+**Instruções Adicionais:**
+${dominioReferencia ? `- Use o site \`${dominioReferencia}\` como principal fonte de referência para entender o tom, a linguagem e a área de atuação.` : ''}
+${siteExclusao ? `- NÃO use o site \`${siteExclusao}\` como referência.` : ''}
+- As respostas devem ser concisas e diretas.
 
-      **Campos para preencher (use exatamente estes nomes de chave):**
-      - identidade: (string) O nome da empresa ou marca.
-      - descricao: (string em HTML) Uma breve descrição da empresa, detalhando sua área de atuação, especializações e foco.
-      - tipo: (string) Uma classificação da natureza da empresa (ex: "Braço de tecnologia", "Agência de marketing", "Consultoria").
-      - objetivoEstrategico: (string em HTML) A meta de longo prazo da mensagem (posicionamento da marca, construção de autoridade, etc.).
-      - objetivoEngajamento: (string em HTML) O tipo de interação que a mensagem deve estimular (gerar comentários, compartilhamentos, etc.).
+**Campos para preencher (use exatamente estes nomes de chave):**
+- identidade: (string) O nome da empresa ou marca.
+- descricao: (string em HTML) Uma breve descrição da empresa, detalhando sua área de atuação, especializações e foco.
+- tipo: (string) Uma classificação da natureza da empresa (ex: "Braço de tecnologia", "Agência de marketing", "Consultoria").
+- objetivoEstrategico: (string em HTML) A meta de longo prazo da mensagem (posicionamento da marca, construção de autoridade, etc.).
+- objetivoEngajamento: (string em HTML) O tipo de interação que a mensagem deve estimular (gerar comentários, compartilhamentos, etc.).
 
-      Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, markdown, ou qualquer outra formatação.
-    `;
+Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, markdown, ou qualquer outra formatação.
+`;
 
     try {
       const response = await callGeminiApi(prompt, apiKey);
@@ -264,8 +266,8 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
     if (!editingField) return '';
     if (editingField === 'persona') return persona;
     if (editingField.startsWith('autor.')) {
-        const fieldName = editingField.split('.')[1];
-        return autor[fieldName] || '';
+      const fieldName = editingField.split('.')[1];
+      return autor[fieldName] || '';
     }
     if (editingField === 'instrucoes') return instrucoes;
     if (editingField === 'formato') return formato;
@@ -289,9 +291,9 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
     // When changing the color manually, we only update the hex and rgb value.
     // We keep the name and role if they exist.
     newColors[index] = {
-        ...newColors[index],
-        hex: newColor,
-        rgb: `RGB(${parseInt(newColor.substr(1, 2), 16)}, ${parseInt(newColor.substr(3, 2), 16)}, ${parseInt(newColor.substr(5, 2), 16)})`
+      ...newColors[index],
+      hex: newColor,
+      rgb: `RGB(${parseInt(newColor.substr(1, 2), 16)}, ${parseInt(newColor.substr(3, 2), 16)}, ${parseInt(newColor.substr(5, 2), 16)})`
     };
     setColors(newColors);
   };
@@ -342,7 +344,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
           }
         };
         img.onerror = () => {
-            toast.error('Ocorreu um erro ao carregar a imagem.');
+          toast.error('Ocorreu um erro ao carregar a imagem.');
         };
         img.src = e.target.result;
       };
@@ -833,75 +835,75 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
             </TabPanel>
 
             <TabPanel value={value} index={4}>
-                <Stack spacing={2} sx={{ mb: 3 }}>
-                    <Button
-                        variant="contained"
-                        startIcon={<AutoAwesomeIcon />}
-                        onClick={() => setShowPaletteWizard(true)}
-                        disabled={!onGeneratePalette}
-                        sx={{ alignSelf: 'flex-start' }}
-                    >
-                        Assistente de Geração de Paleta
-                    </Button>
-                </Stack>
+              <Stack spacing={2} sx={{ mb: 3 }}>
+                <Button
+                  variant="contained"
+                  startIcon={<AutoAwesomeIcon />}
+                  onClick={() => setShowPaletteWizard(true)}
+                  disabled={!onGeneratePalette}
+                  sx={{ alignSelf: 'flex-start' }}
+                >
+                  Assistente de Geração de Paleta
+                </Button>
+              </Stack>
 
-                <Divider />
+              <Divider />
 
-                <Typography variant="h6" gutterBottom sx={{mt: 2}}>Cores da Campanha</Typography>
-                <Typography variant="body2" gutterBottom>
-                    Defina até 5 cores de referência para a campanha. As cores podem ser geradas pelo assistente, extraídas de uma imagem ou adicionadas manualmente.
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, alignItems: 'center' }}>
-                    {colors.map((color, index) => (
-                    <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        <input
-                        type="color"
-                        value={color.hex}
-                        onChange={(e) => handleColorChange(index, e.target.value)}
-                        style={{ width: '50px', height: '50px', border: 'none', background: 'none', cursor: 'pointer' }}
-                        />
-                        <Typography variant="caption">{color.name || color.hex}</Typography>
-                        <Button size="small" onClick={() => removeColor(index)}>Remover</Button>
-                    </Box>
-                    ))}
-                    {colors.length < 5 && (
-                    <Button variant="outlined" onClick={addColor}>Adicionar Cor</Button>
-                    )}
-                </Box>
-
-                <Box sx={{ mt: 4 }}>
-                    <Typography variant="h6" gutterBottom>Extrair Cores de Imagem</Typography>
-                    <Button
-                    variant="outlined"
-                    startIcon={<UploadFileIcon />}
-                    onClick={() => imageInputRef.current.click()}
-                    >
-                    Upload de Imagem
-                    </Button>
+              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Cores da Campanha</Typography>
+              <Typography variant="body2" gutterBottom>
+                Defina até 5 cores de referência para a campanha. As cores podem ser geradas pelo assistente, extraídas de uma imagem ou adicionadas manualmente.
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, alignItems: 'center' }}>
+                {colors.map((color, index) => (
+                  <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <input
-                    type="file"
-                    hidden
-                    accept="image/*"
-                    ref={imageInputRef}
-                    onChange={handleImageUpload}
+                      type="color"
+                      value={color.hex}
+                      onChange={(e) => handleColorChange(index, e.target.value)}
+                      style={{ width: '50px', height: '50px', border: 'none', background: 'none', cursor: 'pointer' }}
                     />
-                </Box>
+                    <Typography variant="caption">{color.name || color.hex}</Typography>
+                    <Button size="small" onClick={() => removeColor(index)}>Remover</Button>
+                  </Box>
+                ))}
+                {colors.length < 5 && (
+                  <Button variant="outlined" onClick={addColor}>Adicionar Cor</Button>
+                )}
+              </Box>
 
-                <Box sx={{ mt: 4 }}>
-                    <Typography variant="h6" gutterBottom>Inspiração de Paletas de Cores</Typography>
-                    {colorPalettes.map((palette) => (
-                    <Chip
-                        key={palette.name}
-                        icon={<LinkIcon />}
-                        label={palette.name}
-                        component="a"
-                        href={palette.url}
-                        target="_blank"
-                        clickable
-                        sx={{ mr: 1, mb: 1 }}
-                    />
-                    ))}
-                </Box>
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="h6" gutterBottom>Extrair Cores de Imagem</Typography>
+                <Button
+                  variant="outlined"
+                  startIcon={<UploadFileIcon />}
+                  onClick={() => imageInputRef.current.click()}
+                >
+                  Upload de Imagem
+                </Button>
+                <input
+                  type="file"
+                  hidden
+                  accept="image/*"
+                  ref={imageInputRef}
+                  onChange={handleImageUpload}
+                />
+              </Box>
+
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="h6" gutterBottom>Inspiração de Paletas de Cores</Typography>
+                {colorPalettes.map((palette) => (
+                  <Chip
+                    key={palette.name}
+                    icon={<LinkIcon />}
+                    label={palette.name}
+                    component="a"
+                    href={palette.url}
+                    target="_blank"
+                    clickable
+                    sx={{ mr: 1, mb: 1 }}
+                  />
+                ))}
+              </Box>
             </TabPanel>
           </Box>
         </DialogContent>
@@ -958,20 +960,20 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         open={showPaletteWizard}
         onClose={() => setShowPaletteWizard(false)}
         onSave={(newPalette) => {
-            setColors(newPalette);
-            toast.success('Paleta de cores aplicada!');
+          setColors(newPalette);
+          toast.success('Paleta de cores aplicada!');
         }}
         onGenerate={async (briefing, callback) => {
-            setIsGenerating(true);
-            try {
-                const result = await onGeneratePalette(briefing);
-                callback(result);
-            } catch (error) {
-                toast.error('Erro ao gerar paleta de cores. Tente novamente.');
-                console.error("Error generating color palette:", error);
-            } finally {
-                setIsGenerating(false);
-            }
+          setIsGenerating(true);
+          try {
+            const result = await onGeneratePalette(briefing);
+            callback(result);
+          } catch (error) {
+            toast.error('Erro ao gerar paleta de cores. Tente novamente.');
+            console.error("Error generating color palette:", error);
+          } finally {
+            setIsGenerating(false);
+          }
         }}
         isGenerating={isGenerating}
       />
