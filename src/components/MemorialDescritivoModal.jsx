@@ -59,7 +59,7 @@ const MemorialDescritivoModal = ({ open, onClose, campaignData }) => {
 
   if (!campaignData) return null;
 
-  const { persona = {}, autor = '', formato = '', instrucoes = '', colors = [] } = campaignData;
+  const { persona = {}, autor = '', formato = '', instrucoes = '', colors = [], briefing = {} } = campaignData;
 
   const renderPersonaField = (label, value, explanation) => {
     let displayValue = 'Não definido';
@@ -168,7 +168,15 @@ const MemorialDescritivoModal = ({ open, onClose, campaignData }) => {
              </Box>
           </Section>
 
-          <Section title="2.5. Paleta de Cores" subtitle="As cores que definem a identidade visual da campanha.">
+          <Section title="2.5. Briefing da Paleta de Cores" subtitle="Os parâmetros usados para a geração da paleta de cores com IA.">
+            <Field label="Objetivo" value={briefing.objective} explanation="O principal objetivo da campanha (ex: Branding, Vendas)." />
+            <Field label="Público-alvo" value={briefing.targetAudience} explanation="O grupo demográfico ou perfil de cliente que a campanha visa atingir." />
+            <Field label="Mensagem Principal" value={briefing.mainMessage} explanation="A ideia central ou o sentimento que a campanha deve comunicar." />
+            <Field label="Atmosfera Desejada" value={briefing.atmosphere} explanation="A sensação ou o ambiente que o design visual deve criar." />
+            <Field label="Detalhes Adicionais" value={briefing.details} explanation="Quaisquer outras instruções, como cores proibidas ou obrigatórias." />
+          </Section>
+
+          <Section title="2.6. Paleta de Cores" subtitle="As cores que definem a identidade visual da campanha.">
             <Grid container spacing={2}>
               {colors.length > 0 ? colors.map((color, index) => (
                 <Grid item xs={12} sm={6} md={4} key={index}>
