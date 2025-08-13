@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useIsMobile } from '../hooks/use-mobile';
 import {
   Dialog,
   DialogTitle,
@@ -57,23 +58,31 @@ const steps = [
   'Mentalidade e Cultura',
 ];
 
-const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona }) => {
+const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona, persona }) => {
+  const isMobile = useIsMobile();
   const [activeStep, setActiveStep] = useState(0);
-  const [personaData, setPersonaData] = useState({
-      description: '',
-      nome: '',
-      posicaoCargo: [],
-      segmentoEmpresa: [],
-      responsabilidadesChave: [],
-      doresEstrategicos: [],
-      doresOperacionais: [],
-      doresPessoas: [],
-      doresRegulatorios: [],
-      gatilhosCompra: [],
-      barreirasAdocao: [],
-      mentalidadeValores: '',
-      contextoCultural: '',
-  });
+  const [personaData, setPersonaData] = useState(persona || {});
+
+  useEffect(() => {
+    if (open) {
+      setPersonaData(persona || {
+          description: '',
+          nome: '',
+          posicaoCargo: [],
+          segmentoEmpresa: [],
+          responsabilidadesChave: [],
+          doresEstrategicos: [],
+          doresOperacionais: [],
+          doresPessoas: [],
+          doresRegulatorios: [],
+          gatilhosCompra: [],
+          barreirasAdocao: [],
+          mentalidadeValores: '',
+          contextoCultural: '',
+      });
+      setActiveStep(0); // Reset to first step when modal opens
+    }
+  }, [open, persona]);
 
   const handleNext = () => {
     if (activeStep === 0) { // Step "Início Rápido com IA"
@@ -331,9 +340,9 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona 
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
       <DialogTitle>
-        Criar Nova Persona
+        Assistente de Criação de Persona
         <Typography variant="body2">Passo {activeStep + 1} de {steps.length}</Typography>
       </DialogTitle>
       <DialogContent sx={{ minHeight: '50vh' }}>

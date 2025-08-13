@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useIsMobile } from '../hooks/use-mobile';
 import {
   Dialog,
   DialogTitle,
@@ -113,6 +114,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const [showPersonaGenModal, setShowPersonaGenModal] = useState(false);
   const [showPersonaWizard, setShowPersonaWizard] = useState(false);
   const [showMemorialModal, setShowMemorialModal] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleBriefingChange = (e) => {
     const { name, value } = e.target;
@@ -376,7 +378,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
                 Padrões de Campanha
@@ -428,7 +430,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                     startIcon={<Add />}
                     onClick={() => setShowPersonaWizard(true)}
                 >
-                    Criar Nova Persona
+                    Assistente de Criação de Persona
                 </Button>
             </Box>
             <Grid container spacing={3}>
@@ -785,6 +787,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       <PersonaWizard
         open={showPersonaWizard}
         onClose={() => setShowPersonaWizard(false)}
+        persona={persona}
         onSave={(newPersona) => {
             setPersona(newPersona);
             setShowPersonaWizard(false);
@@ -797,7 +800,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       <MemorialDescritivoModal
         open={showMemorialModal}
         onClose={() => setShowMemorialModal(false)}
-        personas={[{ id: 1, nome: persona.nome || 'Persona Atual' }]} // Placeholder
+        campaignData={{ persona, autor, instrucoes, formato, colors }}
       />
     </>
   );
