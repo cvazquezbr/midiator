@@ -22,7 +22,7 @@ import {
   LinkedIn,
   AutoAwesome,
   DriveFolderUpload,
-  WordPress,
+  Language,
 } from '@mui/icons-material';
 import GoogleIcon from '@mui/icons-material/Google';
 import { toast } from 'sonner';
@@ -143,7 +143,7 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
             <Tab icon={<AutoAwesome />} iconPosition="start" label="Gemini" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(0)} />
             <Tab icon={<DriveFolderUpload />} iconPosition="start" label="Google Drive" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(1)} />
             <Tab icon={<Audiotrack />} iconPosition="start" label="Cloud TTS" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(2)} />
-            <Tab icon={<WordPress />} iconPosition="start" label="WordPress" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(3)} />
+            <Tab icon={<Language />} iconPosition="start" label="WordPress" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(3)} />
             <Tab icon={<LinkedIn />} iconPosition="start" label="LinkedIn" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(4)} />
             <Tab icon={<Security />} iconPosition="start" label="Credenciais" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(5)} />
           </Tabs>
