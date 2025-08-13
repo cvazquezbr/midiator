@@ -51,10 +51,10 @@ import ColorThief from 'colorthief';
 
 import TextEditorDialog from './TextEditorDialog';
 import HtmlDisplayField from './HtmlDisplayField';
-import PaletteReportModal from './PaletteReportModal';
 import PersonaGenerationModal from './PersonaGenerationModal';
 import PersonaWizard from './PersonaWizard';
 import AutorWizard from './AutorWizard';
+import PaletteWizard from './PaletteWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
 import { callGeminiApi } from '../utils/geminiAPI';
@@ -81,20 +81,6 @@ function TabPanel(props) {
   );
 }
 
-const briefingOptions = {
-    objetivo: ['Branding', 'Site', 'Produto', 'Campanha de Marketing'],
-    publicoAlvo: ['Mulheres 30-45 anos', 'Jovens Gamers', 'Executivos C-Level', 'Famílias com Crianças'],
-    mensagemPrincipal: ['Confiança', 'Inovação', 'Sustentabilidade', 'Acessibilidade', 'Luxo'],
-    atmosfera: ['Calmo e Sereno', 'Energético e Vibrante', 'Premium e Sofisticado', 'Divertido e Descontraído'],
-};
-
-const briefingLabels = {
-    objetivo: 'Objetivo',
-    publicoAlvo: 'Público-alvo',
-    mensagemPrincipal: 'Mensagem Principal',
-    atmosfera: 'Atmosfera',
-};
-
 const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
@@ -107,16 +93,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const imageInputRef = useRef(null);
 
   // State for AI Palette Generation
-  const [briefing, setBriefing] = useState({
-    objetivo: '',
-    publicoAlvo: '',
-    mensagemPrincipal: '',
-    atmosfera: '',
-    details: '',
-  });
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedPalette, setGeneratedPalette] = useState(null);
-  const [showReportModal, setShowReportModal] = useState(false);
 
   // State for AI Persona Generation
   const [personaDescription, setPersonaDescription] = useState('');
@@ -129,10 +106,8 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const [isGeneratingAutor, setIsGeneratingAutor] = useState(false);
   const [showAutorWizard, setShowAutorWizard] = useState(false);
 
-  const handleBriefingChange = (e) => {
-    const { name, value } = e.target;
-    setBriefing(prev => ({ ...prev, [name]: value }));
-  };
+  // State for AI Palette Wizard
+  const [showPaletteWizard, setShowPaletteWizard] = useState(false);
 
   const handleGeneratePersonaWithAI = async (description, callback) => {
     const apiKey = getGeminiApiKey();
@@ -240,36 +215,6 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console do navegador para detalhes.');
     } finally {
       setIsGeneratingAutor(false);
-    }
-  };
-
-  const handleGenerateClick = async () => {
-    setIsGenerating(true);
-    setGeneratedPalette(null);
-    try {
-      const fullBriefing = `
-- Objetivo: ${briefing.objetivo}
-- Público-alvo: ${briefing.publicoAlvo}
-- Mensagem principal: ${briefing.mensagemPrincipal}
-- Atmosfera desejada: ${briefing.atmosfera}
-- Detalhes adicionais: ${briefing.details}
-      `;
-      const result = await onGeneratePalette(fullBriefing.trim());
-      setGeneratedPalette(result);
-      setShowReportModal(true); // Open the report modal
-    } catch (error) {
-      toast.error('Erro ao gerar paleta de cores. Tente novamente.');
-      console.error("Error generating color palette:", error);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const applyGeneratedPalette = () => {
-    if (generatedPalette && generatedPalette.palette) {
-      const newColors = generatedPalette.palette.map(p => p.hex);
-      setColors(newColors);
-      toast.success('Paleta de cores aplicada!');
     }
   };
 
@@ -916,46 +861,15 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
               {/* AI Palette Generator */}
               <Box>
-                <Typography variant="h6" gutterBottom>Gerar Paleta com IA</Typography>
-                <Grid container spacing={2}>
-                  {Object.keys(briefingOptions).map(key => (
-                    <Grid item xs={12} sm={6} key={key}>
-                      <FormControl fullWidth>
-                        <InputLabel>{briefingLabels[key]}</InputLabel>
-                        <Select
-                          name={key}
-                          value={briefing[key]}
-                          label={briefingLabels[key]}
-                          onChange={handleBriefingChange}
-                        >
-                          {briefingOptions[key].map(option => (
-                            <MenuItem key={option} value={option}>{option}</MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                  ))}
-                </Grid>
-                <TextField
-                  name="details"
-                  label="Detalhes Adicionais do Briefing"
-                  multiline
-                  rows={4}
-                  value={briefing.details}
-                  onChange={handleBriefingChange}
-                  fullWidth
-                  placeholder="INCLUINDO:
-- Quaisquer cores proibidas ou obrigatórias"
-                  margin="normal"
-                />
-                <Button
-                  variant="contained"
-                  startIcon={<AutoAwesomeIcon />}
-                  onClick={handleGenerateClick}
-                  disabled={isGenerating || !onGeneratePalette}
-                >
-                  {isGenerating ? <CircularProgress size={24} /> : 'Gerar Paleta'}
-                </Button>
+                  <Typography variant="h6" gutterBottom>Gerar Paleta com IA</Typography>
+                  <Button
+                      variant="contained"
+                      startIcon={<AutoAwesomeIcon />}
+                      onClick={() => setShowPaletteWizard(true)}
+                      disabled={!onGeneratePalette}
+                  >
+                      Assistente de Geração de Paleta
+                  </Button>
               </Box>
             </TabPanel>
           </Box>
@@ -972,14 +886,6 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         content={getCurrentContent()}
         onSave={handleSaveEditor}
         onClose={handleCloseEditor}
-      />
-
-      <PaletteReportModal
-        open={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        paletteData={generatedPalette}
-        onApplyPalette={applyGeneratedPalette}
-        briefing={briefing}
       />
 
       <PersonaGenerationModal
@@ -1017,10 +923,32 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         isGeneratingAutor={isGeneratingAutor}
       />
 
+      <PaletteWizard
+        open={showPaletteWizard}
+        onClose={() => setShowPaletteWizard(false)}
+        onSave={(newPalette) => {
+            setColors(newPalette);
+            toast.success('Paleta de cores aplicada!');
+        }}
+        onGenerate={async (briefing, callback) => {
+            setIsGenerating(true);
+            try {
+                const result = await onGeneratePalette(briefing);
+                callback(result);
+            } catch (error) {
+                toast.error('Erro ao gerar paleta de cores. Tente novamente.');
+                console.error("Error generating color palette:", error);
+            } finally {
+                setIsGenerating(false);
+            }
+        }}
+        isGenerating={isGenerating}
+      />
+
       <MemorialDescritivoModal
         open={showMemorialModal}
         onClose={() => setShowMemorialModal(false)}
-        campaignData={{ persona, autor, instrucoes, formato, colors, briefing }}
+        campaignData={{ persona, autor, instrucoes, formato, colors }}
       />
     </>
   );
