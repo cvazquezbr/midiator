@@ -77,9 +77,20 @@ const MemorialDescritivo = ({ campaignData }) => {
       </Box>
 
       <Divider sx={{ my: 6 }} />
+      <Typography variant="h4" component="h2" sx={{ mb: 2 }}>
+        Conclusão
+      </Typography>
 
-      <Typography variant="body1" sx={{ my: 4, fontStyle: 'italic', color: 'text.secondary', textAlign: 'center' }}>
-        Com este memorial, a equipe possui todas as diretrizes necessárias para uma execução de campanha coesa e de alto impacto. O sucesso da nossa comunicação depende do alinhamento a estes pilares.
+      <Typography variant="body1" sx={{ my: 4, fontStyle: 'italic', color: 'text.secondary' }}>
+        Este memorial descritivo estabelece as fundações estratégicas e operacionais para uma campanha de comunicação eficaz e impactante.
+        Cada elemento foi cuidadosamente desenvolvido para garantir que nossa mensagem ressoe autenticamente com o destinatário, nosso público prioritário.
+      </Typography>
+      <Typography variant="body1" sx={{ my: 4, fontStyle: 'italic', color: 'text.secondary' }}>
+        A implementação bem-sucedida destes guidelines resultará em uma comunicação consistente que não apenas informa, mas constrói relacionamentos duradouros com nossos prospects.
+        O diferencial competitivo será comunicado de forma clara e compelling, posicionando a empresa como a parceira estratégica ideal para os propósitos estabelecidos.
+      </Typography>
+      <Typography variant="body1" sx={{ my: 4, fontStyle: 'italic', color: 'text.secondary' }}>
+        O sucesso desta campanha dependerá do rigoroso alinhamento da equipe executora a estas diretrizes, garantindo que cada peça produzida contribua para o objetivo maior.
       </Typography>
 
     </Container>
