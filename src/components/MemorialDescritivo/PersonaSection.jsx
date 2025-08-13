@@ -74,7 +74,7 @@ const PersonaSection = ({ persona }) => {
   return (
     <Box>
       <Typography variant="h4" component="h2" sx={{ mb: 2 }}>
-        Persona
+        Perfil da Persona
       </Typography>
       <Typography variant="body2" sx={{ mb: 4, color: 'text.secondary' }}>
         A persona é a representação do nosso cliente ideal. Entender profundamente seus desafios, motivações e características demográficas é o primeiro passo para criar uma comunicação que gere conexão e resultados. Tudo o que produzimos deve ser pensado para dialogar com esta pessoa.

@@ -32,9 +32,14 @@ const MemorialDescritivo = ({ campaignData }) => {
   return (
     <Container maxWidth="md" sx={{ py: { xs: 3, md: 6 } }}>
       <Header title="Memorial Descritivo da Campanha" />
-
+      <Typography variant="h4" component="h2" sx={{ mb: 2 }}>
+        Introdução
+      </Typography>
       <Typography variant="body1" sx={{ my: 4, fontStyle: 'italic', color: 'text.secondary' }}>
-        Este documento serve como a pedra angular para a criação e execução de todas as peças de comunicação desta campanha. Ele garante consistência, alinhamento estratégico e uma base sólida para que a equipe criativa possa desenvolver materiais que ressoem com o público-alvo e alcancem os objetivos de marketing definidos.
+        Este memorial descritivo constitui o documento estratégico fundamental para o planejamento, desenvolvimento e execução de todas as ações de comunicação da campanha tech.fattocs. Desenvolvido com base em pesquisa aprofundada do público-alvo e análise competitiva do mercado de tecnologia brasileiro, este guia estabelece os pilares conceituais, visuais e de conteúdo que garantirão a consistência da mensagem em todos os pontos de contato.
+      </Typography>
+      <Typography variant="body1" sx={{ my: 4, fontStyle: 'italic', color: 'text.secondary' }}>
+        O objetivo principal deste documento é fornecer à equipe criativa e de execução um framework completo que assegure o alinhamento estratégico entre objetivos de negócio, necessidades do público-alvo e entrega de valor tangível. Cada elemento aqui descrito foi pensado para maximizar o impacto da comunicação junto aos CTOs e Heads de Engenharia, nosso público prioritário.
       </Typography>
 
       <Box sx={{ my: 4 }}>
@@ -65,7 +70,7 @@ const MemorialDescritivo = ({ campaignData }) => {
         <InstructionsSection formato={formato} instrucoes={instrucoes} />
       </Box>
 
-       <Divider sx={{ my: 6 }} />
+      <Divider sx={{ my: 6 }} />
 
       <Box sx={{ my: 4 }}>
         <ColorPalette colors={uniqueColors} />
