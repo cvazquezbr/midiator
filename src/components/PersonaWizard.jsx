@@ -330,10 +330,10 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
   };
 
   const isNextDisabled = () => {
-    if (activeStep === 0 && !personaData.description.trim()) {
+    if (activeStep === 0 && !(personaData.description || '').trim()) {
         return true;
     }
-    if (activeStep === 1 && !personaData.nome.trim()) {
+    if (activeStep === 1 && !(personaData.nome || '').trim()) {
         return true;
     }
     return false;
