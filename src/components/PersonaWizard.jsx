@@ -300,6 +300,19 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
                   </Select>
                 </FormControl>
               </Grid>
+              {(personaData.posicaoCargo || []).includes('Outro(s)') && (
+                <Grid item xs={12}>
+                  <TextField
+                    label="Especifique Outro Cargo"
+                    name="posicaoCargoOutro"
+                    value={personaData.posicaoCargoOutro || ''}
+                    onChange={handleChange}
+                    fullWidth
+                    required
+                    variant="outlined"
+                  />
+                </Grid>
+              )}
               <Grid item xs={12}>
                 <FormControl fullWidth variant="outlined">
                   <InputLabel>Segmento da Empresa</InputLabel>
@@ -326,6 +339,19 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
                   </Select>
                 </FormControl>
               </Grid>
+              {(personaData.segmentoEmpresa || []).includes('Outro(s)') && (
+                <Grid item xs={12}>
+                  <TextField
+                    label="Especifique Outro Segmento"
+                    name="segmentoEmpresaOutro"
+                    value={personaData.segmentoEmpresaOutro || ''}
+                    onChange={handleChange}
+                    fullWidth
+                    required
+                    variant="outlined"
+                  />
+                </Grid>
+              )}
             </Grid>
           </Box>
         );
@@ -357,6 +383,18 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
                 {RESPONSABILIDADES_CHAVE.map((resp) => (<MenuItem key={resp} value={resp}><Checkbox checked={(personaData.responsabilidadesChave || []).indexOf(resp) > -1} /><ListItemText primary={resp} /></MenuItem>))}
               </Select>
             </FormControl>
+            {(personaData.responsabilidadesChave || []).includes('Outro(s)') && (
+              <TextField
+                label="Especifique Outra Responsabilidade"
+                name="responsabilidadesChaveOutro"
+                value={personaData.responsabilidadesChaveOutro || ''}
+                onChange={handleChange}
+                fullWidth
+                required
+                variant="outlined"
+                sx={{ mt: 2 }}
+              />
+            )}
           </Box>
         );
       case 3:
@@ -406,6 +444,18 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
                         <FormGroup>
                             {items.map((item) => (<FormControlLabel key={item} control={<Checkbox checked={(personaData[key] || []).includes(item)} onChange={handleCheckboxChange(key, item)} />} label={item} />))}
                         </FormGroup>
+                        {(personaData[key] || []).includes('Outro(s)') && (
+                          <TextField
+                            label={`Especifique Outro(a) (${label})`}
+                            name={`${key}Outro`}
+                            value={personaData[`${key}Outro`] || ''}
+                            onChange={handleChange}
+                            fullWidth
+                            required
+                            variant="outlined"
+                            sx={{ mt: 2 }}
+                          />
+                        )}
                     </AccordionDetails>
                 </Accordion>
             ))}
