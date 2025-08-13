@@ -34,8 +34,11 @@ const ContentSection = ({
   return (
     <>
       <Box>
-        <Typography variant="h4" component="h2" sx={{ mb: 4 }}>
-          Diretrizes da Campanha
+        <Typography variant="h4" component="h2" sx={{ mb: 2 }}>
+          Conteúdo e Estratégia
+        </Typography>
+        <Typography variant="body2" sx={{ mb: 4, color: 'text.secondary' }}>
+          Esta seção detalha o "o quê" e o "porquê" da nossa mensagem. Definimos o problema que estamos resolvendo e a solução que oferecemos, além de apresentar o conteúdo principal que servirá de base para todas as peças da campanha.
         </Typography>
         <DetailItem title="Problema / Dor" value={problema} />
         <DetailItem title="Solução / Proposta" value={solucao} />

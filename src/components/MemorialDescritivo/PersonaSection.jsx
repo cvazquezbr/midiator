@@ -73,8 +73,11 @@ const PersonaSection = ({ persona }) => {
 
   return (
     <Box>
-      <Typography variant="h4" component="h2" sx={{ mb: 4 }}>
+      <Typography variant="h4" component="h2" sx={{ mb: 2 }}>
         Persona
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 4, color: 'text.secondary' }}>
+        A persona é a representação do nosso cliente ideal. Entender profundamente seus desafios, motivações e características demográficas é o primeiro passo para criar uma comunicação que gere conexão e resultados. Tudo o que produzimos deve ser pensado para dialogar com esta pessoa.
       </Typography>
       <Grid container spacing={4}>
         {Object.entries(persona).map(([key, value]) => (

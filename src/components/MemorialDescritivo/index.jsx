@@ -33,6 +33,22 @@ const MemorialDescritivo = ({ campaignData }) => {
     <Container maxWidth="md" sx={{ py: { xs: 3, md: 6 } }}>
       <Header title="Memorial Descritivo da Campanha" />
 
+      <Typography variant="body1" sx={{ my: 4, fontStyle: 'italic', color: 'text.secondary' }}>
+        Este documento serve como a pedra angular para a criação e execução de todas as peças de comunicação desta campanha. Ele garante consistência, alinhamento estratégico e uma base sólida para que a equipe criativa possa desenvolver materiais que ressoem com o público-alvo e alcancem os objetivos de marketing definidos.
+      </Typography>
+
+      <Box sx={{ my: 4 }}>
+        <PersonaSection persona={persona} />
+      </Box>
+
+      <Divider sx={{ my: 6 }} />
+
+      <Box sx={{ my: 4 }}>
+        <AuthorSection author={autor} />
+      </Box>
+
+      <Divider sx={{ my: 6 }} />
+
       <Box sx={{ my: 4 }}>
         <ContentSection
           problema={problema}
@@ -49,23 +65,17 @@ const MemorialDescritivo = ({ campaignData }) => {
         <InstructionsSection formato={formato} instrucoes={instrucoes} />
       </Box>
 
-      <Divider sx={{ my: 6 }} />
-
-      <Box sx={{ my: 4 }}>
-        <PersonaSection persona={persona} />
-      </Box>
-
-      <Divider sx={{ my: 6 }} />
-
-      <Box sx={{ my: 4 }}>
-        <AuthorSection author={autor} />
-      </Box>
-
        <Divider sx={{ my: 6 }} />
 
       <Box sx={{ my: 4 }}>
         <ColorPalette colors={uniqueColors} />
       </Box>
+
+      <Divider sx={{ my: 6 }} />
+
+      <Typography variant="body1" sx={{ my: 4, fontStyle: 'italic', color: 'text.secondary', textAlign: 'center' }}>
+        Com este memorial, a equipe possui todas as diretrizes necessárias para uma execução de campanha coesa e de alto impacto. O sucesso da nossa comunicação depende do alinhamento a estes pilares.
+      </Typography>
 
     </Container>
   );

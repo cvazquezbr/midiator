@@ -62,6 +62,12 @@ const MemorialDescritivoModal = ({ open, onClose, campaignData }) => {
                 padding: 0 !important;
                 margin: 0 !important;
               }
+              .printable-section h4 {
+                break-after: avoid;
+              }
+              .printable-section .MuiPaper-root, .printable-section .MuiBox-root {
+                 break-inside: avoid;
+              }
               .no-print {
                 display: none;
               }

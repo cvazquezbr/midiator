@@ -8,8 +8,11 @@ const ColorPalette = ({ colors }) => {
 
   return (
     <Box>
-      <Typography variant="h4" component="h2" sx={{ mb: 4 }}>
+      <Typography variant="h4" component="h2" sx={{ mb: 2 }}>
         Paleta de Cores
+      </Typography>
+      <Typography variant="body2" sx={{ mb: 4, color: 'text.secondary' }}>
+        A paleta de cores define a identidade visual e a atmosfera da campanha. As cores foram escolhidas para evocar emoções específicas e reforçar a mensagem da nossa marca, garantindo uma experiência visual coesa e memorável.
       </Typography>
       <Grid container spacing={3}>
         {colors.map((color, index) => (
