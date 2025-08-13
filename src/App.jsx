@@ -1243,17 +1243,17 @@ function App() {
           sx={{
             flexGrow: 1,
             p: { xs: 1, sm: 2, md: 3 },
-            mt: { xs: 8, sm: 8 },
             transition: theme.transitions.create('margin', {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.leavingScreen,
             }),
             marginLeft: !isMobile && sidebarOpen ? `${320}px` : 0,
+            paddingTop: '64px'
           }}
         >
           {/* Passo 0: Campanha */}
           {activeStep === 0 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
               <Campaign
                 steps={steps}
                 problema={problema}

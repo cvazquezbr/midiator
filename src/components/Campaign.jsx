@@ -62,7 +62,7 @@ const Campaign = ({
     setCampaignContent,
 }) => {
     return (
-        <Card>
+        <Card sx={{ margin: 'auto' }}>
             <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 4 } }}>
                 <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
                     <CampaignIcon />
