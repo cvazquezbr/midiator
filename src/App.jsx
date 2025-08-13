@@ -131,6 +131,7 @@ function App() {
   const [problema, setProblema] = useState('');
   const [solucao, setSolucao] = useState('');
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
+  const [isGeneratingSolucao, setIsGeneratingSolucao] = useState(false);
   const [campaignContent, setCampaignContent] = useState(null);
   const [campaignGenerationFailed, setCampaignGenerationFailed] = useState(false);
   const [generationError, setGenerationError] = useState('');
@@ -1090,6 +1091,26 @@ function App() {
     setFollowupPostsQuantity(5);
   };
 
+  const handleGenerateSolucao = async () => {
+    setIsGeneratingSolucao(true);
+    try {
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        toast.error('Por favor, configure sua chave de API Gemini primeiro.');
+        return;
+      }
+      const { persona, autor } = getCampaignPrompt();
+      const prompt = `Considerando uma pessoa ou organização com a persona ${JSON.stringify(persona)} e um provedor de soluções como ${JSON.stringify(autor)} quais são soluções para o seguinte problema: ${problema}`;
+      const generatedSolucao = await callGeminiApi(prompt, apiKey, "Gerar Solução");
+      setSolucao(generatedSolucao);
+    } catch (error) {
+      console.error("Erro ao gerar solução:", error);
+      toast.error(`Ocorreu um erro ao gerar a solução: ${error.message}`);
+    } finally {
+      setIsGeneratingSolucao(false);
+    }
+  };
+
   const handleGenerateIAContent = async () => {
     setIsGenerating(true);
     try {
@@ -1241,10 +1262,12 @@ function App() {
               aspectRatio={aspectRatio}
               setAspectRatio={setAspectRatio}
               isGeneratingCampaign={isGeneratingCampaign}
+              isGeneratingSolucao={isGeneratingSolucao}
               campaignContent={campaignContent}
               campaignGenerationFailed={campaignGenerationFailed}
               generationError={generationError}
               handleGenerateCampaignContent={handleGenerateCampaignContent}
+              handleGenerateSolucao={handleGenerateSolucao}
               handleResetCampaign={handleResetCampaign}
               handleExportHtml={() => exportHtml({
                 campaignContent,

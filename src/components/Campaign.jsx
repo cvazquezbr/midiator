@@ -34,10 +34,12 @@ const Campaign = ({
     aspectRatio,
     setAspectRatio,
     isGeneratingCampaign,
+    isGeneratingSolucao,
     campaignContent,
     campaignGenerationFailed,
     generationError,
     handleGenerateCampaignContent,
+    handleGenerateSolucao,
     handleResetCampaign,
     handleExportHtml,
     setEditingField,
@@ -81,17 +83,27 @@ const Campaign = ({
                         />
                     </Grid>
                     <Grid item xs={12} md={6}>
-                        <TextField
-                            label="Solução"
-                            multiline
-                            rows={4}
-                            value={solucao}
-                            onChange={(e) => setSolucao(e.target.value)}
-                            variant="outlined"
-                            fullWidth
-                            placeholder="Descreva a solução que sua campanha oferece."
-                            disabled={campaignContent !== null}
-                        />
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                            <TextField
+                                label="Solução"
+                                multiline
+                                rows={4}
+                                value={solucao}
+                                onChange={(e) => setSolucao(e.target.value)}
+                                variant="outlined"
+                                fullWidth
+                                placeholder="Descreva a solução que sua campanha oferece."
+                                disabled={campaignContent !== null}
+                            />
+                            <Button
+                                variant="contained"
+                                onClick={handleGenerateSolucao}
+                                disabled={isGeneratingSolucao || !problema.trim() || campaignContent !== null}
+                                sx={{ height: '56px', alignSelf: 'center' }}
+                            >
+                                {isGeneratingSolucao ? 'Gerando...' : 'Gerar'}
+                            </Button>
+                        </Box>
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <TextField
