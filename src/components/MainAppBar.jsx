@@ -18,13 +18,12 @@ import {
   FileUpload as FileUploadIcon,
   Menu as MenuIcon,
 } from '@mui/icons-material';
-import { useIsMobile } from '../hooks/use-mobile';
-
 const MainAppBar = ({
   darkMode,
   setDarkMode,
   setShowSetupModal,
   onMenuClick,
+  isMobile,
   handleMenuOpen,
   handleMenuClose,
   anchorElMenu,
@@ -37,7 +36,6 @@ const MainAppBar = ({
   loadStateInputRef,
   handleLoadStateFromFile,
 }) => {
-  const isMobile = useIsMobile();
   return (
     <AppBar
       position="fixed"

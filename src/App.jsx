@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useIsMobile } from './hooks/use-mobile.js';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { LinkedIn } from '@mui/icons-material';
 import {
   Container,
@@ -116,8 +117,9 @@ function App() {
     const savedMode = localStorage.getItem('darkMode');
     return savedMode ? JSON.parse(savedMode) : window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const isMobile = useIsMobile();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const [csvData, setCsvData] = useState([]);
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [backgroundImage, setBackgroundImage] = useState(null);
@@ -1140,6 +1142,7 @@ function App() {
           loadStateInputRef={loadStateInputRef}
           handleLoadStateFromFile={handleLoadStateFromFile}
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          isMobile={isMobile}
         />
 
         <Sidebar
@@ -1162,6 +1165,7 @@ function App() {
           <Fab
             size="small"
             onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'}
             sx={{
               position: 'fixed',
               top: '50%',
@@ -1183,19 +1187,16 @@ function App() {
 
         {/* Main Content */}
         <Box
-          key={isMobile ? 'mobile' : 'desktop'}
           component="main"
           sx={{
             flexGrow: 1,
             p: { xs: 1, sm: 2, md: 3 },
             mt: { xs: 8, sm: 8 },
-            ml: !isMobile && sidebarOpen ? `${320}px` : 0,
-            transition: (theme) =>
-              theme.transitions.create('margin', {
-                easing: theme.transitions.easing.sharp,
-                duration: theme.transitions.duration.leavingScreen,
-              }),
-            width: `calc(100% - ${!isMobile && sidebarOpen ? '320px' : '0px'})`,
+            transition: theme.transitions.create('margin', {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.leavingScreen,
+            }),
+            marginLeft: !isMobile && sidebarOpen ? `${320}px` : 0,
           }}
         >
           {/* Passo 0: Campanha */}
