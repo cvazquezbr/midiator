@@ -379,7 +379,13 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth={false} fullScreen>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullWidth
+        maxWidth="lg"
+        fullScreen={isMobile}
+      >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
                 Padrões de Campanha

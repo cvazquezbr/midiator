@@ -15,10 +15,12 @@ import {
   AccordionSummary,
   AccordionDetails,
   Chip,
+  Alert,
 } from '@mui/material';
 import {
     Campaign as CampaignIcon,
     ExpandMore as ExpandMoreIcon,
+    Image as ImageIcon,
 } from '@mui/icons-material';
 
 const Campaign = ({
@@ -33,6 +35,8 @@ const Campaign = ({
     setAspectRatio,
     isGeneratingCampaign,
     campaignContent,
+    campaignGenerationFailed,
+    generationError,
     handleGenerateCampaignContent,
     handleResetCampaign,
     handleExportHtml,
@@ -136,6 +140,24 @@ const Campaign = ({
                         </Button>
                     )}
                 </Box>
+
+                {campaignGenerationFailed && (
+                    <Box sx={{ mt: 3, textAlign: 'center' }}>
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            <strong>Ocorreu um erro ao gerar o conteúdo:</strong> {generationError}
+                        </Alert>
+                        <Button
+                            variant="contained"
+                            color="secondary"
+                            size="large"
+                            onClick={() => handleGenerateImage()}
+                            disabled={isGeneratingImage}
+                            startIcon={<ImageIcon />}
+                        >
+                            {isGeneratingImage ? 'Gerando Imagem...' : 'Tentar Gerar Apenas a Imagem'}
+                        </Button>
+                    </Box>
+                )}
 
                 {campaignContent && (
                     <Box sx={{ mt: 4 }}>

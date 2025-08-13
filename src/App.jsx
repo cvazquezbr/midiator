@@ -131,6 +131,8 @@ function App() {
   const [solucao, setSolucao] = useState('');
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
   const [campaignContent, setCampaignContent] = useState(null);
+  const [campaignGenerationFailed, setCampaignGenerationFailed] = useState(false);
+  const [generationError, setGenerationError] = useState('');
   const [editingField, setEditingField] = useState(null);
   const [personaFields, setPersonaFields] = useState({});
   const [autor, setAutor] = useState('');
@@ -951,6 +953,8 @@ function App() {
 
   const handleGenerateCampaignContent = async (regenerate = false) => {
     setIsGeneratingCampaign(true);
+    setCampaignGenerationFailed(false);
+    setGenerationError('');
     try {
       const normalizedContent = await generateCampaignContent({ problema, solucao });
       setCampaignContent(normalizedContent);
@@ -971,8 +975,11 @@ function App() {
       }
     } catch (error) {
       console.error("Erro ao gerar conteúdo da campanha:", error);
-      toast.error(`Ocorreu um erro ao gerar o conteúdo da campanha: ${error.message}`);
+      const errorMessage = error.message || 'Ocorreu um erro desconhecido.';
+      toast.error(`Ocorreu um erro ao gerar o conteúdo da campanha: ${errorMessage}`);
       setCampaignContent(null);
+      setCampaignGenerationFailed(true);
+      setGenerationError(errorMessage);
     } finally {
       setIsGeneratingCampaign(false);
     }
@@ -1201,9 +1208,10 @@ function App() {
         >
           {/* Passo 0: Campanha */}
           {activeStep === 0 && (
-            <Campaign
-              steps={steps}
-              problema={problema}
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Campaign
+                steps={steps}
+                problema={problema}
               setProblema={setProblema}
               solucao={solucao}
               setSolucao={setSolucao}
@@ -1213,6 +1221,8 @@ function App() {
               setAspectRatio={setAspectRatio}
               isGeneratingCampaign={isGeneratingCampaign}
               campaignContent={campaignContent}
+              campaignGenerationFailed={campaignGenerationFailed}
+              generationError={generationError}
               handleGenerateCampaignContent={handleGenerateCampaignContent}
               handleResetCampaign={handleResetCampaign}
               handleExportHtml={() => exportHtml({
@@ -1243,6 +1253,7 @@ function App() {
               handleGenerateImage={handleGenerateImage}
               setCampaignContent={setCampaignContent}
             />
+            </Box>
           )}
 
           {/* Passo 1: Definir Dados Iniciais */}
@@ -1519,7 +1530,6 @@ function App() {
             aria-label="edit"
             sx={{ position: 'fixed', bottom: 16, right: 16 }}
             onClick={() => setIsDrawerOpen(true)}
-            disabled={!selectedField}
           >
             <Edit />
           </Fab>
@@ -1532,6 +1542,12 @@ function App() {
             fieldPositions={fieldPositions}
             setFieldPositions={setFieldPositions}
             csvHeaders={csvHeaders}
+            imageFilters={imageFilters}
+            setImageFilters={setImageFilters}
+            includeLogo={includeLogo}
+            setIncludeLogo={setIncludeLogo}
+            includeEmpresa={includeEmpresa}
+            setIncludeEmpresa={setIncludeEmpresa}
           />
         </>
       )}

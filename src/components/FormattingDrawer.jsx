@@ -12,12 +12,18 @@ const FormattingDrawer = ({
   fieldPositions,
   setFieldPositions,
   csvHeaders,
+  imageFilters,
+  setImageFilters,
+  includeLogo,
+  setIncludeLogo,
+  includeEmpresa,
+  setIncludeEmpresa,
 }) => {
   return (
     <Drawer anchor="right" open={open} onClose={onClose} sx={{ zIndex: 1400 }}>
-      <Box sx={{ width: 320, p: 2 }}>
+      <Box sx={{ width: 320, p: 2, overflowY: 'auto' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">Editar Campo</Typography>
+          <Typography variant="h6">Editar Propriedades</Typography>
           <IconButton onClick={onClose}>
             <Close />
           </IconButton>
@@ -29,6 +35,12 @@ const FormattingDrawer = ({
           fieldPositions={fieldPositions}
           setFieldPositions={setFieldPositions}
           csvHeaders={csvHeaders}
+          imageFilters={imageFilters}
+          setImageFilters={setImageFilters}
+          includeLogo={includeLogo}
+          setIncludeLogo={setIncludeLogo}
+          includeEmpresa={includeEmpresa}
+          setIncludeEmpresa={setIncludeEmpresa}
         />
       </Box>
     </Drawer>
