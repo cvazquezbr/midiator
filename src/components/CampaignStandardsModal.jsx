@@ -379,7 +379,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth={false} fullScreen>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
                 Padrões de Campanha
@@ -397,25 +397,23 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ display: isMobile ? 'block' : 'flex', p: 0, minHeight: '500px' }}>
-          <Tabs
-            orientation={isMobile ? 'horizontal' : 'vertical'}
-            variant="scrollable"
-            value={value}
-            onChange={handleChange}
-            aria-label="Padrões de Campanha"
-            sx={isMobile ?
-              { borderBottom: 1, borderColor: 'divider' } :
-              { borderRight: 1, borderColor: 'divider', minWidth: 200 }
-            }
-          >
-            <Tab icon={<TextFieldsIcon />} iconPosition={isMobile ? undefined : "start"} label="Persona" sx={{ justifyContent: isMobile ? 'center' : 'flex-start' }} {...a11yProps(0)} />
-            <Tab icon={<TextFieldsIcon />} iconPosition={isMobile ? undefined : "start"} label="Autor" sx={{ justifyContent: isMobile ? 'center' : 'flex-start' }} {...a11yProps(1)} />
-            <Tab icon={<TextFieldsIcon />} iconPosition={isMobile ? undefined : "start"} label="Formato" sx={{ justifyContent: isMobile ? 'center' : 'flex-start' }} {...a11yProps(2)} />
-            <Tab icon={<TextFieldsIcon />} iconPosition={isMobile ? undefined : "start"} label="Instruções" sx={{ justifyContent: isMobile ? 'center' : 'flex-start' }} {...a11yProps(3)} />
-            <Tab icon={<PaletteIcon />} iconPosition={isMobile ? undefined : "start"} label="Cores" sx={{ justifyContent: isMobile ? 'center' : 'flex-start' }} {...a11yProps(4)} />
-          </Tabs>
-          <Box sx={{width: '100%', overflow: 'auto'}}>
+        <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs
+              orientation="horizontal"
+              variant="scrollable"
+              value={value}
+              onChange={handleChange}
+              aria-label="Padrões de Campanha"
+            >
+              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Persona" {...a11yProps(0)} />
+              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Autor" {...a11yProps(1)} />
+              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Formato" {...a11yProps(2)} />
+              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Instruções" {...a11yProps(3)} />
+              <Tab icon={<PaletteIcon />} iconPosition="start" label="Cores" {...a11yProps(4)} />
+            </Tabs>
+          </Box>
+          <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
             <TabPanel value={value} index={0}>
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
