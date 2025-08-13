@@ -589,10 +589,25 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                             <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
                             <AccordionDetails>
                                 <FormGroup>
-                                    {items.map((item) => (<FormControlLabel key={item} control={<Checkbox checked={(persona?.[key] || []).includes(item)} onChange={handlePersonaCheckboxChange(key, item)} />} label={item} />))}
+                                    {items.map((item) => (
+                                        <FormControlLabel
+                                            key={item}
+                                            control={<Checkbox checked={(persona?.[key] || []).includes(item)} onChange={handlePersonaCheckboxChange(key, item)} />}
+                                            label={item}
+                                        />
+                                    ))}
                                 </FormGroup>
                                 {(persona?.[key] || []).includes('Outro(s)') && (
-                                    <TextField label={`Especifique Outro(a) (${label})`} name={`${key}Outro`} value={persona?.[`${key}Outro`] || ''} onChange={handlePersonaChange} fullWidth required variant="outlined" sx={{ mt: 2 }}/>
+                                    <TextField
+                                        label={`Especifique Outro(a) (${label})`}
+                                        name={`${key}Outro`}
+                                        value={persona?.[`${key}Outro`] || ''}
+                                        onChange={handlePersonaChange}
+                                        fullWidth
+                                        required
+                                        variant="outlined"
+                                        sx={{ mt: 2 }}
+                                    />
                                 )}
                             </AccordionDetails>
                         </Accordion>
