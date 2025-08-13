@@ -27,9 +27,13 @@ import {
   FormControlLabel,
   CircularProgress,
   Alert,
+    Tooltip,
+    IconButton,
+    Link as MuiLink,
 } from '@mui/material';
 import {
     ExpandMore as ExpandMoreIcon,
+    InfoOutlined as InfoOutlinedIcon,
 } from '@mui/icons-material';
 import RichTextEditor from './RichTextEditor';
 
@@ -38,11 +42,79 @@ const POSICOES_CARGOS = ['Liderança Executiva: CEO, Diretor Executivo, Sócio',
 const SEGMENTOS_EMPRESA = ['Tecnologia (Software, SaaS, Hardware)', 'Serviços Financeiros (Fintech)', 'E-commerce e Varejo', 'Saúde (Healthtech, Farmacêutica)', 'Manufatura', 'Consultoria e Serviços', 'Outro(s)'];
 const RESPONSABILIDADES_CHAVE = ['Gerenciamento de Orçamento', 'Tomada de Decisão Estratégica', 'Gestão de Equipes', 'Inovação de Produtos', 'Garantir a Operação e Estabilidade', 'Compliance e Governança', 'Outro(s)'];
 const DORES_DESAFIOS = {
-    'doresEstrategicos': { label: 'Estratégicos', items: ['ROI de Inovação', 'Dependência de Fornecedores', 'Escalabilidade de Negócios', 'Outro(s)']},
-    'doresOperacionais': { label: 'Operacionais', items: ['Manutenção de Sistemas Legados', 'Custos Operacionais', 'Segurança de Dados', 'Interoperabilidade de Sistemas', 'Outro(s)']},
-    'doresPessoas': { label: 'Pessoas e Cultura', items: ['Retenção de Talentos', 'Alinhamento de Equipes', 'Resistência à Mudança', 'Treinamento e Capacitação', 'Outro(s)']},
-    'doresRegulatorios': { label: 'Regulatórios e Métricas', items: ['Compliance (LGPD, etc.)', 'Medição de Valor (ROI)', 'Prioridades Conflitantes', 'Outro(s)']},
-};
+    "doresEstrategicos": {
+      "label": "Estratégicos",
+      "items": [
+        {
+          "nome": "Dificuldade em Crescer",
+          "descricao": "A persona se sente estagnada, com pouco ou nenhum avanço em seus objetivos. O desafio é encontrar um caminho claro para a expansão e o sucesso."
+        },
+        {
+          "nome": "Posicionamento de Mercado Fraco",
+          "descricao": "A persona não consegue se diferenciar da concorrência. Sua marca não é reconhecida, e a proposta de valor não é clara para o público."
+        },
+        {
+          "nome": "Falta de Direção Clara",
+          "descricao": "A persona não tem um plano de longo prazo definido. Ela age por impulso, o que resulta em esforços dispersos e resultados inconsistentes."
+        },
+        { "nome": "Outro(s)", "descricao": "Selecione para adicionar uma dor ou desafio estratégico que não está na lista." }
+      ]
+    },
+    "doresOperacionais": {
+      "label": "Operacionais",
+      "items": [
+        {
+          "nome": "Processos Ineficientes",
+          "descricao": "A rotina de trabalho é desorganizada, com falhas na comunicação e falta de automação. A persona perde tempo em tarefas manuais que poderiam ser otimizadas."
+        },
+        {
+          "nome": "Falta de Ferramentas Adequadas",
+          "descricao": "A persona utiliza tecnologias e softwares desatualizados que a impedem de ser produtiva, criando gargalos no fluxo de trabalho."
+        },
+        {
+          "nome": "Orçamento Limitado",
+          "descricao": "A necessidade de maximizar os resultados com poucos recursos financeiros, exigindo um alto retorno sobre o investimento (ROI) para justificar os gastos."
+        },
+        { "nome": "Outro(s)", "descricao": "Selecione para adicionar uma dor ou desafio operacional que não está na lista." }
+      ]
+    },
+    "doresPessoas": {
+      "label": "Pessoas e Cultura",
+      "items": [
+        {
+          "nome": "Clima Organizacional Tóxico",
+          "descricao": "O ambiente de trabalho é negativo, com baixa motivação e conflitos interpessoais. O desafio é construir um espaço de trabalho saudável e colaborativo."
+        },
+        {
+          "nome": "Dificuldade em Atrair e Reter Talentos",
+          "descricao": "A persona tem problemas para encontrar profissionais qualificados e, quando os encontra, não consegue mantê-los. Isso gera um ciclo constante de recrutamento."
+        },
+        {
+          "nome": "Falta de Alinhamento e Engajamento",
+          "descricao": "A equipe não está alinhada aos valores e à visão da empresa, o que pode levar a um desempenho abaixo do esperado."
+        },
+        { "nome": "Outro(s)", "descricao": "Selecione para adicionar uma dor ou desafio de pessoas e cultura que não está na lista." }
+      ]
+    },
+    "doresRegulatorios": {
+      "label": "Regulatórios e Métricas",
+      "items": [
+        {
+          "nome": "Falta de Conformidade Legal",
+          "descricao": "A persona não está atualizada sobre as leis e regulamentos do seu setor, o que pode levar a multas, penalidades e problemas legais. O desafio é garantir que todas as operações estejam de acordo com a legislação."
+        },
+        {
+          "nome": "Análise de Dados Complexa",
+          "descricao": "A persona coleta muitos dados, mas não sabe como interpretá-los para extrair insights valiosos. Ela tem dificuldade em identificar o que está funcionando e o que precisa ser melhorado."
+        },
+        {
+          "nome": "Definição de KPIs Inadequados",
+          "descricao": "Os indicadores de desempenho (KPIs) usados não refletem os objetivos estratégicos da persona. Os números não contam a história completa, o que resulta em decisões equivocadas."
+        },
+        { "nome": "Outro(s)", "descricao": "Selecione para adicionar uma dor ou desafio regulatório e de métricas que não está na lista." }
+      ]
+    }
+  };
 const GATILHOS_BARREIRAS = {
     'gatilhosCompra': { label: 'Gatilhos de Compra', items: ['Problema técnico urgente', 'Pressão do board', 'Necessidade de redução de custos', 'Vantagem competitiva', 'Outro(s)']},
     'barreirasAdocao': { label: 'Barreiras de Adoção', items: ['Orçamento limitado', 'Resistência à mudança da equipe', 'Preocupação com segurança e compliance', 'Dificuldade de integração', 'Outro(s)']},
@@ -85,7 +157,9 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
   }, [open, persona]);
 
   const handleNext = () => {
-    if (activeStep === 0) { // Step "Início Rápido com IA"
+    if (activeStep === steps.length - 1) {
+      handleSave();
+    } else if (activeStep === 0) { // Step "Início Rápido com IA"
         onGenerate(personaData.description, (generatedPersona) => {
             setPersonaData(prev => ({...prev, ...generatedPersona}));
             setActiveStep(1);
@@ -142,6 +216,14 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
   const handleRichTextChange = (name, value) => {
       setPersonaData(prev => ({ ...prev, [name]: value }));
   };
+
+  const InfoTooltip = ({ title, url }) => (
+    <Tooltip title={<Typography variant="body2" sx={{ p: 1 }}>{title} {url && <MuiLink href={url} target="_blank" rel="noopener noreferrer" sx={{ color: 'cyan', display: 'block', mt: 1 }}>Saiba mais</MuiLink>}</Typography>}>
+      <IconButton>
+        <InfoOutlinedIcon sx={{ color: 'text.secondary', fontSize: '1rem' }} />
+      </IconButton>
+    </Tooltip>
+  );
 
   const getStepContent = (step) => {
     switch (step) {
@@ -281,15 +363,35 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
         return (
           <Box>
             <Typography variant="h6" gutterBottom>Dores e Desafios</Typography>
-             {Object.entries(DORES_DESAFIOS).map(([key, { label, items }]) => (
-                <Accordion key={key} defaultExpanded>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
-                    <AccordionDetails>
-                        <FormGroup>
-                            {items.map((item) => (<FormControlLabel key={item} control={<Checkbox checked={(personaData[key] || []).includes(item)} onChange={handleCheckboxChange(key, item)} />} label={item} />))}
-                        </FormGroup>
-                    </AccordionDetails>
-                </Accordion>
+            {Object.entries(DORES_DESAFIOS).map(([key, { label, items }]) => (
+              <Accordion key={key} defaultExpanded>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
+                <AccordionDetails>
+                  <FormGroup>
+                    {items.map((item) => (
+                      <Box key={item.nome} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <FormControlLabel
+                          control={<Checkbox checked={(personaData[key] || []).includes(item.nome)} onChange={handleCheckboxChange(key, item.nome)} />}
+                          label={item.nome}
+                        />
+                        <InfoTooltip title={item.descricao} />
+                      </Box>
+                    ))}
+                  </FormGroup>
+                  {(personaData[key] || []).includes('Outro(s)') && (
+                    <TextField
+                      label={`Especifique Outra Dor (${label})`}
+                      name={`${key}Outro`}
+                      value={personaData[`${key}Outro`] || ''}
+                      onChange={handleChange}
+                      fullWidth
+                      required
+                      variant="outlined"
+                      sx={{ mt: 2 }}
+                    />
+                  )}
+                </AccordionDetails>
+              </Accordion>
             ))}
           </Box>
         );

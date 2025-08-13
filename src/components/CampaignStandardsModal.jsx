@@ -81,10 +81,17 @@ function TabPanel(props) {
 }
 
 const briefingOptions = {
-  objective: ['Branding', 'Site', 'Produto', 'Campanha de Marketing'],
-  targetAudience: ['Mulheres 30-45 anos', 'Jovens Gamers', 'Executivos C-Level', 'Famílias com Crianças'],
-  mainMessage: ['Confiança', 'Inovação', 'Sustentabilidade', 'Acessibilidade', 'Luxo'],
-  atmosphere: ['Calmo e Sereno', 'Energético e Vibrante', 'Premium e Sofisticado', 'Divertido e Descontraído'],
+    objetivo: ['Branding', 'Site', 'Produto', 'Campanha de Marketing'],
+    publicoAlvo: ['Mulheres 30-45 anos', 'Jovens Gamers', 'Executivos C-Level', 'Famílias com Crianças'],
+    mensagemPrincipal: ['Confiança', 'Inovação', 'Sustentabilidade', 'Acessibilidade', 'Luxo'],
+    atmosfera: ['Calmo e Sereno', 'Energético e Vibrante', 'Premium e Sofisticado', 'Divertido e Descontraído'],
+};
+
+const briefingLabels = {
+    objetivo: 'Objetivo',
+    publicoAlvo: 'Público-alvo',
+    mensagemPrincipal: 'Mensagem Principal',
+    atmosfera: 'Atmosfera',
 };
 
 const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
@@ -100,10 +107,10 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
 
   // State for AI Palette Generation
   const [briefing, setBriefing] = useState({
-    objective: '',
-    targetAudience: '',
-    mainMessage: '',
-    atmosphere: '',
+    objetivo: '',
+    publicoAlvo: '',
+    mensagemPrincipal: '',
+    atmosfera: '',
     details: '',
   });
   const [isGenerating, setIsGenerating] = useState(false);
@@ -184,10 +191,10 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
     setGeneratedPalette(null);
     try {
       const fullBriefing = `
-- Objetivo: ${briefing.objective}
-- Público-alvo: ${briefing.targetAudience}
-- Mensagem principal: ${briefing.mainMessage}
-- Atmosfera desejada: ${briefing.atmosphere}
+- Objetivo: ${briefing.objetivo}
+- Público-alvo: ${briefing.publicoAlvo}
+- Mensagem principal: ${briefing.mensagemPrincipal}
+- Atmosfera desejada: ${briefing.atmosfera}
 - Detalhes adicionais: ${briefing.details}
       `;
       const result = await onGeneratePalette(fullBriefing.trim());
@@ -809,11 +816,11 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                   {Object.keys(briefingOptions).map(key => (
                     <Grid item xs={12} sm={6} key={key}>
                       <FormControl fullWidth>
-                        <InputLabel>{key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}</InputLabel>
+                        <InputLabel>{briefingLabels[key]}</InputLabel>
                         <Select
                           name={key}
                           value={briefing[key]}
-                          label={key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim()}
+                          label={briefingLabels[key]}
                           onChange={handleBriefingChange}
                         >
                           {briefingOptions[key].map(option => (
