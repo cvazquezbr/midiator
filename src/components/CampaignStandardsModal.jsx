@@ -802,75 +802,74 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
             </TabPanel>
 
             <TabPanel value={value} index={4}>
-              <Typography variant="h6" gutterBottom>Cores da Campanha</Typography>
-              <Typography variant="body2" gutterBottom>
-                Defina até 5 cores de referência para a campanha.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, mt: 2, alignItems: 'center' }}>
-                {colors.map((color, index) => (
-                  <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Stack spacing={2} sx={{ mb: 3 }}>
+                    <Button
+                        variant="contained"
+                        startIcon={<AutoAwesomeIcon />}
+                        onClick={() => setShowPaletteWizard(true)}
+                        disabled={!onGeneratePalette}
+                        sx={{ alignSelf: 'flex-start' }}
+                    >
+                        Assistente de Geração de Paleta
+                    </Button>
+                </Stack>
+
+                <Divider />
+
+                <Typography variant="h6" gutterBottom sx={{mt: 2}}>Cores da Campanha</Typography>
+                <Typography variant="body2" gutterBottom>
+                    Defina até 5 cores de referência para a campanha.
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, mt: 2, alignItems: 'center' }}>
+                    {colors.map((color, index) => (
+                    <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <input
+                        type="color"
+                        value={color}
+                        onChange={(e) => handleColorChange(index, e.target.value)}
+                        style={{ width: '50px', height: '50px', border: 'none', background: 'none', cursor: 'pointer' }}
+                        />
+                        <Button size="small" onClick={() => removeColor(index)}>Remover</Button>
+                    </Box>
+                    ))}
+                    {colors.length < 5 && (
+                    <Button variant="outlined" onClick={addColor}>Adicionar Cor</Button>
+                    )}
+                </Box>
+
+                <Box sx={{ mt: 4 }}>
+                    <Typography variant="h6" gutterBottom>Extrair Cores de Imagem</Typography>
+                    <Button
+                    variant="outlined"
+                    startIcon={<UploadFileIcon />}
+                    onClick={() => imageInputRef.current.click()}
+                    >
+                    Upload de Imagem
+                    </Button>
                     <input
-                      type="color"
-                      value={color}
-                      onChange={(e) => handleColorChange(index, e.target.value)}
-                      style={{ width: '50px', height: '50px', border: 'none', background: 'none', cursor: 'pointer' }}
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    ref={imageInputRef}
+                    onChange={handleImageUpload}
                     />
-                    <Button size="small" onClick={() => removeColor(index)}>Remover</Button>
-                  </Box>
-                ))}
-                {colors.length < 5 && (
-                  <Button variant="outlined" onClick={addColor}>Adicionar Cor</Button>
-                )}
-              </Box>
+                </Box>
 
-              <Box sx={{ mt: 4 }}>
-                <Typography variant="h6" gutterBottom>Extrair Cores de Imagem</Typography>
-                <Button
-                  variant="outlined"
-                  startIcon={<UploadFileIcon />}
-                  onClick={() => imageInputRef.current.click()}
-                >
-                  Upload de Imagem
-                </Button>
-                <input
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  ref={imageInputRef}
-                  onChange={handleImageUpload}
-                />
-              </Box>
-
-              <Box sx={{ mt: 4 }}>
-                <Typography variant="h6" gutterBottom>Inspiração de Paletas de Cores</Typography>
-                {colorPalettes.map((palette) => (
-                  <Chip
-                    key={palette.name}
-                    icon={<LinkIcon />}
-                    label={palette.name}
-                    component="a"
-                    href={palette.url}
-                    target="_blank"
-                    clickable
-                    sx={{ mr: 1, mb: 1 }}
-                  />
-                ))}
-              </Box>
-
-              <Divider sx={{ my: 4 }} />
-
-              {/* AI Palette Generator */}
-              <Box>
-                  <Typography variant="h6" gutterBottom>Gerar Paleta com IA</Typography>
-                  <Button
-                      variant="contained"
-                      startIcon={<AutoAwesomeIcon />}
-                      onClick={() => setShowPaletteWizard(true)}
-                      disabled={!onGeneratePalette}
-                  >
-                      Assistente de Geração de Paleta
-                  </Button>
-              </Box>
+                <Box sx={{ mt: 4 }}>
+                    <Typography variant="h6" gutterBottom>Inspiração de Paletas de Cores</Typography>
+                    {colorPalettes.map((palette) => (
+                    <Chip
+                        key={palette.name}
+                        icon={<LinkIcon />}
+                        label={palette.name}
+                        component="a"
+                        href={palette.url}
+                        target="_blank"
+                        clickable
+                        sx={{ mr: 1, mb: 1 }}
+                    />
+                    ))}
+                </Box>
             </TabPanel>
           </Box>
         </DialogContent>
