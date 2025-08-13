@@ -1,7 +1,5 @@
 import React from 'react';
-import { Typography, Box, Paper, Grid, Tooltip, Chip } from '@mui/material';
-import SectionCard from '../common/SectionCard';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { Typography, Box, Paper, Grid, Chip } from '@mui/material';
 
 const ColorPalette = ({ colors }) => {
   if (!colors || colors.length === 0) {
@@ -9,7 +7,7 @@ const ColorPalette = ({ colors }) => {
   }
 
   return (
-    <SectionCard>
+    <Box>
       <Typography variant="h4" component="h2" sx={{ mb: 4 }}>
         Paleta de Cores
       </Typography>
@@ -34,18 +32,15 @@ const ColorPalette = ({ colors }) => {
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 {color.hex} | {color.rgb}
               </Typography>
-              <Chip label={color.role || 'N/A'} size="small" sx={{ mb: 2 }} />
-              <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                Justificativa
-                <Tooltip title={color.justification || 'Sem justificativa.'}>
-                  <InfoOutlinedIcon sx={{ fontSize: '1rem', color: 'text.secondary' }} />
-                </Tooltip>
+              <Chip label={color.role || 'N/A'} size="small" sx={{ mb: 1 }} />
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+                {color.justification || 'Sem justificativa.'}
               </Typography>
             </Paper>
           </Grid>
         ))}
       </Grid>
-    </SectionCard>
+    </Box>
   );
 };
 
