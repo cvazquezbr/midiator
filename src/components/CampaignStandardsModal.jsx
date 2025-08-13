@@ -416,7 +416,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
             <Tab icon={<PaletteIcon />} iconPosition={isMobile ? undefined : "start"} label="Cores" sx={{ justifyContent: isMobile ? 'center' : 'flex-start' }} {...a11yProps(4)} />
           </Tabs>
           <Box sx={{width: '100%', overflow: 'auto'}}>
-          <TabPanel value={value} index={0}>
+            <TabPanel value={value} index={0}>
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
               spacing={2}
@@ -783,7 +783,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       <PersonaGenerationModal
         open={showPersonaGenModal}
         onClose={() => setShowPersonaGenModal(false)}
-        onGenerate={() => handleGeneratePersonaWithAI(personaDescription)}
+        onGenerate={handleGeneratePersonaWithAI}
         description={personaDescription}
         setDescription={setPersonaDescription}
         isLoading={isGeneratingPersona}
@@ -806,7 +806,6 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         onClose={() => setShowMemorialModal(false)}
         personas={[{ id: 1, nome: persona.nome || 'Persona Atual' }]} // Placeholder
       />
-      </Box>
     </>
   );
 };
