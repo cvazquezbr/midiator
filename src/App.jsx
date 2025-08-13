@@ -955,40 +955,43 @@ function App() {
     setIsGeneratingCampaign(true);
     setCampaignGenerationFailed(false);
     setGenerationError('');
-    try {
-      const normalizedContent = await generateCampaignContent({ problema, solucao });
-      setCampaignContent(normalizedContent);
 
-      if (!regenerate) {
-        setConteudoMedio('');
-        setConteudoPequeno('');
-        setConteudoFormatado('');
-        setGeneratedImageUrl(null);
+    setTimeout(async () => {
+      try {
+        const normalizedContent = await generateCampaignContent({ problema, solucao });
+        setCampaignContent(normalizedContent);
 
-        const [imageSuccess] = await Promise.all([
-          handleGenerateImage(normalizedContent),
-          handleGenerateSummary(1800, normalizedContent),
-          handleGenerateSummary(130, normalizedContent),
-          handleGenerateFormattedContent(normalizedContent),
-          handleGenerateFollowupPosts(normalizedContent),
-        ]);
+        if (!regenerate) {
+          setConteudoMedio('');
+          setConteudoPequeno('');
+          setConteudoFormatado('');
+          setGeneratedImageUrl(null);
 
-        if (!imageSuccess) {
-          setCampaignGenerationFailed(true);
-          setGenerationError("A geração de texto foi bem-sucedida, mas a criação da imagem falhou. Você pode tentar gerar a imagem novamente.");
+          const [imageSuccess] = await Promise.all([
+            handleGenerateImage(normalizedContent),
+            handleGenerateSummary(1800, normalizedContent),
+            handleGenerateSummary(130, normalizedContent),
+            handleGenerateFormattedContent(normalizedContent),
+            handleGenerateFollowupPosts(normalizedContent),
+          ]);
+
+          if (!imageSuccess) {
+            setCampaignGenerationFailed(true);
+            setGenerationError("A geração de texto foi bem-sucedida, mas a criação da imagem falhou. Você pode tentar gerar a imagem novamente.");
+          }
         }
+      } catch (error) {
+        // This will now only catch errors from text generation
+        console.error("Erro ao gerar conteúdo da campanha:", error);
+        const errorMessage = error.message || 'Ocorreu um erro desconhecido.';
+        toast.error(`Ocorreu um erro ao gerar o conteúdo da campanha: ${errorMessage}`);
+        setCampaignContent(null);
+        setCampaignGenerationFailed(true);
+        setGenerationError(errorMessage);
+      } finally {
+        setIsGeneratingCampaign(false);
       }
-    } catch (error) {
-      // This will now only catch errors from text generation
-      console.error("Erro ao gerar conteúdo da campanha:", error);
-      const errorMessage = error.message || 'Ocorreu um erro desconhecido.';
-      toast.error(`Ocorreu um erro ao gerar o conteúdo da campanha: ${errorMessage}`);
-      setCampaignContent(null);
-      setCampaignGenerationFailed(true);
-      setGenerationError(errorMessage);
-    } finally {
-      setIsGeneratingCampaign(false);
-    }
+    }, 0);
   };
 
   const handleGenerateImage = async (content = campaignContent) => {
@@ -1100,8 +1103,8 @@ function App() {
         return;
       }
       const { persona, autor } = getCampaignPrompt();
-      const prompt = `Considerando uma pessoa ou organização com a persona ${JSON.stringify(persona)} e um provedor de soluções como ${JSON.stringify(autor)} quais são soluções para o seguinte problema: ${problema}`;
-      const generatedSolucao = await callGeminiApi(prompt, apiKey, "Gerar Solução");
+      const prompt = `Com base na persona ${JSON.stringify(persona)} e no autor ${JSON.stringify(autor)}, gere uma solução para o seguinte problema: '${problema}'. Responda apenas com a solução, sem repetir o problema.`;
+      const generatedSolucao = await callGeminiApi(prompt, apiKey, "Gerar Solucao");
       setSolucao(generatedSolucao);
     } catch (error) {
       console.error("Erro ao gerar solução:", error);
@@ -1250,7 +1253,7 @@ function App() {
         >
           {/* Passo 0: Campanha */}
           {activeStep === 0 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
               <Campaign
                 steps={steps}
                 problema={problema}
@@ -1541,7 +1544,7 @@ function App() {
         }}
       />
       <LoadingDialog
-        open={isGeneratingCampaign || isSaving || isLoading}
+        open={isGeneratingCampaign || isSaving || isLoading || isGeneratingSolucao}
         title={
           isSaving ? "Salvando configuração..." :
           isLoading ? "Carregando configuração..." :

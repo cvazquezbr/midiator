@@ -140,7 +140,7 @@ const Campaign = ({
                         onClick={() => handleGenerateCampaignContent(false)}
                         disabled={!problema.trim() || !solucao.trim() || isGeneratingCampaign || campaignContent !== null}
                     >
-                        {isGeneratingCampaign ? 'Gerando...' : 'Gerar Tudo com IA'}
+                        {isGeneratingCampaign ? 'Gerando...' : 'Elaborar Conteúdo'}
                     </Button>
                     {campaignContent && (
                         <Button
