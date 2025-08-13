@@ -25,7 +25,7 @@ const Section = ({ title, children, subtitle }) => (
             {title}
         </Typography>
         {subtitle && <Typography variant="subtitle2" color="text.secondary" sx={{ mt: -1, mb: 2 }}>{subtitle}</Typography>}
-        <Paper variant="outlined" sx={{ p: 3, backgroundColor: '#f9f9f9' }}>
+        <Paper variant="outlined" sx={{ p: 3, backgroundColor: '#f9f9f9', color: 'black' }}>
             {children}
         </Paper>
     </Box>
