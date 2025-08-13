@@ -102,19 +102,16 @@ const Sidebar = ({
         '& .MuiDrawer-paper': {
           width: drawerWidth,
           boxSizing: 'border-box',
-          mt: { xs: 0, sm: 8 },
           borderRight: '1px solid',
           borderColor: 'divider',
           background: darkMode ? '#1e293b' : '#ffffff',
-          height: { xs: '100%', sm: 'calc(100% - 64px)' },
-          top: { xs: 0, sm: 64 },
         },
       }}
       ModalProps={{
         keepMounted: true, // Better open performance on mobile.
       }}
     >
-      <Box sx={{ p: 3, mt: { xs: 8, sm: 0 } }}>
+      <Box sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
           Etapas do Processo
         </Typography>
