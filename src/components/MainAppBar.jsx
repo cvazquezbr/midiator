@@ -17,6 +17,7 @@ import {
   Download as DownloadIcon,
   FileUpload as FileUploadIcon,
   Menu as MenuIcon,
+  Article as ArticleIcon,
 } from '@mui/icons-material';
 const MainAppBar = ({
   darkMode,
@@ -28,6 +29,7 @@ const MainAppBar = ({
   handleMenuClose,
   anchorElMenu,
   setShowCampaignStandardsModal,
+  setShowMemorialDescritivoModal,
   handleSaveTemplateClick,
   handleLoadTemplateClick,
   exportCsv,
@@ -97,6 +99,10 @@ const MainAppBar = ({
             <MenuItem onClick={() => { setShowCampaignStandardsModal(true); handleMenuClose(); }}>
               <Edit sx={{ mr: 1 }} />
               Padrões de Campanha
+            </MenuItem>
+            <MenuItem onClick={() => { setShowMemorialDescritivoModal(true); handleMenuClose(); }}>
+              <ArticleIcon sx={{ mr: 1 }} />
+              Memorial Descritivo
             </MenuItem>
             <MenuItem onClick={handleSaveTemplateClick}>
               <DownloadIcon sx={{ mr: 1 }} />

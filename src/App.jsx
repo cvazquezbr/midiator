@@ -96,6 +96,7 @@ import TextEditorDialog from './components/TextEditorDialog';
 import Campaign from './components/Campaign';
 import ContentStep from './components/ContentStep';
 import ImageUploadStep from './components/ImageUploadStep';
+import MemorialDescritivoModal from './components/MemorialDescritivoModal';
 import {
   generateCampaignContent,
   generateCampaignImage,
@@ -204,6 +205,7 @@ function App() {
   const [includeEmpresa, setIncludeEmpresa] = useState(true);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
+  const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
 
   const saveStateToSessionStorage = useCallback(async () => {
     const blobToBase64 = (blob) => {
@@ -1128,6 +1130,19 @@ function App() {
 
   const currentTheme = darkMode ? darkTheme : lightTheme;
 
+  const campaignData = {
+    problema,
+    solucao,
+    campaignContent,
+    personaFields,
+    autor,
+    formato,
+    aspectRatio,
+    followupPosts,
+    colorPalette,
+    campaignColors,
+  };
+
   return (
     <ThemeProvider theme={currentTheme}>
       <CssBaseline />
@@ -1141,6 +1156,7 @@ function App() {
           handleMenuClose={handleMenuClose}
           anchorElMenu={anchorElMenu}
           setShowCampaignStandardsModal={setShowCampaignStandardsModal}
+          setShowMemorialDescritivoModal={setShowMemorialDescritivoModal}
           handleSaveTemplateClick={handleSaveTemplateClick}
           handleLoadTemplateClick={handleLoadTemplateClick}
           exportCsv={exportCsv}
@@ -1472,6 +1488,11 @@ function App() {
         open={showSetupModal}
         onClose={() => setShowSetupModal(false)}
         onBeforeLinkedinRedirect={saveStateToSessionStorage}
+      />
+      <MemorialDescritivoModal
+        open={showMemorialDescritivoModal}
+        onClose={() => setShowMemorialDescritivoModal(false)}
+        campaignData={campaignData}
       />
        <CampaignStandardsModal
         open={showCampaignStandardsModal}

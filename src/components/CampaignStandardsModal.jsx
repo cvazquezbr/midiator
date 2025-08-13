@@ -287,13 +287,26 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
   const handleColorChange = (index, newColor) => {
     const newColors = [...colors];
-    newColors[index] = newColor;
+    // When changing the color manually, we only update the hex and rgb value.
+    // We keep the name and role if they exist.
+    newColors[index] = {
+        ...newColors[index],
+        hex: newColor,
+        rgb: `RGB(${parseInt(newColor.substr(1, 2), 16)}, ${parseInt(newColor.substr(3, 2), 16)}, ${parseInt(newColor.substr(5, 2), 16)})`
+    };
     setColors(newColors);
   };
 
   const addColor = () => {
     if (colors.length < 5) {
-      setColors([...colors, '#000000']);
+      const newColor = {
+        hex: '#000000',
+        rgb: 'RGB(0, 0, 0)',
+        name: 'Nova Cor',
+        role: 'Manual',
+        justification: 'Adicionada manualmente pelo usuário.'
+      };
+      setColors([...colors, newColor]);
     }
   };
 
@@ -309,9 +322,28 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          const colorThief = new ColorThief();
-          const palette = colorThief.getPalette(img, 5);
-          setColors(palette.map(rgb => `#${rgb.map(c => c.toString(16).padStart(2, '0')).join('')}`));
+          try {
+            const colorThief = new ColorThief();
+            const palette = colorThief.getPalette(img, 5); // Returns array of [R, G, B]
+            const newColors = palette.map((rgb, index) => {
+              const hex = `#${rgb.map(c => c.toString(16).padStart(2, '0')).join('')}`;
+              return {
+                hex: hex,
+                rgb: `RGB(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`,
+                name: `Cor Extraída ${index + 1}`,
+                role: 'Extraída de Imagem',
+                justification: 'Cor extraída automaticamente da imagem de referência.'
+              };
+            });
+            setColors(newColors);
+            toast.success('Paleta de cores extraída da imagem com sucesso!');
+          } catch (error) {
+            console.error("Erro ao extrair paleta de cores da imagem:", error);
+            toast.error('Não foi possível extrair as cores desta imagem. Tente uma imagem diferente.');
+          }
+        };
+        img.onerror = () => {
+            toast.error('Ocorreu um erro ao carregar a imagem.');
         };
         img.src = e.target.result;
       };
@@ -818,17 +850,18 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
                 <Typography variant="h6" gutterBottom sx={{mt: 2}}>Cores da Campanha</Typography>
                 <Typography variant="body2" gutterBottom>
-                    Defina até 5 cores de referência para a campanha.
+                    Defina até 5 cores de referência para a campanha. As cores podem ser geradas pelo assistente, extraídas de uma imagem ou adicionadas manualmente.
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 2, mt: 2, alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, alignItems: 'center' }}>
                     {colors.map((color, index) => (
                     <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <input
                         type="color"
-                        value={color}
+                        value={color.hex}
                         onChange={(e) => handleColorChange(index, e.target.value)}
                         style={{ width: '50px', height: '50px', border: 'none', background: 'none', cursor: 'pointer' }}
                         />
+                        <Typography variant="caption">{color.name || color.hex}</Typography>
                         <Button size="small" onClick={() => removeColor(index)}>Remover</Button>
                     </Box>
                     ))}
