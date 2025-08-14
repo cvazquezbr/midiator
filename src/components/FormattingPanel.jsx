@@ -40,6 +40,7 @@ import {
 import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
 import { BrandingWatermark } from '@mui/icons-material';
+import BrandElementManager from './BrandElementManager';
 
 const FormattingPanel = ({
   selectedField,
@@ -53,7 +54,9 @@ const FormattingPanel = ({
   includeLogo,
   setIncludeLogo,
   includeEmpresa,
-  setIncludeEmpresa
+  setIncludeEmpresa,
+  brandElements,
+  setBrandElements
 }) => {
   const fonts = [
     'Arial', 'Helvetica', 'Times New Roman', 'Georgia', 'Verdana', 'Courier New', 'Impact', 'Comic Sans MS',
@@ -93,13 +96,24 @@ const FormattingPanel = ({
     setFieldStyles(prev => ({ ...prev, [field]: defaultStyle }));
   };
 
+  const updateBrandElementFilter = (elementId, filterProperty, value) => {
+    setBrandElements(prev =>
+      prev.map(el =>
+        el.id === elementId
+          ? { ...el, filters: { ...el.filters, [filterProperty]: value } }
+          : el
+      )
+    );
+  };
+
   const style = selectedField ? fieldStyles[selectedField] || {} : {};
   const position = selectedField ? fieldPositions[selectedField] || {} : {};
+  const selectedBrandElement = brandElements?.find(el => el.id === selectedField);
 
   return (
     <Card>
       <CardContent>
-        {selectedField ? (
+        {selectedField && (fieldPositions[selectedField] || selectedBrandElement) ? (
           <>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
               <Chip
@@ -356,6 +370,28 @@ const FormattingPanel = ({
               <Grid item xs={12} sm={6}><Button variant="outlined" size="small" onClick={() => copyStyleToAll(selectedField)} startIcon={<ContentCopy />} fullWidth>Aplicar a Todos</Button></Grid>
               <Grid item xs={12} sm={6}><Button variant="outlined" size="small" onClick={() => resetFieldStyle(selectedField)} color="secondary" fullWidth>Resetar Estilo</Button></Grid>
             </Grid>
+
+            {selectedBrandElement && (
+              <Accordion sx={{ mt: 2 }}>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                  <Typography variant="subtitle1">🖼️ Filtros do Elemento</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Box sx={{ p: 1 }}>
+                    <Typography gutterBottom>Brilho: {selectedBrandElement.filters.brightness}%</Typography>
+                    <Slider value={selectedBrandElement.filters.brightness} onChange={(e, v) => updateBrandElementFilter(selectedField, 'brightness', v)} min={0} max={200} step={1} />
+                    <Typography gutterBottom>Contraste: {selectedBrandElement.filters.contrast}%</Typography>
+                    <Slider value={selectedBrandElement.filters.contrast} onChange={(e, v) => updateBrandElementFilter(selectedField, 'contrast', v)} min={0} max={200} step={1} />
+                    <Typography gutterBottom>Saturação: {selectedBrandElement.filters.saturate}%</Typography>
+                    <Slider value={selectedBrandElement.filters.saturate} onChange={(e, v) => updateBrandElementFilter(selectedField, 'saturate', v)} min={0} max={200} step={1} />
+                    <Typography gutterBottom>Desfoque: {selectedBrandElement.filters.blur}px</Typography>
+                    <Slider value={selectedBrandElement.filters.blur} onChange={(e, v) => updateBrandElementFilter(selectedField, 'blur', v)} min={0} max={20} step={1} />
+                    <Typography gutterBottom>Opacidade: {selectedBrandElement.filters.opacity}%</Typography>
+                    <Slider value={selectedBrandElement.filters.opacity} onChange={(e, v) => updateBrandElementFilter(selectedField, 'opacity', v)} min={0} max={100} step={1} />
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
+            )}
           </>
         ) : (
           <Typography variant="h6" color="textSecondary" align="center" gutterBottom sx={{ mt: 4 }}>
@@ -402,6 +438,12 @@ const FormattingPanel = ({
               <FormControlLabel
                 control={<Switch checked={includeEmpresa} onChange={(e) => setIncludeEmpresa(e.target.checked)} />}
                 label="Incluir Imagem da Empresa"
+              />
+              <Divider sx={{ my: 2 }} />
+              <BrandElementManager
+                onElementSelect={(newElement) => {
+                  setBrandElements(prev => [...prev, newElement]);
+                }}
               />
             </Box>
           </AccordionDetails>

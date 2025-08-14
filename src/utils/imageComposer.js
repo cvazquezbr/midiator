@@ -7,7 +7,10 @@ const loadImage = (src) => {
   return new Promise((resolve, reject) => {
     console.log(`[loadImage] Attempting to load image from: ${src}`);
     const img = new Image();
-    // img.crossOrigin = 'Anonymous'; // This can cause issues with local dev servers and even some production environments. Removing it for same-origin requests.
+    // For external images (like from Google Drive), this is necessary to avoid tainting the canvas.
+    if (src.startsWith('http')) {
+        img.crossOrigin = 'Anonymous';
+    }
     img.onload = () => {
       console.log(`[loadImage] Successfully loaded image: ${src}`);
       resolve(img);
@@ -35,7 +38,8 @@ export const composeImage = async (
   companyImageUrl,
   imageFilters = {},
   includeLogo = true,
-  includeEmpresa = true
+  includeEmpresa = true,
+  brandElements = []
 ) => {
   console.log('[composeImage] Starting composition with:', {
     backgroundImageUrl,
@@ -43,7 +47,8 @@ export const composeImage = async (
     companyImageUrl,
     imageFilters,
     includeLogo,
-    includeEmpresa
+    includeEmpresa,
+    brandElements
   });
   try {
     const companyBackgroundColor = '#808080'; // A neutral gray
@@ -109,6 +114,46 @@ export const composeImage = async (
       const companyImgY = targetHeight - companyImgHeight;
       ctx.drawImage(companyImg, companyImgX, companyImgY, companyImgWidth, companyImgHeight);
       console.log(`[composeImage] Drawing company image at (${companyImgX}, ${companyImgY})`);
+    }
+
+    // Draw brand elements
+    for (const element of brandElements) {
+      if (!element.url) continue;
+
+      try {
+        const elementImg = await loadImage(element.url);
+
+        ctx.save();
+
+        // Calculate pixel dimensions and positions
+        const elX = (element.x / 100) * targetWidth;
+        const elY = (element.y / 100) * targetHeight;
+        const elWidth = (element.width / 100) * targetWidth;
+        const elHeight = (element.height / 100) * targetHeight;
+
+        // Apply transformations (rotation)
+        if (element.rotation) {
+            const centerX = elX + elWidth / 2;
+            const centerY = elY + elHeight / 2;
+            ctx.translate(centerX, centerY);
+            ctx.rotate(element.rotation * Math.PI / 180);
+            ctx.translate(-centerX, -centerY);
+        }
+
+        // Apply individual filters
+        if (element.filters) {
+            const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = element.filters;
+            ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
+        }
+
+        ctx.drawImage(elementImg, elX, elY, elWidth, elHeight);
+
+        ctx.restore(); // Restore context to remove filters and transformations for the next element
+
+      } catch (error) {
+        console.error(`[composeImage] Failed to load or draw brand element ${element.id}:`, error);
+        // Continue to the next element
+      }
     }
 
     const finalUrl = canvas.toDataURL('image/png');

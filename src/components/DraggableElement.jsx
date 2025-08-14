@@ -1,11 +1,11 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Box } from '@mui/material';
 import RichTextEditor from './RichTextEditor';
-import styles from './HtmlTextBox.module.css';
+import styles from './DraggableElement.module.css';
 import TextEditorDialog from './TextEditorDialog';
 
-const HtmlTextBox = ({
-  field,
+const DraggableElement = ({
+  element, // Combined object for field/element data
   position,
   style,
   content,
@@ -55,13 +55,29 @@ const HtmlTextBox = ({
 
   // Função para renderizar conteúdo HTML ou texto simples
   const renderContent = () => {
+    if (element.type === 'image') {
+      return (
+        <img
+          src={element.url}
+          alt={element.name || 'Brand Element'}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain', // or 'cover', depending on desired behavior
+            pointerEvents: 'none',
+          }}
+        />
+      );
+    }
+
+    // Default to text rendering
     if (!enableHtmlRendering) {
       return content;
     }
 
     const sanitizedContent = sanitizeHtml(content);
     return (
-      <div 
+      <div
         ref={htmlContentRef}
         dangerouslySetInnerHTML={{ __html: sanitizedContent }}
         style={{
@@ -69,8 +85,8 @@ const HtmlTextBox = ({
           height: '100%',
           overflow: 'hidden',
           wordWrap: 'break-word',
-        pointerEvents: 'none',
-        textAlign: style.textAlign || 'left',
+          pointerEvents: 'none',
+          textAlign: style.textAlign || 'left',
         }}
       />
     );
@@ -264,7 +280,7 @@ const HtmlTextBox = ({
 
     if (setIsMoving) setIsMoving(true);
 
-    onSelect(field);
+    onSelect(element.id);
     setDragStart({ x: e.clientX, y: e.clientY });
 
     if (type === 'drag') {
@@ -294,7 +310,7 @@ const HtmlTextBox = ({
     document.body.style.overflow = 'hidden';
     document.body.style.touchAction = 'none';
 
-    onSelect(field);
+    onSelect(element.id);
     const touch = e.touches[0];
     setDragStart({ x: touch.clientX, y: touch.clientY });
 
@@ -331,7 +347,7 @@ const HtmlTextBox = ({
 
       newRotation = (newRotation % 360 + 360) % 360;
 
-      onPositionChange(field, { ...position, rotation: newRotation });
+      onPositionChange(element.id, { ...position, rotation: newRotation });
       return;
     }
 
@@ -360,7 +376,7 @@ const HtmlTextBox = ({
       const finalNewDragX = newCenterX - position.width / 2;
       const finalNewDragY = newCenterY - position.height / 2;
 
-      onPositionChange(field, { ...position, x: finalNewDragX, y: finalNewDragY });
+      onPositionChange(element.id, { ...position, x: finalNewDragX, y: finalNewDragY });
 
     } else if (isResizing && resizeHandle) {
       const rotationDegrees = position.rotation || 0;
@@ -373,10 +389,10 @@ const HtmlTextBox = ({
         rotationDegrees
       );
       
-      onPositionChange(field, { ...position, x: newX, y: newY, rotation: rotationDegrees });
-      onSizeChange(field, { width: newWidth, height: newHeight });
+      onPositionChange(element.id, { ...position, x: newX, y: newY, rotation: rotationDegrees });
+      onSizeChange(element.id, { width: newWidth, height: newHeight });
     }
-  }, [isDragging, isResizing, isRotating, dragStart, initialRotation, field, position, containerSize, initialPosition, initialSize, resizeHandle, onPositionChange, onSizeChange, getRotatedBoundingBox]);
+  }, [isDragging, isResizing, isRotating, dragStart, initialRotation, element, position, containerSize, initialPosition, initialSize, resizeHandle, onPositionChange, onSizeChange, getRotatedBoundingBox]);
 
   const handleTouchMove = useCallback((e) => {
     if (!isDragging && !isResizing && !isRotating) return;
@@ -393,7 +409,7 @@ const HtmlTextBox = ({
       const startAngle = Math.atan2(dragStart.y - dragStart.centerY, dragStart.x - dragStart.centerX) * (180 / Math.PI);
       let newRotation = initialRotation + (angle - startAngle);
       newRotation = (newRotation % 360 + 360) % 360;
-      onPositionChange(field, { ...position, rotation: newRotation });
+      onPositionChange(element.id, { ...position, rotation: newRotation });
       return;
     }
 
@@ -422,7 +438,7 @@ const HtmlTextBox = ({
       const finalNewDragX = newCenterX - position.width / 2;
       const finalNewDragY = newCenterY - position.height / 2;
 
-      onPositionChange(field, { ...position, x: finalNewDragX, y: finalNewDragY });
+      onPositionChange(element.id, { ...position, x: finalNewDragX, y: finalNewDragY });
 
     } else if (isResizing && resizeHandle) {
       const rotationDegrees = position.rotation || 0;
@@ -435,10 +451,10 @@ const HtmlTextBox = ({
         rotationDegrees
       );
 
-      onPositionChange(field, { ...position, x: newX, y: newY, rotation: rotationDegrees });
-      onSizeChange(field, { width: newWidth, height: newHeight });
+      onPositionChange(element.id, { ...position, x: newX, y: newY, rotation: rotationDegrees });
+      onSizeChange(element.id, { width: newWidth, height: newHeight });
     }
-  }, [isDragging, isResizing, isRotating, dragStart, initialRotation, field, position, containerSize, initialPosition, initialSize, resizeHandle, onPositionChange, onSizeChange, getRotatedBoundingBox]);
+  }, [isDragging, isResizing, isRotating, dragStart, initialRotation, element, position, containerSize, initialPosition, initialSize, resizeHandle, onPositionChange, onSizeChange, getRotatedBoundingBox]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false); setIsResizing(false); setIsRotating(false);
@@ -461,7 +477,7 @@ const HtmlTextBox = ({
   const handleEditorSave = (newContent) => {
     setEditedContent(newContent);
     if (onContentChange) {
-      onContentChange(field, newContent);
+      onContentChange(element.id, newContent);
     }
     setIsEditorModalOpen(false);
   };
@@ -561,7 +577,7 @@ const HtmlTextBox = ({
         }}
         onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
         onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
-        onClick={() => onSelect(field)}
+        onClick={() => onSelect(element.id)}
         onDoubleClick={handleDoubleClick}
       >
         <Box
@@ -623,8 +639,8 @@ const HtmlTextBox = ({
 
       {isEditorModalOpen && (
         <TextEditorDialog
-          open={isEditorModalOpen}
-          title={`Editar ${field}`}
+          open={isEditorModalopen}
+          title={`Editar ${element.id}`}
           content={editedContent}
           onSave={handleEditorSave}
           onClose={handleEditorClose}
@@ -634,5 +650,5 @@ const HtmlTextBox = ({
   );
 };
 
-export default HtmlTextBox;
+export default DraggableElement;
 

@@ -18,6 +18,8 @@ const FormattingDrawer = ({
   setIncludeLogo,
   includeEmpresa,
   setIncludeEmpresa,
+  brandElements,
+  setBrandElements
 }) => {
   return (
     <Drawer anchor="right" open={open} onClose={onClose} sx={{ zIndex: 1400 }}>
@@ -41,6 +43,8 @@ const FormattingDrawer = ({
           setIncludeLogo={setIncludeLogo}
           includeEmpresa={includeEmpresa}
           setIncludeEmpresa={setIncludeEmpresa}
+          brandElements={brandElements}
+          setBrandElements={setBrandElements}
         />
       </Box>
     </Drawer>

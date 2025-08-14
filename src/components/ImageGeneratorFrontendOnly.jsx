@@ -53,7 +53,8 @@ const ImageGeneratorFrontendOnly = ({
   originalImageSize,
   imageFilters,
   includeLogo,
-  includeEmpresa
+  includeEmpresa,
+  brandElements
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -248,7 +249,8 @@ const ImageGeneratorFrontendOnly = ({
         '/empresa.png',
         imageFilters,
         includeLogo,
-        includeEmpresa
+        includeEmpresa,
+        brandElements
       );
       console.log('[generateImages] composeImage finished for the main generation.');
 
@@ -575,7 +577,8 @@ const ImageGeneratorFrontendOnly = ({
         '/empresa.png',
         imageFilters,
         includeLogo,
-        includeEmpresa
+        includeEmpresa,
+        brandElements
       );
       console.log(`[regenerateSingleImage] composeImage finished for index ${index}.`);
 
