@@ -16,8 +16,11 @@ import {
   AccordionDetails,
   Chip,
   Alert,
-  Tooltip,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
     Campaign as CampaignIcon,
@@ -105,6 +108,8 @@ const Campaign = ({
     setCampaignContent,
     onEditFollowup,
 }) => {
+    const [isHintModalOpen, setHintModalOpen] = React.useState(false);
+
     return (
         <Card>
             <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 4 } }}>
@@ -116,7 +121,7 @@ const Campaign = ({
                     <Grid item xs={12}>
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                             <TextField
-                                label="Qual problema ou necessidade essa campanha resolve?"
+                                label="Problema ou Necessidade"
                                 multiline
                                 rows={4}
                                 value={problema}
@@ -126,11 +131,9 @@ const Campaign = ({
                                 placeholder="Descreva o problema que sua campanha busca resolver."
                                 disabled={campaignContent !== null}
                             />
-                            <Tooltip title={problemaHint} arrow>
-                                <IconButton color="primary" sx={{ mt: 1 }}>
-                                    <InfoIcon />
-                                </IconButton>
-                            </Tooltip>
+                            <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setHintModalOpen(true)}>
+                                <InfoIcon />
+                            </IconButton>
                         </Box>
                     </Grid>
 
@@ -436,6 +439,16 @@ const Campaign = ({
                         )}
                     </Box>
                 )}
+
+                <Dialog open={isHintModalOpen} onClose={() => setHintModalOpen(false)} maxWidth="md">
+                    <DialogTitle>Como Descrever o Problema ou Necessidade</DialogTitle>
+                    <DialogContent>
+                        {problemaHint}
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setHintModalOpen(false)}>Fechar</Button>
+                    </DialogActions>
+                </Dialog>
             </CardContent>
         </Card>
     );
