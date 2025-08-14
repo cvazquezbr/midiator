@@ -1,22 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, Button, CircularProgress, Alert, Grid, Card, CardActionArea, CardMedia } from '@mui/material';
-import { CloudOff, Refresh } from '@mui/icons-material';
+import {
+  Box, Typography, Button, CircularProgress, Alert, Grid, Card,
+  CardActionArea, CardMedia, Dialog, DialogTitle, DialogContent, IconButton
+} from '@mui/material';
+import { Refresh, Google, Close as CloseIcon } from '@mui/icons-material';
 import googleDriveAPI from '../utils/googleDriveAPI';
+import GoogleAuthSetup from './GoogleAuthSetup'; // Import the auth setup component
 
 const BrandElementManager = ({ onElementSelect }) => {
   const [images, setImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isConnected, setIsConnected] = useState(googleDriveAPI.isUserSignedIn());
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const fetchBrandElements = useCallback(async () => {
+    if (!googleDriveAPI.isUserSignedIn()) {
+      setIsConnected(false);
+      setError("Por favor, conecte-se ao Google Drive para ver os elementos da marca.");
+      return;
+    }
+    setIsConnected(true);
     setIsLoading(true);
     setError(null);
     try {
-      if (!googleDriveAPI.isUserSignedIn()) {
-        // In a real app, you might want to trigger the auth flow here
-        throw new Error('Você não está conectado ao Google Drive.');
-      }
-
       // 1. Find the 'midiator' folder
       const midiatorFolder = await googleDriveAPI.findFolderByName('midiator');
       if (!midiatorFolder) {
@@ -55,13 +62,21 @@ const BrandElementManager = ({ onElementSelect }) => {
   }, []);
 
   useEffect(() => {
-    // Automatically fetch elements when the component mounts if the user is signed in.
+    // Check connection status on mount
+    setIsConnected(googleDriveAPI.isUserSignedIn());
     if (googleDriveAPI.isUserSignedIn()) {
       fetchBrandElements();
     } else {
-        setError("Por favor, conecte-se ao Google Drive para ver os elementos da marca.");
+      setError("Conecte-se ao Google Drive para carregar elementos da marca.");
     }
   }, [fetchBrandElements]);
+
+  const handleAuthSuccess = () => {
+    setShowAuthModal(false);
+    setIsConnected(true);
+    setError(null);
+    fetchBrandElements();
+  };
 
   const handleSelect = (image) => {
     if (onElementSelect) {
@@ -91,20 +106,33 @@ const BrandElementManager = ({ onElementSelect }) => {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Typography variant="h6">Elementos da Marca</Typography>
-        <Button onClick={fetchBrandElements} disabled={isLoading} startIcon={<Refresh />}>
-          Atualizar
-        </Button>
+        {isConnected && (
+          <Button onClick={fetchBrandElements} disabled={isLoading} startIcon={<Refresh />}>
+            Atualizar
+          </Button>
+        )}
       </Box>
 
       {isLoading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}><CircularProgress /></Box>}
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && <Alert severity={isConnected ? "error" : "info"}>{error}</Alert>}
 
-      {!isLoading && !error && images.length === 0 && (
+      {!isConnected && !isLoading && (
+        <Button
+          variant="contained"
+          startIcon={<Google />}
+          onClick={() => setShowAuthModal(true)}
+          fullWidth
+        >
+          Conectar ao Google Drive
+        </Button>
+      )}
+
+      {isConnected && !isLoading && !error && images.length === 0 && (
         <Alert severity="info">Nenhuma imagem encontrada na pasta `midiator/elementos`.</Alert>
       )}
 
-      {!isLoading && images.length > 0 && (
+      {isConnected && !isLoading && images.length > 0 && (
         <Grid container spacing={2}>
           {images.map((image) => (
             <Grid item xs={6} sm={4} key={image.id}>
@@ -126,6 +154,18 @@ const BrandElementManager = ({ onElementSelect }) => {
           ))}
         </Grid>
       )}
+
+      <Dialog open={showAuthModal} onClose={() => setShowAuthModal(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Configuração Google Drive
+          <IconButton onClick={() => setShowAuthModal(false)} sx={{ position: 'absolute', right: 8, top: 8 }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <GoogleAuthSetup onAuthSuccess={handleAuthSuccess} onAuthError={(err) => setError(err.message)} />
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };
