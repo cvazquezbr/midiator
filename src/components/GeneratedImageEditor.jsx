@@ -79,35 +79,102 @@ const GeneratedImageEditor = ({
     }
   }, []); // setEditedRecord is stable
 
-  useEffect(() => {
-    // Diagnostic logs from previous session removed.
-    // The console.log for imageData was already commented and can remain as such if desired for future debugging, or removed.
-    // For this cleanup, we ensure active diagnostic logs are removed.
+  const handleZIndexChange = (elementId, action) => {
+    if (!elementId) return;
 
+    let allElements = [
+      ...Object.entries(editedPositions).map(([id, pos]) => ({ id, zIndex: pos.zIndex, isBrand: false })),
+      ...editedBrandElements.map(el => ({ id: el.id, zIndex: el.zIndex, isBrand: true })),
+    ];
+
+    allElements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+    const currentIndex = allElements.findIndex(el => el.id === elementId);
+    if (currentIndex === -1) return;
+
+    const [currentElement] = allElements.splice(currentIndex, 1);
+
+    switch (action) {
+      case 'front':
+        allElements.push(currentElement);
+        break;
+      case 'back':
+        allElements.unshift(currentElement);
+        break;
+      case 'forward':
+        allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement);
+        break;
+      case 'backward':
+        allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement);
+        break;
+      default:
+        allElements.splice(currentIndex, 0, currentElement);
+        return;
+    }
+
+    const newPositions = { ...editedPositions };
+    const newBrandElements = [...editedBrandElements];
+
+    allElements.forEach((el, index) => {
+      el.zIndex = index;
+      if (el.isBrand) {
+        const brandEl = newBrandElements.find(b => b.id === el.id);
+        if (brandEl) brandEl.zIndex = index;
+      } else {
+        if (newPositions[el.id]) {
+          newPositions[el.id].zIndex = index;
+        }
+      }
+    });
+
+    setEditedPositions(newPositions);
+    setEditedBrandElements(newBrandElements);
+  };
+
+  useEffect(() => {
     if (imageData && initialFieldPositions && initialFieldStyles) {
       setSelectedFieldInternal(null);
-      setEditedPositions(JSON.parse(JSON.stringify(initialFieldPositions)));
-      setEditedRecord(JSON.parse(JSON.stringify(imageData.record))); // Initialize editedRecord
 
-      // Initialize editedStyles
+      const positions = JSON.parse(JSON.stringify(initialFieldPositions));
+      const brands = JSON.parse(JSON.stringify(brandElements || []));
+
+      // Use a set to track assigned z-indices and find the max
+      const zIndices = new Set();
+      Object.values(positions).forEach(p => { if (p.zIndex !== undefined) zIndices.add(p.zIndex); });
+      brands.forEach(b => { if (b.zIndex !== undefined) zIndices.add(b.zIndex); });
+      let zIndexCounter = zIndices.size > 0 ? Math.max(...zIndices) + 1 : 0;
+
+      // Assign zIndex to text fields if they don't have one
+      globalCsvHeaders.forEach(header => {
+        if (!positions[header]) positions[header] = {};
+        if (positions[header].zIndex === undefined) {
+          positions[header].zIndex = zIndexCounter++;
+        }
+      });
+
+      // Assign zIndex to brand elements if they don't have one
+      brands.forEach(el => {
+        if (el.zIndex === undefined) {
+          el.zIndex = zIndexCounter++;
+        }
+      });
+
+      setEditedPositions(positions);
+      setEditedBrandElements(brands);
+      setEditedRecord(JSON.parse(JSON.stringify(imageData.record)));
+
       const newEditedStyles = {};
-      // Iterate over all possible headers to ensure FormattingPanel has complete style info
-      // and that FieldPositioner receives a style object for every field it might render.
       globalCsvHeaders.forEach(field => {
         newEditedStyles[field] = {
-          ...COMPLETE_DEFAULT_STYLE, // Start with all defaults defined in GeneratedImageEditor
-          ...(initialFieldStyles && initialFieldStyles[field] ? initialFieldStyles[field] : {}), // Override with specific styles for this field from prop
+          ...COMPLETE_DEFAULT_STYLE,
+          ...(initialFieldStyles?.[field] || {}),
         };
       });
       setEditedStyles(newEditedStyles);
-      setStylesAreInitialized(true); // Mark styles as initialized and ready for rendering children
+      setStylesAreInitialized(true);
 
-      // Reset filter and toggle states when the editor is opened for a new image
-      // TODO: In the future, this could be initialized from imageData if custom filters are saved per image
       setEditedImageFilters(imageFilters);
-      setEditedBrandElements(JSON.parse(JSON.stringify(brandElements || [])));
     } else {
-      // If essential data is missing, ensure we are not in an initialized state.
       setStylesAreInitialized(false);
     }
   }, [open, imageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, imageFilters, brandElements]);
@@ -196,6 +263,7 @@ const GeneratedImageEditor = ({
                   setImageFilters={setEditedImageFilters}
                   brandElements={editedBrandElements}
                   setBrandElements={setEditedBrandElements}
+                  onZIndexChange={handleZIndexChange}
                 />
               </Grid>
             )}
@@ -228,6 +296,7 @@ const GeneratedImageEditor = ({
             fieldPositions={editedPositions}
             setFieldPositions={setEditedPositions}
             csvHeaders={editorCsvHeaders}
+            onZIndexChange={handleZIndexChange}
           />
         </>
       )}
