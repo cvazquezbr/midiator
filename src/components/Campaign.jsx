@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -190,6 +190,14 @@ const Campaign = ({
     const [commonSolutions, setCommonSolutions] = React.useState([]);
     const [isLoadingSolutions, setIsLoadingSolutions] = React.useState(false);
     const [solutionsError, setSolutionsError] = React.useState(null);
+
+    useEffect(() => {
+        // Quando o conteúdo da campanha é gerado com sucesso e o processo de geração termina,
+        // muda para a segunda aba.
+        if (campaignContent && !isGeneratingCampaign) {
+            setActiveTab(1);
+        }
+    }, [campaignContent, isGeneratingCampaign]);
 
     const handleTabChange = (event, newValue) => {
       setActiveTab(newValue);
