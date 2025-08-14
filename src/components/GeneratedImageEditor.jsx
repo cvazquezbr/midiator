@@ -79,58 +79,6 @@ const GeneratedImageEditor = ({
     }
   }, []); // setEditedRecord is stable
 
-  const handleZIndexChange = (elementId, action) => {
-    if (!elementId) return;
-
-    let allElements = [
-      ...Object.entries(editedPositions).map(([id, pos]) => ({ id, zIndex: pos.zIndex, isBrand: false })),
-      ...editedBrandElements.map(el => ({ id: el.id, zIndex: el.zIndex, isBrand: true })),
-    ];
-
-    allElements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-
-    const currentIndex = allElements.findIndex(el => el.id === elementId);
-    if (currentIndex === -1) return;
-
-    const [currentElement] = allElements.splice(currentIndex, 1);
-
-    switch (action) {
-      case 'front':
-        allElements.push(currentElement);
-        break;
-      case 'back':
-        allElements.unshift(currentElement);
-        break;
-      case 'forward':
-        allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement);
-        break;
-      case 'backward':
-        allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement);
-        break;
-      default:
-        allElements.splice(currentIndex, 0, currentElement);
-        return;
-    }
-
-    const newPositions = { ...editedPositions };
-    const newBrandElements = [...editedBrandElements];
-
-    allElements.forEach((el, index) => {
-      el.zIndex = index;
-      if (el.isBrand) {
-        const brandEl = newBrandElements.find(b => b.id === el.id);
-        if (brandEl) brandEl.zIndex = index;
-      } else {
-        if (newPositions[el.id]) {
-          newPositions[el.id].zIndex = index;
-        }
-      }
-    });
-
-    setEditedPositions(newPositions);
-    setEditedBrandElements(newBrandElements);
-  };
-
   useEffect(() => {
     if (imageData && initialFieldPositions && initialFieldStyles) {
       setSelectedFieldInternal(null);
@@ -263,7 +211,6 @@ const GeneratedImageEditor = ({
                   setImageFilters={setEditedImageFilters}
                   brandElements={editedBrandElements}
                   setBrandElements={setEditedBrandElements}
-                  onZIndexChange={handleZIndexChange}
                 />
               </Grid>
             )}
@@ -296,7 +243,6 @@ const GeneratedImageEditor = ({
             fieldPositions={editedPositions}
             setFieldPositions={setEditedPositions}
             csvHeaders={editorCsvHeaders}
-            onZIndexChange={handleZIndexChange}
           />
         </>
       )}
