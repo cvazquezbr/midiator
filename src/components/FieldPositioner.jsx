@@ -129,7 +129,7 @@ const FieldPositioner = ({
     };
 
     generateComposedImage();
-  }, [backgroundImage, imageFilters, includeLogo, includeEmpresa]);
+  }, [backgroundImage, imageFilters]);
 
   // Campos que devem usar renderização HTML
   const htmlFields = ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'];
