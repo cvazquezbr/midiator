@@ -22,6 +22,7 @@ import {
   Edit
 } from '@mui/icons-material';
 import DraggableElement from './DraggableElement';
+import FormattingPanel from './FormattingPanel';
 import FormattingDrawer from './FormattingDrawer'; // Import the new drawer
 
 const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
