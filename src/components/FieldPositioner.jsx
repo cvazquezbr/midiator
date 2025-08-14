@@ -625,7 +625,7 @@ const FieldPositioner = ({
               {renderableElements.map(element => (
                 <DraggableElement
                   key={element.id}
-                  element={{ id: element.id, type: element.type }}
+                  element={element.type === 'image' ? element.position : { id: element.id, type: 'text' }}
                   position={element.position}
                   style={element.style}
                   content={element.content}
