@@ -62,7 +62,7 @@ class GoogleDriveAPI {
       // 2. Configura o Token Client para autenticação
       this.tokenClient = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
-        scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets',
+        scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets',
         callback: (response) => {
           if (response.error) {
             const err = new Error(`Erro de autenticação: ${response.error}`);
