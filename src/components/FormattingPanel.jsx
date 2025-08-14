@@ -51,10 +51,6 @@ const FormattingPanel = ({
   csvHeaders,
   imageFilters,
   setImageFilters,
-  includeLogo,
-  setIncludeLogo,
-  includeEmpresa,
-  setIncludeEmpresa,
   brandElements,
   setBrandElements
 }) => {
@@ -483,15 +479,6 @@ const FormattingPanel = ({
           </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ p: 1, display: 'flex', flexDirection: 'column' }}>
-              <FormControlLabel
-                control={<Switch checked={includeLogo} onChange={(e) => setIncludeLogo(e.target.checked)} />}
-                label="Incluir Logo"
-              />
-              <FormControlLabel
-                control={<Switch checked={includeEmpresa} onChange={(e) => setIncludeEmpresa(e.target.checked)} />}
-                label="Incluir Imagem da Empresa"
-              />
-              <Divider sx={{ my: 2 }} />
               <BrandElementManager
                 onElementSelect={(newElement) => {
                   setBrandElements(prev => [...prev, newElement]);

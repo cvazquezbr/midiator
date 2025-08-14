@@ -93,8 +93,6 @@ const FieldPositioner = ({
   originalImageSize,
   darkMode,
   imageFilters,
-  includeLogo,
-  includeEmpresa,
   brandElements,
   setBrandElements,
 }) => {
@@ -117,11 +115,7 @@ const FieldPositioner = ({
       try {
         const composedUrl = await composeImage(
           backgroundImage,
-          '/logo.png',
-          '/empresa.png',
-          imageFilters,
-          includeLogo,
-          includeEmpresa
+          imageFilters
           // Do not pass brandElements here to prevent ghosting.
           // They are rendered as interactive DraggableElement components on top.
         );
