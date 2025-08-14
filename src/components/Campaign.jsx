@@ -532,45 +532,53 @@ const Campaign = ({
                     </Box>
                 )}
 
-                <Dialog open={isHintModalOpen} onClose={() => setHintModalOpen(false)} maxWidth="md" fullWidth>
+                <Dialog open={isHintModalOpen} onClose={() => setHintModalOpen(false)} maxWidth="lg" fullWidth>
                     <DialogTitle>Como Descrever o Problema ou Necessidade</DialogTitle>
                     <DialogContent>
-                        {problemaHint}
-                        <Box sx={{ my: 2, borderTop: 1, borderColor: 'divider' }} />
-
-                        {isLoadingProblems && (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-                                <CircularProgress />
-                            </Box>
-                        )}
-                        {problemsError && (
-                            <Alert severity="error" sx={{ mt: 2 }}>
-                                {problemsError}
-                            </Alert>
-                        )}
-                        {commonProblems.length > 0 && (
-                            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                {commonProblems.map((problem, index) => (
-                                    <Alert
-                                        key={index}
-                                        severity="info"
-                                        onClick={() => {
-                                            setProblema(problem.replace(/\*\*(.*?)\*\*\\n/g, '$1\n')); // Remove markdown bold for the text field
-                                            setHintModalOpen(false);
-                                        }}
-                                        sx={{
-                                            cursor: 'pointer',
-                                            '&:hover': {
-                                                bgcolor: 'action.hover'
-                                            },
-                                            whiteSpace: 'pre-wrap'
-                                        }}
-                                    >
-                                        {problem.replace(/\*\*/g, '')}
+                        <Grid container spacing={4} sx={{ mt: 1 }}>
+                            <Grid item xs={12} md={6}>
+                                {problemaHint}
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <Typography variant="h6" gutterBottom>Sugestões com IA</Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{mb: 2}}>
+                                    Use as sugestões abaixo como ponto de partida ou para refinar sua ideia. Clique em uma para usá-la.
+                                </Typography>
+                                {isLoadingProblems && (
+                                    <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                                        <CircularProgress />
+                                    </Box>
+                                )}
+                                {problemsError && (
+                                    <Alert severity="error" sx={{ mt: 2 }}>
+                                        {problemsError}
                                     </Alert>
-                                ))}
-                            </Box>
-                        )}
+                                )}
+                                {commonProblems.length > 0 && (
+                                    <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 400, overflowY: 'auto', pr: 1 }}>
+                                        {commonProblems.map((problem, index) => (
+                                            <Alert
+                                                key={index}
+                                                severity="info"
+                                                onClick={() => {
+                                                    setProblema(problem.replace(/\*\*(.*?)\*\*\\n/g, '$1\n')); // Remove markdown bold for the text field
+                                                    setHintModalOpen(false);
+                                                }}
+                                                sx={{
+                                                    cursor: 'pointer',
+                                                    '&:hover': {
+                                                        bgcolor: 'action.hover'
+                                                    },
+                                                    whiteSpace: 'pre-wrap'
+                                                }}
+                                            >
+                                                {problem.replace(/\*\*/g, '')}
+                                            </Alert>
+                                        ))}
+                                    </Box>
+                                )}
+                            </Grid>
+                        </Grid>
                     </DialogContent>
                     <DialogActions>
                         <Button
