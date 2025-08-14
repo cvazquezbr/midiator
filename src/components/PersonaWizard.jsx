@@ -56,8 +56,7 @@ const DORES_DESAFIOS = {
         {
           "nome": "Falta de Direção Clara",
           "descricao": "A persona não tem um plano de longo prazo definido. Ela age por impulso, o que resulta em esforços dispersos e resultados inconsistentes."
-        },
-        { "nome": "Outro(s)", "descricao": "Selecione para adicionar uma dor ou desafio estratégico que não está na lista." }
+        }
       ]
     },
     "doresOperacionais": {
@@ -74,8 +73,7 @@ const DORES_DESAFIOS = {
         {
           "nome": "Orçamento Limitado",
           "descricao": "A necessidade de maximizar os resultados com poucos recursos financeiros, exigindo um alto retorno sobre o investimento (ROI) para justificar os gastos."
-        },
-        { "nome": "Outro(s)", "descricao": "Selecione para adicionar uma dor ou desafio operacional que não está na lista." }
+        }
       ]
     },
     "doresPessoas": {
@@ -92,8 +90,7 @@ const DORES_DESAFIOS = {
         {
           "nome": "Falta de Alinhamento e Engajamento",
           "descricao": "A equipe não está alinhada aos valores e à visão da empresa, o que pode levar a um desempenho abaixo do esperado."
-        },
-        { "nome": "Outro(s)", "descricao": "Selecione para adicionar uma dor ou desafio de pessoas e cultura que não está na lista." }
+        }
       ]
     },
     "doresRegulatorios": {
@@ -110,14 +107,13 @@ const DORES_DESAFIOS = {
         {
           "nome": "Definição de KPIs Inadequados",
           "descricao": "Os indicadores de desempenho (KPIs) usados não refletem os objetivos estratégicos da persona. Os números não contam a história completa, o que resulta em decisões equivocadas."
-        },
-        { "nome": "Outro(s)", "descricao": "Selecione para adicionar uma dor ou desafio regulatório e de métricas que não está na lista." }
+        }
       ]
     }
   };
 const GATILHOS_BARREIRAS = {
-    'gatilhosCompra': { label: 'Gatilhos de Compra', items: ['Problema técnico urgente', 'Pressão do board', 'Necessidade de redução de custos', 'Vantagem competitiva', 'Outro(s)']},
-    'barreirasAdocao': { label: 'Barreiras de Adoção', items: ['Orçamento limitado', 'Resistência à mudança da equipe', 'Preocupação com segurança e compliance', 'Dificuldade de integração', 'Outro(s)']},
+    'gatilhosCompra': { label: 'Gatilhos de Compra', items: ['Problema técnico urgente', 'Pressão do board', 'Necessidade de redução de custos', 'Vantagem competitiva']},
+    'barreirasAdocao': { label: 'Barreiras de Adoção', items: ['Orçamento limitado', 'Resistência à mudança da equipe', 'Preocupação com segurança e compliance', 'Dificuldade de integração']},
 };
 
 
@@ -134,6 +130,8 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
   const isMobile = useIsMobile();
   const [activeStep, setActiveStep] = useState(0);
   const [personaData, setPersonaData] = useState(persona || {});
+  const [otherItemInputs, setOtherItemInputs] = useState({});
+  const [editingChip, setEditingChip] = useState(null); // { key, value, newValue }
 
   useEffect(() => {
     if (open) {
@@ -215,6 +213,64 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
 
   const handleRichTextChange = (name, value) => {
       setPersonaData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleOtherInputChange = (key, value) => {
+    setOtherItemInputs(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleAddNewItem = (key) => {
+    const newItem = otherItemInputs[key]?.trim();
+    if (!newItem) return;
+
+    const existingItems = (personaData[key] || []).map(item => item.toLowerCase());
+    if (existingItems.includes(newItem.toLowerCase())) {
+        // Consider adding a simple alert or console warning if toast is not available
+        console.warn('Attempted to add a duplicate item:', newItem);
+        return;
+    }
+
+    setPersonaData(prev => ({
+      ...prev,
+      [key]: [...(prev[key] || []), newItem]
+    }));
+    handleOtherInputChange(key, ''); // Clear input
+  };
+
+  const handleEditChip = (key, value) => {
+    setEditingChip({ key, value, newValue: value });
+  };
+
+  const handleUpdateChipValue = () => {
+    if (!editingChip) return;
+    const { key, value, newValue } = editingChip;
+    const trimmedNewValue = newValue.trim();
+
+    if (!trimmedNewValue) {
+        console.error("Chip value cannot be empty.");
+        setEditingChip(null);
+        return;
+    }
+
+    if (value.toLowerCase() === trimmedNewValue.toLowerCase()) {
+        setEditingChip(null); // No change
+        return;
+    }
+
+    const existingItems = (personaData[key] || []).map(item => item.toLowerCase());
+    if (existingItems.includes(trimmedNewValue.toLowerCase())) {
+        console.warn('Attempted to update to a duplicate item:', trimmedNewValue);
+        setEditingChip(null);
+        return;
+    }
+
+    setPersonaData(prev => {
+      const currentValues = prev[key] || [];
+      const newValues = currentValues.map(item => (item === value ? trimmedNewValue : item));
+      return { ...prev, [key]: newValues };
+    });
+
+    setEditingChip(null);
   };
 
   const InfoTooltip = ({ title, url }) => (
@@ -401,64 +457,131 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
         return (
           <Box>
             <Typography variant="h6" gutterBottom>Dores e Desafios</Typography>
-            {Object.entries(DORES_DESAFIOS).map(([key, { label, items }]) => (
-              <Accordion key={key} defaultExpanded>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
-                <AccordionDetails>
-                  <FormGroup>
-                    {items.map((item) => (
-                      <Box key={item.nome} sx={{ display: 'flex', alignItems: 'center' }}>
-                        <FormControlLabel
-                          control={<Checkbox checked={(personaData[key] || []).includes(item.nome)} onChange={handleCheckboxChange(key, item.nome)} />}
-                          label={item.nome}
-                        />
-                        <InfoTooltip title={item.descricao} />
-                      </Box>
-                    ))}
-                  </FormGroup>
-                  {(personaData[key] || []).includes('Outro(s)') && (
-                    <TextField
-                      label={`Especifique Outra Dor (${label})`}
-                      name={`${key}Outro`}
-                      value={personaData[`${key}Outro`] || ''}
-                      onChange={handleChange}
-                      fullWidth
-                      required
-                      variant="outlined"
-                      sx={{ mt: 2 }}
-                    />
-                  )}
-                </AccordionDetails>
-              </Accordion>
-            ))}
+            {Object.entries(DORES_DESAFIOS).map(([key, { label, items }]) => {
+              const customItems = (personaData?.[key] || []).filter(
+                (pItem) => !items.some((i) => i.nome === pItem)
+              );
+              return (
+                <Accordion key={key} defaultExpanded>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
+                  <AccordionDetails>
+                    <FormGroup>
+                      {items.map((item) => (
+                        <Box key={item.nome} sx={{ display: 'flex', alignItems: 'center' }}>
+                          <FormControlLabel
+                            control={<Checkbox checked={(personaData[key] || []).includes(item.nome)} onChange={handleCheckboxChange(key, item.nome)} />}
+                            label={item.nome}
+                          />
+                          <InfoTooltip title={item.descricao} />
+                        </Box>
+                      ))}
+                    </FormGroup>
+
+                    {/* Custom items as chips */}
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+                      {customItems.map((item) => (
+                        editingChip && editingChip.key === key && editingChip.value === item ? (
+                          <TextField
+                            key={item}
+                            value={editingChip.newValue}
+                            onChange={(e) => setEditingChip({ ...editingChip, newValue: e.target.value })}
+                            onBlur={handleUpdateChipValue}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleUpdateChipValue(); } if (e.key === 'Escape') { setEditingChip(null); } }}
+                            autoFocus
+                            size="small"
+                            sx={{ width: 'auto', minWidth: '100px' }}
+                          />
+                        ) : (
+                          <Chip
+                            key={item}
+                            label={item}
+                            onClick={() => handleEditChip(key, item)}
+                            onDelete={() => handleChipDelete(key, item)}
+                          />
+                        )
+                      ))}
+                    </Box>
+
+                    {/* Add new item input */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, gap: 1 }}>
+                      <TextField
+                        label={`Adicionar Outra Dor (${label})`}
+                        value={otherItemInputs[key] || ''}
+                        onChange={(e) => handleOtherInputChange(key, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddNewItem(key); } }}
+                        fullWidth
+                        variant="outlined"
+                        size="small"
+                      />
+                      <Button onClick={() => handleAddNewItem(key)} variant="outlined">
+                        Adicionar
+                      </Button>
+                    </Box>
+
+                  </AccordionDetails>
+                </Accordion>
+              );
+            })}
           </Box>
         );
       case 4:
         return (
           <Box>
             <Typography variant="h6" gutterBottom>Gatilhos de Compra e Barreiras de Adoção</Typography>
-            {Object.entries(GATILHOS_BARREIRAS).map(([key, { label, items }]) => (
+            {Object.entries(GATILHOS_BARREIRAS).map(([key, { label, items }]) => {
+              const customItems = (personaData?.[key] || []).filter(pItem => !items.includes(pItem));
+              return (
                 <Accordion key={key} defaultExpanded>
-                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
-                    <AccordionDetails>
-                        <FormGroup>
-                            {items.map((item) => (<FormControlLabel key={item} control={<Checkbox checked={(personaData[key] || []).includes(item)} onChange={handleCheckboxChange(key, item)} />} label={item} />))}
-                        </FormGroup>
-                        {(personaData[key] || []).includes('Outro(s)') && (
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
+                  <AccordionDetails>
+                    <FormGroup>
+                      {items.map((item) => (<FormControlLabel key={item} control={<Checkbox checked={(personaData[key] || []).includes(item)} onChange={handleCheckboxChange(key, item)} />} label={item} />))}
+                    </FormGroup>
+
+                    {/* Custom items as chips */}
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+                      {customItems.map((item) => (
+                        editingChip && editingChip.key === key && editingChip.value === item ? (
                           <TextField
-                            label={`Especifique Outro(a) (${label})`}
-                            name={`${key}Outro`}
-                            value={personaData[`${key}Outro`] || ''}
-                            onChange={handleChange}
-                            fullWidth
-                            required
-                            variant="outlined"
-                            sx={{ mt: 2 }}
+                            key={item}
+                            value={editingChip.newValue}
+                            onChange={(e) => setEditingChip({ ...editingChip, newValue: e.target.value })}
+                            onBlur={handleUpdateChipValue}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleUpdateChipValue(); } if (e.key === 'Escape') { setEditingChip(null); } }}
+                            autoFocus
+                            size="small"
+                            sx={{ width: 'auto', minWidth: '100px' }}
                           />
-                        )}
-                    </AccordionDetails>
+                        ) : (
+                          <Chip
+                            key={item}
+                            label={item}
+                            onClick={() => handleEditChip(key, item)}
+                            onDelete={() => handleChipDelete(key, item)}
+                          />
+                        )
+                      ))}
+                    </Box>
+
+                    {/* Add new item input */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, gap: 1 }}>
+                      <TextField
+                        label={`Adicionar Outro(a) (${label})`}
+                        value={otherItemInputs[key] || ''}
+                        onChange={(e) => handleOtherInputChange(key, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddNewItem(key); } }}
+                        fullWidth
+                        variant="outlined"
+                        size="small"
+                      />
+                      <Button onClick={() => handleAddNewItem(key)} variant="outlined">
+                        Adicionar
+                      </Button>
+                    </Box>
+                  </AccordionDetails>
                 </Accordion>
-            ))}
+              );
+            })}
           </Box>
         );
       case 5:
