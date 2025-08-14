@@ -27,86 +27,95 @@ import {
     ExpandMore as ExpandMoreIcon,
     Image as ImageIcon,
     InfoOutlined as InfoIcon,
+    HelpOutline as HelpOutlineIcon,
+    TipsAndUpdatesOutlined as TipsAndUpdatesIcon,
+    FactCheckOutlined as FactCheckIcon,
 } from '@mui/icons-material';
 
 const problemaHint = (
-    <Box sx={{ p: 1, maxWidth: 450, lineHeight: '1.4' }}>
-        <Typography variant="body2" gutterBottom>
+    <Box sx={{ p: 2, maxWidth: 500 }}>
+        <Typography variant="body1" gutterBottom>
             Aqui você descreve a situação real que sua campanha pretende resolver ou a necessidade do seu público que será atendida.
         </Typography>
-        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
-            <strong>Por que isso importa?</strong>
-        </Typography>
-        <Typography variant="caption" display="block">
+
+        <Box sx={{ mt: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <HelpOutlineIcon color="action" />
+            <Typography variant="h6">Por que isso importa?</Typography>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ pl: 4, mt: 1 }}>
             Entender o problema central ajuda a criar campanhas direcionadas, eficazes e alinhadas aos objetivos do negócio.
         </Typography>
-        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
-            <strong>Dicas para preencher:</strong>
-        </Typography>
-        <Typography component="div" variant="caption" sx={{ mb: 1 }}>
-            <strong>1️⃣ Seja específico:</strong><br />
-            <Box component="span" sx={{ color: 'error.main', pl: 1 }}><em>Exemplo ruim:</em> “Precisamos de mais vendas.”</Box><br />
-            <Box component="span" sx={{ color: 'success.main', pl: 1 }}><em>Exemplo bom:</em> “Clientes não conhecem nosso novo plano de pagamento parcelado.”</Box>
-        </Typography>
-        <Typography component="div" variant="caption" sx={{ mb: 1 }}>
-            <strong>2️⃣ Pense no público:</strong><br />
-            Qual dor, desejo ou desafio seus clientes têm?<br />
-            <Box component="span" sx={{ pl: 1 }}><em>Exemplo:</em> “Pequenos empreendedores precisam de ferramentas simples para controlar estoque.”</Box>
-        </Typography>
-        <Typography component="div" variant="caption">
-            <strong>3️⃣ Baseie-se em fatos:</strong><br />
-            Use feedbacks de clientes, pesquisas ou dados de vendas para embasar sua resposta.
-        </Typography>
-        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
-            <strong>Exemplos práticos:</strong>
-        </Typography>
-        <Typography component="div" variant="caption">
-            - “Muitos abandonam o carrinho antes de finalizar a compra.”<br />
-            - “Nossos clientes não sabem que oferecemos frete grátis acima de R$ 100.”<br />
-            - “Empresas locais não encontram fornecedores rápidos para reposição de produtos.”
-        </Typography>
+
+        <Box sx={{ mt: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TipsAndUpdatesIcon color="action" />
+            <Typography variant="h6">Dicas para preencher</Typography>
+        </Box>
+        <Box sx={{ pl: 4, mt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="body2"><strong>1️⃣ Seja específico:</strong></Typography>
+            <Alert severity="error" icon={false}>Exemplo ruim: “Precisamos de mais vendas.”</Alert>
+            <Alert severity="success" icon={false}>Exemplo bom: “Clientes não conhecem nosso novo plano de pagamento parcelado.”</Alert>
+
+            <Typography variant="body2"><strong>2️⃣ Pense no público:</strong> Qual dor, desejo ou desafio seus clientes têm?</Typography>
+            <Alert severity="info" icon={false}>Exemplo: “Pequenos empreendedores precisam de ferramentas simples para controlar estoque.”</Alert>
+
+            <Typography variant="body2"><strong>3️⃣ Baseie-se em fatos:</strong> Use feedbacks de clientes, pesquisas ou dados de vendas para embasar sua resposta.</Typography>
+        </Box>
+
+        <Box sx={{ mt: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FactCheckIcon color="action" />
+            <Typography variant="h6">Exemplos Práticos</Typography>
+        </Box>
+        <Box component="ul" sx={{ pl: 6, mt: 1, '& li': { mb: 0.5 } }}>
+            <Typography component="li" variant="body2">“Muitos abandonam o carrinho antes de finalizar a compra.”</Typography>
+            <Typography component="li" variant="body2">“Nossos clientes não sabem que oferecemos frete grátis acima de R$ 100.”</Typography>
+            <Typography component="li" variant="body2">“Empresas locais não encontram fornecedores rápidos para reposição de produtos.”</Typography>
+        </Box>
     </Box>
 );
 
 const solucaoHint = (
-    <Box sx={{ p: 1, maxWidth: 450, lineHeight: '1.4' }}>
-        <Typography variant="body2" gutterBottom>
+    <Box sx={{ p: 2, maxWidth: 500 }}>
+        <Typography variant="body1" gutterBottom>
             Aqui você descreve a ideia principal da campanha para resolver o problema ou atender à necessidade mencionada.
         </Typography>
-        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
-            <strong>Por que isso importa?</strong>
-        </Typography>
-        <Typography variant="caption" display="block">
+
+        <Box sx={{ mt: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <HelpOutlineIcon color="action" />
+            <Typography variant="h6">Por que isso importa?</Typography>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ pl: 4, mt: 1 }}>
             Uma solução bem definida direciona toda a comunicação e ações da campanha, mostrando ao público como você ajudará concretamente.
         </Typography>
-        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
-            <strong>Dicas para preencher:</strong>
-        </Typography>
-        <Typography component="div" variant="caption" sx={{ mb: 1 }}>
-            <strong>1️⃣ Seja direto e tangível:</strong><br />
-            <Box component="span" sx={{ color: 'error.main', pl: 1 }}><em>Exemplo ruim:</em> "Vamos melhorar a experiência do cliente."</Box><br />
-            <Box component="span" sx={{ color: 'success.main', pl: 1 }}><em>Exemplo bom:</em> "Ofereceremos 30 dias de teste grátis do produto."</Box>
-        </Typography>
-        <Typography component="div" variant="caption" sx={{ mb: 1 }}>
-            <strong>2️⃣ Destaque o benefício principal:</strong><br />
-            Responda: "O que o público ganha com isso?"<br />
-            <Box component="span" sx={{ pl: 1 }}><em>Exemplo:</em> "Clientes economizarão 40% no primeiro pedido com cupom X."</Box>
-        </Typography>
-        <Typography component="div" variant="caption">
-            <strong>3️⃣ Conecte ao problema:</strong><br />
-            Garanta que a solução responda diretamente à necessidade identificada.<br />
-            <em>Exemplo de alinhamento:</em><br />
-            Problema: "Empresas não conhecem nosso serviço de entrega expressa."<br />
-            Solução: "Criaremos um comparador online mostrando que somos 2x mais rápidos."
-        </Typography>
-        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
-            <strong>Exemplos práticos:</strong>
-        </Typography>
-        <Typography component="div" variant="caption">
-            - "Criaremos vídeos curtos mostrando como instalar o produto em 5 minutos."<br />
-            - "Lançaremos um desconto progressivo: quanto mais amigos indicarem, maior o desconto."<br />
-            - "Faremos lives diárias para tirar dúvidas técnicas em tempo real."
-        </Typography>
+
+        <Box sx={{ mt: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TipsAndUpdatesIcon color="action" />
+            <Typography variant="h6">Dicas para preencher</Typography>
+        </Box>
+        <Box sx={{ pl: 4, mt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="body2"><strong>1️⃣ Seja direto e tangível:</strong></Typography>
+            <Alert severity="error" icon={false}>Exemplo ruim: "Vamos melhorar a experiência do cliente."</Alert>
+            <Alert severity="success" icon={false}>Exemplo bom: "Ofereceremos 30 dias de teste grátis do produto."</Alert>
+
+            <Typography variant="body2"><strong>2️⃣ Destaque o benefício principal:</strong> Responda: "O que o público ganha com isso?"</Typography>
+            <Alert severity="info" icon={false}>Exemplo: "Clientes economizarão 40% no primeiro pedido com cupom X."</Alert>
+
+            <Typography variant="body2"><strong>3️⃣ Conecte ao problema:</strong> Garanta que a solução responda diretamente à necessidade identificada.</Typography>
+            <Alert severity="info" icon={false}>
+                Exemplo de alinhamento:<br/>
+                <strong>Problema:</strong> "Empresas não conhecem nosso serviço de entrega expressa."<br/>
+                <strong>Solução:</strong> "Criaremos um comparador online mostrando que somos 2x mais rápidos."
+            </Alert>
+        </Box>
+
+        <Box sx={{ mt: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FactCheckIcon color="action" />
+            <Typography variant="h6">Exemplos Práticos</Typography>
+        </Box>
+        <Box component="ul" sx={{ pl: 6, mt: 1, '& li': { mb: 0.5 } }}>
+            <Typography component="li" variant="body2">"Criaremos vídeos curtos mostrando como instalar o produto em 5 minutos."</Typography>
+            <Typography component="li" variant="body2">"Lançaremos um desconto progressivo: quanto mais amigos indicarem, maior o desconto."</Typography>
+            <Typography component="li" variant="body2">"Faremos lives diárias para tirar dúvidas técnicas em tempo real."</Typography>
+        </Box>
     </Box>
 );
 
