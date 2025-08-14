@@ -171,13 +171,21 @@ const FieldPositioner = ({
   }, [csvData, currentPreviewIndex, onCsvDataUpdate]);
 
   const handleVisibilityChange = useCallback((field, isVisible) => {
-    // Lógica para deletar imagem
-    const isImageField = field.toLowerCase().includes('imagem');
+    // Get the current value of the field for the record being previewed
+    const currentValue = csvData?.[currentPreviewIndex]?.[field];
+
+    // A field is an "image field" if its content looks like a URL.
+    const isImageField = currentValue && typeof currentValue === 'string' && (
+        currentValue.startsWith('http') ||
+        currentValue.startsWith('data:image') ||
+        /\.(jpg|jpeg|png|gif|webp)$/i.test(currentValue)
+    );
+
     if (isImageField && !isVisible) {
-      handleContentChange(field, ''); // Limpa o valor do campo de imagem
+      handleContentChange(field, ''); // Clear the image URL
     }
 
-    // Atualiza a visibilidade do campo
+    // Always update the visibility
     setFieldPositions(prev => ({
       ...prev,
       [field]: {
@@ -185,7 +193,7 @@ const FieldPositioner = ({
         visible: isVisible
       }
     }));
-  }, [handleContentChange, setFieldPositions]);
+  }, [handleContentChange, setFieldPositions, csvData, currentPreviewIndex]);
 
   useEffect(() => {
     const container = containerRef.current;
