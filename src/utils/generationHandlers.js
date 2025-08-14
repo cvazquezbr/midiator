@@ -235,6 +235,66 @@ CTAs variados, como: “Leia mais”, “Descubra como”, “Saiba o que fazer�
 };
 
 /**
+ * Generates a list of common problems for a given persona.
+ */
+export const generateCommonProblems = async ({ persona }) => {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Chave de API Gemini não configurada.');
+  }
+
+  if (!persona || Object.keys(persona).length === 0) {
+    throw new Error('Persona não definida. Por favor, configure a persona primeiro.');
+  }
+
+  const personaString = formatObjectForPrompt(persona);
+
+  const prompt = `
+    Com base na seguinte descrição de Persona, gere uma lista de 3 a 5 problemas ou necessidades comuns que essa persona provavelmente enfrenta.
+
+    PERSONA:
+    ${personaString}
+
+    REGRAS:
+    1.  Cada problema deve ser descrito em um ou dois parágrafos concisos.
+    2.  O texto deve ser prático e direto, focando na "dor" ou necessidade da persona.
+    3.  A resposta DEVE ser um array JSON válido.
+
+    FORMATO DE RESPOSTA (APENAS O JSON):
+    \`\`\`json
+    [
+      {
+        "titulo": "Título Curto do Problema 1",
+        "descricao": "Descrição detalhada do problema em um ou dois parágrafos..."
+      },
+      {
+        "titulo": "Título Curto do Problema 2",
+        "descricao": "Descrição detalhada do problema em um ou dois parágrafos..."
+      }
+    ]
+    \`\`\`
+  `;
+
+  const response = await callGeminiApi(prompt, apiKey, 'Geração de Problemas Comuns da Persona');
+  const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
+  if (jsonMatch && jsonMatch[1]) {
+    try {
+      return JSON.parse(jsonMatch[1]);
+    } catch (e) {
+      console.error("Falha ao analisar a resposta JSON dos problemas comuns:", jsonMatch[1], e);
+      throw new Error("A resposta da IA para os problemas comuns não estava em um formato JSON válido.");
+    }
+  }
+
+  try {
+    return JSON.parse(response);
+  } catch (e) {
+    console.error("Falha ao analisar a resposta JSON direta dos problemas comuns:", response, e);
+    throw new Error("A resposta da IA para os problemas comuns não estava em um formato JSON válido.");
+  }
+};
+
+/**
  * Generates CSV data content from a text prompt using an AI API.
  */
 export const generateIAContent = async ({ promptText, promptNumRecords }) => {

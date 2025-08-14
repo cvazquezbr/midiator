@@ -21,7 +21,17 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from '@mui/material';
+import { generateCommonProblems } from '../utils/generationHandlers';
+import { getCampaignPrompt } from '../utils/campaignPrompt';
 import {
     Campaign as CampaignIcon,
     ExpandMore as ExpandMoreIcon,
@@ -161,6 +171,27 @@ const Campaign = ({
 }) => {
     const [isHintModalOpen, setHintModalOpen] = React.useState(false);
     const [isSolucaoHintModalOpen, setSolucaoHintModalOpen] = React.useState(false);
+    const [commonProblems, setCommonProblems] = React.useState([]);
+    const [isLoadingProblems, setIsLoadingProblems] = React.useState(false);
+    const [problemsError, setProblemsError] = React.useState(null);
+
+    const handleGenerateProblems = async () => {
+        setIsLoadingProblems(true);
+        setProblemsError(null);
+        setCommonProblems([]);
+        try {
+            const { persona } = getCampaignPrompt();
+            if (!persona || Object.keys(persona).length === 0) {
+                throw new Error("Defina uma persona primeiro na aba 'Setup'.");
+            }
+            const problems = await generateCommonProblems({ persona });
+            setCommonProblems(problems);
+        } catch (error) {
+            setProblemsError(error.message);
+        } finally {
+            setIsLoadingProblems(false);
+        }
+    };
 
     return (
         <Card>
@@ -497,10 +528,58 @@ const Campaign = ({
                     </Box>
                 )}
 
-                <Dialog open={isHintModalOpen} onClose={() => setHintModalOpen(false)} maxWidth="md">
+                <Dialog open={isHintModalOpen} onClose={() => setHintModalOpen(false)} maxWidth="md" fullWidth>
                     <DialogTitle>Como Descrever o Problema ou Necessidade</DialogTitle>
                     <DialogContent>
                         {problemaHint}
+                        <Box sx={{ my: 2, borderTop: 1, borderColor: 'divider' }} />
+                        <Box sx={{ mt: 2 }}>
+                            <Button
+                                variant="contained"
+                                onClick={handleGenerateProblems}
+                                disabled={isLoadingProblems}
+                            >
+                                {isLoadingProblems ? <CircularProgress size={24} /> : "Sugerir Problemas com IA"}
+                            </Button>
+                            {problemsError && (
+                                <Alert severity="error" sx={{ mt: 2 }}>
+                                    {problemsError}
+                                </Alert>
+                            )}
+                            {commonProblems.length > 0 && (
+                                <TableContainer component={Paper} sx={{ mt: 2 }}>
+                                    <Table>
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell>Título do Problema</TableCell>
+                                                <TableCell>Descrição</TableCell>
+                                                <TableCell>Ação</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            {commonProblems.map((problem, index) => (
+                                                <TableRow key={index}>
+                                                    <TableCell>{problem.titulo}</TableCell>
+                                                    <TableCell>{problem.descricao}</TableCell>
+                                                    <TableCell>
+                                                        <Button
+                                                            variant="outlined"
+                                                            size="small"
+                                                            onClick={() => {
+                                                                setProblema(problem.descricao);
+                                                                setHintModalOpen(false);
+                                                            }}
+                                                        >
+                                                            Usar este
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            )}
+                        </Box>
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => setHintModalOpen(false)}>Fechar</Button>
