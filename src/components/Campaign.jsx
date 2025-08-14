@@ -16,12 +16,55 @@ import {
   AccordionDetails,
   Chip,
   Alert,
+  Tooltip,
+  IconButton,
 } from '@mui/material';
 import {
     Campaign as CampaignIcon,
     ExpandMore as ExpandMoreIcon,
     Image as ImageIcon,
+    InfoOutlined as InfoIcon,
 } from '@mui/icons-material';
+
+const problemaHint = (
+    <Box sx={{ p: 1, maxWidth: 450, lineHeight: '1.4' }}>
+        <Typography variant="body2" gutterBottom>
+            Aqui você descreve a situação real que sua campanha pretende resolver ou a necessidade do seu público que será atendida.
+        </Typography>
+        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+            <strong>Por que isso importa?</strong>
+        </Typography>
+        <Typography variant="caption" display="block">
+            Entender o problema central ajuda a criar campanhas direcionadas, eficazes e alinhadas aos objetivos do negócio.
+        </Typography>
+        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+            <strong>Dicas para preencher:</strong>
+        </Typography>
+        <Typography component="div" variant="caption" sx={{ mb: 1 }}>
+            <strong>1️⃣ Seja específico:</strong><br />
+            <Box component="span" sx={{ color: 'error.main', pl: 1 }}><em>Exemplo ruim:</em> “Precisamos de mais vendas.”</Box><br />
+            <Box component="span" sx={{ color: 'success.main', pl: 1 }}><em>Exemplo bom:</em> “Clientes não conhecem nosso novo plano de pagamento parcelado.”</Box>
+        </Typography>
+        <Typography component="div" variant="caption" sx={{ mb: 1 }}>
+            <strong>2️⃣ Pense no público:</strong><br />
+            Qual dor, desejo ou desafio seus clientes têm?<br />
+            <Box component="span" sx={{ pl: 1 }}><em>Exemplo:</em> “Pequenos empreendedores precisam de ferramentas simples para controlar estoque.”</Box>
+        </Typography>
+        <Typography component="div" variant="caption">
+            <strong>3️⃣ Baseie-se em fatos:</strong><br />
+            Use feedbacks de clientes, pesquisas ou dados de vendas para embasar sua resposta.
+        </Typography>
+        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+            <strong>Exemplos práticos:</strong>
+        </Typography>
+        <Typography component="div" variant="caption">
+            - “Muitos abandonam o carrinho antes de finalizar a compra.”<br />
+            - “Nossos clientes não sabem que oferecemos frete grátis acima de R$ 100.”<br />
+            - “Empresas locais não encontram fornecedores rápidos para reposição de produtos.”
+        </Typography>
+    </Box>
+);
+
 
 const Campaign = ({
     steps,
@@ -71,17 +114,24 @@ const Campaign = ({
                 </Typography>
                 <Grid container spacing={3}>
                     <Grid item xs={12}>
-                        <TextField
-                            label="Problema"
-                            multiline
-                            rows={4}
-                            value={problema}
-                            onChange={(e) => setProblema(e.target.value)}
-                            variant="outlined"
-                            fullWidth
-                            placeholder="Descreva o problema que sua campanha busca resolver."
-                            disabled={campaignContent !== null}
-                        />
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                            <TextField
+                                label="Qual problema ou necessidade essa campanha resolve?"
+                                multiline
+                                rows={4}
+                                value={problema}
+                                onChange={(e) => setProblema(e.target.value)}
+                                variant="outlined"
+                                fullWidth
+                                placeholder="Descreva o problema que sua campanha busca resolver."
+                                disabled={campaignContent !== null}
+                            />
+                            <Tooltip title={problemaHint} arrow>
+                                <IconButton color="primary" sx={{ mt: 1 }}>
+                                    <InfoIcon />
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
                     </Grid>
 
                     <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center' }}>
