@@ -63,9 +63,17 @@ const FormattingPanel = ({
   onVisibilityChange,
 }) => {
   const fonts = [
-    'Arial', 'Helvetica', 'Times New Roman', 'Georgia', 'Verdana', 'Courier New', 'Impact', 'Comic Sans MS',
-    'Roboto', 'Open Sans', 'Montserrat', 'Lato', 'Poppins', 'Inter', 'Source Sans Pro', 'Anton',
-    'Bebas Neue', 'Caveat', 'Courgette', 'Dancing Script', 'Lora', 'Merriweather', 'Playfair Display', 'Raleway'
+    // Sans-serif
+    'Arial', 'Helvetica', 'Verdana', 'Inter', 'Lato', 'Montserrat', 'Noto Sans',
+    'Open Sans', 'Poppins', 'Raleway', 'Roboto', 'Source Sans Pro',
+    // Serif
+    'Georgia', 'Times New Roman', 'Lora', 'Merriweather', 'Playfair Display', 'Roboto Slab',
+    // Display
+    'Anton', 'Bebas Neue', 'Oswald', 'Impact',
+    // Handwriting
+    'Caveat', 'Courgette', 'Dancing Script',
+    // Monospace
+    'Courier New',
   ];
 
   const updateFieldStyle = (field, property, value) => {
@@ -362,6 +370,20 @@ const FormattingPanel = ({
                           max={120}
                           valueLabelDisplay="auto"
                           marks={[{ value: 12, label: '12' }, { value: 24, label: '24' }, { value: 48, label: '48' }, { value: 72, label: '72' }]}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography gutterBottom sx={{ mt: 1 }}>
+                          Espaçamento entre Linhas: {currentElement.style.lineHeightMultiplier || 1.2}x
+                        </Typography>
+                        <Slider
+                          value={currentElement.style.lineHeightMultiplier || 1.2}
+                          onChange={(e, value) => updateFieldStyle(selectedField, 'lineHeightMultiplier', value)}
+                          min={0.8}
+                          max={3}
+                          step={0.1}
+                          valueLabelDisplay="auto"
+                          marks={[{ value: 1, label: '1x' }, { value: 1.5, label: '1.5x' }, { value: 2, label: '2x' }]}
                         />
                       </Grid>
                       <Grid item xs={12}>
