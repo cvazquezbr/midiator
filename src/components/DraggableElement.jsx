@@ -580,6 +580,7 @@ const DraggableElement = ({
           width: `${position.width}%`,
           height: `${position.height}%`,
           transform: `rotate(${rotation || 0}deg)`,
+          zIndex: position.zIndex || 'auto',
         }}
         onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
         onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}

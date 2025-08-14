@@ -498,6 +498,53 @@ const FieldPositioner = ({
     );
   }
 
+  const renderableElements = React.useMemo(() => {
+    const elements = [
+      ...(csvHeaders || [])
+        .map(header => {
+          const position = fieldPositions[header];
+          const style = fieldStyles[header];
+          if (!position || !position.visible) return null;
+
+          const record = csvData[currentPreviewIndex] || {};
+          const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
+
+          return {
+            id: header,
+            type: 'text',
+            position,
+            style,
+            content: sampleData,
+            zIndex: position.zIndex || 0,
+            rotation: position.rotation,
+            fontScale: (imageSize.width && originalImageSize?.width) ? imageSize.width / originalImageSize.width : 1,
+            enableHtmlRendering: isHtmlField(header),
+          };
+        })
+        .filter(Boolean),
+      ...(brandElements || [])
+        .map(element => {
+          if (!element.visible) return null;
+          return {
+            id: element.id,
+            type: 'image',
+            position: element,
+            style: { ...element.filters },
+            content: element.url,
+            zIndex: element.zIndex || 0,
+            rotation: element.rotation,
+            fontScale: 1,
+            enableHtmlRendering: false,
+          };
+        })
+        .filter(Boolean)
+    ];
+
+    elements.sort((a, b) => a.zIndex - b.zIndex);
+    return elements;
+  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, imageSize, originalImageSize]);
+
+
   return (
     <Grid container spacing={3}>
       <Grid item xs={12} lg={12}>
@@ -575,59 +622,26 @@ const FieldPositioner = ({
                 draggable={false}
               />
 
-              {csvHeaders && csvHeaders.length > 0
-                ? csvHeaders.map(header => {
-                  const position = fieldPositions[header];
-                  const style = fieldStyles[header];
-                  if (!position || !position.visible) return null;
-                  const record = csvData[currentPreviewIndex] || {};
-                  const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
-
-                  return (
-                    <DraggableElement
-                      key={header}
-                      element={{ id: header, type: 'text' }}
-                      position={position}
-                      style={style}
-                      content={sampleData}
-                      isSelected={selectedField === header}
-                      onSelect={handleFieldSelectInternal}
-                      onPositionChange={handlePositionChange}
-                      onSizeChange={handleSizeChange}
-                      containerSize={imageSize}
-                      onContentChange={handleContentChange}
-                      rotation={position.rotation}
-                      originalImageSize={originalImageSize}
-                      fontScale={(imageSize.width && originalImageSize?.width) ? imageSize.width / originalImageSize.width : 1}
-                      enableHtmlRendering={isHtmlField(header)}
-                      darkMode={darkMode}
-                    />
-                  );
-                })
-                : null}
-
-              {brandElements && brandElements.map(element => {
-                // The position and style for brand elements are stored directly on the element object.
-                return (
-                  <DraggableElement
-                    key={element.id}
-                    element={{ ...element, type: 'image' }} // Pass the whole element object
-                    position={element} // Position data is on the element itself
-                    style={{}} // Style for images might be different, or not applicable
-                    content={element.url} // The image URL
-                    isSelected={selectedField === element.id}
-                    onSelect={handleFieldSelectInternal}
-                    onPositionChange={handlePositionChange}
-                    onSizeChange={handleSizeChange}
-                    containerSize={imageSize}
-                    rotation={element.rotation}
-                    originalImageSize={originalImageSize}
-                    fontScale={1} // Not applicable for images
-                    enableHtmlRendering={false}
-                    darkMode={darkMode}
-                  />
-                );
-              })}
+              {renderableElements.map(element => (
+                <DraggableElement
+                  key={element.id}
+                  element={{ id: element.id, type: element.type }}
+                  position={element.position}
+                  style={element.style}
+                  content={element.content}
+                  isSelected={selectedField === element.id}
+                  onSelect={handleFieldSelectInternal}
+                  onPositionChange={handlePositionChange}
+                  onSizeChange={handleSizeChange}
+                  containerSize={imageSize}
+                  onContentChange={element.type === 'text' ? handleContentChange : undefined}
+                  rotation={element.rotation}
+                  originalImageSize={originalImageSize}
+                  fontScale={element.fontScale}
+                  enableHtmlRendering={element.enableHtmlRendering}
+                  darkMode={darkMode}
+                />
+              ))}
             </Box>
 
             {csvData && csvData.length > 1 && (

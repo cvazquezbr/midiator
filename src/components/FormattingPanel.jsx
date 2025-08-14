@@ -18,7 +18,9 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Chip
+  Chip,
+  Tooltip,
+  IconButton
 } from '@mui/material';
 import {
   ExpandMore,
@@ -35,7 +37,11 @@ import {
   VerticalAlignBottom,
   FormatBold,
   FormatItalic,
-  FormatUnderlined
+  FormatUnderlined,
+  FlipToFront,
+  FlipToBack,
+  ArrowUpward,
+  ArrowDownward
 } from '@mui/icons-material';
 import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
@@ -52,7 +58,8 @@ const FormattingPanel = ({
   imageFilters,
   setImageFilters,
   brandElements,
-  setBrandElements
+  setBrandElements,
+  onZIndexChange
 }) => {
   const fonts = [
     'Arial', 'Helvetica', 'Times New Roman', 'Georgia', 'Verdana', 'Courier New', 'Impact', 'Comic Sans MS',
@@ -246,6 +253,31 @@ const FormattingPanel = ({
                         { value: 360, label: '360°' },
                       ]}
                     />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="caption" display="block" gutterBottom>Ordem das Camadas</Typography>
+                    <ToggleButtonGroup size="small" fullWidth aria-label="layer order controls">
+                      <Tooltip title="Enviar para o Fundo">
+                        <ToggleButton value="back" onClick={() => onZIndexChange(selectedField, 'back')}>
+                          <FlipToBack />
+                        </ToggleButton>
+                      </Tooltip>
+                      <Tooltip title="Recuar">
+                        <ToggleButton value="backward" onClick={() => onZIndexChange(selectedField, 'backward')}>
+                          <ArrowDownward />
+                        </ToggleButton>
+                      </Tooltip>
+                      <Tooltip title="Avançar">
+                        <ToggleButton value="forward" onClick={() => onZIndexChange(selectedField, 'forward')}>
+                          <ArrowUpward />
+                        </ToggleButton>
+                      </Tooltip>
+                      <Tooltip title="Trazer para Frente">
+                        <ToggleButton value="front" onClick={() => onZIndexChange(selectedField, 'front')}>
+                          <FlipToFront />
+                        </ToggleButton>
+                      </Tooltip>
+                    </ToggleButtonGroup>
                   </Grid>
                 </Grid>
               </AccordionDetails>
