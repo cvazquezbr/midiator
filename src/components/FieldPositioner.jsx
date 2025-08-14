@@ -150,6 +150,25 @@ const FieldPositioner = ({
     }
   }, [onSelectFieldExternal]);
 
+  const handleContentChange = useCallback((field, newText) => {
+    if (!csvData || csvData.length === 0) return;
+
+    const updatedCsvData = csvData.map((row, index) => {
+      if (index === currentPreviewIndex) {
+        return {
+          ...row,
+          [field]: newText,
+        };
+      }
+      return row;
+    });
+
+    // Propagate change upwards
+    if (onCsvDataUpdate) {
+      onCsvDataUpdate(updatedCsvData);
+    }
+  }, [csvData, currentPreviewIndex, onCsvDataUpdate]);
+
   const handleVisibilityChange = useCallback((field, isVisible) => {
     // Lógica para deletar imagem
     const isImageField = field.toLowerCase().includes('imagem');
@@ -449,24 +468,6 @@ const FieldPositioner = ({
     setIsInteracting(false);
   };
 
-  const handleContentChange = useCallback((field, newText) => {
-    if (!csvData || csvData.length === 0) return;
-
-    const updatedCsvData = csvData.map((row, index) => {
-      if (index === currentPreviewIndex) {
-        return {
-          ...row,
-          [field]: newText,
-        };
-      }
-      return row;
-    });
-
-    // Propagate change upwards
-    if (onCsvDataUpdate) {
-      onCsvDataUpdate(updatedCsvData);
-    }
-  }, [csvData, currentPreviewIndex, onCsvDataUpdate]);
 
   // Navigation handlers
   const handleNextPreview = () => {
