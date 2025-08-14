@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import { useIsMobile } from '../hooks/use-mobile.js';
 import {
   Dialog,
   DialogTitle,
@@ -59,7 +58,6 @@ function TabPanel(props) {
 }
 
 const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
-  const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [passwordDialogAction, setPasswordDialogAction] = useState(null); // 'save' or 'load'
@@ -122,25 +120,24 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Configurações
           <IconButton onClick={onClose}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent sx={{ display: 'flex', p: 0, minHeight: '500px', flexDirection: isMobile ? 'column' : 'row' }}>
+        <DialogContent sx={{ display: 'flex', p: 0, minHeight: '500px' }}>
           <Tabs
-            orientation={isMobile ? 'horizontal' : 'vertical'}
+            orientation="vertical"
             variant="scrollable"
             value={value}
             onChange={handleChange}
-            aria-label="Configuration tabs"
+            aria-label="Vertical tabs example"
             sx={{
-              borderRight: isMobile ? 0 : 1,
-              borderBottom: isMobile ? 1 : 0,
+              borderRight: 1,
               borderColor: 'divider',
-              minWidth: isMobile ? 'auto' : 200,
+              minWidth: 200,
             }}
           >
             <Tab icon={<AutoAwesome />} iconPosition="start" label="Gemini" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(0)} />

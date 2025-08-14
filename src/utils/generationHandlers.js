@@ -3,9 +3,10 @@ import { callGeminiApi, generateImage } from './geminiAPI.js';
 import { getGeminiApiKey } from './geminiCredentials.js';
 import { stripHtml } from '../lib/utils.js';
 
-const formatObjectForPrompt = (obj) => {
+const formatObjectForPrompt = (obj, excludeKeys = []) => {
   if (!obj || typeof obj !== 'object') return '';
   return Object.entries(obj)
+    .filter(([key]) => !excludeKeys.includes(key))
     .map(([key, value]) => {
       if (!value) return null;
       const formattedValue = Array.isArray(value) ? value.join(', ') : value;
@@ -29,7 +30,7 @@ export const generateCampaignContent = async ({ problema, solucao }) => {
 
   const { persona, autor, instrucoes, formato } = getCampaignPrompt();
 
-  const personaString = formatObjectForPrompt(persona);
+  const personaString = formatObjectForPrompt(persona, ['description']);
   const autorString = formatObjectForPrompt(autor);
 
   const promptCompleto = `
@@ -89,7 +90,7 @@ export const generateCampaignImage = async ({ content, aspectRatio }) => {
   }
 
   const { persona, autor, colors } = getCampaignPrompt();
-  const personaString = formatObjectForPrompt(persona);
+  const personaString = formatObjectForPrompt(persona, ['description']);
   const autorString = formatObjectForPrompt(autor);
 
   const colorPalettePrompt = colors && colors.length > 0
@@ -155,7 +156,7 @@ export const generateFollowupPosts = async ({ content, followupPostsQuantity }) 
   }
 
   const { persona } = getCampaignPrompt();
-  const personaString = formatObjectForPrompt(persona);
+  const personaString = formatObjectForPrompt(persona, ['description']);
 
   const prompt = 
   `Você é um especialista em marketing de conteúdo e copywriting.
@@ -247,7 +248,7 @@ export const generateCommonProblems = async ({ persona }) => {
     throw new Error('Persona não definida. Por favor, configure a persona primeiro.');
   }
 
-  const personaString = formatObjectForPrompt(persona);
+  const personaString = formatObjectForPrompt(persona, ['description']);
 
   const prompt = `
     Com base na seguinte descrição de Persona, gere uma lista de 3 a 4 problemas ou necessidades comuns que essa persona provavelmente enfrenta.
