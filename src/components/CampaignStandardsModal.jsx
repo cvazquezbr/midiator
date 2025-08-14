@@ -85,6 +85,8 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemori
   const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
   const [persona, setPersona] = useState({});
+  const [otherItemInputs, setOtherItemInputs] = useState({});
+  const [editingChip, setEditingChip] = useState(null); // { key, value, newValue }
   const [autor, setAutor] = useState({});
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
@@ -391,6 +393,64 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
     });
   };
 
+  const handleOtherInputChange = (key, value) => {
+    setOtherItemInputs(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleAddNewItem = (key) => {
+    const newItem = otherItemInputs[key]?.trim();
+    if (!newItem) return;
+
+    const existingItems = (persona[key] || []).map(item => item.toLowerCase());
+    if (existingItems.includes(newItem.toLowerCase())) {
+        toast.warning('Este item já foi adicionado.');
+        return;
+    }
+
+    setPersona(prev => ({
+      ...prev,
+      [key]: [...(prev[key] || []), newItem]
+    }));
+    handleOtherInputChange(key, ''); // Clear input
+  };
+
+  const handleEditChip = (key, value) => {
+    setEditingChip({ key, value, newValue: value });
+  };
+
+  const handleUpdateChipValue = () => {
+    if (!editingChip) return;
+    const { key, value, newValue } = editingChip;
+    const trimmedNewValue = newValue.trim();
+
+    if (!trimmedNewValue) {
+        toast.error("O valor não pode ser vazio.");
+        setEditingChip(null);
+        return;
+    }
+
+    if (value.toLowerCase() === trimmedNewValue.toLowerCase()) {
+        setEditingChip(null); // No change
+        return;
+    }
+
+    const existingItems = (persona[key] || []).map(item => item.toLowerCase());
+    if (existingItems.includes(trimmedNewValue.toLowerCase())) {
+        toast.warning('Este item já foi adicionado.');
+        setEditingChip(null);
+        return;
+    }
+
+    setPersona(prev => {
+      const currentValues = prev[key] || [];
+      const newValues = currentValues.map(item => (item === value ? trimmedNewValue : item));
+      return { ...prev, [key]: newValues };
+    });
+
+    setEditingChip(null);
+  };
+
+
   // Constants for Persona fields
   const POSICOES_CARGOS = ['Liderança Executiva: CEO, Diretor Executivo, Sócio', 'Gestão de Tecnologia: CTO, Head de Engenharia, Gerente de TI', 'Gestão de Marketing: Gerente de Marketing, Coordenador de Marketing', 'Gestão de Vendas: Gerente de Vendas, Diretor Comercial', 'Gestão de Recursos Humanos: Head de RH, Analista de RH', 'Outro(s)'];
   const SEGMENTOS_EMPRESA = ['Tecnologia (Software, SaaS, Hardware)', 'Serviços Financeiros (Fintech)', 'E-commerce e Varejo', 'Saúde (Healthtech, Farmacêutica)', 'Manufatura', 'Consultoria e Serviços', 'Outro(s)'];
@@ -465,8 +525,8 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       ]
     }
   }; const GATILHOS_BARREIRAS = {
-    'gatilhosCompra': { label: 'Gatilhos de Compra', items: ['Problema técnico urgente', 'Pressão do board', 'Necessidade de redução de custos', 'Vantagem competitiva', 'Outro(s)'] },
-    'barreirasAdocao': { label: 'Barreiras de Adoção', items: ['Orçamento limitado', 'Resistência à mudança da equipe', 'Preocupação com segurança e compliance', 'Dificuldade de integração', 'Outro(s)'] },
+    'gatilhosCompra': { label: 'Gatilhos de Compra', items: ['Problema técnico urgente', 'Pressão do board', 'Necessidade de redução de custos', 'Vantagem competitiva'] },
+    'barreirasAdocao': { label: 'Barreiras de Adoção', items: ['Orçamento limitado', 'Resistência à mudança da equipe', 'Preocupação com segurança e compliance', 'Dificuldade de integração'] },
   };
 
   const InfoTooltip = ({ title, url }) => (
@@ -683,27 +743,72 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                     <Typography variant="subtitle1">Dores e Desafios</Typography>
                     <InfoTooltip title="Esta seção descreve os problemas e obstáculos que a persona enfrenta. Compreender suas dores permite que você posicione sua solução como uma resposta direta a um problema real." url="https://www.google.com/search?q=https://blog.hotmart.com/pt-br/dor-do-cliente/" />
                   </Box>
-                  {Object.entries(DORES_DESAFIOS).map(([key, { label, items }]) => (
-                    <Accordion key={key}>
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
-                      <AccordionDetails>
-                        <FormGroup>
-                          {items.map((item) => (
-                            <Box key={item.nome} sx={{ display: 'flex', alignItems: 'center' }}>
-                              <FormControlLabel
-                                control={<Checkbox checked={(persona?.[key] || []).includes(item.nome)} onChange={handlePersonaCheckboxChange(key, item.nome)} />}
-                                label={item.nome}
-                              />
-                              <InfoTooltip title={item.descricao} />
-                            </Box>
-                          ))}
-                        </FormGroup>
-                        {(persona?.[key] || []).includes('Outro(s)') && (
-                          <TextField label={`Especifique Outra Dor (${label})`} name={`${key}Outro`} value={persona?.[`${key}Outro`] || ''} onChange={handlePersonaChange} fullWidth required variant="outlined" sx={{ mt: 2 }} />
-                        )}
-                      </AccordionDetails>
-                    </Accordion>
-                  ))}
+                  {Object.entries(DORES_DESAFIOS).map(([key, { label, items }]) => {
+                    const customItems = (persona?.[key] || []).filter(
+                      (pItem) => !items.some((i) => i.nome === pItem)
+                    );
+
+                    return (
+                      <Accordion key={key}>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
+                        <AccordionDetails>
+                          <FormGroup>
+                            {items.map((item) => (
+                              <Box key={item.nome} sx={{ display: 'flex', alignItems: 'center' }}>
+                                <FormControlLabel
+                                  control={<Checkbox checked={(persona?.[key] || []).includes(item.nome)} onChange={handlePersonaCheckboxChange(key, item.nome)} />}
+                                  label={item.nome}
+                                />
+                                <InfoTooltip title={item.descricao} />
+                              </Box>
+                            ))}
+                          </FormGroup>
+
+                          {/* Custom items as chips */}
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+                            {customItems.map((item) => (
+                              editingChip && editingChip.key === key && editingChip.value === item ? (
+                                <TextField
+                                  key={item}
+                                  value={editingChip.newValue}
+                                  onChange={(e) => setEditingChip({ ...editingChip, newValue: e.target.value })}
+                                  onBlur={handleUpdateChipValue}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleUpdateChipValue(); } if (e.key === 'Escape') { setEditingChip(null); } }}
+                                  autoFocus
+                                  size="small"
+                                  sx={{ width: 'auto', minWidth: '100px' }}
+                                />
+                              ) : (
+                                <Chip
+                                  key={item}
+                                  label={item}
+                                  onClick={() => handleEditChip(key, item)}
+                                  onDelete={() => handlePersonaChipDelete(key, item)}
+                                />
+                              )
+                            ))}
+                          </Box>
+
+                          {/* Add new item input */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, gap: 1 }}>
+                            <TextField
+                              label={`Adicionar Outra Dor (${label})`}
+                              value={otherItemInputs[key] || ''}
+                              onChange={(e) => handleOtherInputChange(key, e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddNewItem(key); } }}
+                              fullWidth
+                              variant="outlined"
+                              size="small"
+                            />
+                            <Button onClick={() => handleAddNewItem(key)} variant="outlined">
+                              Adicionar
+                            </Button>
+                          </Box>
+
+                        </AccordionDetails>
+                      </Accordion>
+                    );
+                  })}
                 </Grid>
 
                 {/* Gatilhos de Compra e Barreiras de Adoção */}
@@ -712,34 +817,68 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                     <Typography variant="subtitle1">Gatilhos de Compra e Barreira de Adoção</Typography>
                     <InfoTooltip title="Detalha os fatores que levam a persona a buscar uma solução (gatilhos) e os obstáculos que podem atrasar ou impedir a decisão de compra (barreiras)." />
                   </Box>
-                  {Object.entries(GATILHOS_BARREIRAS).map(([key, { label, items }]) => (
-                    <Accordion key={key}>
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
-                      <AccordionDetails>
-                        <FormGroup>
-                          {items.map((item) => (
-                            <FormControlLabel
-                              key={item}
-                              control={<Checkbox checked={(persona?.[key] || []).includes(item)} onChange={handlePersonaCheckboxChange(key, item)} />}
-                              label={item}
-                            />
-                          ))}
-                        </FormGroup>
-                        {(persona?.[key] || []).includes('Outro(s)') && (
-                          <TextField
-                            label={`Especifique Outro(a) (${label})`}
-                            name={`${key}Outro`}
-                            value={persona?.[`${key}Outro`] || ''}
-                            onChange={handlePersonaChange}
-                            fullWidth
-                            required
-                            variant="outlined"
-                            sx={{ mt: 2 }}
-                          />
-                        )}
-                      </AccordionDetails>
-                    </Accordion>
-                  ))}
+                  {Object.entries(GATILHOS_BARREIRAS).map(([key, { label, items }]) => {
+                    const customItems = (persona?.[key] || []).filter(pItem => !items.includes(pItem));
+
+                    return (
+                        <Accordion key={key}>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
+                            <AccordionDetails>
+                                <FormGroup>
+                                    {items.map((item) => (
+                                        <FormControlLabel
+                                            key={item}
+                                            control={<Checkbox checked={(persona?.[key] || []).includes(item)} onChange={handlePersonaCheckboxChange(key, item)} />}
+                                            label={item}
+                                        />
+                                    ))}
+                                </FormGroup>
+
+                                {/* Custom items as chips */}
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+                                    {customItems.map((item) => (
+                                        editingChip && editingChip.key === key && editingChip.value === item ? (
+                                          <TextField
+                                            key={item}
+                                            value={editingChip.newValue}
+                                            onChange={(e) => setEditingChip({ ...editingChip, newValue: e.target.value })}
+                                            onBlur={handleUpdateChipValue}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleUpdateChipValue(); } if (e.key === 'Escape') { setEditingChip(null); } }}
+                                            autoFocus
+                                            size="small"
+                                            sx={{ width: 'auto', minWidth: '100px' }}
+                                          />
+                                        ) : (
+                                          <Chip
+                                            key={item}
+                                            label={item}
+                                            onClick={() => handleEditChip(key, item)}
+                                            onDelete={() => handlePersonaChipDelete(key, item)}
+                                          />
+                                        )
+                                    ))}
+                                </Box>
+
+                                {/* Add new item input */}
+                                <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, gap: 1 }}>
+                                    <TextField
+                                        label={`Adicionar Outro(a) (${label})`}
+                                        value={otherItemInputs[key] || ''}
+                                        onChange={(e) => handleOtherInputChange(key, e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddNewItem(key); } }}
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                    />
+                                    <Button onClick={() => handleAddNewItem(key)} variant="outlined">
+                                        Adicionar
+                                    </Button>
+                                </Box>
+
+                            </AccordionDetails>
+                        </Accordion>
+                    );
+                  })}
                 </Grid>
 
                 {/* Mentalidade e Valores */}
