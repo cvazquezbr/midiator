@@ -39,6 +39,20 @@ export const saveCampaignState = async (state) => {
     })
   );
 
+  // Handle the main background image
+  let backgroundImageBase64 = null;
+  if (state.backgroundImageUrl) {
+    try {
+      const response = await fetch(state.backgroundImageUrl);
+      const blob = await response.blob();
+      backgroundImageBase64 = await blobToBase64(blob);
+    } catch (error) {
+      console.error("Could not fetch and serialize background image:", error);
+      // Decide if you want to save the URL as a fallback
+      backgroundImageBase64 = null; // Or keep state.backgroundImageUrl in a different field
+    }
+  }
+
   const stateToSave = {
     version: CURRENT_STATE_VERSION,
     ...state,
@@ -46,6 +60,8 @@ export const saveCampaignState = async (state) => {
     generatedImagesData: serializableGeneratedImages,
     generatedAudioData: serializableGeneratedAudio,
     generatedVideosData: serializableGeneratedVideos,
+    backgroundImageUrl: undefined, // Remove the original URL
+    backgroundImageBase64: backgroundImageBase64, // Add the base64 version
   };
 
   // Remove non-serializable parts from the top-level state object before stringifying
@@ -97,6 +113,14 @@ export const loadCampaignState = (file) => {
             const res = await fetch(base64);
             return res.blob();
         };
+
+        // Restore the main background image
+        if (loadedState.backgroundImageBase64) {
+          const blob = await base64ToBlob(loadedState.backgroundImageBase64);
+          if (blob) {
+            loadedState.backgroundImageUrl = URL.createObjectURL(blob);
+          }
+        }
 
         // Restore blobs from base64 strings
         if (loadedState.generatedImagesData) {
