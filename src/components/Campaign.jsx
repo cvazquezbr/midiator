@@ -22,13 +22,6 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
 } from '@mui/material';
 import { generateCommonProblems } from '../utils/generationHandlers';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
@@ -40,6 +33,7 @@ import {
     HelpOutline as HelpOutlineIcon,
     TipsAndUpdatesOutlined as TipsAndUpdatesIcon,
     FactCheckOutlined as FactCheckIcon,
+    AutoAwesomeOutlined as GeminiIcon,
 } from '@mui/icons-material';
 
 const problemaHint = (
@@ -215,7 +209,7 @@ const Campaign = ({
                                 disabled={campaignContent !== null}
                             />
                             <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setHintModalOpen(true)}>
-                                <InfoIcon />
+                                <GeminiIcon />
                             </IconButton>
                         </Box>
                     </Grid>
@@ -547,37 +541,27 @@ const Campaign = ({
                                 </Alert>
                             )}
                             {commonProblems.length > 0 && (
-                                <TableContainer component={Paper} sx={{ mt: 2 }}>
-                                    <Table>
-                                        <TableHead>
-                                            <TableRow>
-                                                <TableCell>Título do Problema</TableCell>
-                                                <TableCell>Descrição</TableCell>
-                                                <TableCell>Ação</TableCell>
-                                            </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                            {commonProblems.map((problem, index) => (
-                                                <TableRow key={index}>
-                                                    <TableCell>{problem.titulo}</TableCell>
-                                                    <TableCell>{problem.descricao}</TableCell>
-                                                    <TableCell>
-                                                        <Button
-                                                            variant="outlined"
-                                                            size="small"
-                                                            onClick={() => {
-                                                                setProblema(problem.descricao);
-                                                                setHintModalOpen(false);
-                                                            }}
-                                                        >
-                                                            Usar este
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
+                                <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    {commonProblems.map((problem, index) => (
+                                        <Alert
+                                            key={index}
+                                            severity="info"
+                                            onClick={() => {
+                                                setProblema(problem.replace(/\*\*(.*?)\*\*\\n/g, '$1\n')); // Remove markdown bold for the text field
+                                                setHintModalOpen(false);
+                                            }}
+                                            sx={{
+                                                cursor: 'pointer',
+                                                '&:hover': {
+                                                    bgcolor: 'action.hover'
+                                                },
+                                                whiteSpace: 'pre-wrap'
+                                            }}
+                                        >
+                                            {problem.replace(/\*\*/g, '')}
+                                        </Alert>
+                                    ))}
+                                </Box>
                             )}
                         </Box>
                     </DialogContent>
