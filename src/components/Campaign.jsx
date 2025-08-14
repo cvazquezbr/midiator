@@ -219,6 +219,7 @@ const Campaign = ({
                             variant="contained"
                             onClick={handleGenerateSolucao}
                             disabled={isGeneratingSolucao || !problema.trim() || (solucao && solucao.trim() !== '')}
+                            startIcon={<GeminiIcon />}
                         >
                             {isGeneratingSolucao ? 'Gerando...' : 'Gerar Solução'}
                         </Button>
@@ -276,6 +277,7 @@ const Campaign = ({
                         size="large"
                         onClick={() => handleGenerateCampaignContent(false)}
                         disabled={!problema.trim() || !solucao.trim() || isGeneratingCampaign || campaignContent !== null}
+                        startIcon={<GeminiIcon />}
                     >
                         {isGeneratingCampaign ? 'Gerando...' : 'Elaborar Conteúdo'}
                     </Button>
@@ -341,7 +343,7 @@ const Campaign = ({
                                     fullWidth
                                     sx={{ cursor: 'pointer' }}
                                 />
-                                <Button onClick={() => handleGenerateCampaignContent(true)} disabled={isGeneratingCampaign}>Gerar</Button>
+                                <Button onClick={() => handleGenerateCampaignContent(true)} disabled={isGeneratingCampaign} startIcon={<GeminiIcon />}>Gerar</Button>
                             </Grid>
 
                             <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -354,7 +356,7 @@ const Campaign = ({
                                     variant="outlined"
                                     fullWidth
                                 />
-                                <Button onClick={() => handleGenerateSummary(1800)} disabled={isGeneratingSummaryMedio || !campaignContent}>
+                                <Button onClick={() => handleGenerateSummary(1800)} disabled={isGeneratingSummaryMedio || !campaignContent} startIcon={<GeminiIcon />}>
                                     {isGeneratingSummaryMedio ? 'Gerando...' : 'Gerar'}
                                 </Button>
                             </Grid>
@@ -369,7 +371,7 @@ const Campaign = ({
                                     variant="outlined"
                                     fullWidth
                                 />
-                                <Button onClick={() => handleGenerateSummary(130)} disabled={isGeneratingSummaryPequeno || !campaignContent}>
+                                <Button onClick={() => handleGenerateSummary(130)} disabled={isGeneratingSummaryPequeno || !campaignContent} startIcon={<GeminiIcon />}>
                                     {isGeneratingSummaryPequeno ? 'Gerando...' : 'Gerar'}
                                 </Button>
                             </Grid>
@@ -386,7 +388,7 @@ const Campaign = ({
                                     fullWidth
                                     sx={{ cursor: 'pointer' }}
                                 />
-                                <Button onClick={() => handleGenerateFormattedContent()} disabled={isGeneratingConteudoFormatado || !campaignContent}>
+                                <Button onClick={() => handleGenerateFormattedContent()} disabled={isGeneratingConteudoFormatado || !campaignContent} startIcon={<GeminiIcon />}>
                                     {isGeneratingConteudoFormatado ? 'Gerando...' : 'Gerar'}
                                 </Button>
                             </Grid>
@@ -454,7 +456,7 @@ const Campaign = ({
                     <Box sx={{ mt: 4 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                             <Typography variant="h6" gutterBottom>Posts de Follow-up Gerados</Typography>
-                            <Button onClick={() => handleGenerateFollowupPosts()} disabled={isGeneratingFollowup}>
+                            <Button onClick={() => handleGenerateFollowupPosts()} disabled={isGeneratingFollowup} startIcon={<GeminiIcon />}>
                                 {isGeneratingFollowup ? 'Gerando...' : 'Regenerar Posts'}
                             </Button>
                         </Box>
@@ -489,7 +491,7 @@ const Campaign = ({
                             <Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
-                                    <Button onClick={handleGenerateImage} disabled={isGeneratingImage}>
+                                    <Button onClick={handleGenerateImage} disabled={isGeneratingImage} startIcon={<GeminiIcon />}>
                                         {isGeneratingImage ? 'Gerando...' : 'Regenerar Imagem'}
                                     </Button>
                                 </Box>
@@ -513,7 +515,7 @@ const Campaign = ({
                                     variant="contained"
                                     color="secondary"
                                     onClick={handleGenerateImage}
-                                    startIcon={<ImageIcon />}
+                                    startIcon={<GeminiIcon />}
                                 >
                                     Gerar Imagem
                                 </Button>
@@ -527,45 +529,51 @@ const Campaign = ({
                     <DialogContent>
                         {problemaHint}
                         <Box sx={{ my: 2, borderTop: 1, borderColor: 'divider' }} />
-                        <Box sx={{ mt: 2 }}>
-                            <Button
-                                variant="contained"
-                                onClick={handleGenerateProblems}
-                                disabled={isLoadingProblems}
-                            >
-                                {isLoadingProblems ? <CircularProgress size={24} /> : "Sugerir Problemas com IA"}
-                            </Button>
-                            {problemsError && (
-                                <Alert severity="error" sx={{ mt: 2 }}>
-                                    {problemsError}
-                                </Alert>
-                            )}
-                            {commonProblems.length > 0 && (
-                                <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                    {commonProblems.map((problem, index) => (
-                                        <Alert
-                                            key={index}
-                                            severity="info"
-                                            onClick={() => {
-                                                setProblema(problem.replace(/\*\*(.*?)\*\*\\n/g, '$1\n')); // Remove markdown bold for the text field
-                                                setHintModalOpen(false);
-                                            }}
-                                            sx={{
-                                                cursor: 'pointer',
-                                                '&:hover': {
-                                                    bgcolor: 'action.hover'
-                                                },
-                                                whiteSpace: 'pre-wrap'
-                                            }}
-                                        >
-                                            {problem.replace(/\*\*/g, '')}
-                                        </Alert>
-                                    ))}
-                                </Box>
-                            )}
-                        </Box>
+
+                        {isLoadingProblems && (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                                <CircularProgress />
+                            </Box>
+                        )}
+                        {problemsError && (
+                            <Alert severity="error" sx={{ mt: 2 }}>
+                                {problemsError}
+                            </Alert>
+                        )}
+                        {commonProblems.length > 0 && (
+                            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                {commonProblems.map((problem, index) => (
+                                    <Alert
+                                        key={index}
+                                        severity="info"
+                                        onClick={() => {
+                                            setProblema(problem.replace(/\*\*(.*?)\*\*\\n/g, '$1\n')); // Remove markdown bold for the text field
+                                            setHintModalOpen(false);
+                                        }}
+                                        sx={{
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                bgcolor: 'action.hover'
+                                            },
+                                            whiteSpace: 'pre-wrap'
+                                        }}
+                                    >
+                                        {problem.replace(/\*\*/g, '')}
+                                    </Alert>
+                                ))}
+                            </Box>
+                        )}
                     </DialogContent>
                     <DialogActions>
+                        <Button
+                            variant="contained"
+                            startIcon={<GeminiIcon />}
+                            onClick={handleGenerateProblems}
+                            disabled={isLoadingProblems}
+                            sx={{ mr: 'auto' }} // Pushes this button to the left
+                        >
+                            Sugerir Problemas
+                        </Button>
                         <Button onClick={() => setHintModalOpen(false)}>Fechar</Button>
                     </DialogActions>
                 </Dialog>
