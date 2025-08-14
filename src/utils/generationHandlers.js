@@ -97,12 +97,13 @@ export const generateCampaignImage = async ({ content, aspectRatio }) => {
     : '';
 
   const imagePrompt = `
+    Gere uma imagem de fundo para um post. A imagem deve ser visualmente atraente e complementar o conteúdo, mas sem distrair o leitor.
     Persona: ${personaString}
     Autor: ${autorString}
     Resumo do Conteúdo: ${stripHtml(content.titulo)}. ${stripHtml(content.conteudo)}
     Razão de Aspecto: ${aspectRatio}
     ${colorPalettePrompt}
-    ATENÇÃO: A imagem gerada não deve conter, sob NENHUMA CIRCUNSTÂNCIA, qualquer tipo de texto, escrita, letras, números ou palavras. A imagem deve ser puramente visual.
+    ATENÇÃO: A IMAGEM DEVE SERVIR COMO IMAGEM DE FUNDO. NÃO DEVE CONTER, SOB NENHUMA CIRCUNSTÂNCIA, QUALQUER TIPO DE TEXTO, ESCRITA, LETRAS, NÚMEROS OU PALAVRAS. A imagem deve ser puramente visual e abstrata ou conceitual, sem nenhum elemento textual.
   `;
 
   const base64Image = await generateImage(imagePrompt, apiKey, 'Geração de Imagem de Campanha');
@@ -193,6 +194,7 @@ Formato: frase de impacto + CTA.
 Gatilhos: urgência, exclusividade, clareza na próxima etapa.
 
 REGRAS GERAIS PARA TODOS OS POSTS:
+O campo "conteudo" NÃO DEVE incluir hashtags. As hashtags devem ser listadas apenas no campo "hashtags_sugeridas".
 Cada post deve ter entre 400–600 caracteres.
 Tom profissional, porém conversacional, refletindo depoimento ou experiência.
 Inclua até 2 emojis estratégicos por post.
