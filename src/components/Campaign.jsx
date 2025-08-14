@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -22,6 +22,8 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
@@ -123,6 +125,25 @@ const solucaoHint = (
     </Box>
 );
 
+const TabPanel = (props) => {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`campaign-tabpanel-${index}`}
+      aria-labelledby={`campaign-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+};
 
 const Campaign = ({
     steps,
@@ -140,7 +161,6 @@ const Campaign = ({
     generationError,
     handleGenerateCampaignContent,
     handleResetCampaign,
-    handleExportHtml,
     setEditingField,
     conteudoMedio,
     setConteudoMedio,
@@ -161,6 +181,7 @@ const Campaign = ({
     setCampaignContent,
     onEditFollowup,
 }) => {
+    const [activeTab, setActiveTab] = useState(0);
     const [isHintModalOpen, setHintModalOpen] = React.useState(false);
     const [isSolucaoHintModalOpen, setSolucaoHintModalOpen] = React.useState(false);
     const [commonProblems, setCommonProblems] = React.useState([]);
@@ -169,6 +190,10 @@ const Campaign = ({
     const [commonSolutions, setCommonSolutions] = React.useState([]);
     const [isLoadingSolutions, setIsLoadingSolutions] = React.useState(false);
     const [solutionsError, setSolutionsError] = React.useState(null);
+
+    const handleTabChange = (event, newValue) => {
+      setActiveTab(newValue);
+    };
 
     const handleGenerateProblems = async () => {
         setIsLoadingProblems(true);
@@ -213,124 +238,92 @@ const Campaign = ({
                     <CampaignIcon />
                     {steps[0].label}
                 </Typography>
-                <Grid container spacing={3}>
-                    <Grid item xs={12}>
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                            <TextField
-                                label="Problema ou Necessidade"
-                                multiline
-                                rows={4}
-                                value={problema}
-                                onChange={(e) => setProblema(e.target.value)}
-                                variant="outlined"
-                                fullWidth
-                                placeholder="Descreva o problema que sua campanha busca resolver."
-                                disabled={campaignContent !== null}
-                            />
-                            <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setHintModalOpen(true)}>
-                                <GeminiIcon />
-                            </IconButton>
-                        </Box>
-                    </Grid>
 
-                    <Grid item xs={12}>
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                            <TextField
-                                label="Solução ou Proposta"
-                                multiline
-                                rows={4}
-                                value={solucao}
-                                onChange={(e) => setSolucao(e.target.value)}
-                                variant="outlined"
-                                fullWidth
-                                placeholder="Descreva a solução que sua campanha oferece."
-                                disabled={campaignContent !== null}
-                            />
-                            <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setSolucaoHintModalOpen(true)}>
-                                <GeminiIcon />
-                            </IconButton>
-                        </Box>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <TextField
-                            label="Quantidade de Posts de Follow-up"
-                            type="number"
-                            value={followupPostsQuantity}
-                            onChange={(e) => setFollowupPostsQuantity(parseInt(e.target.value, 10))}
-                            fullWidth
-                            variant="outlined"
-                            disabled={campaignContent !== null}
-                            InputProps={{ inputProps: { min: 1, max: 10 } }}
-                        />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <FormControl fullWidth variant="outlined" disabled={campaignContent !== null}>
-                            <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
-                            <Select
-                                labelId="aspect-ratio-label"
-                                value={aspectRatio}
-                                onChange={(e) => setAspectRatio(e.target.value)}
-                                label="Razão de Aspecto"
-                            >
-                                <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
-                                <MenuItem value="4:5">Retrato (4:5)</MenuItem>
-                                <MenuItem value="16:9">Paisagem (16:9)</MenuItem>
-                            </Select>
-                        </FormControl>
-                    </Grid>
-                </Grid>
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 2 }}>
-                    <Button
-                        variant="contained"
-                        size="large"
-                        onClick={() => handleGenerateCampaignContent(false)}
-                        disabled={!problema.trim() || !solucao.trim() || isGeneratingCampaign || campaignContent !== null}
-                        startIcon={<GeminiIcon />}
-                    >
-                        {isGeneratingCampaign ? 'Gerando...' : 'Elaborar Conteúdo'}
-                    </Button>
-                    {campaignContent && (
-                        <Button
-                            variant="outlined"
-                            size="large"
-                            onClick={handleResetCampaign}
-                        >
-                            Resetar
-                        </Button>
-                    )}
+                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                    <Tabs value={activeTab} onChange={handleTabChange} aria-label="abas da campanha">
+                        <Tab label="Problema e Solução" />
+                        <Tab label="Conteúdo Principal" disabled={!campaignContent} />
+                        <Tab label="Imagem" disabled={!campaignContent} />
+                        <Tab label="Posts de Follow-Up" disabled={!campaignContent} />
+                        <Tab label="Conteúdo WordPress" disabled={!campaignContent} />
+                    </Tabs>
                 </Box>
 
-                {campaignGenerationFailed && (
-                    <Box sx={{ mt: 3, textAlign: 'center' }}>
-                        <Alert severity="error" sx={{ mb: 2 }}>
-                            <strong>Ocorreu um erro ao gerar o conteúdo:</strong> {generationError}
-                        </Alert>
+                {/* Painel 0: Problema e Solução */}
+                <TabPanel value={activeTab} index={0}>
+                    <Grid container spacing={3} sx={{ mt: 2 }}>
+                        <Grid item xs={12}>
+                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                <TextField
+                                    label="Problema ou Necessidade"
+                                    multiline
+                                    rows={4}
+                                    value={problema}
+                                    onChange={(e) => setProblema(e.target.value)}
+                                    variant="outlined"
+                                    fullWidth
+                                    placeholder="Descreva o problema que sua campanha busca resolver."
+                                    disabled={campaignContent !== null}
+                                />
+                                <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setHintModalOpen(true)}>
+                                    <GeminiIcon />
+                                </IconButton>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                <TextField
+                                    label="Solução ou Proposta"
+                                    multiline
+                                    rows={4}
+                                    value={solucao}
+                                    onChange={(e) => setSolucao(e.target.value)}
+                                    variant="outlined"
+                                    fullWidth
+                                    placeholder="Descreva a solução que sua campanha oferece."
+                                    disabled={campaignContent !== null}
+                                />
+                                <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setSolucaoHintModalOpen(true)}>
+                                    <GeminiIcon />
+                                </IconButton>
+                            </Box>
+                        </Grid>
+                    </Grid>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 2 }}>
                         <Button
                             variant="contained"
-                            color="secondary"
                             size="large"
-                            onClick={() => handleGenerateImage()}
-                            disabled={isGeneratingImage}
-                            startIcon={<ImageIcon />}
+                            onClick={() => handleGenerateCampaignContent(false)}
+                            disabled={!problema.trim() || !solucao.trim() || isGeneratingCampaign || campaignContent !== null}
+                            startIcon={<GeminiIcon />}
                         >
-                            {isGeneratingImage ? 'Gerando Imagem...' : 'Tentar Gerar Apenas a Imagem'}
+                            {isGeneratingCampaign ? 'Gerando...' : 'Elaborar Conteúdo'}
                         </Button>
-                    </Box>
-                )}
-
-                {campaignContent && (
-                    <Box sx={{ mt: 4 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                        {campaignContent && (
                             <Button
                                 variant="outlined"
-                                onClick={handleExportHtml}
+                                size="large"
+                                onClick={handleResetCampaign}
                             >
-                                Exportar como HTML
+                                Resetar
                             </Button>
+                        )}
+                    </Box>
+                    {campaignGenerationFailed && (
+                        <Box sx={{ mt: 3, textAlign: 'center' }}>
+                            <Alert severity="error" sx={{ mb: 2 }}>
+                                <strong>Ocorreu um erro ao gerar o conteúdo:</strong> {generationError}
+                            </Alert>
                         </Box>
-                        <Typography variant="h6" gutterBottom>Conteúdo Gerado</Typography>
-                        <Grid container spacing={2}>
-                            <Grid item xs={12}>
+                    )}
+                </TabPanel>
+
+                {/* Painel 1: Conteúdo Principal */}
+                <TabPanel value={activeTab} index={1}>
+                    {campaignContent && (
+                        <Grid container spacing={2} sx={{ mt: 2 }}>
+                             <Grid item xs={12}>
                                 <TextField
                                     label="Título"
                                     value={campaignContent.titulo}
@@ -353,7 +346,6 @@ const Campaign = ({
                                 />
                                 <Button onClick={() => handleGenerateCampaignContent(true)} disabled={isGeneratingCampaign} startIcon={<GeminiIcon />}>Gerar</Button>
                             </Grid>
-
                             <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                 <TextField
                                     label="Conteúdo Médio (máx. 1800 caracteres)"
@@ -368,7 +360,6 @@ const Campaign = ({
                                     {isGeneratingSummaryMedio ? 'Gerando...' : 'Gerar'}
                                 </Button>
                             </Grid>
-
                             <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                 <TextField
                                     label="Conteúdo Pequeno (máx. 130 caracteres)"
@@ -383,24 +374,6 @@ const Campaign = ({
                                     {isGeneratingSummaryPequeno ? 'Gerando...' : 'Gerar'}
                                 </Button>
                             </Grid>
-
-                            <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <TextField
-                                    label="Conteúdo Formatado (HTML)"
-                                    multiline
-                                    rows={3}
-                                    value={conteudoFormatado}
-                                    onClick={() => setEditingField('conteudoFormatado')}
-                                    readOnly
-                                    variant="outlined"
-                                    fullWidth
-                                    sx={{ cursor: 'pointer' }}
-                                />
-                                <Button onClick={() => handleGenerateFormattedContent()} disabled={isGeneratingConteudoFormatado || !campaignContent} startIcon={<GeminiIcon />}>
-                                    {isGeneratingConteudoFormatado ? 'Gerando...' : 'Gerar'}
-                                </Button>
-                            </Grid>
-
                             <Grid item xs={12}>
                                 <TextField
                                     label="CTA (Chamada para Ação)"
@@ -451,86 +424,170 @@ const Campaign = ({
                                 </Box>
                             </Grid>
                         </Grid>
-                    </Box>
-                )}
+                    )}
+                </TabPanel>
 
-                {isGeneratingFollowup && (
-                    <Box sx={{ mt: 4, textAlign: 'center' }}>
-                        <Typography variant="h6" gutterBottom>Gerando Posts de Follow-up...</Typography>
-                    </Box>
-                )}
-
-                {followupPosts.length > 0 && !isGeneratingFollowup && (
-                    <Box sx={{ mt: 4 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                            <Typography variant="h6" gutterBottom>Posts de Follow-up Gerados</Typography>
-                            <Button onClick={() => handleGenerateFollowupPosts()} disabled={isGeneratingFollowup} startIcon={<GeminiIcon />}>
-                                {isGeneratingFollowup ? 'Gerando...' : 'Regenerar Posts'}
-                            </Button>
-                        </Box>
-                        {followupPosts.map((post, index) => (
-                            <Accordion key={index}>
-                                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                    <Typography>Post {post.post_numero}: {post.tipo_gancho}</Typography>
-                                </AccordionSummary>
-                                <AccordionDetails sx={{ cursor: 'pointer' }} onClick={() => onEditFollowup(index, post.conteudo)}>
-                                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                                        {post.conteudo}
-                                    </Typography>
-                                    <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-                                        CTA: {post.cta}
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
-                                        {post.hashtags_sugeridas.map((tag, i) => (
-                                            <Chip key={i} label={tag} size="small" />
-                                        ))}
+                {/* Painel 2: Imagem */}
+                <TabPanel value={activeTab} index={2}>
+                    {campaignContent && (
+                        <Box sx={{ mt: 2 }}>
+                             <Grid item xs={12} md={6}>
+                                <FormControl fullWidth variant="outlined" disabled={campaignContent !== null}>
+                                    <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
+                                    <Select
+                                        labelId="aspect-ratio-label"
+                                        value={aspectRatio}
+                                        onChange={(e) => setAspectRatio(e.target.value)}
+                                        label="Razão de Aspecto"
+                                    >
+                                        <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
+                                        <MenuItem value="4:5">Retrato (4:5)</MenuItem>
+                                        <MenuItem value="16:9">Paisagem (16:9)</MenuItem>
+                                    </Select>
+                                </FormControl>
+                            </Grid>
+                            {generatedImageUrl && !isGeneratingImage && (
+                                <Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                                        <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
+                                        <Button onClick={handleGenerateImage} disabled={isGeneratingImage} startIcon={<GeminiIcon />}>
+                                            {isGeneratingImage ? 'Gerando...' : 'Regenerar Imagem'}
+                                        </Button>
                                     </Box>
-                                </AccordionDetails>
-                            </Accordion>
-                        ))}
-                    </Box>
-                )}
-
-                {/* Bloco de Geração e Exibição de Imagem */}
-                {campaignContent && (
-                    <Box sx={{ mt: 4 }}>
-                        {/* Se a imagem já foi gerada, exibe */}
-                        {generatedImageUrl && !isGeneratingImage && (
-                            <Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
-                                    <Button onClick={handleGenerateImage} disabled={isGeneratingImage} startIcon={<GeminiIcon />}>
-                                        {isGeneratingImage ? 'Gerando...' : 'Regenerar Imagem'}
+                                    <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', borderRadius: '8px', mt: 2 }} />
+                                </Box>
+                            )}
+                            {isGeneratingImage && (
+                                <Box sx={{ textAlign: 'center', mt: 2 }}>
+                                    <CircularProgress />
+                                    <Typography variant="h6" gutterBottom>Gerando Imagem...</Typography>
+                                </Box>
+                            )}
+                            {!generatedImageUrl && !isGeneratingImage && (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                                    <Button
+                                        variant="contained"
+                                        color="secondary"
+                                        onClick={handleGenerateImage}
+                                        startIcon={<ImageIcon />}
+                                        disabled={isGeneratingImage}
+                                    >
+                                        Gerar Imagem
                                     </Button>
                                 </Box>
-                                <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', borderRadius: '8px', mt: 2 }} />
-                            </Box>
-                        )}
+                            )}
+                             {campaignGenerationFailed && (
+                                <Box sx={{ mt: 3, textAlign: 'center' }}>
+                                    <Alert severity="error" sx={{ mb: 2 }}>
+                                        <strong>Falha na geração de imagem:</strong> {generationError}
+                                    </Alert>
+                                    <Button
+                                        variant="contained"
+                                        color="secondary"
+                                        size="large"
+                                        onClick={() => handleGenerateImage()}
+                                        disabled={isGeneratingImage}
+                                        startIcon={<ImageIcon />}
+                                    >
+                                        {isGeneratingImage ? 'Gerando Imagem...' : 'Tentar Gerar Apenas a Imagem'}
+                                    </Button>
+                                </Box>
+                            )}
+                        </Box>
+                    )}
+                </TabPanel>
 
-                        {/* Se está gerando a imagem, mostra o loading */}
-                        {isGeneratingImage && (
-                            <Box sx={{ textAlign: 'center' }}>
-                                <Typography variant="h6" gutterBottom>
-                                    Gerando Imagem...
-                                </Typography>
-                            </Box>
-                        )}
-
-                        {/* Se AINDA NÃO tem imagem e NÃO está gerando, mostra o botão para gerar */}
-                        {!generatedImageUrl && !isGeneratingImage && (
-                            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                                <Button
-                                    variant="contained"
-                                    color="secondary"
-                                    onClick={handleGenerateImage}
-                                    startIcon={<GeminiIcon />}
-                                >
-                                    Gerar Imagem
+                {/* Painel 3: Posts de Follow-Up */}
+                <TabPanel value={activeTab} index={3}>
+                    {campaignContent && (
+                         <Grid container spacing={2} sx={{ mt: 2 }}>
+                            <Grid item xs={12}>
+                                <TextField
+                                    label="Quantidade de Posts de Follow-up"
+                                    type="number"
+                                    value={followupPostsQuantity}
+                                    onChange={(e) => setFollowupPostsQuantity(parseInt(e.target.value, 10))}
+                                    fullWidth
+                                    variant="outlined"
+                                    disabled={campaignContent !== null}
+                                    InputProps={{ inputProps: { min: 1, max: 10 } }}
+                                />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Button onClick={() => handleGenerateFollowupPosts()} disabled={isGeneratingFollowup} startIcon={<GeminiIcon />}>
+                                    {isGeneratingFollowup ? 'Gerando...' : 'Gerar Posts de Follow-up'}
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    )}
+                    {isGeneratingFollowup && (
+                        <Box sx={{ mt: 4, textAlign: 'center' }}>
+                            <CircularProgress />
+                            <Typography variant="h6" gutterBottom>Gerando Posts de Follow-up...</Typography>
+                        </Box>
+                    )}
+                    {followupPosts.length > 0 && !isGeneratingFollowup && (
+                        <Box sx={{ mt: 4 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Typography variant="h6" gutterBottom>Posts de Follow-up Gerados</Typography>
+                                <Button onClick={() => handleGenerateFollowupPosts()} disabled={isGeneratingFollowup} startIcon={<GeminiIcon />}>
+                                    {isGeneratingFollowup ? 'Gerando...' : 'Regenerar Posts'}
                                 </Button>
                             </Box>
-                        )}
-                    </Box>
-                )}
+                            {followupPosts.map((post, index) => (
+                                <Accordion key={index}>
+                                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                                        <Typography>Post {post.post_numero}: {post.tipo_gancho}</Typography>
+                                    </AccordionSummary>
+                                    <AccordionDetails sx={{ cursor: 'pointer' }} onClick={() => onEditFollowup(index, post.conteudo)}>
+                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                            {post.conteudo}
+                                        </Typography>
+                                        <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+                                            CTA: {post.cta}
+                                        </Typography>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                                            {post.hashtags_sugeridas.map((tag, i) => (
+                                                <Chip key={i} label={tag} size="small" />
+                                            ))}
+                                        </Box>
+                                    </AccordionDetails>
+                                </Accordion>
+                            ))}
+                        </Box>
+                    )}
+                </TabPanel>
+
+                {/* Painel 4: Conteúdo WordPress */}
+                <TabPanel value={activeTab} index={4}>
+                    {campaignContent && (
+                        <Grid container spacing={2} sx={{ mt: 2 }}>
+                            <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <TextField
+                                    label="Conteúdo Formatado (HTML)"
+                                    multiline
+                                    rows={10}
+                                    value={conteudoFormatado}
+                                    onClick={() => setEditingField('conteudoFormatado')}
+                                    readOnly
+                                    variant="outlined"
+                                    fullWidth
+                                    sx={{ cursor: 'pointer' }}
+                                />
+                                <Button onClick={() => handleGenerateFormattedContent()} disabled={isGeneratingConteudoFormatado || !campaignContent} startIcon={<GeminiIcon />}>
+                                    {isGeneratingConteudoFormatado ? 'Gerando...' : 'Gerar'}
+                                </Button>
+                            </Grid>
+                             <Grid item xs={12}>
+                                <Typography variant="h6" gutterBottom>Pré-visualização</Typography>
+                                <Box border={1} borderColor="grey.300" p={2} borderRadius={1} sx={{ minHeight: 100, '& *': { all: 'revert' } }}>
+                                    <div dangerouslySetInnerHTML={{ __html: conteudoFormatado }} />
+                                </Box>
+                            </Grid>
+                        </Grid>
+                    )}
+                </TabPanel>
+
 
                 <Dialog open={isHintModalOpen} onClose={() => setHintModalOpen(false)} maxWidth="lg" fullWidth>
                     <DialogTitle>Como Descrever o Problema ou Necessidade</DialogTitle>

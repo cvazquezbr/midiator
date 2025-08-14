@@ -215,14 +215,14 @@ const RecordManager = ({
   const containerClasses = `${styles.container} ${darkMode ? styles.darkMode : ''}`;
 
     return (
-    <div className={containerClasses}>
+        <div className={containerClasses}>
             <div className={styles.header}>
-                <h1>Gerenciar Registros</h1>
+                {/* O título agora é gerenciado pelo componente pai (PostsCurtosStep) */}
+                {/* <h1>Gerenciar Registros</h1> */}
                 <div className={styles.actionsContainer}>
                     <button onClick={handleAbrirModalAdicionar} className={`${styles.btn} ${styles.btnPrimary}`}>
-                        &#43; Adicionar Novo
+                        &#43; Adicionar Novo Registro
                     </button>
-                    {/* O carregamento de CSV agora é tratado pelo App.jsx na etapa inicial */}
                 </div>
             </div>
 

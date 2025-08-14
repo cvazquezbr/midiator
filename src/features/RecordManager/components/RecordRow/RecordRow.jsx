@@ -14,21 +14,23 @@ import styles from './RecordRow.module.css';
  * @param {boolean} [props.darkMode=false] - Flag para habilitar o modo escuro.
  */
 const RecordRow = ({ registro, colunas, onEditar, onExcluir, darkMode = false }) => {
-    const trClasses = `${darkMode ? styles.darkMode : ''}`;
+    const trClasses = `${styles.row} ${darkMode ? styles.darkMode : ''}`;
+
+    const handleEditClick = () => {
+        onEditar(registro);
+    };
+
+    const handleDeleteClick = (e) => {
+        e.stopPropagation(); // Impede que o clique na linha seja acionado
+        onExcluir(registro);
+    };
+
     return (
-        <tr className={trClasses}>
+        <tr className={trClasses} onClick={handleEditClick} title="Clique para editar">
             <td className={styles.actionsCell}>
                 <button
                     type="button"
-                    onClick={() => onEditar(registro)}
-                    className={`${styles.btnAction} ${styles.btnEdit}`}
-                    title="Editar"
-                >
-                    &#9998; {/* Ícone de lápis */}
-                </button>
-                <button
-                    type="button"
-                    onClick={() => onExcluir(registro)}
+                    onClick={handleDeleteClick}
                     className={`${styles.btnAction} ${styles.btnDelete}`}
                     title="Excluir"
                 >
