@@ -68,6 +68,48 @@ const problemaHint = (
     </Box>
 );
 
+const solucaoHint = (
+    <Box sx={{ p: 1, maxWidth: 450, lineHeight: '1.4' }}>
+        <Typography variant="body2" gutterBottom>
+            Aqui você descreve a ideia principal da campanha para resolver o problema ou atender à necessidade mencionada.
+        </Typography>
+        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+            <strong>Por que isso importa?</strong>
+        </Typography>
+        <Typography variant="caption" display="block">
+            Uma solução bem definida direciona toda a comunicação e ações da campanha, mostrando ao público como você ajudará concretamente.
+        </Typography>
+        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+            <strong>Dicas para preencher:</strong>
+        </Typography>
+        <Typography component="div" variant="caption" sx={{ mb: 1 }}>
+            <strong>1️⃣ Seja direto e tangível:</strong><br />
+            <Box component="span" sx={{ color: 'error.main', pl: 1 }}><em>Exemplo ruim:</em> "Vamos melhorar a experiência do cliente."</Box><br />
+            <Box component="span" sx={{ color: 'success.main', pl: 1 }}><em>Exemplo bom:</em> "Ofereceremos 30 dias de teste grátis do produto."</Box>
+        </Typography>
+        <Typography component="div" variant="caption" sx={{ mb: 1 }}>
+            <strong>2️⃣ Destaque o benefício principal:</strong><br />
+            Responda: "O que o público ganha com isso?"<br />
+            <Box component="span" sx={{ pl: 1 }}><em>Exemplo:</em> "Clientes economizarão 40% no primeiro pedido com cupom X."</Box>
+        </Typography>
+        <Typography component="div" variant="caption">
+            <strong>3️⃣ Conecte ao problema:</strong><br />
+            Garanta que a solução responda diretamente à necessidade identificada.<br />
+            <em>Exemplo de alinhamento:</em><br />
+            Problema: "Empresas não conhecem nosso serviço de entrega expressa."<br />
+            Solução: "Criaremos um comparador online mostrando que somos 2x mais rápidos."
+        </Typography>
+        <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
+            <strong>Exemplos práticos:</strong>
+        </Typography>
+        <Typography component="div" variant="caption">
+            - "Criaremos vídeos curtos mostrando como instalar o produto em 5 minutos."<br />
+            - "Lançaremos um desconto progressivo: quanto mais amigos indicarem, maior o desconto."<br />
+            - "Faremos lives diárias para tirar dúvidas técnicas em tempo real."
+        </Typography>
+    </Box>
+);
+
 
 const Campaign = ({
     steps,
@@ -109,6 +151,7 @@ const Campaign = ({
     onEditFollowup,
 }) => {
     const [isHintModalOpen, setHintModalOpen] = React.useState(false);
+    const [isSolucaoHintModalOpen, setSolucaoHintModalOpen] = React.useState(false);
 
     return (
         <Card>
@@ -148,17 +191,22 @@ const Campaign = ({
                     </Grid>
 
                     <Grid item xs={12}>
-                        <TextField
-                            label="Solução"
-                            multiline
-                            rows={4}
-                            value={solucao}
-                            onChange={(e) => setSolucao(e.target.value)}
-                            variant="outlined"
-                            fullWidth
-                            placeholder="Descreva a solução que sua campanha oferece."
-                            disabled={campaignContent !== null}
-                        />
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                            <TextField
+                                label="Solução ou Proposta"
+                                multiline
+                                rows={4}
+                                value={solucao}
+                                onChange={(e) => setSolucao(e.target.value)}
+                                variant="outlined"
+                                fullWidth
+                                placeholder="Descreva a solução que sua campanha oferece."
+                                disabled={campaignContent !== null}
+                            />
+                            <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setSolucaoHintModalOpen(true)}>
+                                <InfoIcon />
+                            </IconButton>
+                        </Box>
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <TextField
@@ -447,6 +495,16 @@ const Campaign = ({
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => setHintModalOpen(false)}>Fechar</Button>
+                    </DialogActions>
+                </Dialog>
+
+                <Dialog open={isSolucaoHintModalOpen} onClose={() => setSolucaoHintModalOpen(false)} maxWidth="md">
+                    <DialogTitle>Como Descrever a Solução ou Proposta</DialogTitle>
+                    <DialogContent>
+                        {solucaoHint}
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setSolucaoHintModalOpen(false)}>Fechar</Button>
                     </DialogActions>
                 </Dialog>
             </CardContent>
