@@ -13,6 +13,7 @@ const BrandElementManager = ({ onElementSelect }) => {
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(googleDriveAPI.isUserSignedIn());
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [loadingImageId, setLoadingImageId] = useState(null); // To show loader on specific image
 
   const fetchBrandElements = useCallback(async () => {
     if (!googleDriveAPI.isUserSignedIn()) {
@@ -78,27 +79,30 @@ const BrandElementManager = ({ onElementSelect }) => {
     fetchBrandElements();
   };
 
-  const handleSelect = (image) => {
-    if (onElementSelect) {
-        // Create a new element object for the canvas
-        const newElement = {
-            id: `brand_${new Date().getTime()}`, // Unique ID for the element on canvas
-            gDriveId: image.id,
-            url: image.url, // The URL to be used for drawing on canvas
-            x: 10, // Default position
-            y: 10,
-            width: 20, // Default size
-            height: 20,
-            rotation: 0,
-            filters: {
-                brightness: 100,
-                contrast: 100,
-                saturate: 100,
-                blur: 0,
-                opacity: 100,
-            }
-        };
+  const handleSelect = async (image) => {
+    if (!onElementSelect) return;
+    setLoadingImageId(image.id);
+    setError(null);
+
+    try {
+      const blob = await googleDriveAPI.getFileAsBlob(image.id);
+      const blobUrl = URL.createObjectURL(blob);
+
+      const newElement = {
+        id: `brand_${new Date().getTime()}`,
+        gDriveId: image.id,
+        url: blobUrl, // Use the blob URL
+        x: 10, y: 10, width: 20, height: 20, rotation: 0,
+        filters: {
+          brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100,
+        }
+      };
       onElementSelect(newElement);
+
+    } catch (err) {
+      setError(`Falha ao carregar imagem: ${err.message}`);
+    } finally {
+      setLoadingImageId(null);
     }
   };
 
@@ -137,14 +141,21 @@ const BrandElementManager = ({ onElementSelect }) => {
           {images.map((image) => (
             <Grid item xs={6} sm={4} key={image.id}>
               <Card>
-                <CardActionArea onClick={() => handleSelect(image)} title={`Adicionar ${image.name}`}>
-                  <CardMedia
-                    component="img"
-                    height="100"
-                    image={image.thumbnailLink || image.url} // Use thumbnail if available
-                    alt={image.name}
-                    sx={{ objectFit: 'contain' }}
-                  />
+                <CardActionArea onClick={() => handleSelect(image)} title={`Adicionar ${image.name}`} disabled={loadingImageId === image.id}>
+                  {loadingImageId === image.id ? (
+                    <Box sx={{ height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CircularProgress size={24} />
+                    </Box>
+                  ) : (
+                    <CardMedia
+                      component="img"
+                      height="100"
+                      image={image.thumbnailLink} // Always prefer thumbnailLink for previews
+                      alt={image.name}
+                      sx={{ objectFit: 'contain' }}
+                      onError={(e) => { e.target.style.display = 'none'; }} // Hide if thumbnail fails
+                    />
+                  )}
                   <Typography variant="caption" display="block" sx={{ textAlign: 'center', p: 1 }} noWrap>
                     {image.name}
                   </Typography>
