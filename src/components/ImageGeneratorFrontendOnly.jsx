@@ -54,7 +54,8 @@ const ImageGeneratorFrontendOnly = ({
   imageFilters,
   includeLogo,
   includeEmpresa,
-  brandElements
+  brandElements,
+  onBrandElementsChange
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -506,9 +507,19 @@ const ImageGeneratorFrontendOnly = ({
   };
 
   const handleSaveIndividualModifications = (modifiedImageData) => {
-    // modifiedImageData contém: index, record (potencialmente atualizado), fieldPositions (editados), fieldStyles (editados)
+    // modifiedImageData contém: index, record, fieldPositions, fieldStyles, e brandElements
+    const {
+      index: imageIndex,
+      record: updatedCsvRecord,
+      fieldPositions: newPositions,
+      fieldStyles: newStyles,
+      brandElements: editedBrandElements
+    } = modifiedImageData;
 
-    const { index: imageIndex, record: updatedCsvRecord, fieldPositions: newPositions, fieldStyles: newStyles } = modifiedImageData;
+    // Atualiza o estado global dos brand elements
+    if (onBrandElementsChange) {
+      onBrandElementsChange(editedBrandElements);
+    }
 
     // Atualizar a imagem em generatedImages com as novas posições/estilos customizados e o record atualizado
     const updatedImages = generatedImages.map(img => {
@@ -539,14 +550,16 @@ const ImageGeneratorFrontendOnly = ({
         imageToRegenerate.record, // Passar o record atualizado de imageToRegenerate
         bgToUse,
         newPositions,
-        newStyles
+        newStyles,
+        null, // customSize is not passed here, so it's null
+        editedBrandElements // Pass the just-edited brand elements
       );
     }
     handleCloseGeneratedImageEditor(); // Fecha o editor
   };
 
 
-  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null) => {
+  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements) => {
     // console.log('[regenerateSingleImage] Called for index:', index,
     //             'currentBackgroundImage (first 100 chars):', currentBackgroundImage ? currentBackgroundImage.substring(0, 100) : 'null',
     //             'record:', record,
@@ -578,7 +591,7 @@ const ImageGeneratorFrontendOnly = ({
         imageFilters,
         includeLogo,
         includeEmpresa,
-        brandElements
+        elementsToUse
       );
       console.log(`[regenerateSingleImage] composeImage finished for index ${index}.`);
 
@@ -1223,6 +1236,7 @@ const ImageGeneratorFrontendOnly = ({
             imageFilters={imageFilters}
             includeLogo={includeLogo}
             includeEmpresa={includeEmpresa}
+            brandElements={brandElements}
           />
         );
       })()}

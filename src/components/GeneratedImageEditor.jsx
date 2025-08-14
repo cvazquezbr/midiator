@@ -55,10 +55,12 @@ const GeneratedImageEditor = ({
   originalImageSize,
   imageFilters, // Adicionado
   includeLogo, // Adicionado
-  includeEmpresa // Adicionado
+  includeEmpresa, // Adicionado
+  brandElements
 }) => {
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
+  const [editedBrandElements, setEditedBrandElements] = useState([]);
   const [editedRecord, setEditedRecord] = useState(null); // State for the CSV record being edited
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null); // Estado para o campo selecionado internamente
   const [stylesAreInitialized, setStylesAreInitialized] = useState(false); // New state for initialization tracking
@@ -109,11 +111,12 @@ const GeneratedImageEditor = ({
       setEditedImageFilters(imageFilters);
       setEditedIncludeLogo(includeLogo);
       setEditedIncludeEmpresa(includeEmpresa);
+      setEditedBrandElements(JSON.parse(JSON.stringify(brandElements || [])));
     } else {
       // If essential data is missing, ensure we are not in an initialized state.
       setStylesAreInitialized(false);
     }
-  }, [open, imageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, imageFilters, includeLogo, includeEmpresa]);
+  }, [open, imageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, imageFilters, includeLogo, includeEmpresa, brandElements]);
 
   if (!imageData) {
     return null;
@@ -125,6 +128,7 @@ const GeneratedImageEditor = ({
       record: editedRecord, // Passa o record atualizado
       fieldPositions: editedPositions,
       fieldStyles: editedStyles,
+      brandElements: editedBrandElements,
     });
     onClose();
   };
@@ -183,6 +187,8 @@ const GeneratedImageEditor = ({
                 imageFilters={editedImageFilters}
                 includeLogo={editedIncludeLogo}
                 includeEmpresa={editedIncludeEmpresa}
+                brandElements={editedBrandElements}
+                setBrandElements={setEditedBrandElements}
               />
             </Grid>
             {isLargeScreen && (
@@ -200,6 +206,8 @@ const GeneratedImageEditor = ({
                   setIncludeLogo={setEditedIncludeLogo}
                   includeEmpresa={editedIncludeEmpresa}
                   setIncludeEmpresa={setEditedIncludeEmpresa}
+                  brandElements={editedBrandElements}
+                  setBrandElements={setEditedBrandElements}
                 />
               </Grid>
             )}

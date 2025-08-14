@@ -55,6 +55,10 @@
   background-color: rgba(33, 150, 243, 0.1);
 }
 
+.imageElement {
+  padding: 0 !important;
+}
+
 .textContent {
   pointer-events: none;
   word-wrap: break-word;
