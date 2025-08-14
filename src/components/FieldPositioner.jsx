@@ -524,7 +524,7 @@ const FieldPositioner = ({
         .filter(Boolean),
       ...(brandElements || [])
         .map(element => {
-          if (!element.visible) return null;
+          if (element.visible === false) return null;
           return {
             id: element.id,
             type: 'image',

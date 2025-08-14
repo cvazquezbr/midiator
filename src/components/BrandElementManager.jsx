@@ -108,14 +108,13 @@ const BrandElementManager = ({ onElementSelect }) => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h6">Elementos da Marca</Typography>
-        {isConnected && (
-          <Button onClick={fetchBrandElements} disabled={isLoading} startIcon={<Refresh />}>
+      {isConnected && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <Button onClick={fetchBrandElements} disabled={isLoading} startIcon={<Refresh />} size="small">
             Atualizar
           </Button>
-        )}
-      </Box>
+        </Box>
+      )}
 
       {isLoading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}><CircularProgress /></Box>}
 
