@@ -40,6 +40,38 @@ class GoogleDriveAPI {
     }
   }
 
+  /**
+   * Obtém o conteúdo de um arquivo como um Blob.
+   */
+  async getFileAsBlob(fileId) {
+    if (!this.isInitialized || !this.isSignedIn) {
+      throw new Error('Usuário não está logado para baixar arquivo.');
+    }
+    if (!window.gapi || !window.gapi.client || !window.gapi.client.drive) {
+      throw new Error('Cliente GAPI Drive não está pronto para baixar arquivo.');
+    }
+
+    try {
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(`HTTP ${response.status}: ${response.statusText}. Detalhes: ${errorBody}`);
+      }
+
+      const blob = await response.blob();
+      return blob;
+
+    } catch (error) {
+      throw new Error(`Erro ao baixar arquivo ${fileId}: ${error.message || error}`);
+    }
+  }
+
   async _performInitialization(apiKey, clientId) {
     return new Promise((resolve, reject) => {
       // 1. Carrega a biblioteca GIS se necessário

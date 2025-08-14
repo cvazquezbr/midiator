@@ -587,20 +587,43 @@ const DraggableElement = ({
             alignItems: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
           }}
         >
-          <Box
-            className={`${styles.textContent} ${enableHtmlRendering ? styles.htmlContent : ''}`}
-            sx={textContentStyle}
-          >
-            {enableHtmlRendering ? (
-              renderContent()
+            {element.type === 'image' ? (
+              <img
+                src={content} // Use content prop which holds the URL
+                alt={element.name || 'Brand Element'}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  pointerEvents: 'none',
+                }}
+              />
             ) : (
-              textLines.map((line, index) => (
-                <div key={index} style={{ marginBottom: index < textLines.length - 1 ? '2px' : 0 }}>
-                  {line}
-                </div>
-              ))
+              <Box
+                className={`${styles.textContent} ${enableHtmlRendering ? styles.htmlContent : ''}`}
+                sx={textContentStyle}
+              >
+                {enableHtmlRendering ? (
+                  <div
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      overflow: 'hidden',
+                      wordWrap: 'break-word',
+                      pointerEvents: 'none',
+                      textAlign: style.textAlign || 'left',
+                    }}
+                  />
+                ) : (
+                  textLines.map((line, index) => (
+                    <div key={index} style={{ marginBottom: index < textLines.length - 1 ? '2px' : 0 }}>
+                      {line}
+                    </div>
+                  ))
+                )}
+              </Box>
             )}
-          </Box>
         </Box>
 
         {/* Handles de redimensionamento e rotação */}
