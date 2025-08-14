@@ -23,7 +23,7 @@ import {
   DialogActions,
   CircularProgress,
 } from '@mui/material';
-import { generateCommonProblems } from '../utils/generationHandlers';
+import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
 import {
     Campaign as CampaignIcon,
@@ -135,12 +135,10 @@ const Campaign = ({
     aspectRatio,
     setAspectRatio,
     isGeneratingCampaign,
-    isGeneratingSolucao,
     campaignContent,
     campaignGenerationFailed,
     generationError,
     handleGenerateCampaignContent,
-    handleGenerateSolucao,
     handleResetCampaign,
     handleExportHtml,
     setEditingField,
@@ -168,6 +166,9 @@ const Campaign = ({
     const [commonProblems, setCommonProblems] = React.useState([]);
     const [isLoadingProblems, setIsLoadingProblems] = React.useState(false);
     const [problemsError, setProblemsError] = React.useState(null);
+    const [commonSolutions, setCommonSolutions] = React.useState([]);
+    const [isLoadingSolutions, setIsLoadingSolutions] = React.useState(false);
+    const [solutionsError, setSolutionsError] = React.useState(null);
 
     const handleGenerateProblems = async () => {
         setIsLoadingProblems(true);
@@ -184,6 +185,24 @@ const Campaign = ({
             setProblemsError(error.message);
         } finally {
             setIsLoadingProblems(false);
+        }
+    };
+
+    const handleGenerateSolutions = async () => {
+        setIsLoadingSolutions(true);
+        setSolutionsError(null);
+        setCommonSolutions([]);
+        try {
+            const { persona } = getCampaignPrompt();
+            if (!problema.trim()) {
+                throw new Error("Descreva o problema primeiro.");
+            }
+            const solutions = await generateCommonSolutions({ problema, persona });
+            setCommonSolutions(solutions);
+        } catch (error) {
+            setSolutionsError(error.message);
+        } finally {
+            setIsLoadingSolutions(false);
         }
     };
 
@@ -214,17 +233,6 @@ const Campaign = ({
                         </Box>
                     </Grid>
 
-                    <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center' }}>
-                        <Button
-                            variant="contained"
-                            onClick={handleGenerateSolucao}
-                            disabled={isGeneratingSolucao || !problema.trim() || (solucao && solucao.trim() !== '')}
-                            startIcon={<GeminiIcon />}
-                        >
-                            {isGeneratingSolucao ? 'Gerando...' : 'Gerar Solução'}
-                        </Button>
-                    </Grid>
-
                     <Grid item xs={12}>
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                             <TextField
@@ -239,7 +247,7 @@ const Campaign = ({
                                 disabled={campaignContent !== null}
                             />
                             <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setSolucaoHintModalOpen(true)}>
-                                <InfoIcon />
+                                <GeminiIcon />
                             </IconButton>
                         </Box>
                     </Grid>
@@ -578,12 +586,56 @@ const Campaign = ({
                     </DialogActions>
                 </Dialog>
 
-                <Dialog open={isSolucaoHintModalOpen} onClose={() => setSolucaoHintModalOpen(false)} maxWidth="md">
+                <Dialog open={isSolucaoHintModalOpen} onClose={() => setSolucaoHintModalOpen(false)} maxWidth="md" fullWidth>
                     <DialogTitle>Como Descrever a Solução ou Proposta</DialogTitle>
                     <DialogContent>
                         {solucaoHint}
+                        <Box sx={{ my: 2, borderTop: 1, borderColor: 'divider' }} />
+
+                        {isLoadingSolutions && (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                                <CircularProgress />
+                            </Box>
+                        )}
+                        {solutionsError && (
+                            <Alert severity="error" sx={{ mt: 2 }}>
+                                {solutionsError}
+                            </Alert>
+                        )}
+                        {commonSolutions.length > 0 && (
+                            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                {commonSolutions.map((solution, index) => (
+                                    <Alert
+                                        key={index}
+                                        severity="info"
+                                        onClick={() => {
+                                            setSolucao(solution.replace(/\*\*(.*?)\*\*\\n/g, '$1\n')); // Remove markdown bold
+                                            setSolucaoHintModalOpen(false);
+                                        }}
+                                        sx={{
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                bgcolor: 'action.hover'
+                                            },
+                                            whiteSpace: 'pre-wrap'
+                                        }}
+                                    >
+                                        {solution.replace(/\*\*/g, '')}
+                                    </Alert>
+                                ))}
+                            </Box>
+                        )}
                     </DialogContent>
                     <DialogActions>
+                        <Button
+                            variant="contained"
+                            startIcon={<GeminiIcon />}
+                            onClick={handleGenerateSolutions}
+                            disabled={isLoadingSolutions || !problema.trim()}
+                            sx={{ mr: 'auto' }} // Pushes this button to the left
+                        >
+                            Sugerir Soluções
+                        </Button>
                         <Button onClick={() => setSolucaoHintModalOpen(false)}>Fechar</Button>
                     </DialogActions>
                 </Dialog>
