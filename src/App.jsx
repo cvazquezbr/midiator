@@ -80,7 +80,7 @@ import FormattingDrawer from './components/FormattingDrawer';
 import ImageGeneratorFrontendOnly from './components/ImageGeneratorFrontendOnly';
 import AudioGenerator from './components/AudioGenerator';
 import VideoGenerator2 from './components/VideoGenerator2';
-import RecordManager from './features/RecordManager/RecordManager';
+import PostsCurtosStep from './components/PostsCurtosStep';
 import CsvInfobox from './components/CsvInfobox';
 import Publisher from './components/Publisher';
 import SetupModal from './components/SetupModal';
@@ -95,7 +95,6 @@ import './App.css';
 import LoadingDialog from './components/LoadingDialog';
 import TextEditorDialog from './components/TextEditorDialog';
 import Campaign from './components/Campaign';
-import ContentStep from './components/ContentStep';
 import ImageUploadStep from './components/ImageUploadStep';
 import MemorialDescritivoModal from './components/MemorialDescritivoModal';
 import {
@@ -164,7 +163,7 @@ function App() {
 
 
   // Estados para a Geração com IA
-  const [inputMethod, setInputMethod] = useState('csv');
+  const [inputMethod, setInputMethod] = useState('ia');
   // const [selectedApiModel, setSelectedApiModel] = useState('deepseek'); // Removed, defaulting to gemini
   const [promptNumRecords, setPromptNumRecords] = useState(10);
   const [promptText, setPromptText] = useState('');
@@ -500,14 +499,9 @@ function App() {
       icon: CampaignIcon,
     },
     {
-      label: 'Conteúdo',
-      description: 'Carregar CSV ou criar manualmente',
+      label: 'Posts Curtos',
+      description: 'Gere, carregue ou edite os posts para redes sociais.',
       icon: InsertDriveFileOutlined
-    },
-    {
-      label: 'Editar Conteúdo',
-      description: 'Adicione, edite ou remova posts conforme necessário.',
-      icon: Edit
     },
     {
       label: 'Upload da Imagem',
@@ -603,7 +597,8 @@ function App() {
 
         setFieldPositions(updatedFieldPositions);
         setFieldStyles(updatedFieldStyles);
-        setActiveStep(2);
+        // Não avança mais o passo automaticamente, a UI vai mudar
+        // setActiveStep(2);
       }
     } catch (error) {
       console.error('Erro ao processar CSV:', error);
@@ -711,18 +706,17 @@ function App() {
 
   const canProceedToStep = () => {
     switch (activeStep) {
-      case 0: // Campanha
-        return campaignContent !== null;
-      case 1: // Conteúdo
-        return true; // Pode ir para a edição mesmo sem dados, para adicionar manualmente
-      case 2: // Editar Conteúdo
-        return csvData.length > 0;
-      case 3: // Upload Imagem
-        return backgroundImage !== null;
-      case 4: // Posicionar e Formatar
-        return true;
-      default:
-        return true;
+        case 0: // Campanha
+            return campaignContent !== null;
+        case 1: // Posts Curtos
+            return csvData.length > 0;
+        case 2: // Upload Imagem
+            return backgroundImage !== null;
+        case 3: // Posicionar e Formatar
+            return true;
+        // Adicione outros casos conforme necessário
+        default:
+            return true;
     }
   };
 
@@ -1195,7 +1189,8 @@ function App() {
         setFieldPositions(updatedFieldPositions);
         setFieldStyles(updatedFieldStyles);
 
-        setActiveStep(2); // Avança para Edição de Dados
+        // Não avança mais o passo automaticamente
+        // setActiveStep(2);
       } else {
         toast.error('Não foi possível processar a resposta da IA para o formato de tabela.');
         console.log(`[App] Falha no parsing ou dados vazios. Resposta da API:`, iaResponseText, "Resultado do Parser:", parsedResult);
@@ -1239,9 +1234,6 @@ function App() {
           setShowMemorialDescritivoModal={setShowMemorialDescritivoModal}
           handleSaveTemplateClick={handleSaveTemplateClick}
           handleLoadTemplateClick={handleLoadTemplateClick}
-          exportCsv={exportCsv}
-          csvData={csvData}
-          csvHeaders={csvHeaders}
           loadStateInputRef={loadStateInputRef}
           handleLoadStateFromFile={handleLoadStateFromFile}
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
@@ -1352,9 +1344,9 @@ function App() {
             </Container>
           )}
 
-          {/* Passo 1: Definir Dados Iniciais */}
+          {/* Passo 1: Posts Curtos */}
           {activeStep === 1 && (
-            <ContentStep
+            <PostsCurtosStep
               steps={steps}
               inputMethod={inputMethod}
               setInputMethod={setInputMethod}
@@ -1363,7 +1355,6 @@ function App() {
               fileInputRef={fileInputRef}
               handleCSVUpload={handleCSVUpload}
               downloadExampleCsv={downloadExampleCsv}
-              setActiveStep={setActiveStep}
               getGeminiApiKey={getGeminiApiKey}
               setShowSetupModal={setShowSetupModal}
               promptNumRecords={promptNumRecords}
@@ -1374,21 +1365,14 @@ function App() {
               isGenerating={isGenerating}
               csvData={csvData}
               csvHeaders={csvHeaders}
-            />
-          )}
-
-          {/* Passo 2: Editar Dados */}
-          {activeStep === 2 && (
-            <RecordManager
-              registrosIniciais={csvData}
-              colunasIniciais={csvHeaders}
               onDadosAlterados={handleDadosAlterados}
               darkMode={darkMode}
+              exportCsv={exportCsv}
             />
           )}
 
-          {/* Passo 3: Upload Imagem */}
-          {activeStep === 3 && (
+          {/* Passo 2: Upload Imagem */}
+          {activeStep === 2 && (
             <ImageUploadStep
               steps={steps}
               isDraggingOverImage={isDraggingOverImage}
@@ -1402,8 +1386,8 @@ function App() {
             />
           )}
 
-          {/* Passo 4: Posicionamento e Formatação */}
-          {activeStep === 4 && (
+          {/* Passo 3: Posicionamento e Formatação */}
+          {activeStep === 3 && (
             <Grid container spacing={2}>
               <Grid item xs={12} md={!isMobile ? 8 : 12}>
                 <FieldPositioner
@@ -1416,12 +1400,14 @@ function App() {
                   csvData={csvData}
                   onImageDisplayedSizeChange={setDisplayedImageSize}
                   colorPalette={combinedPalette}
+                  standardsColors={standardsColors}
                   onCsvDataUpdate={handleCsvRecordContentUpdate}
                   onSelectFieldExternal={setSelectedField}
                   originalImageSize={originalImageSize}
                   imageFilters={imageFilters}
                   brandElements={brandElements}
                   setBrandElements={setBrandElements}
+                  onZIndexChange={handleZIndexChange}
                 />
               </Grid>
               {!isMobile && (
@@ -1444,8 +1430,8 @@ function App() {
             </Grid>
           )}
 
-          {/* Passo 5: Geração */}
-          {activeStep === 5 && (
+          {/* Passo 4: Geração de Imagens */}
+          {activeStep === 4 && (
             <ImageGeneratorFrontendOnly
               csvData={csvData}
               backgroundImage={backgroundImage}
@@ -1464,8 +1450,8 @@ function App() {
             />
           )}
 
-          {/* Passo 6: Geração de Áudio */}
-          <div hidden={activeStep !== 6}>
+          {/* Passo 5: Geração de Áudio */}
+          <div hidden={activeStep !== 5}>
             <AudioGenerator
               csvData={csvData}
               fieldPositions={fieldPositions}
@@ -1474,8 +1460,8 @@ function App() {
             />
           </div>
 
-          {/* Passo 7: Geração de Vídeo */}
-          {activeStep === 7 && (
+          {/* Passo 6: Geração de Vídeo */}
+          {activeStep === 6 && (
             <VideoGenerator2
               generatedImages={generatedImagesData}
               generatedAudioData={generatedAudioData}
@@ -1483,8 +1469,8 @@ function App() {
             />
           )}
 
-          {/* Passo 8: Publicar */}
-          {activeStep === 8 && (
+          {/* Passo 7: Publicar */}
+          {activeStep === 7 && (
             <Publisher
               campaignContent={campaignContent}
               conteudoFormatado={conteudoFormatado}
@@ -1645,7 +1631,7 @@ function App() {
           setEditingFollowup(null);
         }}
       />
-      {isMobile && activeStep === 4 && (
+      {isMobile && activeStep === 3 && (
         <>
           <Fab
             color="primary"

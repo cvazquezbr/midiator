@@ -88,6 +88,7 @@ const FieldPositioner = ({
   csvData,
   onImageDisplayedSizeChange,
   colorPalette,
+  standardsColors,
   onSelectFieldExternal,
   onCsvDataUpdate, // New prop to notify App.jsx of changes
   originalImageSize,
@@ -95,6 +96,8 @@ const FieldPositioner = ({
   imageFilters,
   brandElements,
   setBrandElements,
+  setImageFilters,
+  onZIndexChange,
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -146,6 +149,23 @@ const FieldPositioner = ({
       onSelectFieldExternal(fieldToSelect);
     }
   }, [onSelectFieldExternal]);
+
+  const handleVisibilityChange = useCallback((field, isVisible) => {
+    // Lógica para deletar imagem
+    const isImageField = field.toLowerCase().includes('imagem');
+    if (isImageField && !isVisible) {
+      handleContentChange(field, ''); // Limpa o valor do campo de imagem
+    }
+
+    // Atualiza a visibilidade do campo
+    setFieldPositions(prev => ({
+      ...prev,
+      [field]: {
+        ...prev[field],
+        visible: isVisible
+      }
+    }));
+  }, [handleContentChange, setFieldPositions]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -226,7 +246,7 @@ const FieldPositioner = ({
   }, [csvHeaders, fieldPositions, fieldStyles, setFieldPositions, setFieldStyles]);
 
   const handlePositionChange = (id, newPosition) => {
-    if (fieldPositions.hasOwnProperty(id)) {
+    if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
         ...prev,
         [id]: {
@@ -242,7 +262,7 @@ const FieldPositioner = ({
   };
 
   const handleSizeChange = (id, newSize) => {
-    if (fieldPositions.hasOwnProperty(id)) {
+    if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
         ...prev,
         [id]: {
@@ -336,6 +356,7 @@ const FieldPositioner = ({
         shadowBlur: 5,
         shadowOffsetX: 2,
         shadowOffsetY: 2,
+        color: standardsColors?.[0]?.hex || '#FFFFFF', // Usa a cor de acento
       };
     }
 
@@ -542,12 +563,12 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => a.zIndex - b.zIndex);
     return elements;
-  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, imageSize, originalImageSize]);
+  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, imageSize, originalImageSize, isHtmlField]);
 
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} lg={12}>
+      <Grid item xs={12} lg={9}>
         <Card>
           <CardContent>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1, sm: 2 }} justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
@@ -678,7 +699,22 @@ const FieldPositioner = ({
           </CardContent>
         </Card>
       </Grid>
-
+      <Grid item xs={12} lg={3}>
+        <FormattingPanel
+          selectedField={selectedField}
+          fieldStyles={fieldStyles}
+          setFieldStyles={setFieldStyles}
+          fieldPositions={fieldPositions}
+          setFieldPositions={setFieldPositions}
+          csvHeaders={csvHeaders}
+          imageFilters={imageFilters}
+          setImageFilters={setImageFilters}
+          brandElements={brandElements}
+          setBrandElements={setBrandElements}
+          onZIndexChange={onZIndexChange}
+          onVisibilityChange={handleVisibilityChange}
+        />
+      </Grid>
     </Grid>
   );
 };

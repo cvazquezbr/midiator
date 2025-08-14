@@ -23,6 +23,7 @@ const MemorialDescritivo = ({ campaignData }) => {
     aspectRatio,
     followupPosts,
     colors,
+    conteudoFormatado,
   } = campaignData;
 
   // In the new structure, `colors` is the primary array of color objects.
@@ -61,6 +62,7 @@ const MemorialDescritivo = ({ campaignData }) => {
           campaignContent={campaignContent}
           aspectRatio={aspectRatio}
           followupPosts={followupPosts}
+          conteudoFormatado={conteudoFormatado}
         />
       </Box>
 

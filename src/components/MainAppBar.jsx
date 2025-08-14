@@ -32,9 +32,6 @@ const MainAppBar = ({
   setShowMemorialDescritivoModal,
   handleSaveTemplateClick,
   handleLoadTemplateClick,
-  exportCsv,
-  csvData,
-  csvHeaders,
   loadStateInputRef,
   handleLoadStateFromFile,
 }) => {
@@ -111,10 +108,6 @@ const MainAppBar = ({
             <MenuItem onClick={handleLoadTemplateClick}>
               <FileUploadIcon sx={{ mr: 1 }} />
               Carregar Campanha
-            </MenuItem>
-            <MenuItem onClick={() => { exportCsv(csvData, csvHeaders); handleMenuClose(); }} disabled={csvData.length === 0}>
-              <DownloadIcon sx={{ mr: 1 }} />
-              Exportar CSV
             </MenuItem>
           </Menu>
           <input

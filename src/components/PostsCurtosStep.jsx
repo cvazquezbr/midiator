@@ -1,0 +1,224 @@
+import React, { useState } from 'react';
+import {
+  Card,
+  CardContent,
+  Typography,
+  Grid,
+  Box,
+  ToggleButton,
+  ToggleButtonGroup,
+  Button,
+  TextField,
+  Link as MuiLink,
+  Alert,
+} from '@mui/material';
+import {
+  CloudUpload,
+  Add,
+  InsertDriveFileOutlined,
+  AutoAwesomeOutlined as GeminiIcon,
+} from '@mui/icons-material';
+import CsvInfobox from './CsvInfobox';
+import RecordManager from '../features/RecordManager/RecordManager';
+
+const PostsCurtosStep = ({
+  inputMethod,
+  setInputMethod,
+  handleDrop: handleDropProp,
+  handleDragOver: handleDragOverProp,
+  fileInputRef,
+  handleCSVUpload,
+  downloadExampleCsv,
+  getGeminiApiKey,
+  setShowSetupModal,
+  promptNumRecords,
+  setPromptNumRecords,
+  promptText,
+  setPromptText,
+  handleGenerateIAContent,
+  isGenerating,
+  csvData,
+  csvHeaders,
+  onDadosAlterados,
+  darkMode,
+  exportCsv, // Nova prop
+}) => {
+  const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
+
+  const handleDragEnter = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOverCsv(true);
+  };
+
+  const handleDragLeave = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOverCsv(false);
+  };
+
+  const handleDrop = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOverCsv(false);
+    handleDropProp(event);
+  };
+
+  // Show RecordManager if data exists or if user chose manual creation
+  const showRecordManager = (csvData && csvData.length > 0) || inputMethod === 'manual';
+
+  // Show creation options if there's no data and method is not manual
+  const showCreationOptions = !showRecordManager;
+
+  return (
+    <Card>
+      <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 4 } }}>
+        <Typography variant="h5" gutterBottom sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1,
+          mb: 3
+        }}>
+          <InsertDriveFileOutlined />
+          Posts Curtos
+        </Typography>
+
+        {/* Seletor de método de entrada - sempre visível quando não há dados */}
+        {!showRecordManager && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+              <ToggleButtonGroup
+                color="primary"
+                value={inputMethod}
+                exclusive
+                onChange={(event, newInputMethod) => {
+                  if (newInputMethod !== null) {
+                    setInputMethod(newInputMethod);
+                  }
+                }}
+              >
+                <ToggleButton value="ia" sx={{ display: 'flex', gap: 1 }}>
+                  <GeminiIcon />
+                  Gerar com IA
+                </ToggleButton>
+                <ToggleButton value="csv">Carregar CSV</ToggleButton>
+                <ToggleButton value="manual">Criação Manual</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+        )}
+
+
+        {showCreationOptions && (
+          <>
+            {inputMethod === 'ia' && (
+              <Box sx={{ maxWidth: 600, mx: 'auto' }}>
+                {!getGeminiApiKey() && (
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    Chave da API Gemini não configurada.
+                    <MuiLink component="button" variant="body2" onClick={() => setShowSetupModal(true)} sx={{ ml: 1 }}>
+                      Configurar Chave Gemini
+                    </MuiLink>
+                  </Alert>
+                )}
+                <TextField
+                  label="Quantidade de Elementos"
+                  type="number"
+                  value={promptNumRecords}
+                  onChange={(e) => setPromptNumRecords(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  inputProps={{ min: 1 }}
+                  variant="outlined"
+                  fullWidth
+                  sx={{ mb: 3 }}
+                />
+                <TextField
+                  label="Descrição do Conteúdo"
+                  multiline
+                  rows={4}
+                  value={promptText}
+                  onChange={(e) => setPromptText(e.target.value)}
+                  variant="outlined"
+                  fullWidth
+                  placeholder="Ex: Um carrossel sobre os benefícios da meditação para reduzir o estresse..."
+                  sx={{ mb: 3 }}
+                />
+                <Button
+                  variant="contained"
+                  size="large"
+                  fullWidth
+                  onClick={handleGenerateIAContent}
+                  disabled={isGenerating || !promptText.trim() || !getGeminiApiKey()}
+                >
+                  {isGenerating ? 'Gerando...' : 'Gerar Conteúdo com IA'}
+                </Button>
+              </Box>
+            )}
+
+            {inputMethod === 'csv' && (
+              <Grid container spacing={3} justifyContent="center">
+                <Grid item xs={12} md={8}>
+                  <Card
+                    sx={{
+                      border: isDraggingOverCsv ? '2px dashed #8b5cf6' : '2px dashed #d1d5db',
+                      backgroundColor: isDraggingOverCsv ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+                      textAlign: 'center',
+                      p: 4,
+                    }}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOverProp}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                  >
+                    <CloudUpload sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                    <Typography variant="h6" gutterBottom>Arraste e solte ou clique para Upload</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Carregue um arquivo CSV com o conteúdo de seus posts
+                      </Typography>
+                      <CsvInfobox />
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                      <Button variant="contained" component="label">
+                        Selecionar Arquivo
+                        <input type="file" accept=".csv" hidden ref={fileInputRef} onChange={handleCSVUpload} />
+                      </Button>
+                      <Button variant="outlined" onClick={downloadExampleCsv}>
+                        Baixar CSV Exemplo
+                      </Button>
+                    </Box>
+                  </Card>
+                </Grid>
+              </Grid>
+            )}
+          </>
+        )}
+
+        {showRecordManager && (
+          <Box>
+            <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
+                <Button onClick={() => {
+                    onDadosAlterados([], []);
+                    setInputMethod('ia'); // Volta para o método padrão
+                }}>
+                    &larr; Voltar para obter dados
+                </Button>
+                <Button
+                    variant="contained"
+                    onClick={() => exportCsv(csvData, csvHeaders)}
+                    disabled={!csvData || csvData.length === 0}
+                >
+                    Baixar CSV
+                </Button>
+            </Box>
+            <RecordManager
+              registrosIniciais={csvData}
+              colunasIniciais={csvHeaders}
+              onDadosAlterados={onDadosAlterados}
+              darkMode={darkMode}
+            />
+          </Box>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default PostsCurtosStep;

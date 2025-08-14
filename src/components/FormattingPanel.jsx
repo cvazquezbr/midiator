@@ -59,7 +59,8 @@ const FormattingPanel = ({
   setImageFilters,
   brandElements,
   setBrandElements,
-  onZIndexChange
+  onZIndexChange,
+  onVisibilityChange,
 }) => {
   const fonts = [
     'Arial', 'Helvetica', 'Times New Roman', 'Georgia', 'Verdana', 'Courier New', 'Impact', 'Comic Sans MS',
@@ -83,10 +84,6 @@ const FormattingPanel = ({
       if (header !== sourceField) { newStyles[header] = { ...sourceStyle }; }
     });
     setFieldStyles(prev => ({ ...prev, ...newStyles }));
-  };
-
-  const toggleFieldVisibility = (field) => {
-    updateFieldPosition(field, 'visible', !fieldPositions[field]?.visible);
   };
 
   const resetFieldStyle = (field) => {
@@ -168,7 +165,7 @@ const FormattingPanel = ({
                 control={
                   <Switch
                     checked={currentElement.visible !== false}
-                    onChange={() => handlePositionPropertyChange('visible', !currentElement.visible)}
+                    onChange={() => onVisibilityChange(selectedField, !currentElement.visible)}
                     size="small"
                   />
                 }

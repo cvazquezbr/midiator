@@ -22,12 +22,15 @@ const DetailItem = ({ title, value, isHtml = false, sx = {} }) => {
   );
 };
 
+const containsHtml = (str) => /<[a-z][\s\S]*>/i.test(str);
+
 const ContentSection = ({
   problema,
   solucao,
   campaignContent,
   aspectRatio,
-  followupPosts
+  followupPosts,
+  conteudoFormatado,
 }) => {
   const hasCampaignContent = campaignContent && (campaignContent.titulo || campaignContent.conteudo || campaignContent.cta);
 
@@ -51,12 +54,22 @@ const ContentSection = ({
             Conteúdo Principal Gerado
           </Typography>
           <DetailItem title="Título" value={campaignContent.titulo} />
-          <DetailItem title="Conteúdo" value={campaignContent.conteudo} isHtml={true} />
+          <DetailItem
+            title="Conteúdo"
+            value={campaignContent.conteudo}
+            isHtml={containsHtml(campaignContent.conteudo)}
+          />
           <DetailItem title="Call to Action (CTA)" value={campaignContent.cta} />
            {campaignContent.hashtags && campaignContent.hashtags.length > 0 &&
              <DetailItem title="Hashtags" value={campaignContent.hashtags.join(', ')} />
            }
         </Box>
+      )}
+
+      {conteudoFormatado && (
+          <Box sx={{ mt: 4 }}>
+              <DetailItem title="Conteúdo Formatado (HTML)" value={conteudoFormatado} isHtml={true} />
+          </Box>
       )}
 
       {followupPosts && followupPosts.length > 0 && (
