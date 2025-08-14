@@ -623,7 +623,9 @@ const FieldPositioner = ({
                 WebkitOverflowScrolling: 'touch',
                 '&.interacting': {
                   touchAction: 'none'
-                }
+                },
+                maxWidth: '800px',
+                mx: 'auto',
               }}
               onMouseDown={(e) => {
                 if (e.target.closest('.text-box')) return;
