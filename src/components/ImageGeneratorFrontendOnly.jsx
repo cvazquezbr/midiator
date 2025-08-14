@@ -52,8 +52,6 @@ const ImageGeneratorFrontendOnly = ({
   onThumbnailRecordTextUpdate, // <-- ADICIONADO: Callback para atualizar o CSV em App.jsx
   originalImageSize,
   imageFilters,
-  includeLogo,
-  includeEmpresa,
   brandElements,
   onBrandElementsChange
 }) => {
@@ -246,11 +244,7 @@ const ImageGeneratorFrontendOnly = ({
       console.log('[generateImages] Calling composeImage for the main generation.');
       const composedBackgroundImageUrl = await composeImage(
         backgroundImage,
-        '/logo.png',
-        '/empresa.png',
         imageFilters,
-        includeLogo,
-        includeEmpresa,
         brandElements
       );
       console.log('[generateImages] composeImage finished for the main generation.');
@@ -586,11 +580,7 @@ const ImageGeneratorFrontendOnly = ({
       console.log(`[regenerateSingleImage] Calling composeImage for index ${index}.`);
       const composedBackgroundImageUrl = await composeImage(
         currentBackgroundImage,
-        '/logo.png',
-        '/empresa.png',
         imageFilters,
-        includeLogo,
-        includeEmpresa,
         elementsToUse
       );
       console.log(`[regenerateSingleImage] composeImage finished for index ${index}.`);
@@ -1234,8 +1224,6 @@ const ImageGeneratorFrontendOnly = ({
             globalBackgroundImage={backgroundImage}
             originalImageSize={imageToEdit.customOriginalImageSize || originalImageSize} // Pass custom size if available
             imageFilters={imageFilters}
-            includeLogo={includeLogo}
-            includeEmpresa={includeEmpresa}
             brandElements={brandElements}
           />
         );

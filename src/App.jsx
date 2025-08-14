@@ -209,8 +209,6 @@ function App() {
     blur: 0,
     opacity: 100,
   });
-  const [includeLogo, setIncludeLogo] = useState(true);
-  const [includeEmpresa, setIncludeEmpresa] = useState(true);
   const [brandElements, setBrandElements] = useState([]); // State for brand elements
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
@@ -1370,8 +1368,6 @@ function App() {
                   onSelectFieldExternal={setSelectedField}
                   originalImageSize={originalImageSize}
                   imageFilters={imageFilters}
-                  includeLogo={includeLogo}
-                  includeEmpresa={includeEmpresa}
                   brandElements={brandElements}
                   setBrandElements={setBrandElements}
                 />
@@ -1387,10 +1383,6 @@ function App() {
                     csvHeaders={csvHeaders}
                     imageFilters={imageFilters}
                     setImageFilters={setImageFilters}
-                    includeLogo={includeLogo}
-                    setIncludeLogo={setIncludeLogo}
-                    includeEmpresa={includeEmpresa}
-                    setIncludeEmpresa={setIncludeEmpresa}
                     brandElements={brandElements}
                     setBrandElements={setBrandElements}
                   />
@@ -1414,8 +1406,6 @@ function App() {
               onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
               originalImageSize={originalImageSize}
               imageFilters={imageFilters}
-              includeLogo={includeLogo}
-              includeEmpresa={includeEmpresa}
               brandElements={brandElements}
               onBrandElementsChange={setBrandElements}
             />
@@ -1623,10 +1613,6 @@ function App() {
             csvHeaders={csvHeaders}
             imageFilters={imageFilters}
             setImageFilters={setImageFilters}
-            includeLogo={includeLogo}
-            setIncludeLogo={setIncludeLogo}
-            includeEmpresa={includeEmpresa}
-            setIncludeEmpresa={setIncludeEmpresa}
             brandElements={brandElements}
             setBrandElements={setBrandElements}
           />

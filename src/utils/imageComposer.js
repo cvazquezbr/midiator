@@ -34,50 +34,21 @@ const loadImage = (src) => {
  */
 export const composeImage = async (
   backgroundImageUrl,
-  logoUrl,
-  companyImageUrl,
   imageFilters = {},
-  includeLogo = true,
-  includeEmpresa = true,
   brandElements = []
 ) => {
   console.log('[composeImage] Starting composition with:', {
     backgroundImageUrl,
-    logoUrl,
-    companyImageUrl,
     imageFilters,
-    includeLogo,
-    includeEmpresa,
     brandElements
   });
   try {
-    const companyBackgroundColor = '#808080'; // A neutral gray
-
     let backgroundSrc = backgroundImageUrl;
     if (!backgroundImageUrl.startsWith('data:') && !backgroundImageUrl.startsWith('http')) {
       backgroundSrc = `data:image/png;base64,${backgroundImageUrl}`;
     }
 
-    const imagePromises = [loadImage(backgroundSrc)];
-    if (includeLogo && logoUrl) {
-      imagePromises.push(loadImage(logoUrl));
-    }
-    if (includeEmpresa && companyImageUrl) {
-      imagePromises.push(loadImage(companyImageUrl));
-    }
-
-    const images = await Promise.all(imagePromises);
-    const bgImg = images[0];
-    let logoImg = null;
-    let companyImg = null;
-    let currentImageIndex = 1;
-
-    if (includeLogo && logoUrl) {
-      logoImg = images[currentImageIndex++];
-    }
-    if (includeEmpresa && companyImageUrl) {
-      companyImg = images[currentImageIndex];
-    }
+    const bgImg = await loadImage(backgroundSrc);
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -91,30 +62,6 @@ export const composeImage = async (
     ctx.filter = filterString;
     ctx.drawImage(bgImg, 0, 0, targetWidth, targetHeight);
     ctx.filter = 'none';
-
-    const margin = targetWidth * 0.02;
-
-    if (includeLogo && logoImg) {
-      const logoHeight = targetHeight * 0.1;
-      const logoScale = logoHeight / logoImg.height;
-      const logoWidth = logoImg.width * logoScale;
-      ctx.drawImage(logoImg, margin, margin, logoWidth, logoHeight);
-      console.log(`[composeImage] Drawing logo at (${margin}, ${margin})`);
-    }
-
-    if (includeEmpresa && companyImg) {
-      const companyImgHeight = targetHeight * 0.1;
-      const companyImgScale = companyImgHeight / companyImg.height;
-      const companyImgWidth = companyImg.width * companyImgScale;
-
-      ctx.fillStyle = companyBackgroundColor;
-      ctx.fillRect(0, targetHeight - companyImgHeight, targetWidth, companyImgHeight);
-
-      const companyImgX = targetWidth - companyImgWidth - margin;
-      const companyImgY = targetHeight - companyImgHeight;
-      ctx.drawImage(companyImg, companyImgX, companyImgY, companyImgWidth, companyImgHeight);
-      console.log(`[composeImage] Drawing company image at (${companyImgX}, ${companyImgY})`);
-    }
 
     // Draw brand elements
     for (const element of brandElements) {

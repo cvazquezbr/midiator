@@ -14,10 +14,6 @@ const FormattingDrawer = ({
   csvHeaders,
   imageFilters,
   setImageFilters,
-  includeLogo,
-  setIncludeLogo,
-  includeEmpresa,
-  setIncludeEmpresa,
   brandElements,
   setBrandElements
 }) => {
@@ -39,10 +35,6 @@ const FormattingDrawer = ({
           csvHeaders={csvHeaders}
           imageFilters={imageFilters}
           setImageFilters={setImageFilters}
-          includeLogo={includeLogo}
-          setIncludeLogo={setIncludeLogo}
-          includeEmpresa={includeEmpresa}
-          setIncludeEmpresa={setIncludeEmpresa}
           brandElements={brandElements}
           setBrandElements={setBrandElements}
         />

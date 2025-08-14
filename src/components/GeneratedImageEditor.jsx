@@ -54,8 +54,6 @@ const GeneratedImageEditor = ({
   globalBackgroundImage, // Imagem de fundo global, como fallback
   originalImageSize,
   imageFilters, // Adicionado
-  includeLogo, // Adicionado
-  includeEmpresa, // Adicionado
   brandElements
 }) => {
   const [editedPositions, setEditedPositions] = useState({});
@@ -70,8 +68,6 @@ const GeneratedImageEditor = ({
 
   // Local state for image filters and toggles
   const [editedImageFilters, setEditedImageFilters] = useState(imageFilters);
-  const [editedIncludeLogo, setEditedIncludeLogo] = useState(includeLogo);
-  const [editedIncludeEmpresa, setEditedIncludeEmpresa] = useState(includeEmpresa);
 
   const handleInternalFieldSelection = useCallback((fieldToSelect) => {
     setSelectedFieldInternal(fieldToSelect);
@@ -109,14 +105,12 @@ const GeneratedImageEditor = ({
       // Reset filter and toggle states when the editor is opened for a new image
       // TODO: In the future, this could be initialized from imageData if custom filters are saved per image
       setEditedImageFilters(imageFilters);
-      setEditedIncludeLogo(includeLogo);
-      setEditedIncludeEmpresa(includeEmpresa);
       setEditedBrandElements(JSON.parse(JSON.stringify(brandElements || [])));
     } else {
       // If essential data is missing, ensure we are not in an initialized state.
       setStylesAreInitialized(false);
     }
-  }, [open, imageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, imageFilters, includeLogo, includeEmpresa, brandElements]);
+  }, [open, imageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, imageFilters, brandElements]);
 
   if (!imageData) {
     return null;
@@ -185,8 +179,6 @@ const GeneratedImageEditor = ({
                 onCsvDataUpdate={handleFieldPositionerCsvDataUpdate} // Use memoized handler
                 originalImageSize={originalImageSize}
                 imageFilters={editedImageFilters}
-                includeLogo={editedIncludeLogo}
-                includeEmpresa={editedIncludeEmpresa}
                 brandElements={editedBrandElements}
                 setBrandElements={setEditedBrandElements}
               />
@@ -202,10 +194,6 @@ const GeneratedImageEditor = ({
                   csvHeaders={editorCsvHeaders}
                   imageFilters={editedImageFilters}
                   setImageFilters={setEditedImageFilters}
-                  includeLogo={editedIncludeLogo}
-                  setIncludeLogo={setEditedIncludeLogo}
-                  includeEmpresa={editedIncludeEmpresa}
-                  setIncludeEmpresa={setEditedIncludeEmpresa}
                   brandElements={editedBrandElements}
                   setBrandElements={setEditedBrandElements}
                 />
