@@ -590,8 +590,9 @@ const DraggableElement = ({
         <Box
           className={`${styles.textBoxContent} ${isSelected ? styles.selected : ''} ${element.type === 'image' ? styles.imageElement : ''}`}
           sx={{
-            justifyContent: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
-            alignItems: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
+            flexDirection: 'column',
+            justifyContent: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
+            alignItems: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
           }}
         >
             {element.type === 'image' ? (
