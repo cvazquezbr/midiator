@@ -121,8 +121,9 @@ const FieldPositioner = ({
           '/empresa.png',
           imageFilters,
           includeLogo,
-          includeEmpresa,
-          brandElements
+          includeEmpresa
+          // Do not pass brandElements here to prevent ghosting.
+          // They are rendered as interactive DraggableElement components on top.
         );
         setComposedImageUrl(composedUrl);
       } catch (error) {
