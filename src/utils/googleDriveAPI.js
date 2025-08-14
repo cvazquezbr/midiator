@@ -582,7 +582,7 @@ class GoogleDriveAPI {
         query += ` and '${folderId}' in parents`;
       }
 
-      const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=${pageSize}`, {
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=${pageSize}&fields=files(id,name,mimeType,thumbnailLink)`, {
         headers: {
           'Authorization': `Bearer ${this.accessToken}`
         }
