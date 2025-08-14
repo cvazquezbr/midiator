@@ -510,43 +510,36 @@ const ImageGeneratorFrontendOnly = ({
       brandElements: editedBrandElements
     } = modifiedImageData;
 
-    // Atualiza o estado global dos brand elements
-    if (onBrandElementsChange) {
-      onBrandElementsChange(editedBrandElements);
-    }
-
-    // Atualizar a imagem em generatedImages com as novas posições/estilos customizados e o record atualizado
+    // Este handler agora só atualiza a imagem específica, não o estado global de brandElements
     const updatedImages = generatedImages.map(img => {
       if (img.index === imageIndex) {
         return {
           ...img,
-          record: updatedCsvRecord, // Usar o record que veio do editor
+          record: updatedCsvRecord,
           customFieldPositions: newPositions,
           customFieldStyles: newStyles,
+          customBrandElements: editedBrandElements, // Salva os elementos customizados
         };
       }
       return img;
     });
-    setGeneratedImages(updatedImages); // Atualiza o estado local de IGFO
+    setGeneratedImages(updatedImages);
 
-    // Informar App.jsx sobre a mudança no texto do registro para atualizar o csvData principal
     if (onThumbnailRecordTextUpdate) {
       onThumbnailRecordTextUpdate(imageIndex, updatedCsvRecord);
     }
 
-    // Regerar a imagem específica com as novas posições/estilos e o record atualizado
-    // imageToRegenerate já terá o record atualizado devido ao map acima
     const imageToRegenerate = updatedImages.find(im => im.index === imageIndex);
     if (imageToRegenerate) {
       const bgToUse = imageToRegenerate.backgroundImage || backgroundImage;
       regenerateSingleImage(
         imageIndex,
-        imageToRegenerate.record, // Passar o record atualizado de imageToRegenerate
+        imageToRegenerate.record,
         bgToUse,
         newPositions,
         newStyles,
-        null, // customSize is not passed here, so it's null
-        editedBrandElements // Pass the just-edited brand elements
+        null,
+        editedBrandElements // Passa os elementos editados para a regeneração
       );
     }
     handleCloseGeneratedImageEditor(); // Fecha o editor
@@ -687,6 +680,7 @@ const ImageGeneratorFrontendOnly = ({
         backgroundImage: currentBackgroundImage, // Store the background image used for this specific image
         customFieldPositions: positionsToUse,   // Preserve the positions used for this regeneration
         customFieldStyles: stylesToUse,         // Preserve the styles used for this regeneration
+        customBrandElements: elementsToUse,     // Preserve the brand elements used
         customOriginalImageSize: customSize,    // <<<<<<<<<<<<<<<<<<<< Store the custom size
       };
 
@@ -1211,6 +1205,10 @@ const ImageGeneratorFrontendOnly = ({
           ? imageToEdit.customFieldStyles
           : fieldStyles;    // global fieldStyles prop from App.jsx
 
+        const brandElementsToLoad = imageToEdit.customBrandElements !== undefined
+          ? imageToEdit.customBrandElements
+          : brandElements;
+
         return (
           <GeneratedImageEditor
             open={showGeneratedImageEditor}
@@ -1224,7 +1222,7 @@ const ImageGeneratorFrontendOnly = ({
             globalBackgroundImage={backgroundImage}
             originalImageSize={imageToEdit.customOriginalImageSize || originalImageSize} // Pass custom size if available
             imageFilters={imageFilters}
-            brandElements={brandElements}
+            brandElements={brandElementsToLoad}
           />
         );
       })()}
