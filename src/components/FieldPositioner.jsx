@@ -21,7 +21,7 @@ import {
   SkipNext,
   Edit
 } from '@mui/icons-material';
-import HtmlTextBox from './HtmlTextBox';
+import DraggableElement from './DraggableElement';
 import FormattingDrawer from './FormattingDrawer'; // Import the new drawer
 
 const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
@@ -94,7 +94,9 @@ const FieldPositioner = ({
   darkMode,
   imageFilters,
   includeLogo,
-  includeEmpresa
+  includeEmpresa,
+  brandElements,
+  setBrandElements,
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -119,7 +121,8 @@ const FieldPositioner = ({
           '/empresa.png',
           imageFilters,
           includeLogo,
-          includeEmpresa
+          includeEmpresa,
+          brandElements
         );
         setComposedImageUrl(composedUrl);
       } catch (error) {
@@ -227,24 +230,36 @@ const FieldPositioner = ({
     // For this use case, it's likely acceptable.
   }, [csvHeaders, fieldPositions, fieldStyles, setFieldPositions, setFieldStyles]);
 
-  const handlePositionChange = (field, newPosition) => {
-    setFieldPositions(prev => ({
-      ...prev,
-      [field]: {
-        ...prev[field],
-        ...newPosition
-      }
-    }));
+  const handlePositionChange = (id, newPosition) => {
+    if (fieldPositions.hasOwnProperty(id)) {
+      setFieldPositions(prev => ({
+        ...prev,
+        [id]: {
+          ...prev[id],
+          ...newPosition
+        }
+      }));
+    } else {
+      setBrandElements(prev => prev.map(el =>
+        el.id === id ? { ...el, ...newPosition } : el
+      ));
+    }
   };
 
-  const handleSizeChange = (field, newSize) => {
-    setFieldPositions(prev => ({
-      ...prev,
-      [field]: {
-        ...prev[field],
-        ...newSize
-      }
-    }));
+  const handleSizeChange = (id, newSize) => {
+    if (fieldPositions.hasOwnProperty(id)) {
+      setFieldPositions(prev => ({
+        ...prev,
+        [id]: {
+          ...prev[id],
+          ...newSize
+        }
+      }));
+    } else {
+      setBrandElements(prev => prev.map(el =>
+        el.id === id ? { ...el, ...newSize } : el
+      ));
+    }
   };
 
   const centerAllFields = () => {
@@ -574,9 +589,9 @@ const FieldPositioner = ({
                   const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
 
                   return (
-                    <HtmlTextBox
+                    <DraggableElement
                       key={header}
-                      field={header}
+                      element={{ id: header, type: 'text' }}
                       position={position}
                       style={style}
                       content={sampleData}
@@ -594,8 +609,30 @@ const FieldPositioner = ({
                     />
                   );
                 })
-                : null
-              }
+                : null}
+
+              {brandElements && brandElements.map(element => {
+                // The position and style for brand elements are stored directly on the element object.
+                return (
+                  <DraggableElement
+                    key={element.id}
+                    element={{ ...element, type: 'image' }} // Pass the whole element object
+                    position={element} // Position data is on the element itself
+                    style={{}} // Style for images might be different, or not applicable
+                    content={element.url} // The image URL
+                    isSelected={selectedField === element.id}
+                    onSelect={handleFieldSelectInternal}
+                    onPositionChange={handlePositionChange}
+                    onSizeChange={handleSizeChange}
+                    containerSize={imageSize}
+                    rotation={element.rotation}
+                    originalImageSize={originalImageSize}
+                    fontScale={1} // Not applicable for images
+                    enableHtmlRendering={false}
+                    darkMode={darkMode}
+                  />
+                );
+              })}
             </Box>
 
             {csvData && csvData.length > 1 && (

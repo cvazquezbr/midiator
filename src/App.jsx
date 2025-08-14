@@ -211,6 +211,7 @@ function App() {
   });
   const [includeLogo, setIncludeLogo] = useState(true);
   const [includeEmpresa, setIncludeEmpresa] = useState(true);
+  const [brandElements, setBrandElements] = useState([]); // State for brand elements
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
@@ -772,6 +773,7 @@ function App() {
         selectedProfile,
         selectedImages,
         selectedVideos,
+        brandElements,
       };
       await saveCampaignState(stateToSave);
       toast.success("Campanha salva com sucesso!");
@@ -821,6 +823,7 @@ function App() {
       setSelectedProfile(loadedState.selectedProfile || '');
       setSelectedImages(loadedState.selectedImages || {});
       setSelectedVideos(loadedState.selectedVideos || {});
+      setBrandElements(loadedState.brandElements || []);
 
       // Navigate to the appropriate step
       if (loadedState.backgroundImageUrl && loadedState.csvHeaders.length > 0) {
@@ -1369,6 +1372,8 @@ function App() {
                   imageFilters={imageFilters}
                   includeLogo={includeLogo}
                   includeEmpresa={includeEmpresa}
+                  brandElements={brandElements}
+                  setBrandElements={setBrandElements}
                 />
               </Grid>
               {!isMobile && (
@@ -1386,6 +1391,8 @@ function App() {
                     setIncludeLogo={setIncludeLogo}
                     includeEmpresa={includeEmpresa}
                     setIncludeEmpresa={setIncludeEmpresa}
+                    brandElements={brandElements}
+                    setBrandElements={setBrandElements}
                   />
                 </Grid>
               )}
@@ -1409,6 +1416,7 @@ function App() {
               imageFilters={imageFilters}
               includeLogo={includeLogo}
               includeEmpresa={includeEmpresa}
+              brandElements={brandElements}
             />
           )}
 
@@ -1618,6 +1626,8 @@ function App() {
             setIncludeLogo={setIncludeLogo}
             includeEmpresa={includeEmpresa}
             setIncludeEmpresa={setIncludeEmpresa}
+            brandElements={brandElements}
+            setBrandElements={setBrandElements}
           />
         </>
       )}
