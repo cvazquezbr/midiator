@@ -102,8 +102,8 @@ export const loadCampaignState = (file) => {
           reject(new Error(`Versão do arquivo incompatível. Esperado: ${CURRENT_STATE_VERSION}, Encontrado: ${loadedState.version || 'N/A'}.`));
           return;
         }
-        if (!loadedState.backgroundImageUrl || !loadedState.fieldPositions || !loadedState.fieldStyles || !loadedState.csvHeaders) {
-            reject(new Error("Arquivo de estado inválido. Faltam campos essenciais."));
+        if (!loadedState.fieldPositions || !loadedState.fieldStyles || !loadedState.csvHeaders) {
+            reject(new Error("Arquivo de estado inválido. Faltam campos essenciais (posições, estilos ou cabeçalhos)."));
             return;
         }
 
