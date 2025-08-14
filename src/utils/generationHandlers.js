@@ -236,6 +236,65 @@ CTAs variados, como: “Leia mais”, “Descubra como”, “Saiba o que fazer�
 };
 
 /**
+ * Generates a list of common solutions for a given problem and persona.
+ */
+export const generateCommonSolutions = async ({ problema, persona }) => {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Chave de API Gemini não configurada.');
+  }
+
+  if (!problema || problema.trim() === '') {
+    throw new Error('Problema não definido. Por favor, descreva o problema primeiro.');
+  }
+
+  const personaString = formatObjectForPrompt(persona, ['description']);
+
+  const prompt = `
+    Com base na seguinte descrição de Persona e no Problema apresentado, gere uma lista de 3 a 4 ideias de soluções ou propostas de campanha.
+
+    PERSONA:
+    ${personaString}
+
+    PROBLEMA:
+    "${problema}"
+
+    REGRAS:
+    1.  Cada item da lista deve ser uma string única contendo um texto completo sobre a solução.
+    2.  Inicie cada string com um título curto em negrito (usando markdown **Título da Solução**).
+    3.  Após o título, descreva a solução em um ou dois parágrafos concisos.
+    4.  O texto deve ser prático e direto, focando em como a solução resolve o problema para a persona.
+    5.  A resposta DEVE ser um array JSON de strings.
+
+    FORMATO DE RESPOSTA (APENAS O JSON):
+    \`\`\`json
+    [
+      "**Título da Solução 1**\\nDescrição detalhada da solução em um ou dois parágrafos...",
+      "**Título da Solução 2**\\nDescrição detalhada da solução em um ou dois parágrafos..."
+    ]
+    \`\`\`
+  `;
+
+  const response = await callGeminiApi(prompt, apiKey, 'Geração de Soluções Comuns');
+  const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
+  if (jsonMatch && jsonMatch[1]) {
+    try {
+      return JSON.parse(jsonMatch[1]);
+    } catch (e) {
+      console.error("Falha ao analisar a resposta JSON das soluções comuns:", jsonMatch[1], e);
+      throw new Error("A resposta da IA para as soluções comuns não estava em um formato JSON válido.");
+    }
+  }
+
+  try {
+    return JSON.parse(response);
+  } catch (e) {
+    console.error("Falha ao analisar a resposta JSON direta das soluções comuns:", response, e);
+    throw new Error("A resposta da IA para as soluções comuns não estava em um formato JSON válido.");
+  }
+};
+
+/**
  * Generates a list of common problems for a given persona.
  */
 export const generateCommonProblems = async ({ persona }) => {

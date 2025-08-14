@@ -132,7 +132,6 @@ function App() {
   const [problema, setProblema] = useState('');
   const [solucao, setSolucao] = useState('');
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
-  const [isGeneratingSolucao, setIsGeneratingSolucao] = useState(false);
   const [campaignContent, setCampaignContent] = useState(null);
   const [campaignGenerationFailed, setCampaignGenerationFailed] = useState(false);
   const [generationError, setGenerationError] = useState('');
@@ -1113,26 +1112,6 @@ function App() {
     setEditingFollowup(null);
   };
 
-  const handleGenerateSolucao = async () => {
-    setIsGeneratingSolucao(true);
-    try {
-      const apiKey = getGeminiApiKey();
-      if (!apiKey) {
-        toast.error('Por favor, configure sua chave de API Gemini primeiro.');
-        return;
-      }
-      const { persona, autor } = getCampaignPrompt();
-      const prompt = `Com base na persona ${JSON.stringify(persona)} e no autor ${JSON.stringify(autor)}, gere uma solução para o seguinte problema: '${problema}'. Responda apenas com a solução, sem repetir o problema.`;
-      const generatedSolucao = await callGeminiApi(prompt, apiKey, "Gerar Solucao");
-      setSolucao(generatedSolucao);
-    } catch (error) {
-      console.error("Erro ao gerar solução:", error);
-      toast.error(`Ocorreu um erro ao gerar a solução: ${error.message}`);
-    } finally {
-      setIsGeneratingSolucao(false);
-    }
-  };
-
   const handleGenerateIAContent = async () => {
     setIsGenerating(true);
     try {
@@ -1283,12 +1262,10 @@ function App() {
               aspectRatio={aspectRatio}
               setAspectRatio={setAspectRatio}
               isGeneratingCampaign={isGeneratingCampaign}
-              isGeneratingSolucao={isGeneratingSolucao}
               campaignContent={campaignContent}
               campaignGenerationFailed={campaignGenerationFailed}
               generationError={generationError}
               handleGenerateCampaignContent={handleGenerateCampaignContent}
-              handleGenerateSolucao={handleGenerateSolucao}
               handleResetCampaign={handleResetCampaign}
               handleExportHtml={() => exportHtml({
                 campaignContent,
@@ -1563,7 +1540,7 @@ function App() {
         }}
       />
       <LoadingDialog
-        open={isGeneratingCampaign || isSaving || isLoading || isGeneratingSolucao}
+        open={isGeneratingCampaign || isSaving || isLoading}
         title={
           isSaving ? "Salvando configuração..." :
           isLoading ? "Carregando configuração..." :
