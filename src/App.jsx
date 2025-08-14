@@ -1388,46 +1388,26 @@ function App() {
 
           {/* Passo 3: Posicionamento e Formatação */}
           {activeStep === 3 && (
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={!isMobile ? 8 : 12}>
-                <FieldPositioner
-                  backgroundImage={backgroundImage}
-                  csvHeaders={csvHeaders}
-                  fieldPositions={fieldPositions}
-                  setFieldPositions={setFieldPositions}
-                  fieldStyles={fieldStyles}
-                  setFieldStyles={setFieldStyles}
-                  csvData={csvData}
-                  onImageDisplayedSizeChange={setDisplayedImageSize}
-                  colorPalette={combinedPalette}
-                  standardsColors={standardsColors}
-                  onCsvDataUpdate={handleCsvRecordContentUpdate}
-                  onSelectFieldExternal={setSelectedField}
-                  originalImageSize={originalImageSize}
-                  imageFilters={imageFilters}
-                  brandElements={brandElements}
-                  setBrandElements={setBrandElements}
-                  onZIndexChange={handleZIndexChange}
-                />
-              </Grid>
-              {!isMobile && (
-                <Grid item xs={12} md={4}>
-                  <FormattingPanel
-                    selectedField={selectedField}
-                    fieldStyles={fieldStyles}
-                    setFieldStyles={setFieldStyles}
-                    fieldPositions={fieldPositions}
-                    setFieldPositions={setFieldPositions}
-                    csvHeaders={csvHeaders}
-                    imageFilters={imageFilters}
-                    setImageFilters={setImageFilters}
-                    brandElements={brandElements}
-                    setBrandElements={setBrandElements}
-                    onZIndexChange={handleZIndexChange}
-                  />
-                </Grid>
-              )}
-            </Grid>
+            <FieldPositioner
+              backgroundImage={backgroundImage}
+              csvHeaders={csvHeaders}
+              fieldPositions={fieldPositions}
+              setFieldPositions={setFieldPositions}
+              fieldStyles={fieldStyles}
+              setFieldStyles={setFieldStyles}
+              csvData={csvData}
+              onImageDisplayedSizeChange={setDisplayedImageSize}
+              colorPalette={combinedPalette}
+              standardsColors={standardsColors}
+              onCsvDataUpdate={handleCsvRecordContentUpdate}
+              onSelectFieldExternal={setSelectedField}
+              originalImageSize={originalImageSize}
+              imageFilters={imageFilters}
+              setImageFilters={setImageFilters}
+              brandElements={brandElements}
+              setBrandElements={setBrandElements}
+              onZIndexChange={handleZIndexChange}
+            />
           )}
 
           {/* Passo 4: Geração de Imagens */}
