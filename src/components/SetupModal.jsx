@@ -1,5 +1,4 @@
 import React, { useState, useRef } from 'react';
-import { useIsMobile } from '../hooks/use-mobile.js';
 import {
   Dialog,
   DialogTitle,
@@ -59,7 +58,6 @@ function TabPanel(props) {
 }
 
 const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
-  const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [passwordDialogAction, setPasswordDialogAction] = useState(null); // 'save' or 'load'
@@ -122,7 +120,7 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Configurações
           <IconButton onClick={onClose}>
