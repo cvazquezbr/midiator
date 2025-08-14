@@ -250,27 +250,23 @@ export const generateCommonProblems = async ({ persona }) => {
   const personaString = formatObjectForPrompt(persona);
 
   const prompt = `
-    Com base na seguinte descrição de Persona, gere uma lista de 3 a 5 problemas ou necessidades comuns que essa persona provavelmente enfrenta.
+    Com base na seguinte descrição de Persona, gere uma lista de 3 a 4 problemas ou necessidades comuns que essa persona provavelmente enfrenta.
 
     PERSONA:
     ${personaString}
 
     REGRAS:
-    1.  Cada problema deve ser descrito em um ou dois parágrafos concisos.
-    2.  O texto deve ser prático e direto, focando na "dor" ou necessidade da persona.
-    3.  A resposta DEVE ser um array JSON válido.
+    1.  Cada item da lista deve ser uma string única contendo um texto completo sobre o problema.
+    2.  Inicie cada string com um título curto em negrito (usando markdown **Título**).
+    3.  Após o título, descreva o problema em um ou dois parágrafos concisos.
+    4.  O texto deve ser prático e direto, focando na "dor" ou necessidade da persona.
+    5.  A resposta DEVE ser um array JSON de strings.
 
     FORMATO DE RESPOSTA (APENAS O JSON):
     \`\`\`json
     [
-      {
-        "titulo": "Título Curto do Problema 1",
-        "descricao": "Descrição detalhada do problema em um ou dois parágrafos..."
-      },
-      {
-        "titulo": "Título Curto do Problema 2",
-        "descricao": "Descrição detalhada do problema em um ou dois parágrafos..."
-      }
+      "**Título do Problema 1**\\nDescrição detalhada do problema em um ou dois parágrafos...",
+      "**Título do Problema 2**\\nDescrição detalhada do problema em um ou dois parágrafos..."
     ]
     \`\`\`
   `;
