@@ -549,6 +549,12 @@ const DraggableElement = ({
 
   const handleSize = isMobile ? 24 : 12;
 
+  const getFilterString = (filters) => {
+    if (!filters) return 'none';
+    const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters;
+    return `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
+  };
+
   const textContentStyle = {
     fontFamily: style.fontFamily || 'Arial',
     fontSize: `${scaledFontSize}px`,
@@ -596,6 +602,7 @@ const DraggableElement = ({
                   height: '100%',
                   objectFit: 'contain',
                   pointerEvents: 'none',
+                  filter: getFilterString(element.filters),
                 }}
               />
             ) : (
