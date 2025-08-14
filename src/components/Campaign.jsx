@@ -555,7 +555,7 @@ const Campaign = ({
                                     </Alert>
                                 )}
                                 {commonProblems.length > 0 && (
-                                    <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 400, overflowY: 'auto', pr: 1 }}>
+                                    <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
                                         {commonProblems.map((problem, index) => (
                                             <Alert
                                                 key={index}
@@ -594,45 +594,53 @@ const Campaign = ({
                     </DialogActions>
                 </Dialog>
 
-                <Dialog open={isSolucaoHintModalOpen} onClose={() => setSolucaoHintModalOpen(false)} maxWidth="md" fullWidth>
+                <Dialog open={isSolucaoHintModalOpen} onClose={() => setSolucaoHintModalOpen(false)} maxWidth="lg" fullWidth>
                     <DialogTitle>Como Descrever a Solução ou Proposta</DialogTitle>
                     <DialogContent>
-                        {solucaoHint}
-                        <Box sx={{ my: 2, borderTop: 1, borderColor: 'divider' }} />
-
-                        {isLoadingSolutions && (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-                                <CircularProgress />
-                            </Box>
-                        )}
-                        {solutionsError && (
-                            <Alert severity="error" sx={{ mt: 2 }}>
-                                {solutionsError}
-                            </Alert>
-                        )}
-                        {commonSolutions.length > 0 && (
-                            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                {commonSolutions.map((solution, index) => (
-                                    <Alert
-                                        key={index}
-                                        severity="info"
-                                        onClick={() => {
-                                            setSolucao(solution.replace(/\*\*(.*?)\*\*\\n/g, '$1\n')); // Remove markdown bold
-                                            setSolucaoHintModalOpen(false);
-                                        }}
-                                        sx={{
-                                            cursor: 'pointer',
-                                            '&:hover': {
-                                                bgcolor: 'action.hover'
-                                            },
-                                            whiteSpace: 'pre-wrap'
-                                        }}
-                                    >
-                                        {solution.replace(/\*\*/g, '')}
+                        <Grid container spacing={4} sx={{ mt: 1 }}>
+                            <Grid item xs={12} md={6}>
+                                {solucaoHint}
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <Typography variant="h6" gutterBottom>Sugestões com IA</Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{mb: 2}}>
+                                    Use as sugestões abaixo como ponto de partida ou para refinar sua ideia. Clique em uma para usá-la.
+                                </Typography>
+                                {isLoadingSolutions && (
+                                    <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                                        <CircularProgress />
+                                    </Box>
+                                )}
+                                {solutionsError && (
+                                    <Alert severity="error" sx={{ mt: 2 }}>
+                                        {solutionsError}
                                     </Alert>
-                                ))}
-                            </Box>
-                        )}
+                                )}
+                                {commonSolutions.length > 0 && (
+                                    <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                        {commonSolutions.map((solution, index) => (
+                                            <Alert
+                                                key={index}
+                                                severity="info"
+                                                onClick={() => {
+                                                    setSolucao(solution.replace(/\*\*(.*?)\*\*\\n/g, '$1\n')); // Remove markdown bold
+                                                    setSolucaoHintModalOpen(false);
+                                                }}
+                                                sx={{
+                                                    cursor: 'pointer',
+                                                    '&:hover': {
+                                                        bgcolor: 'action.hover'
+                                                    },
+                                                    whiteSpace: 'pre-wrap'
+                                                }}
+                                            >
+                                                {solution.replace(/\*\*/g, '')}
+                                            </Alert>
+                                        ))}
+                                    </Box>
+                                )}
+                            </Grid>
+                        </Grid>
                     </DialogContent>
                     <DialogActions>
                         <Button
