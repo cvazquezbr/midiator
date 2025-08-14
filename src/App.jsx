@@ -1417,6 +1417,7 @@ function App() {
               includeLogo={includeLogo}
               includeEmpresa={includeEmpresa}
               brandElements={brandElements}
+              onBrandElementsChange={setBrandElements}
             />
           )}
 

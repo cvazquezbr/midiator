@@ -587,7 +587,7 @@ const DraggableElement = ({
         onDoubleClick={handleDoubleClick}
       >
         <Box
-          className={`${styles.textBoxContent} ${isSelected ? styles.selected : ''}`}
+          className={`${styles.textBoxContent} ${isSelected ? styles.selected : ''} ${element.type === 'image' ? styles.imageElement : ''}`}
           sx={{
             justifyContent: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
             alignItems: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
