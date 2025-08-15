@@ -472,16 +472,17 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
   };
 
   const handleClearPersona = () => {
-    if (window.confirm('Tem certeza que deseja limpar todos osados da persona? Esta ação não pode ser desfeita.')) {
+    if (window.confirm('Tem certeza que deseja começar de novo? Todos os dados da persona serão apagados.')) {
       setPersona({});
-      toast.success('Dados da persona foram limpos.');
+      setIsPersonaWizardVisible(true);
+      toast.success('Dados da persona removidos. Você pode começar a criar uma nova.');
     }
   };
 
   const handleClearAutor = () => {
-    if (window.confirm('Tem certeza que deseja limpar todos os dados do autor? Esta ação não pode ser desfeita.')) {
+    if (window.confirm('Tem certeza que deseja começar de novo? Todos os dados do autor serão apagados.')) {
       setAutor({});
-      toast.success('Dados do autor foram limpos.');
+      toast.success('Dados do autor removidos. Você pode começar a criar um novo.');
     }
   };
 
@@ -670,7 +671,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                       onClick={handleClearPersona}
                       disabled={!persona || Object.keys(persona).length === 0}
                     >
-                      Limpar Dados
+                      Começar de Novo
                     </Button>
                   </Stack>
                   <Grid container spacing={3}>
@@ -983,7 +984,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                       onClick={handleClearAutor}
                       disabled={!autor || Object.keys(autor).length === 0}
                     >
-                      Limpar Dados
+                      Começar de Novo
                     </Button>
                 </Stack>
 
