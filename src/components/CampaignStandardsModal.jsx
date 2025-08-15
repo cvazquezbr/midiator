@@ -54,7 +54,7 @@ import TextEditorDialog from './TextEditorDialog';
 import HtmlDisplayField from './HtmlDisplayField';
 import PersonaGenerationModal from './PersonaGenerationModal';
 import PersonaWizard, { PersonaWizardContent } from './PersonaWizard';
-import AutorWizard from './AutorWizard';
+import AutorWizard, { AutorWizardContent } from './AutorWizard';
 import PaletteWizard from './PaletteWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
@@ -107,6 +107,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemori
   // State for AI Autor Generation
   const [isGeneratingAutor, setIsGeneratingAutor] = useState(false);
   const [showAutorWizard, setShowAutorWizard] = useState(false);
+  const [isAutorWizardVisible, setIsAutorWizardVisible] = useState(false);
 
   // State for AI Palette Wizard
   const [showPaletteWizard, setShowPaletteWizard] = useState(false);
@@ -236,14 +237,13 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         setIsPersonaWizardVisible(true);
       } else {
         setIsPersonaWizardVisible(false);
-        // Se a persona existe, verifica o autor.
-        // A ausência de 'identidade' é um bom indicador de que o autor não foi preenchido.
-        if (!autor || !autor.identidade) {
-            // Muda para a aba "Autor" para dar contexto ao usuário
-            setValue(1);
-            // Mostra o assistente de criação do autor
-            setShowAutorWizard(true);
-        }
+      }
+
+      // Se o autor não existir ou não tiver identidade, mostra o assistente do autor
+      if (!autor || !autor.identidade) {
+        setIsAutorWizardVisible(true);
+      } else {
+        setIsAutorWizardVisible(false);
       }
     }
   }, [open]);
@@ -968,64 +968,78 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
           )}
         </TabPanel>
             <TabPanel value={value} index={1}>
-              <Stack spacing={2}>
-                <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
-                    <Button
-                      variant="contained"
-                      startIcon={<Add />}
-                      onClick={() => setShowAutorWizard(true)}
-                    >
-                      Assistente de Criação de Autor
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      startIcon={<DeleteForeverIcon />}
-                      onClick={handleClearAutor}
-                      disabled={!autor || Object.keys(autor).length === 0}
-                    >
-                      Começar de Novo
-                    </Button>
-                </Stack>
+              {isAutorWizardVisible ? (
+                <AutorWizardContent
+                  autor={autor}
+                  onGenerate={handleGenerateAutorWithAI}
+                  isGeneratingAutor={isGeneratingAutor}
+                  onClose={() => setIsAutorWizardVisible(false)}
+                  onSave={(newAutor) => {
+                    setAutor(newAutor);
+                    setIsAutorWizardVisible(false);
+                    toast.success('Autor salvo com o assistente!');
+                  }}
+                />
+              ) : (
+                <Stack spacing={2}>
+                  <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
+                      <Button
+                        variant="contained"
+                        startIcon={<Add />}
+                        onClick={() => setShowAutorWizard(true)}
+                      >
+                        Editar com Assistente
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={<DeleteForeverIcon />}
+                        onClick={handleClearAutor}
+                        disabled={!autor || Object.keys(autor).length === 0}
+                      >
+                        Começar de Novo
+                      </Button>
+                  </Stack>
 
-                <TextField
-                  fullWidth
-                  label="Nome"
-                  name="identidade"
-                  value={autor?.identidade || ''}
-                  onChange={handleAutorChange}
-                  inputProps={{ maxLength: 120 }}
-                  helperText={`${(autor?.identidade || '').length}/120 O nome da empresa ou marca que está publicando o conteúdo. Ex: ACME Corporation.`}
-                />
-                <HtmlDisplayField
-                  title="Descrição da Empresa"
-                  tooltip="Uma breve descrição que detalha a área de atuação, as especializações e o foco do negócio."
-                  htmlContent={autor?.descricao}
-                  onClick={() => handleOpenEditor('autor.descricao')}
-                  placeholder="Clique para editar a descrição..."
-                />
-                <HtmlDisplayField
-                  title="Tipo de Organização"
-                  tooltip="Uma classificação que define a natureza da empresa (ex: 'braço de tecnologia', 'agência de marketing')."
-                  htmlContent={autor?.tipo}
-                  onClick={() => handleOpenEditor('autor.tipo')}
-                  placeholder="Clique para editar o tipo..."
-                />
-                <HtmlDisplayField
-                  title="Objetivo Estratégico"
-                  tooltip="A meta de longo prazo da mensagem (posicionamento da marca, construção de autoridade, etc.)."
-                  htmlContent={autor?.objetivoEstrategico}
-                  onClick={() => handleOpenEditor('autor.objetivoEstrategico')}
-                  placeholder="Clique para editar o objetivo estratégico..."
-                />
-                <HtmlDisplayField
-                  title="Objetivo de Engajamento"
-                  tooltip="O tipo de interação que a mensagem deve estimular no público."
-                  htmlContent={autor?.objetivoEngajamento}
-                  onClick={() => handleOpenEditor('autor.objetivoEngajamento')}
-                  placeholder="Clique para editar o objetivo de engajamento..."
-                />
-              </Stack>
+                  <TextField
+                    fullWidth
+                    label="Nome"
+                    name="identidade"
+                    value={autor?.identidade || ''}
+                    onChange={handleAutorChange}
+                    inputProps={{ maxLength: 120 }}
+                    helperText={`${(autor?.identidade || '').length}/120 O nome da empresa ou marca que está publicando o conteúdo. Ex: ACME Corporation.`}
+                  />
+                  <HtmlDisplayField
+                    title="Descrição da Empresa"
+                    tooltip="Uma breve descrição que detalha a área de atuação, as especializações e o foco do negócio."
+                    htmlContent={autor?.descricao}
+                    onClick={() => handleOpenEditor('autor.descricao')}
+                    placeholder="Clique para editar a descrição..."
+                  />
+                  <HtmlDisplayField
+                    title="Tipo de Organização"
+                    tooltip="Uma classificação que define a natureza da empresa (ex: 'braço de tecnologia', 'agência de marketing')."
+                    htmlContent={autor?.tipo}
+                    onClick={() => handleOpenEditor('autor.tipo')}
+                    placeholder="Clique para editar o tipo..."
+                  />
+                  <HtmlDisplayField
+                    title="Objetivo Estratégico"
+                    tooltip="A meta de longo prazo da mensagem (posicionamento da marca, construção de autoridade, etc.)."
+                    htmlContent={autor?.objetivoEstrategico}
+                    onClick={() => handleOpenEditor('autor.objetivoEstrategico')}
+                    placeholder="Clique para editar o objetivo estratégico..."
+                  />
+                  <HtmlDisplayField
+                    title="Objetivo de Engajamento"
+                    tooltip="O tipo de interação que a mensagem deve estimular no público."
+                    htmlContent={autor?.objetivoEngajamento}
+                    onClick={() => handleOpenEditor('autor.objetivoEngajamento')}
+                    placeholder="Clique para editar o objetivo de engajamento..."
+                  />
+                </Stack>
+              )}
             </TabPanel>
             <TabPanel value={value} index={2}>
               <HtmlDisplayField
