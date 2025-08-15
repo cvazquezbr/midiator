@@ -80,6 +80,15 @@ export const AutorWizardContent = ({ open, onClose, onSave, onGenerate, isGenera
   };
 
   const getStepContent = (step) => {
+    const emptyLabelStyle = {
+        '& .MuiInputLabel-root:not(.Mui-focused):not(.MuiFormLabel-filled)': {
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: '1.4rem',
+            // Ajustado para um campo de 6 linhas
+            transform: 'translate(14px, 60px) scale(1)',
+        },
+    };
+
     switch (step) {
       case 0:
         return (
@@ -90,7 +99,7 @@ export const AutorWizardContent = ({ open, onClose, onSave, onGenerate, isGenera
             </Alert>
             <TextField
               name="descricaoGeral"
-              label="Descrição Geral do Autor"
+              label="Descrição do Autor"
               multiline
               rows={6}
               fullWidth
@@ -98,7 +107,7 @@ export const AutorWizardContent = ({ open, onClose, onSave, onGenerate, isGenera
               onChange={handleChange}
               placeholder="Ex: 'Uma empresa de consultoria de marketing digital focada em startups de tecnologia, que busca se posicionar como líder de pensamento em SEO e marketing de conteúdo.'"
               disabled={isGeneratingAutor}
-              sx={{ mb: 2 }}
+              sx={!(autorData.descricaoGeral || '').trim() ? { ...emptyLabelStyle, mb: 2 } : { mb: 2 }}
             />
             <TextField
               name="dominioReferencia"
