@@ -1295,7 +1295,7 @@ function App() {
         >
           <Toolbar />
           {/* Passo 0: Campanha */}
-          {activeStep === 0 && (
+          <div hidden={activeStep !== 0}>
             <Container maxWidth="lg">
               <Campaign
                 steps={steps}
@@ -1343,10 +1343,10 @@ function App() {
               onEditFollowup={handleEditFollowup}
             />
             </Container>
-          )}
+          </div>
 
           {/* Passo 1: Posts Curtos */}
-          {activeStep === 1 && (
+          <div hidden={activeStep !== 1}>
             <PostsCurtosStep
               steps={steps}
               inputMethod={inputMethod}
@@ -1370,10 +1370,10 @@ function App() {
               darkMode={darkMode}
               exportCsv={exportCsv}
             />
-          )}
+          </div>
 
           {/* Passo 2: Upload Imagem */}
-          {activeStep === 2 && (
+          <div hidden={activeStep !== 2}>
             <ImageUploadStep
               steps={steps}
               isDraggingOverImage={isDraggingOverImage}
@@ -1385,10 +1385,10 @@ function App() {
               handleImageUpload={handleImageUpload}
               backgroundImage={backgroundImage}
             />
-          )}
+          </div>
 
           {/* Passo 3: Posicionamento e Formatação */}
-          {activeStep === 3 && (
+          <div hidden={activeStep !== 3}>
             <FieldPositioner
               backgroundImage={backgroundImage}
               csvHeaders={csvHeaders}
@@ -1409,10 +1409,10 @@ function App() {
               setBrandElements={setBrandElements}
               onZIndexChange={handleZIndexChange}
             />
-          )}
+          </div>
 
           {/* Passo 4: Geração de Imagens */}
-          {activeStep === 4 && (
+          <div hidden={activeStep !== 4}>
             <ImageGeneratorFrontendOnly
               csvData={csvData}
               backgroundImage={backgroundImage}
@@ -1429,7 +1429,7 @@ function App() {
               brandElements={brandElements}
               onBrandElementsChange={setBrandElements}
             />
-          )}
+          </div>
 
           {/* Passo 5: Geração de Áudio */}
           <div hidden={activeStep !== 5}>
@@ -1442,16 +1442,16 @@ function App() {
           </div>
 
           {/* Passo 6: Geração de Vídeo */}
-          {activeStep === 6 && (
+          <div hidden={activeStep !== 6}>
             <VideoGenerator2
               generatedImages={generatedImagesData}
               generatedAudioData={generatedAudioData}
               onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)}
             />
-          )}
+          </div>
 
           {/* Passo 7: Publicar */}
-          {activeStep === 7 && (
+          <div hidden={activeStep !== 7}>
             <Publisher
               campaignContent={campaignContent}
               conteudoFormatado={conteudoFormatado}
@@ -1471,7 +1471,7 @@ function App() {
               selectedVideos={selectedVideos}
               setSelectedVideos={setSelectedVideos}
             />
-          )}
+          </div>
 
           {/* Navigation */}
           <Box sx={{
