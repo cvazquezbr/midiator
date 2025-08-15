@@ -289,10 +289,7 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
     switch (step) {
       case 0:
         return (
-          <Box>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Forneça uma breve descrição do perfil. A IA irá usar essa informação para preencher os primeiros campos automaticamente. Ex: 'CTO de uma startup de tecnologia que precisa inovar rapidamente e reduzir custos com a nuvem.'
-            </Alert>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <TextField
               name="description"
               label="Descrição da Persona"
@@ -305,6 +302,7 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
               disabled={isGeneratingPersona}
               sx={!(personaData.description || '').trim() ? emptyLabelStyle : {}}
             />
+            <InfoTooltip title="Forneça uma breve descrição do perfil. A IA irá usar essa informação para preencher os primeiros campos automaticamente. Ex: 'CTO de uma startup de tecnologia que precisa inovar rapidamente e reduzir custos com a nuvem.'" />
           </Box>
         );
       case 1:
