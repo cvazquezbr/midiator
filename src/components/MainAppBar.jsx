@@ -60,15 +60,6 @@ const MainAppBar = ({
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 1 } }}>
-          <Tooltip title={darkMode ? 'Alternar para modo claro' : 'Alternar para modo escuro'}>
-            <IconButton
-              onClick={() => setDarkMode(!darkMode)}
-              sx={{ color: 'white' }}
-              aria-label="toggle-dark-mode"
-            >
-              {darkMode ? <Brightness7 /> : <Brightness4 />}
-            </IconButton>
-          </Tooltip>
           <Tooltip title="Configurações">
             <IconButton
               onClick={() => setShowSetupModal(true)}
@@ -92,6 +83,10 @@ const MainAppBar = ({
             open={Boolean(anchorElMenu)}
             onClose={handleMenuClose}
           >
+            <MenuItem onClick={() => { setDarkMode(!darkMode); handleMenuClose(); }}>
+              {darkMode ? <Brightness7 sx={{ mr: 1 }} /> : <Brightness4 sx={{ mr: 1 }} />}
+              {darkMode ? 'Modo Claro' : 'Modo Escuro'}
+            </MenuItem>
             <MenuItem onClick={() => { setShowCampaignStandardsModal(true); handleMenuClose(); }}>
               <Edit sx={{ mr: 1 }} />
               Padrões de Campanha
