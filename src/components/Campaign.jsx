@@ -312,15 +312,17 @@ const Campaign = ({
                         )}
                     </Grid>
                     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 2 }}>
-                        <Button
-                            variant="contained"
-                            size="large"
-                            onClick={() => handleGenerateCampaignContent(false)}
-                            disabled={!problema.trim() || !solucao.trim() || isGeneratingCampaign || campaignContent !== null}
-                            startIcon={<GeminiIcon />}
-                        >
-                            {isGeneratingCampaign ? 'Gerando...' : 'Elaborar Conteúdo'}
-                        </Button>
+                        {problema.trim() && solucao.trim() && (
+                            <Button
+                                variant="contained"
+                                size="large"
+                                onClick={() => handleGenerateCampaignContent(false)}
+                                disabled={isGeneratingCampaign || campaignContent !== null}
+                                startIcon={<GeminiIcon />}
+                            >
+                                {isGeneratingCampaign ? 'Gerando...' : 'Elaborar Postagens'}
+                            </Button>
+                        )}
                         {campaignContent && (
                             <Button
                                 variant="outlined"
