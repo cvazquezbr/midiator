@@ -26,26 +26,25 @@ const steps = [
 
 const TIPO_ORGANIZACAO_OPTIONS = ['Braço de tecnologia', 'Agência de marketing', 'Consultoria', 'Startup', 'Empresa de Software (SaaS)', 'E-commerce', 'Outro'];
 
-const AutorWizard = ({ open, onClose, onSave, onGenerate, isGeneratingAutor, autor }) => {
-  const isMobile = useIsMobile();
+export const AutorWizardContent = ({ open, onClose, onSave, onGenerate, isGeneratingAutor, autor }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [autorData, setAutorData] = useState(autor || {});
 
   useEffect(() => {
-    if (open) {
-      setAutorData(autor || {
-        descricaoGeral: '',
-        dominioReferencia: '',
-        siteExclusao: '',
-        identidade: '',
-        descricao: '',
-        tipo: '',
-        objetivoEstrategico: '',
-        objetivoEngajamento: '',
-      });
-      setActiveStep(0); // Reset to first step when modal opens
-    }
-  }, [open, autor]);
+    // Unlike the modal version, we don't reset the step when 'open' changes here.
+    // The parent component will control the mounting/unmounting.
+    // We do want to initialize the data when the component mounts or the initial 'autor' prop changes.
+    setAutorData(autor || {
+      descricaoGeral: '',
+      dominioReferencia: '',
+      siteExclusao: '',
+      identidade: '',
+      descricao: '',
+      tipo: '',
+      objetivoEstrategico: '',
+      objetivoEngajamento: '',
+    });
+  }, [autor]);
 
   const handleNext = () => {
     if (activeStep === 0) { // Step "Início Rápido com IA"
@@ -197,37 +196,58 @@ const AutorWizard = ({ open, onClose, onSave, onGenerate, isGeneratingAutor, aut
   };
 
   return (
+    <Box>
+      <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
+        {steps.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+      {getStepContent(activeStep)}
+      <DialogActions sx={{ p: 3, justifyContent: 'space-between', mt: 2, flexWrap: 'wrap' }}>
+        <Box>
+          <Button onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSave} color="secondary">Salvar</Button>
+        </Box>
+        <Box sx={{ display: 'flex', mt: { xs: 2, sm: 0 } }}>
+          <Button onClick={handleBack} disabled={activeStep === 0}>
+            Voltar
+          </Button>
+          <Button
+              onClick={handleNext}
+              variant="contained"
+              disabled={isNextDisabled()}
+              sx={{ ml: 1 }}
+          >
+            {isGeneratingAutor && activeStep === 0 && <CircularProgress size={24} />}
+            {!isGeneratingAutor && (activeStep === 0 ? 'Gerar com IA' : 'Finalizar e Salvar')}
+          </Button>
+        </Box>
+      </DialogActions>
+    </Box>
+  );
+};
+
+
+const AutorWizard = ({ open, onClose, onSave, ...props }) => {
+  const isMobile = useIsMobile();
+
+  return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
       <DialogTitle>
         Assistente de Criação de Autor
-        <Typography variant="body2">Passo {activeStep + 1} de {steps.length}</Typography>
       </DialogTitle>
       <DialogContent sx={{ minHeight: '50vh' }}>
-        <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
-        {getStepContent(activeStep)}
+        <AutorWizardContent
+            onClose={onClose}
+            onSave={(data) => {
+                onSave(data);
+                onClose(); // In modal context, save also closes.
+            }}
+            {...props}
+        />
       </DialogContent>
-      <DialogActions sx={{ p: 3 }}>
-        <Button onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleSave} color="secondary">Salvar e Sair</Button>
-        <Box sx={{ flex: '1 1 auto' }} />
-        <Button onClick={handleBack} disabled={activeStep === 0}>
-          Voltar
-        </Button>
-        <Button
-            onClick={handleNext}
-            variant="contained"
-            disabled={isNextDisabled()}
-        >
-          {isGeneratingAutor && activeStep === 0 && <CircularProgress size={24} />}
-          {!isGeneratingAutor && (activeStep === 0 ? 'Gerar com IA' : 'Finalizar e Salvar')}
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 };
