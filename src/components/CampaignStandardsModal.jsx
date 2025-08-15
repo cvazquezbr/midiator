@@ -924,7 +924,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
                 <TextField
                   fullWidth
-                  label="Identidade do Autor"
+                  label="Nome"
                   name="identidade"
                   value={autor?.identidade || ''}
                   onChange={handleAutorChange}
