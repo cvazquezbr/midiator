@@ -60,7 +60,7 @@ const FormattingPanel = ({
   brandElements,
   setBrandElements,
   onZIndexChange,
-  onVisibilityChange,
+  onDeselectField,
 }) => {
   const fonts = [
     // Sans-serif
@@ -156,6 +156,9 @@ const FormattingPanel = ({
     setBrandElements(prev => prev.filter(el => el.id !== elementId));
     // Also deselect the element
     setCurrentElement(null);
+    if (onDeselectField) {
+      onDeselectField();
+    }
   };
 
   return (
@@ -173,7 +176,17 @@ const FormattingPanel = ({
                 control={
                   <Switch
                     checked={currentElement.visible !== false}
-                    onChange={() => onVisibilityChange(selectedField, !currentElement.visible)}
+                    onChange={(e) => {
+                      const isVisible = e.target.checked;
+                      if (isTextField) {
+                        updateFieldPosition(selectedField, 'visible', isVisible);
+                      } else {
+                        // For brand elements, hiding means deleting.
+                        if (!isVisible) {
+                          handleDeleteBrandElement(selectedField);
+                        }
+                      }
+                    }}
                     size="small"
                   />
                 }
