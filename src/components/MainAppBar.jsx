@@ -60,6 +60,24 @@ const MainAppBar = ({
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 1 } }}>
+          <Tooltip title="Salvar Campanha">
+            <IconButton
+              onClick={handleSaveTemplateClick}
+              sx={{ color: 'white' }}
+              aria-label="Salvar Campanha"
+            >
+              <DownloadIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Carregar Campanha">
+            <IconButton
+              onClick={handleLoadTemplateClick}
+              sx={{ color: 'white' }}
+              aria-label="Carregar Campanha"
+            >
+              <FileUploadIcon />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Configurações">
             <IconButton
               onClick={() => setShowSetupModal(true)}
@@ -94,14 +112,6 @@ const MainAppBar = ({
             <MenuItem onClick={() => { setShowMemorialDescritivoModal(true); handleMenuClose(); }}>
               <ArticleIcon sx={{ mr: 1 }} />
               Memorial Descritivo
-            </MenuItem>
-            <MenuItem onClick={handleSaveTemplateClick}>
-              <DownloadIcon sx={{ mr: 1 }} />
-              Salvar Campanha
-            </MenuItem>
-            <MenuItem onClick={handleLoadTemplateClick}>
-              <FileUploadIcon sx={{ mr: 1 }} />
-              Carregar Campanha
             </MenuItem>
           </Menu>
           <input
