@@ -423,10 +423,12 @@ const Publisher = ({
                 >
                   {isLoadingProfiles && <MenuItem value=""><em><CircularProgress size={20} /> Carregando perfis...</em></MenuItem>}
                   {profileError && <MenuItem value="" disabled><em>Erro: {profileError}</em></MenuItem>}
-                  {linkedinProfiles.map((profile) => (
-                    <MenuItem key={profile.urn} value={profile.urn}>
-                      {profile.name}
-                    </MenuItem>
+                  {linkedinProfiles && linkedinProfiles
+                    .filter(profile => profile && profile.urn) // Garante que o perfil e sua URN existam
+                    .map((profile) => (
+                      <MenuItem key={profile.urn} value={profile.urn}>
+                        {profile.name}
+                      </MenuItem>
                   ))}
                 </Select>
               </FormControl>
