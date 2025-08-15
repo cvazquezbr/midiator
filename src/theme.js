@@ -59,6 +59,7 @@ export const lightTheme = createTheme({
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
+          borderRadius: 12,
           backgroundColor: '#f1f5f9', // slate-100
           '&:hover .MuiOutlinedInput-notchedOutline': {
             borderColor: '#8b5cf6', // primary.main
@@ -121,6 +122,7 @@ export const darkTheme = createTheme({
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
+          borderRadius: 12,
           backgroundColor: '#1e293b', // background.paper
           '&:hover .MuiOutlinedInput-notchedOutline': {
             borderColor: '#a78bfa', // primary.main
