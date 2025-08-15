@@ -11,17 +11,18 @@ import {
   Alert,
   IconButton,
 } from '@mui/material';
-import { VpnKey, PersonPin, InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
+import { VpnKey, PersonPin, InfoOutlined as InfoIcon, Close as CloseIcon, Link, LinkOff } from '@mui/icons-material';
 import { toast } from 'sonner';
 import GoogleDriveInfobox from './GoogleDriveInfobox';
-import googleDriveAPI from '../utils/googleDriveAPI';
+import { useAuth } from '../context/AuthContext';
 
 const GoogleDriveAuthModal = () => {
+  const { isGoogleDriveConnected, connectGoogleDrive, disconnectGoogleDrive, checkGoogleDriveConnection } = useAuth();
   const [apiKey, setApiKey] = useState('');
   const [clientId, setClientId] = useState('');
   const [error, setError] = useState('');
   const [showInfobox, setShowInfobox] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const storedApiKey = localStorage.getItem('google_drive_api_key');
@@ -29,6 +30,7 @@ const GoogleDriveAuthModal = () => {
     if (storedApiKey) setApiKey(storedApiKey);
     if (storedClientId) setClientId(storedClientId);
     setError('');
+    // No-op to avoid empty block
   }, []);
 
   const handleSave = () => {
@@ -40,6 +42,8 @@ const GoogleDriveAuthModal = () => {
     localStorage.setItem('google_drive_client_id', clientId.trim());
     setError('');
     toast.success('Credenciais do Google Drive salvas com sucesso!');
+    // Verifica a conexão novamente caso as credenciais tenham sido atualizadas
+    checkGoogleDriveConnection();
   };
 
   const handleClear = () => {
@@ -49,39 +53,26 @@ const GoogleDriveAuthModal = () => {
     setClientId('');
     setError('');
     toast.info('Credenciais do Google Drive removidas.');
+    // Força a desconexão se as credenciais forem removidas
+    if (isGoogleDriveConnected) {
+      disconnectGoogleDrive();
+    }
   };
 
-  const handleTestConnection = async () => {
+  const handleConnect = async () => {
     if (!apiKey.trim() || !clientId.trim()) {
-      setError('Por favor, preencha a API Key e o Client ID para testar.');
+      setError('Por favor, salve a API Key e o Client ID para conectar.');
       return;
     }
+    setIsLoading(true);
+    await connectGoogleDrive();
+    setIsLoading(false);
+  };
 
-    setIsTesting(true);
-    setError('');
-
-    try {
-      if (!googleDriveAPI.isInitialized) {
-        toast.info('Inicializando API do Google...');
-        await googleDriveAPI.initialize(apiKey, clientId);
-      }
-
-      if (!googleDriveAPI.isUserSignedIn()) {
-        toast.info('Aguardando login com o Google...');
-        await googleDriveAPI.signIn();
-      }
-
-      toast.info('Buscando pastas no Google Drive...');
-      await googleDriveAPI.listFolders(1); // Apenas busca 1 para testar
-
-      toast.success('Conexão com Google Drive bem-sucedida!');
-
-    } catch (err) {
-      console.error("Erro no teste de conexão com Google Drive:", err);
-      toast.error(`Falha na conexão: ${err.message}`);
-    } finally {
-      setIsTesting(false);
-    }
+  const handleDisconnect = async () => {
+    setIsLoading(true);
+    await disconnectGoogleDrive();
+    setIsLoading(false);
   };
 
   return (
@@ -140,14 +131,32 @@ const GoogleDriveAuthModal = () => {
         </Typography>
 
         <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Button onClick={handleTestConnection} disabled={isTesting}>
-            {isTesting ? 'Testando...' : 'Testar Conexão'}
-          </Button>
+          {isGoogleDriveConnected ? (
+            <Button
+              variant="contained"
+              color="error"
+              startIcon={<LinkOff />}
+              onClick={handleDisconnect}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Desconectando...' : 'Desconectar'}
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Link />}
+              onClick={handleConnect}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Conectando...' : 'Conectar'}
+            </Button>
+          )}
           <Box>
-            <Button onClick={handleClear} color="error">
+            <Button onClick={handleClear} color="secondary">
               Remover
             </Button>
-            <Button onClick={handleSave} variant="contained" sx={{ ml: 1 }}>
+            <Button onClick={handleSave} variant="outlined" sx={{ ml: 1 }}>
               Salvar
             </Button>
           </Box>
