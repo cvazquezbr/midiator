@@ -16,7 +16,10 @@ import {
   CircularProgress,
   Alert,
   MenuItem,
+  Tooltip,
+  IconButton,
 } from '@mui/material';
+import { InfoOutlined as InfoOutlinedIcon } from '@mui/icons-material';
 import RichTextEditor from './RichTextEditor';
 
 const steps = [
@@ -25,6 +28,14 @@ const steps = [
 ];
 
 const TIPO_ORGANIZACAO_OPTIONS = ['Braço de tecnologia', 'Agência de marketing', 'Consultoria', 'Startup', 'Empresa de Software (SaaS)', 'E-commerce', 'Outro'];
+
+const InfoTooltip = ({ title }) => (
+    <Tooltip title={<Typography variant="body2" sx={{ p: 1 }}>{title}</Typography>}>
+      <IconButton>
+        <InfoOutlinedIcon sx={{ color: 'text.secondary', fontSize: '1rem' }} />
+      </IconButton>
+    </Tooltip>
+);
 
 export const AutorWizardContent = ({ open, onClose, onSave, onGenerate, isGeneratingAutor, autor }) => {
   const [activeStep, setActiveStep] = useState(0);
@@ -93,43 +104,47 @@ export const AutorWizardContent = ({ open, onClose, onSave, onGenerate, isGenera
       case 0:
         return (
           <Box>
-            <Typography variant="h6" gutterBottom>Descreva o Autor para começar</Typography>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Forneça uma breve descrição do perfil do autor (a empresa ou marca). A IA irá usar essa informação para preencher os campos detalhados.
-            </Alert>
-            <TextField
-              name="descricaoGeral"
-              label="Descrição do Autor"
-              multiline
-              rows={6}
-              fullWidth
-              value={autorData.descricaoGeral || ''}
-              onChange={handleChange}
-              placeholder="Ex: 'Uma empresa de consultoria de marketing digital focada em startups de tecnologia, que busca se posicionar como líder de pensamento em SEO e marketing de conteúdo.'"
-              disabled={isGeneratingAutor}
-              sx={!(autorData.descricaoGeral || '').trim() ? { ...emptyLabelStyle, mb: 2 } : { mb: 2 }}
-            />
-            <TextField
-              name="dominioReferencia"
-              label="Domínio de Referência (Opcional)"
-              fullWidth
-              value={autorData.dominioReferencia || ''}
-              onChange={handleChange}
-              placeholder="Ex: 'empresa.com.br'"
-              helperText="A IA usará este site como fonte de informação para entender o tom e o negócio."
-              disabled={isGeneratingAutor}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              name="siteExclusao"
-              label="Site para Excluir da Busca (Opcional)"
-              fullWidth
-              value={autorData.siteExclusao || ''}
-              onChange={handleChange}
-              placeholder="Ex: 'concorrente.com.br'"
-              helperText="A IA evitará este site em sua busca por informações."
-              disabled={isGeneratingAutor}
-            />
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <TextField
+                  name="descricaoGeral"
+                  label="Descrição do Autor"
+                  multiline
+                  rows={6}
+                  fullWidth
+                  value={autorData.descricaoGeral || ''}
+                  onChange={handleChange}
+                  placeholder="Ex: 'Uma empresa de consultoria de marketing digital focada em startups de tecnologia...'"
+                  disabled={isGeneratingAutor}
+                  sx={!(autorData.descricaoGeral || '').trim() ? emptyLabelStyle : {}}
+                />
+                <InfoTooltip title="Forneça uma breve descrição do perfil do autor (a empresa ou marca). A IA irá usar essa informação para preencher os campos detalhados." />
+            </Box>
+            <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                    <TextField
+                      name="dominioReferencia"
+                      label="Domínio de Referência (Opcional)"
+                      fullWidth
+                      value={autorData.dominioReferencia || ''}
+                      onChange={handleChange}
+                      placeholder="Ex: 'empresa.com.br'"
+                      helperText="A IA usará este site como fonte de informação."
+                      disabled={isGeneratingAutor}
+                    />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <TextField
+                      name="siteExclusao"
+                      label="Site para Excluir da Busca (Opcional)"
+                      fullWidth
+                      value={autorData.siteExclusao || ''}
+                      onChange={handleChange}
+                      placeholder="Ex: 'concorrente.com.br'"
+                      helperText="A IA evitará este site em sua busca."
+                      disabled={isGeneratingAutor}
+                    />
+                </Grid>
+            </Grid>
           </Box>
         );
       case 1:
@@ -206,7 +221,7 @@ export const AutorWizardContent = ({ open, onClose, onSave, onGenerate, isGenera
 
   return (
     <Box>
-      <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
+      <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
         {steps.map((label) => (
           <Step key={label}>
             <StepLabel>{label}</StepLabel>
