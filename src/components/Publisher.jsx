@@ -160,18 +160,21 @@ const Publisher = ({
       setProfileError('');
       try {
         const profiles = await getLinkedInProfiles();
-        // Ensure profiles is an array before setting
+
+        // Defensively clean the data received from the API
         if (Array.isArray(profiles)) {
-          setLinkedinProfiles(profiles);
-          // Set a default profile only if one isn't already selected and the first profile is valid
-          if (profiles.length > 0 && profiles[0] && profiles[0].urn && !selectedProfile) {
-            setSelectedProfile(profiles[0].urn);
+          const cleanedProfiles = profiles.filter(p => p && typeof p.urn === 'string' && typeof p.name === 'string');
+          setLinkedinProfiles(cleanedProfiles);
+
+          // Set a default profile only if one isn't already selected and the first cleaned profile is valid
+          if (cleanedProfiles.length > 0 && !selectedProfile) {
+            setSelectedProfile(cleanedProfiles[0].urn);
           }
         } else {
-            // Handle cases where the API might not return an array
             setLinkedinProfiles([]);
             console.warn("LinkedIn API did not return a valid array of profiles.");
         }
+
       } catch (error) {
         console.error("Erro ao buscar perfis do LinkedIn:", error);
         setProfileError(error.message);
@@ -430,9 +433,7 @@ const Publisher = ({
                 >
                   {isLoadingProfiles && <MenuItem value=""><em><CircularProgress size={20} /> Carregando perfis...</em></MenuItem>}
                   {profileError && <MenuItem value="" disabled><em>Erro: {profileError}</em></MenuItem>}
-                  {linkedinProfiles && linkedinProfiles
-                    .filter(profile => profile && profile.urn) // Garante que o perfil e sua URN existam
-                    .map((profile) => (
+                  {linkedinProfiles.map((profile) => (
                       <MenuItem key={profile.urn} value={profile.urn}>
                         {profile.name}
                       </MenuItem>
