@@ -14,6 +14,8 @@ class GoogleDriveAPI {
     // Promise handlers for discrete signIn calls
     this.signInResolver = null;
     this.signInRejecter = null;
+    this.apiKey = null;
+    this.clientId = null;
   }
 
   /**
@@ -24,18 +26,32 @@ class GoogleDriveAPI {
       return this.initPromise;
     }
 
-    if (this.isInitialized) {
-      return Promise.resolve(true);
+    // If already initialized with the same keys, do nothing.
+    if (this.isInitialized && this.apiKey === apiKey && this.clientId === clientId) {
+      return Promise.resolve({ reinitialized: false });
     }
+
+    // Reset for re-initialization
+    if (this.isInitialized) {
+        await this.signOut(); // Best effort to sign out from previous session
+    }
+
+    this.isInitialized = false;
+    this.tokenClient = null;
+    this.apiKey = apiKey;
+    this.clientId = clientId;
 
     this.initPromise = this._performInitialization(apiKey, clientId);
 
     try {
-      const result = await this.initPromise;
+      await this.initPromise;
       this.initPromise = null;
-      return result;
+      return { reinitialized: true };
     } catch (error) {
       this.initPromise = null;
+      this.isInitialized = false;
+      this.apiKey = null;
+      this.clientId = null;
       throw error;
     }
   }

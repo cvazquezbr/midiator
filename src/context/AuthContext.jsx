@@ -26,10 +26,9 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      // Força a reinicialização se as chaves mudaram.
-      if (!googleDriveAPI.isInitialized) {
-        toast.info('Inicializando API do Google...');
-        await googleDriveAPI.initialize(apiKey, clientId);
+      const initResult = await googleDriveAPI.initialize(apiKey, clientId);
+      if (initResult.reinitialized) {
+        toast.info('API do Google inicializada.');
       }
 
       if (!googleDriveAPI.isUserSignedIn()) {
