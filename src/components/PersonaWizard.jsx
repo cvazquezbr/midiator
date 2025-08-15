@@ -126,38 +126,35 @@ const steps = [
   'Mentalidade e Cultura',
 ];
 
-const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona, persona }) => {
-  const isMobile = useIsMobile();
+export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGeneratingPersona, persona }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [personaData, setPersonaData] = useState(persona || {});
   const [otherItemInputs, setOtherItemInputs] = useState({});
-  const [editingChip, setEditingChip] = useState(null); // { key, value, newValue }
+  const [editingChip, setEditingChip] = useState(null);
 
   useEffect(() => {
-    if (open) {
-      setPersonaData(persona || {
-          description: '',
-          nome: '',
-          posicaoCargo: [],
-          segmentoEmpresa: [],
-          responsabilidadesChave: [],
-          doresEstrategicos: [],
-          doresOperacionais: [],
-          doresPessoas: [],
-          doresRegulatorios: [],
-          gatilhosCompra: [],
-          barreirasAdocao: [],
-          mentalidadeValores: '',
-          contextoCultural: '',
-      });
-      setActiveStep(0); // Reset to first step when modal opens
-    }
-  }, [open, persona]);
+    setPersonaData(persona || {
+        description: '',
+        nome: '',
+        posicaoCargo: [],
+        segmentoEmpresa: [],
+        responsabilidadesChave: [],
+        doresEstrategicos: [],
+        doresOperacionais: [],
+        doresPessoas: [],
+        doresRegulatorios: [],
+        gatilhosCompra: [],
+        barreirasAdocao: [],
+        mentalidadeValores: '',
+        contextoCultural: '',
+    });
+    setActiveStep(0);
+  }, [persona]);
 
   const handleNext = () => {
     if (activeStep === steps.length - 1) {
       handleSave();
-    } else if (activeStep === 0) { // Step "Início Rápido com IA"
+    } else if (activeStep === 0) {
         onGenerate(personaData.description, (generatedPersona) => {
             setPersonaData(prev => ({...prev, ...generatedPersona}));
             setActiveStep(1);
@@ -173,7 +170,6 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
 
   const handleSave = () => {
     onSave(personaData);
-    onClose();
   };
 
   const handleChange = (event) => {
@@ -225,7 +221,6 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
 
     const existingItems = (personaData[key] || []).map(item => item.toLowerCase());
     if (existingItems.includes(newItem.toLowerCase())) {
-        // Consider adding a simple alert or console warning if toast is not available
         console.warn('Attempted to add a duplicate item:', newItem);
         return;
     }
@@ -234,7 +229,7 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
       ...prev,
       [key]: [...(prev[key] || []), newItem]
     }));
-    handleOtherInputChange(key, ''); // Clear input
+    handleOtherInputChange(key, '');
   };
 
   const handleEditChip = (key, value) => {
@@ -253,7 +248,7 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
     }
 
     if (value.toLowerCase() === trimmedNewValue.toLowerCase()) {
-        setEditingChip(null); // No change
+        setEditingChip(null);
         return;
     }
 
@@ -282,6 +277,15 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
   );
 
   const getStepContent = (step) => {
+    const emptyLabelStyle = {
+        '& .MuiInputLabel-root:not(.Mui-focused):not(.MuiFormLabel-filled)': {
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: '1.4rem',
+            // Ajustado para um campo de 6 linhas
+            transform: 'translate(14px, 60px) scale(1)',
+        },
+    };
+
     switch (step) {
       case 0:
         return (
@@ -299,10 +303,11 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
               multiline
               rows={6}
               fullWidth
-              value={personaData.description}
+              value={personaData.description || ''}
               onChange={handleChange}
               placeholder="Ex: 'CTO de uma startup de tecnologia que precisa inovar rapidamente e reduzir custos com a nuvem.'"
               disabled={isGeneratingPersona}
+              sx={!(personaData.description || '').trim() ? emptyLabelStyle : {}}
             />
           </Box>
         );
@@ -476,8 +481,6 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
                         </Box>
                       ))}
                     </FormGroup>
-
-                    {/* Custom items as chips */}
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
                       {customItems.map((item) => (
                         editingChip && editingChip.key === key && editingChip.value === item ? (
@@ -501,8 +504,6 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
                         )
                       ))}
                     </Box>
-
-                    {/* Add new item input */}
                     <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, gap: 1 }}>
                       <TextField
                         label={`Adicionar Outra Dor (${label})`}
@@ -517,7 +518,6 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
                         Adicionar
                       </Button>
                     </Box>
-
                   </AccordionDetails>
                 </Accordion>
               );
@@ -537,8 +537,6 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
                     <FormGroup>
                       {items.map((item) => (<FormControlLabel key={item} control={<Checkbox checked={(personaData[key] || []).includes(item)} onChange={handleCheckboxChange(key, item)} />} label={item} />))}
                     </FormGroup>
-
-                    {/* Custom items as chips */}
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
                       {customItems.map((item) => (
                         editingChip && editingChip.key === key && editingChip.value === item ? (
@@ -562,8 +560,6 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
                         )
                       ))}
                     </Box>
-
-                    {/* Add new item input */}
                     <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, gap: 1 }}>
                       <TextField
                         label={`Adicionar Outro(a) (${label})`}
@@ -615,37 +611,58 @@ const PersonaWizard = ({ open, onClose, onSave, onGenerate, isGeneratingPersona,
   };
 
   return (
+    <Box>
+      <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
+        {steps.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+      {getStepContent(activeStep)}
+      <DialogActions sx={{ p: 3, justifyContent: 'space-between', mt: 2, flexWrap: 'wrap' }}>
+        <Box>
+            <Button onClick={onClose}>Cancelar</Button>
+            <Button onClick={handleSave} color="secondary">Salvar</Button>
+        </Box>
+        <Box sx={{ display: 'flex', mt: { xs: 2, sm: 0 } }}>
+            <Button onClick={handleBack} disabled={activeStep === 0}>
+            Voltar
+            </Button>
+            <Button
+                onClick={handleNext}
+                variant="contained"
+                disabled={isNextDisabled() || isGeneratingPersona}
+                sx={{ ml: 1 }}
+            >
+            {isGeneratingPersona && activeStep === 0 && <CircularProgress size={24} />}
+            {!isGeneratingPersona && (activeStep === 0 ? 'Gerar com IA' : activeStep === steps.length - 1 ? 'Finalizar e Salvar' : 'Continuar')}
+            </Button>
+        </Box>
+      </DialogActions>
+    </Box>
+  );
+};
+
+
+const PersonaWizard = ({ open, onClose, onSave, ...props }) => {
+  const isMobile = useIsMobile();
+
+  return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
       <DialogTitle>
         Assistente de Criação de Persona
-        <Typography variant="body2">Passo {activeStep + 1} de {steps.length}</Typography>
       </DialogTitle>
       <DialogContent sx={{ minHeight: '50vh' }}>
-        <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
-        {getStepContent(activeStep)}
+        <PersonaWizardContent
+            onClose={onClose}
+            onSave={(data) => {
+                onSave(data);
+                onClose(); // In modal context, save also closes.
+            }}
+            {...props}
+        />
       </DialogContent>
-      <DialogActions sx={{ p: 3 }}>
-        <Button onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleSave} color="secondary">Salvar e Sair</Button>
-        <Box sx={{ flex: '1 1 auto' }} />
-        <Button onClick={handleBack} disabled={activeStep === 0}>
-          Voltar
-        </Button>
-        <Button
-            onClick={handleNext}
-            variant="contained"
-            disabled={isNextDisabled() || isGeneratingPersona}
-        >
-          {isGeneratingPersona && activeStep === 0 && <CircularProgress size={24} />}
-          {!isGeneratingPersona && (activeStep === 0 ? 'Gerar com IA' : activeStep === steps.length - 1 ? 'Finalizar' : 'Continuar')}
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 };

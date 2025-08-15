@@ -52,7 +52,7 @@ import ColorThief from 'colorthief';
 import TextEditorDialog from './TextEditorDialog';
 import HtmlDisplayField from './HtmlDisplayField';
 import PersonaGenerationModal from './PersonaGenerationModal';
-import PersonaWizard from './PersonaWizard';
+import PersonaWizard, { PersonaWizardContent } from './PersonaWizard';
 import AutorWizard from './AutorWizard';
 import PaletteWizard from './PaletteWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
@@ -101,7 +101,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemori
   const [personaDescription, setPersonaDescription] = useState('');
   const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
   const [showPersonaGenModal, setShowPersonaGenModal] = useState(false);
-  const [showPersonaWizard, setShowPersonaWizard] = useState(false);
+  const [isPersonaWizardVisible, setIsPersonaWizardVisible] = useState(false);
 
   // State for AI Autor Generation
   const [isGeneratingAutor, setIsGeneratingAutor] = useState(false);
@@ -229,6 +229,13 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       setInstrucoes(instrucoes);
       setFormato(formato);
       setColors(colors || []);
+
+      // Se a persona não existir ou não tiver um nome, mostre o assistente por padrão
+      if (!persona || !persona.nome) {
+        setIsPersonaWizardVisible(true);
+      } else {
+        setIsPersonaWizardVisible(false);
+      }
     }
   }, [open]);
 
@@ -600,27 +607,41 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
           </Box>
           <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
             <TabPanel value={value} index={0}>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={2}
-                sx={{ mb: 2, alignItems: 'flex-start' }}
-              >
-                <Button
-                  variant="outlined"
-                  startIcon={<AutoAwesomeIcon />}
-                  onClick={() => setShowPersonaGenModal(true)}
-                >
-                  Gerar com IA (Simples)
-                </Button>
-                <Button
-                  variant="contained"
-                  startIcon={<Add />}
-                  onClick={() => setShowPersonaWizard(true)}
-                >
-                  Assistente de Criação de Persona
-                </Button>
-              </Stack>
-              <Grid container spacing={3}>
+              {isPersonaWizardVisible ? (
+                <PersonaWizardContent
+                  persona={persona}
+                  onGenerate={handleGeneratePersonaWithAI}
+                  isGeneratingPersona={isGeneratingPersona}
+                  onClose={() => setIsPersonaWizardVisible(false)}
+                  onSave={(newPersona) => {
+                    setPersona(newPersona);
+                    setIsPersonaWizardVisible(false);
+                    toast.success('Persona salva com o assistente!');
+                  }}
+                />
+              ) : (
+                <>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={2}
+                    sx={{ mb: 2, alignItems: 'flex-start' }}
+                  >
+                    <Button
+                      variant="outlined"
+                      startIcon={<AutoAwesomeIcon />}
+                      onClick={() => setShowPersonaGenModal(true)}
+                    >
+                      Gerar com IA (Simples)
+                    </Button>
+                    <Button
+                      variant="contained"
+                      startIcon={<Add />}
+                      onClick={() => setIsPersonaWizardVisible(true)}
+                    >
+                      Editar com Assistente
+                    </Button>
+                  </Stack>
+                  <Grid container spacing={3}>
                 {/* Nome da Persona */}
                 <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center' }}>
                   <TextField
@@ -910,7 +931,9 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                   />
                 </Grid>
               </Grid>
-            </TabPanel>
+            </>
+          )}
+        </TabPanel>
             <TabPanel value={value} index={1}>
               <Stack spacing={2}>
                 <Button
@@ -1074,19 +1097,6 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         description={personaDescription}
         setDescription={setPersonaDescription}
         isLoading={isGeneratingPersona}
-      />
-
-      <PersonaWizard
-        open={showPersonaWizard}
-        onClose={() => setShowPersonaWizard(false)}
-        persona={persona}
-        onSave={(newPersona) => {
-          setPersona(newPersona);
-          setShowPersonaWizard(false);
-          toast.success('Persona salva com sucesso!');
-        }}
-        onGenerate={handleGeneratePersonaWithAI}
-        isGeneratingPersona={isGeneratingPersona}
       />
 
       <AutorWizard
