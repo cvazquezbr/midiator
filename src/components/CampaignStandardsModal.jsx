@@ -1019,20 +1019,38 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                     onClick={() => handleOpenEditor('autor.descricao')}
                     placeholder="Clique para editar a descrição..."
                   />
-                  <HtmlDisplayField
-                    title="Tipo de Organização"
-                    tooltip="Uma classificação que define a natureza da empresa (ex: 'braço de tecnologia', 'agência de marketing')."
-                    htmlContent={autor?.tipo}
-                    onClick={() => handleOpenEditor('autor.tipo')}
-                    placeholder="Clique para editar o tipo..."
+                  <TextField
+                    fullWidth
+                    label="Tipo de Organização"
+                    value={autor?.tipo || ''}
+                    onClick={() => setShowAutorWizard(true)}
+                    InputProps={{
+                      readOnly: true,
+                      style: { cursor: 'pointer' },
+                      endAdornment: (
+                        <Tooltip title="Uma classificação que define a natureza da empresa (ex: 'braço de tecnologia', 'agência de marketing').">
+                          <IconButton size="small" sx={{ ml: 1 }}><InfoOutlinedIcon fontSize="small" /></IconButton>
+                        </Tooltip>
+                      )
+                    }}
+                    variant="outlined"
                   />
                   {autor?.tipo === 'Outro' && (
-                    <HtmlDisplayField
-                      title="Tipo de Organização (Outro)"
-                      tooltip="Descrição específica do tipo de organização."
-                      htmlContent={autor?.tipoOrganizacaoOutro}
-                      onClick={() => handleOpenEditor('autor.tipoOrganizacaoOutro')}
-                      placeholder="Clique para editar a especificação do tipo..."
+                    <TextField
+                      fullWidth
+                      label="Tipo de Organização (Outro)"
+                      value={autor?.tipoOrganizacaoOutro || ''}
+                      onClick={() => setShowAutorWizard(true)}
+                      InputProps={{
+                        readOnly: true,
+                        style: { cursor: 'pointer' },
+                        endAdornment: (
+                          <Tooltip title="Descrição específica do tipo de organização.">
+                            <IconButton size="small" sx={{ ml: 1 }}><InfoOutlinedIcon fontSize="small" /></IconButton>
+                          </Tooltip>
+                        )
+                      }}
+                      variant="outlined"
                     />
                   )}
                   <HtmlDisplayField
