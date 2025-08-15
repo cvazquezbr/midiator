@@ -37,8 +37,8 @@ const InfoTooltip = ({ title }) => (
     </Tooltip>
 );
 
-export const AutorWizardContent = ({ onClose, onSave, onGenerate, isGeneratingAutor, autor }) => {
-  const [activeStep, setActiveStep] = useState(0);
+export const AutorWizardContent = ({ onClose, onSave, onGenerate, isGeneratingAutor, autor, initialStep = 0 }) => {
+  const [activeStep, setActiveStep] = useState(initialStep);
   const [autorData, setAutorData] = useState(autor || {});
 
   useEffect(() => {
@@ -276,7 +276,7 @@ export const AutorWizardContent = ({ onClose, onSave, onGenerate, isGeneratingAu
 };
 
 
-const AutorWizard = ({ open, onClose, onSave, ...props }) => {
+const AutorWizard = ({ open, onClose, onSave, initialStep, ...props }) => {
   const isMobile = useIsMobile();
 
   return (
@@ -291,6 +291,7 @@ const AutorWizard = ({ open, onClose, onSave, ...props }) => {
                 onSave(data);
                 onClose(); // In modal context, save also closes.
             }}
+            initialStep={initialStep}
             {...props}
         />
       </DialogContent>

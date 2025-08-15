@@ -108,6 +108,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemori
   const [isGeneratingAutor, setIsGeneratingAutor] = useState(false);
   const [showAutorWizard, setShowAutorWizard] = useState(false);
   const [isAutorWizardVisible, setIsAutorWizardVisible] = useState(false);
+  const [initialAutorStep, setInitialAutorStep] = useState(0);
 
   // State for AI Palette Wizard
   const [showPaletteWizard, setShowPaletteWizard] = useState(false);
@@ -486,6 +487,11 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       setIsAutorWizardVisible(true);
       toast.success('Dados do autor removidos. Você pode começar a criar um novo.');
     }
+  };
+
+  const handleEditAutorField = () => {
+    setInitialAutorStep(1);
+    setShowAutorWizard(true);
   };
 
 
@@ -1023,7 +1029,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                     fullWidth
                     label="Tipo de Organização"
                     value={autor?.tipo || ''}
-                    onClick={() => setShowAutorWizard(true)}
+                    onClick={handleEditAutorField}
                     InputProps={{
                       readOnly: true,
                       style: { cursor: 'pointer' },
@@ -1040,7 +1046,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                       fullWidth
                       label="Tipo de Organização (Outro)"
                       value={autor?.tipoOrganizacaoOutro || ''}
-                      onClick={() => setShowAutorWizard(true)}
+                      onClick={handleEditAutorField}
                       InputProps={{
                         readOnly: true,
                         style: { cursor: 'pointer' },
@@ -1187,11 +1193,16 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
       <AutorWizard
         open={showAutorWizard}
-        onClose={() => setShowAutorWizard(false)}
+        onClose={() => {
+          setShowAutorWizard(false);
+          setInitialAutorStep(0); // Reset for next time
+        }}
         autor={autor}
+        initialStep={initialAutorStep}
         onSave={(newAutor) => {
           setAutor(newAutor);
           setShowAutorWizard(false);
+          setInitialAutorStep(0); // Reset for next time
           toast.success('Autor salvo com sucesso!');
         }}
         onGenerate={handleGenerateAutorWithAI}
