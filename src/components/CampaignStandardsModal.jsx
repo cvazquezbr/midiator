@@ -236,6 +236,14 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         setIsPersonaWizardVisible(true);
       } else {
         setIsPersonaWizardVisible(false);
+        // Se a persona existe, verifica o autor.
+        // A ausência de 'identidade' é um bom indicador de que o autor não foi preenchido.
+        if (!autor || !autor.identidade) {
+            // Muda para a aba "Autor" para dar contexto ao usuário
+            setValue(1);
+            // Mostra o assistente de criação do autor
+            setShowAutorWizard(true);
+        }
       }
     }
   }, [open]);
@@ -464,9 +472,16 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
   };
 
   const handleClearPersona = () => {
-    if (window.confirm('Tem certeza que deseja limpar todos os dados da persona? Esta ação não pode ser desfeita.')) {
+    if (window.confirm('Tem certeza que deseja limpar todos osados da persona? Esta ação não pode ser desfeita.')) {
       setPersona({});
       toast.success('Dados da persona foram limpos.');
+    }
+  };
+
+  const handleClearAutor = () => {
+    if (window.confirm('Tem certeza que deseja limpar todos os dados do autor? Esta ação não pode ser desfeita.')) {
+      setAutor({});
+      toast.success('Dados do autor foram limpos.');
     }
   };
 
@@ -953,14 +968,24 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         </TabPanel>
             <TabPanel value={value} index={1}>
               <Stack spacing={2}>
-                <Button
-                  variant="contained"
-                  startIcon={<Add />}
-                  onClick={() => setShowAutorWizard(true)}
-                  sx={{ alignSelf: 'flex-start' }}
-                >
-                  Assistente de Criação de Autor
-                </Button>
+                <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
+                    <Button
+                      variant="contained"
+                      startIcon={<Add />}
+                      onClick={() => setShowAutorWizard(true)}
+                    >
+                      Assistente de Criação de Autor
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteForeverIcon />}
+                      onClick={handleClearAutor}
+                      disabled={!autor || Object.keys(autor).length === 0}
+                    >
+                      Limpar Dados
+                    </Button>
+                </Stack>
 
                 <TextField
                   fullWidth
