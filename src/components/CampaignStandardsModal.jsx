@@ -121,12 +121,9 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemori
 
     setIsGeneratingPersona(true);
     const prompt = `
-A partir da seguinte descrição de persona, preencha os campos do objeto JSON abaixo. 
+Descriver uma persona para uma campanha de marketing para ${description}.
+Preencha os campos do objeto JSON abaixo. 
 Use exatamente os nomes de chave em camelCase fornecidos. 
-Se a informação para algum campo não estiver na descrição, use um array vazio [] ou uma string vazia "".
-
-Descrição: ${description}
-
 Campos para preencher (use exatamente estes nomes de chave):
 - nome: (string)
 - posicaoCargo: (array de strings)
@@ -140,6 +137,7 @@ Campos para preencher (use exatamente estes nomes de chave):
 - barreirasAdocao: (array de strings)
 - mentalidadeValores: (string)
 - contextoCultural: (string)
+Para o caso de não conseguir gerar conteúdo para algum cmapo, use um array vazio [] ou uma string vazia "".
 
 Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, markdown, ou qualquer outra formatação.
     `;
