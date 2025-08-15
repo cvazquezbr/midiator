@@ -256,7 +256,8 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
     } else if (editingField.startsWith('autor.')) {
       const fieldName = editingField.split('.')[1];
       setAutor(prev => ({ ...prev, [fieldName]: newContent }));
-    } else if (editingField === 'instrucoes') {
+    }
+    else if (editingField === 'instrucoes') {
       setInstrucoes(newContent);
     } else if (editingField === 'formato') {
       setFormato(newContent);
@@ -278,7 +279,6 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
   const getEditorTitle = () => {
     if (editingField === 'persona') return 'Editar Persona';
-    if (editingField === 'autor.identidade') return 'Editar Identidade do Autor';
     if (editingField === 'autor.descricao') return 'Editar Descrição da Empresa';
     if (editingField === 'autor.tipo') return 'Editar Tipo de Organização';
     if (editingField === 'autor.objetivoEstrategico') return 'Editar Objetivo Estratégico';
@@ -391,6 +391,11 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       const newValues = currentValues.filter(item => item !== valueToDelete);
       return { ...prev, [fieldName]: newValues };
     });
+  };
+
+  const handleAutorChange = (event) => {
+    const { name, value } = event.target;
+    setAutor(prev => ({ ...prev, [name]: value }));
   };
 
   const handleOtherInputChange = (key, value) => {
@@ -917,12 +922,14 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                   Assistente de Criação de Autor
                 </Button>
 
-                <HtmlDisplayField
-                  title="Identidade do Autor"
-                  tooltip="O nome da empresa ou marca que está publicando o conteúdo. Ex: ACME Corporation."
-                  htmlContent={autor?.identidade}
-                  onClick={() => handleOpenEditor('autor.identidade')}
-                  placeholder="Clique para editar a identidade..."
+                <TextField
+                  fullWidth
+                  label="Identidade do Autor"
+                  name="identidade"
+                  value={autor?.identidade || ''}
+                  onChange={handleAutorChange}
+                  inputProps={{ maxLength: 120 }}
+                  helperText={`${(autor?.identidade || '').length}/120 O nome da empresa ou marca que está publicando o conteúdo. Ex: ACME Corporation.`}
                 />
                 <HtmlDisplayField
                   title="Descrição da Empresa"
