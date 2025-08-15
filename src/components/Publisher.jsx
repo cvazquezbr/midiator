@@ -160,10 +160,17 @@ const Publisher = ({
       setProfileError('');
       try {
         const profiles = await getLinkedInProfiles();
-        setLinkedinProfiles(profiles);
-        // Only set a default profile if one isn't already selected (e.g., from a loaded state)
-        if (profiles.length > 0 && !selectedProfile) {
-          setSelectedProfile(profiles[0].urn);
+        // Ensure profiles is an array before setting
+        if (Array.isArray(profiles)) {
+          setLinkedinProfiles(profiles);
+          // Set a default profile only if one isn't already selected and the first profile is valid
+          if (profiles.length > 0 && profiles[0] && profiles[0].urn && !selectedProfile) {
+            setSelectedProfile(profiles[0].urn);
+          }
+        } else {
+            // Handle cases where the API might not return an array
+            setLinkedinProfiles([]);
+            console.warn("LinkedIn API did not return a valid array of profiles.");
         }
       } catch (error) {
         console.error("Erro ao buscar perfis do LinkedIn:", error);
@@ -416,7 +423,7 @@ const Publisher = ({
                 <Select
                   labelId="linkedin-profile-select-label"
                   id="linkedin-profile-select"
-                  value={selectedProfile}
+                  value={selectedProfile || ''}
                   label="Publicar como"
                   onChange={(e) => setSelectedProfile(e.target.value)}
                   disabled={isLoadingProfiles || isPublishingLi}
