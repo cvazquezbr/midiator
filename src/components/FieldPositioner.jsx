@@ -210,7 +210,7 @@ const FieldPositioner = ({
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [onImageDisplayedSizeChange]);
+  }, [onImageDisplayedSizeChange, backgroundImage]);
 
   // Effect to initialize or update field positions and styles based on csvHeaders and props.
   // This ensures that every field in csvHeaders has a corresponding position and a complete style object.
