@@ -282,7 +282,7 @@ const Campaign = ({
                                     fullWidth
                                     placeholder="Descreva o problema que sua campanha busca resolver."
                                     disabled={campaignContent !== null}
-                                    sx={(problema.trim() === '' && solucao.trim() === '') ? emptyLabelStyle : {}}
+                                    sx={problema.trim() === '' ? emptyLabelStyle : {}}
                                 />
                                 <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setHintModalOpen(true)}>
                                     <GeminiIcon />
@@ -290,25 +290,26 @@ const Campaign = ({
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12}>
-                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                                <TextField
-                                    label="Solução ou Proposta"
-                                    multiline
-                                    rows={4}
-                                    value={solucao}
-                                    onChange={(e) => setSolucao(e.target.value)}
-                                    variant="outlined"
-                                    fullWidth
-                                    placeholder="Descreva a solução que sua campanha oferece."
-                                    disabled={campaignContent !== null}
-                                    sx={(problema.trim() === '' && solucao.trim() === '') ? emptyLabelStyle : {}}
-                                />
-                                <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setSolucaoHintModalOpen(true)}>
-                                    <GeminiIcon />
-                                </IconButton>
-                            </Box>
-                        </Grid>
+                        {problema.trim() !== '' && (
+                            <Grid item xs={12}>
+                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                    <TextField
+                                        label="Solução ou Proposta"
+                                        multiline
+                                        rows={4}
+                                        value={solucao}
+                                        onChange={(e) => setSolucao(e.target.value)}
+                                        variant="outlined"
+                                        fullWidth
+                                        placeholder="Descreva a solução que sua campanha oferece."
+                                        disabled={campaignContent !== null}
+                                    />
+                                    <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setSolucaoHintModalOpen(true)}>
+                                        <GeminiIcon />
+                                    </IconButton>
+                                </Box>
+                            </Grid>
+                        )}
                     </Grid>
                     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 2 }}>
                         <Button
