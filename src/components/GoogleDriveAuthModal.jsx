@@ -61,11 +61,11 @@ const GoogleDriveAuthModal = () => {
 
   const handleConnect = async () => {
     if (!apiKey.trim() || !clientId.trim()) {
-      setError('Por favor, salve a API Key e o Client ID para conectar.');
+      setError('Por favor, preencha a API Key e o Client ID para conectar.');
       return;
     }
     setIsLoading(true);
-    await connectGoogleDrive();
+    await connectGoogleDrive(apiKey, clientId);
     setIsLoading(false);
   };
 

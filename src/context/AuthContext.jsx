@@ -19,16 +19,14 @@ export const AuthProvider = ({ children }) => {
     checkGoogleDriveConnection();
   }, [checkGoogleDriveConnection]);
 
-  const connectGoogleDrive = async () => {
-    const apiKey = localStorage.getItem('google_drive_api_key');
-    const clientId = localStorage.getItem('google_drive_client_id');
-
+  const connectGoogleDrive = async (apiKey, clientId) => {
     if (!apiKey || !clientId) {
-      toast.error("API Key e Client ID do Google Drive não configurados.");
+      toast.error("API Key e Client ID do Google Drive são necessários para conectar.");
       return false;
     }
 
     try {
+      // Força a reinicialização se as chaves mudaram.
       if (!googleDriveAPI.isInitialized) {
         toast.info('Inicializando API do Google...');
         await googleDriveAPI.initialize(apiKey, clientId);
