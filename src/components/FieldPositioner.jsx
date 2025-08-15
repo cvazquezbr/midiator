@@ -652,7 +652,7 @@ const FieldPositioner = ({
                 draggable={false}
               />
 
-              {renderableElements.map(element => (
+              {imageSize.width > 0 && renderableElements.map(element => (
                 <DraggableElement
                   key={element.id}
                   element={element.type === 'image' ? { ...element.position, type: 'image' } : { id: element.id, type: 'text' }}
