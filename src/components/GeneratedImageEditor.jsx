@@ -79,6 +79,10 @@ const GeneratedImageEditor = ({
     }
   }, []); // setEditedRecord is stable
 
+  const handleDeselectField = () => {
+    setSelectedFieldInternal(null);
+  };
+
   useEffect(() => {
     if (imageData && initialFieldPositions && initialFieldStyles) {
       setSelectedFieldInternal(null);
@@ -211,6 +215,7 @@ const GeneratedImageEditor = ({
                   setImageFilters={setEditedImageFilters}
                   brandElements={editedBrandElements}
                   setBrandElements={setEditedBrandElements}
+                  onDeselectField={handleDeselectField}
                 />
               </Grid>
             )}
