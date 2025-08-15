@@ -195,9 +195,9 @@ const Campaign = ({
     const emptyLabelStyle = {
         '& .MuiInputLabel-root:not(.Mui-focused):not(.MuiFormLabel-filled)': {
             fontFamily: 'Montserrat, sans-serif',
-            fontSize: '1.2rem',
-            // Aproxima o posicionamento ao centro para um campo de 4 linhas
-            transform: 'translate(14px, 45px) scale(1)',
+            fontSize: '1.4rem',
+            // Aproxima o posicionamento ao centro para um campo de 4 linhas, com maior recuo e tamanho
+            transform: 'translate(24px, 47px) scale(1)',
         },
     };
 
