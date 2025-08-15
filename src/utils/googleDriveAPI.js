@@ -201,9 +201,9 @@ class GoogleDriveAPI {
       this.signInResolver = resolve;
       this.signInRejecter = reject;
 
-      // Prompt for consent only if necessary.
-      // An empty prompt is usually sufficient if the user has already granted consent.
-      this.tokenClient.requestAccessToken({ prompt: '' });
+      // Let GIS library handle the prompt logic.
+      // It will show the consent screen only when necessary.
+      this.tokenClient.requestAccessToken();
     });
   }
 
