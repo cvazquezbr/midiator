@@ -36,6 +36,7 @@ import {
     TipsAndUpdatesOutlined as TipsAndUpdatesIcon,
     FactCheckOutlined as FactCheckIcon,
     AutoAwesomeOutlined as GeminiIcon,
+    Edit as EditIcon,
 } from '@mui/icons-material';
 
 const problemaHint = (
@@ -574,25 +575,32 @@ const Campaign = ({
                 <TabPanel value={activeTab} index={4}>
                     {campaignContent && (
                         <Grid container spacing={2} sx={{ mt: 2 }}>
-                            <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <TextField
-                                    label="Conteúdo Formatado (HTML)"
-                                    multiline
-                                    rows={10}
-                                    value={conteudoFormatado}
-                                    onClick={() => setEditingField('conteudoFormatado')}
-                                    readOnly
-                                    variant="outlined"
-                                    fullWidth
-                                    sx={{ cursor: 'pointer' }}
-                                />
-                                <Button onClick={() => handleGenerateFormattedContent()} disabled={isGeneratingConteudoFormatado || !campaignContent} startIcon={<GeminiIcon />}>
-                                    {isGeneratingConteudoFormatado ? 'Gerando...' : 'Gerar'}
-                                </Button>
-                            </Grid>
                              <Grid item xs={12}>
-                                <Typography variant="h6" gutterBottom>Pré-visualização</Typography>
-                                <Box border={1} borderColor="grey.300" p={2} borderRadius={1} sx={{ minHeight: 100, '& *': { all: 'revert' } }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                    <Typography variant="h6" gutterBottom component="div" sx={{ mb: 0 }}>
+                                        Pré-visualização
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', gap: 1 }}>
+                                        <Button
+                                            onClick={() => setEditingField('conteudoFormatado')}
+                                            startIcon={<EditIcon />}
+                                            variant="outlined"
+                                            size="small"
+                                        >
+                                            Editar
+                                        </Button>
+                                        <Button
+                                            onClick={() => handleGenerateFormattedContent()}
+                                            disabled={isGeneratingConteudoFormatado || !campaignContent}
+                                            startIcon={<GeminiIcon />}
+                                            variant="outlined"
+                                            size="small"
+                                        >
+                                            {isGeneratingConteudoFormatado ? 'Gerando...' : 'Gerar'}
+                                        </Button>
+                                    </Box>
+                                </Box>
+                                <Box border={1} borderColor="grey.300" p={2} borderRadius={1} sx={{ minHeight: 300, '& *': { all: 'revert' } }}>
                                     <div dangerouslySetInnerHTML={{ __html: conteudoFormatado }} />
                                 </Box>
                             </Grid>

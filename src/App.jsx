@@ -807,6 +807,7 @@ function App() {
         autor,
         instrucoes,
         formato,
+        generatedImageUrl,
         conteudoMedio,
         conteudoPequeno,
         conteudoFormatado,
@@ -1576,11 +1577,11 @@ function App() {
           editingFollowup !== null
             ? `Editar Post de Follow-up ${editingFollowup.index + 1}`
             : `Editar ${
-                editingField === 'conteudo'
-                  ? 'Conteúdo'
-                  : editingField === 'cta'
-                  ? 'CTA'
-                  : 'Conteúdo Formatado'
+                editingField === 'conteudo' ? 'Conteúdo' :
+                editingField === 'conteudoMedio' ? 'Conteúdo Médio' :
+                editingField === 'conteudoPequeno' ? 'Conteúdo Pequeno' :
+                editingField === 'cta' ? 'CTA' :
+                'Conteúdo Formatado'
               }`
         }
         content={
@@ -1588,7 +1589,11 @@ function App() {
             ? editingFollowup.content
             : editingField === 'conteudoFormatado'
             ? conteudoFormatado
-            : editingField
+            : editingField === 'conteudoMedio'
+            ? conteudoMedio
+            : editingField === 'conteudoPequeno'
+            ? conteudoPequeno
+            : editingField && campaignContent
             ? campaignContent[editingField]
             : ''
         }
@@ -1598,7 +1603,11 @@ function App() {
             : (newContent) => {
                 if (editingField === 'conteudoFormatado') {
                   setConteudoFormatado(newContent);
-                } else {
+                } else if (editingField === 'conteudoMedio') {
+                  setConteudoMedio(newContent);
+                } else if (editingField === 'conteudoPequeno') {
+                  setConteudoPequeno(newContent);
+                } else if (editingField) {
                   setCampaignContent({
                     ...campaignContent,
                     [editingField]: newContent,

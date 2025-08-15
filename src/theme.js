@@ -55,6 +55,19 @@ export const lightTheme = createTheme({
           }
         }
       }
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#f1f5f9', // slate-100
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#8b5cf6', // primary.main
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#8b5cf6', // primary.main
+          },
+        }
+      }
     }
   }
 });
@@ -102,6 +115,19 @@ export const darkTheme = createTheme({
           '&:hover': {
             background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
           }
+        }
+      }
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#1e293b', // background.paper
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#a78bfa', // primary.main
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#a78bfa', // primary.main
+          },
         }
       }
     }
