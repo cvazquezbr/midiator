@@ -57,7 +57,6 @@ const MainAppBar = ({
               <MenuIcon />
             </IconButton>
           )}
-          <img src="/logo.svg" alt="Midiator Logo" style={{ height: '40px' }} />
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 1 } }}>
