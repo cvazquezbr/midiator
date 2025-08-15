@@ -48,9 +48,21 @@ export const saveCampaignState = async (state) => {
       backgroundImageBase64 = await blobToBase64(blob);
     } catch (error) {
       console.error("Could not fetch and serialize background image:", error);
-      // Decide if you want to save the URL as a fallback
-      backgroundImageBase64 = null; // Or keep state.backgroundImageUrl in a different field
+      backgroundImageBase64 = null;
     }
+  }
+
+  // Handle the AI-generated image
+  let generatedImageBase64 = null;
+  if (state.generatedImageUrl) {
+      try {
+          const response = await fetch(state.generatedImageUrl);
+          const blob = await response.blob();
+          generatedImageBase64 = await blobToBase64(blob);
+      } catch (error) {
+          console.error("Could not fetch and serialize AI-generated image:", error);
+          generatedImageBase64 = null;
+      }
   }
 
   const stateToSave = {
@@ -62,6 +74,8 @@ export const saveCampaignState = async (state) => {
     generatedVideosData: serializableGeneratedVideos,
     backgroundImageUrl: undefined, // Remove the original URL
     backgroundImageBase64: backgroundImageBase64, // Add the base64 version
+    generatedImageUrl: undefined, // Remove the original URL
+    generatedImageBase64: generatedImageBase64, // Add the base64 version
   };
 
   // Remove non-serializable parts from the top-level state object before stringifying
@@ -120,6 +134,14 @@ export const loadCampaignState = (file) => {
           if (blob) {
             loadedState.backgroundImageUrl = URL.createObjectURL(blob);
           }
+        }
+
+        // Restore the AI-generated image
+        if (loadedState.generatedImageBase64) {
+            const blob = await base64ToBlob(loadedState.generatedImageBase64);
+            if (blob) {
+                loadedState.generatedImageUrl = URL.createObjectURL(blob);
+            }
         }
 
         // Restore blobs from base64 strings
