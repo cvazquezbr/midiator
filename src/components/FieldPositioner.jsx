@@ -170,30 +170,28 @@ const FieldPositioner = ({
     }
   }, [csvData, currentPreviewIndex, onCsvDataUpdate]);
 
-  const handleVisibilityChange = useCallback((field, isVisible) => {
-    // Get the current value of the field for the record being previewed
-    const currentValue = csvData?.[currentPreviewIndex]?.[field];
+  const handleVisibilityChange = useCallback((fieldId, isVisible) => {
+    // Check if the selected element is a brand element
+    const isBrandElement = brandElements.some(el => el.id === fieldId);
 
-    // A field is an "image field" if its content looks like a URL.
-    const isImageField = currentValue && typeof currentValue === 'string' && (
-        currentValue.startsWith('http') ||
-        currentValue.startsWith('data:image') ||
-        /\.(jpg|jpeg|png|gif|webp)$/i.test(currentValue)
-    );
-
-    if (isImageField && !isVisible) {
-      handleContentChange(field, ''); // Clear the image URL
+    if (isBrandElement) {
+        if (!isVisible) {
+            // It's a brand element and it's being hidden, so delete it.
+            setBrandElements(prev => prev.filter(el => el.id !== fieldId));
+            // Also deselect it
+            handleFieldSelectInternal(null);
+        }
+    } else {
+        // It's a text field from CSV. Just toggle its visibility.
+        setFieldPositions(prev => ({
+            ...prev,
+            [fieldId]: {
+                ...(prev[fieldId] || {}),
+                visible: isVisible
+            }
+        }));
     }
-
-    // Always update the visibility
-    setFieldPositions(prev => ({
-      ...prev,
-      [field]: {
-        ...prev[field],
-        visible: isVisible
-      }
-    }));
-  }, [handleContentChange, setFieldPositions, csvData, currentPreviewIndex]);
+  }, [brandElements, setBrandElements, setFieldPositions, handleFieldSelectInternal]);
 
   useEffect(() => {
     const container = containerRef.current;
