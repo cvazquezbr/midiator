@@ -360,9 +360,11 @@ const Campaign = ({
                                     multiline
                                     rows={2}
                                     value={conteudoMedio}
-                                    onChange={(e) => setConteudoMedio(e.target.value)}
+                                    onClick={() => setEditingField('conteudoMedio')}
+                                    readOnly
                                     variant="outlined"
                                     fullWidth
+                                    sx={{ cursor: 'pointer' }}
                                 />
                                 <Button onClick={() => handleGenerateSummary(1800)} disabled={isGeneratingSummaryMedio || !campaignContent} startIcon={<GeminiIcon />}>
                                     {isGeneratingSummaryMedio ? 'Gerando...' : 'Gerar'}
@@ -374,9 +376,11 @@ const Campaign = ({
                                     multiline
                                     rows={1}
                                     value={conteudoPequeno}
-                                    onChange={(e) => setConteudoPequeno(e.target.value)}
+                                    onClick={() => setEditingField('conteudoPequeno')}
+                                    readOnly
                                     variant="outlined"
                                     fullWidth
+                                    sx={{ cursor: 'pointer' }}
                                 />
                                 <Button onClick={() => handleGenerateSummary(130)} disabled={isGeneratingSummaryPequeno || !campaignContent} startIcon={<GeminiIcon />}>
                                     {isGeneratingSummaryPequeno ? 'Gerando...' : 'Gerar'}
