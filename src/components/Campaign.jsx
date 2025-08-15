@@ -192,6 +192,15 @@ const Campaign = ({
     const [isLoadingSolutions, setIsLoadingSolutions] = React.useState(false);
     const [solutionsError, setSolutionsError] = React.useState(null);
 
+    const emptyLabelStyle = {
+        '& .MuiInputLabel-root:not(.Mui-focused):not(.MuiFormLabel-filled)': {
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: '1.2rem',
+            // Aproxima o posicionamento ao centro para um campo de 4 linhas
+            transform: 'translate(14px, 45px) scale(1)',
+        },
+    };
+
     useEffect(() => {
         // Quando o conteúdo da campanha é gerado com sucesso e o processo de geração termina,
         // muda para a segunda aba.
@@ -273,6 +282,7 @@ const Campaign = ({
                                     fullWidth
                                     placeholder="Descreva o problema que sua campanha busca resolver."
                                     disabled={campaignContent !== null}
+                                    sx={(problema.trim() === '' && solucao.trim() === '') ? emptyLabelStyle : {}}
                                 />
                                 <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setHintModalOpen(true)}>
                                     <GeminiIcon />
@@ -292,6 +302,7 @@ const Campaign = ({
                                     fullWidth
                                     placeholder="Descreva a solução que sua campanha oferece."
                                     disabled={campaignContent !== null}
+                                    sx={(problema.trim() === '' && solucao.trim() === '') ? emptyLabelStyle : {}}
                                 />
                                 <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setSolucaoHintModalOpen(true)}>
                                     <GeminiIcon />
