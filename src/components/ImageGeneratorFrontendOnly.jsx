@@ -19,7 +19,8 @@ import {
   TextField,
   FormControlLabel,
   Switch,
-  Divider
+  Divider,
+  Tooltip
 } from '@mui/material';
 import {
   Download,
@@ -35,10 +36,10 @@ import {
   SwapHoriz,
   Share // <-- Adicionar ícone de compartilhamento
 } from '@mui/icons-material';
-import GoogleAuthSetup from './GoogleAuthSetup';
 import GeneratedImageEditor from './GeneratedImageEditor'; // Importar o novo editor
 import googleDriveAPI from '../utils/googleDriveAPI';
 import { composeImage } from '../utils/imageComposer';
+import { useAuth } from '../context/AuthContext';
 
 const ImageGeneratorFrontendOnly = ({
   csvData,
@@ -74,12 +75,12 @@ const ImageGeneratorFrontendOnly = ({
   const [showGeneratedImageEditor, setShowGeneratedImageEditor] = useState(false);
 
 
+  const { isGoogleDriveConnected } = useAuth();
+
   // Estados para integração Google Drive
   const [projectName, setProjectName] = useState('');
   const [isUploadingToDrive, setIsUploadingToDrive] = useState(false);
   const [driveResult, setDriveResult] = useState(null);
-  const [authConfigured, setAuthConfigured] = useState(false);
-  const [showAuthSetup, setShowAuthSetup] = useState(false);
   const [replacingImageIndex, setReplacingImageIndex] = useState(null);
 
   // Removed: const canvasRef = useRef(null);
@@ -773,11 +774,6 @@ const ImageGeneratorFrontendOnly = ({
 
   // Função para upload para Google Drive
   const uploadToGoogleDrive = async () => {
-    if (!authConfigured) {
-      setShowAuthSetup(true);
-      return;
-    }
-
     if (!projectName.trim()) {
       alert('Por favor, digite um nome para o projeto.');
       return;
@@ -900,17 +896,6 @@ const ImageGeneratorFrontendOnly = ({
       setIsUploadingToDrive(false); // Libera o estado da UI
     }
   };
-  // Callback para quando a autenticação for bem-sucedida
-  const handleAuthSuccess = () => {
-    setAuthConfigured(true);
-    setShowAuthSetup(false);
-  };
-
-  // Callback para quando houver erro na autenticação
-  const handleAuthError = (error) => {
-    console.error('Erro na autenticação:', error);
-    setAuthConfigured(false);
-  };
 
   return (
     <Box sx={{ mt: 3 }}>
@@ -985,16 +970,20 @@ const ImageGeneratorFrontendOnly = ({
                 </Grid>
 
                 <Grid item xs={12} md={6}>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={uploadToGoogleDrive}
-                    disabled={isUploadingToDrive}
-                    startIcon={<CloudUpload />}
-                    fullWidth
-                  >
-                    {isUploadingToDrive ? 'Enviando...' : 'Enviar para Google Drive'}
-                  </Button>
+                  <Tooltip title={!isGoogleDriveConnected ? "Conecte-se ao Google Drive nas configurações para ativar esta opção" : ""}>
+                    <span>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        onClick={uploadToGoogleDrive}
+                        disabled={isUploadingToDrive || !isGoogleDriveConnected}
+                        startIcon={<CloudUpload />}
+                        fullWidth
+                      >
+                        {isUploadingToDrive ? 'Enviando...' : 'Enviar para Google Drive'}
+                      </Button>
+                    </span>
+                  </Tooltip>
                 </Grid>
               </Grid>
 
@@ -1154,19 +1143,6 @@ const ImageGeneratorFrontendOnly = ({
           <Button onClick={() => downloadImage(selectedPreview)} startIcon={<Download />}>Download</Button>
           <Button onClick={closePreview}>Fechar</Button>
         </DialogActions>
-      </Dialog>
-
-      {/* Dialog de Configuração de Autenticação */}
-      <Dialog open={showAuthSetup} onClose={() => setShowAuthSetup(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Configuração Google Drive
-          <IconButton onClick={() => setShowAuthSetup(false)} sx={{ position: 'absolute', right: 8, top: 8 }}>
-            <Close />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <GoogleAuthSetup onAuthSuccess={handleAuthSuccess} onAuthError={handleAuthError} />
-        </DialogContent>
       </Dialog>
 
       {/* Removed: <canvas ref={canvasRef} style={{ display: 'none' }} /> */}
