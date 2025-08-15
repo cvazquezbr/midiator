@@ -26,6 +26,7 @@ export function getCampaignPrompt() {
       identidade: '',
       descricao: '',
       tipo: '',
+      tipoOrganizacaoOutro: '',
       objetivoEstrategico: '',
       objetivoEngajamento: '',
       dominioReferencia: '',

@@ -37,7 +37,7 @@ const InfoTooltip = ({ title }) => (
     </Tooltip>
 );
 
-export const AutorWizardContent = ({ open, onClose, onSave, onGenerate, isGeneratingAutor, autor }) => {
+export const AutorWizardContent = ({ onClose, onSave, onGenerate, isGeneratingAutor, autor }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [autorData, setAutorData] = useState(autor || {});
 
@@ -52,6 +52,7 @@ export const AutorWizardContent = ({ open, onClose, onSave, onGenerate, isGenera
       identidade: '',
       descricao: '',
       tipo: '',
+      tipoOrganizacaoOutro: '',
       objetivoEstrategico: '',
       objetivoEngajamento: '',
     });
@@ -83,7 +84,15 @@ export const AutorWizardContent = ({ open, onClose, onSave, onGenerate, isGenera
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setAutorData(prev => ({ ...prev, [name]: value }));
+    setAutorData(prev => {
+      const newState = { ...prev, [name]: value };
+      // Se o tipo de organização for alterado para algo diferente de "Outro",
+      // limpa o campo de texto `tipoOrganizacaoOutro`.
+      if (name === 'tipo' && value !== 'Outro') {
+        newState.tipoOrganizacaoOutro = '';
+      }
+      return newState;
+    });
   };
 
   const handleRichTextChange = (name, value) => {
@@ -187,6 +196,19 @@ export const AutorWizardContent = ({ open, onClose, onSave, onGenerate, isGenera
                     {TIPO_ORGANIZACAO_OPTIONS.map(option => <MenuItem key={option} value={option}>{option}</MenuItem>)}
                 </TextField>
               </Grid>
+              {autorData.tipo === 'Outro' && (
+                <Grid item xs={12}>
+                  <TextField
+                    name="tipoOrganizacaoOutro"
+                    label="Qual?"
+                    fullWidth
+                    value={autorData.tipoOrganizacaoOutro || ''}
+                    onChange={handleChange}
+                    placeholder="Especifique o tipo de organização"
+                    required
+                  />
+                </Grid>
+              )}
               <Grid item xs={12}>
                 <Typography variant="subtitle1" gutterBottom>Objetivo Estratégico</Typography>
                 <RichTextEditor
