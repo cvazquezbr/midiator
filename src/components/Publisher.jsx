@@ -421,25 +421,35 @@ const Publisher = ({
               </Typography>
 
               {/* Profile Selection */}
-              <FormControl fullWidth sx={{ my: 2 }}>
-                <InputLabel id="linkedin-profile-select-label">Publicar como</InputLabel>
-                <Select
-                  labelId="linkedin-profile-select-label"
-                  id="linkedin-profile-select"
-                  value={selectedProfile || ''}
-                  label="Publicar como"
-                  onChange={(e) => setSelectedProfile(e.target.value)}
-                  disabled={isLoadingProfiles || isPublishingLi}
-                >
-                  {isLoadingProfiles && <MenuItem value=""><em><CircularProgress size={20} /> Carregando perfis...</em></MenuItem>}
-                  {profileError && <MenuItem value="" disabled><em>Erro: {profileError}</em></MenuItem>}
-                  {linkedinProfiles.map((profile) => (
-                      <MenuItem key={profile.urn} value={profile.urn}>
-                        {profile.name}
-                      </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              {profileError ? (
+                <TextField
+                  error
+                  fullWidth
+                  disabled
+                  label="Erro ao carregar perfis do LinkedIn"
+                  defaultValue={profileError}
+                  sx={{ my: 2 }}
+                />
+              ) : (
+                <FormControl fullWidth sx={{ my: 2 }}>
+                  <InputLabel id="linkedin-profile-select-label">Publicar como</InputLabel>
+                  <Select
+                    labelId="linkedin-profile-select-label"
+                    id="linkedin-profile-select"
+                    value={selectedProfile || ''}
+                    label="Publicar como"
+                    onChange={(e) => setSelectedProfile(e.target.value)}
+                    disabled={isLoadingProfiles || isPublishingLi}
+                  >
+                    {isLoadingProfiles && <MenuItem value=""><em><CircularProgress size={20} /> Carregando perfis...</em></MenuItem>}
+                    {linkedinProfiles.map((profile) => (
+                        <MenuItem key={profile.urn} value={profile.urn}>
+                          {profile.name}
+                        </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
 
               {/* Media Selection */}
               <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
