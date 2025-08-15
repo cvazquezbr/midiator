@@ -290,10 +290,6 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
       case 0:
         return (
           <Box>
-            <Typography variant="h6" gutterBottom>Descreva a persona para começar</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Explique o que é uma persona no contexto do marketing de conteúdo e as informações chave em um vocabulário simples.
-            </Typography>
             <Alert severity="info" sx={{ mb: 2 }}>
               Forneça uma breve descrição do perfil. A IA irá usar essa informação para preencher os primeiros campos automaticamente. Ex: 'CTO de uma startup de tecnologia que precisa inovar rapidamente e reduzir custos com a nuvem.'
             </Alert>
