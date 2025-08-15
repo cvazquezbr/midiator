@@ -295,6 +295,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
     if (editingField === 'persona') return 'Editar Persona';
     if (editingField === 'autor.descricao') return 'Editar Descrição da Empresa';
     if (editingField === 'autor.tipo') return 'Editar Tipo de Organização';
+    if (editingField === 'autor.tipoOrganizacaoOutro') return 'Editar Tipo de Organização (Outro)';
     if (editingField === 'autor.objetivoEstrategico') return 'Editar Objetivo Estratégico';
     if (editingField === 'autor.objetivoEngajamento') return 'Editar Objetivo de Engajamento';
     if (editingField === 'instrucoes') return 'Editar Instruções';
@@ -1023,6 +1024,15 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                     onClick={() => handleOpenEditor('autor.tipo')}
                     placeholder="Clique para editar o tipo..."
                   />
+                  {autor?.tipo === 'Outro' && (
+                    <HtmlDisplayField
+                      title="Tipo de Organização (Outro)"
+                      tooltip="Descrição específica do tipo de organização."
+                      htmlContent={autor?.tipoOrganizacaoOutro}
+                      onClick={() => handleOpenEditor('autor.tipoOrganizacaoOutro')}
+                      placeholder="Clique para editar a especificação do tipo..."
+                    />
+                  )}
                   <HtmlDisplayField
                     title="Objetivo Estratégico"
                     tooltip="A meta de longo prazo da mensagem (posicionamento da marca, construção de autoridade, etc.)."

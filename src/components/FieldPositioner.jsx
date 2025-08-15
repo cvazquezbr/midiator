@@ -79,6 +79,9 @@ const findBestFitFontSize = (text, fontFamily, fontWeight, boxWidth, boxHeight) 
 };
 
 
+// Campos que devem usar renderização HTML
+const htmlFields = ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'];
+
 const FieldPositioner = ({
   backgroundImage,
   csvHeaders,
@@ -135,14 +138,11 @@ const FieldPositioner = ({
     generateComposedImage();
   }, [backgroundImage, imageFilters]);
 
-  // Campos que devem usar renderização HTML
-  const htmlFields = ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'];
-
-  const isHtmlField = (fieldName) => {
-    return htmlFields.some(field => 
+  const isHtmlField = useCallback((fieldName) => {
+    return htmlFields.some(field =>
       fieldName.toLowerCase().includes(field.toLowerCase())
     );
-  };
+  }, []);
 
   const handleFieldSelectInternal = useCallback((fieldToSelect) => {
     setSelectedField(fieldToSelect);
@@ -507,26 +507,6 @@ const FieldPositioner = ({
     }
   }, [isInteracting]);
 
-  if (!backgroundImage) {
-    return (
-      <Box
-        sx={{
-          height: 400,
-          border: '2px dashed #ccc',
-          borderRadius: 2,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#f5f5f5'
-        }}
-      >
-        <Typography color="textSecondary" variant="h6">
-          Carregue uma imagem de fundo para posicionar os campos
-        </Typography>
-      </Box>
-    );
-  }
-
   const renderableElements = React.useMemo(() => {
     const elements = [
       ...(csvHeaders || [])
@@ -574,6 +554,25 @@ const FieldPositioner = ({
   }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, imageSize, originalImageSize, isHtmlField]);
 
 
+  if (!backgroundImage) {
+    return (
+      <Box
+        sx={{
+          height: 400,
+          border: '2px dashed #ccc',
+          borderRadius: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#f5f5f5'
+        }}
+      >
+        <Typography color="textSecondary" variant="h6">
+          Carregue uma imagem de fundo para posicionar os campos
+        </Typography>
+      </Box>
+    );
+  }
   return (
     <Grid container spacing={3}>
       <Grid item xs={12} lg={9}>
