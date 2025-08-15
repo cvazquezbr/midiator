@@ -45,6 +45,7 @@ import {
   AutoAwesome as AutoAwesomeIcon,
   Description as DescriptionIcon,
   Add,
+  DeleteForever as DeleteForeverIcon,
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 import ColorThief from 'colorthief';
@@ -462,6 +463,13 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
     setEditingChip(null);
   };
 
+  const handleClearPersona = () => {
+    if (window.confirm('Tem certeza que deseja limpar todos os dados da persona? Esta ação não pode ser desfeita.')) {
+      setPersona({});
+      toast.success('Dados da persona foram limpos.');
+    }
+  };
+
 
   // Constants for Persona fields
   const POSICOES_CARGOS = ['Liderança Executiva: CEO, Diretor Executivo, Sócio', 'Gestão de Tecnologia: CTO, Head de Engenharia, Gerente de TI', 'Gestão de Marketing: Gerente de Marketing, Coordenador de Marketing', 'Gestão de Vendas: Gerente de Vendas, Diretor Comercial', 'Gestão de Recursos Humanos: Head de RH, Analista de RH', 'Outro(s)'];
@@ -639,6 +647,15 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                       onClick={() => setIsPersonaWizardVisible(true)}
                     >
                       Editar com Assistente
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteForeverIcon />}
+                      onClick={handleClearPersona}
+                      disabled={!persona || Object.keys(persona).length === 0}
+                    >
+                      Limpar Dados
                     </Button>
                   </Stack>
                   <Grid container spacing={3}>
