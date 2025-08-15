@@ -553,7 +553,6 @@ const FieldPositioner = ({
     return elements;
   }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, imageSize, originalImageSize, isHtmlField]);
 
-
   if (!backgroundImage) {
     return (
       <Box
@@ -573,6 +572,7 @@ const FieldPositioner = ({
       </Box>
     );
   }
+
   return (
     <Grid container spacing={3}>
       <Grid item xs={12} lg={9}>

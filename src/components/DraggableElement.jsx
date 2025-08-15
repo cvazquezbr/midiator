@@ -671,7 +671,7 @@ const DraggableElement = ({
 
       {isEditorModalOpen && (
         <TextEditorDialog
-          open={isEditorModalopen}
+          open={isEditorModalOpen}
           title={`Editar ${element.id}`}
           content={editedContent}
           onSave={handleEditorSave}
