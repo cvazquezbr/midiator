@@ -482,6 +482,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
   const handleClearAutor = () => {
     if (window.confirm('Tem certeza que deseja começar de novo? Todos os dados do autor serão apagados.')) {
       setAutor({});
+      setIsAutorWizardVisible(true);
       toast.success('Dados do autor removidos. Você pode começar a criar um novo.');
     }
   };
