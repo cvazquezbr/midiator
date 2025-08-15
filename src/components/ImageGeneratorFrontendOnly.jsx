@@ -75,7 +75,6 @@ const ImageGeneratorFrontendOnly = ({
 
 
   // Estados para integração Google Drive
-  const [driveIntegration, setDriveIntegration] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [isUploadingToDrive, setIsUploadingToDrive] = useState(false);
   const [driveResult, setDriveResult] = useState(null);
@@ -976,43 +975,27 @@ const ImageGeneratorFrontendOnly = ({
 
               <Grid container spacing={2} alignItems="center">
                 <Grid item xs={12} md={6}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={driveIntegration}
-                        onChange={(e) => setDriveIntegration(e.target.checked)}
-                      />
-                    }
-                    label="Ativar integração com Google Drive"
+                  <TextField
+                    fullWidth
+                    label="Nome do Projeto"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    placeholder="Ex: Certificados 2024"
                   />
                 </Grid>
 
-                {driveIntegration && (
-                  <>
-                    <Grid item xs={12} md={6}>
-                      <TextField
-                        fullWidth
-                        label="Nome do Projeto"
-                        value={projectName}
-                        onChange={(e) => setProjectName(e.target.value)}
-                        placeholder="Ex: Certificados 2024"
-                      />
-                    </Grid>
-
-                    <Grid item xs={12}>
-                      <Button
-                        variant="contained"
-                        color="secondary"
-                        onClick={uploadToGoogleDrive}
-                        disabled={isUploadingToDrive}
-                        startIcon={<CloudUpload />}
-                        fullWidth
-                      >
-                        {isUploadingToDrive ? 'Enviando...' : 'Enviar para Google Drive'}
-                      </Button>
-                    </Grid>
-                  </>
-                )}
+                <Grid item xs={12} md={6}>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    onClick={uploadToGoogleDrive}
+                    disabled={isUploadingToDrive}
+                    startIcon={<CloudUpload />}
+                    fullWidth
+                  >
+                    {isUploadingToDrive ? 'Enviando...' : 'Enviar para Google Drive'}
+                  </Button>
+                </Grid>
               </Grid>
 
               {isUploadingToDrive && (
