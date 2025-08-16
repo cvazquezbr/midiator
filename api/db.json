@@ -1,10 +1,10 @@
 {
   "posts": [
     {
-      "id": "dc4becba-0bd2-417e-8452-8b88e7f9b9b7",
-      "createdAt": "2025-08-16T17:27:01.759Z",
+      "id": "4e29e78b-3d78-4eff-97c6-cdb9782ccb6f",
+      "createdAt": "2025-08-16T18:03:43.721Z",
       "status": "failed",
-      "scheduledAt": "2025-08-16T17:26:01.759Z",
+      "scheduledAt": "2025-08-16T18:02:43.716Z",
       "authorUrn": "urn:li:person:xCDEUBo-Mf",
       "content": {
         "titulo": "Test Post from Scheduler",
