@@ -62,11 +62,12 @@ export const exportHtml = (campaignData) => {
     <h2>Posts de Follow-up</h2>
     ${followupPosts.map(post => `
       <div style="border: 1px solid #eee; padding: 1rem; margin-bottom: 1rem; border-radius: 8px;">
-        <h3>Post ${post.post_numero}: ${post.tipo_gancho}</h3>
-        <p>${post.conteudo}</p>
+        <h3>${post.titulo || `Post ${post.post_numero}`}</h3>
+        <p style="font-size: 0.9em; color: #555;"><strong>Etapa AIDA:</strong> ${post.etapa_aida} | <strong>Gancho:</strong> ${post.tipo_gancho}</p>
+        <div style="white-space: pre-wrap; font-family: inherit; margin-top: 1rem; margin-bottom: 1rem;">${post.conteudo.replace(/\n/g, '<br><br>')}</div>
         <p><strong>CTA:</strong> ${post.cta}</p>
         <div>
-          ${post.hashtags_sugeridas.map(tag => `<span style="background-color: #f5f3ff; color: #6d28d9; padding: 0.25rem 0.75rem; border-radius: 16px; font-size: 0.9rem; margin-right: 0.5rem;">${tag}</span>`).join('')}
+          ${(post.hashtags_sugeridas || []).map(tag => `<span style="background-color: #f5f3ff; color: #6d28d9; padding: 0.25rem 0.75rem; border-radius: 16px; font-size: 0.9rem; margin-right: 0.5rem;">#${tag}</span>`).join('')}
         </div>
       </div>
     `).join('')}

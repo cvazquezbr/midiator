@@ -277,6 +277,7 @@ REGRAS:
 - Use o TÍTULO DO POST como o título do seu texto.
 - O corpo do post deve ter **pelo menos 600 caracteres**.
 - O corpo do post deve ser estruturado em **até três parágrafos**.
+- Separe os parágrafos com uma linha em branco.
 - O tom deve ser profissional, mas conversacional.
 - Use até 2 emojis relevantes.
 - O texto final NÃO deve conter hashtags.
@@ -307,6 +308,7 @@ Retorne um objeto JSON com as chaves "titulo_post" e "conteudo_post".
       generatedPosts.push({
         post_numero: postPlan.post_numero,
         tipo_gancho: postPlan.tipo_gancho,
+        etapa_aida: postPlan.etapa_aida,
         titulo: parsedResponse.titulo_post,
         conteudo: parsedResponse.conteudo_post,
         cta: postPlan.cta_sugerido,

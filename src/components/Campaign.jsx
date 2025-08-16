@@ -564,18 +564,22 @@ const Campaign = ({
                             {followupPosts.map((post, index) => (
                                 <Accordion key={index}>
                                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                        <Typography>Post {post.post_numero}: {post.tipo_gancho}</Typography>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                                            <Typography sx={{ flexGrow: 1, mr: 2 }}>{post.titulo || `Post ${post.post_numero}`}</Typography>
+                                            <Chip label={post.etapa_aida || 'AIDA'} size="small" color="primary" variant="outlined" />
+                                        </Box>
                                     </AccordionSummary>
                                     <AccordionDetails sx={{ cursor: 'pointer' }} onClick={() => onEditFollowup(index, post.conteudo)}>
-                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mb: 2 }}>
                                             {post.conteudo}
                                         </Typography>
                                         <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-                                            CTA: {post.cta}
+                                            <strong>CTA:</strong> {post.cta}
                                         </Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                                            <Chip icon={<InfoIcon />} label={post.tipo_gancho || 'Gancho'} size="small" variant="outlined" />
                                             {post.hashtags_sugeridas.map((tag, i) => (
-                                                <Chip key={i} label={tag} size="small" />
+                                                <Chip key={i} label={`#${tag}`} size="small" />
                                             ))}
                                         </Box>
                                     </AccordionDetails>
