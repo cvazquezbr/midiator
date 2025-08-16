@@ -41,7 +41,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   Chip,
   Tooltip,
 } from '@mui/material';
