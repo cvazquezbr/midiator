@@ -60,6 +60,7 @@ import MemorialDescritivoModal from './MemorialDescritivoModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
 import { callGeminiApi } from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
+import isEqual from 'lodash.isequal';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -94,6 +95,8 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemori
   const [colors, setColors] = useState([]);
   const [editingField, setEditingField] = useState(null);
   const imageInputRef = useRef(null);
+  const [initialState, setInitialState] = useState(null);
+  const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false);
 
   // State for AI Palette Generation
   const [isGenerating, setIsGenerating] = useState(false);
@@ -230,6 +233,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       setInstrucoes(instrucoes);
       setFormato(formato);
       setColors(colors || []);
+      setInitialState({ persona, autor, instrucoes, formato, colors: colors || [] });
 
       // Se a persona não existir ou não tiver um nome, mostre o assistente por padrão
       if (!persona || !persona.nome) {
@@ -255,6 +259,14 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
     saveCampaignPrompt({ persona, autor, instrucoes, formato, colors });
     toast.success('Padrões de campanha salvos com sucesso!');
     onClose();
+  };
+
+  const handleClose = () => {
+    if (hasUnsavedChanges()) {
+      setIsConfirmCloseOpen(true);
+    } else {
+      onClose();
+    }
   };
 
   const handleOpenEditor = (field) => {
@@ -492,6 +504,12 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
     setShowAutorWizard(true);
   };
 
+  const hasUnsavedChanges = () => {
+    if (!initialState) return false;
+    const currentState = { persona, autor, instrucoes, formato, colors };
+    return !isEqual(initialState, currentState);
+  };
+
 
   // Constants for Persona fields
   const POSICOES_CARGOS = ['Liderança Executiva: CEO, Diretor Executivo, Sócio', 'Gestão de Tecnologia: CTO, Head de Engenharia, Gerente de TI', 'Gestão de Marketing: Gerente de Marketing, Coordenador de Marketing', 'Gestão de Vendas: Gerente de Vendas, Diretor Comercial', 'Gestão de Recursos Humanos: Head de RH, Analista de RH', 'Outro(s)'];
@@ -597,7 +615,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
     <>
       <Dialog
         open={open}
-        onClose={onClose}
+        onClose={handleClose}
         fullWidth
         maxWidth="lg"
         fullScreen={isMobile}
@@ -615,7 +633,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
               Ver Memorial Descritivo
             </Button>
           </Box>
-          <IconButton onClick={onClose} aria-label="Fechar">
+          <IconButton onClick={handleClose} aria-label="Fechar">
             <CloseIcon />
           </IconButton>
         </DialogTitle>
@@ -1171,7 +1189,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleClose}>Cancelar</Button>
           <Button onClick={handleSave} variant="contained">Salvar Padrões</Button>
         </DialogActions>
       </Dialog>
@@ -1233,6 +1251,36 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         isGenerating={isGenerating}
       />
 
+      <Dialog open={isConfirmCloseOpen} onClose={() => setIsConfirmCloseOpen(false)}>
+        <DialogTitle>Descartar Alterações?</DialogTitle>
+        <DialogContent>
+          <Typography>Você tem alterações não salvas. O que você gostaria de fazer?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsConfirmCloseOpen(false)} color="primary">
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => {
+              setIsConfirmCloseOpen(false);
+              onClose();
+            }}
+            color="secondary"
+          >
+            Descartar
+          </Button>
+          <Button
+            onClick={() => {
+              handleSave();
+              setIsConfirmCloseOpen(false);
+            }}
+            variant="contained"
+            color="primary"
+          >
+            Salvar e Sair
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };
