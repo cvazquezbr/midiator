@@ -1,10 +1,10 @@
 {
   "posts": [
     {
-      "id": "4e29e78b-3d78-4eff-97c6-cdb9782ccb6f",
-      "createdAt": "2025-08-16T18:03:43.721Z",
+      "id": "a21dede5-9946-45e0-9fb6-9ecc2b9e73e5",
+      "createdAt": "2025-08-16T18:18:56.473Z",
       "status": "failed",
-      "scheduledAt": "2025-08-16T18:02:43.716Z",
+      "scheduledAt": "2025-08-16T14:00:00.000Z",
       "authorUrn": "urn:li:person:xCDEUBo-Mf",
       "content": {
         "titulo": "Test Post from Scheduler",
@@ -17,6 +17,7 @@
         ]
       },
       "accessToken": "AQXrKPbg-cEl8t2-AEofaYKl2BVkeBC8iDxDINFhjVd6OX0BVaiy2YZM_dfZfJBgl0AZkP-5pXUxFyKQ2uxDfMyTTDrPYVJTvXNVTy0ultakgs7pr1A7wLZIL9udMSIraulAfHCX6nmIcUFlhBDrClkP2FFy-1VB48ipM8yfMosMe97NFAllH3wir6AFmDR1jGpydEb6xINOQefgyQfSLlgIixfBvLiyfQEAZkBdYScGo0DyRyjcu0g-8qzLwgDGwzsXXv3R1h_5n4I69j3Ybw03U84qsIU4JS1uteUjZdz29rUJ1hDTadgYtvuFRHSFA73TI2yfkCnOFSukxmYteWSSSrSGEg",
+      "userSelectedTime": "2025-08-16T18:17:56.468Z",
       "error": "Unexpected end of JSON input"
     }
   ]

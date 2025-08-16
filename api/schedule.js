@@ -10,11 +10,17 @@ async function handleCreateSchedule(request, response) {
             return response.status(400).json({ error: 'Missing post data payload.' });
         }
 
+        const userSelectedScheduledAt = postData.scheduledAt;
+        const executionDate = new Date(userSelectedScheduledAt);
+        executionDate.setUTCHours(14, 0, 0, 0);
+
         const newPost = {
             id: crypto.randomUUID(),
             createdAt: new Date().toISOString(),
             status: 'scheduled',
             ...postData,
+            scheduledAt: executionDate.toISOString(),
+            userSelectedTime: userSelectedScheduledAt,
         };
 
         db.data.posts.push(newPost);
