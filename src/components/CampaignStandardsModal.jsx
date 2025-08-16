@@ -679,14 +679,14 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                       startIcon={<AutoAwesomeIcon />}
                       onClick={() => setShowPersonaGenModal(true)}
                     >
-                      Gerar com IA (Simples)
+                      Gerar
                     </Button>
                     <Button
                       variant="contained"
                       startIcon={<Add />}
                       onClick={() => setIsPersonaWizardVisible(true)}
                     >
-                      Editar com Assistente
+                      Assistente
                     </Button>
                     <Button
                       variant="outlined"
@@ -695,7 +695,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                       onClick={handleClearPersona}
                       disabled={!persona || Object.keys(persona).length === 0}
                     >
-                      Começar de Novo
+                      Recomeçar
                     </Button>
                   </Stack>
                   <Grid container spacing={3}>
@@ -1015,7 +1015,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                         setShowAutorWizard(true);
                       }}
                     >
-                      Gerar com IA
+                      Gerar
                     </Button>
                     <Button
                       variant="contained"
@@ -1025,7 +1025,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                         setShowAutorWizard(true);
                       }}
                     >
-                      Editar com Assistente
+                      Assistente
                     </Button>
                     <Button
                       variant="outlined"
@@ -1034,7 +1034,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                       onClick={handleClearAutor}
                       disabled={!autor || Object.keys(autor).length === 0}
                     >
-                      Começar de Novo
+                      Recomeçar
                     </Button>
                   </Stack>
 
