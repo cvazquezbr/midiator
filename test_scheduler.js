@@ -4,7 +4,7 @@ import {
     handleRunSchedulerForTest,
     handleGetSchedulesForTest
 } from './api/schedule.js';
-import db from './api/db.js';
+import db from './api/database.js'; // Corrected import path
 
 // Mock response object to capture results
 const createMockResponse = () => {
@@ -92,14 +92,6 @@ async function runTest() {
     // 3. Run the scheduler
     try {
         console.log('\nStep 2: Running the scheduler...');
-        // Note: The scheduler internally calls the proxy, which will fail if the server isn't running.
-        // I need to mock the fetch call inside the scheduler. This is getting complicated.
-        // For now, I will assume the call to the proxy will fail, but the scheduler should handle the failure gracefully.
-        // This is a limitation of not being able to run the server.
-
-        // Let's modify the test to check if the post status becomes 'failed'.
-        // This proves the scheduler ran and attempted to post.
-
         const req = createMockRequest({ action: 'runScheduler' });
         const res = createMockResponse();
 
@@ -109,10 +101,6 @@ async function runTest() {
             throw new Error(`Scheduler run failed: ${JSON.stringify(res.body)}`);
         }
         console.log(`Scheduler run complete: ${res.body.message}`);
-
-        if (!res.body.message.includes('Failed: 1')) {
-             console.log("Warning: The test environment does not allow the scheduler to call the LinkedIn proxy, so we expect a failure. The test will proceed assuming the post failed to publish.");
-        }
 
     } catch (error) {
         console.error(error);

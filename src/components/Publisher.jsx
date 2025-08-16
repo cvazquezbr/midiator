@@ -233,45 +233,143 @@ const Publisher = ({
 
   const handleScheduleLinkedIn = async () => {
     setIsPublishingLi(true);
-    setPublishingStatusLi('Iniciando agendamento...');
-    setPublishedPostUrlLi(null);
-
+    setPublishingStatusLi('Iniciando agendamento e upload para o Google Drive...');
     try {
+        const linkedinConfig = getLinkedinConfig();
+        const driveFolderId = linkedinConfig?.folderId;
+
+        if (!driveFolderId) {
+            throw new Error('O ID da Pasta no Google Drive não está configurado na autenticação do LinkedIn.');
+        }
+
+        if (!googleDriveAPI.isInitialized) {
+            setPublishingStatusLi('Inicializando API do Google Drive...');
+            const apiKey = localStorage.getItem("google_drive_api_key");
+            const clientId = localStorage.getItem("google_drive_client_id");
+            if (!apiKey || !clientId) {
+                throw new Error("Credenciais da API do Google Drive não encontradas. Por favor, configure a integração na página principal.");
+            }
+            await googleDriveAPI.initialize(apiKey, clientId);
+        }
+
+        if (!googleDriveAPI.isUserSignedIn()) {
+            setPublishingStatusLi('Fazendo login no Google Drive...');
+            await googleDriveAPI.signIn();
+        }
+
+        const campaignTitle = campaignContent?.titulo || `Campanha Sem Título - ${new Date().toISOString()}`;
+
+        setPublishingStatusLi(`Criando pasta "${campaignTitle}" no Google Drive...`);
+        const campaignFolder = await googleDriveAPI.createFolder(campaignTitle, driveFolderId);
+
+        // Lida com upload de imagens
+        const imagesToUpload = generatedImagesData.filter((_, index) => selectedImages[index]);
+        const uploadedImageIds = [];
+        if (imagesToUpload.length > 0) {
+            setPublishingStatusLi(`Fazendo upload de ${imagesToUpload.length} imagens...`);
+            for (const image of imagesToUpload) {
+                const fileName = `imagem_${imagesToUpload.indexOf(image) + 1}.png`;
+                const uploadedFile = await googleDriveAPI.uploadFile(image.blob, fileName, campaignFolder.id);
+                uploadedImageIds.push(uploadedFile.id);
+            }
+        }
+
+        // Lida com upload de vídeo
+        const videosToUpload = generatedVideosData.filter((_, index) => selectedVideos[index]);
+        let uploadedVideoId = '';
+        if (videosToUpload.length > 0) {
+            setPublishingStatusLi(`Fazendo upload do vídeo...`);
+            const video = videosToUpload[0];
+            const fileName = `video.mp4`; // ou o tipo de arquivo apropriado
+            const uploadedFile = await googleDriveAPI.uploadFile(video.blob, fileName, campaignFolder.id);
+            uploadedVideoId = uploadedFile.id;
+        }
+
+        setPublishingStatusLi('Criando planilha de controle no Google Drive...');
+
+        const headers = ['Data', 'Horário', 'Author URN', 'Título', 'Conteúdo', 'Convite (CTA)', 'Hashtags', 'Imagens (IDs no Drive)', 'Video (ID no Drive)'];
+
+        const formatDate = (date) => date.toLocaleDateString('pt-BR');
         const getScheduledTime = (date) => {
-            const dayIndex = date.getDay();
+            const dayIndex = date.getDay(); // 0 for Sunday, 1 for Monday, etc.
             const time = weeklySchedule[dayIndex];
-            if (!time) return '12:00'; // Default time
+            if (!time) {
+                console.warn(`Nenhum horário agendado para o dia ${dayIndex}. Usando 12:00 como padrão.`);
+                return '12:00';
+            }
             return time;
         };
 
-        const mainPostDate = new Date(scheduleDate);
-        const [hours, minutes] = getScheduledTime(mainPostDate).split(':');
-        mainPostDate.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+        const mainPostRow = [
+            formatDate(scheduleDate),
+            getScheduledTime(scheduleDate),
+            selectedProfile,
+            campaignContent?.titulo || '',
+            campaignContent?.conteudo || '',
+            campaignContent?.cta || '',
+            campaignContent?.hashtags?.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') || '',
+            uploadedImageIds.join(', '),
+            uploadedVideoId
+        ];
 
-        const { accessToken } = getLinkedinConfig();
-        if (!accessToken) {
-            throw new Error('LinkedIn Access Token not found. Please re-authenticate.');
-        }
-
-        const mainPost = {
-            scheduledAt: mainPostDate.toISOString(),
-            authorUrn: selectedProfile,
-            content: campaignContent,
-            imageBlobs: generatedImagesData.filter((_, index) => selectedImages[index]).map(img => img.blob),
-            videoBlob: generatedVideosData.filter((_, index) => selectedVideos[index]).map(vid => vid.blob)[0],
-            accessToken,
-        };
-
-        const allPosts = [mainPost];
+        const sheetData = [headers, mainPostRow];
 
         if (followupPosts && followupPosts.length > 0) {
             followupPosts.forEach((post, index) => {
                 const followupDate = new Date(scheduleDate);
                 followupDate.setDate(scheduleDate.getDate() + index + 1);
+
+                const followupRow = [
+                    formatDate(followupDate),
+                    getScheduledTime(followupDate),
+                    selectedProfile,
+                    post.titulo || '', // Usando o título do post
+                    post.conteudo || '',
+                    post.cta || '',
+                    post.hashtags_sugeridas?.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') || '',
+                    '', // Sem imagem para follow-up
+                    ''  // Sem vídeo para follow-up
+                ];
+                sheetData.push(followupRow);
+            });
+        }
+
+        const spreadsheet = await googleDriveAPI.createSpreadsheet(
+            `Controle - ${campaignTitle}`,
+            sheetData,
+            campaignFolder.id
+        );
+
+        setPublishingStatusLi('Salvando agendamento no servidor para automação...');
+
+        const { accessToken } = getLinkedinConfig();
+        if (!accessToken) {
+            throw new Error('Não foi possível encontrar o Access Token do LinkedIn para o agendamento automático.');
+        }
+
+        const mainPostDate = new Date(scheduleDate);
+        const [hours, minutes] = getScheduledTime(mainPostDate).split(':');
+        mainPostDate.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+
+        const mainPostSchedule = {
+            scheduledAt: mainPostDate.toISOString(),
+            authorUrn: selectedProfile,
+            content: campaignContent,
+            accessToken: accessToken,
+            imageDriveIds: uploadedImageIds,
+            videoDriveId: uploadedVideoId,
+        };
+
+        await createSchedule(mainPostSchedule);
+
+        if (followupPosts && followupPosts.length > 0) {
+            for (const [index, post] of followupPosts.entries()) {
+                const followupDate = new Date(scheduleDate);
+                followupDate.setDate(scheduleDate.getDate() + index + 1);
                 const [fHours, fMinutes] = getScheduledTime(followupDate).split(':');
                 followupDate.setHours(parseInt(fHours, 10), parseInt(fMinutes, 10));
 
-                allPosts.push({
+                const followupSchedule = {
                     scheduledAt: followupDate.toISOString(),
                     authorUrn: selectedProfile,
                     content: {
@@ -280,37 +378,19 @@ const Publisher = ({
                         cta: post.cta || '',
                         hashtags: post.hashtags_sugeridas || [],
                     },
-                    imageBlobs: [], // Follow-ups are text-only for now
-                    videoBlob: null,
-                });
-            });
+                    accessToken: accessToken,
+                    imageDriveIds: [], // Follow-ups are text-only
+                    videoDriveId: '',
+                };
+                await createSchedule(followupSchedule);
+            }
         }
 
-        setPublishingStatusLi(`Agendando ${allPosts.length} post(s)...`);
-
-        for (const post of allPosts) {
-            // We are not uploading to Drive anymore, so we pass the blobs directly.
-            // The backend will need to handle this. For now, we'll just pass empty IDs.
-            // This part of the logic will need to be revisited in the scheduler implementation.
-            const schedulePayload = {
-                ...post,
-                // Passing blobs is not feasible for a schedule.
-                // We'll pass empty media info for now. The real implementation
-                // would require uploading to a persistent storage first.
-                // For this PoC, we focus on scheduling text posts.
-                imageDriveIds: [],
-                videoDriveId: '',
-            };
-            delete schedulePayload.imageBlobs;
-            delete schedulePayload.videoBlob;
-
-            await createSchedule(schedulePayload);
-        }
-
-        setPublishingStatusLi(`${allPosts.length} post(s) agendados com sucesso! O sistema os publicará automaticamente.`);
+        setPublishingStatusLi(`Agendamento salvo no Google Drive e no servidor! Planilha: ${spreadsheet.spreadsheetUrl}`);
+        setPublishedPostUrlLi(spreadsheet.spreadsheetUrl);
 
     } catch (error) {
-        console.error('Erro ao agendar no servidor:', error);
+        console.error('Erro ao salvar agendamento no Google Drive:', error);
         setPublishingStatusLi(`Erro no agendamento: ${error.message}`);
     } finally {
         setIsPublishingLi(false);

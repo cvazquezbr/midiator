@@ -1,7 +1,7 @@
-import db from './db.js';
+import db from './database.js';
 import crypto from 'crypto';
 import { markdownToLinkedinText } from './utils.js';
-import fetch from 'node-fetch'; // Make sure to install node-fetch if not present
+import fetch from 'node-fetch';
 
 async function handleCreateSchedule(request, response) {
     try {
@@ -29,7 +29,6 @@ async function handleCreateSchedule(request, response) {
 
 async function handleGetSchedules(request, response) {
     try {
-        // We can add filtering or pagination here later if needed
         const posts = db.data.posts;
         return response.status(200).json(posts);
     } catch (error) {
@@ -80,6 +79,7 @@ async function handleRunScheduler(request, response) {
 
         for (const post of duePosts) {
             try {
+                // We will need to handle media posts later. For now, only text posts.
                 const postText = [
                     post.content.titulo.toUpperCase(),
                     '',
@@ -103,7 +103,6 @@ async function handleRunScheduler(request, response) {
                     visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
                 };
 
-                // NOTE: In a real production environment, the base URL should come from an environment variable.
                 const proxyUrl = `${process.env.VITE_API_BASE_URL || 'http://localhost:5173'}/api/linkedin-proxy`;
 
                 const proxyResponse = await fetch(proxyUrl, {
@@ -148,7 +147,6 @@ async function handleRunScheduler(request, response) {
     }
 }
 
-
 export async function handleCreateScheduleForTest(req, res) {
     return await handleCreateSchedule(req, res);
 }
@@ -162,13 +160,20 @@ export async function handleGetSchedulesForTest(req, res) {
 }
 
 export default async function handler(request, response) {
-    console.log(`[${new Date().toISOString()}] /api/schedule invoked. Action: ${request.body?.action}`);
+    // Vercel Cron jobs send GET requests. We'll allow GET only for the cron.
+    if (request.method === 'GET') {
+        console.log(`[${new Date().toISOString()}] /api/schedule invoked by GET (Cron Job)`);
+        // We can add a secret here for security if needed, e.g., check a header.
+        return handleRunScheduler(request, response);
+    }
 
     if (request.method !== 'POST') {
-        response.setHeader('Allow', ['POST']);
+        response.setHeader('Allow', ['POST', 'GET']);
         return response.status(405).end('Method Not Allowed');
     }
 
+    // For POST requests, continue with the action-based logic.
+    console.log(`[${new Date().toISOString()}] /api/schedule invoked by POST. Action: ${request.body?.action}`);
     const { action } = request.body;
 
     switch (action) {
