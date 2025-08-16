@@ -1,8 +1,8 @@
 {
   "posts": [
     {
-      "id": "a21dede5-9946-45e0-9fb6-9ecc2b9e73e5",
-      "createdAt": "2025-08-16T18:18:56.473Z",
+      "id": "1b2d32f8-aa89-424f-97e0-99dee6b7b6cf",
+      "createdAt": "2025-08-16T18:54:29.585Z",
       "status": "failed",
       "scheduledAt": "2025-08-16T14:00:00.000Z",
       "authorUrn": "urn:li:person:xCDEUBo-Mf",
@@ -17,8 +17,27 @@
         ]
       },
       "accessToken": "AQXrKPbg-cEl8t2-AEofaYKl2BVkeBC8iDxDINFhjVd6OX0BVaiy2YZM_dfZfJBgl0AZkP-5pXUxFyKQ2uxDfMyTTDrPYVJTvXNVTy0ultakgs7pr1A7wLZIL9udMSIraulAfHCX6nmIcUFlhBDrClkP2FFy-1VB48ipM8yfMosMe97NFAllH3wir6AFmDR1jGpydEb6xINOQefgyQfSLlgIixfBvLiyfQEAZkBdYScGo0DyRyjcu0g-8qzLwgDGwzsXXv3R1h_5n4I69j3Ybw03U84qsIU4JS1uteUjZdz29rUJ1hDTadgYtvuFRHSFA73TI2yfkCnOFSukxmYteWSSSrSGEg",
-      "userSelectedTime": "2025-08-16T18:17:56.468Z",
+      "userSelectedTime": "2025-08-16T18:53:29.583Z",
       "error": "Unexpected end of JSON input"
+    },
+    {
+      "id": "dd4c30f0-c730-43f9-9cfb-75832e6bdee7",
+      "createdAt": "2025-08-16T18:54:29.637Z",
+      "status": "scheduled",
+      "scheduledAt": "2025-08-16T14:00:00.000Z",
+      "authorUrn": "urn:li:person:anotherUser",
+      "content": {
+        "titulo": "Test Post from Scheduler",
+        "conteudo": "This is a test post generated automatically by the test script.",
+        "cta": "Check out the code!",
+        "hashtags": [
+          "#testing",
+          "#automation",
+          "#nodejs"
+        ]
+      },
+      "accessToken": "AQXrKPbg-cEl8t2-AEofaYKl2BVkeBC8iDxDINFhjVd6OX0BVaiy2YZM_dfZfJBgl0AZkP-5pXUxFyKQ2uxDfMyTTDrPYVJTvXNVTy0ultakgs7pr1A7wLZIL9udMSIraulAfHCX6nmIcUFlhBDrClkP2FFy-1VB48ipM8yfMosMe97NFAllH3wir6AFmDR1jGpydEb6xINOQefgyQfSLlgIixfBvLiyfQEAZkBdYScGo0DyRyjcu0g-8qzLwgDGwzsXXv3R1h_5n4I69j3Ybw03U84qsIU4JS1uteUjZdz29rUJ1hDTadgYtvuFRHSFA73TI2yfkCnOFSukxmYteWSSSrSGEg",
+      "userSelectedTime": "2025-08-16T18:53:29.583Z"
     }
   ]
 }

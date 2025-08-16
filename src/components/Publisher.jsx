@@ -34,11 +34,23 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import TimeHeatMap from './TimeHeatMap';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  Tooltip,
+} from '@mui/material';
+import { Info } from '@mui/icons-material';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
 import { getLinkedinConfig } from '../utils/linkedinCredentials';
 import googleDriveAPI from '../utils/googleDriveAPI';
-import { createSchedule } from '../utils/scheduleAPI';
+import { createSchedule, getSchedulesForUser } from '../utils/scheduleAPI';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -80,10 +92,34 @@ const Publisher = ({
   setSelectedVideos
 }) => {
   const [tabValue, setTabValue] = React.useState(0);
+  const [mySchedules, setMySchedules] = useState([]);
+  const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
   };
+
+  // Fetch schedules when the tab is opened or the selected profile changes
+  useEffect(() => {
+    const fetchSchedules = async () => {
+        if (tabValue === 2 && selectedProfile) { // Tab 2 is "My Schedules"
+            setIsLoadingSchedules(true);
+            try {
+                const schedules = await getSchedulesForUser(selectedProfile);
+                // Sort by most recent schedule first
+                schedules.sort((a, b) => new Date(b.scheduledAt) - new Date(a.scheduledAt));
+                setMySchedules(schedules);
+            } catch (error) {
+                console.error("Failed to fetch user schedules:", error);
+                // Optionally set an error state to show in the UI
+            } finally {
+                setIsLoadingSchedules(false);
+            }
+        }
+    };
+
+    fetchSchedules();
+  }, [tabValue, selectedProfile]);
 
   // State for WordPress
   const [isPublishingWp, setIsPublishingWp] = useState(false);
@@ -454,9 +490,10 @@ const Publisher = ({
         </Typography>
         <Box sx={{ width: '100%' }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={tabValue} onChange={handleTabChange} aria-label="basic tabs example">
+            <Tabs value={tabValue} onChange={handleTabChange} aria-label="publishing tabs">
               <Tab label="LinkedIn" />
               <Tab label="WordPress" />
+              <Tab label="Meus Agendamentos" />
             </Tabs>
           </Box>
           <TabPanel value={tabValue} index={0}>
@@ -708,6 +745,59 @@ const Publisher = ({
                   )}
                 </Alert>
               )}
+            </Box>
+          </TabPanel>
+          <TabPanel value={tabValue} index={2}>
+            <Box>
+                <Typography variant="h6" gutterBottom>Meus Agendamentos</Typography>
+                {!selectedProfile && <Alert severity="warning">Selecione um perfil na aba "LinkedIn" para ver seus agendamentos.</Alert>}
+                {isLoadingSchedules && <LinearProgress />}
+                {!isLoadingSchedules && mySchedules.length === 0 && selectedProfile && (
+                    <Typography sx={{mt: 2, textAlign: 'center'}}>Nenhum agendamento encontrado para este perfil.</Typography>
+                )}
+                {mySchedules.length > 0 && (
+                    <TableContainer component={Paper} sx={{mt: 2}}>
+                        <Table sx={{ minWidth: 650 }} aria-label="simple table">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>Título</TableCell>
+                                    <TableCell align="right">Data Agendada (UTC)</TableCell>
+                                    <TableCell align="right">Status</TableCell>
+                                    <TableCell align="right">Link</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {mySchedules.map((row) => (
+                                    <TableRow key={row.id}>
+                                        <TableCell component="th" scope="row">
+                                            {row.content.titulo}
+                                        </TableCell>
+                                        <TableCell align="right">{new Date(row.scheduledAt).toLocaleString('pt-BR', { timeZone: 'UTC' })}</TableCell>
+                                        <TableCell align="right">
+                                            <Chip
+                                                label={row.status}
+                                                color={row.status === 'published' ? 'success' : (row.status === 'failed' ? 'error' : 'primary')}
+                                                size="small"
+                                            />
+                                            {row.status === 'failed' && row.error && (
+                                                <Tooltip title={row.error}>
+                                                    <Info fontSize="small" sx={{verticalAlign: 'middle', ml: 0.5, color: 'error.main'}}/>
+                                                </Tooltip>
+                                            )}
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            {row.status === 'published' && row.postId ? (
+                                                <MuiLink href={`https://www.linkedin.com/feed/update/${row.postId}/`} target="_blank" rel="noopener">
+                                                    Ver Post
+                                                </MuiLink>
+                                            ) : '-'}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                )}
             </Box>
           </TabPanel>
         </Box>
