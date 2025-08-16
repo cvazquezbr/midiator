@@ -322,7 +322,7 @@ const Publisher = ({
                     formatDate(followupDate),
                     getScheduledTime(followupDate),
                     selectedProfile,
-                    post.tipo_gancho || '', // Usando tipo_gancho como título
+                    post.titulo || '', // Usando o título do post
                     post.conteudo || '',
                     post.cta || '',
                     post.hashtags_sugeridas?.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') || '',
