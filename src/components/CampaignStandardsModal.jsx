@@ -988,23 +988,36 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                 />
               ) : (
                 <Stack spacing={2}>
-                  <Stack direction="row" spacing={2} sx={{ alignItems: 'flex-start' }}>
-                      <Button
-                        variant="contained"
-                        startIcon={<Add />}
-                        onClick={() => setShowAutorWizard(true)}
-                      >
-                        Editar com Assistente
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        startIcon={<DeleteForeverIcon />}
-                        onClick={handleClearAutor}
-                        disabled={!autor || Object.keys(autor).length === 0}
-                      >
-                        Começar de Novo
-                      </Button>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2, alignItems: 'flex-start' }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<AutoAwesomeIcon />}
+                      onClick={() => {
+                        setInitialAutorStep(0);
+                        setShowAutorWizard(true);
+                      }}
+                    >
+                      Gerar com IA
+                    </Button>
+                    <Button
+                      variant="contained"
+                      startIcon={<Add />}
+                      onClick={() => {
+                        setInitialAutorStep(1);
+                        setShowAutorWizard(true);
+                      }}
+                    >
+                      Editar com Assistente
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteForeverIcon />}
+                      onClick={handleClearAutor}
+                      disabled={!autor || Object.keys(autor).length === 0}
+                    >
+                      Começar de Novo
+                    </Button>
                   </Stack>
 
                   <TextField
