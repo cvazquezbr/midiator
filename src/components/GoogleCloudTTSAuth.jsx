@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getGoogleCloudTTSCredentials, saveGoogleCloudTTSCredentials, removeGoogleCloudTTSCredentials } from '../utils/googleCloudTTSCredentials';
-import { callGoogleCloudTTSAPI } from '../utils/googleCloudTTSAPI';
+import googleCloudTTSAPI from '../utils/googleCloudTTSAPI';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Alert } from '@mui/material';
 import { InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
@@ -52,7 +52,10 @@ const GoogleCloudTTSAuth = () => {
     setIsTesting(true);
     try {
       const parsedCredentials = JSON.parse(credentials);
-      await callGoogleCloudTTSAPI('teste', parsedCredentials);
+      // Initialize the API with the provided credentials for the test
+      googleCloudTTSAPI.initialize(parsedCredentials);
+      // Perform a test call
+      await googleCloudTTSAPI.synthesize('teste');
       toast.success('Conexão com a API Google Cloud TTS bem-sucedida!');
     } catch (err) {
       console.error('Erro no teste de conexão com Google Cloud TTS:', err);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getGeminiApiKey, saveGeminiApiKey, removeGeminiApiKey } from '../utils/geminiCredentials';
-import { callGeminiApi } from '../utils/geminiAPI';
+import geminiAPI from '../utils/geminiAPI';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Alert } from '@mui/material';
 import { Visibility, VisibilityOff, InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
@@ -39,13 +39,17 @@ const GeminiAuthSetup = () => {
   };
 
   const handleTestConnection = async () => {
-    if (!apiKey.trim()) {
+    const trimmedApiKey = apiKey.trim();
+    if (!trimmedApiKey) {
       toast.error('Por favor, insira uma chave de API para testar.');
       return;
     }
     setIsTesting(true);
     try {
-      await callGeminiApi('Diga "Olá, mundo!" em português.', apiKey.trim());
+      // Initialize the API with the provided key for the test
+      geminiAPI.initialize(trimmedApiKey);
+      // Perform a test call
+      await geminiAPI.generateContent('Diga "Olá, mundo!" em português.');
       toast.success('Conexão com a API Gemini bem-sucedida!');
     } catch (err) {
       console.error('Erro no teste de conexão com Gemini:', err);
