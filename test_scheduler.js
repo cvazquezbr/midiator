@@ -128,6 +128,17 @@ async function runTest() {
         }
         console.log(`Post status is 'failed' as expected. Error: ${myPost.error}`);
 
+        // Verify the new time logic
+        console.log('Verifying scheduling time logic...');
+        const executionTime = new Date(myPost.scheduledAt);
+        if (executionTime.getUTCHours() !== 14 || executionTime.getUTCMinutes() !== 0) {
+            throw new Error(`Execution time was not 14:00 UTC. It was ${executionTime.toISOString()}`);
+        }
+        if (myPost.userSelectedTime !== scheduledAt) {
+            throw new Error('The original user-selected time was not preserved correctly.');
+        }
+        console.log('Scheduling time logic verified successfully. Execution time is 14:00 UTC.');
+
     } catch (error) {
         console.error(error);
         return;
