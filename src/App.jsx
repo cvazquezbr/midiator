@@ -101,6 +101,7 @@ import {
   generateCampaignContent,
   generateCampaignImage,
   generateFormattedContent,
+  generateFollowupPlan,
   generateFollowupPosts,
   generateIAContent,
   generateColorPalette,
@@ -1130,7 +1131,12 @@ function App() {
     }
     setIsGeneratingFollowup(true);
     try {
-      const posts = await generateFollowupPosts({ content, followupPostsQuantity });
+      // Step 1: Generate the plan
+      const plan = await generateFollowupPlan({ content, followupPostsQuantity });
+
+      // Step 2: Generate the posts based on the plan
+      const posts = await generateFollowupPosts({ content, plan });
+
       setFollowupPosts(posts);
     } catch (error) {
       console.error(`Erro ao gerar posts de follow-up:`, error);
