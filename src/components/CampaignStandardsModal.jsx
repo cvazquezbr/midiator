@@ -58,7 +58,7 @@ import AutorWizard, { AutorWizardContent, TIPO_ORGANIZACAO_OPTIONS } from './Aut
 import PaletteWizard from './PaletteWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
-import { callGeminiApi } from '../utils/geminiAPI';
+import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 import isEqual from 'lodash.isequal';
 
@@ -117,10 +117,13 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemori
   const [showPaletteWizard, setShowPaletteWizard] = useState(false);
 
   const handleGeneratePersonaWithAI = async (description, callback) => {
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
-      toast.error('Chave de API do Gemini não configurada.');
-      return;
+    if (!geminiAPI.isInitialized) {
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        toast.error('Chave de API do Gemini não configurada.');
+        return;
+      }
+      geminiAPI.initialize(apiKey);
     }
 
     setIsGeneratingPersona(true);
@@ -147,7 +150,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
     `;
 
     try {
-      const response = await callGeminiApi(prompt, apiKey);
+      const response = await geminiAPI.generateContent(prompt);
       const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
 
       if (!cleanedResponse) {
@@ -174,10 +177,13 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
   };
 
   const handleGenerateAutorWithAI = async (descricaoGeral, dominioReferencia, siteExclusao, callback) => {
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
-      toast.error('Chave de API do Gemini não configurada.');
-      return;
+    if (!geminiAPI.isInitialized) {
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        toast.error('Chave de API do Gemini não configurada.');
+        return;
+      }
+      geminiAPI.initialize(apiKey);
     }
 
     setIsGeneratingAutor(true);
@@ -203,7 +209,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 `;
 
     try {
-      const response = await callGeminiApi(prompt, apiKey);
+      const response = await geminiAPI.generateContent(prompt);
       const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
 
       if (!cleanedResponse) {
@@ -227,6 +233,12 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
   useEffect(() => {
     if (open) {
+      // Initialize Gemini API when the modal opens
+      const apiKey = getGeminiApiKey();
+      if (apiKey && !geminiAPI.isInitialized) {
+        geminiAPI.initialize(apiKey);
+      }
+
       const { persona, autor, instrucoes, formato, colors } = getCampaignPrompt();
       setPersona(persona);
       setAutor(autor);

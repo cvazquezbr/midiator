@@ -1,5 +1,5 @@
 import { getCampaignPrompt } from './campaignPrompt.js';
-import { callGeminiApi, generateImage } from './geminiAPI.js';
+import geminiAPI from './geminiAPI.js';
 import { getGeminiApiKey } from './geminiCredentials.js';
 import { stripHtml } from '../lib/utils.js';
 
@@ -27,6 +27,9 @@ export const generateCampaignContent = async ({ problema, solucao }) => {
   if (!apiKey) {
     throw new Error('Chave de API Gemini não configurada.');
   }
+  if (!geminiAPI.isInitialized) {
+    geminiAPI.initialize(apiKey);
+  }
 
   const { persona, autor, instrucoes, formato } = getCampaignPrompt();
 
@@ -45,7 +48,7 @@ export const generateCampaignContent = async ({ problema, solucao }) => {
 
   const finalPrompt = `${promptCompleto}\n\nGere uma resposta JSON com os seguintes campos: "titulo" (string), "conteudo" (string), "cta" (string), e "hashtags" (string, separadas por vírgula). A resposta deve ser apenas o JSON.`;
 
-  const response = await callGeminiApi(finalPrompt, apiKey, 'Geração de Conteúdo de Campanha');
+  const response = await geminiAPI.generateContent(finalPrompt, 'Geração de Conteúdo de Campanha');
 
   const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
   let parsedContent;
@@ -88,6 +91,9 @@ export const generateCampaignImage = async ({ content, aspectRatio }) => {
   if (!apiKey) {
     throw new Error('Chave de API Gemini não configurada.');
   }
+  if (!geminiAPI.isInitialized) {
+    geminiAPI.initialize(apiKey);
+  }
 
   const { persona, autor, colors } = getCampaignPrompt();
   const personaString = formatObjectForPrompt(persona, ['description']);
@@ -107,7 +113,7 @@ export const generateCampaignImage = async ({ content, aspectRatio }) => {
     ATENÇÃO: A IMAGEM DEVE SERVIR COMO IMAGEM DE FUNDO. NÃO DEVE CONTER, SOB NENHUMA CIRCUNSTÂNCIA, QUALQUER TIPO DE TEXTO, ESCRITA, LETRAS, NÚMEROS OU PALAVRAS. A imagem deve ser puramente visual e abstrata ou conceitual, sem nenhum elemento textual.
   `;
 
-  const base64Image = await generateImage(imagePrompt, apiKey, 'Geração de Imagem de Campanha');
+  const base64Image = await geminiAPI.generateImage(imagePrompt, 'Geração de Imagem de Campanha');
   return `data:image/png;base64,${base64Image}`;
 };
 
@@ -123,6 +129,9 @@ export const generateFormattedContent = async ({ content }) => {
   if (!apiKey) {
     throw new Error('Chave de API Gemini não configurada.');
   }
+  if (!geminiAPI.isInitialized) {
+    geminiAPI.initialize(apiKey);
+  }
   const prompt = `
       Com o objetivo de gerar um post de blog no WordPress corporativo, Formatar o texto a seguir observando o padrão com HTML.
       Considere que o conteúdo gerado já estará embutido em uma página no contexto de seu BODY.
@@ -137,7 +146,7 @@ export const generateFormattedContent = async ({ content }) => {
       CTA: ${stripHtml(content.cta)}
     `;
 
-  const rawContent = await callGeminiApi(prompt, apiKey, 'Formatação de Conteúdo para HTML');
+  const rawContent = await geminiAPI.generateContent(prompt, 'Formatação de Conteúdo para HTML');
   const match = rawContent.match(/^`{3}(?:html)?\s*([\s\S]+?)\s*`{3}$/);
   return match && match[1] ? match[1].trim() : rawContent.trim();
 };
@@ -153,6 +162,9 @@ export const generateFollowupPosts = async ({ content, followupPostsQuantity }) 
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error('Chave de API Gemini não configurada.');
+  }
+  if (!geminiAPI.isInitialized) {
+    geminiAPI.initialize(apiKey);
   }
 
   const { persona } = getCampaignPrompt();
@@ -221,7 +233,7 @@ CTAs variados, como: “Leia mais”, “Descubra como”, “Saiba o que fazer�
       Cada post deve despertar curiosidade e criar um gap de informação que só será preenchido ao ler o conteúdo principal completo.
     `;
 
-  const response = await callGeminiApi(prompt, apiKey, 'Geração de Posts de Acompanhamento');
+  const response = await geminiAPI.generateContent(prompt, 'Geração de Posts de Acompanhamento');
   const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
   if (jsonMatch && jsonMatch[1]) {
     return JSON.parse(jsonMatch[1]);
@@ -242,6 +254,9 @@ export const generateCommonSolutions = async ({ problema, persona }) => {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error('Chave de API Gemini não configurada.');
+  }
+  if (!geminiAPI.isInitialized) {
+    geminiAPI.initialize(apiKey);
   }
 
   if (!problema || problema.trim() === '') {
@@ -275,7 +290,7 @@ export const generateCommonSolutions = async ({ problema, persona }) => {
     \`\`\`
   `;
 
-  const response = await callGeminiApi(prompt, apiKey, 'Geração de Soluções Comuns');
+  const response = await geminiAPI.generateContent(prompt, 'Geração de Soluções Comuns');
   const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
   if (jsonMatch && jsonMatch[1]) {
     try {
@@ -301,6 +316,9 @@ export const generateCommonProblems = async ({ persona }) => {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error('Chave de API Gemini não configurada.');
+  }
+  if (!geminiAPI.isInitialized) {
+    geminiAPI.initialize(apiKey);
   }
 
   if (!persona || Object.keys(persona).length === 0) {
@@ -331,7 +349,7 @@ export const generateCommonProblems = async ({ persona }) => {
     \`\`\`
   `;
 
-  const response = await callGeminiApi(prompt, apiKey, 'Geração de Problemas Comuns da Persona');
+  const response = await geminiAPI.generateContent(prompt, 'Geração de Problemas Comuns da Persona');
   const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
   if (jsonMatch && jsonMatch[1]) {
     try {
@@ -357,6 +375,9 @@ export const generateIAContent = async ({ promptText, promptNumRecords }) => {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error('Chave de API Gemini não configurada.');
+  }
+  if (!geminiAPI.isInitialized) {
+    geminiAPI.initialize(apiKey);
   }
   if (!promptText.trim()) {
     throw new Error('Por favor, forneça um texto descritivo para o prompt.');
@@ -416,7 +437,7 @@ Titulo;Texto Principal;Ponte para o Próximo
 \`\`\`
 Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` com os dados.`;
 
-  const iaResponseText = await callGeminiApi(finalPrompt, apiKey, 'Geração de Conteúdo CSV com IA');
+  const iaResponseText = await geminiAPI.generateContent(finalPrompt, 'Geração de Conteúdo CSV com IA');
   return iaResponseText;
 };
 
@@ -431,6 +452,9 @@ export const generateColorPalette = async (briefing) => {
     // The original function used toast, but in a util file, it's better to throw.
     // The calling component will be responsible for catching the error and showing a toast.
     throw new Error('Por favor, configure sua chave de API Gemini primeiro.');
+  }
+  if (!geminiAPI.isInitialized) {
+    geminiAPI.initialize(apiKey);
   }
 
   const prompt = `Crie uma paleta harmoniosa de 5 cores baseada no briefing abaixo, aplicando princípios da psicologia das cores na cultura ocidental.
@@ -471,7 +495,7 @@ A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação mark
 `;
 
   try {
-    const response = await callGeminiApi(prompt, apiKey, 'Geração de Paleta de Cores');
+    const response = await geminiAPI.generateContent(prompt, 'Geração de Paleta de Cores');
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (jsonMatch && jsonMatch[0]) {
       return JSON.parse(jsonMatch[0]);

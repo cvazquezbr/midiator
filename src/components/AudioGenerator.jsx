@@ -31,8 +31,8 @@ import {
   CloudDownload,
   Speed
 } from '@mui/icons-material';
+import googleCloudTTSAPI from '../utils/googleCloudTTSAPI';
 import { getGoogleCloudTTSCredentials } from '../utils/googleCloudTTSCredentials';
-import { callGoogleCloudTTSAPI } from '../utils/googleCloudTTSAPI';
 import ProgressModal from './ProgressModal';
 
 const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAudioData }) => {
@@ -51,6 +51,19 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
   useEffect(() => {
     setAudioData(initialAudioData || []);
   }, [initialAudioData]);
+
+  // Initialize the Google Cloud TTS API when the component mounts or mode changes
+  useEffect(() => {
+    if (audioMode.startsWith('google-tts')) {
+      const credentials = getGoogleCloudTTSCredentials();
+      if (credentials) {
+        googleCloudTTSAPI.initialize(credentials);
+      } else {
+        // This could be improved with a user-facing error message
+        console.error("Credenciais do Google Cloud TTS não encontradas para inicialização.");
+      }
+    }
+  }, [audioMode]);
 
   const generateAudioBrowser = async (text, rate = 1.0) => {
     return new Promise((resolve, reject) => {
@@ -101,14 +114,18 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
   };
 
   const generateAudioGoogleTTS = async (text, voice, rate = 1.0) => {
-    const credentials = getGoogleCloudTTSCredentials();
-    if (!credentials) {
-      throw new Error('Credenciais do Google Cloud TTS não configuradas.');
+    if (!googleCloudTTSAPI.isInitialized) {
+       const credentials = getGoogleCloudTTSCredentials();
+       if(credentials){
+        googleCloudTTSAPI.initialize(credentials);
+       }else{
+         throw new Error('Credenciais do Google Cloud TTS não configuradas ou API não inicializada.');
+       }
     }
     const cleanText = removeFormatting(text);
     
-    // Passar a velocidade para a API do Google Cloud TTS
-    const audioContent = await callGoogleCloudTTSAPI(cleanText, credentials, voice, rate);
+    // A velocidade é passada para o método synthesize
+    const audioContent = await googleCloudTTSAPI.synthesize(cleanText, voice, rate);
     const blob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
     const url = URL.createObjectURL(blob);
     const audio = new Audio(url);

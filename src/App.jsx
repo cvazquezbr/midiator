@@ -88,7 +88,7 @@ import CampaignStandardsModal from './components/CampaignStandardsModal';
 import { getGeminiApiKey } from './utils/geminiCredentials';
 import { saveLinkedinConfig } from './utils/linkedinCredentials';
 import { getCampaignPrompt } from './utils/campaignPrompt';
-import { callGeminiApi } from './utils/geminiAPI';
+import geminiAPI from './utils/geminiAPI';
 import GoogleIcon from '@mui/icons-material/Google';
 import { stripHtml } from './lib/utils';
 import './App.css';
@@ -182,6 +182,12 @@ function App() {
 
   useEffect(() => {
     loadCampaignStandards();
+
+    // Initialize Gemini API on app load
+    const apiKey = getGeminiApiKey();
+    if (apiKey) {
+      geminiAPI.initialize(apiKey);
+    }
   }, [loadCampaignStandards]);
 
   const combinedPalette = useMemo(() => {
@@ -1073,16 +1079,19 @@ function App() {
     const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno;
     setLoading(true);
 
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
-      alert('Por favor, configure sua chave de API Gemini primeiro.');
-      setLoading(false);
-      return;
+    if (!geminiAPI.isInitialized) {
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        alert('Por favor, configure sua chave de API Gemini primeiro.');
+        setLoading(false);
+        return;
+      }
+      geminiAPI.initialize(apiKey);
     }
 
     try {
       const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`;
-      const summary = await callGeminiApi(summaryPrompt, apiKey);
+      const summary = await geminiAPI.generateContent(summaryPrompt);
 
       if (targetLength === 1800) {
         setConteudoMedio(summary);
