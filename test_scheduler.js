@@ -110,7 +110,7 @@ async function runTest() {
     // 4. Verify post status
     try {
         console.log('\nStep 3: Verifying post status...');
-        const req = createMockRequest({ action: 'getSchedules' });
+        const req = createMockRequest({ action: 'getSchedules', payload: { authorUrn } });
         const res = createMockResponse();
 
         await handleGetSchedulesForTest(req, res);
@@ -146,6 +146,49 @@ async function runTest() {
 
     console.log('\n--- Test Completed Successfully (with expected failure) ---');
     console.log('The test successfully verified the scheduling and scheduler run logic. The final "failed" status is expected because the test sandbox prevents the scheduler from calling the live LinkedIn proxy.');
+
+    console.log('\nStep 4: Verifying user filtering...');
+    try {
+        // Schedule a post for another user
+        const anotherAuthorUrn = 'urn:li:person:anotherUser';
+        const anotherSchedulePayload = { ...schedulePayload, authorUrn: anotherAuthorUrn };
+        const req1 = createMockRequest({ action: 'createSchedule', payload: anotherSchedulePayload });
+        const res1 = createMockResponse();
+        await handleCreateScheduleForTest(req1, res1);
+
+        // Get schedules for the first user
+        const req2 = createMockRequest({ action: 'getSchedules', payload: { authorUrn } });
+        const res2 = createMockResponse();
+        await handleGetSchedulesForTest(req2, res2);
+        if (res2.body.length !== 1 || res2.body[0].id !== postId) {
+            throw new Error(`Filtering failed for the first user. Expected 1 post, got ${res2.body.length}`);
+        }
+        console.log('Successfully fetched schedules for the first user.');
+
+        // Get schedules for the second user
+        const req3 = createMockRequest({ action: 'getSchedules', payload: { authorUrn: anotherAuthorUrn } });
+        const res3 = createMockResponse();
+        await handleGetSchedulesForTest(req3, res3);
+        if (res3.body.length !== 1) {
+            throw new Error(`Filtering failed for the second user. Expected 1 post, got ${res3.body.length}`);
+        }
+        console.log('Successfully fetched schedules for the second user.');
+
+        // Get schedules with no user
+        const req4 = createMockRequest({ action: 'getSchedules', payload: {} });
+        const res4 = createMockResponse();
+        await handleGetSchedulesForTest(req4, res4);
+        if (res4.body.length !== 0) {
+            throw new Error(`Security check failed. Expected 0 posts for empty user, got ${res4.body.length}`);
+        }
+        console.log('Security check passed: empty user returns empty array.');
+
+        console.log('User filtering verified successfully.');
+
+    } catch (error) {
+        console.error('Error during user filtering verification:', error);
+        return;
+    }
 }
 
 runTest();

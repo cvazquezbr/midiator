@@ -35,8 +35,16 @@ async function handleCreateSchedule(request, response) {
 
 async function handleGetSchedules(request, response) {
     try {
-        const posts = db.data.posts;
-        return response.status(200).json(posts);
+        const { authorUrn } = request.body.payload || {};
+
+        if (!authorUrn) {
+            // Return empty array if no user is specified, for security.
+            return response.status(200).json([]);
+        }
+
+        const userPosts = db.data.posts.filter(post => post.authorUrn === authorUrn);
+        return response.status(200).json(userPosts);
+
     } catch (error) {
         console.error('Error getting schedules:', error);
         return response.status(500).json({ error: 'Internal Server Error' });
