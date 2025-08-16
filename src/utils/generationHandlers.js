@@ -253,6 +253,8 @@ export const generateFollowupPosts = async ({ content, plan }) => {
   const autorString = formatObjectForPrompt(autor);
 
   const generatedPosts = [];
+  const MAX_RETRIES = 3;
+  const MIN_CONTENT_LENGTH = 600;
 
   for (const postPlan of plan) {
     const prompt = `
@@ -275,7 +277,7 @@ INSTRUÇÃO CRIATIVA (Coração do Prompt):
 
 REGRAS:
 - Use o TÍTULO DO POST como o título do seu texto.
-- O corpo do post deve ter **pelo menos 600 caracteres**.
+- O corpo do post deve ter **pelo menos ${MIN_CONTENT_LENGTH} caracteres**.
 - O corpo do post deve ser estruturado em **até três parágrafos**.
 - Separe os parágrafos com uma linha em branco.
 - O tom deve ser profissional, mas conversacional.
@@ -294,29 +296,53 @@ Retorne um objeto JSON com as chaves "titulo_post" e "conteudo_post".
 \`\`\`
 `;
 
-    try {
-      const response = await geminiAPI.generateContent(prompt, `Geração Post Follow-up #${postPlan.post_numero}`);
-      const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
-      let parsedResponse;
+    let postGenerated = false;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        console.log(`Gerando post de follow-up #${postPlan.post_numero}, tentativa ${attempt}...`);
+        const response = await geminiAPI.generateContent(prompt, `Geração Post Follow-up #${postPlan.post_numero} (Tentativa ${attempt})`);
 
-      if (jsonMatch && jsonMatch[1]) {
-        parsedResponse = JSON.parse(jsonMatch[1]);
-      } else {
-        parsedResponse = JSON.parse(response);
+        const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
+        let parsedResponse;
+
+        if (jsonMatch && jsonMatch[1]) {
+          parsedResponse = JSON.parse(jsonMatch[1]);
+        } else {
+          parsedResponse = JSON.parse(response);
+        }
+
+        const { titulo_post, conteudo_post } = parsedResponse;
+
+        if (!titulo_post || !conteudo_post) {
+          throw new Error("Resposta da IA está incompleta. Faltando 'titulo_post' ou 'conteudo_post'.");
+        }
+
+        if (conteudo_post.length < MIN_CONTENT_LENGTH) {
+          throw new Error(`O conteúdo gerado tem ${conteudo_post.length} caracteres, mas o mínimo é ${MIN_CONTENT_LENGTH}.`);
+        }
+
+        generatedPosts.push({
+          post_numero: postPlan.post_numero,
+          tipo_gancho: postPlan.tipo_gancho,
+          etapa_aida: postPlan.etapa_aida,
+          titulo: titulo_post,
+          conteudo: conteudo_post,
+          cta: postPlan.cta_sugerido,
+          hashtags_sugeridas: postPlan.hashtags_sugeridas || [],
+        });
+
+        console.log(`Post de follow-up #${postPlan.post_numero} gerado com sucesso na tentativa ${attempt}.`);
+        postGenerated = true;
+        break; // Sai do loop de tentativas se o post foi gerado com sucesso
+
+      } catch (error) {
+        console.error(`Erro na tentativa ${attempt} para o post #${postPlan.post_numero}:`, error.message);
+        if (attempt === MAX_RETRIES) {
+          console.error(`Falha ao gerar o post #${postPlan.post_numero} após ${MAX_RETRIES} tentativas.`);
+          // Opcional: Adicionar um post de "falha" à lista para indicar o problema na UI
+          // generatedPosts.push({ post_numero: postPlan.post_numero, error: true, ... });
+        }
       }
-
-      generatedPosts.push({
-        post_numero: postPlan.post_numero,
-        tipo_gancho: postPlan.tipo_gancho,
-        etapa_aida: postPlan.etapa_aida,
-        titulo: parsedResponse.titulo_post,
-        conteudo: parsedResponse.conteudo_post,
-        cta: postPlan.cta_sugerido,
-        hashtags_sugeridas: postPlan.hashtags_sugeridas || [],
-      });
-    } catch (error) {
-      console.error(`Erro ao gerar post de follow-up #${postPlan.post_numero}:`, error);
-      // Continue to next post even if one fails
     }
   }
 
