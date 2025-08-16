@@ -187,7 +187,8 @@ ESTRUTURA DA SEQUÊNCIA (AIDA):
 4.  **Ação:** CTA direto para o conteúdo principal.
 
 INSTRUÇÕES:
--   Para cada post, defina o "coração do prompt" que será usado para gerar o conteúdo completo em uma etapa posterior.
+-   Para cada post, defina um título curto e chamativo.
+-   Defina o "coração do prompt" que será usado para gerar o conteúdo completo em uma etapa posterior.
 -   O "coração do prompt" deve ser uma instrução clara e concisa para um redator, incluindo o tipo de gancho, o ângulo e a emoção a ser evocada.
 -   Varie os formatos e gatilhos para cada etapa do funil AIDA.
 
@@ -200,6 +201,7 @@ Retorne um array JSON com a seguinte estrutura. Não inclua markdown ou qualquer
     "post_numero": 1,
     "etapa_aida": "Atenção",
     "tipo_gancho": "Estatística Surpreendente",
+    "titulo_sugerido": "O Erro Silencioso que Sabota 70% dos Projetos de TI",
     "coracao_prompt": "Comece com a estatística mais chocante que você encontrar sobre o fracasso de projetos de software devido à má gestão. Crie um senso de urgência e curiosidade.",
     "cta_sugerido": "Descubra a causa nº 1 de falhas em projetos.",
     "hashtags_sugeridas": ["#gestaodeprojetos", "#liderancatecnica"]
@@ -254,7 +256,7 @@ export const generateFollowupPosts = async ({ content, plan }) => {
 
   for (const postPlan of plan) {
     const prompt = `
-Você é um especialista em copywriting para o LinkedIn. Sua tarefa é escrever um post curto e impactante.
+Você é um especialista em copywriting para o LinkedIn. Sua tarefa é escrever um post impactante e informativo.
 
 PERSONA-ALVO:
 ${personaString}
@@ -265,22 +267,28 @@ ${autorString}
 TEMA CENTRAL (do conteúdo principal):
 "${stripHtml(content.titulo)}"
 
+TÍTULO DO POST:
+"${postPlan.titulo_sugerido}"
+
 INSTRUÇÃO CRIATIVA (Coração do Prompt):
 "${postPlan.coracao_prompt}"
 
 REGRAS:
-- Escreva o texto do post, com 400-600 caracteres.
+- Use o TÍTULO DO POST como o título do seu texto.
+- O corpo do post deve ter **pelo menos 600 caracteres**.
+- O corpo do post deve ser estruturado em **até três parágrafos**.
 - O tom deve ser profissional, mas conversacional.
 - Use até 2 emojis relevantes.
 - O texto final NÃO deve conter hashtags.
 - O texto final NÃO deve conter um CTA, ele será adicionado depois.
 
 FORMATO DE RESPOSTA:
-Retorne um objeto JSON com uma única chave "conteudo_post".
+Retorne um objeto JSON com as chaves "titulo_post" e "conteudo_post".
 
 \`\`\`json
 {
-  "conteudo_post": "Texto do post gerado aqui..."
+  "titulo_post": "O título do post gerado aqui...",
+  "conteudo_post": "O conteúdo do post gerado aqui..."
 }
 \`\`\`
 `;
@@ -299,6 +307,7 @@ Retorne um objeto JSON com uma única chave "conteudo_post".
       generatedPosts.push({
         post_numero: postPlan.post_numero,
         tipo_gancho: postPlan.tipo_gancho,
+        titulo: parsedResponse.titulo_post,
         conteudo: parsedResponse.conteudo_post,
         cta: postPlan.cta_sugerido,
         hashtags_sugeridas: postPlan.hashtags_sugeridas || [],
