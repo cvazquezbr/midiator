@@ -153,9 +153,9 @@ export const generateFormattedContent = async ({ content }) => {
 
 
 /**
- * Generates follow-up posts for the campaign.
+ * Generates a plan for follow-up posts for the campaign.
  */
-export const generateFollowupPosts = async ({ content, followupPostsQuantity }) => {
+export const generateFollowupPlan = async ({ content, followupPostsQuantity }) => {
   if (!content?.conteudo) {
     throw new Error("Conteúdo principal deve ser gerado primeiro.");
   }
@@ -170,81 +170,146 @@ export const generateFollowupPosts = async ({ content, followupPostsQuantity }) 
   const { persona } = getCampaignPrompt();
   const personaString = formatObjectForPrompt(persona, ['description']);
 
-  const prompt = 
-  `Você é um especialista em marketing de conteúdo e copywriting.
-Sua tarefa é criar ${followupPostsQuantity} posts sequenciais seguindo o modelo AIDA (Atenção → Interesse → Desejo → Ação), usando o conteúdo principal como base.
+  const prompt =
+  `Você é um estrategista de marketing de conteúdo. Sua tarefa é criar um plano para ${followupPostsQuantity} posts sequenciais no LinkedIn, baseados em um conteúdo principal, seguindo o modelo AIDA.
 
 CONTEÚDO PRINCIPAL:
-O tema abordado é: [${stripHtml(content.titulo)} - ${stripHtml(content.conteudo)}]
+Tema: "${stripHtml(content.titulo)}"
+Detalhes: "${stripHtml(content.conteudo)}"
 
-PERSONAS-ALVO:
-
+PERSONA-ALVO:
 ${personaString}
 
-ESTRUTURA DA SEQUÊNCIA (AIDA + formatos variados):
-Post 1 — Atenção (Gancho Impactante)
+ESTRUTURA DA SEQUÊNCIA (AIDA):
+1.  **Atenção:** Gancho impactante (dado, insight contraintuitivo).
+2.  **Interesse:** Conexão com problema/oportunidade da persona.
+3.  **Desejo:** Apresentação da transformação/benefício da solução.
+4.  **Ação:** CTA direto para o conteúdo principal.
 
-Objetivo: quebrar o padrão e despertar curiosidade.
-Formato: dado estatístico ou insight contraintuitivo.
-Gatilhos: curiosidade, surpresa, urgência leve.
+INSTRUÇÕES:
+-   Para cada post, defina o "coração do prompt" que será usado para gerar o conteúdo completo em uma etapa posterior.
+-   O "coração do prompt" deve ser uma instrução clara e concisa para um redator, incluindo o tipo de gancho, o ângulo e a emoção a ser evocada.
+-   Varie os formatos e gatilhos para cada etapa do funil AIDA.
 
-Post 2 — Interesse (Problema/Oportunidade)
+FORMATO DE RESPOSTA:
+Retorne um array JSON com a seguinte estrutura. Não inclua markdown ou qualquer outro texto fora do JSON.
 
-Objetivo: mostrar relevância e conexão com a dor ou desejo da persona.
-Formato: situação real ou pergunta reflexiva.
-Gatilhos: dor/problema, urgência, identificação.
+\`\`\`json
+[
+  {
+    "post_numero": 1,
+    "etapa_aida": "Atenção",
+    "tipo_gancho": "Estatística Surpreendente",
+    "coracao_prompt": "Comece com a estatística mais chocante que você encontrar sobre o fracasso de projetos de software devido à má gestão. Crie um senso de urgência e curiosidade.",
+    "cta_sugerido": "Descubra a causa nº 1 de falhas em projetos.",
+    "hashtags_sugeridas": ["#gestaodeprojetos", "#liderancatecnica"]
+  }
+]
+\`\`\`
+`;
 
-Post 3 — Desejo (Transformação/Benefício)
-
-Objetivo: criar desejo pela solução ou mudança.
-Formato: caso real ou prova social (autoridade, sucesso de clientes).
-Gatilhos: prova social, autoridade, ganho futuro.
-
-Post 4 — Ação (Call-to-Action Direto)
-
-Objetivo: levar a persona a interagir com o conteúdo completo.
-Formato: frase de impacto + CTA.
-Gatilhos: urgência, exclusividade, clareza na próxima etapa.
-
-REGRAS GERAIS PARA TODOS OS POSTS:
-O campo "conteudo" NÃO DEVE incluir hashtags. As hashtags devem ser listadas apenas no campo "hashtags_sugeridas".
-Cada post deve ter entre 400–600 caracteres.
-Tom profissional, porém conversacional, refletindo depoimento ou experiência.
-Inclua até 2 emojis estratégicos por post.
-Cada post deve funcionar de forma independente, mas também fazer sentido como parte de uma sequência lógica.
-CTAs variados, como: “Leia mais”, “Descubra como”, “Saiba o que fazer”, “Baixe agora”.
-
-      FORMATO DE RESPOSTA:
-      Retorne um array JSON com a seguinte estrutura:
-
-      \`\`\`json
-      [
-        {
-          "post_numero": 1,
-          "tipo_gancho": "dor/problema",
-          "conteudo": "Texto do post aqui...",
-          "cta": "Call-to-action específico",
-          "hashtags_sugeridas": ["#liderancatecnica", "#gestaoequipes"]
-        }
-      ]
-      \`\`\`
-
-      OBJETIVO:
-      Cada post deve despertar curiosidade e criar um gap de informação que só será preenchido ao ler o conteúdo principal completo.
-    `;
-
-  const response = await geminiAPI.generateContent(prompt, 'Geração de Posts de Acompanhamento');
+  const response = await geminiAPI.generateContent(prompt, 'Geração de Plano de Follow-up');
   const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
   if (jsonMatch && jsonMatch[1]) {
-    return JSON.parse(jsonMatch[1]);
+    try {
+      return JSON.parse(jsonMatch[1]);
+    } catch (e) {
+      console.error("Falha ao analisar o plano de follow-up:", jsonMatch[1], e);
+      throw new Error("A resposta da IA para o plano de follow-up não era um JSON válido.");
+    }
   }
-  // Attempt to parse directly if no markdown block is found
   try {
     return JSON.parse(response);
   } catch (e) {
-    console.error("Failed to parse follow-up posts response as JSON:", response);
-    throw new Error("A resposta da IA para os posts de follow-up não estava em um formato JSON válido.");
+    console.error("Falha ao analisar o plano de follow-up (resposta direta):", response, e);
+    throw new Error("A resposta da IA para o plano de follow-up não era um JSON válido.");
   }
+};
+
+
+/**
+ * Generates follow-up posts for the campaign based on a plan.
+ */
+export const generateFollowupPosts = async ({ content, plan }) => {
+  if (!content?.conteudo) {
+    throw new Error("Conteúdo principal deve ser gerado primeiro.");
+  }
+  if (!plan || plan.length === 0) {
+    throw new Error("O plano de follow-up deve ser gerado primeiro.");
+  }
+
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Chave de API Gemini não configurada.');
+  }
+  if (!geminiAPI.isInitialized) {
+    geminiAPI.initialize(apiKey);
+  }
+
+  const { persona, autor } = getCampaignPrompt();
+  const personaString = formatObjectForPrompt(persona, ['description']);
+  const autorString = formatObjectForPrompt(autor);
+
+  const generatedPosts = [];
+
+  for (const postPlan of plan) {
+    const prompt = `
+Você é um especialista em copywriting para o LinkedIn. Sua tarefa é escrever um post curto e impactante.
+
+PERSONA-ALVO:
+${personaString}
+
+AUTOR DO POST:
+${autorString}
+
+TEMA CENTRAL (do conteúdo principal):
+"${stripHtml(content.titulo)}"
+
+INSTRUÇÃO CRIATIVA (Coração do Prompt):
+"${postPlan.coracao_prompt}"
+
+REGRAS:
+- Escreva o texto do post, com 400-600 caracteres.
+- O tom deve ser profissional, mas conversacional.
+- Use até 2 emojis relevantes.
+- O texto final NÃO deve conter hashtags.
+- O texto final NÃO deve conter um CTA, ele será adicionado depois.
+
+FORMATO DE RESPOSTA:
+Retorne um objeto JSON com uma única chave "conteudo_post".
+
+\`\`\`json
+{
+  "conteudo_post": "Texto do post gerado aqui..."
+}
+\`\`\`
+`;
+
+    try {
+      const response = await geminiAPI.generateContent(prompt, `Geração Post Follow-up #${postPlan.post_numero}`);
+      const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
+      let parsedResponse;
+
+      if (jsonMatch && jsonMatch[1]) {
+        parsedResponse = JSON.parse(jsonMatch[1]);
+      } else {
+        parsedResponse = JSON.parse(response);
+      }
+
+      generatedPosts.push({
+        post_numero: postPlan.post_numero,
+        tipo_gancho: postPlan.tipo_gancho,
+        conteudo: parsedResponse.conteudo_post,
+        cta: postPlan.cta_sugerido,
+        hashtags_sugeridas: postPlan.hashtags_sugeridas || [],
+      });
+    } catch (error) {
+      console.error(`Erro ao gerar post de follow-up #${postPlan.post_numero}:`, error);
+      // Continue to next post even if one fails
+    }
+  }
+
+  return generatedPosts;
 };
 
 /**
