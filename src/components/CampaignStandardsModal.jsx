@@ -669,11 +669,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                 />
               ) : (
                 <>
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={2}
-                    sx={{ mb: 2, alignItems: 'flex-start' }}
-                  >
+                  <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                     <Button
                       variant="outlined"
                       startIcon={<AutoAwesomeIcon />}
