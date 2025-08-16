@@ -1,8 +1,9 @@
-import db from './database.js';
+import { kv } from './kv.js';
 import crypto from 'crypto';
 import { markdownToLinkedinText } from './utils.js';
 import fetch from 'node-fetch';
 
+// Helper function to create a post
 async function handleCreateSchedule(request, response) {
     try {
         const postData = request.body.payload;
@@ -13,9 +14,11 @@ async function handleCreateSchedule(request, response) {
         const userSelectedScheduledAt = postData.scheduledAt;
         const executionDate = new Date(userSelectedScheduledAt);
         executionDate.setUTCHours(14, 0, 0, 0);
+        const executionTimestamp = executionDate.getTime();
 
+        const postId = crypto.randomUUID();
         const newPost = {
-            id: crypto.randomUUID(),
+            id: postId,
             createdAt: new Date().toISOString(),
             status: 'scheduled',
             ...postData,
@@ -23,8 +26,9 @@ async function handleCreateSchedule(request, response) {
             userSelectedTime: userSelectedScheduledAt,
         };
 
-        db.data.posts.push(newPost);
-        await db.write();
+        await kv.set(`post:${postId}`, JSON.stringify(newPost));
+        await kv.sadd(`user:${newPost.authorUrn}`, postId);
+        await kv.zadd('schedules_by_time', executionTimestamp, postId);
 
         return response.status(201).json(newPost);
     } catch (error) {
@@ -33,39 +37,40 @@ async function handleCreateSchedule(request, response) {
     }
 }
 
+// Helper function to get schedules for a user
 async function handleGetSchedules(request, response) {
     try {
         const { authorUrn } = request.body.payload || {};
-
         if (!authorUrn) {
-            // Return empty array if no user is specified, for security.
             return response.status(200).json([]);
         }
 
-        const userPosts = db.data.posts.filter(post => post.authorUrn === authorUrn);
-        return response.status(200).json(userPosts);
+        const postIds = await kv.smembers(`user:${authorUrn}`);
+        if (!postIds || postIds.length === 0) {
+            return response.status(200).json([]);
+        }
 
+        const postsRaw = await kv.mget(postIds.map(id => `post:${id}`));
+        const posts = postsRaw.map(p => p ? JSON.parse(p) : null).filter(p => p);
+        return response.status(200).json(posts);
     } catch (error) {
         console.error('Error getting schedules:', error);
         return response.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
+// Helper function to delete a schedule
 async function handleDeleteSchedule(request, response) {
     try {
-        const { id } = request.body.payload;
-        if (!id) {
-            return response.status(400).json({ error: 'Missing id for deleting schedule.' });
+        const { id, authorUrn } = request.body.payload;
+        if (!id || !authorUrn) {
+            return response.status(400).json({ error: 'Missing id or authorUrn for deleting schedule.' });
         }
 
-        const initialLength = db.data.posts.length;
-        db.data.posts = db.data.posts.filter(post => post.id !== id);
+        await kv.del(`post:${id}`);
+        await kv.srem(`user:${authorUrn}`, id);
+        await kv.zrem('schedules_by_time', id);
 
-        if (db.data.posts.length === initialLength) {
-            return response.status(404).json({ error: 'Post not found.' });
-        }
-
-        await db.write();
         return response.status(200).json({ message: 'Schedule deleted successfully.' });
     } catch (error) {
         console.error('Error deleting schedule:', error);
@@ -73,27 +78,29 @@ async function handleDeleteSchedule(request, response) {
     }
 }
 
+// The main scheduler logic
 async function handleRunScheduler(request, response) {
     console.log('Scheduler run initiated...');
     let publishedCount = 0;
     let failedCount = 0;
 
     try {
-        const now = new Date();
-        const duePosts = db.data.posts.filter(p =>
-            p.status === 'scheduled' && new Date(p.scheduledAt) <= now
-        );
+        const now = Date.now();
+        const duePostIds = await kv.zrangebyscore('schedules_by_time', 0, now);
 
-        if (duePosts.length === 0) {
-            console.log('No due posts found.');
+        if (duePostIds.length === 0) {
             return response.status(200).json({ message: 'No due posts to publish.' });
         }
 
-        console.log(`Found ${duePosts.length} due posts to publish.`);
+        for (const postId of duePostIds) {
+            const postRaw = await kv.get(`post:${postId}`);
+            if (!postRaw) {
+                await kv.zrem('schedules_by_time', postId); // Clean up dangling ID
+                continue;
+            }
+            const post = JSON.parse(postRaw);
 
-        for (const post of duePosts) {
             try {
-                // We will need to handle media posts later. For now, only text posts.
                 const postText = [
                     post.content.titulo.toUpperCase(),
                     '',
@@ -105,11 +112,7 @@ async function handleRunScheduler(request, response) {
                     (post.content.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' '),
                 ].join('\n');
 
-                const shareContent = {
-                    shareCommentary: { text: postText },
-                    shareMediaCategory: 'NONE',
-                };
-
+                const shareContent = { shareCommentary: { text: postText }, shareMediaCategory: 'NONE' };
                 const payload = {
                     author: post.authorUrn,
                     lifecycleState: 'PUBLISHED',
@@ -118,15 +121,10 @@ async function handleRunScheduler(request, response) {
                 };
 
                 const proxyUrl = `${process.env.VITE_API_BASE_URL || 'http://localhost:5173'}/api/linkedin-proxy`;
-
                 const proxyResponse = await fetch(proxyUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'createPost',
-                        accessToken: post.accessToken,
-                        payload,
-                    }),
+                    body: JSON.stringify({ action: 'createPost', accessToken: post.accessToken, payload }),
                 });
 
                 if (!proxyResponse.ok) {
@@ -139,20 +137,17 @@ async function handleRunScheduler(request, response) {
                 post.publishedAt = new Date().toISOString();
                 post.postId = result.id;
                 publishedCount++;
-                console.log(`Post ${post.id} published successfully. LinkedIn ID: ${result.id}`);
-
             } catch (error) {
                 post.status = 'failed';
                 post.error = error.message;
                 failedCount++;
-                console.error(`Failed to publish post ${post.id}:`, error);
             }
+
+            await kv.set(`post:${postId}`, JSON.stringify(post));
+            await kv.zrem('schedules_by_time', postId);
         }
 
-        await db.write();
-
         const summary = `Scheduler run finished. Published: ${publishedCount}, Failed: ${failedCount}.`;
-        console.log(summary);
         return response.status(200).json({ message: summary });
 
     } catch (error) {
@@ -161,45 +156,24 @@ async function handleRunScheduler(request, response) {
     }
 }
 
-export async function handleCreateScheduleForTest(req, res) {
-    return await handleCreateSchedule(req, res);
-}
-
-export async function handleRunSchedulerForTest(req, res) {
-    return await handleRunScheduler(req, res);
-}
-
-export async function handleGetSchedulesForTest(req, res) {
-    return await handleGetSchedules(req, res);
-}
-
+// Main API handler
 export default async function handler(request, response) {
-    // Vercel Cron jobs send GET requests. We'll allow GET only for the cron.
     if (request.method === 'GET') {
-        console.log(`[${new Date().toISOString()}] /api/schedule invoked by GET (Cron Job)`);
-        // We can add a secret here for security if needed, e.g., check a header.
         return handleRunScheduler(request, response);
     }
-
     if (request.method !== 'POST') {
         response.setHeader('Allow', ['POST', 'GET']);
         return response.status(405).end('Method Not Allowed');
     }
 
-    // For POST requests, continue with the action-based logic.
-    console.log(`[${new Date().toISOString()}] /api/schedule invoked by POST. Action: ${request.body?.action}`);
     const { action } = request.body;
-
     switch (action) {
-        case 'createSchedule':
-            return handleCreateSchedule(request, response);
-        case 'getSchedules':
-            return handleGetSchedules(request, response);
-        case 'deleteSchedule':
-            return handleDeleteSchedule(request, response);
-        case 'runScheduler':
-            return handleRunScheduler(request, response);
-        default:
-            return response.status(400).json({ error: `Invalid action specified: ${action}` });
+        case 'createSchedule': return handleCreateSchedule(request, response);
+        case 'getSchedules': return handleGetSchedules(request, response);
+        case 'deleteSchedule': return handleDeleteSchedule(request, response);
+        default: return response.status(400).json({ error: `Invalid action specified: ${action}` });
     }
 }
+
+// Test exports
+export { handleCreateSchedule, handleGetSchedules, handleDeleteSchedule, handleRunScheduler };
