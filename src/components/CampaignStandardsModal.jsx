@@ -54,7 +54,7 @@ import TextEditorDialog from './TextEditorDialog';
 import HtmlDisplayField from './HtmlDisplayField';
 import PersonaGenerationModal from './PersonaGenerationModal';
 import PersonaWizard, { PersonaWizardContent } from './PersonaWizard';
-import AutorWizard, { AutorWizardContent } from './AutorWizard';
+import AutorWizard, { AutorWizardContent, TIPO_ORGANIZACAO_OPTIONS } from './AutorWizard';
 import PaletteWizard from './PaletteWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
@@ -1023,37 +1023,28 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                     onClick={() => handleOpenEditor('autor.descricao')}
                     placeholder="Clique para editar a descrição..."
                   />
-                  <TextField
-                    fullWidth
-                    label="Tipo de Organização"
-                    value={autor?.tipo || ''}
-                    onClick={handleEditAutorField}
-                    InputProps={{
-                      readOnly: true,
-                      style: { cursor: 'pointer' },
-                      endAdornment: (
-                        <Tooltip title="Uma classificação que define a natureza da empresa (ex: 'braço de tecnologia', 'agência de marketing').">
-                          <IconButton size="small" sx={{ ml: 1 }}><InfoOutlinedIcon fontSize="small" /></IconButton>
-                        </Tooltip>
-                      )
-                    }}
-                    variant="outlined"
-                  />
+                  <FormControl fullWidth variant="outlined">
+                    <InputLabel>Tipo de Organização</InputLabel>
+                    <Select
+                      name="tipo"
+                      value={autor?.tipo || ''}
+                      onChange={handleAutorChange}
+                      label="Tipo de Organização"
+                    >
+                      {TIPO_ORGANIZACAO_OPTIONS.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                   {autor?.tipo === 'Outro' && (
                     <TextField
                       fullWidth
-                      label="Tipo de Organização (Outro)"
+                      label="Especifique o Tipo de Organização"
+                      name="tipoOrganizacaoOutro"
                       value={autor?.tipoOrganizacaoOutro || ''}
-                      onClick={handleEditAutorField}
-                      InputProps={{
-                        readOnly: true,
-                        style: { cursor: 'pointer' },
-                        endAdornment: (
-                          <Tooltip title="Descrição específica do tipo de organização.">
-                            <IconButton size="small" sx={{ ml: 1 }}><InfoOutlinedIcon fontSize="small" /></IconButton>
-                          </Tooltip>
-                        )
-                      }}
+                      onChange={handleAutorChange}
                       variant="outlined"
                     />
                   )}

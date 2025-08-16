@@ -27,7 +27,7 @@ const steps = [
   'Revisão Detalhada',
 ];
 
-const TIPO_ORGANIZACAO_OPTIONS = ['Braço de tecnologia', 'Agência de marketing', 'Consultoria', 'Startup', 'Empresa de Software (SaaS)', 'E-commerce', 'Outro'];
+export const TIPO_ORGANIZACAO_OPTIONS = ['Braço de tecnologia', 'Agência de marketing', 'Consultoria', 'Startup', 'Empresa de Software (SaaS)', 'E-commerce', 'Outro'];
 
 const InfoTooltip = ({ title }) => (
     <Tooltip title={<Typography variant="body2" sx={{ p: 1 }}>{title}</Typography>}>
