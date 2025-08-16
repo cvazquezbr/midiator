@@ -1,0 +1,23 @@
+{
+  "posts": [
+    {
+      "id": "dc4becba-0bd2-417e-8452-8b88e7f9b9b7",
+      "createdAt": "2025-08-16T17:27:01.759Z",
+      "status": "failed",
+      "scheduledAt": "2025-08-16T17:26:01.759Z",
+      "authorUrn": "urn:li:person:xCDEUBo-Mf",
+      "content": {
+        "titulo": "Test Post from Scheduler",
+        "conteudo": "This is a test post generated automatically by the test script.",
+        "cta": "Check out the code!",
+        "hashtags": [
+          "#testing",
+          "#automation",
+          "#nodejs"
+        ]
+      },
+      "accessToken": "AQXrKPbg-cEl8t2-AEofaYKl2BVkeBC8iDxDINFhjVd6OX0BVaiy2YZM_dfZfJBgl0AZkP-5pXUxFyKQ2uxDfMyTTDrPYVJTvXNVTy0ultakgs7pr1A7wLZIL9udMSIraulAfHCX6nmIcUFlhBDrClkP2FFy-1VB48ipM8yfMosMe97NFAllH3wir6AFmDR1jGpydEb6xINOQefgyQfSLlgIixfBvLiyfQEAZkBdYScGo0DyRyjcu0g-8qzLwgDGwzsXXv3R1h_5n4I69j3Ybw03U84qsIU4JS1uteUjZdz29rUJ1hDTadgYtvuFRHSFA73TI2yfkCnOFSukxmYteWSSSrSGEg",
+      "error": "Unexpected end of JSON input"
+    }
+  ]
+}

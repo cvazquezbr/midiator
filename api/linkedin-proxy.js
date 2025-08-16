@@ -377,6 +377,10 @@ async function handleGetOrganizations(request, response) {
 }
 
 
+export async function handleGetProfileForTest(req, res) {
+    return await handleGetProfile(req, res);
+}
+
 export default async function handler(request, response) {
   console.log(`[${new Date().toISOString()}] /api/linkedin-proxy invoked. Action: ${request.body?.action}`);
 
