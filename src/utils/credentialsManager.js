@@ -1,9 +1,9 @@
-import CryptoJS from 'crypto-js';
 import { getGeminiApiKey, saveGeminiApiKey } from './geminiCredentials';
 import { getGoogleCloudTTSCredentials, saveGoogleCloudTTSCredentials } from './googleCloudTTSCredentials';
 import { getLinkedinConfig, saveLinkedinConfig } from './linkedinCredentials';
 import { getWordpressConfig, saveWordpressConfig } from './wordpressCredentials';
 
+// The keys for the credentials stored in localStorage.
 const CREDENTIAL_KEYS = {
   GEMINI: 'gemini_api_key',
   GOOGLE_DRIVE_API_KEY: 'google_drive_api_key',
@@ -14,131 +14,115 @@ const CREDENTIAL_KEYS = {
 };
 
 /**
- * Gathers all known credentials from localStorage.
+ * Gathers all known credentials from localStorage into a single object.
+ * This function is still needed to collect the data before saving.
  * @returns {object} An object containing all the credentials.
  */
-const gatherCredentials = () => {
+export const gatherCredentials = () => {
   const credentials = {};
-
   // Gemini
   const geminiApiKey = getGeminiApiKey();
-  if (geminiApiKey) {
-    credentials[CREDENTIAL_KEYS.GEMINI] = geminiApiKey;
-  }
+  if (geminiApiKey) credentials[CREDENTIAL_KEYS.GEMINI] = geminiApiKey;
 
   // Google Drive
   const googleDriveApiKey = localStorage.getItem(CREDENTIAL_KEYS.GOOGLE_DRIVE_API_KEY);
-  if (googleDriveApiKey) {
-    credentials[CREDENTIAL_KEYS.GOOGLE_DRIVE_API_KEY] = googleDriveApiKey;
-  }
+  if (googleDriveApiKey) credentials[CREDENTIAL_KEYS.GOOGLE_DRIVE_API_KEY] = googleDriveApiKey;
+
   const googleDriveClientId = localStorage.getItem(CREDENTIAL_KEYS.GOOGLE_DRIVE_CLIENT_ID);
-  if (googleDriveClientId) {
-    credentials[CREDENTIAL_KEYS.GOOGLE_DRIVE_CLIENT_ID] = googleDriveClientId;
-  }
+  if (googleDriveClientId) credentials[CREDENTIAL_KEYS.GOOGLE_DRIVE_CLIENT_ID] = googleDriveClientId;
 
   // Google Cloud TTS
   const googleTts = getGoogleCloudTTSCredentials();
-  if (googleTts) {
-    credentials[CREDENTIAL_KEYS.GOOGLE_TTS] = googleTts;
-  }
+  if (googleTts) credentials[CREDENTIAL_KEYS.GOOGLE_TTS] = googleTts;
 
   // LinkedIn
   const linkedin = getLinkedinConfig();
-  if (linkedin && linkedin.clientId) { // Check for a meaningful value
-    credentials[CREDENTIAL_KEYS.LINKEDIN] = linkedin;
-  }
+  if (linkedin && (linkedin.clientId || linkedin.accessToken)) credentials[CREDENTIAL_KEYS.LINKEDIN] = linkedin;
 
   // WordPress
   const wordpress = getWordpressConfig();
-  if (wordpress) {
-    credentials[CREDENTIAL_KEYS.WORDPRESS] = wordpress;
-  }
+  if (wordpress && wordpress.url) credentials[CREDENTIAL_KEYS.WORDPRESS] = wordpress;
 
   return credentials;
 };
 
 /**
- * Encrypts and triggers a download of the credentials file.
- * @param {string} password - The password to encrypt the file.
+ * Applies a settings object from the database to localStorage.
+ * @param {object} settings - The settings object to apply.
  */
-export const saveCredentialsToFile = (password) => {
-  return new Promise((resolve, reject) => {
-    try {
-      const credentials = gatherCredentials();
-      if (Object.keys(credentials).length === 0) {
-        reject(new Error('Nenhuma credencial encontrada para salvar.'));
-        return;
+export const applySettings = (settings) => {
+  if (!settings || typeof settings !== 'object') return;
+
+  // Clear existing credentials before applying new ones to avoid stale data
+  // This is a simple approach. A more granular approach might be needed if some
+  // local-only settings should be preserved. For now, this is fine.
+  Object.values(CREDENTIAL_KEYS).forEach(key => {
+      // Be careful with complex keys that are objects
+      if (typeof key === 'string') {
+          localStorage.removeItem(key);
       }
-
-      const jsonString = JSON.stringify(credentials);
-      const encrypted = CryptoJS.AES.encrypt(jsonString, password).toString();
-
-      const blob = new Blob([encrypted], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'credentials.midiatorsetup';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      resolve();
-    } catch (error) {
-      console.error('Erro ao salvar credenciais:', error);
-      reject(error);
-    }
   });
+
+
+  if (settings[CREDENTIAL_KEYS.GEMINI]) {
+    saveGeminiApiKey(settings[CREDENTIAL_KEYS.GEMINI]);
+  }
+  if (settings[CREDENTIAL_KEYS.GOOGLE_DRIVE_API_KEY]) {
+    localStorage.setItem(CREDENTIAL_KEYS.GOOGLE_DRIVE_API_KEY, settings[CREDENTIAL_KEYS.GOOGLE_DRIVE_API_KEY]);
+  }
+  if (settings[CREDENTIAL_KEYS.GOOGLE_DRIVE_CLIENT_ID]) {
+    localStorage.setItem(CREDENTIAL_KEYS.GOOGLE_DRIVE_CLIENT_ID, settings[CREDENTIAL_KEYS.GOOGLE_DRIVE_CLIENT_ID]);
+  }
+  if (settings[CREDENTIAL_KEYS.GOOGLE_TTS]) {
+    saveGoogleCloudTTSCredentials(settings[CREDENTIAL_KEYS.GOOGLE_TTS]);
+  }
+  if (settings[CREDENTIAL_KEYS.LINKEDIN]) {
+    saveLinkedinConfig(settings[CREDENTIAL_KEYS.LINKEDIN]);
+  }
+  if (settings[CREDENTIAL_KEYS.WORDPRESS]) {
+    saveWordpressConfig(settings[CREDENTIAL_KEYS.WORDPRESS]);
+  }
+};
+
+
+/**
+ * Saves the current credentials from localStorage to the database via the API.
+ */
+export const saveSettingsToDb = async () => {
+  const credentials = gatherCredentials();
+
+  const res = await fetch('/api/settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: 'Failed to save settings and could not parse error response.' }));
+    throw new Error(errData.error || 'Failed to save settings.');
+  }
+
+  return await res.json();
 };
 
 /**
- * Loads and decrypts a credentials file, then saves them to localStorage.
- * @param {File} file - The file to load.
- * @param {string} password - The password to decrypt the file.
+ * Loads settings from the database and applies them to localStorage.
  */
-export const loadCredentialsFromFile = (file, password) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const encryptedData = event.target.result;
-        const decryptedBytes = CryptoJS.AES.decrypt(encryptedData, password);
-        const decryptedJson = decryptedBytes.toString(CryptoJS.enc.Utf8);
+export const loadSettingsFromDb = async () => {
+  const res = await fetch('/api/settings');
 
-        if (!decryptedJson) {
-          throw new Error('Senha incorreta ou arquivo corrompido.');
-        }
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({ error: 'Failed to load settings and could not parse error response.' }));
+    throw new Error(errData.error || 'Failed to load settings.');
+  }
 
-        const credentials = JSON.parse(decryptedJson);
+  const settings = await res.json();
+  if (settings && Object.keys(settings).length > 0) {
+    applySettings(settings);
+    console.log('Settings successfully loaded from database and applied.');
+  } else {
+    console.log('No settings found in the database for this user.');
+  }
 
-        // Save credentials back to localStorage
-        if (credentials[CREDENTIAL_KEYS.GEMINI]) {
-          saveGeminiApiKey(credentials[CREDENTIAL_KEYS.GEMINI]);
-        }
-        if (credentials[CREDENTIAL_KEYS.GOOGLE_DRIVE_API_KEY]) {
-          localStorage.setItem(CREDENTIAL_KEYS.GOOGLE_DRIVE_API_KEY, credentials[CREDENTIAL_KEYS.GOOGLE_DRIVE_API_KEY]);
-        }
-        if (credentials[CREDENTIAL_KEYS.GOOGLE_DRIVE_CLIENT_ID]) {
-          localStorage.setItem(CREDENTIAL_KEYS.GOOGLE_DRIVE_CLIENT_ID, credentials[CREDENTIAL_KEYS.GOOGLE_DRIVE_CLIENT_ID]);
-        }
-        if (credentials[CREDENTIAL_KEYS.GOOGLE_TTS]) {
-          saveGoogleCloudTTSCredentials(credentials[CREDENTIAL_KEYS.GOOGLE_TTS]);
-        }
-        if (credentials[CREDENTIAL_KEYS.LINKEDIN]) {
-          saveLinkedinConfig(credentials[CREDENTIAL_KEYS.LINKEDIN]);
-        }
-        if (credentials[CREDENTIAL_KEYS.WORDPRESS]) {
-          saveWordpressConfig(credentials[CREDENTIAL_KEYS.WORDPRESS]);
-        }
-
-        resolve();
-      } catch (error) {
-        console.error('Erro ao carregar credenciais:', error);
-        reject(error);
-      }
-    };
-    reader.onerror = (error) => {
-      reject(error);
-    };
-    reader.readAsText(file);
-  });
+  return settings;
 };

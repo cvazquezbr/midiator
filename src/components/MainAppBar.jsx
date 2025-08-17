@@ -7,6 +7,7 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  Typography,
 } from '@mui/material';
 import {
   Settings,
@@ -14,27 +15,41 @@ import {
   Brightness4,
   Brightness7,
   Edit,
-  Download as DownloadIcon,
-  FileUpload as FileUploadIcon,
   Menu as MenuIcon,
   Article as ArticleIcon,
+  Logout,
+  AdminPanelSettings,
+  AccountCircle,
 } from '@mui/icons-material';
+import { useUserAuth } from '../context/UserAuthContext';
+import { useNavigate } from 'react-router-dom';
+
 const MainAppBar = ({
   darkMode,
   setDarkMode,
   setShowSetupModal,
   onMenuClick,
   isMobile,
-  handleMenuOpen,
-  handleMenuClose,
-  anchorElMenu,
   setShowCampaignStandardsModal,
   setShowMemorialDescritivoModal,
-  handleSaveTemplateClick,
-  handleLoadTemplateClick,
-  loadStateInputRef,
-  handleLoadStateFromFile,
 }) => {
+  const { user, logout } = useUserAuth();
+  const navigate = useNavigate();
+  const [anchorEl, setAnchorEl] = React.useState(null);
+
+  const handleMenu = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = async () => {
+    handleClose();
+    await logout();
+    navigate('/login');
+  };
   return (
     <AppBar
       position="fixed"
@@ -60,24 +75,6 @@ const MainAppBar = ({
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 1 } }}>
-          <Tooltip title="Salvar Campanha">
-            <IconButton
-              onClick={handleSaveTemplateClick}
-              sx={{ color: 'white' }}
-              aria-label="Salvar Campanha"
-            >
-              <DownloadIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Carregar Campanha">
-            <IconButton
-              onClick={handleLoadTemplateClick}
-              sx={{ color: 'white' }}
-              aria-label="Carregar Campanha"
-            >
-              <FileUploadIcon />
-            </IconButton>
-          </Tooltip>
           <Tooltip title="Configurações">
             <IconButton
               onClick={() => setShowSetupModal(true)}
@@ -87,40 +84,58 @@ const MainAppBar = ({
               <Settings />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Mais ações">
+
+          <Tooltip title="Opções do Usuário">
             <IconButton
-              onClick={handleMenuOpen}
+              onClick={handleMenu}
               sx={{ color: 'white' }}
-              aria-label="Mais ações"
             >
-              <MoreVert />
+              <AccountCircle />
             </IconButton>
           </Tooltip>
           <Menu
-            anchorEl={anchorElMenu}
-            open={Boolean(anchorElMenu)}
-            onClose={handleMenuClose}
+            id="menu-appbar"
+            anchorEl={anchorEl}
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            keepMounted
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            open={Boolean(anchorEl)}
+            onClose={handleClose}
           >
-            <MenuItem onClick={() => { setDarkMode(!darkMode); handleMenuClose(); }}>
+            <MenuItem disabled>
+              <Typography variant="body2" noWrap>
+                {user?.email}
+              </Typography>
+            </MenuItem>
+            <MenuItem onClick={() => { setDarkMode(!darkMode); handleClose(); }}>
               {darkMode ? <Brightness7 sx={{ mr: 1 }} /> : <Brightness4 sx={{ mr: 1 }} />}
               {darkMode ? 'Modo Claro' : 'Modo Escuro'}
             </MenuItem>
-            <MenuItem onClick={() => { setShowCampaignStandardsModal(true); handleMenuClose(); }}>
+            <MenuItem onClick={() => { setShowCampaignStandardsModal(true); handleClose(); }}>
               <Edit sx={{ mr: 1 }} />
               Padrões de Campanha
             </MenuItem>
-            <MenuItem onClick={() => { setShowMemorialDescritivoModal(true); handleMenuClose(); }}>
+            <MenuItem onClick={() => { setShowMemorialDescritivoModal(true); handleClose(); }}>
               <ArticleIcon sx={{ mr: 1 }} />
               Memorial Descritivo
             </MenuItem>
+            {user?.role === 'admin' && (
+              <MenuItem onClick={() => { navigate('/admin/users'); handleClose(); }}>
+                <AdminPanelSettings sx={{ mr: 1 }} />
+                Admin Dashboard
+              </MenuItem>
+            )}
+            <MenuItem onClick={handleLogout}>
+              <Logout sx={{ mr: 1 }} />
+              Logout
+            </MenuItem>
           </Menu>
-          <input
-            type="file"
-            hidden
-            accept=".json,.midiator"
-            onChange={handleLoadStateFromFile}
-            ref={loadStateInputRef}
-          />
         </Box>
       </Toolbar>
     </AppBar>

@@ -1,0 +1,131 @@
+import React, { useState, useEffect } from 'react';
+import { useUserAuth } from '../context/UserAuthContext';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { GoogleLogin } from '@react-oauth/google';
+import {
+  Container,
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Paper,
+  CircularProgress,
+  Alert,
+  Divider,
+  Link,
+} from '@mui/material';
+
+const LoginPage = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { user, login, googleLogin } = useUserAuth();
+  const navigate = useNavigate();
+
+  // If the user is already logged in, redirect them to the home page.
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    const success = await login(email, password);
+    if (success) {
+      navigate('/');
+    } else {
+      // The error toast is shown by the context, but we can set a local error for the UI
+      setError('Failed to log in. Please check your credentials.');
+      setLoading(false);
+    }
+    // No need to setLoading(false) on success because the component will unmount
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    setError('');
+    const success = await googleLogin(credentialResponse.credential);
+    if (success) {
+      navigate('/');
+    } else {
+      setError('Google Sign-In failed. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError('Google Sign-In was cancelled or failed. Please try again.');
+    console.error('Google Login Failed');
+  };
+
+  return (
+    <Container component="main" maxWidth="xs">
+      <Paper elevation={3} sx={{ mt: 8, p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Typography component="h1" variant="h5">
+          Sign In
+        </Typography>
+        {error && <Alert severity="error" sx={{ width: '100%', mt: 2 }}>{error}</Alert>}
+        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="email"
+            label="Email Address"
+            name="email"
+            autoComplete="email"
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
+          />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Password"
+            type="password"
+            id="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+          />
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, mb: 2 }}
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+          </Button>
+          <Divider sx={{ my: 2 }}>OR</Divider>
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', mb: 2 }}>
+            {loading ? (
+              <CircularProgress />
+            ) : (
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                useOneTap
+              />
+            )}
+          </Box>
+          <Box sx={{ textAlign: 'center' }}>
+            <Link component={RouterLink} to="/signup" variant="body2">
+              {"Don't have an account? Sign Up"}
+            </Link>
+          </Box>
+        </Box>
+      </Paper>
+    </Container>
+  );
+};
+
+export default LoginPage;

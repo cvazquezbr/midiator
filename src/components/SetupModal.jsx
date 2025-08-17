@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useIsMobile } from '../hooks/use-mobile.js';
 import {
   Dialog,
@@ -9,23 +9,18 @@ import {
   Box,
   Tabs,
   Tab,
-  Typography,
-  IconButton
+  IconButton,
+  CircularProgress
 } from '@mui/material';
 import {
   Close as CloseIcon,
-  VpnKey,
-  CloudQueue,
+  CloudUpload as CloudUploadIcon,
   Audiotrack,
-  SaveAlt as SaveAltIcon,
-  FileUpload as FileUploadIcon,
-  Security,
   LinkedIn,
   AutoAwesome,
   DriveFolderUpload,
   Language,
 } from '@mui/icons-material';
-import GoogleIcon from '@mui/icons-material/Google';
 import { toast } from 'sonner';
 
 import GeminiAuthSetup from './GeminiAuthSetup';
@@ -33,9 +28,9 @@ import GoogleDriveAuthModal from './GoogleDriveAuthModal';
 import GoogleCloudTTSAuth from './GoogleCloudTTSAuth';
 import WordpressAuthSetup from './WordpressAuthSetup';
 import LinkedinAuthSetup from './LinkedinAuthSetup';
-import PasswordDialog from './PasswordDialog';
 
-import { saveCredentialsToFile, loadCredentialsFromFile } from '../utils/credentialsManager';
+// The old file-based manager is replaced with the new DB-based one.
+import { saveSettingsToDb } from '../utils/credentialsManager';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -61,55 +56,21 @@ function TabPanel(props) {
 const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
   const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [passwordDialogAction, setPasswordDialogAction] = useState(null); // 'save' or 'load'
-  const [credentialsPassword, setCredentialsPassword] = useState('');
-  const loadCredentialsInputRef = useRef(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
 
-  const handleSaveCredentialsClick = () => {
-    setPasswordDialogAction('save');
-    setShowPasswordDialog(true);
-  };
-
-  const handleLoadCredentialsClick = () => {
-    setPasswordDialogAction('load');
-    setShowPasswordDialog(true);
-  };
-
-  const handlePasswordConfirm = async (password) => {
-    setShowPasswordDialog(false);
-    if (passwordDialogAction === 'save') {
-      try {
-        await saveCredentialsToFile(password);
-        toast.success('Arquivo de credenciais salvo com sucesso!');
-      } catch (error) {
-        toast.error(`Erro ao salvar credenciais: ${error.message}`);
-      }
-    } else if (passwordDialogAction === 'load') {
-      setCredentialsPassword(password);
-      loadCredentialsInputRef.current.click();
-    }
-  };
-
-  const handleLoadCredentialsFileChange = async (event) => {
-    const file = event.target.files[0];
-    if (file && credentialsPassword) {
-      try {
-        await loadCredentialsFromFile(file, credentialsPassword);
-        toast.success('Credenciais carregadas com sucesso! A página será recarregada.');
-        setTimeout(() => window.location.reload(), 2000);
-      } catch (error) {
-        toast.error(`Erro ao carregar credenciais: ${error.message}`);
-      } finally {
-        setCredentialsPassword('');
-        if (loadCredentialsInputRef.current) {
-          loadCredentialsInputRef.current.value = '';
-        }
-      }
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await saveSettingsToDb();
+      toast.success('Settings saved successfully to your account!');
+    } catch (error) {
+      toast.error(`Failed to save settings: ${error.message}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -121,96 +82,59 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
   };
 
   return (
-    <>
-      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Configurações
-          <IconButton onClick={onClose}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ display: 'flex', p: 0, minHeight: '500px', flexDirection: isMobile ? 'column' : 'row' }}>
-          <Tabs
-            orientation={isMobile ? 'horizontal' : 'vertical'}
-            variant="scrollable"
-            value={value}
-            onChange={handleChange}
-            aria-label="Configuration tabs"
-            sx={{
-              borderRight: isMobile ? 0 : 1,
-              borderBottom: isMobile ? 1 : 0,
-              borderColor: 'divider',
-              minWidth: isMobile ? 'auto' : 200,
-            }}
-          >
-            <Tab icon={<AutoAwesome />} iconPosition="start" label="Gemini" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(0)} />
-            <Tab icon={<DriveFolderUpload />} iconPosition="start" label="Google Drive" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(1)} />
-            <Tab icon={<Audiotrack />} iconPosition="start" label="Cloud TTS" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(2)} />
-            <Tab icon={<Language />} iconPosition="start" label="WordPress" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(3)} />
-            <Tab icon={<LinkedIn />} iconPosition="start" label="LinkedIn" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(4)} />
-            <Tab icon={<Security />} iconPosition="start" label="Credenciais" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(5)} />
-          </Tabs>
-          <TabPanel value={value} index={0}>
-            <GeminiAuthSetup />
-          </TabPanel>
-          <TabPanel value={value} index={1}>
-            <GoogleDriveAuthModal />
-          </TabPanel>
-          <TabPanel value={value} index={2}>
-            <GoogleCloudTTSAuth />
-          </TabPanel>
-          <TabPanel value={value} index={3}>
-            <WordpressAuthSetup />
-          </TabPanel>
-          <TabPanel value={value} index={4}>
-            <LinkedinAuthSetup onBeforeRedirect={onBeforeLinkedinRedirect} />
-          </TabPanel>
-          <TabPanel value={value} index={5}>
-            <Typography variant="h6" gutterBottom>Gerenciar Credenciais</Typography>
-            <Typography variant="body2" gutterBottom>
-              Salve todas as suas configurações de API em um único arquivo criptografado ou carregue um arquivo existente.
-            </Typography>
-            <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-              <Button
-                variant="contained"
-                startIcon={<SaveAltIcon />}
-                onClick={handleSaveCredentialsClick}
-              >
-                Salvar Credenciais
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<FileUploadIcon />}
-                onClick={handleLoadCredentialsClick}
-              >
-                Carregar Credenciais
-              </Button>
-            </Box>
-          </TabPanel>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Fechar</Button>
-        </DialogActions>
-      </Dialog>
-      <PasswordDialog
-        open={showPasswordDialog}
-        onClose={() => setShowPasswordDialog(false)}
-        onConfirm={handlePasswordConfirm}
-        title={passwordDialogAction === 'save' ? 'Salvar Credenciais' : 'Carregar Credenciais'}
-        description={
-          passwordDialogAction === 'save'
-            ? 'Digite uma senha para criptografar o arquivo de credenciais.'
-            : 'Digite a senha para descriptografar o arquivo de credenciais.'
-        }
-      />
-      <input
-        type="file"
-        hidden
-        accept=".midiatorsetup"
-        onChange={handleLoadCredentialsFileChange}
-        ref={loadCredentialsInputRef}
-      />
-    </>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        Configurações
+        <IconButton onClick={onClose}><CloseIcon /></IconButton>
+      </DialogTitle>
+      <DialogContent sx={{ display: 'flex', p: 0, minHeight: '500px', flexDirection: isMobile ? 'column' : 'row' }}>
+        <Tabs
+          orientation={isMobile ? 'horizontal' : 'vertical'}
+          variant="scrollable"
+          value={value}
+          onChange={handleChange}
+          aria-label="Configuration tabs"
+          sx={{
+            borderRight: isMobile ? 0 : 1,
+            borderBottom: isMobile ? 1 : 0,
+            borderColor: 'divider',
+            minWidth: isMobile ? 'auto' : 200,
+          }}
+        >
+          <Tab icon={<AutoAwesome />} iconPosition="start" label="Gemini" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(0)} />
+          <Tab icon={<DriveFolderUpload />} iconPosition="start" label="Google Drive" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(1)} />
+          <Tab icon={<Audiotrack />} iconPosition="start" label="Cloud TTS" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(2)} />
+          <Tab icon={<Language />} iconPosition="start" label="WordPress" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(3)} />
+          <Tab icon={<LinkedIn />} iconPosition="start" label="LinkedIn" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(4)} />
+        </Tabs>
+        <TabPanel value={value} index={0}>
+          <GeminiAuthSetup />
+        </TabPanel>
+        <TabPanel value={value} index={1}>
+          <GoogleDriveAuthModal />
+        </TabPanel>
+        <TabPanel value={value} index={2}>
+          <GoogleCloudTTSAuth />
+        </TabPanel>
+        <TabPanel value={value} index={3}>
+          <WordpressAuthSetup />
+        </TabPanel>
+        <TabPanel value={value} index={4}>
+          <LinkedinAuthSetup onBeforeRedirect={onBeforeLinkedinRedirect} />
+        </TabPanel>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Fechar</Button>
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={isSaving}
+          startIcon={isSaving ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
+        >
+          {isSaving ? 'Salvando...' : 'Salvar na Nuvem'}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
