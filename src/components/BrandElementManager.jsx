@@ -16,6 +16,11 @@ const BrandElementManager = ({ onElementSelect }) => {
   const [loadingImageId, setLoadingImageId] = useState(null); // To show loader on specific image
 
   const fetchBrandElements = useCallback(async () => {
+    if (!googleDriveAPI.isInitialized()) {
+      setError("A API do Google Drive não foi inicializada. Por favor, configure-a na aba 'Google Drive' das configurações.");
+      setIsConnected(false);
+      return;
+    }
     if (!googleDriveAPI.isUserSignedIn()) {
       setIsConnected(false);
       setError("Por favor, conecte-se ao Google Drive para ver os elementos da marca.");

@@ -41,11 +41,11 @@ function TabPanel(props) {
       hidden={value !== index}
       id={`vertical-tabpanel-${index}`}
       aria-labelledby={`vertical-tab-${index}`}
-      style={{ width: '100%' }}
+      style={{ width: '100%', height: '100%', overflowY: 'auto' }}
       {...other}
     >
       {value === index && (
-        <Box sx={{ p: 3, width: '100%' }}>
+        <Box sx={{ p: 3, width: '100%', height: '100%' }}>
           {children}
         </Box>
       )}
@@ -67,6 +67,7 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
     try {
       await saveSettingsToDb();
       toast.success('Settings saved successfully to your account!');
+      onClose();
     } catch (error) {
       toast.error(`Failed to save settings: ${error.message}`);
     } finally {

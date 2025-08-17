@@ -113,7 +113,7 @@ const GeminiAuthSetup = () => {
         )}
 
         <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Button onClick={handleTestConnection} disabled={isTesting}>
+          <Button onClick={handleTestConnection} disabled={isTesting} variant="outlined">
             {isTesting ? 'Testando...' : 'Testar Conexão'}
           </Button>
           <Box>

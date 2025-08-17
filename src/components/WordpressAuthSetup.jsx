@@ -135,7 +135,7 @@ const WordpressAuthSetup = () => {
 
   return (
     <>
-      <Box sx={{ p: 1 }}>
+      <Box>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6">WordPress</Typography>
           <IconButton onClick={() => setShowInfobox(true)}>
@@ -235,7 +235,7 @@ const WordpressAuthSetup = () => {
           <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
         )}
         <Box sx={{ pt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Button onClick={handleTestConnection} disabled={isTesting}>
+          <Button onClick={handleTestConnection} disabled={isTesting} variant="outlined">
             {isTesting ? 'Testando...' : 'Testar Conexão'}
           </Button>
           <Box>

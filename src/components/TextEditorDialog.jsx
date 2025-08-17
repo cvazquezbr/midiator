@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
+import RichTextEditor from './RichTextEditor'; // Import the RichTextEditor
 
 const TextEditorDialog = ({ open, title, content, onSave, onClose }) => {
   const [editedContent, setEditedContent] = useState(content);
@@ -16,25 +17,17 @@ const TextEditorDialog = ({ open, title, content, onSave, onClose }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth PaperProps={{
       style: {
-        height: '80vh',
+        height: '90vh', // Adjust height for better usability
       }
     }}>
       <DialogTitle>{title}</DialogTitle>
-      <DialogContent sx={{ display: 'flex', flexDirection: 'column' }}>
-        <TextField
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', p: 1 }}>
+        <RichTextEditor
           value={editedContent}
-          onChange={(e) => setEditedContent(e.target.value)}
-          multiline
-          fullWidth
-          sx={{ flexGrow: 1, '& .MuiInputBase-root': { height: '100%' } }}
-          InputProps={{
-            style: {
-              height: '100%',
-              alignItems: 'flex-start',
-            }
-          }}
+          onChange={setEditedContent}
+          maxHeight="100%" // Allow editor to fill the space
         />
       </DialogContent>
       <DialogActions sx={{ pb: 2, px: 3 }}>

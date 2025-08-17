@@ -67,7 +67,7 @@ const GoogleCloudTTSAuth = () => {
 
   return (
     <>
-      <Box sx={{ p: 1 }}>
+      <Box>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6">Google Cloud TTS</Typography>
           <IconButton onClick={() => setShowInfobox(true)}>
@@ -93,7 +93,7 @@ const GoogleCloudTTSAuth = () => {
             type="text"
             fullWidth
             multiline
-            rows={10}
+            rows={5}
             variant="outlined"
             value={credentials}
             onChange={(e) => {
@@ -108,7 +108,7 @@ const GoogleCloudTTSAuth = () => {
           <Alert severity="error">{error}</Alert>
         )}
         <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Button onClick={handleTestConnection} disabled={isTesting}>
+          <Button onClick={handleTestConnection} disabled={isTesting} variant="outlined">
             {isTesting ? 'Testando...' : 'Testar Conexão'}
           </Button>
           <Box>
