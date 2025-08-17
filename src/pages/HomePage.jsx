@@ -2,66 +2,10 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {
-  Container,
-  Paper,
-  Typography,
-  Box,
-  Button,
-  Grid,
-  Card,
-  CardContent,
-  Alert,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
-  Chip,
-  IconButton,
-  Tooltip,
-  ToggleButton,
-  ToggleButtonGroup,
-  TextField,
-  Link as MuiLink,
-  Fab,
-  FormControl,
-  InputLabel,
-  Select,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Toolbar,
+  Container, Paper, Typography, Box, Button, Grid, Card, CardContent, Alert, Stepper, Step, StepLabel, StepContent, Chip, IconButton, Tooltip, ToggleButton, ToggleButtonGroup, TextField, Link as MuiLink, Fab, FormControl, InputLabel, Select, Accordion, AccordionSummary, AccordionDetails, Toolbar,
 } from '@mui/material';
 import {
-  CloudUpload,
-  ExpandMore as ExpandMoreIcon,
-  FileUpload,
-  Settings,
-  Image as ImageIcon,
-  Movie,
-  Audiotrack,
-  Palette,
-  ArrowBackIosNew,
-  ArrowForwardIos,
-  MoreVert,
-  Brightness4,
-  Brightness7,
-  Edit,
-  Download as DownloadIcon,
-  CloudQueue,
-  ChevronRight,
-  ChevronLeft,
-  Check,
-  Add,
-  InsertDriveFileOutlined,
-  FormatBold,
-  Visibility,
-  Grid3x3,
-  Campaign as CampaignIcon,
-  AspectRatio,
-  Language,
-  Publish,
-  SaveAlt as SaveAltIcon,
-  FileUpload as FileUploadIcon,
+  CloudUpload, ExpandMore as ExpandMoreIcon, FileUpload, Settings, Image as ImageIcon, Movie, Audiotrack, Palette, ArrowBackIosNew, ArrowForwardIos, MoreVert, Brightness4, Brightness7, Edit, Download as DownloadIcon, CloudQueue, ChevronRight, ChevronLeft, Check, Add, InsertDriveFileOutlined, FormatBold, Visibility, Grid3x3, Campaign as CampaignIcon, AspectRatio, Language, Publish, SaveAlt as SaveAltIcon, FileUpload as FileUploadIcon,
 } from '@mui/icons-material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { ThemeProvider } from '@mui/material/styles';
@@ -70,7 +14,7 @@ import { Toaster, toast } from 'sonner';
 
 import { useUserAuth } from '../context/UserAuthContext';
 import { loadSettingsFromDb } from '../utils/credentialsManager';
-import { getCampaigns, loadCampaign, saveCampaign, updateCampaign } from '../utils/campaignState';
+import { saveCampaign, loadCampaign, updateCampaign } from '../utils/campaignState';
 
 import MainAppBar from '../components/MainAppBar';
 import Sidebar from '../components/Sidebar';
@@ -99,13 +43,7 @@ import Campaign from '../components/Campaign';
 import ImageUploadStep from '../components/ImageUploadStep';
 import MemorialDescritivoModal from '../components/MemorialDescritivoModal';
 import {
-  generateCampaignContent,
-  generateCampaignImage,
-  generateFormattedContent,
-  generateFollowupPlan,
-  generateFollowupPosts,
-  generateIAContent,
-  generateColorPalette,
+  generateCampaignContent, generateCampaignImage, generateFormattedContent, generateFollowupPlan, generateFollowupPosts, generateIAContent, generateColorPalette,
 } from '../utils/generationHandlers.js';
 import { exportCsv, exportHtml } from '../utils/exportUtils.js';
 import { downloadExampleCsv } from '../utils/fileUtils.js';
@@ -116,7 +54,7 @@ import { lightTheme, darkTheme } from '../theme.js';
 function HomePage() {
   const { user } = useUserAuth();
 
-  // All component state
+  // Component State
   const [activeStep, setActiveStep] = useState(0);
   const [darkMode, setDarkMode] = useState(() => {
     const savedMode = localStorage.getItem('darkMode');
@@ -188,12 +126,7 @@ function HomePage() {
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
 
-  // --- State Management ---
-
-  const getAppState = () => ({
-    activeStep, darkMode, sidebarOpen, csvData, csvHeaders, backgroundImage, colorPalette, standardsColors, problema, solucao, isGeneratingCampaign, campaignContent, campaignGenerationFailed, generationError, editingField, persona, autor, instrucoes, formato, aspectRatio, generatedImageUrl, isGeneratingImage, conteudoMedio, conteudoPequeno, isGeneratingSummaryMedio, isGeneratingSummaryPequeno, conteudoFormatado, isGeneratingConteudoFormatado, followupPosts, isGeneratingFollowup, followupPostsQuantity, editingFollowup, isScheduled, scheduleDate, weeklySchedule, selectedProfile, selectedImages, selectedVideos, inputMethod, promptNumRecords, promptText, fieldPositions, fieldStyles, displayedImageSize, originalImageSize, generatedImagesData, generatedAudioData, generatedVideosData, imageFilters, brandElements
-  });
-
+  const getAppState = () => ({ activeStep, darkMode, sidebarOpen, csvData, csvHeaders, backgroundImage, colorPalette, standardsColors, problema, solucao, campaignContent, persona, autor, instrucoes, formato, aspectRatio, generatedImageUrl, conteudoMedio, conteudoPequeno, followupPosts, followupPostsQuantity, isScheduled, scheduleDate, weeklySchedule, selectedProfile, selectedImages, selectedVideos, inputMethod, promptNumRecords, promptText, fieldPositions, fieldStyles, displayedImageSize, originalImageSize, generatedImagesData, generatedAudioData, generatedVideosData, imageFilters, brandElements });
   const applyAppState = (state) => {
     if (!state) return;
     setActiveStep(state.activeStep ?? 0);
@@ -206,28 +139,17 @@ function HomePage() {
     setStandardsColors(state.standardsColors ?? []);
     setProblema(state.problema ?? '');
     setSolucao(state.solucao ?? '');
-    setIsGeneratingCampaign(state.isGeneratingCampaign ?? false);
     setCampaignContent(state.campaignContent ?? null);
-    setCampaignGenerationFailed(state.campaignGenerationFailed ?? false);
-    setGenerationError(state.generationError ?? '');
-    setEditingField(state.editingField ?? null);
     setPersona(state.persona ?? {});
     setAutor(state.autor ?? {});
     setInstrucoes(state.instrucoes ?? '');
     setFormato(state.formato ?? '');
     setAspectRatio(state.aspectRatio ?? '1:1');
     setGeneratedImageUrl(state.generatedImageUrl ?? null);
-    setIsGeneratingImage(state.isGeneratingImage ?? false);
     setConteudoMedio(state.conteudoMedio ?? '');
     setConteudoPequeno(state.conteudoPequeno ?? '');
-    setIsGeneratingSummaryMedio(state.isGeneratingSummaryMedio ?? false);
-    setIsGeneratingSummaryPequeno(state.isGeneratingSummaryPequeno ?? false);
-    setConteudoFormatado(state.conteudoFormatado ?? '');
-    setIsGeneratingConteudoFormatado(state.isGeneratingConteudoFormatado ?? false);
     setFollowupPosts(state.followupPosts ?? []);
-    setIsGeneratingFollowup(state.isGeneratingFollowup ?? false);
     setFollowupPostsQuantity(state.followupPostsQuantity ?? 5);
-    setEditingFollowup(state.editingFollowup ?? null);
     setIsScheduled(state.isScheduled ?? false);
     setScheduleDate(state.scheduleDate ? new Date(state.scheduleDate) : new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
     setWeeklySchedule(state.weeklySchedule ?? {});
@@ -248,7 +170,39 @@ function HomePage() {
     setBrandElements(state.brandElements ?? []);
   };
 
-  // --- Effects ---
+  const handleSaveCampaign = async (name) => {
+    const appState = getAppState();
+    setIsLoading(true);
+    try {
+      if (currentCampaign) {
+        const updated = await updateCampaign(currentCampaign.id, name, appState);
+        toast.success(`Campaign "${name}" updated.`);
+        setCurrentCampaign(updated);
+      } else {
+        const newCampaign = await saveCampaign(name, appState);
+        toast.success(`Campaign "${name}" saved.`);
+        setCurrentCampaign(newCampaign);
+      }
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLoadCampaign = async (id) => {
+    setIsLoading(true);
+    try {
+      const loadedState = await loadCampaign(id);
+      applyAppState(loadedState);
+      setCurrentCampaign({ id, name: loadedState.campaignContent?.titulo || 'Untitled' });
+      toast.success(`Campaign loaded successfully!`);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const loadCampaignStandards = useCallback(() => {
     const { persona: personaData, autor: autorData, instrucoes: instrucoesData, formato: formatoData, colors: colorsData } = getCampaignPrompt();
@@ -271,7 +225,7 @@ function HomePage() {
         await loadSettingsFromDb();
         const apiKey = getGeminiApiKey();
         if (apiKey) geminiAPI.initialize(apiKey);
-        toast.success("Your cloud settings have been loaded.");
+        toast.info("Your cloud settings have been loaded.");
       } catch (error) {
         toast.error(`Could not load your settings: ${error.message}`);
       }
@@ -295,51 +249,12 @@ function HomePage() {
     }
   }, [activeStep, campaignContent]);
 
-  // --- Handlers ---
-
-  const handleSaveCampaign = async (name) => {
-    const appState = getAppState();
-    setIsLoading(true);
-    try {
-      if (currentCampaign) {
-        const updated = await updateCampaign(currentCampaign.id, name, appState);
-        toast.success(`Campaign "${name}" updated successfully!`);
-        setCurrentCampaign(updated);
-      } else {
-        const newCampaign = await saveCampaign(name, appState);
-        toast.success(`Campaign "${name}" saved successfully!`);
-        setCurrentCampaign(newCampaign);
-      }
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLoadCampaign = async (id) => {
-    setIsLoading(true);
-    try {
-      const loadedState = await loadCampaign(id);
-      applyAppState(loadedState);
-      const campaignMeta = { id, name: loadedState.campaignContent?.titulo || 'Untitled' };
-      setCurrentCampaign(campaignMeta);
-      toast.success(`Campaign "${campaignMeta.name}" loaded successfully!`);
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // ... all other original handlers from the app ...
-  const combinedPalette = useMemo(() => { const allColors = [...(standardsColors.map(c => c.hex) || []), ...(colorPalette || [])]; return [...new Set(allColors)]; }, [colorPalette, standardsColors]);
   const steps = [ { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Upload da Imagem', description: 'Carregue a imagem de fundo PNG/JPG.', icon: ImageIcon }, { label: 'Posicionar e Formatar', description: 'Posicione os campos e configure a formatação.', icon: Palette }, { label: 'Gerar Imagens', description: 'Gere as imagens finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish } ];
-  const parseCsvFile = async (file) => { if (!file) return; try { const { data: newCsvData, headers: newHeaders } = await parseCsv(file); if (newCsvData && newCsvData.length > 0) { setCsvData(newCsvData); setCsvHeaders(newHeaders); const updatedFieldPositions = {}; const updatedFieldStyles = {}; const defaultStylesBase = { fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: '#000000', textStroke: false, strokeColor: '#ffffff', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' }; newHeaders.forEach((header, index) => { if (fieldPositions[header]) { updatedFieldPositions[header] = fieldPositions[header]; } else { updatedFieldPositions[header] = { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true }; } if (fieldStyles[header]) { updatedFieldStyles[header] = fieldStyles[header]; } else { if (index === 0) { updatedFieldStyles[header] = { ...defaultStylesBase, fontFamily: 'Anton', fontSize: 72 }; } else { updatedFieldStyles[header] = { ...defaultStylesBase }; } } }); setFieldPositions(updatedFieldPositions); setFieldStyles(updatedFieldStyles); } } catch (error) { toast.error(error.message || 'Ocorreu um erro desconhecido ao processar o arquivo CSV.'); } };
+  const parseCsvFile = async (file) => { if (!file) return; try { const { data: newCsvData, headers: newHeaders } = await parseCsv(file); if (newCsvData && newCsvData.length > 0) { setCsvData(newCsvData); setCsvHeaders(newHeaders); const updatedFieldPositions = {}; const updatedFieldStyles = {}; const defaultStylesBase = { fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: '#000000', textStroke: false, strokeColor: '#ffffff', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' }; newHeaders.forEach((header, index) => { updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true }; if (fieldStyles[header]) { updatedFieldStyles[header] = fieldStyles[header]; } else { if (index === 0) { updatedFieldStyles[header] = { ...defaultStylesBase, fontFamily: 'Anton', fontSize: 72 }; } else { updatedFieldStyles[header] = { ...defaultStylesBase }; } } }); setFieldPositions(updatedFieldPositions); setFieldStyles(updatedFieldStyles); } } catch (error) { toast.error(error.message || 'Ocorreu um erro desconhecido ao processar o arquivo CSV.'); } };
   const handleCSVUpload = (event) => { const file = event.target.files[0]; parseCsvFile(file); };
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
-  const updateImageAndPalette = (imageUrl) => { setBackgroundImage(imageUrl); const img = new Image(); img.crossOrigin = 'Anonymous'; img.onload = () => { setOriginalImageSize({ width: img.width, height: img.height }); try { const colorThief = new ColorThief(); const palette = colorThief.getPalette(img, 5); setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`)); } catch (error) { console.error("Error extracting color palette:", error); setColorPalette([]); } }; img.onerror = (err) => { console.error("Error loading image to extract colors:", err); setBackgroundImage(null); setColorPalette([]); } img.src = imageUrl; };
+  const updateImageAndPalette = (imageUrl) => { setBackgroundImage(imageUrl); const img = new Image(); img.crossOrigin = 'Anonymous'; img.onload = () => { setOriginalImageSize({ width: img.width, height: img.height }); try { const colorThief = new ColorThief(); const palette = colorThief.getPalette(img, 5); setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`)); } catch (error) { console.error("Error extracting color palette:", error); setColorPalette([]); } }; img.onerror = (err) => { console.error("Error loading image to extract colors:", err); setBackgroundImage(null); setColorPalette([]); }; img.src = imageUrl; };
   const parseImageFile = (file) => { if (file) { const reader = new FileReader(); reader.onload = (e) => { const imageUrl = e.target.result; updateImageAndPalette(imageUrl); const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar'); if (etapaPosicionarFormatarIndex !== -1) { setActiveStep(etapaPosicionarFormatarIndex); } }; reader.readAsDataURL(file); } };
   const handleImageUpload = (event) => { const file = event.target.files[0]; parseImageFile(file); };
   const handleImageDrop = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(false); const file = event.dataTransfer.files[0]; parseImageFile(file); };
@@ -371,42 +286,12 @@ function HomePage() {
   return (
     <ThemeProvider theme={currentTheme}>
       <CssBaseline />
-      <Toaster richColors position="top-center" />
       <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-        <MainAppBar
-          darkMode={darkMode}
-          setDarkMode={setDarkMode}
-          setShowSetupModal={setShowSetupModal}
-          setShowCampaignStandardsModal={setShowCampaignStandardsModal}
-          setShowMemorialDescritivoModal={setShowMemorialDescritivoModal}
-          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-          isMobile={isMobile}
-          onSaveCampaign={() => setShowSaveModal(true)}
-          onLoadCampaign={() => setShowLoadModal(true)}
-        />
-        <Sidebar
-          sidebarOpen={sidebarOpen}
-          darkMode={darkMode}
-          steps={steps}
-          activeStep={activeStep}
-          setActiveStep={setActiveStep}
-          csvData={csvData}
-          backgroundImage={backgroundImage}
-          visibleFields={visibleFields}
-          totalFields={totalFields}
-          styledFields={styledFields}
-          variant={isMobile ? 'temporary' : 'persistent'}
-          onClose={() => setSidebarOpen(false)}
-          onStepClick={handleSidebarStepClick}
-        />
-        {!isMobile && (
-          <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out', backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', '&:hover': { backgroundColor: 'background.default', }, }} >
-            {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
-          </Fab>
-        )}
-        <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, transition: theme.transitions.create('margin', { easing: theme.transitions.easing.sharp, duration: theme.transitions.duration.leavingScreen, }), }} >
+        <MainAppBar darkMode={darkMode} setDarkMode={setDarkMode} setShowSetupModal={setShowSetupModal} setShowCampaignStandardsModal={setShowCampaignStandardsModal} setShowMemorialDescritivoModal={setShowMemorialDescritivoModal} onMenuClick={() => setSidebarOpen(!sidebarOpen)} isMobile={isMobile} onSaveCampaign={() => setShowSaveModal(true)} onLoadCampaign={() => setShowLoadModal(true)} />
+        <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImage={backgroundImage} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
+        {!isMobile && <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out', backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', '&:hover': { backgroundColor: 'background.default' } }} >{sidebarOpen ? <ChevronLeft /> : <ChevronRight />}</Fab>}
+        <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, transition: theme.transitions.create('margin', { easing: theme.transitions.easing.sharp, duration: theme.transitions.duration.leavingScreen }) }} >
           <Toolbar />
-          {/* Render steps */}
           <div hidden={activeStep !== 0}><Container maxWidth="lg"><Campaign {...campaignData} setProblema={setProblema} setSolucao={setSolucao} isGeneratingCampaign={isGeneratingCampaign} handleGenerateCampaignContent={handleGenerateCampaignContent} handleResetCampaign={handleResetCampaign} handleExportHtml={() => exportHtml(campaignData)} editingField={editingField} setEditingField={setEditingField} conteudoMedio={conteudoMedio} setConteudoMedio={setConteudoMedio} isGeneratingSummaryMedio={isGeneratingSummaryMedio} handleGenerateSummary={handleGenerateSummary} conteudoPequeno={conteudoPequeno} setConteudoPequeno={setConteudoPequeno} isGeneratingSummaryPequeno={isGeneratingSummaryPequeno} conteudoFormatado={conteudoFormatado} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} setCampaignContent={setCampaignContent} onEditFollowup={handleEditFollowup} /></Container></div>
           <div hidden={activeStep !== 1}><PostsCurtosStep steps={steps} inputMethod={inputMethod} setInputMethod={setInputMethod} handleDrop={handleDrop} handleDragOver={handleDragOver} fileInputRef={fileInputRef} handleCSVUpload={handleCSVUpload} downloadExampleCsv={downloadExampleCsv} getGeminiApiKey={getGeminiApiKey} setShowSetupModal={setShowSetupModal} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} handleGenerateIAContent={handleGenerateIAContent} isGenerating={isGenerating} csvData={csvData} csvHeaders={csvHeaders} onDadosAlterados={handleDadosAlterados} darkMode={darkMode} exportCsv={exportCsv} /></div>
           <div hidden={activeStep !== 2}><ImageUploadStep steps={steps} isDraggingOverImage={isDraggingOverImage} handleImageDrop={handleImageDrop} handleImageDragOver={handleImageDragOver} handleImageDragEnter={handleImageDragEnter} handleImageDragLeave={handleImageDragLeave} imageInputRef={imageInputRef} handleImageUpload={handleImageUpload} backgroundImage={backgroundImage} /></div>
