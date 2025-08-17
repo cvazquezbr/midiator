@@ -1,5 +1,5 @@
 import { withAuth } from './middleware/auth.js';
-import { query } from '../db.js';
+import { query } from './db.js';
 
 const parseBody = async (req) => {
   let body = '';
