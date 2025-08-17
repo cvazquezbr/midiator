@@ -197,31 +197,31 @@ const Publisher = ({
       try {
         const profiles = await getLinkedInProfiles();
 
-        // Defensively clean the data received from the API
-        if (Array.isArray(profiles)) {
-          const cleanedProfiles = profiles.filter(p => p && typeof p.urn === 'string' && typeof p.name === 'string');
-          setLinkedinProfiles(cleanedProfiles);
+        // Ensure profiles is an array before proceeding.
+        if (!Array.isArray(profiles)) {
+          console.warn("LinkedIn API did not return a valid array of profiles.", profiles);
+          setLinkedinProfiles([]);
+          return;
+        }
 
-          // Set a default profile only if one isn't already selected and the first cleaned profile is valid
-          if (cleanedProfiles.length > 0 && !selectedProfile) {
-            setSelectedProfile(cleanedProfiles[0].urn);
-          }
-        } else {
-            setLinkedinProfiles([]);
-            // It's a valid case for a user to have no profiles, so a console warning might be too noisy.
-            // console.warn("LinkedIn API did not return a valid array of profiles or the user has no profiles.");
+        const cleanedProfiles = profiles.filter(p => p && typeof p.urn === 'string' && typeof p.name === 'string');
+        setLinkedinProfiles(cleanedProfiles);
+
+        // Set a default profile only if the cleaned list is not empty and no profile is already selected.
+        if (cleanedProfiles.length > 0 && !selectedProfile) {
+          setSelectedProfile(cleanedProfiles[0].urn);
         }
 
       } catch (error) {
         console.error("Erro ao buscar perfis do LinkedIn:", error);
         setProfileError(error.message);
-        setLinkedinProfiles([]); // Ensure profiles are cleared on error
+        setLinkedinProfiles([]); // Also clear profiles on error
       } finally {
         setIsLoadingProfiles(false);
       }
     };
     fetchProfiles();
-  }, [setSelectedProfile]);
+  }, []); // Run only once on component mount
 
   // Effect to clear selection if media data is removed.
   useEffect(() => {
