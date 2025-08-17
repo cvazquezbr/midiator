@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { LinkedIn } from '@mui/icons-material';
 import {
   Container,
   Paper,
@@ -89,10 +88,8 @@ import Publisher from '../components/Publisher';
 import SetupModal from '../components/SetupModal';
 import CampaignStandardsModal from '../components/CampaignStandardsModal';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
-import { saveLinkedinConfig } from '../utils/linkedinCredentials';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
 import geminiAPI from '../utils/geminiAPI';
-import GoogleIcon from '@mui/icons-material/Google';
 import { stripHtml } from '../lib/utils';
 import '../App.css';
 import LoadingDialog from '../components/LoadingDialog';
@@ -109,14 +106,12 @@ import {
   generateIAContent,
   generateColorPalette,
 } from '../utils/generationHandlers.js';
-import { saveCampaignState, loadCampaignState } from '../utils/campaignState.js';
 import { exportCsv, exportHtml } from '../utils/exportUtils.js';
 import { downloadExampleCsv } from '../utils/fileUtils.js';
 import { parseIaResponseToCsvData } from '../utils/iaResponseParser.js';
 import { parseCsv } from '../utils/csvParser.js';
 import { lightTheme, darkTheme } from '../theme.js';
 
-// Changed function name from App to HomePage
 function HomePage() {
   const { user } = useUserAuth();
   const [activeStep, setActiveStep] = useState(0);
@@ -130,10 +125,9 @@ function HomePage() {
   const [csvData, setCsvData] = useState([]);
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [backgroundImage, setBackgroundImage] = useState(null);
-  const [colorPalette, setColorPalette] = useState([]); // Colors from image
-  const [standardsColors, setStandardsColors] = useState([]); // Colors from campaign standards
+  const [colorPalette, setColorPalette] = useState([]);
+  const [standardsColors, setStandardsColors] = useState([]);
 
-  // Estados para a Campanha
   const [problema, setProblema] = useState('');
   const [solucao, setSolucao] = useState('');
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
@@ -159,18 +153,14 @@ function HomePage() {
   const [followupPostsQuantity, setFollowupPostsQuantity] = useState(5);
   const [editingFollowup, setEditingFollowup] = useState(null);
 
-  // Publisher State
   const [isScheduled, setIsScheduled] = useState(false);
-  const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 24 * 60 * 60 * 1000)); // Default to tomorrow
-  const [weeklySchedule, setWeeklySchedule] = useState({}); // { 0: '09:00', 1: '10:00', ... }
+  const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
+  const [weeklySchedule, setWeeklySchedule] = useState({});
   const [selectedProfile, setSelectedProfile] = useState('');
   const [selectedImages, setSelectedImages] = useState({});
   const [selectedVideos, setSelectedVideos] = useState({});
 
-
-  // Estados para a Geração com IA
   const [inputMethod, setInputMethod] = useState('ia');
-  // const [selectedApiModel, setSelectedApiModel] = useState('deepseek'); // Removed, defaulting to gemini
   const [promptNumRecords, setPromptNumRecords] = useState(10);
   const [promptText, setPromptText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -188,45 +178,35 @@ function HomePage() {
 
   useEffect(() => {
     loadCampaignStandards();
-
-    // Initialize Gemini API on app load
     const apiKey = getGeminiApiKey();
     if (apiKey) {
       geminiAPI.initialize(apiKey);
     }
   }, [loadCampaignStandards]);
 
-  // Load user settings from DB on mount
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        console.log("Attempting to load settings from database for user:", user?.email);
         await loadSettingsFromDb();
-        // After loading, we need to re-initialize components that depend on these settings.
-        // For example, re-initializing the Gemini API if the key was just loaded.
         const apiKey = getGeminiApiKey();
         if (apiKey) {
           geminiAPI.initialize(apiKey);
         }
         toast.success("Your cloud settings have been loaded.");
       } catch (error) {
-        console.error("Failed to load settings from database:", error);
         toast.error(`Could not load your settings: ${error.message}`);
       }
     };
-
     if (user) {
       loadSettings();
     }
-    // This effect should run once when the user object becomes available.
   }, [user]);
 
   const combinedPalette = useMemo(() => {
-    // This palette is used for the color picker in the field formatter.
-    // It should combine colors from the standards and colors extracted from the image.
     const allColors = [...(standardsColors.map(c => c.hex) || []), ...(colorPalette || [])];
     return [...new Set(allColors)];
   }, [colorPalette, standardsColors]);
+
   const [fieldPositions, setFieldPositions] = useState({});
   const [fieldStyles, setFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
@@ -244,19 +224,10 @@ function HomePage() {
     blur: 0,
     opacity: 100,
   });
-  const [brandElements, setBrandElements] = useState([]); // State for brand elements
+  const [brandElements, setBrandElements] = useState([]);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
-
-  // The saveStateToSessionStorage useCallback is removed.
-
-  // The useEffect for loadStateFromSession is removed.
-
-  // The useEffect that called saveStateToSessionStorage is removed.
-
-
-
 
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -276,8 +247,6 @@ function HomePage() {
     }
   }, [isMobile]);
 
-  // The useEffect for handleLinkedinCallback is removed as it was part of the old session management.
-
   useEffect(() => {
     if (activeStep === 1 && campaignContent) {
       const { titulo, conteudo, cta } = campaignContent;
@@ -287,115 +256,46 @@ function HomePage() {
   }, [activeStep, campaignContent]);
 
   const steps = [
-    {
-      label: 'Campanha',
-      description: 'Criar o material de referência para a campanha.',
-      icon: CampaignIcon,
-    },
-    {
-      label: 'Posts Curtos',
-      description: 'Gere, carregue ou edite os posts para redes sociais.',
-      icon: InsertDriveFileOutlined
-    },
-    {
-      label: 'Upload da Imagem',
-      description: 'Carregue a imagem de fundo PNG/JPG.',
-      icon: ImageIcon
-    },
-    {
-      label: 'Posicionar e Formatar',
-      description: 'Posicione os campos e configure a formatação.',
-      icon: Palette
-    },
-    {
-      label: 'Gerar Imagens',
-      description: 'Gere as imagens finais.',
-      icon: FormatBold
-    },
-    {
-      label: 'Gerar Áudio',
-      description: 'Crie a narração para os slides.',
-      icon: Audiotrack
-    },
-    {
-      label: 'Gerar Vídeo',
-      description: 'Crie um vídeo a partir das imagens geradas.',
-      icon: Movie
-    },
-    {
-      label: 'Publicar',
-      description: 'Publique o conteúdo no WordPress.',
-      icon: Publish
-    }
+    { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon },
+    { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined },
+    { label: 'Upload da Imagem', description: 'Carregue a imagem de fundo PNG/JPG.', icon: ImageIcon },
+    { label: 'Posicionar e Formatar', description: 'Posicione os campos e configure a formatação.', icon: Palette },
+    { label: 'Gerar Imagens', description: 'Gere as imagens finais.', icon: FormatBold },
+    { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack },
+    { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie },
+    { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish }
   ];
-  // Função para ler arquivo CSV
+
   const parseCsvFile = async (file) => {
     if (!file) return;
-
     try {
       const { data: newCsvData, headers: newHeaders } = await parseCsv(file);
-
       if (newCsvData && newCsvData.length > 0) {
         setCsvData(newCsvData);
         setCsvHeaders(newHeaders);
-
         const updatedFieldPositions = {};
         const updatedFieldStyles = {};
-
-        const defaultStylesBase = {
-          fontFamily: 'Inter',
-          fontSize: 24,
-          fontWeight: 'normal',
-          fontStyle: 'normal',
-          textDecoration: 'none',
-          color: '#000000',
-          textStroke: false,
-          strokeColor: '#ffffff',
-          strokeWidth: 2,
-          textShadow: false,
-          shadowColor: '#000000',
-          shadowBlur: 4,
-          shadowOffsetX: 2,
-          shadowOffsetY: 2,
-          textAlign: 'left',
-          verticalAlign: 'top'
-        };
-
+        const defaultStylesBase = { fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: '#000000', textStroke: false, strokeColor: '#ffffff', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' };
         newHeaders.forEach((header, index) => {
           if (fieldPositions[header]) {
             updatedFieldPositions[header] = fieldPositions[header];
           } else {
-            updatedFieldPositions[header] = {
-              x: 10 + (index % 5) * 18,
-              y: 10 + Math.floor(index / 5) * 12,
-              width: 15,
-              height: 10,
-              visible: true
-            };
+            updatedFieldPositions[header] = { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true };
           }
-
           if (fieldStyles[header]) {
             updatedFieldStyles[header] = fieldStyles[header];
           } else {
             if (index === 0) {
-              updatedFieldStyles[header] = {
-                ...defaultStylesBase,
-                fontFamily: 'Anton',
-                fontSize: 72,
-              };
+              updatedFieldStyles[header] = { ...defaultStylesBase, fontFamily: 'Anton', fontSize: 72 };
             } else {
               updatedFieldStyles[header] = { ...defaultStylesBase };
             }
           }
         });
-
         setFieldPositions(updatedFieldPositions);
         setFieldStyles(updatedFieldStyles);
-        // Não avança mais o passo automaticamente, a UI vai mudar
-        // setActiveStep(2);
       }
     } catch (error) {
-      console.error('Erro ao processar CSV:', error);
       toast.error(error.message || 'Ocorreu um erro desconhecido ao processar o arquivo CSV.');
     }
   };
@@ -419,7 +319,6 @@ function HomePage() {
 
   const updateImageAndPalette = (imageUrl) => {
     setBackgroundImage(imageUrl);
-
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
@@ -441,13 +340,11 @@ function HomePage() {
     img.src = imageUrl;
   };
 
-  // Função para processar o arquivo de imagem de fundo
   const parseImageFile = (file) => {
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const imageUrl = e.target.result;
-        // A composição não é mais feita aqui. Apenas atualiza a imagem de fundo.
         updateImageAndPalette(imageUrl);
         const etapaPosicionarFormatarIndex = steps.findIndex(step => step.label === 'Posicionar e Formatar');
         if (etapaPosicionarFormatarIndex !== -1) {
@@ -458,13 +355,11 @@ function HomePage() {
     }
   };
 
-  // Função para upload da imagem de fundo via clique
   const handleImageUpload = (event) => {
     const file = event.target.files[0];
     parseImageFile(file);
   };
 
-  // Funções para drag and drop da imagem de fundo
   const handleImageDrop = (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -500,26 +395,18 @@ function HomePage() {
 
   const canProceedToStep = () => {
     switch (activeStep) {
-        case 0: // Campanha
-            return campaignContent !== null;
-        case 1: // Posts Curtos
-            return csvData.length > 0;
-        case 2: // Upload Imagem
-            return backgroundImage !== null;
-        case 3: // Posicionar e Formatar
-            return true;
-        // Adicione outros casos conforme necessário
-        default:
-            return true;
+        case 0: return campaignContent !== null;
+        case 1: return csvData.length > 0;
+        case 2: return backgroundImage !== null;
+        case 3: return true;
+        default: return true;
     }
   };
 
-  // Calcular estatísticas dos campos
   const getFieldStats = () => {
     const visibleFields = Object.values(fieldPositions).filter(pos => pos.visible).length;
     const totalFields = csvHeaders.length;
     const styledFields = Object.keys(fieldStyles).length;
-
     return { visibleFields, totalFields, styledFields };
   };
 
@@ -527,40 +414,23 @@ function HomePage() {
 
   const handleZIndexChange = (elementId, action) => {
     if (!elementId) return;
-
     let allElements = [
       ...Object.entries(fieldPositions).map(([id, pos]) => ({ id, zIndex: pos.zIndex, isBrand: false })),
       ...brandElements.map(el => ({ id: el.id, zIndex: el.zIndex, isBrand: true })),
     ];
-
     allElements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-
     const currentIndex = allElements.findIndex(el => el.id === elementId);
     if (currentIndex === -1) return;
-
     const [currentElement] = allElements.splice(currentIndex, 1);
-
     switch (action) {
-      case 'front':
-        allElements.push(currentElement);
-        break;
-      case 'back':
-        allElements.unshift(currentElement);
-        break;
-      case 'forward':
-        allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement);
-        break;
-      case 'backward':
-        allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement);
-        break;
-      default:
-        allElements.splice(currentIndex, 0, currentElement);
-        return;
+      case 'front': allElements.push(currentElement); break;
+      case 'back': allElements.unshift(currentElement); break;
+      case 'forward': allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement); break;
+      case 'backward': allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement); break;
+      default: allElements.splice(currentIndex, 0, currentElement); return;
     }
-
     const newPositions = { ...fieldPositions };
     const newBrandElements = [...brandElements];
-
     allElements.forEach((el, index) => {
       el.zIndex = index;
       if (el.isBrand) {
@@ -572,14 +442,9 @@ function HomePage() {
         }
       }
     });
-
     setFieldPositions(newPositions);
     setBrandElements(newBrandElements);
   };
-
-  // Outras funções mantidas do código original...
-
-  // The handleSaveState and handleLoadStateFromFile functions are removed.
 
   const handleSidebarStepClick = (index) => {
     setActiveStep(index);
@@ -588,63 +453,24 @@ function HomePage() {
     }
   };
 
-  // The handleLoadTemplateClick and handleSaveTemplateClick are removed.
   const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
     setCsvData(novosRegistros);
     setCsvHeaders(novasColunas);
-
     const updatedFieldPositions = {};
     const updatedFieldStyles = {};
-    const defaultStylesBase = {
-      fontFamily: 'Inter',
-      fontSize: 24,
-      fontWeight: 'normal',
-      fontStyle: 'normal',
-      textDecoration: 'none',
-      color: darkMode ? '#FFFFFF' : '#000000',
-      textStroke: false,
-      strokeColor: darkMode ? '#000000' : '#FFFFFF',
-      strokeWidth: 2,
-      textShadow: false,
-      shadowColor: '#000000',
-      shadowBlur: 4,
-      shadowOffsetX: 2,
-      shadowOffsetY: 2,
-      textAlign: 'left',
-      verticalAlign: 'top'
-    };
-
+    const defaultStylesBase = { fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false, strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' };
     novasColunas.forEach((header, index) => {
-      updatedFieldPositions[header] = fieldPositions[header] || {
-        x: 10 + (index % 5) * 18,
-        y: 10 + Math.floor(index / 5) * 12,
-        width: 15,
-        height: 10,
-        visible: true
-      };
+      updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true };
       updatedFieldStyles[header] = fieldStyles[header] || { ...defaultStylesBase };
     });
-
     setFieldPositions(updatedFieldPositions);
     setFieldStyles(updatedFieldStyles);
-
     setGeneratedImagesData(prevGeneratedImages => {
       if (prevGeneratedImages.length !== novosRegistros.length) {
-        const rebuiltGeneratedImages = novosRegistros.map((record, index) => ({
-          index,
-          record,
-          blob: null,
-          url: null,
-          filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-          backgroundImage: backgroundImage,
-        }));
+        const rebuiltGeneratedImages = novosRegistros.map((record, index) => ({ index, record, blob: null, url: null, filename: `midiator_${String(index + 1).padStart(3, '0')}.png`, backgroundImage: backgroundImage, }));
         return rebuiltGeneratedImages;
       } else {
-        const updatedGeneratedImages = prevGeneratedImages.map((oldImage, index) => ({
-          ...oldImage,
-          record: novosRegistros[index],
-          index: index,
-        }));
+        const updatedGeneratedImages = prevGeneratedImages.map((oldImage, index) => ({ ...oldImage, record: novosRegistros[index], index: index, }));
         return updatedGeneratedImages;
       }
     });
@@ -657,7 +483,6 @@ function HomePage() {
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => {
     setCsvData(prevCsvData => {
       if (recordIndex < 0 || recordIndex >= prevCsvData.length) {
-        console.error("handleThumbnailRecordTextUpdate: recordIndex out of bounds", recordIndex);
         return prevCsvData;
       }
       return prevCsvData.map((row, idx) => {
@@ -673,18 +498,15 @@ function HomePage() {
     setIsGeneratingCampaign(true);
     setCampaignGenerationFailed(false);
     setGenerationError('');
-
     setTimeout(async () => {
       try {
         const normalizedContent = await generateCampaignContent({ problema, solucao });
         setCampaignContent(normalizedContent);
-
         if (!regenerate) {
           setConteudoMedio('');
           setConteudoPequeno('');
           setConteudoFormatado('');
           setGeneratedImageUrl(null);
-
           const [imageSuccess] = await Promise.all([
             handleGenerateImage(normalizedContent),
             handleGenerateSummary(1800, normalizedContent),
@@ -692,15 +514,12 @@ function HomePage() {
             handleGenerateFormattedContent(normalizedContent),
             handleGenerateFollowupPosts(normalizedContent),
           ]);
-
           if (!imageSuccess) {
             setCampaignGenerationFailed(true);
             setGenerationError("A geração de texto foi bem-sucedida, mas a criação da imagem falhou. Você pode tentar gerar a imagem novamente.");
           }
         }
       } catch (error) {
-        // This will now only catch errors from text generation
-        console.error("Erro ao gerar conteúdo da campanha:", error);
         const errorMessage = error.message || 'Ocorreu um erro desconhecido.';
         toast.error(`Ocorreu um erro ao gerar o conteúdo da campanha: ${errorMessage}`);
         setCampaignContent(null);
@@ -724,7 +543,6 @@ function HomePage() {
       updateImageAndPalette(imageUrl);
       return true;
     } catch (imageError) {
-      console.error("Erro ao gerar imagem:", imageError);
       toast.error(`Ocorreu um erro ao gerar a imagem da campanha: ${imageError.message}`);
       setGeneratedImageUrl(null);
       return false;
@@ -738,10 +556,8 @@ function HomePage() {
       alert("Por favor, gere o conteúdo principal primeiro.");
       return;
     }
-
     const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno;
     setLoading(true);
-
     if (!geminiAPI.isInitialized) {
       const apiKey = getGeminiApiKey();
       if (!apiKey) {
@@ -751,18 +567,15 @@ function HomePage() {
       }
       geminiAPI.initialize(apiKey);
     }
-
     try {
       const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`;
       const summary = await geminiAPI.generateContent(summaryPrompt);
-
       if (targetLength === 1800) {
         setConteudoMedio(summary);
       } else {
         setConteudoPequeno(summary);
       }
     } catch (error) {
-      console.error(`Erro ao gerar resumo de ${targetLength} caracteres:`, error);
       alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`);
     } finally {
       setLoading(false);
@@ -779,7 +592,6 @@ function HomePage() {
       const finalContent = await generateFormattedContent({ content });
       setConteudoFormatado(finalContent);
     } catch (error) {
-      console.error(`Erro ao gerar conteúdo formatado:`, error);
       toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`);
     } finally {
       setIsGeneratingConteudoFormatado(false);
@@ -793,15 +605,10 @@ function HomePage() {
     }
     setIsGeneratingFollowup(true);
     try {
-      // Step 1: Generate the plan
       const plan = await generateFollowupPlan({ content, followupPostsQuantity });
-
-      // Step 2: Generate the posts based on the plan
       const posts = await generateFollowupPosts({ content, plan });
-
       setFollowupPosts(posts);
     } catch (error) {
-      console.error(`Erro ao gerar posts de follow-up:`, error);
       toast.error(`Ocorreu um erro ao gerar os posts de follow-up: ${error.message}`);
     } finally {
       setIsGeneratingFollowup(false);
@@ -810,8 +617,6 @@ function HomePage() {
 
   const handleResetCampaign = () => {
     setCampaignContent(null);
-    // setProblema(''); // Keep the problem
-    // setSolucao(''); // Keep the solution
     setGeneratedImageUrl(null);
     setConteudoMedio('');
     setConteudoPequeno('');
@@ -826,7 +631,6 @@ function HomePage() {
 
   const handleSaveFollowup = (newContent) => {
     if (editingFollowup === null) return;
-
     const updatedPosts = followupPosts.map((post, index) => {
       if (index === editingFollowup.index) {
         return { ...post, conteudo: newContent };
@@ -841,40 +645,23 @@ function HomePage() {
     setIsGenerating(true);
     try {
       const iaResponseText = await generateIAContent({ promptText, promptNumRecords });
-      const parsedResult = parseIaResponseToCsvData(iaResponseText); // This function stays in App.jsx
-
+      const parsedResult = parseIaResponseToCsvData(iaResponseText);
       if (parsedResult && parsedResult.data && parsedResult.data.length > 0) {
         setCsvData(parsedResult.data);
         setCsvHeaders(parsedResult.headers);
-
         const updatedFieldPositions = {};
         const updatedFieldStyles = {};
-        const defaultStylesBase = {
-          fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
-          textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
-          strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
-          shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
-          textAlign: 'left', verticalAlign: 'top'
-        };
-
+        const defaultStylesBase = { fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false, strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' };
         parsedResult.headers.forEach((header, index) => {
-          updatedFieldPositions[header] = {
-            x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12,
-            width: 15, height: 10, visible: true
-          };
+          updatedFieldPositions[header] = { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true };
           updatedFieldStyles[header] = { ...defaultStylesBase };
         });
         setFieldPositions(updatedFieldPositions);
         setFieldStyles(updatedFieldStyles);
-
-        // Não avança mais o passo automaticamente
-        // setActiveStep(2);
       } else {
         toast.error('Não foi possível processar a resposta da IA para o formato de tabela.');
-        console.log(`[App] Falha no parsing ou dados vazios. Resposta da API:`, iaResponseText, "Resultado do Parser:", parsedResult);
       }
     } catch (error) {
-      console.error(`Erro ao gerar conteúdo com IA:`, error);
       toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
     } finally {
       setIsGenerating(false);
@@ -910,7 +697,6 @@ function HomePage() {
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
           isMobile={isMobile}
         />
-
         <Sidebar
           sidebarOpen={sidebarOpen}
           darkMode={darkMode}
@@ -926,399 +712,69 @@ function HomePage() {
           onClose={() => setSidebarOpen(false)}
           onStepClick={handleSidebarStepClick}
         />
-
         {!isMobile && (
-          <Fab
-            size="small"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'}
-            sx={{
-              position: 'fixed',
-              top: '50%',
-              left: sidebarOpen ? 320 - 20 : 0,
-              transform: 'translateY(-50%)',
-              zIndex: (theme) => theme.zIndex.drawer + 1,
-              transition: 'left 0.2s ease-in-out',
-              backgroundColor: 'background.paper',
-              border: '1px solid',
-              borderColor: 'divider',
-              '&:hover': {
-                backgroundColor: 'background.default',
-              },
-            }}
-          >
+          <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out', backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', '&:hover': { backgroundColor: 'background.default', }, }} >
             {sidebarOpen ? <ChevronLeft /> : <ChevronRight />}
           </Fab>
         )}
-
-        {/* Main Content */}
-        <Box
-          component="main"
-          sx={{
-            flexGrow: 1,
-            p: { xs: 1, sm: 2, md: 3 },
-            transition: theme.transitions.create('margin', {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.leavingScreen,
-            }),
-          }}
-        >
+        <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, transition: theme.transitions.create('margin', { easing: theme.transitions.easing.sharp, duration: theme.transitions.duration.leavingScreen, }), }} >
           <Toolbar />
-          {/* Passo 0: Campanha */}
           <div hidden={activeStep !== 0}>
             <Container maxWidth="lg">
-              <Campaign
-                steps={steps}
-                problema={problema}
-              setProblema={setProblema}
-              solucao={solucao}
-              setSolucao={setSolucao}
-              followupPostsQuantity={followupPostsQuantity}
-              setFollowupPostsQuantity={setFollowupPostsQuantity}
-              aspectRatio={aspectRatio}
-              setAspectRatio={setAspectRatio}
-              isGeneratingCampaign={isGeneratingCampaign}
-              campaignContent={campaignContent}
-              campaignGenerationFailed={campaignGenerationFailed}
-              generationError={generationError}
-              handleGenerateCampaignContent={handleGenerateCampaignContent}
-              handleResetCampaign={handleResetCampaign}
-              handleExportHtml={() => exportHtml({
-                campaignContent,
-                backgroundImage,
-                followupPosts,
-                conteudoMedio,
-                conteudoPequeno,
-                conteudoFormatado
-              })}
-              editingField={editingField}
-              setEditingField={setEditingField}
-              conteudoMedio={conteudoMedio}
-              setConteudoMedio={setConteudoMedio}
-              isGeneratingSummaryMedio={isGeneratingSummaryMedio}
-              handleGenerateSummary={handleGenerateSummary}
-              conteudoPequeno={conteudoPequeno}
-              setConteudoPequeno={setConteudoPequeno}
-              isGeneratingSummaryPequeno={isGeneratingSummaryPequeno}
-              conteudoFormatado={conteudoFormatado}
-              isGeneratingConteudoFormatado={isGeneratingConteudoFormatado}
-              handleGenerateFormattedContent={handleGenerateFormattedContent}
-              followupPosts={followupPosts}
-              isGeneratingFollowup={isGeneratingFollowup}
-              handleGenerateFollowupPosts={handleGenerateFollowupPosts}
-              generatedImageUrl={generatedImageUrl}
-              isGeneratingImage={isGeneratingImage}
-              handleGenerateImage={handleGenerateImage}
-              setCampaignContent={setCampaignContent}
-              onEditFollowup={handleEditFollowup}
-            />
+              <Campaign steps={steps} problema={problema} setProblema={setProblema} solucao={solucao} setSolucao={setSolucao} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} isGeneratingCampaign={isGeneratingCampaign} campaignContent={campaignContent} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleGenerateCampaignContent={handleGenerateCampaignContent} handleResetCampaign={handleResetCampaign} handleExportHtml={() => exportHtml({ campaignContent, backgroundImage, followupPosts, conteudoMedio, conteudoPequeno, conteudoFormatado })} editingField={editingField} setEditingField={setEditingField} conteudoMedio={conteudoMedio} setConteudoMedio={setConteudoMedio} isGeneratingSummaryMedio={isGeneratingSummaryMedio} handleGenerateSummary={handleGenerateSummary} conteudoPequeno={conteudoPequeno} setConteudoPequeno={setConteudoPequeno} isGeneratingSummaryPequeno={isGeneratingSummaryPequeno} conteudoFormatado={conteudoFormatado} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} followupPosts={followupPosts} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} setCampaignContent={setCampaignContent} onEditFollowup={handleEditFollowup} />
             </Container>
           </div>
-
-          {/* Passo 1: Posts Curtos */}
           <div hidden={activeStep !== 1}>
-            <PostsCurtosStep
-              steps={steps}
-              inputMethod={inputMethod}
-              setInputMethod={setInputMethod}
-              handleDrop={handleDrop}
-              handleDragOver={handleDragOver}
-              fileInputRef={fileInputRef}
-              handleCSVUpload={handleCSVUpload}
-              downloadExampleCsv={downloadExampleCsv}
-              getGeminiApiKey={getGeminiApiKey}
-              setShowSetupModal={setShowSetupModal}
-              promptNumRecords={promptNumRecords}
-              setPromptNumRecords={setPromptNumRecords}
-              promptText={promptText}
-              setPromptText={setPromptText}
-              handleGenerateIAContent={handleGenerateIAContent}
-              isGenerating={isGenerating}
-              csvData={csvData}
-              csvHeaders={csvHeaders}
-              onDadosAlterados={handleDadosAlterados}
-              darkMode={darkMode}
-              exportCsv={exportCsv}
-            />
+            <PostsCurtosStep steps={steps} inputMethod={inputMethod} setInputMethod={setInputMethod} handleDrop={handleDrop} handleDragOver={handleDragOver} fileInputRef={fileInputRef} handleCSVUpload={handleCSVUpload} downloadExampleCsv={downloadExampleCsv} getGeminiApiKey={getGeminiApiKey} setShowSetupModal={setShowSetupModal} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} handleGenerateIAContent={handleGenerateIAContent} isGenerating={isGenerating} csvData={csvData} csvHeaders={csvHeaders} onDadosAlterados={handleDadosAlterados} darkMode={darkMode} exportCsv={exportCsv} />
           </div>
-
-          {/* Passo 2: Upload Imagem */}
           <div hidden={activeStep !== 2}>
-            <ImageUploadStep
-              steps={steps}
-              isDraggingOverImage={isDraggingOverImage}
-              handleImageDrop={handleImageDrop}
-              handleImageDragOver={handleImageDragOver}
-              handleImageDragEnter={handleImageDragEnter}
-              handleImageDragLeave={handleImageDragLeave}
-              imageInputRef={imageInputRef}
-              handleImageUpload={handleImageUpload}
-              backgroundImage={backgroundImage}
-            />
+            <ImageUploadStep steps={steps} isDraggingOverImage={isDraggingOverImage} handleImageDrop={handleImageDrop} handleImageDragOver={handleImageDragOver} handleImageDragEnter={handleImageDragEnter} handleImageDragLeave={handleImageDragLeave} imageInputRef={imageInputRef} handleImageUpload={handleImageUpload} backgroundImage={backgroundImage} />
           </div>
-
-          {/* Passo 3: Posicionamento e Formatação */}
           <div hidden={activeStep !== 3}>
-            <FieldPositioner
-              backgroundImage={backgroundImage}
-              csvHeaders={csvHeaders}
-              fieldPositions={fieldPositions}
-              setFieldPositions={setFieldPositions}
-              fieldStyles={fieldStyles}
-              setFieldStyles={setFieldStyles}
-              csvData={csvData}
-              onImageDisplayedSizeChange={setDisplayedImageSize}
-              colorPalette={combinedPalette}
-              standardsColors={standardsColors}
-              onCsvDataUpdate={handleCsvRecordContentUpdate}
-              onSelectFieldExternal={setSelectedField}
-              originalImageSize={originalImageSize}
-              imageFilters={imageFilters}
-              setImageFilters={setImageFilters}
-              brandElements={brandElements}
-              setBrandElements={setBrandElements}
-              onZIndexChange={handleZIndexChange}
-            />
+            <FieldPositioner backgroundImage={backgroundImage} csvHeaders={csvHeaders} fieldPositions={fieldPositions} setFieldPositions={setFieldPositions} fieldStyles={fieldStyles} setFieldStyles={setFieldStyles} csvData={csvData} onImageDisplayedSizeChange={setDisplayedImageSize} colorPalette={combinedPalette} standardsColors={standardsColors} onCsvDataUpdate={handleCsvRecordContentUpdate} onSelectFieldExternal={setSelectedField} originalImageSize={originalImageSize} imageFilters={imageFilters} setImageFilters={setImageFilters} brandElements={brandElements} setBrandElements={setBrandElements} onZIndexChange={handleZIndexChange} />
           </div>
-
-          {/* Passo 4: Geração de Imagens */}
           <div hidden={activeStep !== 4}>
-            <ImageGeneratorFrontendOnly
-              csvData={csvData}
-              backgroundImage={backgroundImage}
-              fieldPositions={fieldPositions}
-              fieldStyles={fieldStyles}
-              displayedImageSize={displayedImageSize}
-              csvHeaders={csvHeaders}
-              colorPalette={colorPalette}
-              setGeneratedImagesData={setGeneratedImagesData}
-              initialGeneratedImagesData={generatedImagesData}
-              onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
-              originalImageSize={originalImageSize}
-              imageFilters={imageFilters}
-              brandElements={brandElements}
-              onBrandElementsChange={setBrandElements}
-            />
+            <ImageGeneratorFrontendOnly csvData={csvData} backgroundImage={backgroundImage} fieldPositions={fieldPositions} fieldStyles={fieldStyles} displayedImageSize={displayedImageSize} csvHeaders={csvHeaders} colorPalette={colorPalette} setGeneratedImagesData={setGeneratedImagesData} initialGeneratedImagesData={generatedImagesData} onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} originalImageSize={originalImageSize} imageFilters={imageFilters} brandElements={brandElements} onBrandElementsChange={setBrandElements} />
           </div>
-
-          {/* Passo 5: Geração de Áudio */}
           <div hidden={activeStep !== 5}>
-            <AudioGenerator
-              csvData={csvData}
-              fieldPositions={fieldPositions}
-              onAudiosGenerated={setGeneratedAudioData}
-              initialAudioData={generatedAudioData}
-            />
+            <AudioGenerator csvData={csvData} fieldPositions={fieldPositions} onAudiosGenerated={setGeneratedAudioData} initialAudioData={generatedAudioData} />
           </div>
-
-          {/* Passo 6: Geração de Vídeo */}
           <div hidden={activeStep !== 6}>
-            <VideoGenerator2
-              generatedImages={generatedImagesData}
-              generatedAudioData={generatedAudioData}
-              onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)}
-            />
+            <VideoGenerator2 generatedImages={generatedImagesData} generatedAudioData={generatedAudioData} onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)} />
           </div>
-
-          {/* Passo 7: Publicar */}
           <div hidden={activeStep !== 7}>
-            <Publisher
-              campaignContent={campaignContent}
-              conteudoFormatado={conteudoFormatado}
-              generatedImagesData={generatedImagesData}
-              generatedVideosData={generatedVideosData}
-              followupPosts={followupPosts}
-              isScheduled={isScheduled}
-              setIsScheduled={setIsScheduled}
-              scheduleDate={scheduleDate}
-              setScheduleDate={setScheduleDate}
-              weeklySchedule={weeklySchedule}
-              setWeeklySchedule={setWeeklySchedule}
-              selectedProfile={selectedProfile}
-              setSelectedProfile={setSelectedProfile}
-              selectedImages={selectedImages}
-              setSelectedImages={setSelectedImages}
-              selectedVideos={selectedVideos}
-              setSelectedVideos={setSelectedVideos}
-            />
+            <Publisher campaignContent={campaignContent} conteudoFormatado={conteudoFormatado} generatedImagesData={generatedImagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedProfile={selectedProfile} setSelectedProfile={setSelectedProfile} selectedImages={selectedImages} setSelectedImages={setSelectedImages} selectedVideos={selectedVideos} setSelectedVideos={setSelectedVideos} />
           </div>
-
-          {/* Navigation */}
-          <Box sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mt: 4,
-            px: 2
-          }}>
-            <Button
-              onClick={handleBack}
-              disabled={activeStep === 0}
-              variant="outlined"
-              sx={{
-                borderRadius: 2,
-                px: 3,
-                py: 1.5
-              }}
-            >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} >
+            <Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >
               Anterior
             </Button>
-
             <Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>
               {steps.map((_, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    backgroundColor: index === activeStep
-                      ? 'primary.main'
-                      : index < activeStep
-                        ? 'success.main'
-                        : 'grey.300',
-                    transition: 'all 0.3s ease'
-                  }}
-                />
+                <Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />
               ))}
             </Box>
-
-            <Button
-              onClick={handleNext}
-              disabled={activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)}
-              variant="contained"
-              sx={{
-                borderRadius: 2,
-                px: 3,
-                py: 1.5
-              }}
-            >
+            <Button onClick={handleNext} disabled={activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)} variant="contained" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >
               Próximo
             </Button>
           </Box>
         </Box>
       </Box>
-
-      {/* Modals */}
-      <SetupModal
-        open={showSetupModal}
-        onClose={() => setShowSetupModal(false)}
-        onBeforeLinkedinRedirect={saveStateToSessionStorage}
-      />
-      <MemorialDescritivoModal
-        open={showMemorialDescritivoModal}
-        onClose={() => setShowMemorialDescritivoModal(false)}
-        campaignData={campaignData}
-      />
-       <CampaignStandardsModal
-        open={showCampaignStandardsModal}
-        onClose={() => {
-          setShowCampaignStandardsModal(false);
-          loadCampaignStandards();
-        }}
-        onShowMemorial={() => setShowMemorialDescritivoModal(true)}
-        onGeneratePalette={async (briefing) => {
-          try {
-            const palette = await generateColorPalette(briefing);
-            return palette;
-          } catch (error) {
-            toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores.");
-            // Re-throw to be caught by the modal's internal state
-            throw error;
-          }
-        }}
-      />
-      <LoadingDialog
-        open={isGeneratingCampaign || isSaving || isLoading}
-        title={
-          isSaving ? "Salvando configuração..." :
-          isLoading ? "Carregando configuração..." :
-          "Gerando conteúdo..." // Default for isGeneratingCampaign
-        }
-        description={
-          isSaving ? "Aguarde um momento, estamos empacotando tudo para você." :
-          isLoading ? "Estamos desempacotando sua configuração. Quase pronto!" :
-          "A IA está pensando e escrevendo. Isso pode levar alguns segundos." // Default
-        }
-      />
-      <TextEditorDialog
-        open={editingField !== null || editingFollowup !== null}
-        title={
-          editingFollowup !== null
-            ? `Editar Post de Follow-up ${editingFollowup.index + 1}`
-            : `Editar ${
-                editingField === 'conteudo' ? 'Conteúdo' :
-                editingField === 'conteudoMedio' ? 'Conteúdo Médio' :
-                editingField === 'conteudoPequeno' ? 'Conteúdo Pequeno' :
-                editingField === 'cta' ? 'CTA' :
-                'Conteúdo Formatado'
-              }`
-        }
-        content={
-          editingFollowup !== null
-            ? editingFollowup.content
-            : editingField === 'conteudoFormatado'
-            ? conteudoFormatado
-            : editingField === 'conteudoMedio'
-            ? conteudoMedio
-            : editingField === 'conteudoPequeno'
-            ? conteudoPequeno
-            : editingField && campaignContent
-            ? campaignContent[editingField]
-            : ''
-        }
-        onSave={
-          editingFollowup !== null
-            ? handleSaveFollowup
-            : (newContent) => {
-                if (editingField === 'conteudoFormatado') {
-                  setConteudoFormatado(newContent);
-                } else if (editingField === 'conteudoMedio') {
-                  setConteudoMedio(newContent);
-                } else if (editingField === 'conteudoPequeno') {
-                  setConteudoPequeno(newContent);
-                } else if (editingField) {
-                  setCampaignContent({
-                    ...campaignContent,
-                    [editingField]: newContent,
-                  });
-                }
-              }
-        }
-        onClose={() => {
-          setEditingField(null);
-          setEditingFollowup(null);
-        }}
-      />
+      <SetupModal open={showSetupModal} onClose={() => setShowSetupModal(false)} onBeforeLinkedinRedirect={() => {}} />
+      <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
+       <CampaignStandardsModal open={showCampaignStandardsModal} onClose={() => { setShowCampaignStandardsModal(false); loadCampaignStandards(); }} onShowMemorial={() => setShowMemorialDescritivoModal(true)} onGeneratePalette={async (briefing) => { try { const palette = await generateColorPalette(briefing); return palette; } catch (error) { toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores."); throw error; } }} />
+      <LoadingDialog open={isGeneratingCampaign || isSaving || isLoading} title={ isSaving ? "Salvando configuração..." : isLoading ? "Carregando configuração..." : "Gerando conteúdo..." } description={ isSaving ? "Aguarde um momento, estamos empacotando tudo para você." : isLoading ? "Estamos desempacotando sua configuração. Quase pronto!" : "A IA está pensando e escrevendo. Isso pode levar alguns segundos." } />
+      <TextEditorDialog open={editingField !== null || editingFollowup !== null} title={ editingFollowup !== null ? `Editar Post de Follow-up ${editingFollowup.index + 1}` : `Editar ${ editingField === 'conteudo' ? 'Conteúdo' : editingField === 'conteudoMedio' ? 'Conteúdo Médio' : editingField === 'conteudoPequeno' ? 'Conteúdo Pequeno' : editingField === 'cta' ? 'CTA' : 'Conteúdo Formatado' }` } content={ editingFollowup !== null ? editingFollowup.content : editingField === 'conteudoFormatado' ? conteudoFormatado : editingField === 'conteudoMedio' ? conteudoMedio : editingField === 'conteudoPequeno' ? conteudoPequeno : editingField && campaignContent ? campaignContent[editingField] : '' } onSave={ editingFollowup !== null ? handleSaveFollowup : (newContent) => { if (editingField === 'conteudoFormatado') { setConteudoFormatado(newContent); } else if (editingField === 'conteudoMedio') { setConteudoMedio(newContent); } else if (editingField === 'conteudoPequeno') { setConteudoPequeno(newContent); } else if (editingField) { setCampaignContent({ ...campaignContent, [editingField]: newContent, }); } } } onClose={() => { setEditingField(null); setEditingFollowup(null); }} />
       {isMobile && activeStep === 3 && (
         <>
-          <Fab
-            color="primary"
-            aria-label="edit"
-            sx={{ position: 'fixed', bottom: 16, right: 16 }}
-            onClick={() => setIsDrawerOpen(true)}
-          >
+          <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16 }} onClick={() => setIsDrawerOpen(true)} >
             <Edit />
           </Fab>
-          <FormattingDrawer
-            open={isDrawerOpen}
-            onClose={() => setIsDrawerOpen(false)}
-            selectedField={selectedField}
-            fieldStyles={fieldStyles}
-            setFieldStyles={setFieldStyles}
-            fieldPositions={fieldPositions}
-            setFieldPositions={setFieldPositions}
-            csvHeaders={csvHeaders}
-            imageFilters={imageFilters}
-            setImageFilters={setImageFilters}
-            brandElements={brandElements}
-            setBrandElements={setBrandElements}
-            onZIndexChange={handleZIndexChange}
-          />
+          <FormattingDrawer open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} selectedField={selectedField} fieldStyles={fieldStyles} setFieldStyles={setFieldStyles} fieldPositions={fieldPositions} setFieldPositions={setFieldPositions} csvHeaders={csvHeaders} imageFilters={imageFilters} setImageFilters={setImageFilters} brandElements={brandElements} setBrandElements={setBrandElements} onZIndexChange={handleZIndexChange} />
         </>
       )}
     </ThemeProvider>
   );
 }
 
-export default App;
+export default HomePage;
