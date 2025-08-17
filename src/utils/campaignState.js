@@ -1,238 +1,208 @@
-import pako from 'pako';
+// This file now handles the logic for serializing, deserializing,
+// and communicating with the campaign API endpoints.
 
-const CURRENT_STATE_VERSION = "3.0";
+// Helper to convert Blob to Base64
+const blobToBase64 = (blob) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+// Helper to convert Base64 back to Blob
+const base64ToBlob = async (base64) => {
+  if (!base64) return null;
+  const fetchString = base64.startsWith('data:') ? base64 : `data:application/octet-stream;base64,${base64}`;
+  try {
+    const res = await fetch(fetchString);
+    return res.blob();
+  } catch (error) {
+    console.error("Error converting base64 to blob:", error);
+    return null;
+  }
+};
 
 /**
- * Serializes, compresses, and triggers the download of the application state.
- * @param {object} state - The application state to save.
+ * Gathers and serializes the current application state for saving.
+ * Blobs are converted to Base64 strings.
+ * @param {object} state - The current application state from HomePage.
+ * @returns {Promise<object>} A promise that resolves to a serializable object.
  */
-export const saveCampaignState = async (state) => {
-  // Helper to convert Blob to Base64
-  const blobToBase64 = (blob) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  };
-
-  // Create a serializable version of the state
+export const serializeCampaignData = async (state) => {
   const serializableGeneratedImages = await Promise.all(
     (state.generatedImagesData || []).map(async (img) => {
       const imageBase64 = img.blob ? await blobToBase64(img.blob) : null;
       return { ...img, blob: undefined, url: undefined, imageBase64 };
     })
   );
-
   const serializableGeneratedAudio = await Promise.all(
     (state.generatedAudioData || []).map(async (audio) => {
       const audioBase64 = audio.blob ? await blobToBase64(audio.blob) : null;
       return { ...audio, blob: undefined, audioBase64 };
     })
   );
-
   const serializableGeneratedVideos = await Promise.all(
     (state.generatedVideosData || []).map(async (video) => {
       const videoBase64 = video.blob ? await blobToBase64(video.blob) : null;
       return { ...video, blob: undefined, url: undefined, videoBase64 };
     })
   );
-
-  // Handle brand elements
   const serializableBrandElements = await Promise.all(
     (state.brandElements || []).map(async (el) => {
       if (el.url && el.url.startsWith('blob:')) {
-        try {
-          const response = await fetch(el.url);
-          const blob = await response.blob();
-          const urlBase64 = await blobToBase64(blob);
-          return { ...el, url: undefined, urlBase64 };
-        } catch (error) {
-          console.error(`Could not fetch and serialize brand element blob for element ID ${el.id}:`, error);
-          return { ...el, url: undefined };
-        }
+        const response = await fetch(el.url);
+        const blob = await response.blob();
+        const urlBase64 = await blobToBase64(blob);
+        return { ...el, url: undefined, urlBase64 };
       }
       return el;
     })
   );
-
-  // Handle the main background image
   let backgroundImageBase64 = null;
   if (state.backgroundImageUrl && state.backgroundImageUrl.startsWith('blob:')) {
-    try {
-      const response = await fetch(state.backgroundImageUrl);
-      const blob = await response.blob();
-      backgroundImageBase64 = await blobToBase64(blob);
-    } catch (error) {
-      console.error("Could not fetch and serialize background image:", error);
-      backgroundImageBase64 = state.backgroundImageUrl; // Keep original if fetch fails
-    }
+    const response = await fetch(state.backgroundImageUrl);
+    const blob = await response.blob();
+    backgroundImageBase64 = await blobToBase64(blob);
   } else {
-      backgroundImageBase64 = state.backgroundImageUrl; // It might be a data URL or other already serialized format
+    backgroundImageBase64 = state.backgroundImageUrl;
   }
-
-
-  // Handle the AI-generated image
   let generatedImageBase64 = null;
   if (state.generatedImageUrl && state.generatedImageUrl.startsWith('blob:')) {
-      try {
-          const response = await fetch(state.generatedImageUrl);
-          const blob = await response.blob();
-          generatedImageBase64 = await blobToBase64(blob);
-      } catch (error) {
-          console.error("Could not fetch and serialize AI-generated image:", error);
-          generatedImageBase64 = state.generatedImageUrl;
-      }
+    const response = await fetch(state.generatedImageUrl);
+    const blob = await response.blob();
+    generatedImageBase64 = await blobToBase64(blob);
   } else {
-      generatedImageBase64 = state.generatedImageUrl;
+    generatedImageBase64 = state.generatedImageUrl;
   }
 
   const stateToSave = {
-    version: CURRENT_STATE_VERSION,
     ...state,
-    // Replace original data with serializable versions
     generatedImagesData: serializableGeneratedImages,
     generatedAudioData: serializableGeneratedAudio,
     generatedVideosData: serializableGeneratedVideos,
     brandElements: serializableBrandElements,
-    backgroundImageUrl: undefined, // Remove the original URL
-    backgroundImageBase64: backgroundImageBase64, // Add the base64 version
-    generatedImageUrl: undefined, // Remove the original URL
-    generatedImageBase64: generatedImageBase64, // Add the base64 version
+    backgroundImageUrl: undefined,
+    backgroundImageBase64: backgroundImageBase64,
+    generatedImageUrl: undefined,
+    generatedImageBase64: generatedImageBase64,
   };
 
-  // Remove non-serializable parts from the top-level state object before stringifying
+  // Remove props that shouldn't be persisted
   delete stateToSave.isSaving;
   delete stateToSave.isLoading;
+  delete stateToSave.user;
 
-  const jsonString = JSON.stringify(stateToSave, null, 2);
-  const compressedData = pako.gzip(jsonString);
-  const blob = new Blob([compressedData], { type: "application/octet-stream" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  const safeTitle = state.campaignContent?.titulo?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'sem-titulo';
-  link.download = `${safeTitle}.midiator`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  return stateToSave;
 };
 
 /**
- * Reads a .midiator file, decompresses, and parses it into a state object.
- * @param {File} file - The file to load.
- * @returns {Promise<object>} A promise that resolves to the loaded state object.
+ * Takes a loaded campaign state and deserializes it for the application.
+ * @param {object} loadedState - The state object loaded from the database.
+ * @returns {Promise<object>} The deserialized state ready for the application.
  */
-export const loadCampaignState = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = async (e) => {
-      try {
-        const compressedData = new Uint8Array(e.target.result);
-        const decompressedData = pako.ungzip(compressedData, { to: 'string' });
-        const loadedState = JSON.parse(decompressedData);
-
-        // Verify version and essential fields
-        if (loadedState.version !== CURRENT_STATE_VERSION) {
-          reject(new Error(`Versão do arquivo incompatível. Esperado: ${CURRENT_STATE_VERSION}, Encontrado: ${loadedState.version || 'N/A'}.`));
-          return;
+export const deserializeCampaignData = async (loadedState) => {
+  if (loadedState.backgroundImageBase64) {
+    const blob = await base64ToBlob(loadedState.backgroundImageBase64);
+    if (blob) loadedState.backgroundImageUrl = URL.createObjectURL(blob);
+  }
+  if (loadedState.generatedImageBase64) {
+    const blob = await base64ToBlob(loadedState.generatedImageBase64);
+    if (blob) loadedState.generatedImageUrl = URL.createObjectURL(blob);
+  }
+  if (loadedState.generatedImagesData) {
+    loadedState.generatedImagesData = await Promise.all(
+      (loadedState.generatedImagesData || []).map(async (imgData) => {
+        const blob = await base64ToBlob(imgData.imageBase64);
+        return { ...imgData, blob, url: blob ? URL.createObjectURL(blob) : null, imageBase64: undefined };
+      })
+    );
+  }
+  if (loadedState.generatedAudioData) {
+    loadedState.generatedAudioData = await Promise.all(
+      (loadedState.generatedAudioData || []).map(async (audioData) => {
+        const blob = await base64ToBlob(audioData.audioBase64);
+        return { ...audioData, blob, audioBase64: undefined };
+      })
+    );
+  }
+  if (loadedState.generatedVideosData) {
+    loadedState.generatedVideosData = await Promise.all(
+      (loadedState.generatedVideosData || []).map(async (videoData) => {
+        const blob = await base64ToBlob(videoData.videoBase64);
+        return { ...videoData, blob, url: blob ? URL.createObjectURL(blob) : null, videoBase64: undefined };
+      })
+    );
+  }
+  if (loadedState.brandElements) {
+    loadedState.brandElements = await Promise.all(
+      (loadedState.brandElements || []).map(async (el) => {
+        if (el.urlBase64) {
+          const blob = await base64ToBlob(el.urlBase64);
+          if (blob) return { ...el, url: URL.createObjectURL(blob), urlBase64: undefined };
         }
-        if (!loadedState.fieldPositions || !loadedState.fieldStyles || !loadedState.csvHeaders) {
-            reject(new Error("Arquivo de estado inválido. Faltam campos essenciais (posições, estilos ou cabeçalhos)."));
-            return;
-        }
+        return el;
+      })
+    );
+  }
+  return loadedState;
+};
 
-        // Helper to convert Base64 back to Blob
-        const base64ToBlob = async (base64) => {
-            if (!base64) return null;
-            // Handle both data URLs and raw base64 strings
-            const fetchString = base64.startsWith('data:') ? base64 : `data:application/octet-stream;base64,${base64}`;
-            const res = await fetch(fetchString);
-            return res.blob();
-        };
+// --- API Functions ---
 
-        // Restore the main background image
-        if (loadedState.backgroundImageBase64) {
-          const blob = await base64ToBlob(loadedState.backgroundImageBase64);
-          if (blob) {
-            loadedState.backgroundImageUrl = URL.createObjectURL(blob);
-          }
-        }
+export const getCampaigns = async () => {
+  const res = await fetch('/api/campaigns');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to fetch campaigns.');
+  }
+  return res.json();
+};
 
-        // Restore the AI-generated image
-        if (loadedState.generatedImageBase64) {
-            const blob = await base64ToBlob(loadedState.generatedImageBase64);
-            if (blob) {
-                loadedState.generatedImageUrl = URL.createObjectURL(blob);
-            }
-        }
+export const loadCampaign = async (id) => {
+  const res = await fetch(`/api/campaigns/${id}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to load campaign.');
+  }
+  const campaign = await res.json();
+  return deserializeCampaignData(campaign.campaign_data);
+};
 
-        // Restore blobs from base64 strings
-        if (loadedState.generatedImagesData) {
-            loadedState.generatedImagesData = await Promise.all(
-                (loadedState.generatedImagesData || []).map(async (imgData) => {
-                    const blob = await base64ToBlob(imgData.imageBase64);
-                    return { ...imgData, blob, url: blob ? URL.createObjectURL(blob) : null, imageBase64: undefined };
-                })
-            );
-        }
-
-        if(loadedState.generatedAudioData) {
-            loadedState.generatedAudioData = await Promise.all(
-                (loadedState.generatedAudioData || []).map(async (audioData) => {
-                    const blob = await base64ToBlob(audioData.audioBase64);
-                    return { ...audioData, blob, audioBase64: undefined };
-                })
-            );
-        }
-
-        if (loadedState.generatedVideosData) {
-            loadedState.generatedVideosData = await Promise.all(
-                (loadedState.generatedVideosData || []).map(async (videoData) => {
-                    const blob = await base64ToBlob(videoData.videoBase64);
-                    return { ...videoData, blob, url: blob ? URL.createObjectURL(blob) : null, videoBase64: undefined };
-                })
-            );
-        }
-
-        // Restore brand elements
-        if (loadedState.brandElements) {
-            loadedState.brandElements = await Promise.all(
-                (loadedState.brandElements || []).map(async (el) => {
-                    if (el.urlBase64) {
-                        try {
-                            const blob = await base64ToBlob(el.urlBase64);
-                            if (blob) {
-                                const blobUrl = URL.createObjectURL(blob);
-                                return { ...el, url: blobUrl, urlBase64: undefined };
-                            }
-                        } catch (error) {
-                            console.error(`Could not deserialize brand element ID ${el.id}:`, error);
-                            // Return element without URL if deserialization fails
-                            return { ...el, url: undefined, urlBase64: undefined };
-                        }
-                    }
-                    return el;
-                })
-            );
-        }
-
-        resolve(loadedState);
-
-      } catch (error) {
-        console.error("Erro ao carregar o arquivo de estado:", error);
-        reject(new Error("Não foi possível ler o arquivo. Pode estar corrompido ou em um formato inválido."));
-      }
-    };
-
-    reader.onerror = (error) => {
-        console.error("FileReader error:", error);
-        reject(new Error("Falha ao ler o arquivo."));
-    };
-
-    reader.readAsArrayBuffer(file);
+export const saveCampaign = async (name, campaignState) => {
+  const serializableData = await serializeCampaignData(campaignState);
+  const res = await fetch('/api/campaigns', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, campaign_data: serializableData }),
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to save campaign.');
+  }
+  return res.json();
+};
+
+export const updateCampaign = async (id, name, campaignState) => {
+  const serializableData = await serializeCampaignData(campaignState);
+  const res = await fetch(`/api/campaigns/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, campaign_data: serializableData }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to update campaign.');
+  }
+  return res.json();
+};
+
+export const deleteCampaign = async (id) => {
+  const res = await fetch(`/api/campaigns/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to delete campaign.');
+  }
+  return res.json();
 };
