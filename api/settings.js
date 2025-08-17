@@ -1,4 +1,4 @@
-import { withAuth } from '../middleware/auth.js';
+import { withAuth } from './middleware/auth.js';
 import { query } from '../db.js';
 
 const parseBody = async (req) => {
