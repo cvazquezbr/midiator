@@ -50,6 +50,7 @@ import { downloadExampleCsv } from '../utils/fileUtils.js';
 import { parseIaResponseToCsvData } from '../utils/iaResponseParser.js';
 import { parseCsv } from '../utils/csvParser.js';
 import { lightTheme, darkTheme } from '../theme.js';
+import ColorThief from 'colorthief';
 
 function HomePage() {
   const { user } = useUserAuth();
