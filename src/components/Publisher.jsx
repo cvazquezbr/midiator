@@ -208,18 +208,20 @@ const Publisher = ({
           }
         } else {
             setLinkedinProfiles([]);
-            console.warn("LinkedIn API did not return a valid array of profiles.");
+            // It's a valid case for a user to have no profiles, so a console warning might be too noisy.
+            // console.warn("LinkedIn API did not return a valid array of profiles or the user has no profiles.");
         }
 
       } catch (error) {
         console.error("Erro ao buscar perfis do LinkedIn:", error);
         setProfileError(error.message);
+        setLinkedinProfiles([]); // Ensure profiles are cleared on error
       } finally {
         setIsLoadingProfiles(false);
       }
     };
     fetchProfiles();
-  }, []);
+  }, [setSelectedProfile]);
 
   // Effect to clear selection if media data is removed.
   useEffect(() => {
