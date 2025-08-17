@@ -525,7 +525,7 @@ const Publisher = ({
                     disabled={isLoadingProfiles || isPublishingLi}
                   >
                     {isLoadingProfiles && <MenuItem value=""><em><CircularProgress size={20} /> Carregando perfis...</em></MenuItem>}
-                    {linkedinProfiles.map((profile) => (
+                    {Array.isArray(linkedinProfiles) && linkedinProfiles.map((profile) => (
                         <MenuItem key={profile.urn} value={profile.urn}>
                           {profile.name}
                         </MenuItem>
@@ -545,7 +545,7 @@ const Publisher = ({
                 <Grid item xs={12} md={4}>
                   <Paper sx={{ height: 400, overflow: 'auto', p: 1 }}>
                     <List>
-                      {unifiedMedia.map((media, index) => (
+                      {Array.isArray(unifiedMedia) && unifiedMedia.map((media, index) => (
                         <ListItem
                           key={media.id}
                           button
@@ -646,7 +646,7 @@ const Publisher = ({
                         <Grid item>
                           <Typography variant="h6" gutterBottom>3. Prévia do Agendamento</Typography>
                           <Paper sx={{ p: 2, maxHeight: 300, overflowY: 'auto' }}>
-                              {schedulePreview.length > 0 ? (
+                              {Array.isArray(schedulePreview) && schedulePreview.length > 0 ? (
                                   <List dense>
                                       {schedulePreview.map(item => (
                                           <ListItem key={item.key} disablePadding sx={{ mb: 1 }}>
