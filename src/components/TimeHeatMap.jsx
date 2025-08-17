@@ -35,7 +35,7 @@ const displayDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 // Data order is Seg-Dom, so we map Sun to index 6.
 const dayIndexMapping = [6, 0, 1, 2, 3, 4, 5]; // getDay() index -> data index
 
-const hours = Object.keys(heatMapData);
+const allHours = Object.keys(heatMapData);
 
 const colorScale = chroma.scale(['#d73027', '#fee08b', '#1a9850']).domain([0, 5, 10]);
 
@@ -44,7 +44,12 @@ const getColor = (value) => {
     return colorScale(value).hex();
 };
 
-const TimeHeatMap = ({ weeklySchedule = {}, onScheduleChange }) => {
+const TimeHeatMap = ({ weeklySchedule = {}, onScheduleChange, startHour = 0, endHour = 23 }) => {
+    const hours = allHours.filter(hour => {
+        const h = parseInt(hour.split(':')[0], 10);
+        return h >= startHour && h <= endHour;
+    });
+
     const handleTimeSelect = (dayIndex, hour) => {
         const newSchedule = {
             ...weeklySchedule,

@@ -13,7 +13,6 @@ async function handleCreateSchedule(request, response) {
 
         const userSelectedScheduledAt = postData.scheduledAt;
         const executionDate = new Date(userSelectedScheduledAt);
-        executionDate.setUTCHours(14, 0, 0, 0);
         const executionTimestamp = executionDate.getTime();
 
         const postId = crypto.randomUUID();

@@ -45,7 +45,7 @@ import {
 } from '@mui/icons-material';
 import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
-import { BrandingWatermark } from '@mui/icons-material';
+import { BrandingWatermark, Edit } from '@mui/icons-material';
 import BrandElementManager from './BrandElementManager';
 
 const FormattingPanel = ({
@@ -61,6 +61,8 @@ const FormattingPanel = ({
   setBrandElements,
   onZIndexChange,
   onDeselectField,
+  onOpenHtmlEditor,
+  isHtmlField,
 }) => {
   const fonts = [
     // Sans-serif
@@ -304,6 +306,17 @@ const FormattingPanel = ({
             {isTextField ? (
               <>
                 {/* Fonte e Estilo */}
+                {isHtmlField(selectedField) && (
+                  <Button
+                    variant="contained"
+                    startIcon={<Edit />}
+                    onClick={() => onOpenHtmlEditor(selectedField)}
+                    fullWidth
+                    sx={{ mb: 2 }}
+                  >
+                    Editar Conteúdo HTML
+                  </Button>
+                )}
                 <Accordion defaultExpanded>
                   <AccordionSummary expandIcon={<ExpandMore />}>
                     <Typography variant="subtitle1">

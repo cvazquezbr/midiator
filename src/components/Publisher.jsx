@@ -674,6 +674,8 @@ const Publisher = ({
                         <TimeHeatMap
                             weeklySchedule={weeklySchedule}
                             onScheduleChange={setWeeklySchedule}
+                            startHour={8}
+                            endHour={23}
                         />
                     </Grid>
                   </Grid>

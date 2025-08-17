@@ -23,6 +23,7 @@ import {
 } from '@mui/icons-material';
 import DraggableElement from './DraggableElement';
 import FormattingPanel from './FormattingPanel';
+import TextEditorDialog from './TextEditorDialog';
 import FormattingDrawer from './FormattingDrawer'; // Import the new drawer
 
 const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
@@ -110,6 +111,24 @@ const FieldPositioner = ({
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [composedImageUrl, setComposedImageUrl] = useState(null);
   const [isComposing, setIsComposing] = useState(false);
+  const [isHtmlEditorOpen, setIsHtmlEditorOpen] = useState(false);
+  const [fieldToEditInHtml, setFieldToEditInHtml] = useState(null);
+
+  const handleOpenHtmlEditor = (fieldId) => {
+    setFieldToEditInHtml(fieldId);
+    setIsHtmlEditorOpen(true);
+  };
+
+  const handleCloseHtmlEditor = () => {
+    setFieldToEditInHtml(null);
+    setIsHtmlEditorOpen(false);
+  };
+
+  const handleSaveHtmlContent = (newContent) => {
+    if (fieldToEditInHtml) {
+      handleContentChange(fieldToEditInHtml, newContent);
+    }
+  };
 
   useEffect(() => {
     if (!backgroundImage) {
@@ -722,8 +741,19 @@ const FieldPositioner = ({
           setBrandElements={setBrandElements}
           onZIndexChange={onZIndexChange}
           onVisibilityChange={handleVisibilityChange}
+          onOpenHtmlEditor={handleOpenHtmlEditor}
+          isHtmlField={isHtmlField}
         />
       </Grid>
+      {isHtmlEditorOpen && (
+        <TextEditorDialog
+          open={isHtmlEditorOpen}
+          onClose={handleCloseHtmlEditor}
+          title={`Editando ${fieldToEditInHtml}`}
+          content={csvData.find((row, index) => index === currentPreviewIndex)?.[fieldToEditInHtml] || ''}
+          onSave={handleSaveHtmlContent}
+        />
+      )}
     </Grid>
   );
 };
