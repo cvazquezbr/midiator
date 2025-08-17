@@ -18,27 +18,24 @@ const parseBody = async (req) => {
  * This route is protected and operates on the currently authenticated user.
  */
 const settingsHandler = async (req, res) => {
-  const userId = req.user.sub; // Get user ID from the JWT payload
+  console.log(`[api/settings] Received ${req.method} request.`);
+  try {
+    const userId = req.user.sub;
+    console.log(`[api/settings] Authenticated user ID: ${userId}`);
 
-  if (req.method === 'GET') {
-    try {
+    if (req.method === 'GET') {
+      console.log(`[api/settings] Entering GET block for user ${userId}.`);
       const { rows } = await query('SELECT settings_data FROM settings WHERE user_id = $1', [userId]);
+      console.log(`[api/settings] DB query successful. Found ${rows.length} rows.`);
+
       if (rows.length === 0) {
-        // It's not an error if the user has no saved settings yet. Return an empty object.
         return res.status(200).json({});
       }
-      // The settings are stored in a JSONB column named 'settings_data'.
       return res.status(200).json(rows[0].settings_data);
-    } catch (error) {
-      console.error(`Failed to get settings for user ${userId}:`, error);
-      return res.status(500).json({ error: 'Internal Server Error' });
-    }
-  } else if (req.method === 'PUT') {
-    try {
+    } else if (req.method === 'PUT') {
+      console.log(`[api/settings] Entering PUT block for user ${userId}.`);
       const settingsData = await parseBody(req);
 
-      // Use an "upsert" operation (INSERT ... ON CONFLICT ... DO UPDATE).
-      // This is an atomic and efficient way to handle both creating and updating.
       const upsertQuery = `
         INSERT INTO settings (user_id, settings_data)
         VALUES ($1, $2)
@@ -47,15 +44,22 @@ const settingsHandler = async (req, res) => {
       `;
 
       await query(upsertQuery, [userId, settingsData]);
+      console.log(`[api/settings] Successfully saved settings for user ${userId}.`);
 
       return res.status(200).json({ message: 'Settings saved successfully.' });
-    } catch (error) {
-      console.error(`Failed to save settings for user ${userId}:`, error);
-      return res.status(500).json({ error: 'Internal Server Error' });
+    } else {
+      res.setHeader('Allow', ['GET', 'PUT']);
+      return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
-  } else {
-    res.setHeader('Allow', ['GET', 'PUT']);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
+  } catch (error) {
+    console.error(`[api/settings] CATASTROPHIC ERROR: ${error.message}`);
+    console.error(error.stack);
+    // Even in a crash, try to send a JSON response with details.
+    return res.status(500).json({
+        error: 'Internal Server Error',
+        details: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    });
   }
 };
 
