@@ -16,6 +16,24 @@ export const createSchedule = async (scheduleData) => {
     return await response.json();
 };
 
+export const deleteSchedule = async (id, authorUrn) => {
+    const response = await fetch('/api/schedule', {
+        method: 'POST', // Still POST because the endpoint routes based on `action`
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'deleteSchedule',
+            payload: { id, authorUrn },
+        }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Proxy response was not valid JSON.' }));
+        throw new Error(`Failed to delete schedule via proxy: ${errorData.message || 'Unknown error'}`);
+    }
+
+    return await response.json();
+};
+
 export const getSchedulesForUser = async (authorUrn) => {
     if (!authorUrn) return []; // Don't bother making a request if there's no user.
 

@@ -43,13 +43,14 @@ import {
   TableRow,
   Chip,
   Tooltip,
+  IconButton,
 } from '@mui/material';
-import { Info } from '@mui/icons-material';
+import { Info, Delete } from '@mui/icons-material';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
 import { getLinkedinConfig } from '../utils/linkedinCredentials';
 import googleDriveAPI from '../utils/googleDriveAPI';
-import { createSchedule, getSchedulesForUser } from '../utils/scheduleAPI';
+import { createSchedule, getSchedulesForUser, deleteSchedule } from '../utils/scheduleAPI';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -93,6 +94,29 @@ const Publisher = ({
   const [tabValue, setTabValue] = React.useState(0);
   const [mySchedules, setMySchedules] = useState([]);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
+
+  const handleDeleteSchedule = async (scheduleId) => {
+    try {
+        // Find the schedule to get the authorUrn
+        const scheduleToDelete = mySchedules.find(s => s.id === scheduleId);
+        if (!scheduleToDelete) {
+            throw new Error("Agendamento não encontrado.");
+        }
+
+        await deleteSchedule(scheduleId, scheduleToDelete.authorUrn);
+
+        // Update the UI by removing the schedule from the list
+        setMySchedules(prevSchedules => prevSchedules.filter(s => s.id !== scheduleId));
+
+        // Optional: Show a success toast
+        // toast.success("Agendamento excluído com sucesso!");
+
+    } catch (error) {
+        console.error("Failed to delete schedule:", error);
+        // Optional: Show an error toast
+        // toast.error(`Falha ao excluir agendamento: ${error.message}`);
+    }
+  };
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -767,6 +791,7 @@ const Publisher = ({
                                     <TableCell align="right">Data Agendada (UTC)</TableCell>
                                     <TableCell align="right">Status</TableCell>
                                     <TableCell align="right">Link</TableCell>
+                                    <TableCell align="right">Ações</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -794,6 +819,11 @@ const Publisher = ({
                                                     Ver Post
                                                 </MuiLink>
                                             ) : '-'}
+                                        </TableCell>
+                                        <TableCell align="right">
+                                            <IconButton onClick={() => handleDeleteSchedule(row.id)} size="small" disabled={row.status === 'published'}>
+                                                <Delete />
+                                            </IconButton>
                                         </TableCell>
                                     </TableRow>
                                 ))}

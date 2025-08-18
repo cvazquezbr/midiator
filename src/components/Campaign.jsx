@@ -214,6 +214,7 @@ const Campaign = ({
     };
 
     const handleGenerateProblems = async () => {
+        if (commonProblems.length > 0) return;
         setIsLoadingProblems(true);
         setProblemsError(null);
         setCommonProblems([]);
@@ -231,7 +232,14 @@ const Campaign = ({
         }
     };
 
+    useEffect(() => {
+        if (isHintModalOpen) {
+            handleGenerateProblems();
+        }
+    }, [isHintModalOpen, handleGenerateProblems]);
+
     const handleGenerateSolutions = async () => {
+        if (commonSolutions.length > 0) return;
         setIsLoadingSolutions(true);
         setSolutionsError(null);
         setCommonSolutions([]);
@@ -248,6 +256,12 @@ const Campaign = ({
             setIsLoadingSolutions(false);
         }
     };
+
+    useEffect(() => {
+        if (isSolucaoHintModalOpen) {
+            handleGenerateSolutions();
+        }
+    }, [isSolucaoHintModalOpen, handleGenerateSolutions]);
 
     return (
         <Card>
@@ -478,7 +492,7 @@ const Campaign = ({
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
                                         <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
                                         <Button onClick={handleGenerateImage} disabled={isGeneratingImage} startIcon={<GeminiIcon />}>
-                                            {isGeneratingImage ? 'Gerando...' : 'Regenerar Imagem'}
+                                            {isGeneratingImage ? 'Gerando...' : 'Regerar Imagem'}
                                         </Button>
                                     </Box>
                                     <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', borderRadius: '8px', mt: 2 }} />
@@ -536,7 +550,6 @@ const Campaign = ({
                                     onChange={(e) => setFollowupPostsQuantity(parseInt(e.target.value, 10))}
                                     fullWidth
                                     variant="outlined"
-                                    disabled={campaignContent !== null}
                                     InputProps={{ inputProps: { min: 1, max: 10 } }}
                                 />
                             </Grid>
@@ -558,7 +571,7 @@ const Campaign = ({
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                 <Typography variant="h6" gutterBottom>Posts de Follow-up Gerados</Typography>
                                 <Button onClick={() => handleGenerateFollowupPosts()} disabled={isGeneratingFollowup} startIcon={<GeminiIcon />}>
-                                    {isGeneratingFollowup ? 'Gerando...' : 'Regenerar Posts'}
+                                    {isGeneratingFollowup ? 'Gerando...' : 'Regerar Posts'}
                                 </Button>
                             </Box>
                             {followupPosts.map((post, index) => (
@@ -632,9 +645,6 @@ const Campaign = ({
                     <DialogContent>
                         <Grid container spacing={4} sx={{ mt: 1 }}>
                             <Grid item xs={12} md={6}>
-                                {problemaHint}
-                            </Grid>
-                            <Grid item xs={12} md={6}>
                                 <Typography variant="h6" gutterBottom>Sugestões com IA</Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{mb: 2}}>
                                     Use as sugestões abaixo como ponto de partida ou para refinar sua ideia. Clique em uma para usá-la.
@@ -673,6 +683,9 @@ const Campaign = ({
                                     </Box>
                                 )}
                             </Grid>
+                            <Grid item xs={12} md={6}>
+                                {problemaHint}
+                            </Grid>
                         </Grid>
                     </DialogContent>
                     <DialogActions>
@@ -693,9 +706,6 @@ const Campaign = ({
                     <DialogTitle>Como Descrever a Solução ou Proposta</DialogTitle>
                     <DialogContent>
                         <Grid container spacing={4} sx={{ mt: 1 }}>
-                            <Grid item xs={12} md={6}>
-                                {solucaoHint}
-                            </Grid>
                             <Grid item xs={12} md={6}>
                                 <Typography variant="h6" gutterBottom>Sugestões com IA</Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{mb: 2}}>
@@ -734,6 +744,9 @@ const Campaign = ({
                                         ))}
                                     </Box>
                                 )}
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                {solucaoHint}
                             </Grid>
                         </Grid>
                     </DialogContent>

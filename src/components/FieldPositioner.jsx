@@ -743,6 +743,7 @@ const FieldPositioner = ({
           onVisibilityChange={handleVisibilityChange}
           onOpenHtmlEditor={handleOpenHtmlEditor}
           isHtmlField={isHtmlField}
+          standardsColors={standardsColors}
         />
       </Grid>
       {isHtmlEditorOpen && (

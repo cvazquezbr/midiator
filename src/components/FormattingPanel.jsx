@@ -63,6 +63,7 @@ const FormattingPanel = ({
   onDeselectField,
   onOpenHtmlEditor,
   isHtmlField,
+  standardsColors,
 }) => {
   const fonts = [
     // Sans-serif
@@ -352,6 +353,28 @@ const FormattingPanel = ({
                           size="small"
                         />
                       </Grid>
+                      {standardsColors && standardsColors.length > 0 && (
+                        <Grid item xs={12}>
+                          <Typography variant="caption">Cores da Campanha</Typography>
+                          <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                            {standardsColors.map((color, index) => (
+                              <Tooltip title={color.name} key={index}>
+                                <Box
+                                  sx={{
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: '50%',
+                                    backgroundColor: color.hex,
+                                    cursor: 'pointer',
+                                    border: '1px solid #ccc',
+                                  }}
+                                  onClick={() => updateFieldStyle(selectedField, 'color', color.hex)}
+                                />
+                              </Tooltip>
+                            ))}
+                          </Box>
+                        </Grid>
+                      )}
                       <Grid item xs={12}>
                         <ToggleButtonGroup
                           value={[]}
