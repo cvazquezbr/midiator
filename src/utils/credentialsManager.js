@@ -41,7 +41,7 @@ export const gatherCredentials = () => {
 
   // WordPress
   const wordpress = getWordpressConfig();
-  if (wordpress && wordpress.url) credentials[CREDENTIAL_KEYS.WORDPRESS] = wordpress;
+  if (wordpress && wordpress.wordpressUrl) credentials[CREDENTIAL_KEYS.WORDPRESS] = wordpress;
 
   return credentials;
 };
