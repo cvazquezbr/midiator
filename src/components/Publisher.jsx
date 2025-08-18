@@ -828,7 +828,7 @@ const Publisher = ({
                                             {row.content.titulo}
                                         </TableCell>
                                         <TableCell align="right">
-                                            {format ? format(utcToZonedTime(new Date(row.scheduledAt), userTimezone), 'dd/MM/yyyy HH:mm', { timeZone: userTimezone, locale: ptBR }) : new Date(row.scheduledAt).toLocaleString()}
+                                            {format && utcToZonedTime ? format(utcToZonedTime(new Date(row.scheduledAt), userTimezone), 'dd/MM/yyyy HH:mm', { timeZone: userTimezone, locale: ptBR }) : new Date(row.scheduledAt).toLocaleString()}
                                         </TableCell>
                                         <TableCell align="right">
                                             <Chip
