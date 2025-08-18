@@ -126,8 +126,8 @@ async function handleUpdateSchedule(request, response) {
         // Update the post in KV
         await kv.set(`post:${id}`, JSON.stringify(post));
 
-        // zadd with the same member updates the score, so this is correct.
-        await kv.zadd('schedules_by_time', { score: newExecutionTimestamp, member: id });
+        // zadd with the same member updates the score. The correct syntax is (key, score, member).
+        await kv.zadd('schedules_by_time', newExecutionTimestamp, id);
 
         return response.status(200).json(post);
     } catch (error) {
