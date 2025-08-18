@@ -80,6 +80,11 @@ export function getCampaignPrompt() {
         delete parsedData.aspectRatio;
       }
 
+      // Garante que 'colors' seja sempre um array.
+      if (!Array.isArray(parsedData.colors)) {
+        parsedData.colors = [];
+      }
+
       // Mescla com os padrões para garantir que todas as chaves estejam presentes
       const finalData = {
         ...defaultPrompt,
