@@ -254,7 +254,7 @@ const Campaign = ({
             <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 4 } }}>
                 <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
                     <CampaignIcon />
-                    {steps[0].label}
+                    {steps && steps.length > 0 ? steps[0].label : 'Campanha'}
                 </Typography>
 
                 <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
