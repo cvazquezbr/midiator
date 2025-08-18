@@ -546,7 +546,7 @@ const Campaign = ({
                                 <TextField
                                     label="Quantidade de Posts de Follow-up"
                                     type="number"
-                                    value={followupPostsQuantity}
+                                    value={followupPostsQuantity || ''}
                                     onChange={(e) => setFollowupPostsQuantity(parseInt(e.target.value, 10))}
                                     fullWidth
                                     variant="outlined"
