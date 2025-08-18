@@ -27,8 +27,7 @@ export default defineConfig({
   },
   
   optimizeDeps: {
-    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
-    include: ['date-fns-tz'],
+    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util']
   },
   
   worker: {
