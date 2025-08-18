@@ -192,31 +192,28 @@ const Publisher = ({
   // Fetch LinkedIn profiles on component mount
   useEffect(() => {
     const fetchProfiles = async () => {
-      console.log('[Publisher] useEffect to fetch profiles started.');
       setIsLoadingProfiles(true);
       setProfileError('');
       try {
         const profiles = await getLinkedInProfiles();
-        console.log('[Publisher] Raw profiles from getLinkedInProfiles:', JSON.stringify(profiles, null, 2));
 
+        // Ensure profiles is an array before proceeding.
         if (!Array.isArray(profiles)) {
-          console.warn("[Publisher] API did not return a valid array.", profiles);
+          console.warn("LinkedIn API did not return a valid array of profiles.", profiles);
           setLinkedinProfiles([]);
           return;
         }
 
         const cleanedProfiles = profiles.filter(p => p && typeof p.urn === 'string' && typeof p.name === 'string');
-        console.log('[Publisher] Cleaned profiles:', JSON.stringify(cleanedProfiles, null, 2));
         setLinkedinProfiles(cleanedProfiles);
 
-        console.log('[Publisher] Current selectedProfile before setting:', selectedProfile);
+        // Set a default profile only if the cleaned list is not empty and no profile is already selected.
         if (cleanedProfiles.length > 0 && !selectedProfile) {
-          console.log('[Publisher] Setting selected profile to:', cleanedProfiles[0].urn);
           setSelectedProfile(cleanedProfiles[0].urn);
         }
 
       } catch (error) {
-        console.error("[Publisher] Error fetching LinkedIn profiles:", error);
+        console.error("Erro ao buscar perfis do LinkedIn:", error);
         setProfileError(error.message);
         setLinkedinProfiles([]); // Also clear profiles on error
       } finally {

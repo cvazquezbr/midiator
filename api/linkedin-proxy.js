@@ -368,7 +368,6 @@ async function handleGetOrganizations(request, response) {
       });
     });
 
-    console.log('[PROXY] Final profiles being returned:', JSON.stringify(profiles, null, 2));
     return response.status(200).json(profiles);
 
   } catch (error) {
