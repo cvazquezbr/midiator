@@ -213,7 +213,7 @@ const Campaign = ({
       setActiveTab(newValue);
     };
 
-    const handleGenerateProblems = useCallback(async () => {
+    const fetchProblemsOnOpen = useCallback(async () => {
         if (commonProblems.length > 0) return;
         setIsLoadingProblems(true);
         setProblemsError(null);
@@ -232,13 +232,31 @@ const Campaign = ({
         }
     }, [commonProblems.length]);
 
+    const handleRegenerateProblems = useCallback(async () => {
+        setIsLoadingProblems(true);
+        setProblemsError(null);
+        setCommonProblems([]);
+        try {
+            const { persona } = getCampaignPrompt();
+            if (!persona || Object.keys(persona).length === 0) {
+                throw new Error("Defina uma persona primeiro na aba 'Setup'.");
+            }
+            const problems = await generateCommonProblems({ persona });
+            setCommonProblems(problems);
+        } catch (error) {
+            setProblemsError(error.message);
+        } finally {
+            setIsLoadingProblems(false);
+        }
+    }, []);
+
     useEffect(() => {
         if (isHintModalOpen) {
-            handleGenerateProblems();
+            fetchProblemsOnOpen();
         }
-    }, [isHintModalOpen, handleGenerateProblems]);
+    }, [isHintModalOpen, fetchProblemsOnOpen]);
 
-    const handleGenerateSolutions = useCallback(async () => {
+    const fetchSolutionsOnOpen = useCallback(async () => {
         if (commonSolutions.length > 0) return;
         setIsLoadingSolutions(true);
         setSolutionsError(null);
@@ -257,11 +275,29 @@ const Campaign = ({
         }
     }, [commonSolutions.length, problema]);
 
+    const handleRegenerateSolutions = useCallback(async () => {
+        setIsLoadingSolutions(true);
+        setSolutionsError(null);
+        setCommonSolutions([]);
+        try {
+            const { persona } = getCampaignPrompt();
+            if (!problema.trim()) {
+                throw new Error("Descreva o problema primeiro.");
+            }
+            const solutions = await generateCommonSolutions({ problema, persona });
+            setCommonSolutions(solutions);
+        } catch (error) {
+            setSolutionsError(error.message);
+        } finally {
+            setIsLoadingSolutions(false);
+        }
+    }, [problema]);
+
     useEffect(() => {
         if (isSolucaoHintModalOpen) {
-            handleGenerateSolutions();
+            fetchSolutionsOnOpen();
         }
-    }, [isSolucaoHintModalOpen, handleGenerateSolutions]);
+    }, [isSolucaoHintModalOpen, fetchSolutionsOnOpen]);
 
     return (
         <Card>
@@ -692,7 +728,7 @@ const Campaign = ({
                         <Button
                             variant="contained"
                             startIcon={<GeminiIcon />}
-                            onClick={handleGenerateProblems}
+                            onClick={handleRegenerateProblems}
                             disabled={isLoadingProblems}
                             sx={{ mr: 'auto' }} // Pushes this button to the left
                         >
@@ -754,7 +790,7 @@ const Campaign = ({
                         <Button
                             variant="contained"
                             startIcon={<GeminiIcon />}
-                            onClick={handleGenerateSolutions}
+                            onClick={handleRegenerateSolutions}
                             disabled={isLoadingSolutions || !problema.trim()}
                             sx={{ mr: 'auto' }} // Pushes this button to the left
                         >
