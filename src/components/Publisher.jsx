@@ -27,11 +27,15 @@ import {
   Paper,
   Tabs,
   Tab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { Language, Publish, LinkedIn } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { DatePicker, DateTimePicker } from '@mui/x-date-pickers';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import TimeHeatMap from './TimeHeatMap';
 import {
@@ -45,12 +49,13 @@ import {
   Tooltip,
   IconButton,
 } from '@mui/material';
-import { Info, Delete } from '@mui/icons-material';
+import { Info, Delete, Edit, Visibility } from '@mui/icons-material';
+import { toast } from 'sonner';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
 import { getLinkedinConfig } from '../utils/linkedinCredentials';
 import googleDriveAPI from '../utils/googleDriveAPI';
-import { createSchedule, getSchedulesForUser, deleteSchedule } from '../utils/scheduleAPI';
+import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -94,6 +99,53 @@ const Publisher = ({
   const [tabValue, setTabValue] = React.useState(0);
   const [mySchedules, setMySchedules] = useState([]);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
+  const [viewingSchedule, setViewingSchedule] = useState(null);
+  const [editingSchedule, setEditingSchedule] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const fetchSchedules = async () => {
+    if (tabValue === 2 && selectedProfile) {
+      setIsLoadingSchedules(true);
+      try {
+        const schedules = await getSchedulesForUser(selectedProfile);
+        schedules.sort((a, b) => new Date(b.scheduledAt) - new Date(a.scheduledAt));
+        setMySchedules(schedules);
+      } catch (error) {
+        console.error("Failed to fetch user schedules:", error);
+        toast.error(`Failed to fetch schedules: ${error.message}`);
+      } finally {
+        setIsLoadingSchedules(false);
+      }
+    }
+  };
+
+  const handleViewDetails = async (scheduleId) => {
+    try {
+      const scheduleDetails = await getSchedule(scheduleId);
+      setViewingSchedule(scheduleDetails);
+    } catch (error) {
+      toast.error(`Failed to get schedule details: ${error.message}`);
+    }
+  };
+
+  const handleOpenEditModal = (schedule) => {
+    setEditingSchedule({ ...schedule, newScheduledAt: new Date(schedule.scheduledAt) });
+  };
+
+  const handleUpdateSchedule = async () => {
+    if (!editingSchedule) return;
+    setIsUpdating(true);
+    try {
+      await updateSchedule(editingSchedule.id, editingSchedule.newScheduledAt.toISOString());
+      toast.success("Schedule updated successfully!");
+      setEditingSchedule(null);
+      fetchSchedules(); // Refresh the list
+    } catch (error) {
+      toast.error(`Failed to update schedule: ${error.message}`);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const handleDeleteSchedule = async (scheduleId) => {
     try {
@@ -124,23 +176,6 @@ const Publisher = ({
 
   // Fetch schedules when the tab is opened or the selected profile changes
   useEffect(() => {
-    const fetchSchedules = async () => {
-        if (tabValue === 2 && selectedProfile) { // Tab 2 is "My Schedules"
-            setIsLoadingSchedules(true);
-            try {
-                const schedules = await getSchedulesForUser(selectedProfile);
-                // Sort by most recent schedule first
-                schedules.sort((a, b) => new Date(b.scheduledAt) - new Date(a.scheduledAt));
-                setMySchedules(schedules);
-            } catch (error) {
-                console.error("Failed to fetch user schedules:", error);
-                // Optionally set an error state to show in the UI
-            } finally {
-                setIsLoadingSchedules(false);
-            }
-        }
-    };
-
     fetchSchedules();
   }, [tabValue, selectedProfile]);
 
@@ -821,9 +856,21 @@ const Publisher = ({
                                             ) : '-'}
                                         </TableCell>
                                         <TableCell align="right">
-                                            <IconButton onClick={() => handleDeleteSchedule(row.id)} size="small" disabled={row.status === 'published'}>
-                                                <Delete />
-                                            </IconButton>
+                                            <Tooltip title="View Details">
+                                                <IconButton onClick={() => handleViewDetails(row.id)} size="small">
+                                                    <Visibility />
+                                                </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="Edit Schedule">
+                                                <IconButton onClick={() => handleOpenEditModal(row)} size="small" disabled={row.status === 'published'}>
+                                                    <Edit />
+                                                </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="Delete Schedule">
+                                                <IconButton onClick={() => handleDeleteSchedule(row.id)} size="small" disabled={row.status === 'published'}>
+                                                    <Delete />
+                                                </IconButton>
+                                            </Tooltip>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -835,6 +882,56 @@ const Publisher = ({
           </TabPanel>
         </Box>
       </CardContent>
+
+      {/* View Details Modal */}
+      <Dialog open={!!viewingSchedule} onClose={() => setViewingSchedule(null)} fullWidth maxWidth="md">
+        <DialogTitle>Schedule Details</DialogTitle>
+        <DialogContent>
+            {viewingSchedule ? (
+                <Box>
+                    <Typography variant="h6" gutterBottom>{viewingSchedule.content.titulo}</Typography>
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', my: 2 }}>{viewingSchedule.content.conteudo}</Typography>
+                    <Typography variant="body2" color="text.secondary"><strong>CTA:</strong> {viewingSchedule.content.cta}</Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        <strong>Hashtags:</strong> {(viewingSchedule.content.hashtags || []).join(' ')}
+                    </Typography>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="body2"><strong>Scheduled for:</strong> {new Date(viewingSchedule.scheduledAt).toLocaleString('pt-BR')}</Typography>
+                    <Typography variant="body2"><strong>Status:</strong> {viewingSchedule.status}</Typography>
+                    {viewingSchedule.error && <Typography variant="body2" color="error"><strong>Error:</strong> {viewingSchedule.error}</Typography>}
+                </Box>
+            ) : <CircularProgress />}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setViewingSchedule(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Schedule Modal */}
+      <Dialog open={!!editingSchedule} onClose={() => setEditingSchedule(null)} fullWidth maxWidth="sm">
+        <DialogTitle>Edit Schedule Time</DialogTitle>
+        <DialogContent>
+            {editingSchedule && (
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
+                    <Box sx={{mt: 2}}>
+                        <DateTimePicker
+                            label="New Schedule Time"
+                            value={editingSchedule.newScheduledAt}
+                            onChange={(newValue) => setEditingSchedule(prev => ({ ...prev, newScheduledAt: newValue }))}
+                            renderInput={(params) => <TextField {...params} fullWidth />}
+                            minDateTime={new Date()}
+                        />
+                    </Box>
+                </LocalizationProvider>
+            )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditingSchedule(null)}>Cancel</Button>
+          <Button onClick={handleUpdateSchedule} disabled={isUpdating}>
+            {isUpdating ? <CircularProgress size={24} /> : 'Update'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 };
