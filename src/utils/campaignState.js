@@ -8,16 +8,20 @@ const uploadAsset = async (asset, filename) => {
   if (!asset) return null;
 
   let fileToUpload;
-  if (typeof asset === 'string' && asset.startsWith('blob:')) {
+  if (typeof asset === 'string' && (asset.startsWith('blob:') || asset.startsWith('data:'))) {
     const response = await fetch(asset);
     const blob = await response.blob();
     fileToUpload = new File([blob], filename, { type: blob.type });
   } else if (asset instanceof Blob) {
     fileToUpload = asset;
-  } else if (typeof asset === 'string') {
-    // It's likely already a URL, so we don't need to re-upload.
+  } else if (typeof asset === 'string' && asset.startsWith('http')) {
+    // It's likely already a public URL, so we don't need to re-upload.
     return asset;
-  } else {
+  } else if (typeof asset === 'string') {
+    // Could be an invalid string or something else, treat as non-uploadable
+    return asset;
+  }
+   else {
     // Unsupported asset type
     return null;
   }
