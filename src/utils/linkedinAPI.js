@@ -279,7 +279,6 @@ export const getLinkedInProfiles = async () => {
   }
 
   const profiles = await response.json();
-  console.log('[CLIENT API] Profiles received from proxy:', JSON.stringify(profiles, null, 2));
 
   try {
     sessionStorage.setItem(cacheKey, JSON.stringify(profiles));
