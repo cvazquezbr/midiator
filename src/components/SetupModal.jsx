@@ -20,7 +20,6 @@ import {
   AutoAwesome,
   DriveFolderUpload,
   Language,
-  Public as PublicIcon,
 } from '@mui/icons-material';
 import { toast } from 'sonner';
 
@@ -29,7 +28,6 @@ import GoogleDriveAuthModal from './GoogleDriveAuthModal';
 import GoogleCloudTTSAuth from './GoogleCloudTTSAuth';
 import WordpressAuthSetup from './WordpressAuthSetup';
 import LinkedinAuthSetup from './LinkedinAuthSetup';
-import TimezoneSetup from './TimezoneSetup';
 
 // The old file-based manager is replaced with the new DB-based one.
 import { saveSettingsToDb } from '../utils/credentialsManager';
@@ -109,7 +107,6 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
           <Tab icon={<Audiotrack />} iconPosition="start" label="Cloud TTS" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(2)} />
           <Tab icon={<Language />} iconPosition="start" label="WordPress" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(3)} />
           <Tab icon={<LinkedIn />} iconPosition="start" label="LinkedIn" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(4)} />
-          <Tab icon={<PublicIcon />} iconPosition="start" label="Local" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(5)} />
         </Tabs>
         <TabPanel value={value} index={0}>
           <GeminiAuthSetup />
@@ -125,9 +122,6 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
         </TabPanel>
         <TabPanel value={value} index={4}>
           <LinkedinAuthSetup onBeforeRedirect={onBeforeLinkedinRedirect} />
-        </TabPanel>
-        <TabPanel value={value} index={5}>
-          <TimezoneSetup />
         </TabPanel>
       </DialogContent>
       <DialogActions>
