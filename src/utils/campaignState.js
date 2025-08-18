@@ -39,8 +39,8 @@ const uploadFile = async (fileData, filenamePrefix = 'file') => {
     return newBlob.url;
   } catch (error) {
     console.error(`Error uploading file with prefix ${filenamePrefix}:`, error);
-    // Return original data to not break the app state if upload fails
-    return fileData;
+    // Re-throw the error so the calling function can handle it and show a toast.
+    throw new Error(`Falha no upload do arquivo: ${error.message}. Verifique se um Blob Store está conectado ao projeto no Vercel.`);
   }
 };
 
