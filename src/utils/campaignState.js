@@ -160,7 +160,8 @@ export const deserializeCampaignData = async (loadedState) => {
     const fetchString = loadedState.backgroundImageBase64.startsWith('data:') ? loadedState.backgroundImageBase64 : `data:application/octet-stream;base64,${loadedState.backgroundImageBase64}`;
     const res = await fetch(fetchString);
     const blob = await res.blob();
-    loadedState.backgroundImageUrl = URL.createObjectURL(blob);
+    // This sets the image to a local blob URL, which the uploadAsset function can handle.
+    loadedState.backgroundImage = URL.createObjectURL(blob);
     delete loadedState.backgroundImageBase64;
   }
 
