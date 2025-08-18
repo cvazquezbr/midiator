@@ -71,8 +71,11 @@ const RecordManager = ({
 
     // Inicialização e sincronização com props externas
     useEffect(() => {
+        // Garantir que registrosIniciais seja sempre um array para evitar erros.
+        const safeRegistrosIniciais = Array.isArray(registrosIniciais) ? registrosIniciais : [];
+
         let maxIdCalculado = 0;
-        registrosIniciais.forEach(reg => {
+        safeRegistrosIniciais.forEach(reg => {
             if (reg.id !== undefined && reg.id !== null) {
                 const numIdMatch = String(reg.id).match(/\d+$/);
                 if (numIdMatch) {
@@ -86,7 +89,7 @@ const RecordManager = ({
 
         let idCounterParaLote = maxIdCalculado + 1;
 
-        const dadosProcessados = registrosIniciais.map(reg => {
+        const dadosProcessados = safeRegistrosIniciais.map(reg => {
             const idOriginal = reg.id;
             let idFinal;
             if (idOriginal !== undefined && idOriginal !== null) {
