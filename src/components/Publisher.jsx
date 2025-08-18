@@ -800,7 +800,7 @@ const Publisher = ({
                                         <TableCell component="th" scope="row">
                                             {row.content.titulo}
                                         </TableCell>
-                                        <TableCell align="right">{new Date(row.scheduledAt).toLocaleString('pt-BR', { timeZone: 'UTC' })}</TableCell>
+                                        <TableCell align="right">{new Date(row.scheduledAt).toLocaleString('pt-BR')}</TableCell>
                                         <TableCell align="right">
                                             <Chip
                                                 label={row.status}
