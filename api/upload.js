@@ -13,8 +13,10 @@ const handler = async (req, res) => {
       body,
       request: req,
       onBeforeGenerateToken: async (pathname /*, clientPayload */) => {
-        // This is where you can add custom logic before a token is generated.
-        // For example, you can check if the user has permission to upload to this path.
+        if (!req.user || !req.user.sub) {
+          throw new Error('Authentication is required to upload files.');
+        }
+
         // The pathname will be the one sent from the client.
         return {
           allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'audio/mpeg', 'video/webm', 'audio/webm', 'audio/wav'],
