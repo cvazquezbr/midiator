@@ -11,6 +11,7 @@ const CREDENTIAL_KEYS = {
   GOOGLE_TTS: 'googleCloudTTSCredentials',
   LINKEDIN: 'linkedinConfig',
   WORDPRESS: 'wordpressConfig',
+  USER_TIMEZONE: 'user_timezone',
 };
 
 /**
@@ -42,6 +43,10 @@ export const gatherCredentials = () => {
   // WordPress
   const wordpress = getWordpressConfig();
   if (wordpress && wordpress.wordpressUrl) credentials[CREDENTIAL_KEYS.WORDPRESS] = wordpress;
+
+  // Timezone
+  const timezone = localStorage.getItem(CREDENTIAL_KEYS.USER_TIMEZONE);
+  if (timezone) credentials[CREDENTIAL_KEYS.USER_TIMEZONE] = timezone;
 
   return credentials;
 };
@@ -81,6 +86,9 @@ export const applySettings = (settings) => {
   }
   if (settings[CREDENTIAL_KEYS.WORDPRESS]) {
     saveWordpressConfig(settings[CREDENTIAL_KEYS.WORDPRESS]);
+  }
+  if (settings[CREDENTIAL_KEYS.USER_TIMEZONE]) {
+    localStorage.setItem(CREDENTIAL_KEYS.USER_TIMEZONE, settings[CREDENTIAL_KEYS.USER_TIMEZONE]);
   }
 };
 
