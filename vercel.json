@@ -4,5 +4,6 @@
       "path": "/api/schedule",
       "schedule": "0 14 * * *"
     }
-  ]
+  ],
+  "bodyLimit": "10mb"
 }
