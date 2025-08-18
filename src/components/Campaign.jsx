@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   CardContent,
@@ -213,7 +213,7 @@ const Campaign = ({
       setActiveTab(newValue);
     };
 
-    const handleGenerateProblems = async () => {
+    const handleGenerateProblems = useCallback(async () => {
         if (commonProblems.length > 0) return;
         setIsLoadingProblems(true);
         setProblemsError(null);
@@ -230,7 +230,7 @@ const Campaign = ({
         } finally {
             setIsLoadingProblems(false);
         }
-    };
+    }, [commonProblems.length]);
 
     useEffect(() => {
         if (isHintModalOpen) {
@@ -238,7 +238,7 @@ const Campaign = ({
         }
     }, [isHintModalOpen, handleGenerateProblems]);
 
-    const handleGenerateSolutions = async () => {
+    const handleGenerateSolutions = useCallback(async () => {
         if (commonSolutions.length > 0) return;
         setIsLoadingSolutions(true);
         setSolutionsError(null);
@@ -255,7 +255,7 @@ const Campaign = ({
         } finally {
             setIsLoadingSolutions(false);
         }
-    };
+    }, [commonSolutions.length, problema]);
 
     useEffect(() => {
         if (isSolucaoHintModalOpen) {
