@@ -16,6 +16,42 @@ export const createSchedule = async (scheduleData) => {
     return await response.json();
 };
 
+export const getSchedule = async (id) => {
+    const response = await fetch('/api/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'getSchedule',
+            payload: { id },
+        }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to get schedule details.');
+    }
+
+    return await response.json();
+};
+
+export const updateSchedule = async (id, newScheduledAt) => {
+    const response = await fetch('/api/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'updateSchedule',
+            payload: { id, scheduledAt: newScheduledAt },
+        }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to update schedule.');
+    }
+
+    return await response.json();
+};
+
 export const deleteSchedule = async (id, authorUrn) => {
     const response = await fetch('/api/schedule', {
         method: 'POST', // Still POST because the endpoint routes based on `action`

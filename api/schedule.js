@@ -77,6 +77,66 @@ async function handleDeleteSchedule(request, response) {
     }
 }
 
+// Helper function to get a single schedule by ID
+async function handleGetScheduleById(request, response) {
+    try {
+        const { id } = request.body.payload;
+        if (!id) {
+            return response.status(400).json({ error: 'Missing id for getting schedule.' });
+        }
+
+        const postRaw = await kv.get(`post:${id}`);
+        if (!postRaw) {
+            return response.status(404).json({ error: 'Schedule not found.' });
+        }
+
+        const post = JSON.parse(postRaw);
+        return response.status(200).json(post);
+    } catch (error) {
+        console.error('Error getting schedule by id:', error);
+        return response.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+
+// Helper function to update a schedule
+async function handleUpdateSchedule(request, response) {
+    try {
+        const { id, scheduledAt: newScheduledAt } = request.body.payload;
+        if (!id || !newScheduledAt) {
+            return response.status(400).json({ error: 'Missing id or newScheduledAt for updating schedule.' });
+        }
+
+        const postRaw = await kv.get(`post:${id}`);
+        if (!postRaw) {
+            return response.status(404).json({ error: 'Schedule not found to update.' });
+        }
+
+        const post = JSON.parse(postRaw);
+
+        // Update the schedule time
+        const newExecutionDate = new Date(newScheduledAt);
+        const newExecutionTimestamp = newExecutionDate.getTime();
+
+        post.scheduledAt = newExecutionDate.toISOString();
+        post.userSelectedTime = newScheduledAt;
+        // Also update status back to 'scheduled' in case it was 'failed'
+        post.status = 'scheduled';
+        post.error = null; // Clear previous errors
+
+        // Update the post in KV
+        await kv.set(`post:${id}`, JSON.stringify(post));
+
+        // zadd with the same member updates the score, so this is correct.
+        await kv.zadd('schedules_by_time', { score: newExecutionTimestamp, member: id });
+
+        return response.status(200).json(post);
+    } catch (error) {
+        console.error('Error updating schedule:', error);
+        return response.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+
+
 // The main scheduler logic
 async function handleRunScheduler(request, response) {
     console.log('Scheduler run initiated...');
@@ -170,9 +230,11 @@ export default async function handler(request, response) {
         case 'createSchedule': return handleCreateSchedule(request, response);
         case 'getSchedules': return handleGetSchedules(request, response);
         case 'deleteSchedule': return handleDeleteSchedule(request, response);
+        case 'getSchedule': return handleGetScheduleById(request, response);
+        case 'updateSchedule': return handleUpdateSchedule(request, response);
         default: return response.status(400).json({ error: `Invalid action specified: ${action}` });
     }
 }
 
 // Test exports
-export { handleCreateSchedule, handleGetSchedules, handleDeleteSchedule, handleRunScheduler };
+export { handleCreateSchedule, handleGetSchedules, handleDeleteSchedule, handleRunScheduler, handleGetScheduleById, handleUpdateSchedule };
