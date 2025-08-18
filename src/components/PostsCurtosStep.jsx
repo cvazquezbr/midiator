@@ -43,7 +43,6 @@ const PostsCurtosStep = ({
   darkMode,
   exportCsv, // Nova prop
 }) => {
-  console.log('[PostsCurtosStep] Renderizando com props:', { csvData, csvHeaders, inputMethod });
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
 
   const handleDragEnter = (event) => {
@@ -196,7 +195,6 @@ const PostsCurtosStep = ({
           <Box>
             <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
                 <Button onClick={() => {
-                    console.log('[PostsCurtosStep] Botão "Voltar" clicado. Limpando dados.');
                     onDadosAlterados([], []);
                     setInputMethod('ia'); // Volta para o método padrão
                 }}>

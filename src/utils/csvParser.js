@@ -6,10 +6,8 @@ import Papa from 'papaparse';
  * @returns {Promise<{data: Array<Object>, headers: Array<string>}>} A promise that resolves with the parsed data and headers.
  */
 export const parseCsv = (file) => {
-  console.log('[csvParser] Iniciando parse do arquivo:', file);
   return new Promise((resolve, reject) => {
     if (!file) {
-      console.error('[csvParser] Nenhum arquivo fornecido.');
       return reject(new Error("Nenhum arquivo fornecido para o parser."));
     }
 
@@ -17,19 +15,16 @@ export const parseCsv = (file) => {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        console.log('[csvParser] Parse concluído. Resultados:', results);
         if (results.data && results.data.length > 0) {
           const headers = Object.keys(results.data[0] || {});
-          console.log('[csvParser] Dados e cabeçalhos extraídos:', { data: results.data, headers });
           resolve({ data: results.data, headers });
         } else {
-          console.log('[csvParser] Arquivo CSV vazio ou sem dados. Resolvendo com arrays vazios.');
           // Resolve with empty arrays if the file is valid but has no data
           resolve({ data: [], headers: [] });
         }
       },
       error: (error) => {
-        console.error('[csvParser] Erro no Papa.parse:', error);
+        console.error('Erro ao ler CSV:', error);
         reject(new Error('Erro ao ler o arquivo CSV. Verifique se o formato está correto.'));
       }
     });
