@@ -32,6 +32,7 @@ import { Language, Publish, LinkedIn } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { zonedTimeToUtc, utcToZonedTime, format } from 'date-fns-tz';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import TimeHeatMap from './TimeHeatMap';
 import {
@@ -161,6 +162,12 @@ const Publisher = ({
   const [unifiedMedia, setUnifiedMedia] = useState([]);
   const [previewedMedia, setPreviewedMedia] = useState(null);
   const [schedulePreview, setSchedulePreview] = useState([]);
+  const [userTimezone, setUserTimezone] = useState('America/Sao_Paulo');
+
+  useEffect(() => {
+    const tz = localStorage.getItem('user_timezone') || 'America/Sao_Paulo';
+    setUserTimezone(tz);
+  }, [tabValue]); // Re-check when tab changes, for instance.
 
   useEffect(() => {
     if (!followupPosts || followupPosts.length === 0) {
@@ -168,10 +175,8 @@ const Publisher = ({
       return;
     }
 
-    const daysOfWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-
     const getScheduledTime = (date) => {
-      const dayIndex = date.getDay();
+      const dayIndex = date.getDay(); // This is still based on the local date for simplicity of lookup
       return weeklySchedule[dayIndex] || 'N/A';
     };
 
@@ -179,10 +184,12 @@ const Publisher = ({
       const postDate = new Date(scheduleDate);
       postDate.setDate(postDate.getDate() + index + 1);
 
+      const zonedDate = utcToZonedTime(postDate, userTimezone);
+
       return {
         key: `followup-${index}`,
-        date: postDate.toLocaleDateString('pt-BR'),
-        day: daysOfWeek[postDate.getDay()],
+        date: format(zonedDate, 'dd/MM/yyyy', { timeZone: userTimezone }),
+        day: format(zonedDate, 'EEE', { timeZone: userTimezone, locale: ptBR }),
         time: getScheduledTime(postDate),
         title: post.tipo_gancho || `Follow-up ${index + 1}`
       };
@@ -190,7 +197,7 @@ const Publisher = ({
 
     setSchedulePreview(preview);
 
-  }, [followupPosts, scheduleDate, weeklySchedule]);
+  }, [followupPosts, scheduleDate, weeklySchedule, userTimezone]);
 
   const formatBytes = (bytes, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
@@ -361,8 +368,12 @@ const Publisher = ({
             return time;
         };
 
+        const formatDateInTimezone = (date, tz) => {
+            return format(utcToZonedTime(date, tz), 'dd/MM/yyyy', { timeZone: tz });
+        }
+
         const mainPostRow = [
-            formatDate(scheduleDate),
+            formatDateInTimezone(scheduleDate, userTimezone),
             getScheduledTime(scheduleDate),
             selectedProfile,
             campaignContent?.titulo || '',
@@ -381,7 +392,7 @@ const Publisher = ({
                 followupDate.setDate(scheduleDate.getDate() + index + 1);
 
                 const followupRow = [
-                    formatDate(followupDate),
+                    formatDateInTimezone(followupDate, userTimezone),
                     getScheduledTime(followupDate),
                     selectedProfile,
                     post.titulo || '', // Usando o título do post
@@ -408,12 +419,17 @@ const Publisher = ({
             throw new Error('Não foi possível encontrar o Access Token do LinkedIn para o agendamento automático.');
         }
 
-        const mainPostDate = new Date(scheduleDate);
+        const mainPostDate = new Date(scheduleDate); // Start with the date part
         const [hours, minutes] = getScheduledTime(mainPostDate).split(':');
-        mainPostDate.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+
+        // Combine date and time into a single date object
+        mainPostDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+        // Convert the combined date from the user's configured timezone to UTC
+        const scheduledAtUtc = zonedTimeToUtc(mainPostDate, userTimezone);
 
         const mainPostSchedule = {
-            scheduledAt: mainPostDate.toISOString(),
+            scheduledAt: scheduledAtUtc.toISOString(),
             authorUrn: selectedProfile,
             content: campaignContent,
             accessToken: accessToken,
@@ -428,10 +444,12 @@ const Publisher = ({
                 const followupDate = new Date(scheduleDate);
                 followupDate.setDate(scheduleDate.getDate() + index + 1);
                 const [fHours, fMinutes] = getScheduledTime(followupDate).split(':');
-                followupDate.setHours(parseInt(fHours, 10), parseInt(fMinutes, 10));
+                followupDate.setHours(parseInt(fHours, 10), parseInt(fMinutes, 10), 0, 0);
+
+                const followupScheduledAtUtc = zonedTimeToUtc(followupDate, userTimezone);
 
                 const followupSchedule = {
-                    scheduledAt: followupDate.toISOString(),
+                    scheduledAt: followupScheduledAtUtc.toISOString(),
                     authorUrn: selectedProfile,
                     content: {
                         titulo: post.titulo || '',
@@ -788,7 +806,7 @@ const Publisher = ({
                             <TableHead>
                                 <TableRow>
                                     <TableCell>Título</TableCell>
-                                    <TableCell align="right">Data Agendada (UTC)</TableCell>
+                                    <TableCell align="right">Data Agendada</TableCell>
                                     <TableCell align="right">Status</TableCell>
                                     <TableCell align="right">Link</TableCell>
                                     <TableCell align="right">Ações</TableCell>
@@ -800,7 +818,9 @@ const Publisher = ({
                                         <TableCell component="th" scope="row">
                                             {row.content.titulo}
                                         </TableCell>
-                                        <TableCell align="right">{new Date(row.scheduledAt).toLocaleString('pt-BR')}</TableCell>
+                                        <TableCell align="right">
+                                            {format(utcToZonedTime(new Date(row.scheduledAt), userTimezone), 'dd/MM/yyyy HH:mm', { timeZone: userTimezone, locale: ptBR })}
+                                        </TableCell>
                                         <TableCell align="right">
                                             <Chip
                                                 label={row.status}
