@@ -56,6 +56,7 @@ const RecordManager = ({
     onDadosAlterados,
     darkMode = false
 }) => {
+    console.log('[RecordManager] Renderizando com props:', { registrosIniciais, colunasIniciais });
     const [registros, setRegistros] = useState([]);
     const [colunas, setColunas] = useState([]);
     const [modalAberto, setModalAberto] = useState(null); // null, 'ADICIONAR', 'EDITAR', 'EXCLUIR'
@@ -71,8 +72,10 @@ const RecordManager = ({
 
     // Inicialização e sincronização com props externas
     useEffect(() => {
+        console.log('[RecordManager] useEffect - Sincronizando com props externas.');
         // Garantir que registrosIniciais seja sempre um array para evitar erros.
         const safeRegistrosIniciais = Array.isArray(registrosIniciais) ? registrosIniciais : [];
+        console.log('[RecordManager] useEffect - safeRegistrosIniciais:', safeRegistrosIniciais);
 
         let maxIdCalculado = 0;
         safeRegistrosIniciais.forEach(reg => {
@@ -100,6 +103,7 @@ const RecordManager = ({
             }
             return { ...reg, id: idFinal };
         });
+        console.log('[RecordManager] useEffect - dadosProcessados:', dadosProcessados);
 
         setRegistros(dadosProcessados);
         setProximoId(idCounterParaLote); // Atualiza o proximoId global com base no último ID gerado em lote
@@ -112,6 +116,7 @@ const RecordManager = ({
         } else {
             currentCols = [];
         }
+        console.log('[RecordManager] useEffect - currentCols:', currentCols);
         setColunas(currentCols);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
