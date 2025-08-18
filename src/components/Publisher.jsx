@@ -32,9 +32,7 @@ import { Language, Publish, LinkedIn } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { zonedTimeToUtc } from 'date-fns-tz/fp/zonedTimeToUtc';
-import { utcToZonedTime } from 'date-fns-tz/fp/utcToZonedTime';
-import { format } from 'date-fns-tz/fp/format';
+import { zonedTimeToUtc, utcToZonedTime, format } from 'date-fns-tz';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import TimeHeatMap from './TimeHeatMap';
 import {
@@ -186,12 +184,12 @@ const Publisher = ({
       const postDate = new Date(scheduleDate);
       postDate.setDate(postDate.getDate() + index + 1);
 
-      const zonedDate = utcToZonedTime(userTimezone)(postDate);
+      const zonedDate = utcToZonedTime(postDate, userTimezone);
 
       return {
         key: `followup-${index}`,
-        date: format('dd/MM/yyyy', { timeZone: userTimezone })(zonedDate),
-        day: format('EEE', { timeZone: userTimezone, locale: ptBR })(zonedDate),
+        date: format(zonedDate, 'dd/MM/yyyy', { timeZone: userTimezone }),
+        day: format(zonedDate, 'EEE', { timeZone: userTimezone, locale: ptBR }),
         time: getScheduledTime(postDate),
         title: post.tipo_gancho || `Follow-up ${index + 1}`
       };
@@ -371,7 +369,7 @@ const Publisher = ({
         };
 
         const formatDateInTimezone = (date, tz) => {
-            return format('dd/MM/yyyy', { timeZone: tz })(utcToZonedTime(tz)(date));
+            return format(utcToZonedTime(date, tz), 'dd/MM/yyyy', { timeZone: tz });
         }
 
         const mainPostRow = [
@@ -428,7 +426,7 @@ const Publisher = ({
         mainPostDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
         // Convert the combined date from the user's configured timezone to UTC
-        const scheduledAtUtc = zonedTimeToUtc(userTimezone)(mainPostDate);
+        const scheduledAtUtc = zonedTimeToUtc(mainPostDate, userTimezone);
 
         const mainPostSchedule = {
             scheduledAt: scheduledAtUtc.toISOString(),
@@ -448,7 +446,7 @@ const Publisher = ({
                 const [fHours, fMinutes] = getScheduledTime(followupDate).split(':');
                 followupDate.setHours(parseInt(fHours, 10), parseInt(fMinutes, 10), 0, 0);
 
-                const followupScheduledAtUtc = zonedTimeToUtc(userTimezone)(followupDate);
+                const followupScheduledAtUtc = zonedTimeToUtc(followupDate, userTimezone);
 
                 const followupSchedule = {
                     scheduledAt: followupScheduledAtUtc.toISOString(),
@@ -821,7 +819,7 @@ const Publisher = ({
                                             {row.content.titulo}
                                         </TableCell>
                                         <TableCell align="right">
-                                            {format('dd/MM/yyyy HH:mm', { timeZone: userTimezone, locale: ptBR })(utcToZonedTime(userTimezone)(new Date(row.scheduledAt)))}
+                                            {format(utcToZonedTime(new Date(row.scheduledAt), userTimezone), 'dd/MM/yyyy HH:mm', { timeZone: userTimezone, locale: ptBR })}
                                         </TableCell>
                                         <TableCell align="right">
                                             <Chip
