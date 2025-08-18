@@ -1,81 +1,77 @@
 // This file now handles the logic for serializing, deserializing,
 // and communicating with the campaign API endpoints.
+import { upload } from '@vercel/blob/client';
+import { toast } from 'sonner';
 
-// Helper to convert Blob to Base64
-const blobToBase64 = (blob) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
+// Helper to upload a blob-like asset to Vercel Blob storage.
+const uploadAsset = async (asset, filename) => {
+  if (!asset) return null;
 
-// Helper to convert Base64 back to Blob
-const base64ToBlob = async (base64) => {
-  if (!base64) return null;
-  const fetchString = base64.startsWith('data:') ? base64 : `data:application/octet-stream;base64,${base64}`;
+  let fileToUpload;
+  if (typeof asset === 'string' && asset.startsWith('blob:')) {
+    const response = await fetch(asset);
+    const blob = await response.blob();
+    fileToUpload = new File([blob], filename, { type: blob.type });
+  } else if (asset instanceof Blob) {
+    fileToUpload = asset;
+  } else if (typeof asset === 'string') {
+    // It's likely already a URL, so we don't need to re-upload.
+    return asset;
+  } else {
+    // Unsupported asset type
+    return null;
+  }
+
   try {
-    const res = await fetch(fetchString);
-    return res.blob();
+    const newBlob = await upload(filename, fileToUpload, {
+      access: 'public',
+      handleUploadUrl: '/api/upload',
+    });
+    // Return the public URL of the uploaded file.
+    return newBlob.url;
   } catch (error) {
-    console.error("Error converting base64 to blob:", error);
+    console.error('Error uploading asset to Vercel Blob:', error);
+    toast.error(`Failed to upload asset: ${filename}`);
+    // Return null or the original asset to indicate failure
     return null;
   }
 };
 
+
 /**
  * Gathers and serializes the current application state for saving.
- * Blobs are converted to Base64 strings.
+ * Blobs are uploaded to Vercel Blob storage.
  * @param {object} state - The current application state from HomePage.
  * @returns {Promise<object>} A promise that resolves to a serializable object.
  */
 export const serializeCampaignData = async (state) => {
-  const serializableGeneratedImages = await Promise.all(
-    (state.generatedImagesData || []).map(async (img) => {
-      const imageBase64 = img.blob ? await blobToBase64(img.blob) : null;
-      return { ...img, blob: undefined, url: undefined, imageBase64 };
-    })
-  );
-  const serializableGeneratedAudio = await Promise.all(
-    (state.generatedAudioData || []).map(async (audio) => {
-      const audioBase64 = audio.blob ? await blobToBase64(audio.blob) : null;
-      return { ...audio, blob: undefined, audioBase64 };
-    })
-  );
-  const serializableGeneratedVideos = await Promise.all(
-    (state.generatedVideosData || []).map(async (video) => {
-      const videoBase64 = video.blob ? await blobToBase64(video.blob) : null;
-      return { ...video, blob: undefined, url: undefined, videoBase64 };
-    })
-  );
+  // Helper to process a list of assets, uploading their blobs
+  const serializeAssetList = async (assetList) => {
+    if (!assetList) return [];
+    return Promise.all(
+      assetList.map(async (asset, index) => {
+        const newUrl = await uploadAsset(asset.blob, asset.filename || `asset_${index}`);
+        return { ...asset, url: newUrl, blob: undefined }; // Store URL, remove blob
+      })
+    );
+  };
+
+  const serializableGeneratedImages = await serializeAssetList(state.generatedImagesData);
+  const serializableGeneratedAudio = await serializeAssetList(state.generatedAudioData);
+  const serializableGeneratedVideos = await serializeAssetList(state.generatedVideosData);
+
   const serializableBrandElements = await Promise.all(
     (state.brandElements || []).map(async (el) => {
       if (el.url && el.url.startsWith('blob:')) {
-        const response = await fetch(el.url);
-        const blob = await response.blob();
-        const urlBase64 = await blobToBase64(blob);
-        return { ...el, url: undefined, urlBase64 };
+        const newUrl = await uploadAsset(el.url, el.name || `brand_element_${el.id}`);
+        return { ...el, url: newUrl };
       }
       return el;
     })
   );
-  let backgroundImageBase64 = null;
-  if (state.backgroundImageUrl && state.backgroundImageUrl.startsWith('blob:')) {
-    const response = await fetch(state.backgroundImageUrl);
-    const blob = await response.blob();
-    backgroundImageBase64 = await blobToBase64(blob);
-  } else {
-    backgroundImageBase64 = state.backgroundImageUrl;
-  }
-  let generatedImageBase64 = null;
-  if (state.generatedImageUrl && state.generatedImageUrl.startsWith('blob:')) {
-    const response = await fetch(state.generatedImageUrl);
-    const blob = await response.blob();
-    generatedImageBase64 = await blobToBase64(blob);
-  } else {
-    generatedImageBase64 = state.generatedImageUrl;
-  }
+
+  const newBackgroundImageUrl = await uploadAsset(state.backgroundImage, 'background_image');
+  const newGeneratedImageUrl = await uploadAsset(state.generatedImageUrl, 'generated_campaign_image');
 
   const stateToSave = {
     ...state,
@@ -83,69 +79,88 @@ export const serializeCampaignData = async (state) => {
     generatedAudioData: serializableGeneratedAudio,
     generatedVideosData: serializableGeneratedVideos,
     brandElements: serializableBrandElements,
-    backgroundImageUrl: undefined,
-    backgroundImageBase64: backgroundImageBase64,
-    generatedImageUrl: undefined,
-    generatedImageBase64: generatedImageBase64,
+    backgroundImage: newBackgroundImageUrl,
+    generatedImageUrl: newGeneratedImageUrl,
   };
 
   // Remove props that shouldn't be persisted
   delete stateToSave.isSaving;
   delete stateToSave.isLoading;
   delete stateToSave.user;
+  // These are client-side only representations
+  delete stateToSave.backgroundImageUrl;
 
   return stateToSave;
 };
 
 /**
  * Takes a loaded campaign state and deserializes it for the application.
+ * For Vercel Blob, URLs are stored directly, so deserialization is simpler.
+ * We just need to ensure local blob URLs are created for components that expect them.
  * @param {object} loadedState - The state object loaded from the database.
  * @returns {Promise<object>} The deserialized state ready for the application.
  */
 export const deserializeCampaignData = async (loadedState) => {
-  if (loadedState.backgroundImageBase64) {
-    const blob = await base64ToBlob(loadedState.backgroundImageBase64);
-    if (blob) loadedState.backgroundImageUrl = URL.createObjectURL(blob);
-  }
-  if (loadedState.generatedImageBase64) {
-    const blob = await base64ToBlob(loadedState.generatedImageBase64);
-    if (blob) loadedState.generatedImageUrl = URL.createObjectURL(blob);
-  }
-  if (loadedState.generatedImagesData) {
-    loadedState.generatedImagesData = await Promise.all(
-      (loadedState.generatedImagesData || []).map(async (imgData) => {
-        const blob = await base64ToBlob(imgData.imageBase64);
-        return { ...imgData, blob, url: blob ? URL.createObjectURL(blob) : null, imageBase64: undefined };
+  // Helper to convert a remote URL back to a blob and a blob URL
+  const urlToBlob = async (url) => {
+    if (!url || !url.startsWith('http')) return { blob: null, url: url };
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Failed to fetch ${url}`);
+      const blob = await response.blob();
+      return { blob, url: URL.createObjectURL(blob) };
+    } catch (error) {
+      console.error('Error converting URL to blob:', error);
+      toast.error(`Could not load an asset: ${error.message}`);
+      return { blob: null, url: url }; // Return original URL on failure
+    }
+  };
+
+  const deserializeAssetList = async (assetList) => {
+    if (!assetList) return [];
+    return Promise.all(
+      assetList.map(async (asset) => {
+        const { blob, url } = await urlToBlob(asset.url);
+        return { ...asset, blob, url };
       })
     );
-  }
-  if (loadedState.generatedAudioData) {
-    loadedState.generatedAudioData = await Promise.all(
-      (loadedState.generatedAudioData || []).map(async (audioData) => {
-        const blob = await base64ToBlob(audioData.audioBase64);
-        return { ...audioData, blob, audioBase64: undefined };
-      })
-    );
-  }
-  if (loadedState.generatedVideosData) {
-    loadedState.generatedVideosData = await Promise.all(
-      (loadedState.generatedVideosData || []).map(async (videoData) => {
-        const blob = await base64ToBlob(videoData.videoBase64);
-        return { ...videoData, blob, url: blob ? URL.createObjectURL(blob) : null, videoBase64: undefined };
-      })
-    );
-  }
+  };
+
+  loadedState.generatedImagesData = await deserializeAssetList(loadedState.generatedImagesData);
+  loadedState.generatedAudioData = await deserializeAssetList(loadedState.generatedAudioData);
+  loadedState.generatedVideosData = await deserializeAssetList(loadedState.generatedVideosData);
+
   if (loadedState.brandElements) {
     loadedState.brandElements = await Promise.all(
-      (loadedState.brandElements || []).map(async (el) => {
-        if (el.urlBase64) {
-          const blob = await base64ToBlob(el.urlBase64);
-          if (blob) return { ...el, url: URL.createObjectURL(blob), urlBase64: undefined };
-        }
-        return el;
-      })
+        (loadedState.brandElements || []).map(async (el) => {
+            if (el.url && el.url.startsWith('http')) {
+                const { url: localUrl } = await urlToBlob(el.url);
+                return { ...el, url: localUrl };
+            }
+            return el;
+        })
     );
   }
+
+  if (loadedState.backgroundImage) {
+      const { url } = await urlToBlob(loadedState.backgroundImage);
+      loadedState.backgroundImage = url;
+  }
+  if (loadedState.generatedImageUrl) {
+      const { url } = await urlToBlob(loadedState.generatedImageUrl);
+      loadedState.generatedImageUrl = url;
+  }
+
+  // Backward compatibility for old data structure
+  if (loadedState.backgroundImageBase64) {
+    const fetchString = loadedState.backgroundImageBase64.startsWith('data:') ? loadedState.backgroundImageBase64 : `data:application/octet-stream;base64,${loadedState.backgroundImageBase64}`;
+    const res = await fetch(fetchString);
+    const blob = await res.blob();
+    loadedState.backgroundImageUrl = URL.createObjectURL(blob);
+    delete loadedState.backgroundImageBase64;
+  }
+
+
   return loadedState;
 };
 
