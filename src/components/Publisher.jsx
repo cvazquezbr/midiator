@@ -32,8 +32,8 @@ import { Language, Publish, LinkedIn } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { zonedTimeToUtc, utcToZonedTime, format } from 'date-fns-tz';
 import { ptBR } from 'date-fns/locale/pt-BR';
+import * as dateFnsTz from 'date-fns-tz';
 import TimeHeatMap from './TimeHeatMap';
 import {
   Table,
@@ -164,13 +164,18 @@ const Publisher = ({
   const [schedulePreview, setSchedulePreview] = useState([]);
   const [userTimezone, setUserTimezone] = useState('America/Sao_Paulo');
 
+  // Defensive accessors for date-fns-tz functions
+  const format = dateFnsTz.format || dateFnsTz.default?.format;
+  const utcToZonedTime = dateFnsTz.utcToZonedTime || dateFnsTz.default?.utcToZonedTime;
+  const zonedTimeToUtc = dateFnsTz.zonedTimeToUtc || dateFnsTz.default?.zonedTimeToUtc;
+
   useEffect(() => {
     const tz = localStorage.getItem('user_timezone') || 'America/Sao_Paulo';
     setUserTimezone(tz);
   }, [tabValue]); // Re-check when tab changes, for instance.
 
   useEffect(() => {
-    if (!followupPosts || followupPosts.length === 0) {
+    if (!followupPosts || followupPosts.length === 0 || !format || !utcToZonedTime) {
       setSchedulePreview([]);
       return;
     }
@@ -197,7 +202,7 @@ const Publisher = ({
 
     setSchedulePreview(preview);
 
-  }, [followupPosts, scheduleDate, weeklySchedule, userTimezone]);
+  }, [followupPosts, scheduleDate, weeklySchedule, userTimezone, format, utcToZonedTime]);
 
   const formatBytes = (bytes, decimals = 2) => {
     if (bytes === 0) return '0 Bytes';
@@ -369,6 +374,7 @@ const Publisher = ({
         };
 
         const formatDateInTimezone = (date, tz) => {
+            if (!format || !utcToZonedTime) return date.toLocaleDateString('pt-BR');
             return format(utcToZonedTime(date, tz), 'dd/MM/yyyy', { timeZone: tz });
         }
 
@@ -419,6 +425,9 @@ const Publisher = ({
             throw new Error('Não foi possível encontrar o Access Token do LinkedIn para o agendamento automático.');
         }
 
+        if (!zonedTimeToUtc) {
+            throw new Error("Função de fuso horário (zonedTimeToUtc) não está disponível. O pacote date-fns-tz pode não ter sido carregado corretamente.");
+        }
         const mainPostDate = new Date(scheduleDate); // Start with the date part
         const [hours, minutes] = getScheduledTime(mainPostDate).split(':');
 
@@ -819,7 +828,7 @@ const Publisher = ({
                                             {row.content.titulo}
                                         </TableCell>
                                         <TableCell align="right">
-                                            {format(utcToZonedTime(new Date(row.scheduledAt), userTimezone), 'dd/MM/yyyy HH:mm', { timeZone: userTimezone, locale: ptBR })}
+                                            {format ? format(utcToZonedTime(new Date(row.scheduledAt), userTimezone), 'dd/MM/yyyy HH:mm', { timeZone: userTimezone, locale: ptBR }) : new Date(row.scheduledAt).toLocaleString()}
                                         </TableCell>
                                         <TableCell align="right">
                                             <Chip
