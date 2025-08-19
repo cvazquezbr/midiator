@@ -59,7 +59,6 @@ import PaletteWizard from './PaletteWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
 import geminiAPI from '../utils/geminiAPI';
-import { getGeminiApiKey } from '../utils/geminiCredentials';
 import isEqual from 'lodash.isequal';
 
 function TabPanel(props) {
@@ -117,15 +116,6 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemori
   const [showPaletteWizard, setShowPaletteWizard] = useState(false);
 
   const handleGeneratePersonaWithAI = async (description, callback) => {
-    if (!geminiAPI.isInitialized) {
-      const apiKey = getGeminiApiKey();
-      if (!apiKey) {
-        toast.error('Chave de API do Gemini não configurada.');
-        return;
-      }
-      geminiAPI.initialize(apiKey);
-    }
-
     setIsGeneratingPersona(true);
     const prompt = `
 Descriver uma persona para uma campanha de marketing para ${description}.
@@ -170,22 +160,13 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
     } catch (error) {
       console.error("Erro ao gerar ou processar persona com IA:", error);
-      toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console do navegador para detalhes.');
+      toast.error(`Ocorreu um erro ao processar a resposta da IA: ${error.message}`);
     } finally {
       setIsGeneratingPersona(false);
     }
   };
 
   const handleGenerateAutorWithAI = async (descricaoGeral, dominioReferencia, siteExclusao, callback) => {
-    if (!geminiAPI.isInitialized) {
-      const apiKey = getGeminiApiKey();
-      if (!apiKey) {
-        toast.error('Chave de API do Gemini não configurada.');
-        return;
-      }
-      geminiAPI.initialize(apiKey);
-    }
-
     setIsGeneratingAutor(true);
     const prompt = `
 Com base na descrição do autor, preencha os campos do objeto JSON abaixo.
@@ -203,7 +184,7 @@ ${siteExclusao ? `- NÃO use o site \`${siteExclusao}\` como referência.` : ''}
 - descricao: (string em HTML) Uma breve descrição da empresa, detalhando sua área de atuação, especializações e foco.
 - tipo: (string) Uma classificação da natureza da empresa (ex: "Braço de tecnologia", "Agência de marketing", "Consultoria").
 - objetivoEstrategico: (string em HTML) A meta de longo prazo da mensagem (posicionamento da marca, construção de autoridade, etc.).
-- objetivoEngajamento: (string em HTML) O tipo de interação que a mensagem deve estimular (gerar comentários, compartilhamentos, etc.).
+- objetivoEngajamento: (string em HTML) O tipo de interação que a mensagem deve estimular no público.
 
 Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, markdown, ou qualquer outra formatação.
 `;
@@ -225,7 +206,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
     } catch (error) {
       console.error("Erro ao gerar ou processar autor com IA:", error);
-      toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console do navegador para detalhes.');
+      toast.error(`Ocorreu um erro ao processar a resposta da IA: ${error.message}`);
     } finally {
       setIsGeneratingAutor(false);
     }
@@ -233,12 +214,6 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
   useEffect(() => {
     if (open) {
-      // Initialize Gemini API when the modal opens
-      const apiKey = getGeminiApiKey();
-      if (apiKey && !geminiAPI.isInitialized) {
-        geminiAPI.initialize(apiKey);
-      }
-
       const { persona, autor, instrucoes, formato, colors } = getCampaignPrompt();
       setPersona(persona);
       setAutor(autor);
@@ -247,14 +222,12 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
       setColors(colors || []);
       setInitialState({ persona, autor, instrucoes, formato, colors: colors || [] });
 
-      // Se a persona não existir ou não tiver um nome, mostre o assistente por padrão
       if (!persona || !persona.nome) {
         setIsPersonaWizardVisible(true);
       } else {
         setIsPersonaWizardVisible(false);
       }
 
-      // Se o autor não existir ou não tiver identidade, mostra o assistente do autor
       if (!autor || !autor.identidade) {
         setIsAutorWizardVisible(true);
       } else {
@@ -330,8 +303,6 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
   const handleColorChange = (index, newColor) => {
     const newColors = [...colors];
-    // When changing the color manually, we only update the hex and rgb value.
-    // We keep the name and role if they exist.
     newColors[index] = {
       ...newColors[index],
       hex: newColor,
@@ -367,7 +338,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         img.onload = () => {
           try {
             const colorThief = new ColorThief();
-            const palette = colorThief.getPalette(img, 5); // Returns array of [R, G, B]
+            const palette = colorThief.getPalette(img, 5);
             const newColors = palette.map((rgb, index) => {
               const hex = `#${rgb.map(c => c.toString(16).padStart(2, '0')).join('')}`;
               return {
