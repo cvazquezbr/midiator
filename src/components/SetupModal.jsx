@@ -10,12 +10,7 @@ import {
   Tabs,
   Tab,
   IconButton,
-  CircularProgress,
-  Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  CircularProgress
 } from '@mui/material';
 import {
   Close as CloseIcon,

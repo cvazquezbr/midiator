@@ -51,7 +51,7 @@ import {
 } from '@mui/material';
 import { Info, Delete, Edit, Visibility } from '@mui/icons-material';
 import { toast } from 'sonner';
-import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
+import { zonedTimeToUtc } from 'date-fns-tz';
 import { getTimezone } from '../utils/timezone';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
@@ -139,7 +139,7 @@ const Publisher = ({
     setIsUpdating(true);
     try {
       const userTimezone = getTimezone() || 'UTC';
-      const utcDate = fromZonedTime(editingSchedule.newScheduledAt, userTimezone);
+      const utcDate = zonedTimeToUtc(editingSchedule.newScheduledAt, userTimezone);
       await updateSchedule(editingSchedule.id, utcDate.toISOString());
       toast.success("Schedule updated successfully!");
       setEditingSchedule(null);
@@ -451,7 +451,7 @@ const Publisher = ({
         const mainPostDate = new Date(scheduleDate);
         const [hours, minutes] = getScheduledTime(mainPostDate).split(':');
         mainPostDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-        const mainPostUtcDate = fromZonedTime(mainPostDate, userTimezone);
+        const mainPostUtcDate = zonedTimeToUtc(mainPostDate, userTimezone);
 
         const mainPostSchedule = {
             scheduledAt: mainPostUtcDate.toISOString(),
@@ -470,7 +470,7 @@ const Publisher = ({
                 followupDate.setDate(scheduleDate.getDate() + index + 1);
                 const [fHours, fMinutes] = getScheduledTime(followupDate).split(':');
                 followupDate.setHours(parseInt(fHours, 10), parseInt(fMinutes, 10), 0, 0);
-                const followupUtcDate = fromZonedTime(followupDate, userTimezone);
+                const followupUtcDate = zonedTimeToUtc(followupDate, userTimezone);
 
                 const followupSchedule = {
                     scheduledAt: followupUtcDate.toISOString(),
@@ -830,7 +830,7 @@ const Publisher = ({
                             <TableHead>
                                 <TableRow>
                                     <TableCell>Título</TableCell>
-                                    <TableCell align="right">Data Agendada</TableCell>
+                                    <TableCell align="right">Data Agendada (UTC)</TableCell>
                                     <TableCell align="right">Status</TableCell>
                                     <TableCell align="right">Link</TableCell>
                                     <TableCell align="right">Ações</TableCell>
@@ -842,9 +842,7 @@ const Publisher = ({
                                         <TableCell component="th" scope="row">
                                             {row.content.titulo}
                                         </TableCell>
-                                        <TableCell align="right">
-                                            {formatInTimeZone(new Date(row.scheduledAt), getTimezone() || 'UTC', 'dd/MM/yyyy HH:mm:ss zzz', { locale: ptBR })}
-                                        </TableCell>
+                                        <TableCell align="right">{new Date(row.scheduledAt).toLocaleString('pt-BR')}</TableCell>
                                         <TableCell align="right">
                                             <Chip
                                                 label={row.status}
@@ -905,7 +903,7 @@ const Publisher = ({
                         <strong>Hashtags:</strong> {(viewingSchedule.content.hashtags || []).join(' ')}
                     </Typography>
                     <Divider sx={{ my: 2 }} />
-                    <Typography variant="body2"><strong>Scheduled for:</strong> {formatInTimeZone(new Date(viewingSchedule.scheduledAt), getTimezone() || 'UTC', 'dd/MM/yyyy HH:mm:ss zzz', { locale: ptBR })}</Typography>
+                    <Typography variant="body2"><strong>Scheduled for:</strong> {new Date(viewingSchedule.scheduledAt).toLocaleString('pt-BR')}</Typography>
                     <Typography variant="body2"><strong>Status:</strong> {viewingSchedule.status}</Typography>
                     {viewingSchedule.error && <Typography variant="body2" color="error"><strong>Error:</strong> {viewingSchedule.error}</Typography>}
                 </Box>
