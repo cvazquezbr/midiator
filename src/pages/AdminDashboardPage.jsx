@@ -3,7 +3,7 @@ import { useUserAuth } from '../context/UserAuthContext';
 import { useNavigate } from 'react-router-dom';
 import { DataGrid } from '@mui/x-data-grid';
 import { Box, Button, Container, Typography, Paper, CircularProgress, Alert, IconButton } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Edit as EditIcon, PlayCircleOutline as PlayCircleOutlineIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 
 // For now, the edit functionality will be a placeholder.
@@ -16,6 +16,7 @@ const AdminDashboardPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isSchedulerRunning, setIsSchedulerRunning] = useState(false);
   const { user: adminUser, logout } = useUserAuth();
   const navigate = useNavigate();
 
@@ -59,6 +60,24 @@ const AdminDashboardPage = () => {
     }
   };
 
+  const handleRunScheduler = async () => {
+    setIsSchedulerRunning(true);
+    toast.info('Scheduler run initiated...');
+    try {
+      const res = await fetch('/api/schedule');
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Scheduler run completed successfully.');
+      } else {
+        throw new Error(data.error || 'Failed to run scheduler');
+      }
+    } catch (err) {
+      toast.error(`Scheduler run failed: ${err.message}`);
+    } finally {
+      setIsSchedulerRunning(false);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
@@ -98,7 +117,18 @@ const AdminDashboardPage = () => {
       <Paper sx={{ my: 4, p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h4" component="h1">Admin Dashboard</Typography>
-          <Button variant="outlined" onClick={handleLogout}>Logout</Button>
+          <Box>
+            <Button
+              variant="contained"
+              sx={{ mr: 2 }}
+              onClick={handleRunScheduler}
+              disabled={isSchedulerRunning}
+              startIcon={isSchedulerRunning ? <CircularProgress size={20} color="inherit" /> : <PlayCircleOutlineIcon />}
+            >
+              {isSchedulerRunning ? 'Running...' : 'Run Scheduler'}
+            </Button>
+            <Button variant="outlined" onClick={handleLogout}>Logout</Button>
+          </Box>
         </Box>
         <Typography variant="h6" component="h2" sx={{ mb: 2 }}>User Management</Typography>
         {loading ? (
