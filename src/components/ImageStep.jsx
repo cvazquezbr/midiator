@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -6,13 +6,16 @@ import {
   Grid,
   Box,
   Button,
+  Fab,
 } from '@mui/material';
 import {
   Image as ImageIcon,
   Visibility,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 import FieldPositioner from './FieldPositioner';
 import FormattingPanel from './FormattingPanel';
+import FormattingDrawer from './FormattingDrawer';
 
 const ImageStep = ({
   steps,
@@ -44,7 +47,12 @@ const ImageStep = ({
   isMobile,
   selectedField,
   setSelectedField,
+  onDeselectField,
+  onOpenHtmlEditor,
+  isHtmlField,
 }) => {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
   if (!backgroundImage) {
     return (
       <Card>
@@ -150,7 +158,7 @@ const ImageStep = ({
             onZIndexChange={onZIndexChange}
           />
         </Grid>
-        {!isMobile && (
+        {!isMobile ? (
           <Grid item xs={12} md={4}>
             <FormattingPanel
               selectedField={selectedField}
@@ -164,8 +172,35 @@ const ImageStep = ({
               brandElements={brandElements}
               setBrandElements={setBrandElements}
               onZIndexChange={onZIndexChange}
+              onDeselectField={onDeselectField}
+              onOpenHtmlEditor={onOpenHtmlEditor}
+              isHtmlField={isHtmlField}
+              standardsColors={standardsColors}
             />
           </Grid>
+        ) : (
+          <>
+            <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16 }} onClick={() => setIsDrawerOpen(true)}><EditIcon /></Fab>
+            <FormattingDrawer
+              open={isDrawerOpen}
+              onClose={() => setIsDrawerOpen(false)}
+              selectedField={selectedField}
+              fieldStyles={fieldStyles}
+              setFieldStyles={setFieldStyles}
+              fieldPositions={fieldPositions}
+              setFieldPositions={setFieldPositions}
+              csvHeaders={csvHeaders}
+              imageFilters={imageFilters}
+              setImageFilters={setImageFilters}
+              brandElements={brandElements}
+              setBrandElements={setBrandElements}
+              onZIndexChange={onZIndexChange}
+              onDeselectField={onDeselectField}
+              onOpenHtmlEditor={onOpenHtmlEditor}
+              isHtmlField={isHtmlField}
+              standardsColors={standardsColors}
+            />
+          </>
         )}
       </Grid>
     </Box>
