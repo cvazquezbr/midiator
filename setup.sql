@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255),
     role VARCHAR(50) DEFAULT 'user' NOT NULL,
     google_id VARCHAR(255) UNIQUE,
+    google_access_token TEXT,
+    google_refresh_token TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
