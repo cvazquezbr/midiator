@@ -26,6 +26,7 @@ const DraggableElement = ({
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(content);
   const [resizeHandle, setResizeHandle] = useState(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -564,7 +565,13 @@ const DraggableElement = ({
         onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
         onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
         onClick={() => onSelect(element.id)}
-        onDoubleClick={onDoubleClick}
+        onDoubleClick={() => {
+          if (element.type === 'text' && !enableHtmlRendering) {
+            setIsEditing(true);
+          } else if (onDoubleClick) {
+            onDoubleClick();
+          }
+        }}
       >
         <Box
           className={`${styles.textBoxContent} ${isSelected ? styles.selected : ''} ${element.type === 'image' ? styles.imageElement : ''}`}
@@ -585,6 +592,25 @@ const DraggableElement = ({
                   pointerEvents: 'none',
                   filter: getFilterString(element.filters),
                 }}
+              />
+            ) : isEditing ? (
+              <textarea
+                ref={textareaRef}
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                onBlur={() => {
+                  setIsEditing(false);
+                  onContentChange(element.id, editedContent);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    setIsEditing(false);
+                    onContentChange(element.id, editedContent);
+                  }
+                }}
+                className={styles.textArea}
+                style={{ ...textContentStyle, pointerEvents: 'auto' }}
+                autoFocus
               />
             ) : (
               <Box
