@@ -4,9 +4,12 @@ import { serialize } from 'cookie';
 import { query } from '../db.js';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const JWT_SECRET = process.env.JWT_SECRET;
 
-const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+// O redirect_uri deve corresponder ao que está configurado no Google Cloud Console.
+// Para o fluxo de código de autorização iniciado pelo cliente, 'postmessage' é um valor seguro e padrão.
+const client = new OAuth2Client(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, 'postmessage');
 
 const parseBody = async (req) => {
   let body = '';
@@ -20,11 +23,6 @@ const parseBody = async (req) => {
   }
 };
 
-/**
- * Issues a JWT for the user and sets it in a secure cookie.
- * @param {object} res - The response object.
- * @param {object} user - The user object from the database.
- */
 const issueJwtAndSetCookie = (res, user) => {
   const tokenPayload = {
     sub: user.id,
@@ -45,8 +43,6 @@ const issueJwtAndSetCookie = (res, user) => {
   });
 
   res.setHeader('Set-Cookie', cookie);
-
-  // Return the user profile, which is the same as the token payload
   res.status(200).json({ message: 'Logged in successfully.', user: tokenPayload });
 };
 
@@ -56,20 +52,28 @@ export default async function handler(req, res) {
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
-  if (!GOOGLE_CLIENT_ID || !JWT_SECRET) {
-    console.error('Server configuration error: Google Client ID or JWT Secret is missing.');
+  if (!GOOGLE_CLIENT_ID || !JWT_SECRET || !GOOGLE_CLIENT_SECRET) {
+    console.error('Server configuration error: Google credentials or JWT Secret is missing.');
     return res.status(500).json({ error: 'Server configuration error.' });
   }
 
   try {
-    const { credential } = await parseBody(req);
-    if (!credential) {
-      return res.status(400).json({ error: 'Google credential not provided.' });
+    const { code } = await parseBody(req);
+    if (!code) {
+      return res.status(400).json({ error: 'Google authorization code not provided.' });
     }
 
-    // Verify the ID token from Google
+    // 1. Trocar o código de autorização por tokens
+    const { tokens } = await client.getToken(code);
+    const { access_token, refresh_token, id_token } = tokens;
+
+    if (!id_token) {
+        return res.status(400).json({ error: 'ID token not received from Google.' });
+    }
+
+    // 2. Verificar o ID token para obter informações do usuário de forma segura
     const ticket = await client.verifyIdToken({
-      idToken: credential,
+      idToken: id_token,
       audience: GOOGLE_CLIENT_ID,
     });
     const payload = ticket.getPayload();
@@ -78,42 +82,48 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid Google token payload.' });
     }
 
-    const { sub: googleId, email, name, picture } = payload;
+    const { sub: googleId, email, name } = payload;
 
-    // 1. Check if user exists with this Google ID
+    // 3. Procurar usuário pelo google_id
     let { rows } = await query('SELECT * FROM users WHERE google_id = $1', [googleId]);
     let user = rows[0];
 
     if (user) {
-      // User exists and is linked to Google, log them in
-      return issueJwtAndSetCookie(res, user);
-    }
-
-    // 2. If no user with that google_id, check by email
-    ({ rows } = await query('SELECT * FROM users WHERE email = $1', [email]));
-    user = rows[0];
-
-    if (user) {
-      // User with this email exists, but no google_id. Link the account.
-      const { rows: updatedRows } = await query(
-        'UPDATE users SET google_id = $1 WHERE id = $2 RETURNING *',
-        [googleId, user.id]
-      );
+      // Usuário existente, atualiza os tokens
+      const updateQuery = refresh_token
+        ? 'UPDATE users SET google_access_token = $1, google_refresh_token = $2 WHERE id = $3 RETURNING *'
+        : 'UPDATE users SET google_access_token = $1 WHERE id = $2 RETURNING *';
+      const params = refresh_token ? [access_token, refresh_token, user.id] : [access_token, user.id];
+      const { rows: updatedRows } = await query(updateQuery, params);
       user = updatedRows[0];
       return issueJwtAndSetCookie(res, user);
     }
 
-    // 3. No user found, create a new one
+    // 4. Se não encontrado, procurar por e-mail para vincular a conta
+    ({ rows } = await query('SELECT * FROM users WHERE email = $1', [email]));
+    user = rows[0];
+
+    if (user) {
+      // Usuário com este e-mail existe, vincular a conta e salvar os tokens
+      const updateQuery = refresh_token
+        ? 'UPDATE users SET google_id = $1, google_access_token = $2, google_refresh_token = $3 WHERE id = $4 RETURNING *'
+        : 'UPDATE users SET google_id = $1, google_access_token = $2 WHERE id = $3 RETURNING *';
+      const params = refresh_token ? [googleId, access_token, refresh_token, user.id] : [googleId, access_token, user.id];
+      const { rows: updatedRows } = await query(updateQuery, params);
+      user = updatedRows[0];
+      return issueJwtAndSetCookie(res, user);
+    }
+
+    // 5. Se não houver usuário, criar um novo com os tokens
     const { rows: newRows } = await query(
-      'INSERT INTO users (name, email, google_id) VALUES ($1, $2, $3) RETURNING *',
-      [name, email, googleId]
+      'INSERT INTO users (name, email, google_id, google_access_token, google_refresh_token) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [name, email, googleId, access_token, refresh_token]
     );
     user = newRows[0];
     return issueJwtAndSetCookie(res, user);
 
   } catch (error) {
     console.error('Google Auth Error:', error);
-    // Be generic in the error message to the client
     return res.status(401).json({ error: 'Google authentication failed. The token might be invalid or expired.' });
   }
 }
