@@ -15,7 +15,12 @@ const FormattingDrawer = ({
   imageFilters,
   setImageFilters,
   brandElements,
-  setBrandElements
+  setBrandElements,
+  onZIndexChange,
+  onDeselectField,
+  onOpenHtmlEditor,
+  isHtmlField,
+  standardsColors,
 }) => {
   return (
     <Drawer anchor="right" open={open} onClose={onClose} sx={{ zIndex: 1400 }}>
@@ -37,6 +42,11 @@ const FormattingDrawer = ({
           setImageFilters={setImageFilters}
           brandElements={brandElements}
           setBrandElements={setBrandElements}
+          onZIndexChange={onZIndexChange}
+          onDeselectField={onDeselectField}
+          onOpenHtmlEditor={onOpenHtmlEditor}
+          isHtmlField={isHtmlField}
+          standardsColors={standardsColors}
         />
       </Box>
     </Drawer>

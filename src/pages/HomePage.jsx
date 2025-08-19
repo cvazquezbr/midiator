@@ -345,7 +345,29 @@ function HomePage() {
       {isMobile && activeStep === 2 && (
         <>
           <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16 }} onClick={() => setIsDrawerOpen(true)} ><Edit /></Fab>
-          <FormattingDrawer open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} selectedField={selectedField} fieldStyles={fieldStyles} setFieldStyles={setFieldStyles} fieldPositions={fieldPositions} setFieldPositions={setFieldPositions} csvHeaders={csvHeaders} imageFilters={imageFilters} setImageFilters={setImageFilters} brandElements={brandElements} setBrandElements={setBrandElements} onZIndexChange={handleZIndexChange} />
+          <FormattingDrawer
+            open={isDrawerOpen}
+            onClose={() => setIsDrawerOpen(false)}
+            selectedField={selectedField}
+            fieldStyles={fieldStyles}
+            setFieldStyles={setFieldStyles}
+            fieldPositions={fieldPositions}
+            setFieldPositions={setFieldPositions}
+            csvHeaders={csvHeaders}
+            imageFilters={imageFilters}
+            setImageFilters={setImageFilters}
+            brandElements={brandElements}
+            setBrandElements={setBrandElements}
+            onZIndexChange={handleZIndexChange}
+            onDeselectField={() => setSelectedField(null)}
+            onOpenHtmlEditor={(fieldId) => {
+              setEditingField(fieldId);
+              // This is a guess, I might need to create a new state for this
+              // setIsHtmlEditorOpen(true);
+            }}
+            isHtmlField={(fieldName) => ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'].some(field => fieldName.toLowerCase().includes(field.toLowerCase()))}
+            standardsColors={standardsColors}
+          />
         </>
       )}
     </ThemeProvider>
