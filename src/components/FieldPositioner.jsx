@@ -22,7 +22,9 @@ import {
   Edit
 } from '@mui/icons-material';
 import DraggableElement from './DraggableElement';
+import FormattingPanel from './FormattingPanel';
 import TextEditorDialog from './TextEditorDialog';
+import FormattingDrawer from './FormattingDrawer'; // Import the new drawer
 
 const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
   fontFamily: 'Arial',
@@ -101,6 +103,7 @@ const FieldPositioner = ({
   setBrandElements,
   setImageFilters,
   onZIndexChange,
+  onOpenHtmlEditor,
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -109,24 +112,6 @@ const FieldPositioner = ({
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [composedImageUrl, setComposedImageUrl] = useState(null);
   const [isComposing, setIsComposing] = useState(false);
-  const [isHtmlEditorOpen, setIsHtmlEditorOpen] = useState(false);
-  const [fieldToEditInHtml, setFieldToEditInHtml] = useState(null);
-
-  const handleOpenHtmlEditor = (fieldId) => {
-    setFieldToEditInHtml(fieldId);
-    setIsHtmlEditorOpen(true);
-  };
-
-  const handleCloseHtmlEditor = () => {
-    setFieldToEditInHtml(null);
-    setIsHtmlEditorOpen(false);
-  };
-
-  const handleSaveHtmlContent = (newContent) => {
-    if (fieldToEditInHtml) {
-      handleContentChange(fieldToEditInHtml, newContent);
-    }
-  };
 
   useEffect(() => {
     if (!backgroundImage) {
@@ -156,7 +141,6 @@ const FieldPositioner = ({
   }, [backgroundImage, imageFilters]);
 
   const isHtmlField = useCallback((fieldName) => {
-    if (!fieldName) return false;
     return htmlFields.some(field =>
       fieldName.toLowerCase().includes(field.toLowerCase())
     );
@@ -593,7 +577,7 @@ const FieldPositioner = ({
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12}>
+      <Grid item xs={12} lg={9}>
         <Card>
           <CardContent>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1, sm: 2 }} justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
@@ -683,6 +667,11 @@ const FieldPositioner = ({
                   onSizeChange={handleSizeChange}
                   containerSize={imageSize}
                   onContentChange={element.type === 'text' ? handleContentChange : undefined}
+                  onDoubleClick={() => {
+                    if (element.type === 'text' && isHtmlField(element.id)) {
+                      onOpenHtmlEditor(element.id);
+                    }
+                  }}
                   rotation={element.rotation}
                   originalImageSize={originalImageSize}
                   fontScale={element.fontScale}
@@ -726,15 +715,25 @@ const FieldPositioner = ({
           </CardContent>
         </Card>
       </Grid>
-      {isHtmlEditorOpen && (
-        <TextEditorDialog
-          open={isHtmlEditorOpen}
-          onClose={handleCloseHtmlEditor}
-          title={`Editando ${fieldToEditInHtml}`}
-          content={csvData.find((row, index) => index === currentPreviewIndex)?.[fieldToEditInHtml] || ''}
-          onSave={handleSaveHtmlContent}
+      <Grid item xs={12} lg={3}>
+        <FormattingPanel
+          selectedField={selectedField}
+          fieldStyles={fieldStyles}
+          setFieldStyles={setFieldStyles}
+          fieldPositions={fieldPositions}
+          setFieldPositions={setFieldPositions}
+          csvHeaders={csvHeaders}
+          imageFilters={imageFilters}
+          setImageFilters={setImageFilters}
+          brandElements={brandElements}
+          setBrandElements={setBrandElements}
+          onZIndexChange={onZIndexChange}
+          onVisibilityChange={handleVisibilityChange}
+          onOpenHtmlEditor={onOpenHtmlEditor}
+          isHtmlField={isHtmlField}
+          standardsColors={standardsColors}
         />
-      )}
+      </Grid>
     </Grid>
   );
 };

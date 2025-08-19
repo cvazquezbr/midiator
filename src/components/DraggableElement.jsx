@@ -21,11 +21,11 @@ const DraggableElement = ({
   fontScale: fontScaleProp,
   enableHtmlRendering = false,
   darkMode,
+  onDoubleClick,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
-  const [isEditorModalOpen, setIsEditorModalOpen] = useState(false);
   const [editedContent, setEditedContent] = useState(content);
   const [resizeHandle, setResizeHandle] = useState(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -247,10 +247,8 @@ const DraggableElement = ({
   };
 
   useEffect(() => {
-    if (!isEditorModalOpen) {
-      setEditedContent(content);
-    }
-  }, [content, isEditorModalOpen]);
+    setEditedContent(content);
+  }, [content]);
 
   const pixelPosition = {
     x: (position.x / 100) * (containerSize.width || 1),
@@ -468,25 +466,6 @@ const DraggableElement = ({
     setResizeHandle(null);
   }, []);
 
-  const handleDoubleClick = () => {
-    if (isSelected && enableHtmlRendering) {
-      setIsEditorModalOpen(true);
-    }
-  };
-
-  const handleEditorSave = (newContent) => {
-    setEditedContent(newContent);
-    if (onContentChange) {
-      onContentChange(element.id, newContent);
-    }
-    setIsEditorModalOpen(false);
-  };
-
-  const handleEditorClose = () => {
-    setEditedContent(content); // Reverte para o conteúdo original
-    setIsEditorModalOpen(false);
-  };
-
   const effectiveHandleMouseDown = (e, type, handle = null) => {
     doHandleMouseDown(e, type, handle);
   };
@@ -585,7 +564,7 @@ const DraggableElement = ({
         onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
         onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
         onClick={() => onSelect(element.id)}
-        onDoubleClick={handleDoubleClick}
+        onDoubleClick={onDoubleClick}
       >
         <Box
           className={`${styles.textBoxContent} ${isSelected ? styles.selected : ''} ${element.type === 'image' ? styles.imageElement : ''}`}
@@ -668,16 +647,6 @@ const DraggableElement = ({
           </>
         )}
       </Box>
-
-      {isEditorModalOpen && (
-        <TextEditorDialog
-          open={isEditorModalOpen}
-          title={`Editar ${element.id}`}
-          content={editedContent}
-          onSave={handleEditorSave}
-          onClose={handleEditorClose}
-        />
-      )}
     </>
   );
 };

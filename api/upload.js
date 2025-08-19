@@ -36,8 +36,13 @@ const handler = async (req, res) => {
 
     return res.status(200).json(jsonResponse);
   } catch (error) {
-    console.error('Error in upload handler:', error);
-    return res.status(400).json({ error: error.message });
+    console.error('Error in Vercel Blob upload handler:', error);
+    // Return a 500 error for server-side issues
+    return res.status(500).json({
+      error: 'Ocorreu um erro interno no servidor durante o upload.',
+      details: error.message,
+      suggestion: 'Verifique se o armazenamento de Blob (Vercel Blob, S3, etc.) está corretamente configurado e conectado ao projeto Vercel.'
+    });
   }
 };
 

@@ -156,6 +156,7 @@ const ImageStep = ({
             brandElements={brandElements}
             setBrandElements={setBrandElements}
             onZIndexChange={onZIndexChange}
+            onOpenHtmlEditor={onOpenHtmlEditor}
           />
         </Grid>
         {!isMobile ? (
