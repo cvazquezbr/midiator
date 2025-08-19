@@ -406,24 +406,46 @@ function HomePage() {
                   conteudoPequeno: 'Conteúdo Pequeno',
                   conteudoFormatado: 'Conteúdo Formatado',
                   cta: 'CTA',
-                }[editingField] || 'Conteúdo'
+                }[editingField] || editingField || 'Conteúdo'
               }`
         }
         content={
-          editingFollowup !== null
-            ? editingFollowup.content
-            : editingField && campaignContent
-            ? campaignContent[editingField] || ''
-            : ''
+          (() => {
+            if (editingFollowup) return editingFollowup.content;
+            if (!editingField) return '';
+
+            // Step 0: Campaign content
+            if (activeStep === 0) {
+              return campaignContent ? campaignContent[editingField] || '' : '';
+            }
+
+            // Step 2: Image/Formatting step (from CSV)
+            if (activeStep === 2) {
+              const currentRecord = csvData[currentPreviewIndex];
+              return currentRecord ? currentRecord[editingField] || '' : '';
+            }
+
+            return '';
+          })()
         }
         onSave={
-          editingFollowup !== null
-            ? handleSaveFollowup
-            : (newContent) => {
-                if (editingField) {
-                  setCampaignContent((prev) => ({ ...prev, [editingField]: newContent }));
-                }
+          (newContent) => {
+            if (editingFollowup) {
+              handleSaveFollowup(newContent);
+            } else if (editingField) {
+              if (activeStep === 0) {
+                setCampaignContent((prev) => ({ ...prev, [editingField]: newContent }));
+              } else if (activeStep === 2) {
+                const updatedCsvData = csvData.map((row, index) => {
+                  if (index === currentPreviewIndex) {
+                    return { ...row, [editingField]: newContent };
+                  }
+                  return row;
+                });
+                handleCsvRecordContentUpdate(updatedCsvData);
               }
+            }
+          }
         }
         onClose={() => {
           setEditingField(null);
