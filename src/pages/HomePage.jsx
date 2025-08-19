@@ -15,6 +15,7 @@ import { Toaster, toast } from 'sonner';
 import { useUserAuth } from '../context/UserAuthContext';
 import { loadSettingsFromDb } from '../utils/credentialsManager';
 import { saveCampaign, loadCampaign, updateCampaign } from '../utils/campaignState';
+import { saveLinkedinConfig } from '../utils/linkedinCredentials';
 
 import MainAppBar from '../components/MainAppBar';
 import Sidebar from '../components/Sidebar';
@@ -249,6 +250,51 @@ function HomePage() {
       setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
     }
   }, [activeStep, campaignContent]);
+
+  useEffect(() => {
+    const handleLinkedInRedirect = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+
+      if (code) {
+        // Clean the URL
+        window.history.replaceState({}, document.title, "/");
+        toast.loading('Finalizando conexão com o LinkedIn...');
+
+        try {
+          const response = await fetch('/api/linkedin-proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'tokenExchange',
+              code: code,
+              redirectUri: window.location.origin
+            }),
+          });
+
+          toast.dismiss();
+          const data = await response.json();
+
+          if (response.ok) {
+            saveLinkedinConfig({
+              accessToken: data.access_token,
+              expiry: Date.now() + data.expires_in * 1000,
+            });
+            toast.success('Conexão com o LinkedIn estabelecida com sucesso!');
+            // Optionally, trigger a refresh of the settings view
+            setShowSetupModal(true);
+          } else {
+            throw new Error(data.error || 'Falha na troca de token do LinkedIn.');
+          }
+        } catch (error) {
+          toast.dismiss();
+          toast.error(`Erro ao conectar com o LinkedIn: ${error.message}`);
+        }
+      }
+    };
+
+    handleLinkedInRedirect();
+  }, []);
 
   const steps = [ { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Imagem e Formatação', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Gerar Imagens', description: 'Gere as imagens finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish } ];
   const parseCsvFile = async (file) => { if (!file) return; try { const { data: newCsvData, headers: newHeaders } = await parseCsv(file); if (newCsvData && newCsvData.length > 0) { setCsvData(newCsvData); setCsvHeaders(newHeaders); const updatedFieldPositions = {}; const updatedFieldStyles = {}; const defaultStylesBase = { fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: '#000000', textStroke: false, strokeColor: '#ffffff', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' }; newHeaders.forEach((header, index) => { updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true }; if (fieldStyles[header]) { updatedFieldStyles[header] = fieldStyles[header]; } else { if (index === 0) { updatedFieldStyles[header] = { ...defaultStylesBase, fontFamily: 'Anton', fontSize: 72 }; } else { updatedFieldStyles[header] = { ...defaultStylesBase }; } } }); setFieldPositions(updatedFieldPositions); setFieldStyles(updatedFieldStyles); } } catch (error) { toast.error(error.message || 'Ocorreu um erro desconhecido ao processar o arquivo CSV.'); } };
