@@ -22,9 +22,7 @@ import {
   Edit
 } from '@mui/icons-material';
 import DraggableElement from './DraggableElement';
-import FormattingPanel from './FormattingPanel';
 import TextEditorDialog from './TextEditorDialog';
-import FormattingDrawer from './FormattingDrawer'; // Import the new drawer
 
 const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
   fontFamily: 'Arial',
@@ -158,6 +156,7 @@ const FieldPositioner = ({
   }, [backgroundImage, imageFilters]);
 
   const isHtmlField = useCallback((fieldName) => {
+    if (!fieldName) return false;
     return htmlFields.some(field =>
       fieldName.toLowerCase().includes(field.toLowerCase())
     );
@@ -594,7 +593,7 @@ const FieldPositioner = ({
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} lg={9}>
+      <Grid item xs={12}>
         <Card>
           <CardContent>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1, sm: 2 }} justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
@@ -726,25 +725,6 @@ const FieldPositioner = ({
             )}
           </CardContent>
         </Card>
-      </Grid>
-      <Grid item xs={12} lg={3}>
-        <FormattingPanel
-          selectedField={selectedField}
-          fieldStyles={fieldStyles}
-          setFieldStyles={setFieldStyles}
-          fieldPositions={fieldPositions}
-          setFieldPositions={setFieldPositions}
-          csvHeaders={csvHeaders}
-          imageFilters={imageFilters}
-          setImageFilters={setImageFilters}
-          brandElements={brandElements}
-          setBrandElements={setBrandElements}
-          onZIndexChange={onZIndexChange}
-          onVisibilityChange={handleVisibilityChange}
-          onOpenHtmlEditor={handleOpenHtmlEditor}
-          isHtmlField={isHtmlField}
-          standardsColors={standardsColors}
-        />
       </Grid>
       {isHtmlEditorOpen && (
         <TextEditorDialog
