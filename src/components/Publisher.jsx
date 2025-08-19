@@ -830,7 +830,7 @@ const Publisher = ({
                             <TableHead>
                                 <TableRow>
                                     <TableCell>Título</TableCell>
-                                    <TableCell align="right">Data Agendada (UTC)</TableCell>
+                                    <TableCell align="right">Data Agendada</TableCell>
                                     <TableCell align="right">Status</TableCell>
                                     <TableCell align="right">Link</TableCell>
                                     <TableCell align="right">Ações</TableCell>
