@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google';
-import { Google } from '@mui/icons-material';
+import { GoogleLogin } from '@react-oauth/google';
 import {
   Container,
   Box,
@@ -24,6 +23,7 @@ const LoginPage = () => {
   const { user, login, googleLogin } = useUserAuth();
   const navigate = useNavigate();
 
+  // If the user is already logged in, redirect them to the home page.
   useEffect(() => {
     if (user) {
       navigate('/', { replace: true });
@@ -38,31 +38,29 @@ const LoginPage = () => {
     if (success) {
       navigate('/');
     } else {
+      // The error toast is shown by the context, but we can set a local error for the UI
       setError('Failed to log in. Please check your credentials.');
+      setLoading(false);
+    }
+    // No need to setLoading(false) on success because the component will unmount
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    setError('');
+    const success = await googleLogin(credentialResponse.credential);
+    if (success) {
+      navigate('/');
+    } else {
+      setError('Google Sign-In failed. Please try again.');
       setLoading(false);
     }
   };
 
-  const handleGoogleLogin = useGoogleLogin({
-    flow: 'auth-code',
-    scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets',
-    onSuccess: async (codeResponse) => {
-      setLoading(true);
-      setError('');
-      const success = await googleLogin(codeResponse.code);
-      if (success) {
-        navigate('/');
-      } else {
-        setError('Google Sign-In failed. Please try again.');
-        setLoading(false);
-      }
-    },
-    onError: (errorResponse) => {
-      setError('Google Sign-In was cancelled or failed. Please try again.');
-      console.error('Google Login Failed:', errorResponse);
-      setLoading(false);
-    },
-  });
+  const handleGoogleError = () => {
+    setError('Google Sign-In was cancelled or failed. Please try again.');
+    console.error('Google Login Failed');
+  };
 
   return (
     <Container component="main" maxWidth="xs">
@@ -108,16 +106,17 @@ const LoginPage = () => {
             {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
           </Button>
           <Divider sx={{ my: 2 }}>OR</Divider>
-          <Button
-            fullWidth
-            variant="outlined"
-            startIcon={<Google />}
-            onClick={() => handleGoogleLogin()}
-            disabled={loading}
-            sx={{ mb: 2 }}
-          >
-            {loading ? <CircularProgress size={24} /> : 'Sign In with Google'}
-          </Button>
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%', mb: 2 }}>
+            {loading ? (
+              <CircularProgress />
+            ) : (
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                useOneTap
+              />
+            )}
+          </Box>
           <Box sx={{ textAlign: 'center' }}>
             <Link component={RouterLink} to="/signup" variant="body2">
               {"Don't have an account? Sign Up"}

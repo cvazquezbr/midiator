@@ -1,5 +1,6 @@
 import { getCampaignPrompt } from './campaignPrompt.js';
 import geminiAPI from './geminiAPI.js';
+import { getGeminiApiKey } from './geminiCredentials.js';
 import { stripHtml } from '../lib/utils.js';
 
 const formatObjectForPrompt = (obj, excludeKeys = []) => {
@@ -22,6 +23,12 @@ const formatObjectForPrompt = (obj, excludeKeys = []) => {
  * Generates the main campaign content using an AI API.
  */
 export const generateCampaignContent = async ({ problema, solucao }) => {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Chave de API Gemini não configurada.');
+  }
+  geminiAPI.initialize(apiKey);
+
   const { persona, autor, instrucoes, formato } = getCampaignPrompt();
 
   const personaString = formatObjectForPrompt(persona, ['description']);
@@ -78,6 +85,11 @@ export const generateCampaignImage = async ({ content, aspectRatio }) => {
   if (!content) {
     throw new Error("Conteúdo do texto deve ser gerado primeiro.");
   }
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Chave de API Gemini não configurada.');
+  }
+  geminiAPI.initialize(apiKey);
 
   const { persona, autor, colors } = getCampaignPrompt();
   const personaString = formatObjectForPrompt(persona, ['description']);
@@ -109,7 +121,11 @@ export const generateFormattedContent = async ({ content }) => {
   if (!content?.conteudo) {
     throw new Error("Conteúdo principal deve ser gerado primeiro.");
   }
-
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Chave de API Gemini não configurada.');
+  }
+  geminiAPI.initialize(apiKey);
   const prompt = `
       Com o objetivo de gerar um post de blog no WordPress corporativo, Formatar o texto a seguir observando o padrão com HTML.
       Considere que o conteúdo gerado já estará embutido em uma página no contexto de seu BODY.
@@ -137,6 +153,11 @@ export const generateFollowupPlan = async ({ content, followupPostsQuantity }) =
   if (!content?.conteudo) {
     throw new Error("Conteúdo principal deve ser gerado primeiro.");
   }
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Chave de API Gemini não configurada.');
+  }
+  geminiAPI.initialize(apiKey);
 
   const { persona } = getCampaignPrompt();
   const personaString = formatObjectForPrompt(persona, ['description']);
@@ -210,6 +231,12 @@ export const generateFollowupPosts = async ({ content, plan }) => {
   if (!plan || plan.length === 0) {
     throw new Error("O plano de follow-up deve ser gerado primeiro.");
   }
+
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Chave de API Gemini não configurada.');
+  }
+  geminiAPI.initialize(apiKey);
 
   const { persona, autor } = getCampaignPrompt();
   const personaString = formatObjectForPrompt(persona, ['description']);
@@ -316,6 +343,12 @@ Retorne um objeto JSON com as chaves "titulo_post" e "conteudo_post".
  * Generates a list of common solutions for a given problem and persona.
  */
 export const generateCommonSolutions = async ({ problema, persona }) => {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Chave de API Gemini não configurada.');
+  }
+  geminiAPI.initialize(apiKey);
+
   if (!problema || problema.trim() === '') {
     throw new Error('Problema não definido. Por favor, descreva o problema primeiro.');
   }
@@ -370,6 +403,12 @@ export const generateCommonSolutions = async ({ problema, persona }) => {
  * Generates a list of common problems for a given persona.
  */
 export const generateCommonProblems = async ({ persona }) => {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Chave de API Gemini não configurada.');
+  }
+  geminiAPI.initialize(apiKey);
+
   if (!persona || Object.keys(persona).length === 0) {
     throw new Error('Persona não definida. Por favor, configure a persona primeiro.');
   }
@@ -421,6 +460,11 @@ export const generateCommonProblems = async ({ persona }) => {
  * Generates CSV data content from a text prompt using an AI API.
  */
 export const generateIAContent = async ({ promptText, promptNumRecords }) => {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('Chave de API Gemini não configurada.');
+  }
+  geminiAPI.initialize(apiKey);
   if (!promptText.trim()) {
     throw new Error('Por favor, forneça um texto descritivo para o prompt.');
   }
@@ -489,6 +533,14 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
  * @returns {Promise<Object>} A promise that resolves to the generated palette object.
  */
 export const generateColorPalette = async (briefing) => {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    // The original function used toast, but in a util file, it's better to throw.
+    // The calling component will be responsible for catching the error and showing a toast.
+    throw new Error('Por favor, configure sua chave de API Gemini primeiro.');
+  }
+  geminiAPI.initialize(apiKey);
+
   const prompt = `Crie uma paleta harmoniosa de 5 cores baseada no briefing abaixo, aplicando princípios da psicologia das cores na cultura ocidental.
 
 **Briefing do Cliente:**
