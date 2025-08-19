@@ -22,9 +22,7 @@ import {
   Edit
 } from '@mui/icons-material';
 import DraggableElement from './DraggableElement';
-import FormattingPanel from './FormattingPanel';
 import TextEditorDialog from './TextEditorDialog';
-import FormattingDrawer from './FormattingDrawer'; // Import the new drawer
 
 const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
   fontFamily: 'Arial',
@@ -141,6 +139,7 @@ const FieldPositioner = ({
   }, [backgroundImage, imageFilters]);
 
   const isHtmlField = useCallback((fieldName) => {
+    if (!fieldName) return false;
     return htmlFields.some(field =>
       fieldName.toLowerCase().includes(field.toLowerCase())
     );
@@ -714,25 +713,6 @@ const FieldPositioner = ({
             )}
           </CardContent>
         </Card>
-      </Grid>
-      <Grid item xs={12} lg={3}>
-        <FormattingPanel
-          selectedField={selectedField}
-          fieldStyles={fieldStyles}
-          setFieldStyles={setFieldStyles}
-          fieldPositions={fieldPositions}
-          setFieldPositions={setFieldPositions}
-          csvHeaders={csvHeaders}
-          imageFilters={imageFilters}
-          setImageFilters={setImageFilters}
-          brandElements={brandElements}
-          setBrandElements={setBrandElements}
-          onZIndexChange={onZIndexChange}
-          onVisibilityChange={handleVisibilityChange}
-          onOpenHtmlEditor={onOpenHtmlEditor}
-          isHtmlField={isHtmlField}
-          standardsColors={standardsColors}
-        />
       </Grid>
     </Grid>
   );
