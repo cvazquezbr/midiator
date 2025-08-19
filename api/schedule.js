@@ -160,7 +160,7 @@ async function handleRunScheduler(request, response) {
             const post = JSON.parse(postRaw);
 
             try {
-                const postText = [
+                const postParts = [
                     post.content.titulo.toUpperCase(),
                     '',
                     markdownToLinkedinText(post.content.conteudo),
@@ -168,8 +168,22 @@ async function handleRunScheduler(request, response) {
                     '----',
                     post.content.cta,
                     '----',
-                    (post.content.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' '),
-                ].join('\n');
+                ];
+
+                // If this is a follow-up post, try to append the main post's link
+                if (!post.is_main_post && post.main_post_id) {
+                    const mainPostRaw = await kv.get(`post:${post.main_post_id}`);
+                    if (mainPostRaw) {
+                        const mainPost = JSON.parse(mainPostRaw);
+                        if (mainPost.linkedin_post_url) {
+                            postParts.push(`\nLeia o post principal aqui: ${mainPost.linkedin_post_url}\n`);
+                        }
+                    }
+                }
+
+                postParts.push((post.content.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' '));
+
+                const postText = postParts.join('\n');
 
                 const shareContent = { shareCommentary: { text: postText }, shareMediaCategory: 'NONE' };
                 const payload = {
@@ -195,6 +209,12 @@ async function handleRunScheduler(request, response) {
                 post.status = 'published';
                 post.publishedAt = new Date().toISOString();
                 post.postId = result.id;
+
+                // If this is a main post, construct and save its URL
+                if (post.is_main_post && result.id) {
+                    post.linkedin_post_url = `https://www.linkedin.com/feed/update/${result.id}/`;
+                }
+
                 publishedCount++;
             } catch (error) {
                 post.status = 'failed';
