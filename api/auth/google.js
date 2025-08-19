@@ -28,6 +28,7 @@ const issueJwtAndSetCookie = (res, user) => {
     name: user.name,
     email: user.email,
     role: user.role,
+    googleAccessToken: user.google_access_token, // Adicionado
   };
 
   const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
