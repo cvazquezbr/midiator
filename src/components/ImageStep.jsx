@@ -50,6 +50,8 @@ const ImageStep = ({
   onDeselectField,
   onOpenHtmlEditor,
   isHtmlField,
+  currentPreviewIndex,
+  setCurrentPreviewIndex,
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -157,6 +159,8 @@ const ImageStep = ({
             setBrandElements={setBrandElements}
             onZIndexChange={onZIndexChange}
             onOpenHtmlEditor={onOpenHtmlEditor}
+            currentPreviewIndex={currentPreviewIndex}
+            setCurrentPreviewIndex={setCurrentPreviewIndex}
           />
         </Grid>
         {!isMobile ? (
