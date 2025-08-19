@@ -19,7 +19,11 @@ Um fluxo de trabalho guiado para transformar suas ideias em conteúdo pronto par
   - **Geração com IA**: Use um prompt para que a IA gere uma tabela de posts.
   - **Upload de CSV**: Carregue um arquivo CSV com conteúdo pré-definido.
 - **Etapa 3: Upload de Imagem**: Defina uma imagem de fundo para suas criações.
-- **Etapa 4: Posicionar e Formatar**: Um editor visual poderoso para arrastar, soltar e estilizar os campos de texto sobre a imagem de fundo. Oferece controle total sobre fontes, cores, sombras, contornos e filtros de imagem.
+- **Etapa 4: Posicionar e Formatar**: Um editor visual avançado, estilo Canva, para total controle sobre o design:
+  - **Movimentação e Redimensionamento**: Arraste e redimensione caixas de texto com 8 handles de controle.
+  - **Formatação Individual**: Estilize cada campo de forma independente com mais de 15 fontes, cores, tamanhos e pesos.
+  - **Text Wrapping**: O texto se ajusta automaticamente dentro das áreas definidas.
+  - **Efeitos Avançados**: Adicione contornos e sombras personalizáveis ao texto.
 - **Etapa 5: Gerar Imagens**: Produza as imagens finais para cada post, combinando o texto estilizado com a imagem de fundo.
 - **Etapa 6: Gerar Áudio**: Crie narrações para seus posts ou vídeos usando tecnologia Text-to-Speech (TTS).
 - **Etapa 7: Gerar Vídeo**: Transforme suas imagens e áudios gerados em vídeos dinâmicos.
@@ -85,4 +89,4 @@ Contribuições são bem-vindas! Siga os passos abaixo:
 
 ## 📝 Licença
 
-Distribuído sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+Todos os direitos reservados.
