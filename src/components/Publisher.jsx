@@ -460,9 +460,15 @@ const Publisher = ({
             accessToken: accessToken,
             imageDriveIds: uploadedImageIds,
             videoDriveId: uploadedVideoId,
+            is_main_post: true,
         };
 
-        await createSchedule(mainPostSchedule);
+        const createdMainPost = await createSchedule(mainPostSchedule);
+
+        if (!createdMainPost || !createdMainPost.id) {
+          throw new Error("Failed to create the main post schedule and retrieve its ID.");
+        }
+        const mainPostId = createdMainPost.id;
 
         if (followupPosts && followupPosts.length > 0) {
             for (const [index, post] of followupPosts.entries()) {
@@ -484,6 +490,8 @@ const Publisher = ({
                     accessToken: accessToken,
                     imageDriveIds: [], // Follow-ups are text-only
                     videoDriveId: '',
+                    is_main_post: false,
+                    main_post_id: mainPostId,
                 };
                 await createSchedule(followupSchedule);
             }
