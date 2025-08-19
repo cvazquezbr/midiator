@@ -96,7 +96,7 @@ export const generateCampaignImage = async ({ content, aspectRatio }) => {
   const autorString = formatObjectForPrompt(autor);
 
   const colorPalettePrompt = colors && colors.length > 0
-    ? `A imagem deve usar predominantemente a seguinte paleta de cores: ${colors.join(', ')}.`
+    ? `A imagem deve usar predominantemente a seguinte paleta de cores: ${colors.map(c => c.hex).join(', ')}.`
     : '';
 
   const imagePrompt = `

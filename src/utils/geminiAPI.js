@@ -1,6 +1,6 @@
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GEMINI_MODEL = 'gemini-1.5-flash-latest';
-const GEMINI_IMAGE_MODEL = 'gemini-pro-vision'; // Corrected to a valid model for image-related tasks
+const GEMINI_IMAGE_MODEL = 'gemini-1.5-flash-latest'; // Corrected to a valid model for image-related tasks
 
 class GeminiAPI {
   constructor() {
