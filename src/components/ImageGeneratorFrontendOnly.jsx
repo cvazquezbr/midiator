@@ -39,7 +39,7 @@ import {
 import GeneratedImageEditor from './GeneratedImageEditor'; // Importar o novo editor
 import googleDriveAPI from '../utils/googleDriveAPI';
 import { composeImage } from '../utils/imageComposer';
-import { useAuth } from '../context/AuthContext';
+import { useUserAuth } from '../context/UserAuthContext';
 
 const ImageGeneratorFrontendOnly = ({
   csvData,
@@ -75,7 +75,8 @@ const ImageGeneratorFrontendOnly = ({
   const [showGeneratedImageEditor, setShowGeneratedImageEditor] = useState(false);
 
 
-  const { isGoogleDriveConnected } = useAuth();
+  const { googleAccessToken } = useUserAuth();
+  const isGoogleDriveConnected = !!googleAccessToken;
 
   // Estados para integração Google Drive
   const [projectName, setProjectName] = useState('');
