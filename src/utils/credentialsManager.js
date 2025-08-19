@@ -2,6 +2,7 @@ import { getGeminiApiKey, saveGeminiApiKey } from './geminiCredentials';
 import { getGoogleCloudTTSCredentials, saveGoogleCloudTTSCredentials } from './googleCloudTTSCredentials';
 import { getLinkedinConfig, saveLinkedinConfig } from './linkedinCredentials';
 import { getWordpressConfig, saveWordpressConfig } from './wordpressCredentials';
+import { getTimezone, saveTimezone } from './timezone';
 
 // The keys for the credentials stored in localStorage.
 const CREDENTIAL_KEYS = {
@@ -11,6 +12,7 @@ const CREDENTIAL_KEYS = {
   GOOGLE_TTS: 'googleCloudTTSCredentials',
   LINKEDIN: 'linkedinConfig',
   WORDPRESS: 'wordpressConfig',
+  TIMEZONE: 'user_timezone',
 };
 
 /**
@@ -42,6 +44,10 @@ export const gatherCredentials = () => {
   // WordPress
   const wordpress = getWordpressConfig();
   if (wordpress && wordpress.wordpressUrl) credentials[CREDENTIAL_KEYS.WORDPRESS] = wordpress;
+
+  // Timezone
+  const timezone = getTimezone();
+  if (timezone) credentials[CREDENTIAL_KEYS.TIMEZONE] = timezone;
 
   return credentials;
 };
@@ -81,6 +87,9 @@ export const applySettings = (settings) => {
   }
   if (settings[CREDENTIAL_KEYS.WORDPRESS]) {
     saveWordpressConfig(settings[CREDENTIAL_KEYS.WORDPRESS]);
+  }
+  if (settings[CREDENTIAL_KEYS.TIMEZONE]) {
+    saveTimezone(settings[CREDENTIAL_KEYS.TIMEZONE]);
   }
 };
 

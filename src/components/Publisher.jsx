@@ -51,6 +51,8 @@ import {
 } from '@mui/material';
 import { Info, Delete, Edit, Visibility } from '@mui/icons-material';
 import { toast } from 'sonner';
+import { fromZonedTime } from 'date-fns-tz';
+import { getTimezone } from '../utils/timezone';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
 import { getLinkedinConfig } from '../utils/linkedinCredentials';
@@ -136,7 +138,9 @@ const Publisher = ({
     if (!editingSchedule) return;
     setIsUpdating(true);
     try {
-      await updateSchedule(editingSchedule.id, editingSchedule.newScheduledAt.toISOString());
+      const userTimezone = getTimezone() || 'UTC';
+      const utcDate = fromZonedTime(editingSchedule.newScheduledAt, userTimezone);
+      await updateSchedule(editingSchedule.id, utcDate.toISOString());
       toast.success("Schedule updated successfully!");
       setEditingSchedule(null);
       fetchSchedules(); // Refresh the list
@@ -443,12 +447,14 @@ const Publisher = ({
             throw new Error('Não foi possível encontrar o Access Token do LinkedIn para o agendamento automático.');
         }
 
+        const userTimezone = getTimezone() || 'UTC';
         const mainPostDate = new Date(scheduleDate);
         const [hours, minutes] = getScheduledTime(mainPostDate).split(':');
-        mainPostDate.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+        mainPostDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+        const mainPostUtcDate = fromZonedTime(mainPostDate, userTimezone);
 
         const mainPostSchedule = {
-            scheduledAt: mainPostDate.toISOString(),
+            scheduledAt: mainPostUtcDate.toISOString(),
             authorUrn: selectedProfile,
             content: campaignContent,
             accessToken: accessToken,
@@ -463,10 +469,11 @@ const Publisher = ({
                 const followupDate = new Date(scheduleDate);
                 followupDate.setDate(scheduleDate.getDate() + index + 1);
                 const [fHours, fMinutes] = getScheduledTime(followupDate).split(':');
-                followupDate.setHours(parseInt(fHours, 10), parseInt(fMinutes, 10));
+                followupDate.setHours(parseInt(fHours, 10), parseInt(fMinutes, 10), 0, 0);
+                const followupUtcDate = fromZonedTime(followupDate, userTimezone);
 
                 const followupSchedule = {
-                    scheduledAt: followupDate.toISOString(),
+                    scheduledAt: followupUtcDate.toISOString(),
                     authorUrn: selectedProfile,
                     content: {
                         titulo: post.titulo || '',
