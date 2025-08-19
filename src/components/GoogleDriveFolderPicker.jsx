@@ -29,11 +29,6 @@ const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder }) => {
     setLoading(true);
     setError('');
     try {
-      if (!googleDriveAPI.isUserSignedIn()) {
-        setError('Você precisa estar logado no Google para procurar pastas.');
-        setLoading(false);
-        return;
-      }
       const folderList = await googleDriveAPI.listFolders();
       setFolders(folderList);
     } catch (err) {

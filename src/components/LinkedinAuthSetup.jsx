@@ -99,34 +99,10 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
     setPickerOpen(false);
   };
 
-  const handleBrowseDrive = async () => {
-    setError('');
-    setIsDriveLoading(true);
-
-    const apiKey = localStorage.getItem("google_drive_api_key");
-    const clientId = localStorage.getItem("google_drive_client_id");
-
-    if (!apiKey || !clientId) {
-      toast.error('Por favor, configure a integração com o Google Drive primeiro.');
-      setIsDriveLoading(false);
-      return;
-    }
-
-    try {
-      if (!googleDriveAPI.isInitialized) {
-        await googleDriveAPI.initialize(apiKey, clientId);
-      }
-      if (!googleDriveAPI.isUserSignedIn()) {
-        toast.info('Aguardando login com o Google...');
-        await googleDriveAPI.signIn();
-      }
-      setPickerOpen(true);
-    } catch (err) {
-      console.error('Erro ao preparar o seletor de pastas do Google Drive:', err);
-      toast.error(`Erro no Google Drive: ${err.message}`);
-    } finally {
-      setIsDriveLoading(false);
-    }
+  const handleBrowseDrive = () => {
+    // The new flow assumes the user is already authenticated via the main login.
+    // The GoogleDriveFolderPicker component will handle API calls and any potential errors.
+    setPickerOpen(true);
   };
 
   const handleConnect = async () => {

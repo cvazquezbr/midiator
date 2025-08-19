@@ -342,20 +342,6 @@ const Publisher = ({
             throw new Error('O ID da Pasta no Google Drive não está configurado na autenticação do LinkedIn.');
         }
 
-        if (!googleDriveAPI.isInitialized) {
-            setPublishingStatusLi('Inicializando API do Google Drive...');
-            const apiKey = localStorage.getItem("google_drive_api_key");
-            const clientId = localStorage.getItem("google_drive_client_id");
-            if (!apiKey || !clientId) {
-                throw new Error("Credenciais da API do Google Drive não encontradas. Por favor, configure a integração na página principal.");
-            }
-            await googleDriveAPI.initialize(apiKey, clientId);
-        }
-
-        if (!googleDriveAPI.isUserSignedIn()) {
-            setPublishingStatusLi('Fazendo login no Google Drive...');
-            await googleDriveAPI.signIn();
-        }
 
         const campaignTitle = campaignContent?.titulo || `Campanha Sem Título - ${new Date().toISOString()}`;
 
