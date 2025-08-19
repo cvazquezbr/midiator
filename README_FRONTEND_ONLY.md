@@ -146,7 +146,6 @@ midiator_frontend_only/
 ├── src/
 │   ├── components/
 │   │   ├── ImageGeneratorFrontendOnly.jsx  # Gerador principal
-│   │   ├── GoogleAuthSetup.jsx             # Configuração OAuth
 │   │   └── ...                             # Outros componentes
 │   ├── utils/
 │   │   └── googleDriveAPI.js               # Wrapper da Google API
