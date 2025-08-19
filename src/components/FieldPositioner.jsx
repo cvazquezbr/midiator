@@ -102,12 +102,13 @@ const FieldPositioner = ({
   setImageFilters,
   onZIndexChange,
   onOpenHtmlEditor,
+  currentPreviewIndex,
+  setCurrentPreviewIndex,
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
-  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [composedImageUrl, setComposedImageUrl] = useState(null);
   const [isComposing, setIsComposing] = useState(false);
 

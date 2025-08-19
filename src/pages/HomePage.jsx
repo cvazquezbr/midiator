@@ -121,6 +121,7 @@ function HomePage() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [currentCampaign, setCurrentCampaign] = useState(null);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
 
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -375,6 +376,8 @@ function HomePage() {
                 // This is a guess, I might need to create a new state for this
                 // setIsHtmlEditorOpen(true);
               }}
+              currentPreviewIndex={currentPreviewIndex}
+              setCurrentPreviewIndex={setCurrentPreviewIndex}
               isHtmlField={(fieldName) => {
                 if (!fieldName) return false;
                 return fieldName && ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'].some(field => fieldName.toLowerCase().includes(field.toLowerCase()))
