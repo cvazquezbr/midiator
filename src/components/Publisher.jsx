@@ -82,7 +82,6 @@ function TabPanel(props) {
 
 const Publisher = ({
   campaignContent,
-  conteudoFormatado,
   generatedImagesData,
   generatedVideosData,
   followupPosts,
@@ -309,7 +308,7 @@ const Publisher = ({
     setPublishedPostUrlWp(null);
 
     try {
-      if (!campaignContent || !conteudoFormatado || !generatedImagesData || generatedImagesData.length === 0) {
+      if (!campaignContent || !campaignContent.conteudoFormatado || !generatedImagesData || generatedImagesData.length === 0) {
         throw new Error('Dados da campanha ou imagens não estão disponíveis.');
       }
       const firstImage = generatedImagesData[0];
@@ -318,7 +317,7 @@ const Publisher = ({
       }
       const campaignData = {
         campaignContent,
-        conteudoFormatado,
+        conteudoFormatado: campaignContent.conteudoFormatado,
         imageBlob: firstImage.blob,
       };
       setPublishingStatusWp('Publicando no WordPress... Isso pode levar um momento.');
@@ -512,7 +511,7 @@ const Publisher = ({
     setPublishedPostUrlLi(null);
 
     try {
-      if (!campaignContent || !conteudoFormatado) {
+      if (!campaignContent || !campaignContent.conteudoFormatado) {
         throw new Error('Dados da campanha não estão disponíveis. Volte para as etapas anteriores.');
       }
       if (!selectedProfile) {

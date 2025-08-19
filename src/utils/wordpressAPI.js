@@ -186,7 +186,8 @@ const _createPost = async (campaignContent, conteudoFormatado, tagIds, mediaId, 
  * @throws {Error} Se a configuração do WordPress não for encontrada ou se ocorrer um erro na API.
  */
 export const publishToWordPress = async (campaignData) => {
-  const { campaignContent, imageBlob, conteudoFormatado } = campaignData;
+  const { campaignContent, imageBlob } = campaignData;
+  const { conteudoFormatado } = campaignContent;
 
   const config = getWordpressConfig();
   if (!config) {

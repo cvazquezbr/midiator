@@ -30,7 +30,6 @@ const ContentSection = ({
   campaignContent,
   aspectRatio,
   followupPosts,
-  conteudoFormatado,
 }) => {
   const hasCampaignContent = campaignContent && (campaignContent.titulo || campaignContent.conteudo || campaignContent.cta);
 
@@ -66,9 +65,9 @@ const ContentSection = ({
         </Box>
       )}
 
-      {conteudoFormatado && (
+      {campaignContent && campaignContent.conteudoFormatado && (
           <Box sx={{ mt: 4 }}>
-              <DetailItem title="Conteúdo Formatado (HTML)" value={conteudoFormatado} isHtml={true} />
+              <DetailItem title="Conteúdo Formatado (HTML)" value={campaignContent.conteudoFormatado} isHtml={true} />
           </Box>
       )}
 
