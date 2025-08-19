@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Card,
   CardContent,
@@ -42,9 +42,9 @@ const ImageStep = ({
   setBrandElements,
   onZIndexChange,
   isMobile,
+  selectedField,
+  setSelectedField,
 }) => {
-  const [selectedField, setSelectedField] = useState(null);
-
   if (!backgroundImage) {
     return (
       <Card>
