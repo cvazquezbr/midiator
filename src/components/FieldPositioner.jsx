@@ -106,7 +106,6 @@ const FieldPositioner = ({
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isInteracting, setIsInteracting] = useState(false);
-  const [editingField, setEditingField] = useState(null); // State for simple text editor
   const containerRef = useRef(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [composedImageUrl, setComposedImageUrl] = useState(null);
@@ -668,14 +667,8 @@ const FieldPositioner = ({
                   containerSize={imageSize}
                   onContentChange={element.type === 'text' ? handleContentChange : undefined}
                   onDoubleClick={() => {
-                    if (element.type === 'text') {
-                      if (isHtmlField(element.id)) {
-                        onOpenHtmlEditor(element.id);
-                      } else {
-                        // Handle simple text editing
-                        handleFieldSelectInternal(element.id); // Ensure the field is selected
-                        setEditingField(element.id);
-                      }
+                    if (element.type === 'text' && isHtmlField(element.id)) {
+                      onOpenHtmlEditor(element.id);
                     }
                   }}
                   rotation={element.rotation}
@@ -721,19 +714,6 @@ const FieldPositioner = ({
           </CardContent>
         </Card>
       </Grid>
-
-      {editingField && (
-        <TextEditorDialog
-          open={!!editingField}
-          title={`Editar ${editingField}`}
-          content={(csvData[currentPreviewIndex] && csvData[currentPreviewIndex][editingField]) || ''}
-          onSave={(newContent) => {
-            handleContentChange(editingField, newContent);
-            setEditingField(null);
-          }}
-          onClose={() => setEditingField(null)}
-        />
-      )}
     </Grid>
   );
 };

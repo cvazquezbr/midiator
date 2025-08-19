@@ -37,10 +37,8 @@ export default async function handler(req, res) {
     }
 
     const { email, password } = await parseBody(req);
-    console.log(`Login attempt for email: ${email}`); // Diagnostic log
 
     if (!email || !password) {
-      console.log('Login failed: Email or password not provided.'); // Diagnostic log
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 
@@ -49,28 +47,21 @@ export default async function handler(req, res) {
     const user = rows[0];
 
     if (!user) {
-      console.log(`Login failed: User not found for email: ${email}`); // Diagnostic log
+      // Use a generic error message to prevent email enumeration attacks
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
-
-    console.log(`User found for email: ${email}. User ID: ${user.id}`); // Diagnostic log
 
     // Check if the user has a password (they might have signed up with a social provider)
     if (!user.password_hash) {
-      console.log(`Login failed: User ${user.id} has no password hash (social login?).`); // Diagnostic log
       return res.status(401).json({ error: 'Invalid credentials. Please try a different sign-in method.' });
     }
 
-    console.log(`Comparing password for user ${user.id}.`); // Diagnostic log
+    // Compare password
     const isMatch = await bcrypt.compare(password, user.password_hash);
-    console.log(`Password comparison for user ${user.id} resulted in: ${isMatch}`); // Diagnostic log
-
     if (!isMatch) {
-      console.log(`Login failed: Password mismatch for user ${user.id}.`); // Diagnostic log
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
-    console.log(`Login successful for user ${user.id}. Generating token.`); // Diagnostic log
     // User is authenticated, create JWT
     const tokenPayload = {
       sub: user.id, // 'sub' is the standard claim for subject (user ID)
