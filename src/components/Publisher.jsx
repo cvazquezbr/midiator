@@ -51,7 +51,7 @@ import {
 } from '@mui/material';
 import { Info, Delete, Edit, Visibility } from '@mui/icons-material';
 import { toast } from 'sonner';
-import { fromZonedTime } from 'date-fns-tz';
+import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getTimezone } from '../utils/timezone';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
@@ -842,7 +842,9 @@ const Publisher = ({
                                         <TableCell component="th" scope="row">
                                             {row.content.titulo}
                                         </TableCell>
-                                        <TableCell align="right">{new Date(row.scheduledAt).toLocaleString('pt-BR')}</TableCell>
+                                        <TableCell align="right">
+                                            {formatInTimeZone(new Date(row.scheduledAt), getTimezone() || 'UTC', 'dd/MM/yyyy HH:mm:ss zzz', { locale: ptBR })}
+                                        </TableCell>
                                         <TableCell align="right">
                                             <Chip
                                                 label={row.status}
@@ -903,7 +905,7 @@ const Publisher = ({
                         <strong>Hashtags:</strong> {(viewingSchedule.content.hashtags || []).join(' ')}
                     </Typography>
                     <Divider sx={{ my: 2 }} />
-                    <Typography variant="body2"><strong>Scheduled for:</strong> {new Date(viewingSchedule.scheduledAt).toLocaleString('pt-BR')}</Typography>
+                    <Typography variant="body2"><strong>Scheduled for:</strong> {formatInTimeZone(new Date(viewingSchedule.scheduledAt), getTimezone() || 'UTC', 'dd/MM/yyyy HH:mm:ss zzz', { locale: ptBR })}</Typography>
                     <Typography variant="body2"><strong>Status:</strong> {viewingSchedule.status}</Typography>
                     {viewingSchedule.error && <Typography variant="body2" color="error"><strong>Error:</strong> {viewingSchedule.error}</Typography>}
                 </Box>
