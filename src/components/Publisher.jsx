@@ -49,7 +49,7 @@ import {
   Tooltip,
   IconButton,
 } from '@mui/material';
-import { Info, Delete, Edit, Visibility } from '@mui/icons-material';
+import { Info, Delete, Edit, Visibility, Replay } from '@mui/icons-material';
 import { toast } from 'sonner';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getTimezone } from '../utils/timezone';
@@ -870,9 +870,9 @@ const Publisher = ({
                                                     <Visibility />
                                                 </IconButton>
                                             </Tooltip>
-                                            <Tooltip title="Edit Schedule">
+                                            <Tooltip title={row.status === 'failed' ? 'Retry' : 'Edit Schedule'}>
                                                 <IconButton onClick={() => handleOpenEditModal(row)} size="small" disabled={row.status === 'published'}>
-                                                    <Edit />
+                                                    {row.status === 'failed' ? <Replay /> : <Edit />}
                                                 </IconButton>
                                             </Tooltip>
                                             <Tooltip title="Delete Schedule">
