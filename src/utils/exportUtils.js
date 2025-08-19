@@ -45,14 +45,11 @@ export const exportHtml = (campaignData) => {
     campaignContent,
     backgroundImage,
     followupPosts,
-    conteudoMedio,
-    conteudoPequeno,
-    conteudoFormatado
   } = campaignData;
 
   if (!campaignContent) return;
 
-  const { titulo, conteudo, cta, hashtags } = campaignContent;
+  const { titulo, conteudo, cta, hashtags, conteudoMedio, conteudoPequeno, conteudoFormatado } = campaignContent;
   const imageHtml = backgroundImage ? `
     <h2>Imagem de Fundo</h2>
     <img src="${backgroundImage}" alt="Imagem de Fundo da Campanha" style="max-width: 100%; border-radius: 8px; margin-bottom: 2rem;" />
