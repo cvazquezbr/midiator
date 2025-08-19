@@ -1,19 +1,34 @@
+import { withAuth } from './middleware/auth.js';
+import { query } from './db.js';
+
 // A general-purpose, action-based proxy for LinkedIn API calls.
 // This is more secure than an endpoint-based proxy as it doesn't allow calling arbitrary URLs.
 
 async function handleTokenExchange(request, response) {
   const { code, redirectUri } = request.body;
-  const clientId = process.env.LINKEDIN_CLIENT_ID;
-  const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+  const userId = request.user.sub;
 
   if (!code || !redirectUri) {
     return response.status(400).json({ error: 'Missing code or redirectUri for token exchange.' });
   }
 
-  if (!clientId || !clientSecret) {
-    console.error("Server-side environment variables for LinkedIn are not set.");
-    return response.status(500).json({ error: 'Server configuration error.' });
+  let clientId, clientSecret;
+  try {
+    const { rows } = await query('SELECT settings_data FROM settings WHERE user_id = $1', [userId]);
+    if (rows.length === 0 || !rows[0].settings_data.linkedin) {
+      return response.status(400).json({ error: 'LinkedIn credentials not configured for this user.' });
+    }
+    clientId = rows[0].settings_data.linkedin.clientId;
+    clientSecret = rows[0].settings_data.linkedin.clientSecret;
+
+    if (!clientId || !clientSecret) {
+      return response.status(400).json({ error: 'Incomplete LinkedIn credentials configured for this user.' });
+    }
+  } catch (dbError) {
+    console.error('Database error fetching LinkedIn credentials:', dbError);
+    return response.status(500).json({ error: 'Failed to retrieve user settings.' });
   }
+
 
   const tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
   const params = new URLSearchParams({
@@ -381,7 +396,7 @@ export async function handleGetProfileForTest(req, res) {
     return await handleGetProfile(req, res);
 }
 
-export default async function handler(request, response) {
+const mainHandler = async (request, response) => {
   console.log(`[${new Date().toISOString()}] /api/linkedin-proxy invoked. Action: ${request.body?.action}`);
 
   if (request.method !== 'POST') {
@@ -391,9 +406,14 @@ export default async function handler(request, response) {
 
   const { action } = request.body;
 
+  // Actions that require authentication are handled by the withAuth middleware.
+  // 'tokenExchange' is special because it establishes the auth, so it's wrapped.
+  // Other actions that depend on an accessToken passed in the body might not need user context
+  // from the middleware if the accessToken is sufficient.
+  // However, for consistency and security, we can protect them all.
   switch (action) {
     case 'tokenExchange':
-      return handleTokenExchange(request, response);
+      return handleTokenExchange(request, response); // Already has user context from withAuth
     case 'testConnection':
       return handleGetProfile(request, response);
     case 'getProfile':
@@ -417,4 +437,6 @@ export default async function handler(request, response) {
     default:
       return response.status(400).json({ error: `Invalid action specified: ${action}` });
   }
-}
+};
+
+export default withAuth(mainHandler);
