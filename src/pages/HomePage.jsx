@@ -326,6 +326,13 @@ function HomePage() {
               isMobile={isMobile}
               selectedField={selectedField}
               setSelectedField={setSelectedField}
+              onDeselectField={() => setSelectedField(null)}
+              onOpenHtmlEditor={(fieldId) => {
+                setEditingField(fieldId);
+                // This is a guess, I might need to create a new state for this
+                // setIsHtmlEditorOpen(true);
+              }}
+              isHtmlField={(fieldName) => ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'].some(field => fieldName.toLowerCase().includes(field.toLowerCase()))}
             />
           </div>
           <div hidden={activeStep !== 3}><ImageGeneratorFrontendOnly csvData={csvData} backgroundImage={backgroundImage} fieldPositions={fieldPositions} fieldStyles={fieldStyles} displayedImageSize={displayedImageSize} csvHeaders={csvHeaders} colorPalette={colorPalette} setGeneratedImagesData={setGeneratedImagesData} initialGeneratedImagesData={generatedImagesData} onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} originalImageSize={originalImageSize} imageFilters={imageFilters} brandElements={brandElements} onBrandElementsChange={setBrandElements} /></div>
@@ -342,34 +349,6 @@ function HomePage() {
       <CampaignStandardsModal open={showCampaignStandardsModal} onClose={() => { setShowCampaignStandardsModal(false); loadCampaignStandards(); }} onShowMemorial={() => setShowMemorialDescritivoModal(true)} onGeneratePalette={async (briefing) => { try { const palette = await generateColorPalette(briefing); return palette; } catch (error) { toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores."); throw error; } }} />
       <LoadingDialog open={isGeneratingCampaign || isSaving || isLoading} title={ isSaving ? "Salvando configuração..." : isLoading ? "Carregando configuração..." : "Gerando conteúdo..." } description={ isSaving ? "Aguarde um momento, estamos empacotando tudo para você." : isLoading ? "Estamos desempacotando sua configuração. Quase pronto!" : "A IA está pensando e escrevendo. Isso pode levar alguns segundos." } />
       <TextEditorDialog open={editingField !== null || editingFollowup !== null} title={ editingFollowup !== null ? `Editar Post de Follow-up ${editingFollowup.index + 1}` : `Editar ${ editingField === 'conteudo' ? 'Conteúdo' : editingField === 'conteudoMedio' ? 'Conteúdo Médio' : editingField === 'conteudoPequeno' ? 'Conteúdo Pequeno' : editingField === 'cta' ? 'CTA' : 'Conteúdo Formatado' }` } content={ editingFollowup !== null ? editingFollowup.content : editingField === 'conteudoFormatado' ? conteudoFormatado : editingField === 'conteudoMedio' ? conteudoMedio : editingField === 'conteudoPequeno' ? conteudoPequeno : editingField && campaignContent ? campaignContent[editingField] : '' } onSave={ editingFollowup !== null ? handleSaveFollowup : (newContent) => { if (editingField === 'conteudoFormatado') { setConteudoFormatado(newContent); } else if (editingField === 'conteudoMedio') { setConteudoMedio(newContent); } else if (editingField === 'conteudoPequeno') { setConteudoPequeno(newContent); } else if (editingField) { setCampaignContent({ ...campaignContent, [editingField]: newContent, }); } } } onClose={() => { setEditingField(null); setEditingFollowup(null); }} />
-      {isMobile && activeStep === 2 && (
-        <>
-          <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16 }} onClick={() => setIsDrawerOpen(true)} ><Edit /></Fab>
-          <FormattingDrawer
-            open={isDrawerOpen}
-            onClose={() => setIsDrawerOpen(false)}
-            selectedField={selectedField}
-            fieldStyles={fieldStyles}
-            setFieldStyles={setFieldStyles}
-            fieldPositions={fieldPositions}
-            setFieldPositions={setFieldPositions}
-            csvHeaders={csvHeaders}
-            imageFilters={imageFilters}
-            setImageFilters={setImageFilters}
-            brandElements={brandElements}
-            setBrandElements={setBrandElements}
-            onZIndexChange={handleZIndexChange}
-            onDeselectField={() => setSelectedField(null)}
-            onOpenHtmlEditor={(fieldId) => {
-              setEditingField(fieldId);
-              // This is a guess, I might need to create a new state for this
-              // setIsHtmlEditorOpen(true);
-            }}
-            isHtmlField={(fieldName) => ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'].some(field => fieldName.toLowerCase().includes(field.toLowerCase()))}
-            standardsColors={standardsColors}
-          />
-        </>
-      )}
     </ThemeProvider>
   );
 }
