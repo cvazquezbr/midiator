@@ -22,10 +22,11 @@ import {
   removeLinkedinConfig,
 } from '../utils/linkedinCredentials';
 import GoogleDriveFolderPicker from './GoogleDriveFolderPicker';
-import googleDriveAPI from '../utils/googleDriveAPI';
+import { useUserAuth } from '../context/UserAuthContext';
 import LinkedinInfobox from './LinkedinInfobox';
 
 const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
+  const { googleAccessToken } = useUserAuth();
   const [config, setConfig] = useState({ clientId: '', clientSecret: '', folderId: '' });
   const [currentConfig, setCurrentConfig] = useState(null);
   const [isPickerOpen, setPickerOpen] = useState(false);
@@ -99,34 +100,12 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
     setPickerOpen(false);
   };
 
-  const handleBrowseDrive = async () => {
-    setError('');
-    setIsDriveLoading(true);
-
-    const apiKey = localStorage.getItem("google_drive_api_key");
-    const clientId = localStorage.getItem("google_drive_client_id");
-
-    if (!apiKey || !clientId) {
-      toast.error('Por favor, configure a integração com o Google Drive primeiro.');
-      setIsDriveLoading(false);
+  const handleBrowseDrive = () => {
+    if (!googleAccessToken) {
+      toast.error('Você precisa estar conectado com uma conta Google que tenha permissão para o Drive.');
       return;
     }
-
-    try {
-      if (!googleDriveAPI.isInitialized) {
-        await googleDriveAPI.initialize(apiKey, clientId);
-      }
-      if (!googleDriveAPI.isUserSignedIn()) {
-        toast.info('Aguardando login com o Google...');
-        await googleDriveAPI.signIn();
-      }
-      setPickerOpen(true);
-    } catch (err) {
-      console.error('Erro ao preparar o seletor de pastas do Google Drive:', err);
-      toast.error(`Erro no Google Drive: ${err.message}`);
-    } finally {
-      setIsDriveLoading(false);
-    }
+    setPickerOpen(true);
   };
 
   const handleConnect = async () => {
@@ -332,6 +311,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
         open={isPickerOpen}
         onClose={() => setPickerOpen(false)}
         onSelectFolder={handleSelectFolder}
+        googleAccessToken={googleAccessToken}
       />
 
       <Dialog open={showInfobox} onClose={() => setShowInfobox(false)} fullWidth maxWidth="lg">

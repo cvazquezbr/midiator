@@ -16,9 +16,9 @@ import {
   IconButton,
 } from '@mui/material';
 import { Folder, Close } from '@mui/icons-material';
-import googleDriveAPI from '../utils/googleDriveAPI';
+import { listFolders, createFolder } from '../utils/googleApi';
 
-const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder }) => {
+const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder, googleAccessToken }) => {
   const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,15 +26,14 @@ const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder }) => {
   const [newFolderName, setNewFolderName] = useState('');
 
   const fetchFolders = async () => {
+    if (!googleAccessToken) {
+      setError('Acesso ao Google Drive não autorizado.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
-      if (!googleDriveAPI.isUserSignedIn()) {
-        setError('Você precisa estar logado no Google para procurar pastas.');
-        setLoading(false);
-        return;
-      }
-      const folderList = await googleDriveAPI.listFolders();
+      const folderList = await listFolders(googleAccessToken);
       setFolders(folderList);
     } catch (err) {
       setError(`Falha ao buscar pastas: ${err.message}`);
@@ -57,18 +56,20 @@ const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder }) => {
       setError('Por favor, insira um nome para a nova pasta.');
       return;
     }
+    if (!googleAccessToken) {
+      setError('Acesso ao Google Drive não autorizado.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
-      const newFolder = await googleDriveAPI.createFolder(newFolderName.trim());
-      // On success, immediately select the new folder and close the dialog.
+      const newFolder = await createFolder(newFolderName.trim(), null, googleAccessToken);
       onSelectFolder(newFolder);
       onClose();
     } catch (err) {
       setError(`Falha ao criar pasta: ${err.message}`);
       console.error(err);
     } finally {
-      // Reset loading state, though the component will likely be unmounted.
       setLoading(false);
     }
   };
