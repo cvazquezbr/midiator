@@ -33,7 +33,6 @@ import CampaignStandardsModal from '../components/CampaignStandardsModal';
 import SaveCampaignModal from '../components/SaveCampaignModal';
 import LoadCampaignModal from '../components/LoadCampaignModal';
 
-import { getGeminiApiKey } from '../utils/geminiCredentials';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
 import geminiAPI from '../utils/geminiAPI';
 import { stripHtml } from '../lib/utils';
@@ -221,16 +220,12 @@ function HomePage() {
 
   useEffect(() => {
     loadCampaignStandards();
-    const apiKey = getGeminiApiKey();
-    if (apiKey) geminiAPI.initialize(apiKey);
   }, [loadCampaignStandards]);
 
   useEffect(() => {
     const loadSettings = async () => {
       try {
         await loadSettingsFromDb();
-        const apiKey = getGeminiApiKey();
-        if (apiKey) geminiAPI.initialize(apiKey);
         toast.info("Your cloud settings have been loaded.");
       } catch (error) {
         toast.error(`Could not load your settings: ${error.message}`);
@@ -324,7 +319,7 @@ function HomePage() {
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => { setCsvData(prevCsvData => { if (recordIndex < 0 || recordIndex >= prevCsvData.length) { return prevCsvData; } return prevCsvData.map((row, idx) => { if (idx === recordIndex) { return updatedRecord; } return row; }); }); }, [setCsvData]);
   const handleGenerateCampaignContent = async (regenerate = false) => { setIsGeneratingCampaign(true); setCampaignGenerationFailed(false); setGenerationError(''); setTimeout(async () => { try { const normalizedContent = await generateCampaignContent({ problema, solucao }); setCampaignContent(normalizedContent); if (!regenerate) { setConteudoMedio(''); setConteudoPequeno(''); setConteudoFormatado(''); setGeneratedImageUrl(null); const [imageSuccess] = await Promise.all([ handleGenerateImage(normalizedContent), handleGenerateSummary(1800, normalizedContent), handleGenerateSummary(130, normalizedContent), handleGenerateFormattedContent(normalizedContent), handleGenerateFollowupPosts(normalizedContent), ]); if (!imageSuccess) { setCampaignGenerationFailed(true); setGenerationError("A geração de texto foi bem-sucedida, mas a criação da imagem falhou. Você pode tentar gerar a imagem novamente."); } } } catch (error) { const errorMessage = error.message || 'Ocorreu um erro desconhecido.'; toast.error(`Ocorreu um erro ao gerar o conteúdo da campanha: ${errorMessage}`); setCampaignContent(null); setCampaignGenerationFailed(true); setGenerationError(errorMessage); } finally { setIsGeneratingCampaign(false); } }, 0); };
   const handleGenerateImage = async (content = campaignContent) => { if (!content) { toast.error("Por favor, gere o conteúdo do texto primeiro."); return false; } setIsGeneratingImage(true); try { const imageUrl = await generateCampaignImage({ content, aspectRatio }); setGeneratedImageUrl(imageUrl); updateImageAndPalette(imageUrl); return true; } catch (imageError) { toast.error(`Ocorreu um erro ao gerar a imagem da campanha: ${imageError.message}`); setGeneratedImageUrl(null); return false; } finally { setIsGeneratingImage(false); } };
-  const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); if (targetLength === 1800) { setConteudoMedio(summary); } else { setConteudoPequeno(summary); } } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
+  const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); if (targetLength === 1800) { setConteudoMedio(summary); } else { setConteudoPequeno(summary); } } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
   const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setConteudoFormatado(finalContent); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
   const handleGenerateFollowupPosts = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingFollowup(true); try { const plan = await generateFollowupPlan({ content, followupPostsQuantity }); const posts = await generateFollowupPosts({ content, plan }); setFollowupPosts(posts); } catch (error) { toast.error(`Ocorreu um erro ao gerar os posts de follow-up: ${error.message}`); } finally { setIsGeneratingFollowup(false); } };
   const handleResetCampaign = () => { setCampaignContent(null); setGeneratedImageUrl(null); setConteudoMedio(''); setConteudoPequeno(''); setConteudoFormatado(''); setFollowupPosts([]); setFollowupPostsQuantity(5); };
