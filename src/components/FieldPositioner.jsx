@@ -99,15 +99,14 @@ const FieldPositioner = ({
   imageFilters,
   brandElements,
   setBrandElements,
-  setImageFilters,
-  onZIndexChange,
-  onOpenHtmlEditor,
+  onOpenEditor,
+  currentPreviewIndex,
+  setCurrentPreviewIndex,
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
-  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [composedImageUrl, setComposedImageUrl] = useState(null);
   const [isComposing, setIsComposing] = useState(false);
 
@@ -170,29 +169,6 @@ const FieldPositioner = ({
       onCsvDataUpdate(updatedCsvData);
     }
   }, [csvData, currentPreviewIndex, onCsvDataUpdate]);
-
-  const handleVisibilityChange = useCallback((fieldId, isVisible) => {
-    // Check if the selected element is a brand element
-    const isBrandElement = brandElements.some(el => el.id === fieldId);
-
-    if (isBrandElement) {
-        if (!isVisible) {
-            // It's a brand element and it's being hidden, so delete it.
-            setBrandElements(prev => prev.filter(el => el.id !== fieldId));
-            // Also deselect it
-            handleFieldSelectInternal(null);
-        }
-    } else {
-        // It's a text field from CSV. Just toggle its visibility.
-        setFieldPositions(prev => ({
-            ...prev,
-            [fieldId]: {
-                ...(prev[fieldId] || {}),
-                visible: isVisible
-            }
-        }));
-    }
-  }, [brandElements, setBrandElements, setFieldPositions, handleFieldSelectInternal]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -668,7 +644,7 @@ const FieldPositioner = ({
                   onContentChange={element.type === 'text' ? handleContentChange : undefined}
                   onDoubleClick={() => {
                     if (element.type === 'text' && isHtmlField(element.id)) {
-                      onOpenHtmlEditor(element.id);
+                      onOpenEditor(element.id);
                     }
                   }}
                   rotation={element.rotation}
@@ -719,4 +695,3 @@ const FieldPositioner = ({
 };
 
 export default FieldPositioner;
-

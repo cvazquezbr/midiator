@@ -20,9 +20,9 @@ const DraggableElement = ({
   originalImageSize,
   fontScale: fontScaleProp,
   enableHtmlRendering = false,
-  darkMode,
   onDoubleClick,
 }) => {
+  const [isEditing, setIsEditing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
@@ -51,45 +51,6 @@ const DraggableElement = ({
     sanitized = sanitized.replace(/on\w+="[^"]*"/gi, ''); // Remove event handlers
     
     return sanitized;
-  };
-
-  // Função para renderizar conteúdo HTML ou texto simples
-  const renderContent = () => {
-    if (element.type === 'image') {
-      return (
-        <img
-          src={element.url}
-          alt={element.name || 'Brand Element'}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain', // or 'cover', depending on desired behavior
-            pointerEvents: 'none',
-          }}
-        />
-      );
-    }
-
-    // Default to text rendering
-    if (!enableHtmlRendering) {
-      return content;
-    }
-
-    const sanitizedContent = sanitizeHtml(content);
-    return (
-      <div
-        ref={htmlContentRef}
-        dangerouslySetInnerHTML={{ __html: sanitizedContent }}
-        style={{
-          width: '100%',
-          height: '100%',
-          overflow: 'hidden',
-          wordWrap: 'break-word',
-          pointerEvents: 'none',
-          textAlign: style.textAlign || 'left',
-        }}
-      />
-    );
   };
 
   const getRotatedBoundingBox = useCallback((widthPercent, heightPercent, rotationDegrees) => {
@@ -250,12 +211,13 @@ const DraggableElement = ({
     setEditedContent(content);
   }, [content]);
 
-  const pixelPosition = {
-    x: (position.x / 100) * (containerSize.width || 1),
-    y: (position.y / 100) * (containerSize.height || 1),
-    width: (position.width / 100) * (containerSize.width || 1),
-    height: (position.height / 100) * (containerSize.height || 1)
-  };
+  // Auto-focus the textarea when entering edit mode
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.select(); // Select all text for easy replacement
+    }
+  }, [isEditing]);
 
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
                    ('ontouchstart' in window) || 
@@ -548,6 +510,20 @@ const DraggableElement = ({
     pointerEvents: 'none',
   };
 
+  const handleDoubleClick = (e) => {
+    // Prevent triggering onDoubleClick on parent elements
+    e.stopPropagation();
+
+    // Logic for simple text fields
+    if (element.type === 'text' && !enableHtmlRendering) {
+      setIsEditing(true);
+    }
+    // Logic for HTML fields (and other potential double-click actions)
+    else if (onDoubleClick) {
+      onDoubleClick(e);
+    }
+  };
+
   return (
     <>
       <Box
@@ -564,7 +540,7 @@ const DraggableElement = ({
         onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
         onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
         onClick={() => onSelect(element.id)}
-        onDoubleClick={onDoubleClick}
+        onDoubleClick={handleDoubleClick}
       >
         <Box
           className={`${styles.textBoxContent} ${isSelected ? styles.selected : ''} ${element.type === 'image' ? styles.imageElement : ''}`}
@@ -601,6 +577,30 @@ const DraggableElement = ({
                       wordWrap: 'break-word',
                       pointerEvents: 'none',
                       textAlign: style.textAlign || 'left',
+                    }}
+                  />
+                ) : isEditing ? (
+                  <textarea
+                    ref={textareaRef}
+                    value={editedContent}
+                    onChange={(e) => setEditedContent(e.target.value)}
+                    onBlur={() => {
+                      setIsEditing(false);
+                      onContentChange(element.id, editedContent);
+                    }}
+                    style={{
+                      ...textContentStyle,
+                      width: '100%',
+                      height: '100%',
+                      padding: 0,
+                      margin: 0,
+                      border: 'none',
+                      background: 'rgba(255, 255, 255, 0.7)',
+                      resize: 'none',
+                      outline: 'none',
+                      overflow: 'hidden',
+                      whiteSpace: 'pre-wrap',
+                      wordWrap: 'break-word',
                     }}
                   />
                 ) : (

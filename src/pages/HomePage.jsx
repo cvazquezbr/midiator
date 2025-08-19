@@ -53,6 +53,8 @@ import { parseCsv } from '../utils/csvParser.js';
 import { lightTheme, darkTheme } from '../theme.js';
 import ColorThief from 'colorthief';
 
+const htmlFields = ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'];
+
 function HomePage() {
   const { user } = useUserAuth();
 
@@ -124,11 +126,12 @@ function HomePage() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [currentCampaign, setCurrentCampaign] = useState(null);
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
 
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
 
-  const getAppState = () => ({ activeStep, darkMode, sidebarOpen, csvData, csvHeaders, backgroundImage, colorPalette, standardsColors, problema, solucao, campaignContent, persona, autor, instrucoes, formato, aspectRatio, generatedImageUrl, conteudoMedio, conteudoPequeno, followupPosts, followupPostsQuantity, isScheduled, scheduleDate, weeklySchedule, selectedProfile, selectedImages, selectedVideos, inputMethod, promptNumRecords, promptText, fieldPositions, fieldStyles, displayedImageSize, originalImageSize, generatedImagesData, generatedAudioData, generatedVideosData, imageFilters, brandElements });
+  const getAppState = () => ({ activeStep, darkMode, sidebarOpen, csvData, csvHeaders, backgroundImage, colorPalette, standardsColors, problema, solucao, campaignContent, persona, autor, instrucoes, formato, aspectRatio, generatedImageUrl, conteudoMedio, conteudoPequeno, followupPosts, followupPostsQuantity, isScheduled, scheduleDate, weeklySchedule, selectedProfile, selectedImages, selectedVideos, inputMethod, promptNumRecords, promptText, fieldPositions, fieldStyles, displayedImageSize, originalImageSize, generatedImagesData, generatedAudioData, generatedVideosData, imageFilters, brandElements, currentPreviewIndex });
   const applyAppState = (state) => {
     if (!state) return;
     setActiveStep(state.activeStep ?? 0);
@@ -170,6 +173,7 @@ function HomePage() {
     setGeneratedVideosData(state.generatedVideosData ?? []);
     setImageFilters(state.imageFilters ?? { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 });
     setBrandElements(state.brandElements ?? []);
+    setCurrentPreviewIndex(state.currentPreviewIndex ?? 0);
   };
 
   const handleSaveCampaign = async (name) => {
@@ -373,14 +377,14 @@ function HomePage() {
               selectedField={selectedField}
               setSelectedField={setSelectedField}
               onDeselectField={() => setSelectedField(null)}
-              onOpenHtmlEditor={(fieldId) => {
+              currentPreviewIndex={currentPreviewIndex}
+              setCurrentPreviewIndex={setCurrentPreviewIndex}
+              onOpenEditor={(fieldId) => {
                 setEditingField(fieldId);
-                // This is a guess, I might need to create a new state for this
-                // setIsHtmlEditorOpen(true);
               }}
               isHtmlField={(fieldName) => {
                 if (!fieldName) return false;
-                return fieldName && ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'].some(field => fieldName.toLowerCase().includes(field.toLowerCase()))
+                return fieldName && htmlFields.some(field => String(fieldName).toLowerCase().includes(field.toLowerCase()))
               }}
             />
           </div>
@@ -397,7 +401,62 @@ function HomePage() {
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
       <CampaignStandardsModal open={showCampaignStandardsModal} onClose={() => { setShowCampaignStandardsModal(false); loadCampaignStandards(); }} onShowMemorial={() => setShowMemorialDescritivoModal(true)} onGeneratePalette={async (briefing) => { try { const palette = await generateColorPalette(briefing); return palette; } catch (error) { toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores."); throw error; } }} />
       <LoadingDialog open={isGeneratingCampaign || isSaving || isLoading} title={ isSaving ? "Salvando configuração..." : isLoading ? "Carregando configuração..." : "Gerando conteúdo..." } description={ isSaving ? "Aguarde um momento, estamos empacotando tudo para você." : isLoading ? "Estamos desempacotando sua configuração. Quase pronto!" : "A IA está pensando e escrevendo. Isso pode levar alguns segundos." } />
-      <TextEditorDialog open={editingField !== null || editingFollowup !== null} title={ editingFollowup !== null ? `Editar Post de Follow-up ${editingFollowup.index + 1}` : `Editar ${ editingField === 'conteudo' ? 'Conteúdo' : editingField === 'conteudoMedio' ? 'Conteúdo Médio' : editingField === 'conteudoPequeno' ? 'Conteúdo Pequeno' : editingField === 'cta' ? 'CTA' : 'Conteúdo Formatado' }` } content={ editingFollowup !== null ? editingFollowup.content : editingField === 'conteudoFormatado' ? conteudoFormatado : editingField === 'conteudoMedio' ? conteudoMedio : editingField === 'conteudoPequeno' ? conteudoPequeno : editingField && campaignContent ? campaignContent[editingField] : '' } onSave={ editingFollowup !== null ? handleSaveFollowup : (newContent) => { if (editingField === 'conteudoFormatado') { setConteudoFormatado(newContent); } else if (editingField === 'conteudoMedio') { setConteudoMedio(newContent); } else if (editingField === 'conteudoPequeno') { setConteudoPequeno(newContent); } else if (editingField) { setCampaignContent({ ...campaignContent, [editingField]: newContent, }); } } } onClose={() => { setEditingField(null); setEditingFollowup(null); }} />
+      <TextEditorDialog
+        open={editingField !== null || editingFollowup !== null}
+        title={
+          editingFollowup !== null
+            ? `Editar Post de Follow-up ${editingFollowup.index + 1}`
+            : `Editar Campo: "${editingField}"`
+        }
+        isHtml={
+          editingFollowup !== null ||
+          (editingField && htmlFields.some(field => String(editingField).toLowerCase().includes(field)))
+        }
+        content={
+          editingFollowup !== null
+            ? editingFollowup.content
+            : editingField && csvHeaders.includes(editingField) && csvData[currentPreviewIndex]
+              ? csvData[currentPreviewIndex][editingField] || ''
+              : editingField === 'conteudoFormatado'
+                ? conteudoFormatado
+                : editingField === 'conteudoMedio'
+                  ? conteudoMedio
+                  : editingField === 'conteudoPequeno'
+                    ? conteudoPequeno
+                    : editingField && campaignContent
+                      ? campaignContent[editingField] || ''
+                      : ''
+        }
+        onSave={
+          editingFollowup !== null
+            ? handleSaveFollowup
+            : editingField && csvHeaders.includes(editingField)
+              ? (newContent) => {
+                  const updatedCsvData = csvData.map((row, index) => {
+                    if (index === currentPreviewIndex) {
+                      return { ...row, [editingField]: newContent };
+                    }
+                    return row;
+                  });
+                  setCsvData(updatedCsvData);
+                }
+              : (newContent) => {
+                  if (editingField === 'conteudoFormatado') {
+                    setConteudoFormatado(newContent);
+                  } else if (editingField === 'conteudoMedio') {
+                    setConteudoMedio(newContent);
+                  } else if (editingField === 'conteudoPequeno') {
+                    setConteudoPequeno(newContent);
+                  } else if (editingField) {
+                    setCampaignContent({ ...campaignContent, [editingField]: newContent });
+                  }
+                }
+        }
+        onClose={() => {
+          setEditingField(null);
+          setEditingFollowup(null);
+        }}
+      />
     </ThemeProvider>
   );
 }

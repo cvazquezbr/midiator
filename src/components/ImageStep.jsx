@@ -48,8 +48,10 @@ const ImageStep = ({
   selectedField,
   setSelectedField,
   onDeselectField,
-  onOpenHtmlEditor,
+  onOpenEditor,
   isHtmlField,
+  currentPreviewIndex,
+  setCurrentPreviewIndex
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -156,7 +158,9 @@ const ImageStep = ({
             brandElements={brandElements}
             setBrandElements={setBrandElements}
             onZIndexChange={onZIndexChange}
-            onOpenHtmlEditor={onOpenHtmlEditor}
+            onOpenEditor={onOpenEditor}
+            currentPreviewIndex={currentPreviewIndex}
+            setCurrentPreviewIndex={setCurrentPreviewIndex}
           />
         </Grid>
         {!isMobile ? (
@@ -174,7 +178,7 @@ const ImageStep = ({
               setBrandElements={setBrandElements}
               onZIndexChange={onZIndexChange}
               onDeselectField={onDeselectField}
-              onOpenHtmlEditor={onOpenHtmlEditor}
+              onOpenEditor={onOpenEditor}
               isHtmlField={isHtmlField}
               standardsColors={standardsColors}
             />
@@ -197,7 +201,7 @@ const ImageStep = ({
               setBrandElements={setBrandElements}
               onZIndexChange={onZIndexChange}
               onDeselectField={onDeselectField}
-              onOpenHtmlEditor={onOpenHtmlEditor}
+              onOpenEditor={onOpenEditor}
               isHtmlField={isHtmlField}
               standardsColors={standardsColors}
             />

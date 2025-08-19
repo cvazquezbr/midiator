@@ -18,7 +18,7 @@ const FormattingDrawer = ({
   setBrandElements,
   onZIndexChange,
   onDeselectField,
-  onOpenHtmlEditor,
+  onOpenEditor,
   isHtmlField,
   standardsColors,
 }) => {
@@ -44,7 +44,7 @@ const FormattingDrawer = ({
           setBrandElements={setBrandElements}
           onZIndexChange={onZIndexChange}
           onDeselectField={onDeselectField}
-          onOpenHtmlEditor={onOpenHtmlEditor}
+          onOpenEditor={onOpenEditor}
           isHtmlField={isHtmlField}
           standardsColors={standardsColors}
         />

@@ -61,7 +61,7 @@ const FormattingPanel = ({
   setBrandElements,
   onZIndexChange,
   onDeselectField,
-  onOpenHtmlEditor,
+  onOpenEditor,
   isHtmlField,
   standardsColors,
 }) => {
@@ -311,7 +311,7 @@ const FormattingPanel = ({
                   <Button
                     variant="contained"
                     startIcon={<Edit />}
-                    onClick={() => onOpenHtmlEditor(selectedField)}
+                    onClick={() => onOpenEditor(selectedField)}
                     fullWidth
                     sx={{ mb: 2 }}
                   >
