@@ -51,7 +51,7 @@ import {
 } from '@mui/material';
 import { Info, Delete, Edit, Visibility } from '@mui/icons-material';
 import { toast } from 'sonner';
-import { zonedTimeToUtc } from 'date-fns-tz';
+import { fromZonedTime } from 'date-fns-tz';
 import { getTimezone } from '../utils/timezone';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
@@ -139,7 +139,7 @@ const Publisher = ({
     setIsUpdating(true);
     try {
       const userTimezone = getTimezone() || 'UTC';
-      const utcDate = zonedTimeToUtc(editingSchedule.newScheduledAt, userTimezone);
+      const utcDate = fromZonedTime(editingSchedule.newScheduledAt, userTimezone);
       await updateSchedule(editingSchedule.id, utcDate.toISOString());
       toast.success("Schedule updated successfully!");
       setEditingSchedule(null);
@@ -451,7 +451,7 @@ const Publisher = ({
         const mainPostDate = new Date(scheduleDate);
         const [hours, minutes] = getScheduledTime(mainPostDate).split(':');
         mainPostDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-        const mainPostUtcDate = zonedTimeToUtc(mainPostDate, userTimezone);
+        const mainPostUtcDate = fromZonedTime(mainPostDate, userTimezone);
 
         const mainPostSchedule = {
             scheduledAt: mainPostUtcDate.toISOString(),
@@ -470,7 +470,7 @@ const Publisher = ({
                 followupDate.setDate(scheduleDate.getDate() + index + 1);
                 const [fHours, fMinutes] = getScheduledTime(followupDate).split(':');
                 followupDate.setHours(parseInt(fHours, 10), parseInt(fMinutes, 10), 0, 0);
-                const followupUtcDate = zonedTimeToUtc(followupDate, userTimezone);
+                const followupUtcDate = fromZonedTime(followupDate, userTimezone);
 
                 const followupSchedule = {
                     scheduledAt: followupUtcDate.toISOString(),
