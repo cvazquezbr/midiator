@@ -88,13 +88,13 @@ export const UserAuthContextProvider = ({ children }) => {
     }
   };
 
-  const googleLogin = async (credential) => {
+  const googleLogin = async (code) => {
     setLoading(true);
     try {
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential }),
+        body: JSON.stringify({ code }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -133,6 +133,7 @@ export const UserAuthContextProvider = ({ children }) => {
   const value = {
     user,
     loading,
+    googleAccessToken: user?.googleAccessToken,
     login,
     signup,
     logout,

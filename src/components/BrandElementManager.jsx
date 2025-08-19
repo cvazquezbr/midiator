@@ -1,88 +1,60 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Button, CircularProgress, Alert, Grid, Card,
-  CardActionArea, CardMedia, Dialog, DialogTitle, DialogContent, IconButton
+  CardActionArea, CardMedia
 } from '@mui/material';
-import { Refresh, Google, Close as CloseIcon } from '@mui/icons-material';
-import googleDriveAPI from '../utils/googleDriveAPI';
-import GoogleAuthSetup from './GoogleAuthSetup'; // Import the auth setup component
+import { Refresh } from '@mui/icons-material';
+import { useUserAuth } from '../context/UserAuthContext';
+import { findFolderByName, listFiles, getFileAsBlob } from '../utils/googleApi';
 
 const BrandElementManager = ({ onElementSelect }) => {
   const [images, setImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isConnected, setIsConnected] = useState(googleDriveAPI.isUserSignedIn());
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [loadingImageId, setLoadingImageId] = useState(null); // To show loader on specific image
+  const [loadingImageId, setLoadingImageId] = useState(null);
+  const { googleAccessToken } = useUserAuth();
 
   const fetchBrandElements = useCallback(async () => {
-    if (!googleDriveAPI.isInitialized()) {
-      setError("A API do Google Drive não foi inicializada. Por favor, configure-a na aba 'Google Drive' das configurações.");
-      setIsConnected(false);
+    if (!googleAccessToken) {
+      setError("Por favor, conecte-se com o Google para ver os elementos da marca.");
       return;
     }
-    if (!googleDriveAPI.isUserSignedIn()) {
-      setIsConnected(false);
-      setError("Por favor, conecte-se ao Google Drive para ver os elementos da marca.");
-      return;
-    }
-    setIsConnected(true);
+
     setIsLoading(true);
     setError(null);
     try {
-      // 1. Find the 'midiator' folder
-      const midiatorFolder = await googleDriveAPI.findFolderByName('midiator');
+      const midiatorFolder = await findFolderByName('midiator', null, googleAccessToken);
       if (!midiatorFolder) {
         throw new Error("A pasta 'midiator' não foi encontrada no seu Google Drive.");
       }
 
-      // 2. Find the 'elementos' subfolder
-      const elementosFolder = await googleDriveAPI.findFolderByName('elementos', midiatorFolder.id);
+      const elementosFolder = await findFolderByName('elementos', midiatorFolder.id, googleAccessToken);
       if (!elementosFolder) {
         throw new Error("A subpasta 'elementos' não foi encontrada dentro da pasta 'midiator'.");
       }
 
-      // 3. List image files in the 'elementos' folder
-      const fileList = await googleDriveAPI.listFiles(elementosFolder.id, 100); // Fetch up to 100 items
-
+      const fileList = await listFiles(elementosFolder.id, googleAccessToken, 100);
       const imageFiles = fileList.files.filter(file => file.mimeType.startsWith('image/'));
 
-      // 4. For each image, get a web-viewable link.
       const imagesWithLinks = imageFiles.map(file => ({
         id: file.id,
         name: file.name,
-        // This is a direct download link, which might require CORS handling.
-        // For display, webContentLink is often better if available, or construct a thumbnail link.
         url: `https://drive.google.com/uc?export=view&id=${file.id}`,
-        thumbnailLink: file.thumbnailLink, // Google Drive API can provide this
+        thumbnailLink: file.thumbnailLink,
       }));
 
       setImages(imagesWithLinks);
-
     } catch (err) {
       setError(err.message || 'Ocorreu um erro desconhecido.');
       console.error("Error fetching brand elements:", err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [googleAccessToken]);
 
   useEffect(() => {
-    // Check connection status on mount
-    setIsConnected(googleDriveAPI.isUserSignedIn());
-    if (googleDriveAPI.isUserSignedIn()) {
-      fetchBrandElements();
-    } else {
-      setError("Conecte-se ao Google Drive para carregar elementos da marca.");
-    }
-  }, [fetchBrandElements]);
-
-  const handleAuthSuccess = () => {
-    setShowAuthModal(false);
-    setIsConnected(true);
-    setError(null);
     fetchBrandElements();
-  };
+  }, [fetchBrandElements]);
 
   const handleSelect = async (image) => {
     if (!onElementSelect) return;
@@ -90,7 +62,7 @@ const BrandElementManager = ({ onElementSelect }) => {
     setError(null);
 
     try {
-      const blob = await googleDriveAPI.getFileAsBlob(image.id);
+      const blob = await getFileAsBlob(image.id, googleAccessToken);
       const blobUrl = URL.createObjectURL(blob);
 
       const newElement = {
@@ -113,34 +85,25 @@ const BrandElementManager = ({ onElementSelect }) => {
 
   return (
     <Box>
-      {isConnected && (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-          <Button onClick={fetchBrandElements} disabled={isLoading} startIcon={<Refresh />} size="small">
-            Atualizar
-          </Button>
-        </Box>
-      )}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <Button onClick={fetchBrandElements} disabled={isLoading || !googleAccessToken} startIcon={<Refresh />} size="small">
+          Atualizar
+        </Button>
+      </Box>
 
       {isLoading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}><CircularProgress /></Box>}
 
-      {error && <Alert severity={isConnected ? "error" : "info"}>{error}</Alert>}
+      {error && <Alert severity="error">{error}</Alert>}
 
-      {!isConnected && !isLoading && (
-        <Button
-          variant="contained"
-          startIcon={<Google />}
-          onClick={() => setShowAuthModal(true)}
-          fullWidth
-        >
-          Conectar ao Google Drive
-        </Button>
+      {!googleAccessToken && !isLoading && (
+         <Alert severity="info">Conecte-se com sua conta Google para carregar os elementos da marca.</Alert>
       )}
 
-      {isConnected && !isLoading && !error && images.length === 0 && (
-        <Alert severity="info">Nenhuma imagem encontrada na pasta `midiator/elementos`.</Alert>
+      {googleAccessToken && !isLoading && !error && images.length === 0 && (
+        <Alert severity="info">Nenhuma imagem encontrada na pasta `midiator/elementos` do seu Google Drive.</Alert>
       )}
 
-      {isConnected && !isLoading && images.length > 0 && (
+      {googleAccessToken && !isLoading && images.length > 0 && (
         <Grid container spacing={2}>
           {images.map((image) => (
             <Grid item xs={6} sm={4} key={image.id}>
@@ -154,10 +117,10 @@ const BrandElementManager = ({ onElementSelect }) => {
                     <CardMedia
                       component="img"
                       height="100"
-                      image={image.thumbnailLink} // Always prefer thumbnailLink for previews
+                      image={image.thumbnailLink}
                       alt={image.name}
                       sx={{ objectFit: 'contain' }}
-                      onError={(e) => { e.target.style.display = 'none'; }} // Hide if thumbnail fails
+                      onError={(e) => { e.target.style.display = 'none'; }}
                     />
                   )}
                   <Typography variant="caption" display="block" sx={{ textAlign: 'center', p: 1 }} noWrap>
@@ -169,18 +132,6 @@ const BrandElementManager = ({ onElementSelect }) => {
           ))}
         </Grid>
       )}
-
-      <Dialog open={showAuthModal} onClose={() => setShowAuthModal(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          Configuração Google Drive
-          <IconButton onClick={() => setShowAuthModal(false)} sx={{ position: 'absolute', right: 8, top: 8 }}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <GoogleAuthSetup onAuthSuccess={handleAuthSuccess} onAuthError={(err) => setError(err.message)} />
-        </DialogContent>
-      </Dialog>
     </Box>
   );
 };

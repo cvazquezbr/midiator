@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { GoogleLogin } from '@react-oauth/google';
+import { useGoogleLogin } from '@react-oauth/google';
 import {
   Container,
   Box,
@@ -45,22 +45,26 @@ const LoginPage = () => {
     // No need to setLoading(false) on success because the component will unmount
   };
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    setLoading(true);
-    setError('');
-    const success = await googleLogin(credentialResponse.credential);
-    if (success) {
-      navigate('/');
-    } else {
-      setError('Google Sign-In failed. Please try again.');
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleError = () => {
-    setError('Google Sign-In was cancelled or failed. Please try again.');
-    console.error('Google Login Failed');
-  };
+  const initiateGoogleLogin = useGoogleLogin({
+    flow: 'auth-code',
+    scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets',
+    access_type: 'offline',
+    onSuccess: async (codeResponse) => {
+      setLoading(true);
+      setError('');
+      const success = await googleLogin(codeResponse.code);
+      if (success) {
+        navigate('/');
+      } else {
+        setError('Google Sign-In failed. Please try again.');
+        setLoading(false);
+      }
+    },
+    onError: (error) => {
+      setError('Google Sign-In was cancelled or failed. Please try again.');
+      console.error('Google Login Failed:', error);
+    },
+  });
 
   return (
     <Container component="main" maxWidth="xs">
@@ -110,11 +114,14 @@ const LoginPage = () => {
             {loading ? (
               <CircularProgress />
             ) : (
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                useOneTap
-              />
+              <Button
+                variant="outlined"
+                fullWidth
+                onClick={() => initiateGoogleLogin()}
+                disabled={loading}
+              >
+                Sign In with Google
+              </Button>
             )}
           </Box>
           <Box sx={{ textAlign: 'center' }}>
