@@ -39,6 +39,7 @@ import {
 import GeneratedImageEditor from './GeneratedImageEditor'; // Importar o novo editor
 import googleDriveAPI from '../utils/googleDriveAPI';
 import { composeImage } from '../utils/imageComposer';
+import { useAuth } from '../context/AuthContext';
 
 const ImageGeneratorFrontendOnly = ({
   csvData,
@@ -72,6 +73,9 @@ const ImageGeneratorFrontendOnly = ({
   // Novos estados para o editor WYSIWYG de imagens geradas
   const [editingGeneratedImageIndex, setEditingGeneratedImageIndex] = useState(null);
   const [showGeneratedImageEditor, setShowGeneratedImageEditor] = useState(false);
+
+
+  const { isGoogleDriveConnected } = useAuth();
 
   // Estados para integração Google Drive
   const [projectName, setProjectName] = useState('');
@@ -966,16 +970,20 @@ const ImageGeneratorFrontendOnly = ({
                 </Grid>
 
                 <Grid item xs={12} md={6}>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    onClick={uploadToGoogleDrive}
-                    disabled={isUploadingToDrive}
-                    startIcon={<CloudUpload />}
-                    fullWidth
-                  >
-                    {isUploadingToDrive ? 'Enviando...' : 'Enviar para Google Drive'}
-                  </Button>
+                  <Tooltip title={!isGoogleDriveConnected ? "Conecte-se ao Google Drive nas configurações para ativar esta opção" : ""}>
+                    <span>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        onClick={uploadToGoogleDrive}
+                        disabled={isUploadingToDrive || !isGoogleDriveConnected}
+                        startIcon={<CloudUpload />}
+                        fullWidth
+                      >
+                        {isUploadingToDrive ? 'Enviando...' : 'Enviar para Google Drive'}
+                      </Button>
+                    </span>
+                  </Tooltip>
                 </Grid>
               </Grid>
 

@@ -29,7 +29,6 @@ const PostsCurtosStep = ({
   fileInputRef,
   handleCSVUpload,
   downloadExampleCsv,
-  getGeminiApiKey,
   setShowSetupModal,
   promptNumRecords,
   setPromptNumRecords,
@@ -111,14 +110,9 @@ const PostsCurtosStep = ({
           <>
             {inputMethod === 'ia' && (
               <Box sx={{ maxWidth: 600, mx: 'auto' }}>
-                {!getGeminiApiKey() && (
-                  <Alert severity="warning" sx={{ mb: 2 }}>
-                    Chave da API Gemini não configurada.
-                    <MuiLink component="button" variant="body2" onClick={() => setShowSetupModal(true)} sx={{ ml: 1 }}>
-                      Configurar Chave Gemini
-                    </MuiLink>
-                  </Alert>
-                )}
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  A geração de conteúdo usará a chave de API Gemini configurada em sua conta. Certifique-se de que ela está salva nas <MuiLink component="button" variant="body2" onClick={() => setShowSetupModal(true)}>Configurações</MuiLink>.
+                </Alert>
                 <TextField
                   label="Quantidade de Elementos"
                   type="number"
@@ -145,7 +139,7 @@ const PostsCurtosStep = ({
                   size="large"
                   fullWidth
                   onClick={handleGenerateIAContent}
-                  disabled={isGenerating || !promptText.trim() || !getGeminiApiKey()}
+                  disabled={isGenerating || !promptText.trim()}
                 >
                   {isGenerating ? 'Gerando...' : 'Gerar Conteúdo com IA'}
                 </Button>

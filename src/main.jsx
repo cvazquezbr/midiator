@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 
 // Existing Providers
 import { TemplateProvider } from './context/TemplateContext.jsx';
+import { AuthProvider } from './context/AuthContext.jsx'; // This is for Google Drive
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 // New Auth Provider for Application Users
@@ -27,9 +28,12 @@ createRoot(document.getElementById('root')).render(
       <GoogleOAuthProvider clientId={googleClientId}>
         <BrowserRouter>
           <UserAuthContextProvider>
-            <TemplateProvider>
-              <App />
-            </TemplateProvider>
+            {/* This AuthProvider is for the Google Drive API, not user authentication */}
+            <AuthProvider>
+              <TemplateProvider>
+                <App />
+              </TemplateProvider>
+            </AuthProvider>
           </UserAuthContextProvider>
         </BrowserRouter>
       </GoogleOAuthProvider>

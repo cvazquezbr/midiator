@@ -88,13 +88,13 @@ export const UserAuthContextProvider = ({ children }) => {
     }
   };
 
-  const googleLogin = async (code) => {
+  const googleLogin = async (credential) => {
     setLoading(true);
     try {
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ credential }),
       });
       const data = await res.json();
       if (res.ok) {
