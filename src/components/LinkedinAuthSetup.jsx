@@ -17,7 +17,7 @@ import {
 import { InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import {
-  saveLinkedinConfig,
+  saveLinkedinConfig as saveLocalConfig,
   getLinkedinConfig,
   removeLinkedinConfig,
 } from '../utils/linkedinCredentials';
@@ -26,13 +26,37 @@ import googleDriveAPI from '../utils/googleDriveAPI';
 import LinkedinInfobox from './LinkedinInfobox';
 
 const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
-  const [config, setConfig] = useState({ clientId: '', folderId: '' });
+  const [config, setConfig] = useState({ clientId: '', clientSecret: '', folderId: '' });
   const [currentConfig, setCurrentConfig] = useState(null);
   const [isPickerOpen, setPickerOpen] = useState(false);
   const [isDriveLoading, setIsDriveLoading] = useState(false);
   const [connectedUser, setConnectedUser] = useState(null);
   const [showInfobox, setShowInfobox] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchSettings = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/settings');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.linkedin) {
+          setConfig(prev => ({
+            ...prev,
+            clientId: data.linkedin.clientId || '',
+            clientSecret: data.linkedin.clientSecret || '',
+          }));
+        }
+      } else {
+        toast.error('Falha ao carregar as configurações do LinkedIn.');
+      }
+    } catch (err) {
+      toast.error('Erro de rede ao carregar as configurações.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchUserDetails = async (accessToken) => {
@@ -51,11 +75,8 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
       }
     };
 
+    fetchSettings();
     const storedConfig = getLinkedinConfig();
-    setConfig({
-      clientId: storedConfig.clientId || '',
-      folderId: storedConfig.folderId || '',
-    });
 
     if (storedConfig.accessToken) {
       setCurrentConfig(storedConfig);
@@ -110,11 +131,14 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
 
   const handleConnect = async () => {
     if (config.clientId.trim()) {
-      // The onBeforeRedirect logic should be handled by the parent component if needed.
-      // For instance, the parent could save the app state before initiating the connection.
+      // Save the configuration before redirecting
+      await handleSave(false); // silent save
+
       if (onBeforeRedirect) await onBeforeRedirect();
 
-      saveLinkedinConfig(config);
+      // We only save the non-sensitive part to local storage for the redirect
+      saveLocalConfig({ clientId: config.clientId });
+
       const redirectUri = window.location.origin;
       const scope = encodeURIComponent('r_basicprofile w_member_social w_organization_social rw_organization_admin');
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${config.clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
@@ -155,19 +179,48 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
     }
   };
 
-  const handleRemove = () => {
+  const handleRemove = async () => {
+    // Also clear server-side credentials
+    await handleSave(false, { clientId: '', clientSecret: '' });
     removeLinkedinConfig();
     sessionStorage.removeItem('linkedin_profiles_cache');
     setCurrentConfig(null);
     setConnectedUser(null);
-    setConfig({ clientId: '', folderId: '' });
-    toast.info('Configuração do LinkedIn removida.');
+    setConfig({ clientId: '', clientSecret: '', folderId: '' });
+    toast.info('Configuração do LinkedIn e conexão removidas.');
   };
 
-  const handleSave = () => {
-    saveLinkedinConfig(config);
-    toast.success('Configuração salva com sucesso!');
+  const handleSave = async (showToast = true, newConfig) => {
+    const settingsToSave = newConfig || config;
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          linkedin: {
+            clientId: settingsToSave.clientId,
+            clientSecret: settingsToSave.clientSecret,
+          }
+        }),
+      });
+      if (response.ok) {
+        if (showToast) toast.success('Configuração salva com sucesso!');
+      } else {
+        if (showToast) toast.error('Falha ao salvar a configuração.');
+      }
+    } catch (err) {
+      if (showToast) toast.error('Erro de rede ao salvar a configuração.');
+    }
   };
+
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3 }}>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Carregando configurações...</Typography>
+      </Box>
+    );
+  }
 
   return (
     <>
@@ -220,7 +273,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <Typography variant="body2" gutterBottom>
-                Insira seu Client ID para conectar sua conta do LinkedIn.
+                Insira suas credenciais do LinkedIn para conectar sua conta.
               </Typography>
             </Grid>
             <Grid item xs={12}>
@@ -235,6 +288,19 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
                 placeholder="Seu Client ID do LinkedIn"
               />
             </Grid>
+            <Grid item xs={12}>
+              <TextField
+                name="clientSecret"
+                label="Client Secret"
+                type="password"
+                value={config.clientSecret}
+                onChange={handleChange}
+                fullWidth
+                required
+                variant="outlined"
+                placeholder="Seu Client Secret do LinkedIn"
+              />
+            </Grid>
           </Grid>
         )}
 
@@ -246,7 +312,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
           {currentConfig && currentConfig.accessToken ? (
             <Button onClick={handleTestConnection}>Testar Conexão</Button>
           ) : (
-            <Button onClick={handleSave} variant="outlined">Salvar Configuração</Button>
+            <Button onClick={() => handleSave()} variant="outlined">Salvar Credenciais</Button>
           )}
           <Box>
             {currentConfig && currentConfig.accessToken ? (
@@ -255,7 +321,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
               </Button>
             ) : (
               <Button onClick={handleConnect} variant="contained">
-                Conectar com o LinkedIn
+                Salvar e Conectar
               </Button>
             )}
           </Box>
