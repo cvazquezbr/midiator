@@ -37,7 +37,7 @@ import {
   Share // <-- Adicionar ícone de compartilhamento
 } from '@mui/icons-material';
 import GeneratedImageEditor from './GeneratedImageEditor'; // Importar o novo editor
-import googleDriveAPI from '../utils/googleDriveAPI';
+import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { composeImage } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
 
@@ -779,122 +779,62 @@ const ImageGeneratorFrontendOnly = ({
       alert('Por favor, digite um nome para o projeto.');
       return;
     }
-
     if (generatedImages.length === 0) {
       alert('Nenhuma imagem foi gerada ainda.');
       return;
     }
+    if (!googleAccessToken) {
+      alert('Conexão com Google não está ativa. Por favor, faça login.');
+      return;
+    }
+    if (isUploadingToDrive) return;
 
-  // Lock síncrono com useRef para prevenir dupla execução imediata
-  if (uploadLock.current) {
-    console.warn(`[${new Date().toISOString()}] uploadToGoogleDrive: Upload já em progresso (detectado pelo uploadLock). Abortando.`);
-    return;
-  }
-  uploadLock.current = true; // Define o lock imediatamente
+    setIsUploadingToDrive(true);
+    setDriveResult(null);
 
-  // Salvaguarda original com useState (ainda útil para desabilitar UI e como fallback)
-  if (isUploadingToDrive) {
-    console.warn(`[${new Date().toISOString()}] uploadToGoogleDrive: Upload já em progresso (detectado pelo isUploadingToDrive). Abortando. (uploadLock deveria ter pego isso)`);
-    uploadLock.current = false; // Resetar o lock se esta guarda pegar (improvável se o lock funcionar)
-    return;
-  }
-
-  setIsUploadingToDrive(true); // Para desabilitar UI e lógica dependente de estado
-  console.log(`[${new Date().toISOString()}] uploadToGoogleDrive: Iniciando upload. Project: ${projectName}. isUploadingToDrive set to TRUE. uploadLock set to TRUE.`);
-  setDriveResult(null);
-
-  try {
-    // 1. Criar pasta principal do projeto (ou obter existente)
-    console.log(`[${new Date().toISOString()}] Tentando criar/obter pasta do projeto: ${projectName}`);
-    const folder = await googleDriveAPI.createFolder(projectName); // createFolder agora é idempotente por nome na raiz
-    console.log(`[${new Date().toISOString()}] Pasta do projeto obtida/criada ID: ${folder.id}`);
-
-      // 2. Criar subpasta para as imagens (agora vamos usar essa para tudo)
-    // Para a subpasta, queremos que ela seja sempre criada dentro da pasta do projeto,
-    // mesmo que uma com nome 'Conteúdo' já exista em outro projeto.
-    // A versão atual de createFolder em googleDriveAPI.js já lida com parentId.
-    // Se quisermos que a subpasta 'Conteúdo' também seja idempotente *dentro* da pasta do projeto:
-    console.log(`[${new Date().toISOString()}] Tentando criar/obter subpasta 'Conteúdo' dentro de ${folder.id}`);
-    const contentFolder = await googleDriveAPI.createFolder('Conteúdo', folder.id); // Passando folder.id como parentId
-    console.log(`[${new Date().toISOString()}] Subpasta 'Conteúdo' obtida/criada ID: ${contentFolder.id}`);
-    // A linha duplicada "const contentFolder = await googleDriveAPI.createFolder('Conteúdo', folder.id);" foi removida.
+    try {
+      const folder = await createFolder(projectName, null, googleAccessToken);
+      const contentFolder = await createFolder('Conteúdo', folder.id, googleAccessToken);
 
       const uploadResults = [];
       const sheetData = [];
+      const allHeaders = Array.from(new Set(generatedImages.flatMap(img => Object.keys(img.record))));
 
-      // Obter todos os cabeçalhos únicos de todas as linhas do CSV
-      const allHeaders = Array.from(new Set(
-        generatedImages.flatMap(img => Object.keys(img.record))
-      ));
-
-      // 3. Upload de cada imagem para a pasta de conteúdo
       for (let i = 0; i < generatedImages.length; i++) {
         const imageData = generatedImages[i];
-
         try {
-          const result = await googleDriveAPI.uploadFile(
-            imageData.blob,
-            imageData.filename,
-            contentFolder.id // Enviando para a pasta de conteúdo
-          );
-
-          uploadResults.push({
-            filename: imageData.filename,
-            success: true,
-            fileId: result.id
-          });
-
-          // Preparar dados para a planilha
-          const row = [
-            i + 1,
-            `https://drive.google.com/file/d/${result.id}/view?usp=sharing`,
-            ...allHeaders.map(header => imageData.record[header] || '')
-          ];
-
+          const result = await uploadFile(imageData.blob, imageData.filename, contentFolder.id, googleAccessToken);
+          uploadResults.push({ filename: imageData.filename, success: true, fileId: result.id });
+          const row = [i + 1, `https://drive.google.com/file/d/${result.id}/view?usp=sharing`, ...allHeaders.map(header => imageData.record[header] || '')];
           sheetData.push(row);
-
         } catch (error) {
-          uploadResults.push({
-            filename: imageData.filename,
-            success: false,
-            error: error.message
-          });
+          uploadResults.push({ filename: imageData.filename, success: false, error: error.message });
         }
       }
 
-      // 4. Criar planilha na MESMA pasta das imagens
       if (sheetData.length > 0) {
-        const headers = [
-          'Nº',
-          'Link do Arquivo',
-          ...allHeaders
-        ];
-
-        // Agora criando na pasta de conteúdo
-        await googleDriveAPI.createSpreadsheet(
+        const headers = ['Nº', 'Link do Arquivo', ...allHeaders];
+        await createSpreadsheet(
           `Relação de Arquivos - ${projectName}`,
           [headers, ...sheetData],
-          contentFolder.id // <-- Aqui está a mudança principal
+          googleAccessToken,
+          contentFolder.id
         );
       }
 
-      // 5. Atualizar estado com resultados
       setDriveResult({
         folderId: folder.id,
         folderName: projectName,
         uploads: uploadResults,
         successCount: uploadResults.filter(r => r.success).length,
         totalCount: uploadResults.length,
-        contentFolderId: contentFolder.id // Adicionando para referência
+        contentFolderId: contentFolder.id
       });
-
     } catch (error) {
-      console.error(`[${new Date().toISOString()}] Erro no upload para Google Drive:`, error);
+      console.error('Erro no upload para Google Drive:', error);
       alert(`Erro no upload: ${error.message}`);
     } finally {
-      console.log(`[${new Date().toISOString()}] FINALLY block: Resetando uploadLock e isUploadingToDrive.`);
-      uploadLock.current = false; // Libera o lock síncrono
-      setIsUploadingToDrive(false); // Libera o estado da UI
+      setIsUploadingToDrive(false);
     }
   };
 
