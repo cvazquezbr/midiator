@@ -163,14 +163,9 @@ const Campaign = ({
     handleGenerateCampaignContent,
     handleResetCampaign,
     setEditingField,
-    conteudoMedio,
-    setConteudoMedio,
     isGeneratingSummaryMedio,
     handleGenerateSummary,
-    conteudoPequeno,
-    setConteudoPequeno,
     isGeneratingSummaryPequeno,
-    conteudoFormatado,
     isGeneratingConteudoFormatado,
     handleGenerateFormattedContent,
     followupPosts,
@@ -424,7 +419,7 @@ const Campaign = ({
                                     label="Conteúdo Médio (máx. 1800 caracteres)"
                                     multiline
                                     rows={2}
-                                    value={conteudoMedio}
+                                    value={campaignContent.conteudoMedio || ''}
                                     onClick={() => setEditingField('conteudoMedio')}
                                     readOnly
                                     variant="outlined"
@@ -440,7 +435,7 @@ const Campaign = ({
                                     label="Conteúdo Pequeno (máx. 130 caracteres)"
                                     multiline
                                     rows={1}
-                                    value={conteudoPequeno}
+                                    value={campaignContent.conteudoPequeno || ''}
                                     onClick={() => setEditingField('conteudoPequeno')}
                                     readOnly
                                     variant="outlined"
@@ -668,7 +663,7 @@ const Campaign = ({
                                     </Box>
                                 </Box>
                                 <Box border={1} borderColor="grey.300" p={2} borderRadius={1} sx={{ minHeight: 300, '& *': { all: 'revert' } }}>
-                                    <div dangerouslySetInnerHTML={{ __html: conteudoFormatado }} />
+                                    <div dangerouslySetInnerHTML={{ __html: campaignContent.conteudoFormatado || '' }} />
                                 </Box>
                             </Grid>
                         </Grid>

@@ -84,11 +84,8 @@ function HomePage() {
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [conteudoMedio, setConteudoMedio] = useState('');
-  const [conteudoPequeno, setConteudoPequeno] = useState('');
   const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
   const [isGeneratingSummaryPequeno, setIsGeneratingSummaryPequeno] = useState(false);
-  const [conteudoFormatado, setConteudoFormatado] = useState('');
   const [isGeneratingConteudoFormatado, setIsGeneratingConteudoFormatado] = useState(false);
   const [followupPosts, setFollowupPosts] = useState([]);
   const [isGeneratingFollowup, setIsGeneratingFollowup] = useState(false);
@@ -320,8 +317,8 @@ function HomePage() {
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => { setCsvData(prevCsvData => { if (recordIndex < 0 || recordIndex >= prevCsvData.length) { return prevCsvData; } return prevCsvData.map((row, idx) => { if (idx === recordIndex) { return updatedRecord; } return row; }); }); }, [setCsvData]);
   const handleGenerateCampaignContent = async (regenerate = false) => { setIsGeneratingCampaign(true); setCampaignGenerationFailed(false); setGenerationError(''); setTimeout(async () => { try { const normalizedContent = await generateCampaignContent({ problema, solucao }); setCampaignContent(normalizedContent); if (!regenerate) { setConteudoMedio(''); setConteudoPequeno(''); setConteudoFormatado(''); setGeneratedImageUrl(null); const [imageSuccess] = await Promise.all([ handleGenerateImage(normalizedContent), handleGenerateSummary(1800, normalizedContent), handleGenerateSummary(130, normalizedContent), handleGenerateFormattedContent(normalizedContent), handleGenerateFollowupPosts(normalizedContent), ]); if (!imageSuccess) { setCampaignGenerationFailed(true); setGenerationError("A geração de texto foi bem-sucedida, mas a criação da imagem falhou. Você pode tentar gerar a imagem novamente."); } } } catch (error) { const errorMessage = error.message || 'Ocorreu um erro desconhecido.'; toast.error(`Ocorreu um erro ao gerar o conteúdo da campanha: ${errorMessage}`); setCampaignContent(null); setCampaignGenerationFailed(true); setGenerationError(errorMessage); } finally { setIsGeneratingCampaign(false); } }, 0); };
   const handleGenerateImage = async (content = campaignContent) => { if (!content) { toast.error("Por favor, gere o conteúdo do texto primeiro."); return false; } setIsGeneratingImage(true); try { const imageUrl = await generateCampaignImage({ content, aspectRatio }); setGeneratedImageUrl(imageUrl); updateImageAndPalette(imageUrl); return true; } catch (imageError) { toast.error(`Ocorreu um erro ao gerar a imagem da campanha: ${imageError.message}`); setGeneratedImageUrl(null); return false; } finally { setIsGeneratingImage(false); } };
-  const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); if (targetLength === 1800) { setConteudoMedio(summary); } else { setConteudoPequeno(summary); } } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
-  const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setConteudoFormatado(finalContent); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
+  const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
+  const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
   const handleGenerateFollowupPosts = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingFollowup(true); try { const plan = await generateFollowupPlan({ content, followupPostsQuantity }); const posts = await generateFollowupPosts({ content, plan }); setFollowupPosts(posts); } catch (error) { toast.error(`Ocorreu um erro ao gerar os posts de follow-up: ${error.message}`); } finally { setIsGeneratingFollowup(false); } };
   const handleResetCampaign = () => { setCampaignContent(null); setGeneratedImageUrl(null); setConteudoMedio(''); setConteudoPequeno(''); setConteudoFormatado(''); setFollowupPosts([]); setFollowupPostsQuantity(5); };
   const handleEditFollowup = (index, content) => { setEditingFollowup({ index, content }); };
@@ -397,7 +394,42 @@ function HomePage() {
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
       <CampaignStandardsModal open={showCampaignStandardsModal} onClose={() => { setShowCampaignStandardsModal(false); loadCampaignStandards(); }} onShowMemorial={() => setShowMemorialDescritivoModal(true)} onGeneratePalette={async (briefing) => { try { const palette = await generateColorPalette(briefing); return palette; } catch (error) { toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores."); throw error; } }} />
       <LoadingDialog open={isGeneratingCampaign || isSaving || isLoading} title={ isSaving ? "Salvando configuração..." : isLoading ? "Carregando configuração..." : "Gerando conteúdo..." } description={ isSaving ? "Aguarde um momento, estamos empacotando tudo para você." : isLoading ? "Estamos desempacotando sua configuração. Quase pronto!" : "A IA está pensando e escrevendo. Isso pode levar alguns segundos." } />
-      <TextEditorDialog open={editingField !== null || editingFollowup !== null} title={ editingFollowup !== null ? `Editar Post de Follow-up ${editingFollowup.index + 1}` : `Editar ${ editingField === 'conteudo' ? 'Conteúdo' : editingField === 'conteudoMedio' ? 'Conteúdo Médio' : editingField === 'conteudoPequeno' ? 'Conteúdo Pequeno' : editingField === 'cta' ? 'CTA' : 'Conteúdo Formatado' }` } content={ editingFollowup !== null ? editingFollowup.content : editingField === 'conteudoFormatado' ? conteudoFormatado : editingField === 'conteudoMedio' ? conteudoMedio : editingField === 'conteudoPequeno' ? conteudoPequeno : editingField && campaignContent ? campaignContent[editingField] : '' } onSave={ editingFollowup !== null ? handleSaveFollowup : (newContent) => { if (editingField === 'conteudoFormatado') { setConteudoFormatado(newContent); } else if (editingField === 'conteudoMedio') { setConteudoMedio(newContent); } else if (editingField === 'conteudoPequeno') { setConteudoPequeno(newContent); } else if (editingField) { setCampaignContent({ ...campaignContent, [editingField]: newContent, }); } } } onClose={() => { setEditingField(null); setEditingFollowup(null); }} />
+      <TextEditorDialog
+        open={editingField !== null || editingFollowup !== null}
+        title={
+          editingFollowup !== null
+            ? `Editar Post de Follow-up ${editingFollowup.index + 1}`
+            : `Editar ${
+                {
+                  conteudo: 'Conteúdo',
+                  conteudoMedio: 'Conteúdo Médio',
+                  conteudoPequeno: 'Conteúdo Pequeno',
+                  conteudoFormatado: 'Conteúdo Formatado',
+                  cta: 'CTA',
+                }[editingField] || 'Conteúdo'
+              }`
+        }
+        content={
+          editingFollowup !== null
+            ? editingFollowup.content
+            : editingField && campaignContent
+            ? campaignContent[editingField] || ''
+            : ''
+        }
+        onSave={
+          editingFollowup !== null
+            ? handleSaveFollowup
+            : (newContent) => {
+                if (editingField) {
+                  setCampaignContent((prev) => ({ ...prev, [editingField]: newContent }));
+                }
+              }
+        }
+        onClose={() => {
+          setEditingField(null);
+          setEditingFollowup(null);
+        }}
+      />
     </ThemeProvider>
   );
 }
