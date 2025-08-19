@@ -56,7 +56,8 @@ import { getTimezone } from '../utils/timezone';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
 import { getLinkedinConfig } from '../utils/linkedinCredentials';
-import googleDriveAPI from '../utils/googleDriveAPI';
+import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
+import { useUserAuth } from '../context/UserAuthContext';
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
 
 function TabPanel(props) {
@@ -200,6 +201,7 @@ const Publisher = ({
   const [unifiedMedia, setUnifiedMedia] = useState([]);
   const [previewedMedia, setPreviewedMedia] = useState(null);
   const [schedulePreview, setSchedulePreview] = useState([]);
+  const { googleAccessToken } = useUserAuth();
 
   useEffect(() => {
     if (!followupPosts || followupPosts.length === 0) {
@@ -335,6 +337,10 @@ const Publisher = ({
     setIsPublishingLi(true);
     setPublishingStatusLi('Iniciando agendamento e upload para o Google Drive...');
     try {
+        if (!googleAccessToken) {
+          throw new Error('A conexão com o Google não está ativa. Faça o login novamente.');
+        }
+
         const linkedinConfig = getLinkedinConfig();
         const driveFolderId = linkedinConfig?.folderId;
 
@@ -342,25 +348,10 @@ const Publisher = ({
             throw new Error('O ID da Pasta no Google Drive não está configurado na autenticação do LinkedIn.');
         }
 
-        if (!googleDriveAPI.isInitialized) {
-            setPublishingStatusLi('Inicializando API do Google Drive...');
-            const apiKey = localStorage.getItem("google_drive_api_key");
-            const clientId = localStorage.getItem("google_drive_client_id");
-            if (!apiKey || !clientId) {
-                throw new Error("Credenciais da API do Google Drive não encontradas. Por favor, configure a integração na página principal.");
-            }
-            await googleDriveAPI.initialize(apiKey, clientId);
-        }
-
-        if (!googleDriveAPI.isUserSignedIn()) {
-            setPublishingStatusLi('Fazendo login no Google Drive...');
-            await googleDriveAPI.signIn();
-        }
-
         const campaignTitle = campaignContent?.titulo || `Campanha Sem Título - ${new Date().toISOString()}`;
 
         setPublishingStatusLi(`Criando pasta "${campaignTitle}" no Google Drive...`);
-        const campaignFolder = await googleDriveAPI.createFolder(campaignTitle, driveFolderId);
+        const campaignFolder = await createFolder(campaignTitle, driveFolderId, googleAccessToken);
 
         // Lida com upload de imagens
         const imagesToUpload = generatedImagesData.filter((_, index) => selectedImages[index]);
@@ -369,7 +360,7 @@ const Publisher = ({
             setPublishingStatusLi(`Fazendo upload de ${imagesToUpload.length} imagens...`);
             for (const image of imagesToUpload) {
                 const fileName = `imagem_${imagesToUpload.indexOf(image) + 1}.png`;
-                const uploadedFile = await googleDriveAPI.uploadFile(image.blob, fileName, campaignFolder.id);
+                const uploadedFile = await uploadFile(image.blob, fileName, campaignFolder.id, googleAccessToken);
                 uploadedImageIds.push(uploadedFile.id);
             }
         }
@@ -381,7 +372,7 @@ const Publisher = ({
             setPublishingStatusLi(`Fazendo upload do vídeo...`);
             const video = videosToUpload[0];
             const fileName = `video.mp4`; // ou o tipo de arquivo apropriado
-            const uploadedFile = await googleDriveAPI.uploadFile(video.blob, fileName, campaignFolder.id);
+            const uploadedFile = await uploadFile(video.blob, fileName, campaignFolder.id, googleAccessToken);
             uploadedVideoId = uploadedFile.id;
         }
 
@@ -434,9 +425,10 @@ const Publisher = ({
             });
         }
 
-        const spreadsheet = await googleDriveAPI.createSpreadsheet(
+        const spreadsheet = await createSpreadsheet(
             `Controle - ${campaignTitle}`,
             sheetData,
+            googleAccessToken,
             campaignFolder.id
         );
 

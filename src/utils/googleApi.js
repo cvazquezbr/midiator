@@ -66,3 +66,89 @@ export const getFileAsBlob = async (fileId, accessToken) => {
 
   return response.blob();
 };
+
+/**
+ * Cria uma nova planilha Google Sheets com os dados fornecidos
+ */
+export const createSpreadsheet = async (title, data, accessToken, folderId = null) => {
+  if (!accessToken) throw new Error('Access token não fornecido.');
+
+  const sheetsData = [
+    {
+      properties: { title: 'Dados CSV' },
+      data: [{
+        rowData: data.map((row, rowIndex) => ({
+          values: row.map((cell) => ({
+            userEnteredValue: { stringValue: String(cell) },
+            userEnteredFormat: { textFormat: { bold: rowIndex === 0 } }
+          }))
+        }))
+      }]
+    },
+    {
+      properties: { title: 'Controle' },
+      data: [{
+        rowData: [
+          {
+            values: [
+              { userEnteredValue: { stringValue: "campo" } },
+              { userEnteredValue: { stringValue: "valor" } }
+            ]
+          },
+          {
+            values: [
+              { userEnteredValue: { stringValue: "controle" } },
+              { userEnteredValue: { numberValue: 0 } }
+            ]
+          }
+        ]
+      }]
+    }
+  ];
+
+  const spreadsheetRequestBody = {
+    properties: { title },
+    sheets: sheetsData
+  };
+
+  const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(spreadsheetRequestBody)
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json();
+    throw new Error(`Erro ao criar planilha: ${errorBody.error.message}`);
+  }
+
+  const createdSpreadsheet = await response.json();
+  const spreadsheetId = createdSpreadsheet.spreadsheetId;
+
+  if (folderId && spreadsheetId) {
+    await moveFileToFolder(spreadsheetId, folderId, accessToken);
+  }
+
+  return createdSpreadsheet;
+};
+
+/**
+ * Move um arquivo para uma pasta específica no Google Drive.
+ */
+export const moveFileToFolder = async (fileId, folderId, accessToken) => {
+    if (!accessToken) throw new Error('Access token não fornecido.');
+
+    const file = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=parents`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+    }).then(res => res.json());
+
+    const previousParents = file.parents ? file.parents.join(',') : '';
+
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?addParents=${folderId}&removeParents=${previousParents}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+};
