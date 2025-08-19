@@ -152,3 +152,117 @@ export const moveFileToFolder = async (fileId, folderId, accessToken) => {
         headers: { 'Authorization': `Bearer ${accessToken}` }
     });
 };
+
+/**
+ * Cria uma pasta no Google Drive. Verifica se já existe antes de criar.
+ */
+export const createFolder = async (name, parentId, accessToken) => {
+  if (!accessToken) throw new Error('Access token não fornecido para criar pasta.');
+
+  // Primeiro, verifica se a pasta já existe para evitar duplicatas.
+  const existingFolder = await findFolderByName(name, parentId, accessToken);
+  if (existingFolder) {
+    console.warn(`Pasta '${name}' já existe com ID: ${existingFolder.id}. Usando a existente.`);
+    return existingFolder;
+  }
+
+  const metadata = {
+    name: name,
+    mimeType: 'application/vnd.google-apps.folder',
+  };
+
+  if (parentId) {
+    metadata.parents = [parentId];
+  }
+
+  const response = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(metadata),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json();
+    throw new Error(`Erro ao criar pasta: ${errorBody.error.message}`);
+  }
+
+  return await response.json();
+};
+
+/**
+ * Faz upload de um arquivo (Blob) para o Google Drive.
+ * Esta versão usa 'uploadType=resumable' que é mais robusto e preferível para blobs.
+ */
+export const uploadFile = async (fileBlob, fileName, folderId, accessToken) => {
+  if (!accessToken) throw new Error('Access token não fornecido para upload.');
+
+  const metadata = {
+    name: fileName,
+  };
+  if (folderId) {
+    metadata.parents = [folderId];
+  }
+
+  // 1. Iniciar uma sessão de upload resumível
+  const initResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json; charset=UTF-8',
+    },
+    body: JSON.stringify(metadata),
+  });
+
+  if (!initResponse.ok) {
+    const errorBody = await initResponse.json();
+    throw new Error(`Erro ao iniciar upload: ${errorBody.error.message}`);
+  }
+
+  const location = initResponse.headers.get('Location');
+  if (!location) {
+    throw new Error('Não foi possível obter o URL de upload resumível.');
+  }
+
+  // 2. Fazer o upload do conteúdo do arquivo
+  const uploadResponse = await fetch(location, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': fileBlob.type,
+    },
+    body: fileBlob,
+  });
+
+  if (!uploadResponse.ok) {
+    const errorBody = await uploadResponse.json();
+    throw new Error(`Erro durante o upload do arquivo: ${errorBody.error.message}`);
+  }
+
+  return await uploadResponse.json();
+};
+
+/**
+ * Lista as pastas do Google Drive do usuário.
+ */
+export const listFolders = async (accessToken, pageSize = 100) => {
+  if (!accessToken) throw new Error('Access token não fornecido para listar pastas.');
+
+  const query = "mimeType='application/vnd.google-apps.folder' and 'me' in owners and trashed=false";
+
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=${pageSize}&fields=files(id,name)&orderBy=name`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json();
+    const errorMessage = errorBody.error?.message || response.statusText;
+    throw new Error(`HTTP ${response.status}: ${errorMessage}`);
+  }
+
+  const result = await response.json();
+  return result.files || [];
+};

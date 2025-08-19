@@ -24,7 +24,6 @@ import {
 } from '@mui/material';
 import {
   Download,
-  // Visibility, // Removed as unused
   Close,
   GetApp,
   Image as ImageIcon,
@@ -34,23 +33,23 @@ import {
   Google,
   Edit,
   SwapHoriz,
-  Share // <-- Adicionar ícone de compartilhamento
+  Share
 } from '@mui/icons-material';
-import GeneratedImageEditor from './GeneratedImageEditor'; // Importar o novo editor
+import GeneratedImageEditor from './GeneratedImageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { composeImage } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
 
 const ImageGeneratorFrontendOnly = ({
   csvData,
-  backgroundImage, // Imagem de fundo global/template
-  fieldPositions, // Posições globais/template
-  fieldStyles, // Estilos globais/template
-  csvHeaders, // Todos os cabeçalhos CSV possíveis (para GeneratedImageEditor)
-  colorPalette, // Paleta de cores global (para GeneratedImageEditor)
-  setGeneratedImagesData, // Setter para atualizar o estado em App.jsx
-  initialGeneratedImagesData, // Dados iniciais carregados do JSON
-  onThumbnailRecordTextUpdate, // <-- ADICIONADO: Callback para atualizar o CSV em App.jsx
+  backgroundImage,
+  fieldPositions,
+  fieldStyles,
+  csvHeaders,
+  colorPalette,
+  setGeneratedImagesData,
+  initialGeneratedImagesData,
+  onThumbnailRecordTextUpdate,
   originalImageSize,
   imageFilters,
   brandElements,
@@ -60,107 +59,66 @@ const ImageGeneratorFrontendOnly = ({
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const isCancelledRef = useRef(false);
-  // O estado local `generatedImages` será inicializado com `initialGeneratedImagesData`
-  // e depois atualizado. Ele também chamará `setGeneratedImagesData` para sincronizar com App.jsx.
   const [generatedImages, setGeneratedImages] = useState(initialGeneratedImagesData || []);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPreview, setSelectedPreview] = useState(null);
-  
-  // REMOVED: Old CSV text editing states
-  // const [editingImageTextData, setEditingImageTextData] = useState(null);
-  // const [editedCsvFields, setEditedCsvFields] = useState({});
-
-  // Novos estados para o editor WYSIWYG de imagens geradas
   const [editingGeneratedImageIndex, setEditingGeneratedImageIndex] = useState(null);
   const [showGeneratedImageEditor, setShowGeneratedImageEditor] = useState(false);
-
-
   const { googleAccessToken } = useUserAuth();
   const isGoogleDriveConnected = !!googleAccessToken;
-
-  // Estados para integração Google Drive
   const [projectName, setProjectName] = useState('');
   const [isUploadingToDrive, setIsUploadingToDrive] = useState(false);
   const [driveResult, setDriveResult] = useState(null);
   const [replacingImageIndex, setReplacingImageIndex] = useState(null);
-
-  // Removed: const canvasRef = useRef(null);
   const individualImageInputRef = useRef(null);
-  const uploadLock = useRef(false); // Lock síncrono para prevenir dupla execução
-
-  // Estado para controle de fontes carregadas
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
-  // Efeito para garantir que as fontes estejam carregadas
   useEffect(() => {
     const loadFonts = async () => {
       try {
-        // Aguarda todas as fontes do documento estarem carregadas
         if (document.fonts && document.fonts.ready) {
           await document.fonts.ready;
         }
         setFontsLoaded(true);
       } catch (error) {
         console.warn('Erro ao carregar fontes:', error);
-        setFontsLoaded(true); // Continua mesmo com erro
+        setFontsLoaded(true);
       }
     };
-
     loadFonts();
   }, []);
 
-  // Efeito para atualizar o estado pai (App.jsx) quando generatedImages local mudar
   useEffect(() => {
     if (setGeneratedImagesData) {
       setGeneratedImagesData(generatedImages);
     }
   }, [generatedImages, setGeneratedImagesData]);
 
-  // Efeito para sincronizar com initialGeneratedImagesData se ele mudar externamente
-  // Isso é útil se o usuário carregar um novo arquivo JSON enquanto este componente já está montado.
   useEffect(() => {
     if (initialGeneratedImagesData) {
-      // More direct update: if the prop reference is different.
-      // This relies on App.jsx providing new references for meaningful changes.
-      // Avoids issues with JSON.stringify for complex objects or undefined properties.
-      // We also check if generatedImages is empty and initial is not, for initial population.
       if (initialGeneratedImagesData !== generatedImages) {
          setGeneratedImages(initialGeneratedImagesData);
       }
     } else {
-      // If initialGeneratedImagesData is null or undefined (e.g., data cleared in App.jsx),
-      // reset local state only if it's not already empty, to avoid needless update.
       if (generatedImages.length > 0) {
         setGeneratedImages([]);
       }
     }
-    // Note: `generatedImages` is intentionally not in the dependency array here.
-    // This effect is meant to react to changes in the *prop* `initialGeneratedImagesData`.
-    // If `generatedImages` were included, and `setGeneratedImages` was called, it could lead to
-    // loops if `App.jsx` passes the same reference back. The `initialGeneratedImagesData !== generatedImages`
-    // check helps, but keeping dependencies minimal for prop-driven effects is often clearer.
   }, [initialGeneratedImagesData]);
 
-  // Função para quebrar texto em linhas dentro de uma área retangular
   const wrapTextInArea = (ctx, text, x, y, maxWidth, maxHeight, style) => {
     if (!text) return [];
-
     const fontSize = style.fontSize || 24;
     const lineHeight = fontSize * (style.lineHeightMultiplier || 1.2);
     const maxLines = Math.floor(maxHeight / lineHeight);
-
-    // Aplica a fonte antes de medir o texto
     ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${fontSize}px ${style.fontFamily || 'Arial'}`;
-
     const words = text.toString().split(' ');
     const lines = [];
     let currentLine = words[0] || '';
-
     for (let i = 1; i < words.length; i++) {
       const word = words[i];
       const testLine = currentLine + ' ' + word;
       const metrics = ctx.measureText(testLine);
-
       if (metrics.width > maxWidth && currentLine !== '') {
         lines.push(currentLine);
         if (lines.length >= maxLines) break;
@@ -169,22 +127,17 @@ const ImageGeneratorFrontendOnly = ({
         currentLine = testLine;
       }
     }
-
     if (lines.length < maxLines && currentLine) {
       lines.push(currentLine);
     }
-
     return lines;
   };
 
-  // Função para aplicar efeitos de texto
   const applyTextEffects = (ctx, style) => {
     ctx.fillStyle = style.color || '#000000';
     ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${style.fontSize || 24}px ${style.fontFamily || 'Arial'}`;
     ctx.textAlign = style.textAlign || 'left';
     ctx.textBaseline = style.textBaseline || 'top';
-
-    // Configurar sombra
     if (style.textShadow) {
       ctx.shadowColor = style.shadowColor || '#000000';
       ctx.shadowBlur = style.shadowBlur || 4;
@@ -196,8 +149,6 @@ const ImageGeneratorFrontendOnly = ({
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
     }
-
-    // Configurar contorno
     if (style.textStroke) {
       ctx.strokeStyle = style.strokeColor || '#ffffff';
       ctx.lineWidth = style.strokeWidth || 2;
@@ -206,14 +157,10 @@ const ImageGeneratorFrontendOnly = ({
     }
   };
 
-  // Função para desenhar texto com efeitos (com suporte a HTML)
   const drawTextWithEffects = async (ctx, text, x, y, style, maxWidth, maxHeight) => {
-    // Verificar se o texto contém HTML
     if (containsHtml(text)) {
-      // Renderizar HTML usando html2canvas
       await renderHtmlToCanvas(ctx, text, x, y, maxWidth, maxHeight, style);
     } else {
-      // Renderização de texto simples (comportamento original)
       if (style.textStroke) {
         ctx.strokeText(text, x, y);
       }
@@ -221,185 +168,112 @@ const ImageGeneratorFrontendOnly = ({
     }
   };
 
-
-  // Função principal para gerar imagens
   const generateImages = async () => {
     if (!backgroundImage || csvData.length === 0) {
       alert('Por favor, carregue um arquivo CSV e uma imagem de fundo.');
       return;
     }
-
     if (!fontsLoaded) {
       alert('Aguardando carregamento das fontes. Tente novamente em alguns segundos.');
       return;
     }
-
     setIsGenerating(true);
     setShowProgressModal(true);
     setProgress(0);
     isCancelledRef.current = false;
     const images = [];
-
     try {
-      // 1. Compor a imagem de fundo com logo e empresa UMA VEZ
-      console.log('[generateImages] Calling composeImage for the main generation.');
-      const composedBackgroundImageUrl = await composeImage(
-        backgroundImage,
-        imageFilters,
-        brandElements
-      );
-      console.log('[generateImages] composeImage finished for the main generation.');
-
-      // 2. Carregar a imagem composta para ser usada no loop
+      const composedBackgroundImageUrl = await composeImage(backgroundImage, imageFilters, brandElements);
       const img = new Image();
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = reject;
-        img.src = composedBackgroundImageUrl; // Usar a imagem composta
+        img.src = composedBackgroundImageUrl;
       });
-
       for (let i = 0; i < csvData.length; i++) {
-        if (isCancelledRef.current) {
-          break;
-        }
+        if (isCancelledRef.current) break;
         const record = csvData[i];
-
-        // Criar canvas para cada registro
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-
-        // Configurar canvas com alta qualidade
         canvas.width = img.width;
         canvas.height = img.height;
-
-        // Melhorar qualidade de renderização
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
         ctx.textRenderingOptimization = 'optimizeQuality';
-
-        // Desenhar imagem de fundo JÁ COMPOSTA
         ctx.drawImage(img, 0, 0);
-
-          // Desenhar campos do CSV com estilos individuais
-          for (const field of Object.keys(record)) {
-            const position = fieldPositions[field];
-            const style = fieldStyles[field];
-
-            if (!position || !position.visible || !style) continue;
-
-            const text = record[field] || "";
-            if (!text) continue;
-
-            ctx.save(); // Salvar o estado do canvas ANTES da rotação e translação
-
-            // Calcular posições precisas da caixa de texto na imagem final
-            const posPx = {
-              x: Math.round((position.x / 100) * img.width),
-              y: Math.round((position.y / 100) * img.height),
-              width: Math.round((position.width / 100) * img.width),
-              height: Math.round((position.height / 100) * img.height)
-            };
-
-            // Aplicar rotação
-            if (position.rotation) {
-              const centerX = posPx.x + posPx.width / 2;
-              const centerY = posPx.y + posPx.height / 2;
-              ctx.translate(centerX, centerY);
-              ctx.rotate(position.rotation * Math.PI / 180);
-              ctx.translate(-centerX, -centerY);
-            }
-
-            // O tamanho da fonte agora é fixo, baseado no estilo, pois estamos renderizando no canvas de tamanho original.
-            const fontSize = style.fontSize || 24;
-
-            // Aplicar configurações de texto
-            applyTextEffects(ctx, { ...style, fontSize: fontSize });
-
-            const fixedPadding = 8; // Padding fixo de 8px, igual ao do CSS no TextBox
-
-            // Área efetiva para o texto dentro da caixa, subtraindo o padding
-            const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
-            const effectiveTextHeight = Math.max(0, posPx.height - (2 * fixedPadding));
-
-            // Posição inicial do conteúdo do texto (canto superior esquerdo da área de texto)
-            const textContentStartX = posPx.x + fixedPadding;
-            const textContentStartY = posPx.y + fixedPadding;
-
-            // Quebrar texto em linhas
-            const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: fontSize });
-
-            // Desenhar cada linha
-            const lineHeight = fontSize * (style.lineHeightMultiplier || 1.2);
-            let currentLineRenderY = textContentStartY;
-
-            // Ajuste de alinhamento vertical
-            if (style.verticalAlign === 'middle') {
-              const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
-              currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
-            } else if (style.verticalAlign === 'bottom') {
-              const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
-              currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
-            }
-
-            // Verificar se o texto contém HTML para usar renderização especial
-            if (containsHtml(text)) {
-              // Para HTML, renderizar diretamente na área completa
-              await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
-            } else {
-              // Renderização de texto simples linha por linha (comportamento original)
-              for (const line of lines) {
-                let currentLineRenderX;
-
-                // Ajuste de alinhamento horizontal
-                if (style.textAlign === 'center') {
-                  currentLineRenderX = textContentStartX + effectiveTextWidth / 2;
-                } else if (style.textAlign === 'right') {
-                  currentLineRenderX = textContentStartX + effectiveTextWidth;
-                } else {
-                  currentLineRenderX = textContentStartX;
-                }
-
-                const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
-
-                // Desenhar o texto com efeitos
-                await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
-              }
-            }
-            ctx.restore(); // Restaurar o estado do canvas para o próximo campo
+        for (const field of Object.keys(record)) {
+          const position = fieldPositions[field];
+          const style = fieldStyles[field];
+          if (!position || !position.visible || !style) continue;
+          const text = record[field] || "";
+          if (!text) continue;
+          ctx.save();
+          const posPx = {
+            x: Math.round((position.x / 100) * img.width),
+            y: Math.round((position.y / 100) * img.height),
+            width: Math.round((position.width / 100) * img.width),
+            height: Math.round((position.height / 100) * img.height)
+          };
+          if (position.rotation) {
+            const centerX = posPx.x + posPx.width / 2;
+            const centerY = posPx.y + posPx.height / 2;
+            ctx.translate(centerX, centerY);
+            ctx.rotate(position.rotation * Math.PI / 180);
+            ctx.translate(-centerX, -centerY);
           }
-
-        // Converter canvas para blob com alta qualidade
-        const blob = await new Promise(resolve => {
-          canvas.toBlob(resolve, 'image/png', 1.0);
-        });
-
-        // Try to find existing custom data for this index to preserve it
+          const fontSize = style.fontSize || 24;
+          applyTextEffects(ctx, { ...style, fontSize: fontSize });
+          const fixedPadding = 8;
+          const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
+          const effectiveTextHeight = Math.max(0, posPx.height - (2 * fixedPadding));
+          const textContentStartX = posPx.x + fixedPadding;
+          const textContentStartY = posPx.y + fixedPadding;
+          const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: fontSize });
+          const lineHeight = fontSize * (style.lineHeightMultiplier || 1.2);
+          let currentLineRenderY = textContentStartY;
+          if (style.verticalAlign === 'middle') {
+            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
+            currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
+          } else if (style.verticalAlign === 'bottom') {
+            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
+            currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
+          }
+          if (containsHtml(text)) {
+            await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
+          } else {
+            for (const line of lines) {
+              let currentLineRenderX;
+              if (style.textAlign === 'center') {
+                currentLineRenderX = textContentStartX + effectiveTextWidth / 2;
+              } else if (style.textAlign === 'right') {
+                currentLineRenderX = textContentStartX + effectiveTextWidth;
+              } else {
+                currentLineRenderX = textContentStartX;
+              }
+              const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
+              await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
+            }
+          }
+          ctx.restore();
+        }
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
         const existingImageDataItem = generatedImages.find(img => img.index === i);
-
         const imageData = {
-          blob: blob,
+          blob,
           url: URL.createObjectURL(blob),
-          record: record,
+          record,
           index: i,
           filename: `midiator_${String(i + 1).padStart(3, '0')}.png`,
-          // Preserve existing custom properties if they exist
-          // AQUI A MUDANÇA PRINCIPAL:
-          // Sempre usar o 'backgroundImage' da prop (o modelo global atual)
-          // quando estivermos na função 'generateImages' (geração/regeneração global).
-          // As customizações de 'customFieldPositions' e 'customFieldStyles' podem ser mantidas.
-          backgroundImage: backgroundImage, // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< ESTA LINHA
+          backgroundImage,
           customFieldPositions: existingImageDataItem?.customFieldPositions,
           customFieldStyles: existingImageDataItem?.customFieldStyles,
         };
-
         images.push(imageData);
         setProgress(i + 1);
       }
-
       if (!isCancelledRef.current) {
         setGeneratedImages(images);
       }
-
     } catch (error) {
       console.error('Erro na geração de imagens:', error);
       alert(`Erro na geração de imagens: ${error.message}`);
@@ -409,11 +283,7 @@ const ImageGeneratorFrontendOnly = ({
     }
   };
 
-  const handleCancelGeneration = () => {
-    isCancelledRef.current = true;
-  };
-
-  // Função para fazer download de uma imagem
+  const handleCancelGeneration = () => { isCancelledRef.current = true; };
   const downloadImage = (imageData) => {
     const link = document.createElement('a');
     link.href = imageData.url;
@@ -423,25 +293,16 @@ const ImageGeneratorFrontendOnly = ({
     document.body.removeChild(link);
   };
 
-  // Função para compartilhar uma imagem
   const handleShare = async (imageData) => {
     if (!imageData || !imageData.blob) {
       alert('A imagem não está disponível para compartilhamento.');
       return;
     }
-
     const file = new File([imageData.blob], imageData.filename, { type: imageData.blob.type });
-
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
-        await navigator.share({
-          files: [file],
-          title: 'Compartilhar Imagem',
-          text: `Confira a imagem: ${imageData.filename}`,
-        });
+        await navigator.share({ files: [file], title: 'Compartilhar Imagem', text: `Confira a imagem: ${imageData.filename}` });
       } catch (error) {
-        console.error('Erro ao compartilhar:', error);
-        // Não mostrar alerta para erro "AbortError", que ocorre quando o usuário fecha o diálogo de compartilhamento
         if (error.name !== 'AbortError') {
           alert('Ocorreu um erro ao tentar compartilhar a imagem.');
         }
@@ -451,48 +312,25 @@ const ImageGeneratorFrontendOnly = ({
     }
   };
 
-  // Função para fazer download de todas as imagens
   const downloadAllImages = () => {
     generatedImages.forEach((imageData, index) => {
-      setTimeout(() => {
-        downloadImage(imageData);
-      }, index * 100); // Pequeno delay entre downloads
+      setTimeout(() => downloadImage(imageData), index * 100);
     });
   };
 
-
-  // Função para fechar preview
   const closePreview = () => {
     setPreviewOpen(false);
     setSelectedPreview(null);
   };
 
-  // REMOVED: Old CSV text editing functions: handleEditTextCsv, handleSaveTextCsvEdit, handleCancelTextCsvEdit, handleCsvFieldChange
-
-  // Novas funções para o editor WYSIWYG de imagem gerada
-  const handleOpenGeneratedImageEditor = (imageFromClosure, index) => { // Renamed first param for clarity
+  const handleOpenGeneratedImageEditor = (imageFromClosure, index) => {
     setEditingGeneratedImageIndex(index);
-
-    // Fetch the most current version from state using the index, to avoid potential stale closure issues.
     const imageToEdit = generatedImages.find(img => img.index === index);
-
     if (!imageToEdit) {
-      console.error(`[IGFO] handleOpenGeneratedImageEditor: Could not find image in local 'generatedImages' state with index: ${index}. imageFromClosure was:`, imageFromClosure);
-      // Fallback or error handling if imageToEdit is not found, though this should ideally not happen
-      // if 'index' is always valid and 'generatedImages' is properly synced.
-      // For now, let's try to proceed with imageFromClosure if imageToEdit is missing,
-      // though this indicates a deeper state inconsistency.
+      console.error(`[IGFO] handleOpenGeneratedImageEditor: Could not find image in local 'generatedImages' state with index: ${index}.`);
       setShowGeneratedImageEditor(true);
       return;
     }
-
-    // console.log('[handleOpenGeneratedImageEditor] imageToEdit (freshly fetched) object:', imageToEdit);
-    // console.log('[handleOpenGeneratedImageEditor] imageToEdit.customFieldPositions:', imageToEdit.customFieldPositions);
-    // console.log('[handleOpenGeneratedImageEditor] imageToEdit.customFieldStyles:', imageToEdit.customFieldStyles);
-
-
-    // Removed: setIndividualFieldPositions(JSON.parse(JSON.stringify(positionsToLoad)));
-    // Removed: setIndividualFieldStyles(JSON.parse(JSON.stringify(stylesToLoad)));
     setShowGeneratedImageEditor(true);
   };
 
@@ -502,91 +340,33 @@ const ImageGeneratorFrontendOnly = ({
   };
 
   const handleSaveIndividualModifications = (modifiedImageData) => {
-    // modifiedImageData contém: index, record, fieldPositions, fieldStyles, e brandElements
-    const {
-      index: imageIndex,
-      record: updatedCsvRecord,
-      fieldPositions: newPositions,
-      fieldStyles: newStyles,
-      brandElements: editedBrandElements
-    } = modifiedImageData;
-
-    // Este handler agora só atualiza a imagem específica, não o estado global de brandElements
-    const updatedImages = generatedImages.map(img => {
-      if (img.index === imageIndex) {
-        return {
-          ...img,
-          record: updatedCsvRecord,
-          customFieldPositions: newPositions,
-          customFieldStyles: newStyles,
-          customBrandElements: editedBrandElements, // Salva os elementos customizados
-        };
-      }
-      return img;
-    });
+    const { index: imageIndex, record: updatedCsvRecord, fieldPositions: newPositions, fieldStyles: newStyles, brandElements: editedBrandElements } = modifiedImageData;
+    const updatedImages = generatedImages.map(img => (img.index === imageIndex) ? { ...img, record: updatedCsvRecord, customFieldPositions: newPositions, customFieldStyles: newStyles, customBrandElements: editedBrandElements } : img);
     setGeneratedImages(updatedImages);
-
     if (onThumbnailRecordTextUpdate) {
       onThumbnailRecordTextUpdate(imageIndex, updatedCsvRecord);
     }
-
     const imageToRegenerate = updatedImages.find(im => im.index === imageIndex);
     if (imageToRegenerate) {
       const bgToUse = imageToRegenerate.backgroundImage || backgroundImage;
-      regenerateSingleImage(
-        imageIndex,
-        imageToRegenerate.record,
-        bgToUse,
-        newPositions,
-        newStyles,
-        null,
-        editedBrandElements // Passa os elementos editados para a regeneração
-      );
+      regenerateSingleImage(imageIndex, imageToRegenerate.record, bgToUse, newPositions, newStyles, null, editedBrandElements);
     }
-    handleCloseGeneratedImageEditor(); // Fecha o editor
+    handleCloseGeneratedImageEditor();
   };
 
-
   const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements) => {
-    // console.log('[regenerateSingleImage] Called for index:', index,
-    //             'currentBackgroundImage (first 100 chars):', currentBackgroundImage ? currentBackgroundImage.substring(0, 100) : 'null',
-    //             'record:', record,
-    //             'customSize:', customSize);
-
-
-    if (!currentBackgroundImage || !record) {
-      // console.error('[regenerateSingleImage] Background image or record not found for regeneration.');
+    if (!currentBackgroundImage || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
+      alert('Pré-requisitos para regeneração não atendidos. Fontes foram carregadas?');
       return;
     }
-    if (!positionsToUse || !stylesToUse) {
-      // console.error('[regenerateSingleImage] Field positions or styles not provided for regeneration.');
-      return;
-    }
-
-    if (!fontsLoaded) {
-      alert('Aguardando carregamento das fontes. Tente novamente em alguns segundos.');
-      // console.warn('[regenerateSingleImage] Fonts not loaded, aborting.');
-      return;
-    }
-
     try {
-      // 1. Compor a imagem de fundo com logo e empresa
-      console.log(`[regenerateSingleImage] Calling composeImage for index ${index}.`);
-      const composedBackgroundImageUrl = await composeImage(
-        currentBackgroundImage,
-        imageFilters,
-        elementsToUse
-      );
-      console.log(`[regenerateSingleImage] composeImage finished for index ${index}.`);
-
-      // 2. Carregar a imagem recém-composta
+      const composedBackgroundImageUrl = await composeImage(currentBackgroundImage, imageFilters, elementsToUse);
       const img = new Image();
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = (err) => reject(new Error('Failed to load composed background for regeneration.', { cause: err }));
         img.src = composedBackgroundImageUrl;
       });
-
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = img.width;
@@ -595,23 +375,19 @@ const ImageGeneratorFrontendOnly = ({
       ctx.imageSmoothingQuality = 'high';
       ctx.textRenderingOptimization = 'optimizeQuality';
       ctx.drawImage(img, 0, 0);
-
       for (const field of Object.keys(record)) {
         const position = positionsToUse[field];
         const style = stylesToUse[field];
         if (!position || !position.visible || !style) continue;
         const text = record[field] || "";
         if (!text) continue;
-
-        ctx.save(); // Salvar o estado do canvas ANTES da rotação e translação
-
+        ctx.save();
         const posPx = {
           x: Math.round((position.x / 100) * img.width),
           y: Math.round((position.y / 100) * img.height),
           width: Math.round((position.width / 100) * img.width),
           height: Math.round((position.height / 100) * img.height)
         };
-
         if (position.rotation) {
           const centerX = posPx.x + posPx.width / 2;
           const centerY = posPx.y + posPx.height / 2;
@@ -619,25 +395,16 @@ const ImageGeneratorFrontendOnly = ({
           ctx.rotate(position.rotation * Math.PI / 180);
           ctx.translate(-centerX, -centerY);
         }
-
         const fontSize = style.fontSize || 24;
         applyTextEffects(ctx, { ...style, fontSize: fontSize });
-
-        const fixedPadding = 8; // Padding fixo de 8px, igual ao do CSS no TextBox
-
-        // Área efetiva para o texto dentro da caixa, subtraindo o padding
+        const fixedPadding = 8;
         const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
         const effectiveTextHeight = Math.max(0, posPx.height - (2 * fixedPadding));
-
-        // Posição inicial do conteúdo do texto (canto superior esquerdo da área de texto)
         const textContentStartX = posPx.x + fixedPadding;
         const textContentStartY = posPx.y + fixedPadding;
-
         const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: fontSize });
-        
         const lineHeight = fontSize * (style.lineHeightMultiplier || 1.2);
         let currentLineRenderY = textContentStartY;
-
         if (style.verticalAlign === 'middle') {
           const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
           currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
@@ -645,13 +412,11 @@ const ImageGeneratorFrontendOnly = ({
           const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
           currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
         }
-
         if (containsHtml(text)) {
           await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
         } else {
           for (const line of lines) {
             let currentLineRenderX;
-
             if (style.textAlign === 'center') {
               currentLineRenderX = textContentStartX + effectiveTextWidth / 2;
             } else if (style.textAlign === 'right') {
@@ -659,121 +424,78 @@ const ImageGeneratorFrontendOnly = ({
             } else {
               currentLineRenderX = textContentStartX;
             }
-            
             const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
             await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
           }
         }
-        ctx.restore(); // Restaurar o estado do canvas para o próximo campo
+        ctx.restore();
       }
-
       const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
-      // console.log('[regenerateSingleImage] Blob created. Size:', blob ? blob.size : 'null', 'Type:', blob ? blob.type : 'null');
       const newImageUrl = URL.createObjectURL(blob);
-      // console.log('[regenerateSingleImage] New object URL created:', newImageUrl);
-
       const newImageData = {
-        blob: blob,
+        blob,
         url: newImageUrl,
-        record: record,
-        index: index,
+        record,
+        index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        backgroundImage: currentBackgroundImage, // Store the background image used for this specific image
-        customFieldPositions: positionsToUse,   // Preserve the positions used for this regeneration
-        customFieldStyles: stylesToUse,         // Preserve the styles used for this regeneration
-        customBrandElements: elementsToUse,     // Preserve the brand elements used
-        customOriginalImageSize: customSize,    // <<<<<<<<<<<<<<<<<<<< Store the custom size
+        backgroundImage: currentBackgroundImage,
+        customFieldPositions: positionsToUse,
+        customFieldStyles: stylesToUse,
+        customBrandElements: elementsToUse,
+        customOriginalImageSize: customSize,
       };
-
       setGeneratedImages(prevImages => {
         const updatedImages = prevImages.map(img => {
           if (img.index === index) {
-            if (img.url && img.url !== newImageUrl) { // Avoid revoking if it's somehow the same URL
-              // console.log(`[regenerateSingleImage setGeneratedImages] Revoking old object URL for index ${index}: ${img.url}`);
+            if (img.url && img.url !== newImageUrl) {
               URL.revokeObjectURL(img.url);
             }
             return newImageData;
           }
           return img;
         });
-        // const finalUpdatedImg = updatedImages.find(im => im.index === index);
-        // console.log(`[regenerateSingleImage setGeneratedImages callback] Image index ${index} in new state. URL: ${finalUpdatedImg ? finalUpdatedImg.url : 'not found'}, BG: ${finalUpdatedImg && finalUpdatedImg.backgroundImage ? finalUpdatedImg.backgroundImage.substring(0,100) + '...' : 'undefined'}`);
         return updatedImages;
       });
-
     } catch (error) {
       alert(`Erro na regeneração da imagem (índice ${index}): ${error.message}`);
     }
   };
 
   const handleReplaceImageClick = (index) => {
-    // console.log('[handleReplaceImageClick] Called with index:', index);
     setReplacingImageIndex(index);
     if (individualImageInputRef.current) {
       individualImageInputRef.current.click();
-    } else {
-      // console.error('[handleReplaceImageClick] individualImageInputRef.current is null');
     }
   };
 
   const handleIndividualImageUpload = (event) => {
     const file = event.target.files[0];
-    // console.log('[handleIndividualImageUpload] Called. File:', file ? file.name : 'No file', 'replacingImageIndex:', replacingImageIndex);
-
     if (file && replacingImageIndex !== null) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const newBgUrl = e.target.result;
         const imageToUpdate = generatedImages.find(img => img.index === replacingImageIndex);
-
         if (imageToUpdate) {
-          // Create a new Image object to get the dimensions of the new background
           const img = new Image();
           img.onload = () => {
             const newSize = { width: img.width, height: img.height };
-            // Now, call regenerateSingleImage with the new size
-            regenerateSingleImage(
-              replacingImageIndex,
-              imageToUpdate.record,
-              newBgUrl, // This is the new individual background
-              imageToUpdate.customFieldPositions || fieldPositions, // Use custom if available, else global
-              imageToUpdate.customFieldStyles || fieldStyles,     // Use custom if available, else global
-              newSize // Pass the new dimensions
-            );
+            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, newSize);
           };
           img.onerror = () => {
             console.error('Failed to load the new background image to get its dimensions.');
-            // Fallback: regenerate without the new size if loading fails
-            regenerateSingleImage(
-              replacingImageIndex,
-              imageToUpdate.record,
-              newBgUrl,
-              imageToUpdate.customFieldPositions || fieldPositions,
-              imageToUpdate.customFieldStyles || fieldStyles
-            );
+            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles);
           };
           img.src = newBgUrl;
-        } else {
-          console.error('[handleIndividualImageUpload reader.onload] Could not find imageToUpdate for index:', replacingImageIndex);
         }
       };
-      reader.onerror = (error) => {
-        console.error('[handleIndividualImageUpload reader.onerror] FileReader error:', error);
-      };
       reader.readAsDataURL(file);
-    } else {
-      // console.warn('[handleIndividualImageUpload] No file selected or replacingImageIndex is null.');
     }
-
-    // Reset the input value to allow uploading the same file again if needed
     if (individualImageInputRef.current) {
       individualImageInputRef.current.value = "";
     }
-    setReplacingImageIndex(null); // Reset after upload attempt
+    setReplacingImageIndex(null);
   };
 
-
-  // Função para upload para Google Drive
   const uploadToGoogleDrive = async () => {
     if (!projectName.trim()) {
       alert('Por favor, digite um nome para o projeto.');
@@ -890,7 +612,6 @@ const ImageGeneratorFrontendOnly = ({
             </Box>
           )}
 
-          {/* Integração Google Drive */}
           {generatedImages.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} />
@@ -953,7 +674,6 @@ const ImageGeneratorFrontendOnly = ({
             </Box>
           )}
 
-          {/* Lista de imagens geradas */}
           {generatedImages.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} />
@@ -979,52 +699,48 @@ const ImageGeneratorFrontendOnly = ({
                         </Box>
 
 <Box sx={{
-                          width: 'auto', // Permitir que a largura se ajuste ao conteúdo + padding
-                          maxWidth: '100%', // Não exceder o contêiner do card
-                          height: 'auto', // Permitir que a altura se ajuste
-                          maxHeight: '180px', // Altura máxima total (incluindo padding da borda)
-                          display: 'inline-flex', // Para que o Box se ajuste ao tamanho da imagem + padding
-                          flexDirection: 'column', // Para centralizar se necessário
+                          width: 'auto',
+                          maxWidth: '100%',
+                          height: 'auto',
+                          maxHeight: '180px',
+                          display: 'inline-flex',
+                          flexDirection: 'column',
                           justifyContent: 'center',
                           alignItems: 'center',
-                          padding: '10px', // Espaçamento para a "borda branca" da foto
-                          backgroundColor: 'white', // Cor da borda da foto
-                          borderRadius: '4px', // Leve arredondamento nas bordas externas
+                          padding: '10px',
+                          backgroundColor: 'white',
+                          borderRadius: '4px',
                           mb: 1,
-                          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2), 0 6px 20px rgba(0, 0, 0, 0.19)', // Efeito de sombra
-                          cursor: 'pointer', // Add cursor pointer to indicate it's clickable
+                          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2), 0 6px 20px rgba(0, 0, 0, 0.19)',
+                          cursor: 'pointer',
                           '&:hover img': {
-                            transform: 'scale(1.03)', // Zoom um pouco mais sutil na imagem interna
+                            transform: 'scale(1.03)',
                           },
-                          '&:hover': { // Sutil levantamento do card no hover
+                          '&:hover': {
                             boxShadow: '0 8px 16px rgba(0, 0, 0, 0.25), 0 10px 25px rgba(0, 0, 0, 0.22)',
                             transform: 'translateY(-2px)',
                           },
-                          transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out', // Transição suave para o hover do Box
+                          transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out',
                         }}
-                        onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)} // Add onClick handler here
+                        onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
                         >
                           <img
-                            key={imageData.url} // Força a recriação da tag img quando a URL muda
+                            key={imageData.url}
                             src={imageData.url}
                             alt={`Preview ${index + 1}`}
                             style={{
                               display: 'block',
                               maxWidth: '100%',
-                              maxHeight: '150px', // Altura máxima da imagem em si, para caber no padding
+                              maxHeight: '150px',
                               width: 'auto',
                               height: 'auto',
                               objectFit: 'contain',
                               transition: 'transform 0.3s ease-in-out',
-                              // Adicionar uma pequena sombra interna na imagem para separá-la da borda branca
                               boxShadow: 'inset 0 0 2px rgba(0,0,0,0.1)',
                             }}
                           />
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
-                          {/* O IconButton de Visualizar foi removido assumindo que o clique na imagem já chama openPreview,
-                               ou para resolver a questão de "duas opções de visualizar". 
-                               Se o clique na imagem não abre o preview, este botão deveria ser restaurado. */}
                           <IconButton
                             size="small"
                             onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
@@ -1046,7 +762,6 @@ const ImageGeneratorFrontendOnly = ({
                           >
                             <Download />
                           </IconButton>
-                          {/* Botão de Compartilhar */}
                           <IconButton
                             size="small"
                             onClick={() => handleShare(imageData)}
@@ -1065,7 +780,6 @@ const ImageGeneratorFrontendOnly = ({
         </CardContent>
       </Card>
 
-      {/* Dialog de Preview */}
       <Dialog open={previewOpen} onClose={closePreview} maxWidth="lg" fullWidth>
         <DialogTitle>
           Preview - {selectedPreview?.filename}
@@ -1086,48 +800,33 @@ const ImageGeneratorFrontendOnly = ({
         </DialogActions>
       </Dialog>
 
-      {/* Removed: <canvas ref={canvasRef} style={{ display: 'none' }} /> */}
-
-      {/* REMOVED: Old CSV text editing Dialog */}
-
       {showGeneratedImageEditor && editingGeneratedImageIndex !== null && (() => {
         const imageToEdit = generatedImages.find(img => img.index === editingGeneratedImageIndex);
         if (!imageToEdit) {
           console.error(`[IGFO] Render: Could not find image with index ${editingGeneratedImageIndex} to edit.`);
           return null;
         }
-
-        const positionsToLoad = imageToEdit.customFieldPositions !== undefined
-          ? imageToEdit.customFieldPositions
-          : fieldPositions; // global fieldPositions prop from App.jsx
-
-        const stylesToLoad = imageToEdit.customFieldStyles !== undefined
-          ? imageToEdit.customFieldStyles
-          : fieldStyles;    // global fieldStyles prop from App.jsx
-
-        const brandElementsToLoad = imageToEdit.customBrandElements !== undefined
-          ? imageToEdit.customBrandElements
-          : brandElements;
-
+        const positionsToLoad = imageToEdit.customFieldPositions !== undefined ? imageToEdit.customFieldPositions : fieldPositions;
+        const stylesToLoad = imageToEdit.customFieldStyles !== undefined ? imageToEdit.customFieldStyles : fieldStyles;
+        const brandElementsToLoad = imageToEdit.customBrandElements !== undefined ? imageToEdit.customBrandElements : brandElements;
         return (
           <GeneratedImageEditor
             open={showGeneratedImageEditor}
             onClose={handleCloseGeneratedImageEditor}
-            imageData={imageToEdit} // Pass the full, most current image object
+            imageData={imageToEdit}
             globalCsvHeaders={csvHeaders}
             initialFieldPositions={JSON.parse(JSON.stringify(positionsToLoad || {}))}
             initialFieldStyles={JSON.parse(JSON.stringify(stylesToLoad || {}))}
             onSave={handleSaveIndividualModifications}
             colorPalette={colorPalette}
             globalBackgroundImage={backgroundImage}
-            originalImageSize={imageToEdit.customOriginalImageSize || originalImageSize} // Pass custom size if available
+            originalImageSize={imageToEdit.customOriginalImageSize || originalImageSize}
             imageFilters={imageFilters}
             brandElements={brandElementsToLoad}
           />
         );
       })()}
 
-      {/* Hidden file input for individual image replacement */}
       <input
         type="file"
         accept="image/png, image/jpeg"
