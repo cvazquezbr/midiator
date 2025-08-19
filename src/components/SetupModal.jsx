@@ -32,7 +32,6 @@ import { toast } from 'sonner';
 import { IANA_TIMEZONES } from '../lib/timezones';
 import { saveTimezone, getTimezone } from '../utils/timezone';
 import GeminiAuthSetup from './GeminiAuthSetup';
-import GoogleDriveAuthModal from './GoogleDriveAuthModal';
 import GoogleCloudTTSAuth from './GoogleCloudTTSAuth';
 import WordpressAuthSetup from './WordpressAuthSetup';
 import LinkedinAuthSetup from './LinkedinAuthSetup';
@@ -150,10 +149,9 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
         >
           <Tab icon={<AccountCircle />} iconPosition="start" label="Geral" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(0)} />
           <Tab icon={<AutoAwesome />} iconPosition="start" label="Gemini" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(1)} />
-          <Tab icon={<DriveFolderUpload />} iconPosition="start" label="Google Drive" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(2)} />
-          <Tab icon={<Audiotrack />} iconPosition="start" label="Cloud TTS" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(3)} />
-          <Tab icon={<Language />} iconPosition="start" label="WordPress" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(4)} />
-          <Tab icon={<LinkedIn />} iconPosition="start" label="LinkedIn" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(5)} />
+          <Tab icon={<Audiotrack />} iconPosition="start" label="Cloud TTS" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(2)} />
+          <Tab icon={<Language />} iconPosition="start" label="WordPress" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} {...a11yProps(3)} />
+          <Tab icon={<LinkedIn />} iconPosition="start" label="LinkedIn" sx={{ justifyContent: 'flex-start', textAlign: 'left' }}{...a11yProps(4)} />
         </Tabs>
         <TabPanel value={value} index={0}>
           <GeneralSettings />
@@ -162,15 +160,12 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
           <GeminiAuthSetup />
         </TabPanel>
         <TabPanel value={value} index={2}>
-          <GoogleDriveAuthModal />
-        </TabPanel>
-        <TabPanel value={value} index={3}>
           <GoogleCloudTTSAuth />
         </TabPanel>
-        <TabPanel value={value} index={4}>
+        <TabPanel value={value} index={3}>
           <WordpressAuthSetup />
         </TabPanel>
-        <TabPanel value={value} index={5}>
+        <TabPanel value={value} index={4}>
           <LinkedinAuthSetup onBeforeRedirect={onBeforeLinkedinRedirect} />
         </TabPanel>
       </DialogContent>
