@@ -1,42 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { getGeminiApiKey, saveGeminiApiKey, removeGeminiApiKey } from '../utils/geminiCredentials';
+import React, { useState } from 'react';
 import geminiAPI from '../utils/geminiAPI';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Alert } from '@mui/material';
 import { Visibility, VisibilityOff, InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import GeminiInfobox from './GeminiInfobox';
 
-const GeminiAuthSetup = () => {
-  const [apiKey, setApiKey] = useState('');
-  const [currentStoredKey, setCurrentStoredKey] = useState(null);
+const GeminiAuthSetup = ({ apiKey, onApiKeyChange }) => {
   const [showKey, setShowKey] = useState(false);
-  const [error, setError] = useState('');
   const [showInfobox, setShowInfobox] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
-
-  useEffect(() => {
-    const storedKey = getGeminiApiKey();
-    setCurrentStoredKey(storedKey);
-    setApiKey(storedKey || '');
-    setError('');
-  }, []);
-
-  const handleSave = () => {
-    if (apiKey.trim()) {
-      saveGeminiApiKey(apiKey.trim());
-      setCurrentStoredKey(apiKey.trim());
-      toast.success('Chave da API Gemini salva com sucesso!');
-    } else {
-      setError('Por favor, insira uma chave da API Gemini válida.');
-    }
-  };
-
-  const handleRemove = () => {
-    removeGeminiApiKey();
-    setCurrentStoredKey(null);
-    setApiKey('');
-    toast.info('Chave da API Gemini removida.');
-  };
 
   const handleTestConnection = async () => {
     const trimmedApiKey = apiKey.trim();
@@ -46,10 +18,12 @@ const GeminiAuthSetup = () => {
     }
     setIsTesting(true);
     try {
-      // Initialize the API with the provided key for the test
-      geminiAPI.initialize(trimmedApiKey);
-      // Perform a test call
-      await geminiAPI.generateContent('Diga "Olá, mundo!" em português.');
+      // Pass the key from the input field directly to the API method for the test
+      // Note: This test now relies on the proxy endpoint, which uses the *saved* key.
+      // To test an unsaved key, we would need a different mechanism.
+      // For simplicity, we now test the currently saved and configured key.
+      // The prompt will be sent to the proxy which will use the key from the DB.
+      await geminiAPI.generateContent('Diga "Olá, mundo!" em português.', 'Connection Test');
       toast.success('Conexão com a API Gemini bem-sucedida!');
     } catch (err) {
       console.error('Erro no teste de conexão com Gemini:', err);
@@ -59,35 +33,31 @@ const GeminiAuthSetup = () => {
     }
   };
 
-  const toggleShowKey = () => {
-    setShowKey(!showKey);
-  };
-
   const getMaskedKey = (key) => {
-    if (!key || key.length < 8) return 'Chave muito curta para mascarar';
+    if (!key || key.length < 8) return '';
     return `...${key.substring(key.length - 6)}`;
-  }
+  };
 
   return (
     <>
       <Box sx={{ p: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="h6">API Gemini</Typography>
-            <IconButton onClick={() => setShowInfobox(true)}>
-                <InfoIcon />
-            </IconButton>
+          <Typography variant="h6">API Gemini</Typography>
+          <IconButton onClick={() => setShowInfobox(true)}>
+            <InfoIcon />
+          </IconButton>
         </Box>
-        <Typography variant="body2" gutterBottom sx={{mt: 2}}>
-          Insira sua chave da API Gemini (Google AI Studio). Esta chave será armazenada localmente no seu navegador.
+        <Typography variant="body2" gutterBottom sx={{ mt: 2 }}>
+          Insira sua chave da API Gemini (Google AI Studio). A chave será salva de forma segura em sua conta.
         </Typography>
 
-        {currentStoredKey && (
+        {apiKey && (
           <Typography variant="caption" color="textSecondary" gutterBottom>
-            Chave atual configurada: {getMaskedKey(currentStoredKey)}
+            Chave configurada: {getMaskedKey(apiKey)}
           </Typography>
         )}
 
-        <Box sx={{ display: 'flex', alignItems: 'center', mt: currentStoredKey ? 1 : 2, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mt: apiKey ? 1 : 2, mb: 2 }}>
           <TextField
             autoFocus
             margin="dense"
@@ -97,46 +67,29 @@ const GeminiAuthSetup = () => {
             fullWidth
             variant="outlined"
             value={apiKey}
-            onChange={(e) => {
-              setApiKey(e.target.value);
-              if (error) setError('');
-            }}
+            onChange={(e) => onApiKeyChange(e.target.value)}
             placeholder="Sua chave da API Gemini..."
           />
-          <IconButton onClick={toggleShowKey} edge="end" sx={{ ml: 1 }}>
+          <IconButton onClick={() => setShowKey(!showKey)} edge="end" sx={{ ml: 1 }}>
             {showKey ? <VisibilityOff /> : <Visibility />}
           </IconButton>
         </Box>
 
-        {error && (
-          <Alert severity="error">{error}</Alert>
-        )}
-
-        <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ pt: 2, display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
           <Button onClick={handleTestConnection} disabled={isTesting} variant="outlined">
-            {isTesting ? 'Testando...' : 'Testar Conexão'}
+            {isTesting ? 'Testando...' : 'Testar Conexão Salva'}
           </Button>
-          <Box>
-            {currentStoredKey && (
-              <Button onClick={handleRemove} color="error">
-                Remover
-              </Button>
-            )}
-            <Button onClick={handleSave} variant="contained" sx={{ ml: 1 }}>
-              Salvar
-            </Button>
-          </Box>
         </Box>
       </Box>
 
       <Dialog open={showInfobox} onClose={() => setShowInfobox(false)} fullWidth maxWidth="lg">
         <DialogTitle>
-           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             Instruções de Configuração
             <IconButton onClick={() => setShowInfobox(false)}>
-                <CloseIcon />
+              <CloseIcon />
             </IconButton>
-           </Box>
+          </Box>
         </DialogTitle>
         <DialogContent>
           <GeminiInfobox />
