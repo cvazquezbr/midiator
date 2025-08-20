@@ -160,18 +160,25 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
       const generatedPersona = JSON.parse(cleanedResponse);
 
-      if (callback) {
-        callback(generatedPersona);
-      } else {
-        setPersona(prev => ({ ...prev, ...generatedPersona }));
-        toast.success('Persona gerada com sucesso! Revise os campos preenchidos.');
-        setShowPersonaGenModal(false);
-      }
+      // First, stop the loading state to allow the child component to stabilize.
+      setIsGeneratingPersona(false);
+
+      // Now, perform the actions after the state has had a chance to update.
+      // Using a microtask to ensure state update has been processed.
+      Promise.resolve().then(() => {
+        if (callback) {
+          callback(generatedPersona);
+        } else {
+          setPersona(prev => ({ ...prev, ...generatedPersona }));
+          toast.success('Persona gerada com sucesso! Revise os campos preenchidos.');
+          setShowPersonaGenModal(false);
+        }
+      });
 
     } catch (error) {
       console.error("Erro ao gerar ou processar persona com IA:", error);
       toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console do navegador para detalhes.');
-    } finally {
+      // Also ensure loading is stopped on error.
       setIsGeneratingPersona(false);
     }
   };
