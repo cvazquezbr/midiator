@@ -1,4 +1,4 @@
-import { getGeminiApiKey, saveGeminiApiKey } from './geminiCredentials';
+import { getGeminiApiKey, saveGeminiApiKey, saveGeminiModel, saveGeminiImageModel } from './geminiCredentials';
 import { getGoogleCloudTTSCredentials, saveGoogleCloudTTSCredentials } from './googleCloudTTSCredentials';
 import { getWordpressConfig, saveWordpressConfig } from './wordpressCredentials';
 import { getTimezone, saveTimezone } from './timezone';
@@ -12,6 +12,8 @@ const CREDENTIAL_KEYS = {
   // LINKEDIN: 'linkedinConfig', // This is now handled by SettingsContext
   WORDPRESS: 'wordpressConfig',
   TIMEZONE: 'user_timezone',
+  GEMINI_MODEL: 'gemini_model',
+  GEMINI_IMAGE_MODEL: 'gemini_image_model',
 };
 
 /**
@@ -82,6 +84,12 @@ export const applySettings = (settings) => {
   }
   if (settings[CREDENTIAL_KEYS.TIMEZONE]) {
     saveTimezone(settings[CREDENTIAL_KEYS.TIMEZONE]);
+  }
+  if (settings[CREDENTIAL_KEYS.GEMINI_MODEL]) {
+    saveGeminiModel(settings[CREDENTIAL_KEYS.GEMINI_MODEL]);
+  }
+  if (settings[CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL]) {
+    saveGeminiImageModel(settings[CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL]);
   }
 };
 
