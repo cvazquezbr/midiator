@@ -122,6 +122,7 @@ function HomePage() {
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [currentCampaign, setCurrentCampaign] = useState(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
 
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -172,21 +173,22 @@ function HomePage() {
 
   const handleSaveCampaign = async (name) => {
     const appState = getAppState();
-    setIsLoading(true);
+    setIsSaving(true);
+    setUploadProgress({ current: 0, total: 0 });
     try {
       if (currentCampaign) {
-        const updated = await updateCampaign(currentCampaign.id, name, appState);
+        const updated = await updateCampaign(currentCampaign.id, name, appState, setUploadProgress);
         toast.success(`Campaign "${name}" updated.`);
         setCurrentCampaign(updated);
       } else {
-        const newCampaign = await saveCampaign(name, appState);
+        const newCampaign = await saveCampaign(name, appState, setUploadProgress);
         toast.success(`Campaign "${name}" saved.`);
         setCurrentCampaign(newCampaign);
       }
     } catch (err) {
-      toast.error(err.message);
+      // The error is already toasted in serializeCampaignData
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -396,7 +398,7 @@ function HomePage() {
       <LoadCampaignModal open={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadCampaign} onEdit={(campaign) => { setCurrentCampaign(campaign); setShowSaveModal(true); }} />
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
       <CampaignStandardsModal open={showCampaignStandardsModal} onClose={() => { setShowCampaignStandardsModal(false); loadCampaignStandards(); }} onShowMemorial={() => setShowMemorialDescritivoModal(true)} onGeneratePalette={async (briefing) => { try { const palette = await generateColorPalette(briefing); return palette; } catch (error) { toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores."); throw error; } }} />
-      <LoadingDialog open={isGeneratingCampaign || isSaving || isLoading} title={ isSaving ? "Salvando configuração..." : isLoading ? "Carregando configuração..." : "Gerando conteúdo..." } description={ isSaving ? "Aguarde um momento, estamos empacotando tudo para você." : isLoading ? "Estamos desempacotando sua configuração. Quase pronto!" : "A IA está pensando e escrevendo. Isso pode levar alguns segundos." } />
+      <LoadingDialog open={isGeneratingCampaign || isSaving || isLoading} title={ isSaving ? `Salvando Campanha... (${uploadProgress.current}/${uploadProgress.total})` : isLoading ? "Carregando configuração..." : "Gerando conteúdo..." } description={ isSaving ? "Aguarde um momento, estamos fazendo o upload dos seus arquivos." : isLoading ? "Estamos desempacotando sua configuração. Quase pronto!" : "A IA está pensando e escrevendo. Isso pode levar alguns segundos." } progress={isSaving ? (uploadProgress.total > 0 ? (uploadProgress.current / uploadProgress.total) * 100 : 0) : null} />
       <TextEditorDialog
         open={editingField !== null || editingFollowup !== null}
         title={
