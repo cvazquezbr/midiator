@@ -103,8 +103,7 @@ export const generateCampaignImage = async ({ content, aspectRatio }) => {
   }
   geminiAPI.initialize(apiKey);
 
-  const { persona, autor, colors } = getCampaignPrompt();
-  const personaString = formatObjectForPrompt(persona, ['description']);
+  const { autor, colors } = getCampaignPrompt();
   const autorString = formatObjectForPrompt(autor);
 
   const colorPalettePrompt = colors && colors.length > 0
@@ -115,7 +114,6 @@ export const generateCampaignImage = async ({ content, aspectRatio }) => {
   const imagePrompt = `
     Crie uma imagem de fundo para um post de rede social.
     O tema é: "${stripHtml(content.titulo)}".
-    O público-alvo é: ${personaString}.
     O estilo deve ser consistente com a marca: ${autorString}.
     ${colorPalettePrompt}
     A imagem deve ser puramente visual, conceitual ou abstrata, e não deve conter nenhum texto, letras ou números.
