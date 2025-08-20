@@ -376,7 +376,7 @@ async function handleGetProfiles(request, response) {
     const personalData = await personalResponse.json();
     const personal = {
       id: personalData.id,
-      name: `${personalData.firstName.localized.en_US} ${personalData.lastName.localized.en_US}`,
+      name: `${personalData.firstName.localized.pt_BR || personalData.firstName.localized.en_US} ${personalData.lastName.localized.pt_BR || personalData.lastName.localized.en_US}`,
       type: 'personal',
       profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier
     };
@@ -384,13 +384,17 @@ async function handleGetProfiles(request, response) {
     let organizations = [];
     if (organizationsResponse.ok) {
       const orgData = await organizationsResponse.json();
-      organizations = orgData.elements?.map(element => ({
-        id: element['organization~']?.id,
-        name: element['organization~']?.name,
-        role: element.role,
-        logo: element['organization~']?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
-        type: 'organization'
-      })) || [];
+      organizations = orgData.elements?.map(element => {
+        const orgNameObject = element['organization~']?.name;
+        const orgName = (orgNameObject && orgNameObject.localized && (orgNameObject.localized.pt_BR || orgNameObject.localized.en_US)) || 'Nome da Página Indisponível';
+        return {
+            id: element['organization~']?.id,
+            name: orgName,
+            role: element.role,
+            logo: element['organization~']?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
+            type: 'organization'
+        };
+      }) || [];
     } else {
       // It's not a critical error if the user has no company pages or permissions.
       console.warn('Could not fetch organization pages:', organizationsResponse.status);
