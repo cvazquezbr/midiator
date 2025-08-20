@@ -117,7 +117,6 @@ class GeminiAPI {
             }]
           }],
           generationConfig: {
-            responseMimeType: "application/json",
             responseModalities: ["TEXT", "IMAGE"]
           },
           safetySettings: [
