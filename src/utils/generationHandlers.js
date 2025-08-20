@@ -104,14 +104,15 @@ export const generateCampaignImage = async ({ content, aspectRatio }) => {
     ? `A imagem deve usar predominantemente a seguinte paleta de cores: ${colors.map(c => c.hex).join(', ')}.`
     : '';
 
+  // Simplified prompt to be more direct and less prone to errors.
   const imagePrompt = `
-    Gere uma imagem de fundo para um post. A imagem deve ser visualmente atraente e complementar o conteúdo, mas sem distrair o leitor.
-    Persona: ${personaString}
-    Autor: ${autorString}
-    Resumo do Conteúdo: ${stripHtml(content.titulo)}. ${stripHtml(content.conteudo)}
-    Razão de Aspecto: ${aspectRatio}
+    Crie uma imagem de fundo para um post de rede social.
+    O tema é: "${stripHtml(content.titulo)}".
+    O público-alvo é: ${personaString}.
+    O estilo deve ser consistente com a marca: ${autorString}.
     ${colorPalettePrompt}
-    ATENÇÃO: A IMAGEM DEVE SERVIR COMO IMAGEM DE FUNDO. NÃO DEVE CONTER, SOB NENHUMA CIRCUNSTÂNCIA, QUALQUER TIPO DE TEXTO, ESCRITA, LETRAS, NÚMEROS OU PALAVRAS. A imagem deve ser puramente visual e abstrata ou conceitual, sem nenhum elemento textual.
+    A imagem deve ser puramente visual, conceitual ou abstrata, e não deve conter nenhum texto, letras ou números.
+    A razão de aspecto da imagem deve ser ${aspectRatio}.
   `;
 
   const base64Image = await geminiAPI.generateImage(imagePrompt, 'Geração de Imagem de Campanha');

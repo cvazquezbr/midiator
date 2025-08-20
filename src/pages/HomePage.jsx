@@ -329,7 +329,13 @@ function HomePage() {
     setGenerationError('');
     try {
       const normalizedContent = await generateCampaignContent({ problema, solucao });
+      if (!normalizedContent) {
+        // This case should ideally not happen as generateCampaignContent throws on error,
+        // but as a defensive measure, we stop if the content is falsy.
+        throw new Error("A geração do conteúdo principal falhou e não retornou dados.");
+      }
       setCampaignContent(normalizedContent);
+
       if (!regenerate) {
         // Reset dependent states for a fresh generation
         setFollowupPosts([]);

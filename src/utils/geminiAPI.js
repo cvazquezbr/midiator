@@ -116,9 +116,8 @@ class GeminiAPI {
               text: promptString
             }]
           }],
-          generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"]
-          }
+          // generationConfig is optional; the model can infer the desired output
+          // from a well-crafted prompt. Removing it to simplify the request.
         }),
       });
 
