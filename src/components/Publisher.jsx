@@ -92,7 +92,6 @@ const Publisher = ({
   weeklySchedule,
   setWeeklySchedule,
   selectedProfile,
-  setSelectedProfile,
   selectedImages,
   setSelectedImages,
   selectedVideos,
@@ -105,7 +104,7 @@ const Publisher = ({
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const fetchSchedules = async () => {
+  const fetchSchedules = React.useCallback(async () => {
     if (tabValue === 2 && selectedProfile) {
       setIsLoadingSchedules(true);
       try {
@@ -119,7 +118,7 @@ const Publisher = ({
         setIsLoadingSchedules(false);
       }
     }
-  };
+  }, [tabValue, selectedProfile]);
 
   const handleViewDetails = async (scheduleId) => {
     try {
@@ -181,7 +180,7 @@ const Publisher = ({
   // Fetch schedules when the tab is opened or the selected profile changes
   useEffect(() => {
     fetchSchedules();
-  }, [tabValue, selectedProfile]);
+  }, [tabValue, selectedProfile, fetchSchedules]);
 
   // State for WordPress
   const [isPublishingWp, setIsPublishingWp] = useState(false);
@@ -194,33 +193,76 @@ const Publisher = ({
   const [publishedPostUrlLi, setPublishedPostUrlLi] = useState(null);
 
   // Local states for Publisher component
-  const [linkedinProfiles, setLinkedinProfiles] = useState([]);
+  const [linkedinProfiles, setLinkedinProfiles] = useState({ personal: null, organizations: [] });
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [profileError, setProfileError] = useState('');
+  const [selectedTarget, setSelectedTarget] = useState(null);
+  const [publishResults, setPublishResults] = useState([]);
+  const [content, setContent] = useState(''); // Assuming campaignContent will be mapped to this
   const [unifiedMedia, setUnifiedMedia] = useState([]);
   const [previewedMedia, setPreviewedMedia] = useState(null);
   const [schedulePreview, setSchedulePreview] = useState([]);
   const { googleAccessToken } = useUserAuth();
+
+    // Map campaign content to a simple text state for the publisher
+    useEffect(() => {
+        if (campaignContent) {
+            const postText = [
+                campaignContent.titulo?.toUpperCase(),
+                '',
+                campaignContent.conteudo,
+                '',
+                '----',
+                campaignContent.cta,
+                '----',
+                (campaignContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' '),
+            ].join('\n');
+            setContent(postText);
+        }
+    }, [campaignContent]);
+
+  const getPublishingTargets = () => {
+    const targets = [];
+    if (linkedinProfiles.personal) {
+      targets.push({
+        id: linkedinProfiles.personal.id,
+        name: `${linkedinProfiles.personal.name} (Perfil Pessoal)`,
+        type: 'personal'
+      });
+    }
+    if (linkedinProfiles.organizations && linkedinProfiles.organizations.length > 0) {
+      linkedinProfiles.organizations.forEach(org => {
+        targets.push({
+          id: org.id,
+          name: `${org.name} (Página)`,
+          type: 'organization'
+        });
+      });
+    }
+    return targets;
+  };
 
   const handleRefreshProfiles = async () => {
     setIsLoadingProfiles(true);
     setProfileError('');
     try {
         const profiles = await getLinkedInProfiles(settings?.linkedin, true); // force a refresh
-        if (!Array.isArray(profiles)) {
-          console.warn("LinkedIn API did not return a valid array of profiles.", profiles);
-          setLinkedinProfiles([]);
-          return;
-        }
-        const cleanedProfiles = profiles.filter(p => p && typeof p.urn === 'string' && typeof p.name === 'string');
-        setLinkedinProfiles(cleanedProfiles);
-        if (cleanedProfiles.length > 0 && !selectedProfile) {
-          setSelectedProfile(cleanedProfiles[0].urn);
+        setLinkedinProfiles({
+            personal: profiles.personal,
+            organizations: profiles.organizations || []
+        });
+        // Auto-select first profile if none is selected
+        if (!selectedTarget && profiles.personal) {
+            setSelectedTarget({
+                id: profiles.personal.id,
+                name: `${profiles.personal.name} (Perfil Pessoal)`,
+                type: 'personal'
+            });
         }
     } catch (error) {
         console.error("Erro ao buscar perfis do LinkedIn:", error);
         setProfileError(error.message);
-        setLinkedinProfiles([]);
+        setLinkedinProfiles({ personal: null, organizations: [] });
     } finally {
         setIsLoadingProfiles(false);
     }
@@ -284,46 +326,44 @@ const Publisher = ({
       setProfileError('');
       try {
         const profiles = await getLinkedInProfiles(settings?.linkedin);
-
-        // Ensure profiles is an array before proceeding.
-        if (!Array.isArray(profiles)) {
-          console.warn("LinkedIn API did not return a valid array of profiles.", profiles);
-          setLinkedinProfiles([]);
-          return;
-        }
-
-        const cleanedProfiles = profiles.filter(p => p && typeof p.urn === 'string' && typeof p.name === 'string');
-        setLinkedinProfiles(cleanedProfiles);
+        setLinkedinProfiles({
+            personal: profiles.personal,
+            organizations: profiles.organizations || []
+        });
 
         // Set a default profile only if the cleaned list is not empty and no profile is already selected.
-        if (cleanedProfiles.length > 0 && !selectedProfile) {
-          setSelectedProfile(cleanedProfiles[0].urn);
+        if (profiles.personal && !selectedTarget) {
+            setSelectedTarget({
+                id: profiles.personal.id,
+                name: `${profiles.personal.name} (Perfil Pessoal)`,
+                type: 'personal'
+            });
         }
 
       } catch (error) {
         console.error("Erro ao buscar perfis do LinkedIn:", error);
         setProfileError(error.message);
-        setLinkedinProfiles([]); // Also clear profiles on error
+        setLinkedinProfiles({ personal: null, organizations: [] }); // Also clear profiles on error
       } finally {
         setIsLoadingProfiles(false);
       }
     };
     fetchProfiles();
-  }, []); // Run only once on component mount
+  }, [settings?.linkedin, selectedTarget]); // Rerun if settings change
 
   // Effect to clear selection if media data is removed.
   useEffect(() => {
     if (!generatedImagesData || generatedImagesData.length === 0) {
       setSelectedImages({});
     }
-  }, [generatedImagesData]);
+  }, [generatedImagesData, setSelectedImages]);
 
   // Effect to clear selection if media data is removed.
   useEffect(() => {
     if (!generatedVideosData || generatedVideosData.length === 0) {
       setSelectedVideos({});
     }
-  }, [generatedVideosData]);
+  }, [generatedVideosData, setSelectedVideos]);
 
 
   const handlePublishWordPress = async () => {
@@ -524,47 +564,55 @@ const Publisher = ({
 
   const handlePublishLinkedIn = async () => {
     if (isScheduled) {
-      // This case should not be reached if the button is disabled, but as a safeguard:
       handleScheduleLinkedIn();
       return;
     }
 
+    if (!content.trim() || !selectedTarget) {
+      toast.error('Conteúdo e alvo de publicação são obrigatórios');
+      return;
+    }
+
     setIsPublishingLi(true);
-    setPublishingStatusLi('Iniciando publicação...');
-    setPublishedPostUrlLi(null);
+    setPublishingStatusLi('Publicando...');
 
     try {
-      if (!campaignContent || !campaignContent.conteudoFormatado) {
-        throw new Error('Dados da campanha não estão disponíveis. Volte para as etapas anteriores.');
-      }
-      if (!selectedProfile) {
-        throw new Error('Nenhum perfil do LinkedIn foi selecionado.');
-      }
-
-      const imageBlobs = generatedImagesData
-        .filter((_, index) => selectedImages[index])
-        .map(img => img.blob);
-
-      const videoBlobs = generatedVideosData
-        .filter((_, index) => selectedVideos[index])
-        .map(vid => vid.blob);
-
-      const videoBlob = videoBlobs.length > 0 ? videoBlobs[0] : null;
-
       const campaignData = {
-        campaignContent,
-        authorUrn: selectedProfile,
-        imageBlobs,
-        videoBlob,
+        content: content.trim(),
+        targetId: selectedTarget.id,
+        targetType: selectedTarget.type
       };
 
-      setPublishingStatusLi('Publicando no LinkedIn... Isso pode levar um momento.');
-      const post = await publishToLinkedIn(campaignData, settings?.linkedin);
-      setPublishingStatusLi(`Post publicado no LinkedIn com sucesso!`);
-      setPublishedPostUrlLi(post.link);
+      const result = await publishToLinkedIn(campaignData, settings?.linkedin);
+      const postLink = `https://www.linkedin.com/feed/update/${result.id}/`;
+
+      setPublishingStatusLi('Publicado com sucesso!');
+      setPublishedPostUrlLi(postLink);
+
+      setPublishResults(prev => [{
+        id: Date.now(),
+        target: selectedTarget.name,
+        content: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
+        success: true,
+        timestamp: new Date().toLocaleString('pt-BR'),
+        link: postLink
+      }, ...prev]);
+
+      // Do not clear content automatically, user might want to post to another network.
+      // setContent('');
+
     } catch (error) {
-      console.error('Erro ao publicar no LinkedIn:', error);
+      console.error('Erro na publicação:', error);
       setPublishingStatusLi(`Erro ao publicar: ${error.message}`);
+
+      setPublishResults(prev => [{
+        id: Date.now(),
+        target: selectedTarget.name,
+        content: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
+        success: false,
+        error: error.message,
+        timestamp: new Date().toLocaleString('pt-BR')
+      }, ...prev]);
     } finally {
       setIsPublishingLi(false);
     }
@@ -600,15 +648,19 @@ const Publisher = ({
                         <Select
                             labelId="linkedin-profile-select-label"
                             id="linkedin-profile-select"
-                            value={selectedProfile || ''}
+                            value={selectedTarget ? JSON.stringify(selectedTarget) : ''}
                             label="Publicar como"
-                            onChange={(e) => setSelectedProfile(e.target.value)}
+                            onChange={(e) => {
+                                if(e.target.value) {
+                                    setSelectedTarget(JSON.parse(e.target.value));
+                                }
+                            }}
                             disabled={isLoadingProfiles || isPublishingLi}
                         >
                             {isLoadingProfiles && <MenuItem value=""><em><CircularProgress size={20} /> Carregando perfis...</em></MenuItem>}
-                            {Array.isArray(linkedinProfiles) && linkedinProfiles.map((profile) => (
-                                <MenuItem key={profile.urn} value={profile.urn}>
-                                    {profile.name}
+                            {getPublishingTargets().map((target) => (
+                                <MenuItem key={target.id} value={JSON.stringify(target)}>
+                                    {target.name}
                                 </MenuItem>
                             ))}
                         </Select>
@@ -626,6 +678,20 @@ const Publisher = ({
                         {profileError}
                     </Alert>
                 )}
+
+                {/* Content Text Area */}
+                <TextField
+                    label="Conteúdo da Publicação"
+                    multiline
+                    rows={6}
+                    fullWidth
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    variant="outlined"
+                    sx={{ my: 2 }}
+                    placeholder="O que você gostaria de compartilhar?"
+                    maxLength={3000}
+                />
 
               {/* Media Selection */}
               <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
@@ -780,7 +846,7 @@ const Publisher = ({
                 size="large"
                 color="primary"
                 onClick={handlePublishLinkedIn}
-                disabled={isPublishingLi || (isScheduled) || !selectedProfile}
+                disabled={isPublishingLi || (isScheduled) || !selectedTarget || !content.trim()}
               >
                 {isPublishingLi ? 'Publicando...' : 'Publicar Agora no LinkedIn'}
               </Button>
@@ -805,6 +871,42 @@ const Publisher = ({
                   )}
                 </Alert>
               )}
+
+            {/* Publishing History */}
+            {publishResults.length > 0 && (
+                <Box sx={{ mt: 4 }}>
+                    <Typography variant="h6" gutterBottom>Histórico de Publicações Recentes</Typography>
+                    <Paper sx={{ maxHeight: 300, overflow: 'auto', p: 1 }}>
+                        <List>
+                            {publishResults.map(result => (
+                                <ListItem
+                                    key={result.id}
+                                    sx={{
+                                        borderLeft: 5,
+                                        borderColor: result.success ? 'success.main' : 'error.main',
+                                        mb: 1,
+                                        bgcolor: result.success ? 'success.light' : 'error.light'
+                                    }}
+                                >
+                                    <ListItemText
+                                        primary={`[${result.timestamp}] Publicado em: ${result.target}`}
+                                        secondary={
+                                            <>
+                                                <Typography variant="body2" color="text.primary">
+                                                    "{result.content}"
+                                                </Typography>
+                                                {result.error && <Typography variant="caption" color="error">Erro: {result.error}</Typography>}
+                                                {result.link && <MuiLink href={result.link} target="_blank" rel="noopener">Ver no LinkedIn</MuiLink>}
+                                            </>
+                                        }
+                                    />
+                                </ListItem>
+                            ))}
+                        </List>
+                    </Paper>
+                </Box>
+            )}
+
             </Box>
           </TabPanel>
           <TabPanel value={tabValue} index={1}>
