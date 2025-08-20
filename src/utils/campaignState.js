@@ -5,24 +5,32 @@ import { toast } from 'sonner';
 
 // Helper to upload a blob-like asset to Vercel Blob storage.
 const uploadAsset = async (asset, filename) => {
-  if (!asset) return null;
+  if (!asset) {
+    return null;
+  }
+
+  // If it's already a permanent http(s) URL, do nothing.
+  if (typeof asset === 'string' && asset.startsWith('http')) {
+    return asset;
+  }
 
   let fileToUpload;
-  if (typeof asset === 'string' && (asset.startsWith('blob:') || asset.startsWith('data:'))) {
+  if (asset instanceof Blob) {
+    // Asset is already a blob (e.g. from an input field).
+    fileToUpload = asset;
+  } else if (typeof asset === 'string' && (asset.startsWith('blob:') || asset.startsWith('data:'))) {
+    // Asset is a temporary client-side URL. Fetch it and convert to a File.
     const response = await fetch(asset);
     const blob = await response.blob();
     fileToUpload = new File([blob], filename, { type: blob.type });
-  } else if (asset instanceof Blob) {
-    fileToUpload = asset;
-  } else if (typeof asset === 'string' && asset.startsWith('http')) {
-    // It's likely already a public URL, so we don't need to re-upload.
-    return asset;
-  } else if (typeof asset === 'string') {
-    // Could be an invalid string or something else, treat as non-uploadable
-    return asset;
+  } else {
+    // If it's any other type of string or an unsupported type, we don't upload.
+    // This prevents saving invalid data.
+    console.warn(`Unsupported asset type for upload: ${typeof asset}`, asset);
+    return asset; // Return the original asset to avoid breaking the state shape.
   }
-   else {
-    // Unsupported asset type
+
+  if (!fileToUpload) {
     return null;
   }
 

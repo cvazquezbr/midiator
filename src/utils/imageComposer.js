@@ -44,7 +44,8 @@ export const composeImage = async (
   });
   try {
     let backgroundSrc = backgroundImageUrl;
-    if (!backgroundImageUrl.startsWith('data:') && !backgroundImageUrl.startsWith('http')) {
+    // A blob: URL is a valid source, so we should not treat it as a base64 string.
+    if (!backgroundImageUrl.startsWith('data:') && !backgroundImageUrl.startsWith('http') && !backgroundImageUrl.startsWith('blob:')) {
       backgroundSrc = `data:image/png;base64,${backgroundImageUrl}`;
     }
 
