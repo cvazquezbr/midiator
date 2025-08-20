@@ -116,6 +116,10 @@ class GeminiAPI {
               text: promptString
             }]
           }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseModalities: ["TEXT", "IMAGE"]
+          },
           safetySettings: [
             {
               category: 'HARM_CATEGORY_HARASSMENT',
