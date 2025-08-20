@@ -169,10 +169,10 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
         <Button
           variant="contained"
           onClick={handleSave}
-          disabled={isSaving}
-          startIcon={isSaving ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
+          disabled={isLoading}
+          startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
         >
-          {isSaving ? 'Salvando...' : 'Salvar na Nuvem'}
+          {isLoading ? 'Salvando...' : 'Salvar na Nuvem'}
         </Button>
       </DialogActions>
     </Dialog>
