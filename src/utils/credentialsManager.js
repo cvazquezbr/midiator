@@ -97,13 +97,11 @@ export const applySettings = (settings) => {
 /**
  * Saves the current credentials from localStorage to the database via the API.
  */
-export const saveSettingsToDb = async () => {
-  const credentials = gatherCredentials();
-
+export const saveSettingsToDb = async (settings) => {
   const res = await fetch('/api/settings', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(credentials),
+    body: JSON.stringify(settings),
   });
 
   if (!res.ok) {
