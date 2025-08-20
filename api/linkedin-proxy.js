@@ -46,6 +46,21 @@ async function handleTokenExchange(request, response) {
       body: params.toString(),
     });
     const data = await linkedinResponse.json();
+
+    if (linkedinResponse.ok) {
+        const { access_token, expires_in, refresh_token } = data;
+        const expiryDate = new Date(Date.now() + expires_in * 1000);
+
+        await query(
+            `UPDATE users SET
+                linkedin_access_token = $1,
+                linkedin_access_token_expiry = $2,
+                linkedin_refresh_token = $3
+            WHERE id = $4`,
+            [access_token, expiryDate, refresh_token, userId]
+        );
+    }
+
     return response.status(linkedinResponse.status).json(data);
   } catch (error) {
     console.error('Error during token exchange:', error);
@@ -392,6 +407,65 @@ async function handleGetOrganizations(request, response) {
 }
 
 
+async function handleRefreshToken(request, response) {
+    // The scheduler will pass userId in the body, while a logged-in user will have it in the token.
+    const userId = request.user?.sub || request.body.userId;
+
+    if (!userId) {
+        return response.status(400).json({ error: 'User ID not provided.' });
+    }
+
+    try {
+        const { rows } = await query('SELECT linkedin_refresh_token FROM users WHERE id = $1', [userId]);
+        if (rows.length === 0 || !rows[0].linkedin_refresh_token) {
+            return response.status(400).json({ error: 'LinkedIn refresh token not found for this user.' });
+        }
+        const refreshToken = rows[0].linkedin_refresh_token;
+
+        const { rows: settingsRows } = await query('SELECT settings_data FROM settings WHERE user_id = $1', [userId]);
+        if (settingsRows.length === 0 || !settingsRows[0].settings_data.linkedin) {
+            return response.status(400).json({ error: 'LinkedIn credentials not configured for this user.' });
+        }
+        const { clientId, clientSecret } = settingsRows[0].settings_data.linkedin;
+
+        const tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
+        const params = new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken,
+            client_id: clientId,
+            client_secret: clientSecret,
+        });
+
+        const linkedinResponse = await fetch(tokenUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString(),
+        });
+
+        const data = await linkedinResponse.json();
+
+        if (linkedinResponse.ok) {
+            const { access_token, expires_in } = data;
+            const expiryDate = new Date(Date.now() + expires_in * 1000);
+
+            await query(
+                `UPDATE users SET
+                    linkedin_access_token = $1,
+                    linkedin_access_token_expiry = $2
+                WHERE id = $3`,
+                [access_token, expiryDate, userId]
+            );
+            return response.status(200).json({ accessToken: access_token });
+        } else {
+            return response.status(linkedinResponse.status).json(data);
+        }
+    } catch (error) {
+        console.error('Error refreshing LinkedIn token:', error);
+        return response.status(500).json({ error: 'Internal Server Error during token refresh' });
+    }
+}
+
+
 export async function handleGetProfileForTest(req, res) {
     return await handleGetProfile(req, res);
 }
@@ -414,6 +488,8 @@ const mainHandler = async (request, response) => {
   switch (action) {
     case 'tokenExchange':
       return handleTokenExchange(request, response); // Already has user context from withAuth
+    case 'refreshToken':
+        return handleRefreshToken(request, response);
     case 'testConnection':
       return handleGetProfile(request, response);
     case 'getProfile':

@@ -1,3 +1,4 @@
+import { withAuth } from './middleware/auth.js';
 import { kv } from './kv.js';
 import crypto from 'crypto';
 import { markdownToLinkedinText } from './utils.js';
@@ -10,6 +11,7 @@ async function handleCreateSchedule(request, response) {
         if (!postData) {
             return response.status(400).json({ error: 'Missing post data payload.' });
         }
+        const userId = request.user.sub;
 
         const userSelectedScheduledAt = postData.scheduledAt;
         const executionDate = new Date(userSelectedScheduledAt);
@@ -21,6 +23,7 @@ async function handleCreateSchedule(request, response) {
             createdAt: new Date().toISOString(),
             status: 'scheduled',
             ...postData,
+            userId: userId,
             scheduledAt: executionDate.toISOString(),
             userSelectedTime: userSelectedScheduledAt,
         };
@@ -160,6 +163,20 @@ async function handleRunScheduler(request, response) {
             const post = JSON.parse(postRaw);
 
             try {
+                // Refresh the token before publishing
+                const refreshResponse = await fetch(`${process.env.VITE_API_BASE_URL || 'http://localhost:5173'}/api/linkedin-proxy`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    // The user ID is now stored with the post
+                    body: JSON.stringify({ action: 'refreshToken', userId: post.userId }),
+                });
+
+                if (!refreshResponse.ok) {
+                    throw new Error('Failed to refresh LinkedIn token.');
+                }
+                const { accessToken: newAccessToken } = await refreshResponse.json();
+                post.accessToken = newAccessToken; // Update the token
+
                 const postParts = [
                     post.content.titulo.toUpperCase(),
                     '',
@@ -236,8 +253,10 @@ async function handleRunScheduler(request, response) {
 }
 
 // Main API handler
-export default async function handler(request, response) {
+const mainHandler = async (request, response) => {
     if (request.method === 'GET') {
+        // This endpoint is likely called by a cron job and doesn't need auth.
+        // If it needed auth, we would need to secure it differently (e.g., with a secret key).
         return handleRunScheduler(request, response);
     }
     if (request.method !== 'POST') {
@@ -254,7 +273,9 @@ export default async function handler(request, response) {
         case 'updateSchedule': return handleUpdateSchedule(request, response);
         default: return response.status(400).json({ error: `Invalid action specified: ${action}` });
     }
-}
+};
+
+export default withAuth(mainHandler);
 
 // Test exports
 export { handleCreateSchedule, handleGetSchedules, handleDeleteSchedule, handleRunScheduler, handleGetScheduleById, handleUpdateSchedule };
