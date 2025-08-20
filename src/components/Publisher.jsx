@@ -55,7 +55,6 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getTimezone } from '../utils/timezone';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
-import { getLinkedinConfig } from '../utils/linkedinCredentials';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { useUserAuth } from '../context/UserAuthContext';
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
@@ -81,6 +80,7 @@ function TabPanel(props) {
 }
 
 const Publisher = ({
+  settings,
   campaignContent,
   generatedImagesData,
   generatedVideosData,
@@ -206,7 +206,7 @@ const Publisher = ({
     setIsLoadingProfiles(true);
     setProfileError('');
     try {
-        const profiles = await getLinkedInProfiles(true); // force a refresh
+        const profiles = await getLinkedInProfiles(settings?.linkedin, true); // force a refresh
         if (!Array.isArray(profiles)) {
           console.warn("LinkedIn API did not return a valid array of profiles.", profiles);
           setLinkedinProfiles([]);
@@ -283,7 +283,7 @@ const Publisher = ({
       setIsLoadingProfiles(true);
       setProfileError('');
       try {
-        const profiles = await getLinkedInProfiles();
+        const profiles = await getLinkedInProfiles(settings?.linkedin);
 
         // Ensure profiles is an array before proceeding.
         if (!Array.isArray(profiles)) {
@@ -364,8 +364,7 @@ const Publisher = ({
           throw new Error('A conexão com o Google não está ativa. Faça o login novamente.');
         }
 
-        const linkedinConfig = getLinkedinConfig();
-        const driveFolderId = linkedinConfig?.folderId;
+        const driveFolderId = settings.linkedin?.folderId;
 
         if (!driveFolderId) {
             throw new Error('O ID da Pasta no Google Drive não está configurado na autenticação do LinkedIn.');
@@ -457,7 +456,7 @@ const Publisher = ({
 
         setPublishingStatusLi('Salvando agendamento no servidor para automação...');
 
-        const { accessToken } = getLinkedinConfig();
+        const accessToken = settings.linkedin?.accessToken;
         if (!accessToken) {
             throw new Error('Não foi possível encontrar o Access Token do LinkedIn para o agendamento automático.');
         }
@@ -560,7 +559,7 @@ const Publisher = ({
       };
 
       setPublishingStatusLi('Publicando no LinkedIn... Isso pode levar um momento.');
-      const post = await publishToLinkedIn(campaignData);
+      const post = await publishToLinkedIn(campaignData, settings?.linkedin);
       setPublishingStatusLi(`Post publicado no LinkedIn com sucesso!`);
       setPublishedPostUrlLi(post.link);
     } catch (error) {
