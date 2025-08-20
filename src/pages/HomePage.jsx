@@ -323,7 +323,41 @@ function HomePage() {
   const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => { setCsvData(novosRegistros); setCsvHeaders(novasColunas); const updatedFieldPositions = {}; const updatedFieldStyles = {}; const defaultStylesBase = { fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false, strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' }; novasColunas.forEach((header, index) => { updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true }; updatedFieldStyles[header] = fieldStyles[header] || { ...defaultStylesBase }; }); setFieldPositions(updatedFieldPositions); setFieldStyles(updatedFieldStyles); setGeneratedImagesData(prevGeneratedImages => { if (prevGeneratedImages.length !== novosRegistros.length) { const rebuiltGeneratedImages = novosRegistros.map((record, index) => ({ index, record, blob: null, url: null, filename: `midiator_${String(index + 1).padStart(3, '0')}.png`, backgroundImage: backgroundImage, })); return rebuiltGeneratedImages; } else { const updatedGeneratedImages = prevGeneratedImages.map((oldImage, index) => ({ ...oldImage, record: novosRegistros[index], index: index, })); return updatedGeneratedImages; } }); }, [darkMode, fieldPositions, fieldStyles, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles, backgroundImage]);
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => { setCsvData(newCsvData); }, [setCsvData]);
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => { setCsvData(prevCsvData => { if (recordIndex < 0 || recordIndex >= prevCsvData.length) { return prevCsvData; } return prevCsvData.map((row, idx) => { if (idx === recordIndex) { return updatedRecord; } return row; }); }); }, [setCsvData]);
-  const handleGenerateCampaignContent = async (regenerate = false) => { setIsGeneratingCampaign(true); setCampaignGenerationFailed(false); setGenerationError(''); setTimeout(async () => { try { const normalizedContent = await generateCampaignContent({ problema, solucao }); setCampaignContent(normalizedContent); if (!regenerate) { setConteudoMedio(''); setConteudoPequeno(''); setConteudoFormatado(''); setGeneratedImageUrl(null); const [imageSuccess] = await Promise.all([ handleGenerateImage(normalizedContent), handleGenerateSummary(1800, normalizedContent), handleGenerateSummary(130, normalizedContent), handleGenerateFormattedContent(normalizedContent), handleGenerateFollowupPosts(normalizedContent), ]); if (!imageSuccess) { setCampaignGenerationFailed(true); setGenerationError("A geração de texto foi bem-sucedida, mas a criação da imagem falhou. Você pode tentar gerar a imagem novamente."); } } } catch (error) { const errorMessage = error.message || 'Ocorreu um erro desconhecido.'; toast.error(`Ocorreu um erro ao gerar o conteúdo da campanha: ${errorMessage}`); setCampaignContent(null); setCampaignGenerationFailed(true); setGenerationError(errorMessage); } finally { setIsGeneratingCampaign(false); } }, 0); };
+  const handleGenerateCampaignContent = async (regenerate = false) => {
+    setIsGeneratingCampaign(true);
+    setCampaignGenerationFailed(false);
+    setGenerationError('');
+    try {
+      const normalizedContent = await generateCampaignContent({ problema, solucao });
+      setCampaignContent(normalizedContent);
+      if (!regenerate) {
+        // Reset dependent states
+        setFollowupPosts([]);
+        setGeneratedImageUrl(null);
+
+        const [imageSuccess] = await Promise.all([
+          handleGenerateImage(normalizedContent),
+          handleGenerateSummary(1800, normalizedContent),
+          handleGenerateSummary(130, normalizedContent),
+          handleGenerateFormattedContent(normalizedContent),
+          handleGenerateFollowupPosts(normalizedContent),
+        ]);
+
+        if (!imageSuccess) {
+          setCampaignGenerationFailed(true);
+          setGenerationError("A geração de texto foi bem-sucedida, mas a criação da imagem falhou. Você pode tentar gerar a imagem novamente.");
+        }
+      }
+    } catch (error) {
+      const errorMessage = error.message || 'Ocorreu um erro desconhecido.';
+      toast.error(`Ocorreu um erro ao gerar o conteúdo da campanha: ${errorMessage}`);
+      setCampaignContent(null);
+      setCampaignGenerationFailed(true);
+      setGenerationError(errorMessage);
+    } finally {
+      setIsGeneratingCampaign(false);
+    }
+  };
   const handleGenerateImage = async (content = campaignContent) => { if (!content) { toast.error("Por favor, gere o conteúdo do texto primeiro."); return false; } setIsGeneratingImage(true); try { const imageUrl = await generateCampaignImage({ content, aspectRatio }); setGeneratedImageUrl(imageUrl); updateImageAndPalette(imageUrl); return true; } catch (imageError) { toast.error(`Ocorreu um erro ao gerar a imagem da campanha: ${imageError.message}`); setGeneratedImageUrl(null); return false; } finally { setIsGeneratingImage(false); } };
   const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
   const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };

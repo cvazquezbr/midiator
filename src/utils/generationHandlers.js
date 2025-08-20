@@ -65,9 +65,14 @@ export const generateCampaignContent = async ({ problema, solucao }) => {
 
   let hashtags = [];
   if (Array.isArray(parsedContent.hashtags)) {
-    hashtags = parsedContent.hashtags;
+    // If it's already an array, just trim and remove the '#' if present
+    hashtags = parsedContent.hashtags.map(h => h.trim().replace(/^#/, ''));
   } else if (typeof parsedContent.hashtags === 'string') {
-    hashtags = parsedContent.hashtags.split(',').map(h => h.trim().replace(/^#/, ''));
+    // Split by space or comma, filter out empty strings, and remove '#'
+    hashtags = parsedContent.hashtags
+      .split(/[\s,]+/) // Split by one or more spaces or commas
+      .filter(h => h && h.length > 0) // Remove empty strings that might result from multiple separators
+      .map(h => h.trim().replace(/^#/, '')); // Trim and remove leading '#'
   }
 
   return {
