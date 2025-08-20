@@ -13,7 +13,7 @@ const BrandElementManager = ({ onElementSelect }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [loadingImageId, setLoadingImageId] = useState(null);
-  const { googleAccessToken } = useUserAuth();
+  const { googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const fileInputRef = React.useRef(null);
 
   const fetchBrandElements = useCallback(async () => {
@@ -25,17 +25,17 @@ const BrandElementManager = ({ onElementSelect }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const midiatorFolder = await findFolderByName('midiator', null, googleAccessToken);
+      const midiatorFolder = await findFolderByName('midiator', null, googleAccessToken, setGoogleAccessToken);
       if (!midiatorFolder) {
         throw new Error("A pasta 'midiator' não foi encontrada no seu Google Drive.");
       }
 
-      const elementosFolder = await findFolderByName('elementos', midiatorFolder.id, googleAccessToken);
+      const elementosFolder = await findFolderByName('elementos', midiatorFolder.id, googleAccessToken, setGoogleAccessToken);
       if (!elementosFolder) {
         throw new Error("A subpasta 'elementos' não foi encontrada dentro da pasta 'midiator'.");
       }
 
-      const fileList = await listFiles(elementosFolder.id, googleAccessToken, 100);
+      const fileList = await listFiles(elementosFolder.id, googleAccessToken, setGoogleAccessToken, 100);
       const imageFiles = fileList.files.filter(file => file.mimeType.startsWith('image/'));
 
       const imagesWithLinks = imageFiles.map(file => ({
@@ -54,7 +54,7 @@ const BrandElementManager = ({ onElementSelect }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [googleAccessToken]);
+  }, [googleAccessToken, setGoogleAccessToken]);
 
   useEffect(() => {
     fetchBrandElements();
@@ -66,7 +66,7 @@ const BrandElementManager = ({ onElementSelect }) => {
     setError(null);
 
     try {
-      const blob = await getFileAsBlob(image.id, googleAccessToken);
+      const blob = await getFileAsBlob(image.id, googleAccessToken, setGoogleAccessToken);
       const blobUrl = URL.createObjectURL(blob);
 
       const newElement = {
@@ -113,21 +113,21 @@ const BrandElementManager = ({ onElementSelect }) => {
 
     try {
         // 1. Find or create midiator folder
-        let midiatorFolder = await findFolderByName('midiator', null, googleAccessToken);
+        let midiatorFolder = await findFolderByName('midiator', null, googleAccessToken, setGoogleAccessToken);
         if (!midiatorFolder) {
             toast.info("Criando pasta 'midiator' no seu Google Drive...");
-            midiatorFolder = await createFolder('midiator', null, googleAccessToken);
+            midiatorFolder = await createFolder('midiator', null, googleAccessToken, setGoogleAccessToken);
         }
 
         // 2. Find or create elementos folder
-        let elementosFolder = await findFolderByName('elementos', midiatorFolder.id, googleAccessToken);
+        let elementosFolder = await findFolderByName('elementos', midiatorFolder.id, googleAccessToken, setGoogleAccessToken);
         if (!elementosFolder) {
             toast.info("Criando pasta 'elementos' no seu Google Drive...");
-            elementosFolder = await createFolder('elementos', midiatorFolder.id, googleAccessToken);
+            elementosFolder = await createFolder('elementos', midiatorFolder.id, googleAccessToken, setGoogleAccessToken);
         }
 
         // 3. Upload the file
-        const uploadedFile = await uploadFile(file, file.name, elementosFolder.id, googleAccessToken);
+        const uploadedFile = await uploadFile(file, file.name, elementosFolder.id, googleAccessToken, setGoogleAccessToken);
         toast.success(`'${file.name}' foi enviado com sucesso!`, { id: toastId });
 
         // 4. Refresh the list of brand elements
