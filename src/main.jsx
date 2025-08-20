@@ -9,6 +9,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 // New Auth Provider for Application Users
 import { UserAuthContextProvider } from './context/UserAuthContext.jsx';
+import { SettingsProvider } from './context/SettingsContext.jsx';
 
 import './index.css';
 import App from './App.jsx';
@@ -27,9 +28,11 @@ createRoot(document.getElementById('root')).render(
       <GoogleOAuthProvider clientId={googleClientId}>
         <BrowserRouter>
           <UserAuthContextProvider>
-            <TemplateProvider>
-              <App />
-            </TemplateProvider>
+            <SettingsProvider>
+              <TemplateProvider>
+                <App />
+              </TemplateProvider>
+            </SettingsProvider>
           </UserAuthContextProvider>
         </BrowserRouter>
       </GoogleOAuthProvider>

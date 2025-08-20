@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getGeminiApiKey, saveGeminiApiKey, removeGeminiApiKey, getGeminiModel, saveGeminiModel } from '../utils/geminiCredentials';
+import { useSettings } from '../context/SettingsContext';
 import geminiAPI from '../utils/geminiAPI';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Alert, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { Visibility, VisibilityOff, InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
@@ -7,41 +7,27 @@ import { toast } from 'sonner';
 import GeminiInfobox from './GeminiInfobox';
 
 const GeminiAuthSetup = () => {
-  const [apiKey, setApiKey] = useState('');
-  const [currentStoredKey, setCurrentStoredKey] = useState(null);
+  const { settings, updateSetting } = useSettings();
   const [showKey, setShowKey] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('gemini-2.5-pro');
   const [error, setError] = useState('');
   const [showInfobox, setShowInfobox] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
 
-  useEffect(() => {
-    const storedKey = getGeminiApiKey();
-    const storedModel = getGeminiModel();
-    setCurrentStoredKey(storedKey);
-    setApiKey(storedKey || '');
-    if (storedModel) {
-      setSelectedModel(storedModel);
-    }
-    setError('');
-  }, []);
+  const apiKey = settings.gemini_api_key || '';
+  const selectedModel = settings.gemini_model || 'gemini-1.5-pro-latest';
 
-  const handleSave = () => {
-    if (apiKey.trim()) {
-      saveGeminiApiKey(apiKey.trim());
-      saveGeminiModel(selectedModel);
-      setCurrentStoredKey(apiKey.trim());
-      toast.success('Configurações da API Gemini salvas com sucesso!');
-    } else {
-      setError('Por favor, insira uma chave da API Gemini válida.');
-    }
+  const handleApiKeyChange = (e) => {
+    updateSetting('gemini_api_key', e.target.value);
+    if (error) setError('');
+  };
+
+  const handleModelChange = (e) => {
+    updateSetting('gemini_model', e.target.value);
   };
 
   const handleRemove = () => {
-    removeGeminiApiKey();
-    setCurrentStoredKey(null);
-    setApiKey('');
+    updateSetting('gemini_api_key', '');
     toast.info('Chave da API Gemini removida.');
   };
 
@@ -87,13 +73,13 @@ const GeminiAuthSetup = () => {
           Insira sua chave da API Gemini (Google AI Studio). Esta chave será armazenada localmente no seu navegador.
         </Typography>
 
-        {currentStoredKey && (
+        {apiKey && (
           <Typography variant="caption" color="textSecondary" gutterBottom>
-            Chave atual configurada: {getMaskedKey(currentStoredKey)}
+            Chave atual configurada: {getMaskedKey(apiKey)}
           </Typography>
         )}
 
-        <Box sx={{ display: 'flex', alignItems: 'center', mt: currentStoredKey ? 1 : 2, mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mt: apiKey ? 1 : 2, mb: 2 }}>
           <TextField
             autoFocus
             margin="dense"
@@ -103,10 +89,7 @@ const GeminiAuthSetup = () => {
             fullWidth
             variant="outlined"
             value={apiKey}
-            onChange={(e) => {
-              setApiKey(e.target.value);
-              if (error) setError('');
-            }}
+            onChange={handleApiKeyChange}
             placeholder="Sua chave da API Gemini..."
           />
           <IconButton onClick={toggleShowKey} edge="end" sx={{ ml: 1 }}>
@@ -121,7 +104,7 @@ const GeminiAuthSetup = () => {
                 id="gemini-model-select"
                 value={selectedModel}
                 label="Modelo Gemini"
-                onChange={(e) => setSelectedModel(e.target.value)}
+                onChange={handleModelChange}
             >
                 <MenuItem value="gemini-1.5-pro-latest">Gemini 1.5 Pro (latest)</MenuItem>
                 <MenuItem value="gemini-1.5-flash-latest">Gemini 1.5 Flash (latest)</MenuItem>
@@ -138,14 +121,11 @@ const GeminiAuthSetup = () => {
             {isTesting ? 'Testando...' : 'Testar Conexão'}
           </Button>
           <Box>
-            {currentStoredKey && (
+            {apiKey && (
               <Button onClick={handleRemove} color="error">
                 Remover
               </Button>
             )}
-            <Button onClick={handleSave} variant="contained" sx={{ ml: 1 }}>
-              Salvar
-            </Button>
           </Box>
         </Box>
 

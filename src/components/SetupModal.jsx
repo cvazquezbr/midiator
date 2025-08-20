@@ -30,14 +30,13 @@ import {
 import { toast } from 'sonner';
 
 import { IANA_TIMEZONES } from '../lib/timezones';
-import { saveTimezone, getTimezone } from '../utils/timezone';
 import GeminiAuthSetup from './GeminiAuthSetup';
 import GoogleCloudTTSAuth from './GoogleCloudTTSAuth';
 import WordpressAuthSetup from './WordpressAuthSetup';
 import LinkedinAuthSetup from './LinkedinAuthSetup';
 
 // The old file-based manager is replaced with the new DB-based one.
-import { saveSettingsToDb } from '../utils/credentialsManager';
+import { useSettings } from '../context/SettingsContext';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -61,12 +60,12 @@ function TabPanel(props) {
 }
 
 const GeneralSettings = () => {
-  const [timezone, setTimezone] = useState(() => getTimezone() || 'UTC');
+  const { settings, updateSetting } = useSettings();
+  const timezone = settings.user_timezone || 'UTC';
 
   const handleTimezoneChange = (event) => {
     const newTimezone = event.target.value;
-    setTimezone(newTimezone);
-    saveTimezone(newTimezone);
+    updateSetting('user_timezone', newTimezone);
     toast.info(`Timezone set to ${newTimezone}. This will be saved with your other settings.`);
   };
 
@@ -98,25 +97,21 @@ const GeneralSettings = () => {
 };
 
 
-const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect, linkedinConfig, setLinkedinConfig }) => {
+const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
   const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
-  const [isSaving, setIsSaving] = useState(false);
+  const { saveSettings, isLoading } = useSettings();
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
     try {
-      await saveSettingsToDb();
-      toast.success('Settings saved successfully to your account!');
+      await saveSettings();
       onClose();
     } catch (error) {
-      toast.error(`Failed to save settings: ${error.message}`);
-    } finally {
-      setIsSaving(false);
+      // Error is already toasted in the context
     }
   };
 
@@ -166,7 +161,7 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect, linkedinConfig, s
           <WordpressAuthSetup />
         </TabPanel>
         <TabPanel value={value} index={4}>
-          <LinkedinAuthSetup onBeforeRedirect={onBeforeLinkedinRedirect} linkedinConfig={linkedinConfig} setLinkedinConfig={setLinkedinConfig} />
+          <LinkedinAuthSetup onBeforeRedirect={onBeforeLinkedinRedirect} />
         </TabPanel>
       </DialogContent>
       <DialogActions>
