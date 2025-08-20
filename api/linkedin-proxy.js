@@ -352,10 +352,9 @@ async function handleGetProfiles(request, response) {
   };
 
   try {
-    // Fetch personal profile and organization pages in parallel
-    const [personalResponse, organizationsResponse] = await Promise.all([
+    const [personalResponse, orgAclsResponse] = await Promise.all([
       fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
-      fetch('https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&projection=(elements*(organization~(id,name,localizedName,logoV2),role))', { headers })
+      fetch('https://api.linkedin.com/v2/organizationAcls?q=roleAssignee', { headers })
     ]);
 
     if (!personalResponse.ok) {
@@ -372,26 +371,36 @@ async function handleGetProfiles(request, response) {
     };
 
     let organizations = [];
-    if (organizationsResponse.ok) {
-      const orgData = await organizationsResponse.json();
-      organizations = orgData.elements?.map(element => {
-        const organizationData = element['organization~'];
-        const orgNameObject = organizationData?.name;
+    if (orgAclsResponse.ok) {
+      const orgAclsData = await orgAclsResponse.json();
+      const orgUrns = orgAclsData.elements?.map(el => el.organization) || [];
+      const orgIds = orgUrns.map(urn => urn.split(':').pop());
 
-        const orgName = organizationData?.localizedName ||
-                      (orgNameObject && orgNameObject.localized && (orgNameObject.localized.pt_BR || orgNameObject.localized.en_US)) ||
-                      'Nome da Página Indisponível';
-        return {
-            id: organizationData?.id,
-            name: orgName,
-            role: element.role,
-            logo: organizationData?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
-            type: 'organization'
-        };
-      }) || [];
+      if (orgIds.length > 0) {
+        const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
+        const batchOrgResponse = await fetch(batchOrgUrl, { headers });
+
+        if (batchOrgResponse.ok) {
+          const batchOrgData = await batchOrgResponse.json();
+          organizations = orgAclsData.elements.map(acl => {
+            const orgId = acl.organization.split(':').pop();
+            const orgDetails = batchOrgData.results[orgId];
+            const orgName = orgDetails?.localizedName || orgDetails?.name?.localized?.en_US || 'Nome da Página Indisponível';
+
+            return {
+              id: orgId,
+              name: orgName,
+              role: acl.role,
+              logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
+              type: 'organization'
+            };
+          });
+        } else {
+          console.warn('Could not fetch batch organization details:', batchOrgResponse.status);
+        }
+      }
     } else {
-      // It's not a critical error if the user has no company pages or permissions.
-      console.warn('Could not fetch organization pages:', organizationsResponse.status);
+      console.warn('Could not fetch organization ACLs:', orgAclsResponse.status);
     }
 
     return response.status(200).json({
