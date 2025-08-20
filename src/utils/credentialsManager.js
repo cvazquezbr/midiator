@@ -89,7 +89,13 @@ export const applySettings = (settings) => {
     saveGeminiModel(settings[CREDENTIAL_KEYS.GEMINI_MODEL]);
   }
   if (settings[CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL]) {
-    saveGeminiImageModel(settings[CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL]);
+    const validImageModels = ['gemini-2.0-flash-preview-image-generation'];
+    if (validImageModels.includes(settings[CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL])) {
+      saveGeminiImageModel(settings[CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL]);
+    } else {
+      // If the saved model is invalid (e.g., old 'imagen-3'), save the default valid one.
+      saveGeminiImageModel('gemini-2.0-flash-preview-image-generation');
+    }
   }
 };
 
