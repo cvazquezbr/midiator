@@ -116,8 +116,24 @@ class GeminiAPI {
               text: promptString
             }]
           }],
-          // generationConfig is optional; the model can infer the desired output
-          // from a well-crafted prompt. Removing it to simplify the request.
+          safetySettings: [
+            {
+              category: 'HARM_CATEGORY_HARASSMENT',
+              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+            },
+            {
+              category: 'HARM_CATEGORY_HATE_SPEECH',
+              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+            },
+            {
+              category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+            },
+            {
+              category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+            },
+          ],
         }),
       });
 
@@ -131,13 +147,23 @@ class GeminiAPI {
       const responseData = await response.json();
       console.log(`[${purpose}] Resposta da API de Imagem Gemini (bruta):`, responseData);
 
+      // Check for prompt feedback which indicates a safety block
+      if (responseData.promptFeedback && responseData.promptFeedback.blockReason) {
+        const blockReason = responseData.promptFeedback.blockReason;
+        const safetyRatings = responseData.promptFeedback.safetyRatings;
+        console.error(`[${purpose}] A solicitação foi bloqueada pela API Gemini. Razão: ${blockReason}`);
+        console.error(`[${purpose}] Detalhes de Segurança:`, safetyRatings);
+        throw new Error(`A geração de imagem foi bloqueada por questões de segurança: ${blockReason}. Verifique o conteúdo do seu prompt.`);
+      }
+
       const imagePart = responseData.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
       if (imagePart) {
         console.log(`[${purpose}] Imagem Base64 recebida (tamanho: ${imagePart.inlineData.data.length} bytes).`);
         return imagePart.inlineData.data;
       } else {
-        console.error('Formato de resposta inesperado da API Gemini (Imagem):', responseData);
-        throw new Error('Nenhuma imagem foi retornada pela API.');
+        // This case handles when there are no candidates, but it wasn't explicitly blocked.
+        console.error('Formato de resposta inesperado da API Gemini (Imagem). Nenhum candidato ou parte de imagem encontrada:', responseData);
+        throw new Error('Nenhuma imagem foi retornada pela API. A resposta não continha dados de imagem.');
       }
     } catch (error) {
       console.error('Erro ao chamar a API de imagem Gemini:', error);
