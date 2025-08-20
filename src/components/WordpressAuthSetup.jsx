@@ -14,79 +14,27 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
-import {
-  saveWordpressConfig,
-  getWordpressConfig,
-  removeWordpressConfig,
-} from '../utils/wordpressCredentials';
+import { useSettings } from '../context/SettingsContext';
 import WordpressInfobox from './WordpressInfobox';
 
 const WordpressAuthSetup = () => {
-  const [config, setConfig] = useState({
-    username: '',
-    password: '',
-    wordpressUrl: '',
-    tagsUrl: '/wp-json/wp/v2/tags',
-    mediaUrl: '/wp-json/wp/v2/media',
-    postsUrl: '/wp-json/wp/v2/posts',
-  });
-  const [currentConfig, setCurrentConfig] = useState(null);
+  const { settings, updateSetting } = useSettings();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isTesting, setIsTesting] = useState(false);
   const [showInfobox, setShowInfobox] = useState(false);
 
-  useEffect(() => {
-    const storedConfig = getWordpressConfig();
-    const initialConfig = {
-      username: '',
-      password: '',
-      wordpressUrl: '',
-      tagsUrl: '/wp-json/wp/v2/tags',
-      mediaUrl: '/wp-json/wp/v2/media',
-      postsUrl: '/wp-json/wp/v2/posts',
-    };
-
-    if (storedConfig) {
-      setCurrentConfig(storedConfig);
-      setConfig({ ...initialConfig, ...storedConfig });
-    } else {
-      setCurrentConfig(null);
-      setConfig(initialConfig);
-    }
-    setError('');
-  }, []);
+  const wordpressConfig = settings.wordpress || {};
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setConfig((prevConfig) => ({
-      ...prevConfig,
-      [name]: value,
-    }));
+    const newWordpressConfig = { ...wordpressConfig, [name]: value };
+    updateSetting('wordpress', newWordpressConfig);
     if (error) setError('');
   };
 
-  const handleSave = () => {
-    if (config.username.trim() && config.password.trim() && config.wordpressUrl.trim()) {
-      saveWordpressConfig(config);
-      setCurrentConfig(config);
-      toast.success('Configuração do WordPress salva com sucesso!');
-    } else {
-      setError('Por favor, preencha a URL, o nome de usuário e a senha de aplicação.');
-    }
-  };
-
   const handleRemove = () => {
-    removeWordpressConfig();
-    setCurrentConfig(null);
-    setConfig({
-      username: '',
-      password: '',
-      wordpressUrl: '',
-      tagsUrl: '/wp-json/wp/v2/tags',
-      mediaUrl: '/wp-json/wp/v2/media',
-      postsUrl: '/wp-json/wp/v2/posts',
-    });
+    updateSetting('wordpress', {});
     toast.info('Configuração do WordPress removida.');
   };
 
@@ -146,9 +94,9 @@ const WordpressAuthSetup = () => {
           Insira suas credenciais e URLs de endpoints do WordPress. A senha de aplicação será armazenada localmente no seu navegador.
         </Typography>
 
-        {currentConfig && (
+        {wordpressConfig.wordpressUrl && (
           <Typography variant="caption" color="textSecondary" gutterBottom>
-            Configuração atual salva para o site: {currentConfig.wordpressUrl}
+            Configuração atual salva para o site: {wordpressConfig.wordpressUrl}
           </Typography>
         )}
 
@@ -157,7 +105,7 @@ const WordpressAuthSetup = () => {
                 <TextField
                     name="wordpressUrl"
                     label="URL do WordPress"
-                    value={config.wordpressUrl}
+                    value={wordpressConfig.wordpressUrl || ''}
                     onChange={handleChange}
                     fullWidth
                     required
@@ -169,7 +117,7 @@ const WordpressAuthSetup = () => {
                 <TextField
                     name="username"
                     label="Nome de usuário do WordPress"
-                    value={config.username}
+                    value={wordpressConfig.username || ''}
                     onChange={handleChange}
                     fullWidth
                     required
@@ -182,7 +130,7 @@ const WordpressAuthSetup = () => {
                         name="password"
                         label="Senha de Aplicação"
                         type={showPassword ? 'text' : 'password'}
-                        value={config.password}
+                        value={wordpressConfig.password || ''}
                         onChange={handleChange}
                         fullWidth
                         required
@@ -203,7 +151,7 @@ const WordpressAuthSetup = () => {
                 <TextField
                     name="tagsUrl"
                     label="URL para incluir tag"
-                    value={config.tagsUrl}
+                    value={wordpressConfig.tagsUrl || '/wp-json/wp/v2/tags'}
                     onChange={handleChange}
                     fullWidth
                     variant="outlined"
@@ -213,7 +161,7 @@ const WordpressAuthSetup = () => {
                 <TextField
                     name="mediaUrl"
                     label="URL para subir mídia"
-                    value={config.mediaUrl}
+                    value={wordpressConfig.mediaUrl || '/wp-json/wp/v2/media'}
                     onChange={handleChange}
                     fullWidth
                     variant="outlined"
@@ -223,7 +171,7 @@ const WordpressAuthSetup = () => {
                 <TextField
                     name="postsUrl"
                     label="URL para enviar post"
-                    value={config.postsUrl}
+                    value={wordpressConfig.postsUrl || '/wp-json/wp/v2/posts'}
                     onChange={handleChange}
                     fullWidth
                     variant="outlined"
@@ -239,14 +187,11 @@ const WordpressAuthSetup = () => {
             {isTesting ? 'Testando...' : 'Testar Conexão'}
           </Button>
           <Box>
-            {currentConfig && (
+            {wordpressConfig.wordpressUrl && (
               <Button onClick={handleRemove} color="error">
                 Remover
               </Button>
             )}
-            <Button onClick={handleSave} variant="contained" sx={{ ml: 1 }}>
-              Salvar
-            </Button>
           </Box>
         </Box>
       </Box>
