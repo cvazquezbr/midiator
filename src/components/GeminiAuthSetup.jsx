@@ -14,6 +14,7 @@ const GeminiAuthSetup = () => {
   const [error, setError] = useState('');
   const [showInfobox, setShowInfobox] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
 
   useEffect(() => {
     const storedKey = getGeminiApiKey();
@@ -46,20 +47,19 @@ const GeminiAuthSetup = () => {
 
   const handleTestConnection = async () => {
     const trimmedApiKey = apiKey.trim();
+    setTestResult(null);
     if (!trimmedApiKey) {
-      toast.error('Por favor, insira uma chave de API para testar.');
-      return;
+        setTestResult({ severity: 'error', message: 'Por favor, insira uma chave de API para testar.' });
+        return;
     }
     setIsTesting(true);
     try {
-      // Initialize the API with the provided key for the test
       geminiAPI.initialize(trimmedApiKey);
-      // Perform a test call
       await geminiAPI.generateContent('Diga "Olá, mundo!" em português.');
-      toast.success('Conexão com a API Gemini bem-sucedida!');
+      setTestResult({ severity: 'success', message: 'Conexão com a API Gemini bem-sucedida!' });
     } catch (err) {
       console.error('Erro no teste de conexão com Gemini:', err);
-      toast.error(`Falha na conexão: ${err.message}`);
+      setTestResult({ severity: 'error', message: `Falha na conexão: ${err.message}` });
     } finally {
       setIsTesting(false);
     }
@@ -148,6 +148,12 @@ const GeminiAuthSetup = () => {
             </Button>
           </Box>
         </Box>
+
+        {testResult && (
+            <Alert severity={testResult.severity} sx={{ mt: 2 }}>
+                {testResult.message}
+            </Alert>
+        )}
       </Box>
 
       <Dialog open={showInfobox} onClose={() => setShowInfobox(false)} fullWidth maxWidth="lg">
