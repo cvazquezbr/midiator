@@ -7,10 +7,7 @@
   ],
   "functions": {
     "api/**/*.js": {
-      "includeFiles": [
-        "package.json",
-        "package-lock.json"
-      ]
+      "includeFiles": "package*.json"
     }
   }
 }
