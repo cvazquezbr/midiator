@@ -108,13 +108,13 @@ export const serializeCampaignData = async (state, setProgress) => {
 
     let newBackgroundImageUrl = state.backgroundImage;
     if (state.backgroundImage && (state.backgroundImage.startsWith('blob:') || state.backgroundImage.startsWith('data:'))) {
-      newBackgroundImageUrl = await uploadAsset(state.backgroundImage, 'background_image');
+      newBackgroundImageUrl = await uploadAsset(state.backgroundImage, 'background_image.png');
       updateProgress();
     }
 
     let newGeneratedImageUrl = state.generatedImageUrl;
     if (state.generatedImageUrl && (state.generatedImageUrl.startsWith('blob:') || state.generatedImageUrl.startsWith('data:'))) {
-      newGeneratedImageUrl = await uploadAsset(state.generatedImageUrl, 'generated_campaign_image');
+      newGeneratedImageUrl = await uploadAsset(state.generatedImageUrl, 'generated_campaign_image.png');
       updateProgress();
     }
 
