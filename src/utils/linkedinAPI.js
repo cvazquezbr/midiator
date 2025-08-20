@@ -1,5 +1,3 @@
-import { getLinkedinConfig } from './linkedinCredentials';
-
 // Helper to convert Blob to Base64
 const blobToBase64 = (blob) => new Promise((resolve, reject) => {
     const reader = new FileReader();
