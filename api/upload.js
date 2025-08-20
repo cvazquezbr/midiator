@@ -1,4 +1,4 @@
-import { handleUpload } from '@vercel/blob/server';
+import { handleUpload } from '@vercel/blob';
 import { withAuth } from './middleware/auth.js';
 
 const handler = async (req, res) => {
