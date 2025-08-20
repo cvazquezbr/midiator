@@ -105,7 +105,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
 
       const redirectUri = window.location.origin;
       const scope = encodeURIComponent('r_basicprofile w_member_social w_organization_social rw_organization_admin');
-      const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
+      const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&prompt=select_account`;
       window.location.href = authUrl;
     } else {
       setError('O Client ID do LinkedIn não está configurado no servidor.');
@@ -201,7 +201,10 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <Typography variant="body2" gutterBottom>
-                Clique no botão "Salvar e Conectar" para autorizar a aplicação a postar em seu nome.
+                Clique no botão "Conectar" para autorizar a aplicação a postar em seu nome.
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                Para conectar com uma conta diferente, primeiro saia do LinkedIn no seu navegador.
               </Typography>
             </Grid>
           </Grid>
@@ -226,7 +229,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
               </Button>
             ) : (
               <Button onClick={handleConnect} variant="contained">
-                Salvar e Conectar
+                Conectar
               </Button>
             )}
           </Box>
