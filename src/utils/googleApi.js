@@ -36,9 +36,11 @@ const fetchWithRefresh = async (url, options, accessToken, setAccessToken) => {
             response = await fetch(url, newOptions);
         } catch (error) {
             console.error('Token refresh failed:', error);
-            // Optionally, force the user to log out or re-authenticate
-            window.location.href = '/login'; // Or show a modal
-            throw error;
+            // Forcing a redirect here causes the entire app to crash if a component
+            // is in the middle of a state update. It's better to let the error
+            // bubble up to the calling component, which can handle it gracefully.
+            // window.location.href = '/login';
+            throw new Error(`Sua sessão com o Google expirou. Por favor, renove a conexão nas configurações. Detalhes: ${error.message}`);
         }
     }
 

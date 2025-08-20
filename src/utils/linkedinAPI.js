@@ -245,7 +245,7 @@ const _createPost = async (accessToken, authorUrn, campaignContent, assetUrns = 
   return await response.json();
 };
 
-export const getLinkedInProfiles = async (forceRefresh = false) => {
+export const getLinkedInProfiles = async (linkedinConfig, forceRefresh = false) => {
   const cacheKey = 'linkedin_profiles_cache';
 
   if (forceRefresh) {
@@ -266,11 +266,10 @@ export const getLinkedInProfiles = async (forceRefresh = false) => {
   }
 
   console.log('Fetching fresh LinkedIn profiles from API.');
-  const config = getLinkedinConfig();
-  if (!config || !config.accessToken) {
+  if (!linkedinConfig || !linkedinConfig.accessToken) {
     throw new Error('LinkedIn configuration or Access Token not found. Please connect first.');
   }
-  const { accessToken } = config;
+  const { accessToken } = linkedinConfig;
 
   const response = await fetch('/api/linkedin-proxy', {
     method: 'POST',
@@ -294,13 +293,12 @@ export const getLinkedInProfiles = async (forceRefresh = false) => {
   return profiles;
 };
 
-export const publishToLinkedIn = async (campaignData) => {
+export const publishToLinkedIn = async (campaignData, linkedinConfig) => {
   const { campaignContent, imageBlobs = [], videoBlob, authorUrn: providedAuthorUrn } = campaignData;
-  const config = getLinkedinConfig();
-  if (!config || !config.accessToken) {
+  if (!linkedinConfig || !linkedinConfig.accessToken) {
     throw new Error('LinkedIn configuration or Access Token not found. Please connect first.');
   }
-  const { accessToken } = config;
+  const { accessToken } = linkedinConfig;
 
   const authorUrn = providedAuthorUrn || await _getProfileUrn(accessToken);
 
