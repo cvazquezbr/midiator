@@ -4,5 +4,13 @@
       "path": "/api/schedule",
       "schedule": "0 8-23 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "api/**/*.js": {
+      "includeFiles": [
+        "package.json",
+        "package-lock.json"
+      ]
+    }
+  }
 }
