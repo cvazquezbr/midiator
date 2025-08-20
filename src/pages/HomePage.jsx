@@ -135,6 +135,10 @@ function HomePage() {
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
 
+  // Use a ref to hold the latest campaignContent to avoid stale state in callbacks.
+  const campaignContentRef = useRef(campaignContent);
+  campaignContentRef.current = campaignContent;
+
   const getAppState = () => ({ activeStep, darkMode, sidebarOpen, csvData, csvHeaders, backgroundImage, colorPalette, standardsColors, problema, solucao, campaignContent, persona, autor, instrucoes, formato, aspectRatio, generatedImageUrl, conteudoMedio, conteudoPequeno, followupPosts, followupPostsQuantity, isScheduled, scheduleDate, weeklySchedule, selectedProfile, selectedImages, selectedVideos, inputMethod, promptNumRecords, promptText, fieldPositions, fieldStyles, displayedImageSize, originalImageSize, generatedImagesData, generatedAudioData, generatedVideosData, imageFilters, brandElements });
   const applyAppState = (state) => {
     if (!state) return;
@@ -433,14 +437,15 @@ function HomePage() {
       setIsGeneratingCampaign(false);
     }
   };
-  const handleGenerateImage = useCallback(async (content = campaignContent) => {
-    if (!content) {
+  const handleGenerateImage = useCallback(async (content) => {
+    const finalContent = content || campaignContentRef.current;
+    if (!finalContent) {
       toast.error("Por favor, gere o conteúdo do texto primeiro.");
       return false;
     }
     setIsGeneratingImage(true);
     try {
-      const imageUrl = await generateCampaignImage({ content, aspectRatio });
+      const imageUrl = await generateCampaignImage({ content: finalContent, aspectRatio });
       setGeneratedImageUrl(imageUrl);
       updateImageAndPalette(imageUrl);
       return true;
@@ -451,7 +456,7 @@ function HomePage() {
     } finally {
       setIsGeneratingImage(false);
     }
-  }, [campaignContent, aspectRatio, updateImageAndPalette]);
+  }, [aspectRatio, updateImageAndPalette]);
   const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
   const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
   const handleGenerateFollowupPosts = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingFollowup(true); try { const plan = await generateFollowupPlan({ content, followupPostsQuantity }); const posts = await generateFollowupPosts({ content, plan }); setFollowupPosts(posts); } catch (error) { toast.error(`Ocorreu um erro ao gerar os posts de follow-up: ${error.message}`); } finally { setIsGeneratingFollowup(false); } };
