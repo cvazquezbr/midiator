@@ -3,9 +3,10 @@ import {
   Box, Typography, Button, CircularProgress, Alert, Grid, Card,
   CardActionArea, CardMedia
 } from '@mui/material';
-import { Refresh } from '@mui/icons-material';
+import { Refresh, Upload } from '@mui/icons-material';
 import { useUserAuth } from '../context/UserAuthContext';
 import { findFolderByName, listFiles, getFileAsBlob } from '../utils/googleApi';
+import { toast } from 'sonner';
 
 const BrandElementManager = ({ onElementSelect }) => {
   const [images, setImages] = useState([]);
@@ -13,6 +14,7 @@ const BrandElementManager = ({ onElementSelect }) => {
   const [error, setError] = useState(null);
   const [loadingImageId, setLoadingImageId] = useState(null);
   const { googleAccessToken } = useUserAuth();
+  const fileInputRef = React.useRef(null);
 
   const fetchBrandElements = useCallback(async () => {
     if (!googleAccessToken) {
@@ -83,9 +85,69 @@ const BrandElementManager = ({ onElementSelect }) => {
     }
   };
 
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageUrl = e.target.result;
+      const img = new Image();
+      img.onload = () => {
+        const MAX_RESOLUTION = 1920;
+        if (img.width > MAX_RESOLUTION || img.height > MAX_RESOLUTION) {
+          toast.error(`A imagem excede a resolução máxima de ${MAX_RESOLUTION}px. Por favor, escolha uma imagem menor.`);
+          // Reset the file input so the user can select the same file again if they want
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+          return;
+        }
+
+        const newElement = {
+          id: `brand_${new Date().getTime()}`,
+          url: imageUrl,
+          x: 10, y: 10,
+          width: 20, height: (img.height / img.width) * 20, // Maintain aspect ratio
+          rotation: 0,
+          filters: {
+            brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100,
+          }
+        };
+        onElementSelect(newElement);
+        toast.success("Imagem adicionada com sucesso!");
+
+        // Reset the file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      };
+      img.onerror = () => {
+        toast.error("Ocorreu um erro ao carregar o arquivo de imagem.");
+      };
+      img.src = imageUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Button
+          onClick={() => fileInputRef.current && fileInputRef.current.click()}
+          startIcon={<Upload />}
+          size="small"
+          variant="contained"
+        >
+          Upload
+          <input
+            type="file"
+            ref={fileInputRef}
+            hidden
+            accept="image/png, image/jpeg"
+            onChange={handleFileUpload}
+          />
+        </Button>
         <Button onClick={fetchBrandElements} disabled={isLoading || !googleAccessToken} startIcon={<Refresh />} size="small">
           Atualizar
         </Button>
