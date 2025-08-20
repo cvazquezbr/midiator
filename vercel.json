@@ -4,5 +4,10 @@
       "path": "/api/schedule",
       "schedule": "0 8-23 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "api/upload.js": {
+      "includeFiles": "api/node_modules/@vercel/blob/**"
+    }
+  }
 }
