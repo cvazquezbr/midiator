@@ -246,6 +246,12 @@ function HomePage() {
   }, [isMobile]);
 
   useEffect(() => {
+    if (linkedinConfig) {
+        setShowSetupModal(true);
+    }
+  }, [linkedinConfig]);
+
+  useEffect(() => {
     if (activeStep === 1 && campaignContent) {
       const { titulo, conteudo, cta } = campaignContent;
       setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
@@ -284,8 +290,6 @@ function HomePage() {
             saveLinkedinConfig(newConfig);
             setLinkedinConfig(newConfig);
             toast.success('Conexão com o LinkedIn estabelecida com sucesso!');
-            // Optionally, trigger a refresh of the settings view
-            setShowSetupModal(true);
           } else {
             throw new Error(data.error || 'Falha na troca de token do LinkedIn.');
           }
