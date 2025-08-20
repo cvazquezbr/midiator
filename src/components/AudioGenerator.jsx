@@ -32,7 +32,7 @@ import {
   Speed
 } from '@mui/icons-material';
 import googleCloudTTSAPI from '../utils/googleCloudTTSAPI';
-import { getGoogleCloudTTSCredentials } from '../utils/googleCloudTTSCredentials';
+import { useSettings } from '../context/SettingsContext';
 import ProgressModal from './ProgressModal';
 
 const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAudioData }) => {
@@ -44,6 +44,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
   const [speechRate, setSpeechRate] = useState(1.0); // Nova state para velocidade
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
+  const { settings } = useSettings();
   const currentTrackIndexRef = useRef(0);
   const audioRef = useRef(null);
   const isCancelledRef = useRef(false);
@@ -55,15 +56,22 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
   // Initialize the Google Cloud TTS API when the component mounts or mode changes
   useEffect(() => {
     if (audioMode.startsWith('google-tts')) {
-      const credentials = getGoogleCloudTTSCredentials();
-      if (credentials) {
-        googleCloudTTSAPI.initialize(credentials);
+      const credsString = settings.googleCloudTTSCredentials;
+      if (credsString) {
+        try {
+          const credentials = JSON.parse(credsString);
+          googleCloudTTSAPI.initialize(credentials);
+        } catch (error) {
+          console.error("Falha ao analisar as credenciais do Google Cloud TTS a partir das configurações:", error);
+          // Optionally, you could show a toast or an alert here
+        }
       } else {
-        // This could be improved with a user-facing error message
-        console.error("Credenciais do Google Cloud TTS não encontradas para inicialização.");
+        // This is not necessarily an error, the user might not have set them up yet.
+        // The error will be thrown when they try to generate.
+        console.log("Credenciais do Google Cloud TTS não configuradas.");
       }
     }
-  }, [audioMode]);
+  }, [audioMode, settings.googleCloudTTSCredentials]);
 
   const generateAudioBrowser = async (text, rate = 1.0) => {
     return new Promise((resolve, reject) => {
@@ -114,14 +122,27 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
   };
 
   const generateAudioGoogleTTS = async (text, voice, rate = 1.0) => {
+    // Always check for initialization before generating.
     if (!googleCloudTTSAPI.isInitialized) {
-       const credentials = getGoogleCloudTTSCredentials();
-       if(credentials){
-        googleCloudTTSAPI.initialize(credentials);
-       }else{
-         throw new Error('Credenciais do Google Cloud TTS não configuradas ou API não inicializada.');
-       }
+      const credsString = settings.googleCloudTTSCredentials;
+      if (credsString) {
+        try {
+          const credentials = JSON.parse(credsString);
+          googleCloudTTSAPI.initialize(credentials);
+        } catch (error) {
+          console.error("Falha ao analisar as credenciais do Google Cloud TTS a partir das configurações:", error);
+          throw new Error('As credenciais do Google Cloud TTS salvas são inválidas. Por favor, verifique-as na tela de configuração.');
+        }
+      } else {
+        throw new Error('Credenciais do Google Cloud TTS não configuradas. Por favor, adicione-as na tela de configuração.');
+      }
     }
+
+    if (!googleCloudTTSAPI.isInitialized) {
+      // This is a fallback check, in case initialization failed silently before.
+      throw new Error('A API do Google Cloud TTS não pôde ser inicializada. Verifique as credenciais.');
+    }
+
     const cleanText = removeFormatting(text);
     
     // A velocidade é passada para o método synthesize
