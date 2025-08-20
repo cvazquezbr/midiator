@@ -1,100 +1,123 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { getLinkedInProfiles } from '../utils/linkedinAPI';
 import {
+  Alert,
   Box,
   Typography,
-  Stepper,
-  Step,
-  StepLabel,
-  StepContent,
-  Link,
+  CircularProgress,
   Paper,
-  Alert,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Avatar,
+  Chip
 } from '@mui/material';
+import { Person, Business } from '@mui/icons-material';
 
-const steps = [
-  {
-    label: 'Acesse o LinkedIn Developer Portal',
-    description: (
-      <Typography variant="body2">
-        Abra o{' '}
-        <Link href="https://www.linkedin.com/developers/apps/" target="_blank" rel="noopener noreferrer" sx={{ color: '#90caf9' }}>
-          LinkedIn Developer Portal
-        </Link>{' '}
-        e faça login com sua conta do LinkedIn.
-      </Typography>
-    ),
-  },
-  {
-    label: 'Crie um Novo Aplicativo (App)',
-    description: (
-        <>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-                Clique em <b>"Create app"</b>. Preencha as informações do aplicativo, como nome, empresa associada e logo.
-            </Typography>
-            <Alert severity="info">
-                Você precisará ter uma página de empresa (Company Page) no LinkedIn para associar ao aplicativo.
-            </Alert>
-        </>
-    ),
-  },
-  {
-    label: 'Configure os Produtos (Products)',
-    description: (
-      <Typography variant="body2">
-        Na aba <b>"Products"</b> do seu aplicativo, solicite acesso aos produtos necessários. Para o Midiator, você provavelmente precisará de:
-        <ul>
-            <li><b>Sign In with LinkedIn</b></li>
-            <li><b>Share on LinkedIn</b></li>
-        </ul>
-        Pode ser necessário aguardar a aprovação do LinkedIn para alguns produtos.
-      </Typography>
-    ),
-  },
-  {
-    label: 'Configure a Autenticação (Auth)',
-    description: (
-      <>
-        <Typography variant="body2" sx={{ mb: 2 }}>
-          Na aba <b>"Auth"</b>, você encontrará seu <b>Client ID</b>. Copie este valor e cole-o no campo correspondente no Midiator.
-        </Typography>
-        <Typography variant="body2" sx={{ mb: 1 }}>
-          Em <b>"Authorized redirect URIs for your app"</b>, você deve adicionar o endereço exato onde o Midiator está rodando.
-        </Typography>
-        <Paper variant="outlined" sx={{ p: 1, mb: 2, bgcolor: 'background.default' }}>
-            <Typography variant="body2" component="code">{window.location.origin}</Typography>
-        </Paper>
-        <Typography variant="body2">
-          Clique em <b>"Update"</b> para salvar o URI de redirecionamento.
-        </Typography>
-      </>
-    ),
-  },
-];
+const LinkedinInfobox = ({ settings }) => {
+  const [profiles, setProfiles] = useState({
+    personal: null,
+    organizations: [],
+    loading: true,
+    error: null
+  });
 
-const LinkedinInfobox = () => {
-  return (
-    <Box>
-      <Typography variant="h6" gutterBottom>
-        Passo a Passo: Configurando a Integração com LinkedIn
-      </Typography>
-      <Alert severity="info" sx={{ mb: 3 }}>
-        Siga estas instruções para obter o Client ID para a integração com o LinkedIn.
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      if (settings?.linkedin?.accessToken) {
+        try {
+          setProfiles(prev => ({ ...prev, loading: true, error: null }));
+          const data = await getLinkedInProfiles(settings.linkedin);
+          setProfiles({
+            personal: data.personal,
+            organizations: data.organizations || [],
+            loading: false,
+            error: null
+          });
+        } catch (error) {
+          console.error('Erro ao buscar perfis:', error);
+          setProfiles(prev => ({
+            ...prev,
+            loading: false,
+            error: error.message
+          }));
+        }
+      } else {
+        setProfiles(prev => ({ ...prev, loading: false, error: "Token de acesso do LinkedIn não encontrado. Conecte sua conta." }));
+      }
+    };
+
+    fetchProfiles();
+  }, [settings]);
+
+  if (profiles.loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4 }}>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Carregando perfis LinkedIn...</Typography>
+      </Box>
+    );
+  }
+
+  if (profiles.error) {
+    return (
+      <Alert severity="error">
+        Erro ao carregar perfis: {profiles.error}
       </Alert>
-      <Stepper activeStep={-1} orientation="vertical">
-        {steps.map((step) => (
-          <Step key={step.label} active={true}>
-            <StepLabel>
-              <Typography variant="subtitle1">{step.label}</Typography>
-            </StepLabel>
-            <StepContent>
-                <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                    {step.description}
-                </Paper>
-            </StepContent>
-          </Step>
-        ))}
-      </Stepper>
-    </Box>
+    );
+  }
+
+  return (
+    <Paper elevation={1} sx={{ p: 2, background: 'linear-gradient(to right, #eef2f3, #e0eafc)'}}>
+      <Typography variant="h6" sx={{ mb: 2, color: '#0d47a1' }}>
+        Perfis Conectados no LinkedIn
+      </Typography>
+
+      {/* Perfil Pessoal */}
+      {profiles.personal && (
+        <Paper variant="outlined" sx={{ mb: 2, p: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Avatar src={profiles.personal.profilePicture} sx={{ mr: 2, width: 48, height: 48 }}>
+                <Person />
+            </Avatar>
+            <ListItemText
+              primary={profiles.personal.name}
+              secondary="Perfil Pessoal"
+            />
+             <Chip label="Conectado" color="success" size="small" />
+          </Box>
+        </Paper>
+      )}
+
+      {/* Páginas Empresariais */}
+      <Typography variant="subtitle1" sx={{ mt: 3, mb: 1, color: '#1565c0' }}>
+        Páginas Empresariais ({profiles.organizations.length})
+      </Typography>
+
+      {profiles.organizations.length > 0 ? (
+        <List>
+          {profiles.organizations.map((org) => (
+            <ListItem key={org.id} component={Paper} variant="outlined" sx={{ mb: 1, borderRadius: 2 }}>
+                <ListItemIcon>
+                    <Avatar src={org.logo} sx={{ bgcolor: 'primary.main' }}>
+                        <Business />
+                    </Avatar>
+                </ListItemIcon>
+                <ListItemText
+                  primary={org.name}
+                  secondary={`Função: ${org.role || 'Admin'}`}
+                />
+            </ListItem>
+          ))}
+        </List>
+      ) : (
+        <Alert severity="info">
+            Nenhuma página empresarial encontrada ou você não tem permissão para acessá-las.
+            Para gerenciar páginas, você precisa ser administrador no LinkedIn e ter as permissões corretas na sua aplicação de desenvolvedor.
+        </Alert>
+      )}
+    </Paper>
   );
 };
 

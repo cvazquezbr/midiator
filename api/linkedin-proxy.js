@@ -83,7 +83,7 @@ async function handleInitializeVideoUpload(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202406'
+        'LinkedIn-Version': '202507'
       },
       body: JSON.stringify(payload),
     });
@@ -153,7 +153,7 @@ async function handleFinalizeVideoUpload(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202406'
+                'LinkedIn-Version': '202507'
             },
             body: JSON.stringify(payload)
         });
@@ -184,7 +184,7 @@ async function handleCheckVideoStatus(request, response) {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202406'
+                'LinkedIn-Version': '202507'
             }
         });
         if (!linkedinResponse.ok) {
@@ -206,7 +206,7 @@ async function handleGetProfile(request, response) {
         return response.status(400).json({ error: 'Missing accessToken for getProfile.' });
     }
 
-    const profileUrl = 'https://api.linkedin.com/v2/me';
+    const profileUrl = 'https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))';
 
     try {
         const linkedinResponse = await fetch(profileUrl, {
@@ -214,7 +214,7 @@ async function handleGetProfile(request, response) {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
                 'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': '202406'
+                'LinkedIn-Version': '202507'
             },
         });
         const data = await linkedinResponse.json();
@@ -242,7 +242,7 @@ async function handleRegisterUpload(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202406'
+        'LinkedIn-Version': '202507'
       },
       body: JSON.stringify(payload),
     });
@@ -301,9 +301,29 @@ async function handleUploadImage(request, response) {
 async function handleCreatePost(request, response) {
   const { accessToken, payload } = request.body;
 
-  if (!accessToken || !payload) {
-    return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
+  if (!accessToken || !payload || !payload.content || !payload.targetId) {
+    return response.status(400).json({ error: 'Missing parameters for creating post.' });
   }
+
+  const { content, targetId, targetType = 'personal' } = payload;
+
+  const author = targetType === 'organization'
+    ? `urn:li:organization:${targetId}`
+    : `urn:li:person:${targetId}`;
+
+  const postData = {
+    author,
+    lifecycleState: 'PUBLISHED',
+    specificContent: {
+      'com.linkedin.ugc.ShareContent': {
+        shareCommentary: { text: content },
+        shareMediaCategory: 'NONE' // Simplified for now, as per report
+      }
+    },
+    visibility: {
+      'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
+    }
+  };
 
   const createPostUrl = 'https://api.linkedin.com/v2/ugcPosts';
 
@@ -314,9 +334,9 @@ async function handleCreatePost(request, response) {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202406'
+        'LinkedIn-Version': '202507'
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(postData),
     });
 
     const data = await linkedinResponse.json();
@@ -327,82 +347,64 @@ async function handleCreatePost(request, response) {
   }
 }
 
-async function handleGetOrganizations(request, response) {
+async function handleGetProfiles(request, response) {
   const { accessToken } = request.body;
 
   if (!accessToken) {
-    return response.status(400).json({ error: 'Missing accessToken for getOrganizations.' });
+    return response.status(400).json({ error: 'Missing accessToken for getProfiles.' });
   }
 
+  const headers = {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+    'X-Restli-Protocol-Version': '2.0.0',
+    'LinkedIn-Version': '202507'
+  };
+
   try {
-    const profileResponse = await fetch('https://api.linkedin.com/v2/me', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-        'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202406'
-      },
-    });
-    if (!profileResponse.ok) {
-      throw new Error(`Failed to fetch user profile: ${profileResponse.status}`);
-    }
-    const profileData = await profileResponse.json();
-    const profiles = [{
-      urn: `urn:li:person:${profileData.id}`,
-      name: `${profileData.localizedFirstName} ${profileData.localizedLastName} (Pessoal)`,
-    }];
+    // Fetch personal profile and organization pages in parallel
+    const [personalResponse, organizationsResponse] = await Promise.all([
+      fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
+      fetch('https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&projection=(elements*(organization~(id,name,logoV2),role))', { headers })
+    ]);
 
-    const aclsUrl = 'https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED';
-    const aclsHeaders = {
-      'Authorization': `Bearer ${accessToken}`,
-      'X-Restli-Protocol-Version': '2.0.0',
-      'LinkedIn-Version': '202406',
-      'Content-Type': 'application/json'
+    if (!personalResponse.ok) {
+      const errorText = await personalResponse.text();
+      throw new Error(`Failed to fetch personal profile: ${personalResponse.status} - ${errorText}`);
+    }
+
+    const personalData = await personalResponse.json();
+    const personal = {
+      id: personalData.id,
+      name: `${personalData.firstName.localized.en_US} ${personalData.lastName.localized.en_US}`,
+      type: 'personal',
+      profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier
     };
-    const aclsResponse = await fetch(aclsUrl, { headers: aclsHeaders });
 
-    if (!aclsResponse.ok) {
-      const errorBody = await aclsResponse.text();
-      console.warn(`ACLs API failed: ${aclsResponse.status}, body: ${errorBody}`);
-      return response.status(200).json(profiles);
+    let organizations = [];
+    if (organizationsResponse.ok) {
+      const orgData = await organizationsResponse.json();
+      organizations = orgData.elements?.map(element => ({
+        id: element['organization~']?.id,
+        name: element['organization~']?.name,
+        role: element.role,
+        logo: element['organization~']?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
+        type: 'organization'
+      })) || [];
+    } else {
+      // It's not a critical error if the user has no company pages or permissions.
+      console.warn('Could not fetch organization pages:', organizationsResponse.status);
     }
 
-    const aclsData = await aclsResponse.json();
-    const orgIds = (aclsData.elements || []).map(acl => acl.organization).map(urn => urn.split(':')[3]);
-
-    if (orgIds.length === 0) {
-      return response.status(200).json(profiles);
-    }
-
-    const orgDetailsUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
-    const orgDetailsHeaders = {
-        'Authorization': `Bearer ${accessToken}`,
-        'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': '202406',
-        'Content-Type': 'application/json'
-    };
-    const orgDetailsResponse = await fetch(orgDetailsUrl, { headers: orgDetailsHeaders });
-
-    if (!orgDetailsResponse.ok) {
-      const errorBody = await orgDetailsResponse.text();
-      console.warn(`Organizations API failed: ${orgDetailsResponse.status}, body: ${errorBody}`);
-      return response.status(200).json(profiles);
-    }
-
-    const orgDetailsData = await orgDetailsResponse.json();
-
-    Object.values(orgDetailsData.results || {}).forEach(org => {
-      profiles.push({
-        urn: `urn:li:organization:${org.id}`,
-        name: org.localizedName || org.name?.localized?.en_US,
-      });
+    return response.status(200).json({
+      personal,
+      organizations,
+      hasOrganizations: organizations.length > 0
     });
-
-    return response.status(200).json(profiles);
 
   } catch (error) {
-    console.error('Error during proxied getOrganizations:', error);
-    return response.status(500).json({ error: 'Internal Server Error during proxied API call' });
+    console.error('Error in handleGetProfiles:', error);
+    return response.status(500).json({ error: 'Internal Server Error while fetching profiles.' });
   }
 }
 
@@ -500,8 +502,8 @@ const mainHandler = async (request, response) => {
       return handleUploadImage(request, response);
     case 'createPost':
         return handleCreatePost(request, response);
-    case 'getOrganizations':
-        return handleGetOrganizations(request, response);
+    case 'getProfiles':
+        return handleGetProfiles(request, response);
     case 'initializeVideoUpload':
         return handleInitializeVideoUpload(request, response);
     case 'uploadVideo':
