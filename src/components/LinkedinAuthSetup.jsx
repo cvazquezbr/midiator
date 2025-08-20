@@ -26,7 +26,7 @@ import { useUserAuth } from '../context/UserAuthContext';
 import LinkedinInfobox from './LinkedinInfobox';
 
 const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
-  const { googleAccessToken } = useUserAuth();
+  const { googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const [config, setConfig] = useState({ clientId: '', clientSecret: '', folderId: '' });
   const [currentConfig, setCurrentConfig] = useState(null);
   const [isPickerOpen, setPickerOpen] = useState(false);
@@ -312,6 +312,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
         onClose={() => setPickerOpen(false)}
         onSelectFolder={handleSelectFolder}
         googleAccessToken={googleAccessToken}
+        setGoogleAccessToken={setGoogleAccessToken}
       />
 
       <Dialog open={showInfobox} onClose={() => setShowInfobox(false)} fullWidth maxWidth="lg">
