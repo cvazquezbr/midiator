@@ -331,7 +331,7 @@ function HomePage() {
       const normalizedContent = await generateCampaignContent({ problema, solucao });
       setCampaignContent(normalizedContent);
       if (!regenerate) {
-        // Reset dependent states
+        // Reset dependent states for a fresh generation
         setFollowupPosts([]);
         setGeneratedImageUrl(null);
 
