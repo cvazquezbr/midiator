@@ -98,7 +98,7 @@ const GeneralSettings = () => {
 };
 
 
-const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
+const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect, linkedinConfig, setLinkedinConfig }) => {
   const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
@@ -166,7 +166,7 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
           <WordpressAuthSetup />
         </TabPanel>
         <TabPanel value={value} index={4}>
-          <LinkedinAuthSetup onBeforeRedirect={onBeforeLinkedinRedirect} />
+          <LinkedinAuthSetup onBeforeRedirect={onBeforeLinkedinRedirect} linkedinConfig={linkedinConfig} setLinkedinConfig={setLinkedinConfig} />
         </TabPanel>
       </DialogContent>
       <DialogActions>

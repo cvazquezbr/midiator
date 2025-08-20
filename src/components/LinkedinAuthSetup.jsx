@@ -25,7 +25,7 @@ import GoogleDriveFolderPicker from './GoogleDriveFolderPicker';
 import { useUserAuth } from '../context/UserAuthContext';
 import LinkedinInfobox from './LinkedinInfobox';
 
-const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
+const LinkedinAuthSetup = ({ onBeforeRedirect, linkedinConfig, setLinkedinConfig }) => {
   const { googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const [config, setConfig] = useState({ clientId: '', clientSecret: '', folderId: '' });
   const [currentConfig, setCurrentConfig] = useState(null);
@@ -77,17 +77,23 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
     };
 
     fetchSettings();
-    const storedConfig = getLinkedinConfig();
 
-    if (storedConfig.accessToken) {
-      setCurrentConfig(storedConfig);
-      fetchUserDetails(storedConfig.accessToken);
+    if (linkedinConfig && linkedinConfig.accessToken) {
+      setCurrentConfig(linkedinConfig);
+      fetchUserDetails(linkedinConfig.accessToken);
     } else {
-      setCurrentConfig(null);
-      setConnectedUser(null);
+      const storedConfig = getLinkedinConfig();
+      if (storedConfig.accessToken) {
+        setCurrentConfig(storedConfig);
+        setLinkedinConfig(storedConfig); // Update parent state
+        fetchUserDetails(storedConfig.accessToken);
+      } else {
+        setCurrentConfig(null);
+        setConnectedUser(null);
+      }
     }
     setError('');
-  }, []);
+  }, [linkedinConfig]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -165,6 +171,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
     sessionStorage.removeItem('linkedin_profiles_cache');
     setCurrentConfig(null);
     setConnectedUser(null);
+    setLinkedinConfig(null); // Update parent state
     setConfig({ clientId: '', clientSecret: '', folderId: '' });
     toast.info('Configuração do LinkedIn e conexão removidas.');
   };
