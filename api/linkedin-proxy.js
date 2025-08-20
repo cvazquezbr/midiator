@@ -4,6 +4,24 @@ import { query } from './db.js';
 // A general-purpose, action-based proxy for LinkedIn API calls.
 // This is more secure than an endpoint-based proxy as it doesn't allow calling arbitrary URLs.
 
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function fetchWithRetry(url, options, retries = 3, backoff = 1000) {
+  for (let i = 0; i < retries; i++) {
+    const response = await fetch(url, options);
+    if (response.status === 429) {
+      const retryAfter = parseInt(response.headers.get('Retry-After'), 10) * 1000 || backoff;
+      console.warn(`Rate limit hit. Retrying after ${retryAfter}ms...`);
+      await delay(retryAfter);
+      continue;
+    }
+    return response;
+  }
+  // After all retries, throw an error or return the last response
+  throw new Error(`Failed to fetch from ${url} after ${retries} attempts due to rate limiting.`);
+}
+
+
 async function handleTokenExchange(request, response) {
   const { code, redirectUri } = request.body;
   const userId = request.user.sub;
@@ -377,27 +395,43 @@ async function handleGetProfiles(request, response) {
       const orgIds = orgUrns.map(urn => urn.split(':').pop());
 
       if (orgIds.length > 0) {
-        const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${orgIds.join(',')})`;
-        const batchOrgResponse = await fetch(batchOrgUrl, { headers });
+        const CHUNK_SIZE = 50;
+        const allOrgDetails = {};
 
-        if (batchOrgResponse.ok) {
-          const batchOrgData = await batchOrgResponse.json();
-          organizations = orgAclsData.elements.map(acl => {
-            const orgId = acl.organization.split(':').pop();
-            const orgDetails = batchOrgData.results[orgId];
-            const orgName = orgDetails?.localizedName || orgDetails?.name?.localized?.en_US || 'Nome da Página Indisponível';
+        for (let i = 0; i < orgIds.length; i += CHUNK_SIZE) {
+          const chunk = orgIds.slice(i, i + CHUNK_SIZE);
+          const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${chunk.join(',')})`;
 
-            return {
-              id: orgId,
-              name: orgName,
-              role: acl.role,
-              logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
-              type: 'organization'
-            };
-          });
-        } else {
-          console.warn('Could not fetch batch organization details:', batchOrgResponse.status);
+          console.log(`Fetching chunk ${i / CHUNK_SIZE + 1} of ${Math.ceil(orgIds.length / CHUNK_SIZE)}...`);
+
+          const batchOrgResponse = await fetchWithRetry(batchOrgUrl, { headers });
+
+          if (batchOrgResponse.ok) {
+            const batchOrgData = await batchOrgResponse.json();
+            Object.assign(allOrgDetails, batchOrgData.results);
+          } else {
+            console.warn(`Could not fetch batch organization details for chunk. Status: ${batchOrgResponse.status}`);
+            // Optionally, handle partial failures. For now, we'll just warn and continue.
+          }
+          // Add a small delay between chunk requests to avoid hitting rate limits.
+          if (i + CHUNK_SIZE < orgIds.length) {
+            await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+          }
         }
+
+        organizations = orgAclsData.elements.map(acl => {
+          const orgId = acl.organization.split(':').pop();
+          const orgDetails = allOrgDetails[orgId];
+          const orgName = orgDetails?.localizedName || orgDetails?.name?.localized?.en_US || 'Nome da Página Indisponível';
+
+          return {
+            id: orgId,
+            name: orgName,
+            role: acl.role,
+            logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
+            type: 'organization'
+          };
+        }).filter(org => allOrgDetails[org.id]); // Ensure we only include orgs we got details for
       }
     } else {
       console.warn('Could not fetch organization ACLs:', orgAclsResponse.status);
