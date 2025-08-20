@@ -63,6 +63,13 @@ export const generateCampaignContent = async ({ problema, solucao }) => {
     }
   }
 
+  const { titulo, title, conteudo, body, cta } = parsedContent;
+
+  if (!titulo && !title) {
+    console.error("Content generation response missing title:", parsedContent);
+    throw new Error("A resposta da IA para o conteúdo da campanha não continha um campo 'titulo' ou 'title'.");
+  }
+
   let hashtags = [];
   if (Array.isArray(parsedContent.hashtags)) {
     // If it's already an array, just trim and remove the '#' if present
@@ -76,9 +83,9 @@ export const generateCampaignContent = async ({ problema, solucao }) => {
   }
 
   return {
-    titulo: parsedContent.titulo || parsedContent.title || '',
-    conteudo: parsedContent.conteudo || parsedContent.body || '',
-    cta: parsedContent.cta || '',
+    titulo: titulo || title,
+    conteudo: conteudo || body || '',
+    cta: cta || '',
     hashtags: hashtags,
   };
 };
