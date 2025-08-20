@@ -16,7 +16,6 @@ import { useUserAuth } from '../context/UserAuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { loadSettingsFromDb } from '../utils/credentialsManager';
 import { saveCampaign, loadCampaign, updateCampaign } from '../utils/campaignState';
-import { saveLinkedinConfig } from '../utils/linkedinCredentials';
 
 import MainAppBar from '../components/MainAppBar';
 import Sidebar from '../components/Sidebar';
@@ -56,7 +55,7 @@ import ColorThief from 'colorthief';
 
 function HomePage() {
   const { user } = useUserAuth();
-  const { updateSetting } = useSettings();
+  const { settings, updateSetting, saveSettings } = useSettings();
 
   // Component State
   const [activeStep, setActiveStep] = useState(0);
@@ -125,7 +124,6 @@ function HomePage() {
   const [currentCampaign, setCurrentCampaign] = useState(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
-  const [linkedinConfig, setLinkedinConfig] = useState(null);
 
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -225,17 +223,19 @@ function HomePage() {
   }, [loadCampaignStandards]);
 
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        await loadSettingsFromDb();
-        const apiKey = getGeminiApiKey();
-        if (apiKey) geminiAPI.initialize(apiKey);
-        toast.info("Your cloud settings have been loaded.");
-      } catch (error) {
-        toast.error(`Could not load your settings: ${error.message}`);
-      }
+    const loadInitialSettings = async () => {
+        if (user) {
+            try {
+                await loadSettingsFromDb();
+                const apiKey = getGeminiApiKey();
+                if (apiKey) geminiAPI.initialize(apiKey);
+                toast.info("Your cloud settings have been loaded.");
+            } catch (error) {
+                toast.error(`Could not load your settings: ${error.message}`);
+            }
+        }
     };
-    if (user) loadSettings();
+    loadInitialSettings();
   }, [user]);
 
   useEffect(() => {
@@ -246,12 +246,6 @@ function HomePage() {
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
   }, [isMobile]);
-
-  useEffect(() => {
-    if (linkedinConfig) {
-        setShowSetupModal(true);
-    }
-  }, [linkedinConfig]);
 
   useEffect(() => {
     if (activeStep === 1 && campaignContent) {
@@ -266,7 +260,6 @@ function HomePage() {
       const code = urlParams.get('code');
 
       if (code) {
-        // Clean the URL
         window.history.replaceState({}, document.title, "/");
         toast.loading('Finalizando conexão com o LinkedIn...');
 
@@ -285,16 +278,18 @@ function HomePage() {
           const data = await response.json();
 
           if (response.ok) {
+            const currentLinkedinConfig = settings.linkedin || {};
             const newConfig = {
-              ...linkedinConfig,
+              ...currentLinkedinConfig,
               accessToken: data.access_token,
               expiry: Date.now() + data.expires_in * 1000,
             };
             updateSetting('linkedin', newConfig);
+            await saveSettings(); // Save immediately after getting the token
             toast.success('Conexão com o LinkedIn estabelecida com sucesso!');
             setShowSetupModal(true);
           } else {
-            throw new Error(data.error || 'Falha na troca de token do LinkedIn.');
+            throw new Error(data.error_description || data.error || 'Falha na troca de token do LinkedIn.');
           }
         } catch (error) {
           toast.dismiss();
@@ -304,7 +299,7 @@ function HomePage() {
     };
 
     handleLinkedInRedirect();
-  }, []);
+  }, []); // Should only run once on page load
 
   const steps = [ { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Imagem e Formatação', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Gerar Imagens', description: 'Gere as imagens finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish } ];
   const parseCsvFile = async (file) => { if (!file) return; try { const { data: newCsvData, headers: newHeaders } = await parseCsv(file); if (newCsvData && newCsvData.length > 0) { setCsvData(newCsvData); setCsvHeaders(newHeaders); const updatedFieldPositions = {}; const updatedFieldStyles = {}; const defaultStylesBase = { fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: '#000000', textStroke: false, strokeColor: '#ffffff', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' }; newHeaders.forEach((header, index) => { updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true }; if (fieldStyles[header]) { updatedFieldStyles[header] = fieldStyles[header]; } else { if (index === 0) { updatedFieldStyles[header] = { ...defaultStylesBase, fontFamily: 'Anton', fontSize: 72 }; } else { updatedFieldStyles[header] = { ...defaultStylesBase }; } } }); setFieldPositions(updatedFieldPositions); setFieldStyles(updatedFieldStyles); } } catch (error) { toast.error(error.message || 'Ocorreu um erro desconhecido ao processar o arquivo CSV.'); } };
@@ -403,7 +398,7 @@ function HomePage() {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} ><Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button><Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box><Button onClick={handleNext} disabled={activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)} variant="contained" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Próximo</Button></Box>
         </Box>
       </Box>
-      <SetupModal open={showSetupModal} onClose={() => setShowSetupModal(false)} linkedinConfig={linkedinConfig} setLinkedinConfig={setLinkedinConfig} />
+      <SetupModal open={showSetupModal} onClose={() => setShowSetupModal(false)} />
       <SaveCampaignModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={handleSaveCampaign} campaignToEdit={currentCampaign} />
       <LoadCampaignModal open={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadCampaign} onEdit={(campaign) => { setCurrentCampaign(campaign); setShowSaveModal(true); }} />
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />

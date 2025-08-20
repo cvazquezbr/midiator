@@ -65,7 +65,8 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   };
 
   const handleSelectFolder = (folder) => {
-    setConfig((prevConfig) => ({ ...prevConfig, folderId: folder.id }));
+    const newLinkedinConfig = { ...linkedinConfig, folderId: folder.id };
+    updateSetting('linkedin', newLinkedinConfig);
     setPickerOpen(false);
   };
 
@@ -78,11 +79,8 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   };
 
   const handleConnect = async () => {
-    if (linkedinConfig.clientId.trim()) {
+    if (linkedinConfig.clientId?.trim()) {
       if (onBeforeRedirect) await onBeforeRedirect();
-
-      // We only save the non-sensitive part to local storage for the redirect
-      localStorage.setItem('linkedin_client_id_temp', linkedinConfig.clientId);
 
       const redirectUri = window.location.origin;
       const scope = encodeURIComponent('r_basicprofile w_member_social w_organization_social rw_organization_admin');
@@ -94,7 +92,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   };
 
   const handleTestConnection = async () => {
-    const { accessToken } = getLinkedinConfig();
+    const { accessToken } = linkedinConfig;
     if (!accessToken) {
       toast.error('Não há uma conexão ativa para testar.');
       return;
@@ -113,8 +111,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
         const errorData = await response.json().catch(() => ({ message: 'Não foi possível ler a resposta de erro.' }));
         toast.error(`Erro no teste: ${errorData.message || 'Ocorreu um erro desconhecido.'}`);
         if (response.status === 401) {
-          removeLinkedinConfig();
-          setCurrentConfig(null);
+          handleRemove();
         }
       }
     } catch (err) {
