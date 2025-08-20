@@ -522,7 +522,7 @@ const Campaign = ({
                                 <Box>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
                                         <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
-                                        <Button onClick={handleGenerateImage} disabled={isGeneratingImage} startIcon={<GeminiIcon />}>
+                                        <Button onClick={() => handleGenerateImage(campaignContent)} disabled={isGeneratingImage} startIcon={<GeminiIcon />}>
                                             {isGeneratingImage ? 'Gerando...' : 'Regerar Imagem'}
                                         </Button>
                                     </Box>
@@ -540,7 +540,7 @@ const Campaign = ({
                                     <Button
                                         variant="contained"
                                         color="secondary"
-                                        onClick={handleGenerateImage}
+                                        onClick={() => handleGenerateImage(campaignContent)}
                                         startIcon={<ImageIcon />}
                                         disabled={isGeneratingImage}
                                     >
@@ -557,7 +557,7 @@ const Campaign = ({
                                         variant="contained"
                                         color="secondary"
                                         size="large"
-                                        onClick={() => handleGenerateImage()}
+                                        onClick={() => handleGenerateImage(campaignContent)}
                                         disabled={isGeneratingImage}
                                         startIcon={<ImageIcon />}
                                     >
