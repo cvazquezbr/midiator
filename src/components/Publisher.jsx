@@ -103,6 +103,16 @@ const Publisher = ({
   const [viewingSchedule, setViewingSchedule] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  // Local states for Publisher component
+  const [linkedinProfiles, setLinkedinProfiles] = useState({ personal: null, organizations: [] });
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
+  const [profileError, setProfileError] = useState('');
+  const [selectedTarget, setSelectedTarget] = useState(null);
+  const [publishResults, setPublishResults] = useState([]);
+  const [content, setContent] = useState(''); // Assuming campaignContent will be mapped to this
+  const [unifiedMedia, setUnifiedMedia] = useState([]);
+  const [previewedMedia, setPreviewedMedia] = useState(null);
+  const [schedulePreview, setSchedulePreview] = useState([]);
 
   const fetchSchedules = React.useCallback(async () => {
     if (tabValue === 2 && selectedTarget) {
@@ -192,16 +202,6 @@ const Publisher = ({
   const [publishingStatusLi, setPublishingStatusLi] = useState('');
   const [publishedPostUrlLi, setPublishedPostUrlLi] = useState(null);
 
-  // Local states for Publisher component
-  const [linkedinProfiles, setLinkedinProfiles] = useState({ personal: null, organizations: [] });
-  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
-  const [profileError, setProfileError] = useState('');
-  const [selectedTarget, setSelectedTarget] = useState(null);
-  const [publishResults, setPublishResults] = useState([]);
-  const [content, setContent] = useState(''); // Assuming campaignContent will be mapped to this
-  const [unifiedMedia, setUnifiedMedia] = useState([]);
-  const [previewedMedia, setPreviewedMedia] = useState(null);
-  const [schedulePreview, setSchedulePreview] = useState([]);
   const { googleAccessToken } = useUserAuth();
 
     // Map campaign content to a simple text state for the publisher
