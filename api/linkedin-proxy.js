@@ -12,21 +12,11 @@ async function handleTokenExchange(request, response) {
     return response.status(400).json({ error: 'Missing code or redirectUri for token exchange.' });
   }
 
-  let clientId, clientSecret;
-  try {
-    const { rows } = await query('SELECT settings_data FROM settings WHERE user_id = $1', [userId]);
-    if (rows.length === 0 || !rows[0].settings_data.linkedin) {
-      return response.status(400).json({ error: 'LinkedIn credentials not configured for this user.' });
-    }
-    clientId = rows[0].settings_data.linkedin.clientId;
-    clientSecret = rows[0].settings_data.linkedin.clientSecret;
+  const clientId = process.env.LINKEDIN_CLIENT_ID;
+  const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
 
-    if (!clientId || !clientSecret) {
-      return response.status(400).json({ error: 'Incomplete LinkedIn credentials configured for this user.' });
-    }
-  } catch (dbError) {
-    console.error('Database error fetching LinkedIn credentials:', dbError);
-    return response.status(500).json({ error: 'Failed to retrieve user settings.' });
+  if (!clientId || !clientSecret) {
+    return response.status(400).json({ error: 'LinkedIn credentials not configured in environment variables.' });
   }
 
 
@@ -432,11 +422,12 @@ async function handleRefreshToken(request, response) {
         }
         const refreshToken = rows[0].linkedin_refresh_token;
 
-        const { rows: settingsRows } = await query('SELECT settings_data FROM settings WHERE user_id = $1', [userId]);
-        if (settingsRows.length === 0 || !settingsRows[0].settings_data.linkedin) {
-            return response.status(400).json({ error: 'LinkedIn credentials not configured for this user.' });
+        const clientId = process.env.LINKEDIN_CLIENT_ID;
+        const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+
+        if (!clientId || !clientSecret) {
+            return response.status(400).json({ error: 'LinkedIn credentials not configured in environment variables.' });
         }
-        const { clientId, clientSecret } = settingsRows[0].settings_data.linkedin;
 
         const tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
         const params = new URLSearchParams({
@@ -520,6 +511,8 @@ const mainHandler = async (request, response) => {
         return handleFinalizeVideoUpload(request, response);
     case 'checkVideoStatus':
         return handleCheckVideoStatus(request, response);
+    case 'getClientId':
+        return response.status(200).json({ clientId: process.env.LINKEDIN_CLIENT_ID });
     default:
       return response.status(400).json({ error: `Invalid action specified: ${action}` });
   }
