@@ -84,6 +84,9 @@ function HomePage() {
   const [formato, setFormato] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
+  const [conteudoMedio, setConteudoMedio] = useState('');
+  const [conteudoPequeno, setConteudoPequeno] = useState('');
+  const [conteudoFormatado, setConteudoFormatado] = useState('');
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
   const [isGeneratingSummaryPequeno, setIsGeneratingSummaryPequeno] = useState(false);
