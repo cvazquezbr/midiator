@@ -54,7 +54,8 @@ const LoginPage = () => {
       setError('');
       const success = await googleLogin(codeResponse.code);
       if (success) {
-        navigate('/');
+        // Introduce a small delay to allow the Google Auth library to clean up.
+        setTimeout(() => navigate('/'), 100);
       } else {
         setError('Google Sign-In failed. Please try again.');
         setLoading(false);
