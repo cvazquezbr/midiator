@@ -44,7 +44,7 @@ const LinkedinInfobox = ({ settings }) => {
           }));
         }
       } else {
-        setProfiles(prev => ({ ...prev, loading: false, error: "Token de acesso do LinkedIn não encontrado. Conecte sua conta." }));
+        setProfiles(prev => ({ ...prev, loading: false, error: "Conecte sua conta do LinkedIn para ver seus perfis." }));
       }
     };
 
