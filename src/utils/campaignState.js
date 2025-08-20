@@ -16,8 +16,8 @@ const uploadAsset = async (asset, filename) => {
 
   let fileToUpload;
   if (asset instanceof Blob) {
-    // Asset is already a blob (e.g. from an input field).
-    fileToUpload = asset;
+    // Asset is already a blob. Ensure it's a File object with a name.
+    fileToUpload = new File([asset], filename, { type: asset.type });
   } else if (typeof asset === 'string' && (asset.startsWith('blob:') || asset.startsWith('data:'))) {
     // Asset is a temporary client-side URL. Fetch it and convert to a File.
     const response = await fetch(asset);
