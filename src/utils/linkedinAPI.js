@@ -245,18 +245,23 @@ const _createPost = async (accessToken, authorUrn, campaignContent, assetUrns = 
   return await response.json();
 };
 
-export const getLinkedInProfiles = async () => {
+export const getLinkedInProfiles = async (forceRefresh = false) => {
   const cacheKey = 'linkedin_profiles_cache';
-  const cachedData = sessionStorage.getItem(cacheKey);
 
-  if (cachedData) {
-    try {
-      const profiles = JSON.parse(cachedData);
-      console.log('Returning cached LinkedIn profiles.');
-      return profiles;
-    } catch (e) {
-      console.error('Failed to parse cached LinkedIn profiles, fetching again.', e);
-      sessionStorage.removeItem(cacheKey);
+  if (forceRefresh) {
+    sessionStorage.removeItem(cacheKey);
+    console.log('Forcing refresh, cache cleared.');
+  } else {
+    const cachedData = sessionStorage.getItem(cacheKey);
+    if (cachedData) {
+      try {
+        const profiles = JSON.parse(cachedData);
+        console.log('Returning cached LinkedIn profiles.');
+        return profiles;
+      } catch (e) {
+        console.error('Failed to parse cached LinkedIn profiles, fetching again.', e);
+        sessionStorage.removeItem(cacheKey);
+      }
     }
   }
 

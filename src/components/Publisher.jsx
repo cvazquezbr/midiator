@@ -202,6 +202,30 @@ const Publisher = ({
   const [schedulePreview, setSchedulePreview] = useState([]);
   const { googleAccessToken } = useUserAuth();
 
+  const handleRefreshProfiles = async () => {
+    setIsLoadingProfiles(true);
+    setProfileError('');
+    try {
+        const profiles = await getLinkedInProfiles(true); // force a refresh
+        if (!Array.isArray(profiles)) {
+          console.warn("LinkedIn API did not return a valid array of profiles.", profiles);
+          setLinkedinProfiles([]);
+          return;
+        }
+        const cleanedProfiles = profiles.filter(p => p && typeof p.urn === 'string' && typeof p.name === 'string');
+        setLinkedinProfiles(cleanedProfiles);
+        if (cleanedProfiles.length > 0 && !selectedProfile) {
+          setSelectedProfile(cleanedProfiles[0].urn);
+        }
+    } catch (error) {
+        console.error("Erro ao buscar perfis do LinkedIn:", error);
+        setProfileError(error.message);
+        setLinkedinProfiles([]);
+    } finally {
+        setIsLoadingProfiles(false);
+    }
+  };
+
   useEffect(() => {
     if (!followupPosts || followupPosts.length === 0) {
       setSchedulePreview([]);
@@ -571,35 +595,38 @@ const Publisher = ({
               </Typography>
 
               {/* Profile Selection */}
-              {profileError ? (
-                <TextField
-                  error
-                  fullWidth
-                  disabled
-                  label="Erro ao carregar perfis do LinkedIn"
-                  defaultValue={profileError}
-                  sx={{ my: 2 }}
-                />
-              ) : (
-                <FormControl fullWidth sx={{ my: 2 }}>
-                  <InputLabel id="linkedin-profile-select-label">Publicar como</InputLabel>
-                  <Select
-                    labelId="linkedin-profile-select-label"
-                    id="linkedin-profile-select"
-                    value={selectedProfile || ''}
-                    label="Publicar como"
-                    onChange={(e) => setSelectedProfile(e.target.value)}
-                    disabled={isLoadingProfiles || isPublishingLi}
-                  >
-                    {isLoadingProfiles && <MenuItem value=""><em><CircularProgress size={20} /> Carregando perfis...</em></MenuItem>}
-                    {Array.isArray(linkedinProfiles) && linkedinProfiles.map((profile) => (
-                        <MenuItem key={profile.urn} value={profile.urn}>
-                          {profile.name}
-                        </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FormControl fullWidth sx={{ my: 2 }}>
+                        <InputLabel id="linkedin-profile-select-label">Publicar como</InputLabel>
+                        <Select
+                            labelId="linkedin-profile-select-label"
+                            id="linkedin-profile-select"
+                            value={selectedProfile || ''}
+                            label="Publicar como"
+                            onChange={(e) => setSelectedProfile(e.target.value)}
+                            disabled={isLoadingProfiles || isPublishingLi}
+                        >
+                            {isLoadingProfiles && <MenuItem value=""><em><CircularProgress size={20} /> Carregando perfis...</em></MenuItem>}
+                            {Array.isArray(linkedinProfiles) && linkedinProfiles.map((profile) => (
+                                <MenuItem key={profile.urn} value={profile.urn}>
+                                    {profile.name}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    <Tooltip title="Atualizar perfis do LinkedIn">
+                        <span>
+                            <IconButton onClick={handleRefreshProfiles} disabled={isLoadingProfiles}>
+                                <Replay />
+                            </IconButton>
+                        </span>
+                    </Tooltip>
+                </Box>
+                {profileError && (
+                    <Alert severity="error" sx={{ mt: 1 }}>
+                        {profileError}
+                    </Alert>
+                )}
 
               {/* Media Selection */}
               <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
