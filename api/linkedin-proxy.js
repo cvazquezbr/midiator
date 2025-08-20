@@ -365,7 +365,7 @@ async function handleGetProfiles(request, response) {
     // Fetch personal profile and organization pages in parallel
     const [personalResponse, organizationsResponse] = await Promise.all([
       fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
-      fetch('https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&projection=(elements*(organization~(id,name,logoV2),role))', { headers })
+      fetch('https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&projection=(elements*(organization~(id,name,localizedName,logoV2),role))', { headers })
     ]);
 
     if (!personalResponse.ok) {
@@ -385,13 +385,17 @@ async function handleGetProfiles(request, response) {
     if (organizationsResponse.ok) {
       const orgData = await organizationsResponse.json();
       organizations = orgData.elements?.map(element => {
-        const orgNameObject = element['organization~']?.name;
-        const orgName = (orgNameObject && orgNameObject.localized && (orgNameObject.localized.pt_BR || orgNameObject.localized.en_US)) || 'Nome da Página Indisponível';
+        const organizationData = element['organization~'];
+        const orgNameObject = organizationData?.name;
+
+        const orgName = organizationData?.localizedName ||
+                      (orgNameObject && orgNameObject.localized && (orgNameObject.localized.pt_BR || orgNameObject.localized.en_US)) ||
+                      'Nome da Página Indisponível';
         return {
-            id: element['organization~']?.id,
+            id: organizationData?.id,
             name: orgName,
             role: element.role,
-            logo: element['organization~']?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
+            logo: organizationData?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
             type: 'organization'
         };
       }) || [];
