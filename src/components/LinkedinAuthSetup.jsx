@@ -30,8 +30,28 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   const [isDriveLoading, setIsDriveLoading] = useState(false);
   const [showInfobox, setShowInfobox] = useState(false);
   const [error, setError] = useState('');
+  const [clientId, setClientId] = useState('');
 
   const linkedinConfig = settings.linkedin || {};
+
+  useEffect(() => {
+    const fetchClientId = async () => {
+      try {
+        const response = await fetch('/api/linkedin-proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'getClientId' }),
+        });
+        if (!response.ok) throw new Error('Falha ao buscar o Client ID do LinkedIn.');
+        const data = await response.json();
+        setClientId(data.clientId);
+      } catch (err) {
+        console.error("Erro ao buscar o Client ID do LinkedIn:", err);
+        setError('Não foi possível obter a configuração para a conexão com o LinkedIn.');
+      }
+    };
+    fetchClientId();
+  }, []);
 
   useEffect(() => {
     const fetchUserDetails = async (accessToken) => {
@@ -57,11 +77,10 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
     }
   }, [linkedinConfig.accessToken]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    const newLinkedinConfig = { ...linkedinConfig, [name]: value };
+  const handleFolderIdChange = (e) => {
+    const { value } = e.target;
+    const newLinkedinConfig = { ...linkedinConfig, folderId: value };
     updateSetting('linkedin', newLinkedinConfig);
-    if (error) setError('');
   };
 
   const handleSelectFolder = (folder) => {
@@ -79,15 +98,15 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   };
 
   const handleConnect = async () => {
-    if (linkedinConfig.clientId?.trim()) {
+    if (clientId) {
       if (onBeforeRedirect) await onBeforeRedirect();
 
       const redirectUri = window.location.origin;
       const scope = encodeURIComponent('r_basicprofile w_member_social w_organization_social rw_organization_admin');
-      const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${linkedinConfig.clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
+      const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
       window.location.href = authUrl;
     } else {
-      setError('Por favor, preencha o Client ID.');
+      setError('O Client ID do LinkedIn não está configurado no servidor.');
     }
   };
 
@@ -122,10 +141,11 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   };
 
   const handleRemove = () => {
-    updateSetting('linkedin', { clientId: '', clientSecret: '', accessToken: null, expiry: null, folderId: '' });
+    const { folderId } = settings.linkedin || {};
+    updateSetting('linkedin', { accessToken: null, expiry: null, folderId: folderId || '' });
     sessionStorage.removeItem('linkedin_profiles_cache');
     setConnectedUser(null);
-    toast.info('Configuração do LinkedIn e conexão removidas.');
+    toast.info('Conexão com o LinkedIn removida.');
   };
 
   return (
@@ -152,7 +172,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
               name="folderId"
               label="ID da Pasta no Google Drive (Opcional)"
               value={linkedinConfig.folderId || ''}
-              onChange={handleChange}
+              onChange={handleFolderIdChange}
               fullWidth
               variant="outlined"
               placeholder="ID da pasta para a fila de publicação"
@@ -179,33 +199,8 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12}>
               <Typography variant="body2" gutterBottom>
-                Insira suas credenciais do LinkedIn para conectar sua conta.
+                Clique no botão "Salvar e Conectar" para autorizar a aplicação a postar em seu nome.
               </Typography>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                name="clientId"
-                label="Client ID"
-                value={linkedinConfig.clientId || ''}
-                onChange={handleChange}
-                fullWidth
-                required
-                variant="outlined"
-                placeholder="Seu Client ID do LinkedIn"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                name="clientSecret"
-                label="Client Secret"
-                type="password"
-                value={linkedinConfig.clientSecret || ''}
-                onChange={handleChange}
-                fullWidth
-                required
-                variant="outlined"
-                placeholder="Seu Client Secret do LinkedIn"
-              />
             </Grid>
           </Grid>
         )}
