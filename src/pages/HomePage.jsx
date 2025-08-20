@@ -123,6 +123,7 @@ function HomePage() {
   const [currentCampaign, setCurrentCampaign] = useState(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  const [linkedinConfig, setLinkedinConfig] = useState(null);
 
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -276,10 +277,12 @@ function HomePage() {
           const data = await response.json();
 
           if (response.ok) {
-            saveLinkedinConfig({
+            const newConfig = {
               accessToken: data.access_token,
               expiry: Date.now() + data.expires_in * 1000,
-            });
+            };
+            saveLinkedinConfig(newConfig);
+            setLinkedinConfig(newConfig);
             toast.success('Conexão com o LinkedIn estabelecida com sucesso!');
             // Optionally, trigger a refresh of the settings view
             setShowSetupModal(true);
@@ -393,7 +396,7 @@ function HomePage() {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} ><Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button><Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box><Button onClick={handleNext} disabled={activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)} variant="contained" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Próximo</Button></Box>
         </Box>
       </Box>
-      <SetupModal open={showSetupModal} onClose={() => setShowSetupModal(false)} />
+      <SetupModal open={showSetupModal} onClose={() => setShowSetupModal(false)} linkedinConfig={linkedinConfig} setLinkedinConfig={setLinkedinConfig} />
       <SaveCampaignModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={handleSaveCampaign} campaignToEdit={currentCampaign} />
       <LoadCampaignModal open={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadCampaign} onEdit={(campaign) => { setCurrentCampaign(campaign); setShowSaveModal(true); }} />
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
