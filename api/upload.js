@@ -1,14 +1,34 @@
-import { handleUpload } from '@vercel/blob';
+import { handleUpload } from '@vercel/blob/client';
 import { withAuth } from './middleware/auth.js';
+
+// Helper to parse the body for Vercel Serverless Functions
+async function parseJson(req) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', (chunk) => {
+      data += chunk;
+    });
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(data));
+      } catch (error) {
+        reject(error);
+      }
+    });
+    req.on('error', (error) => {
+      reject(error);
+    });
+  });
+}
 
 const handler = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const body = await req.json();
-
   try {
+    const body = await parseJson(req);
+
     const jsonResponse = await handleUpload({
       body,
       request: req,
