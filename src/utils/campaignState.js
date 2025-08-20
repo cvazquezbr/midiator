@@ -83,6 +83,7 @@ export const serializeCampaignData = async (state, setProgress) => {
   };
 
   try {
+    const serializableGeneratedImages = await serializeAssetList(state.generatedImagesData);
     const serializableGeneratedAudio = await serializeAssetList(state.generatedAudioData);
     const serializableGeneratedVideos = await serializeAssetList(state.generatedVideosData);
 
