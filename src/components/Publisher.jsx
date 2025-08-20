@@ -105,10 +105,10 @@ const Publisher = ({
   const [isUpdating, setIsUpdating] = useState(false);
 
   const fetchSchedules = React.useCallback(async () => {
-    if (tabValue === 2 && selectedProfile) {
+    if (tabValue === 2 && selectedTarget) {
       setIsLoadingSchedules(true);
       try {
-        const schedules = await getSchedulesForUser(selectedProfile);
+        const schedules = await getSchedulesForUser(selectedTarget.id);
         schedules.sort((a, b) => new Date(b.scheduledAt) - new Date(a.scheduledAt));
         setMySchedules(schedules);
       } catch (error) {
@@ -118,7 +118,7 @@ const Publisher = ({
         setIsLoadingSchedules(false);
       }
     }
-  }, [tabValue, selectedProfile]);
+  }, [tabValue, selectedTarget]);
 
   const handleViewDetails = async (scheduleId) => {
     try {
@@ -180,7 +180,7 @@ const Publisher = ({
   // Fetch schedules when the tab is opened or the selected profile changes
   useEffect(() => {
     fetchSchedules();
-  }, [tabValue, selectedProfile, fetchSchedules]);
+  }, [tabValue, selectedTarget, fetchSchedules]);
 
   // State for WordPress
   const [isPublishingWp, setIsPublishingWp] = useState(false);
@@ -946,9 +946,9 @@ const Publisher = ({
           <TabPanel value={tabValue} index={2}>
             <Box>
                 <Typography variant="h6" gutterBottom>Meus Agendamentos</Typography>
-                {!selectedProfile && <Alert severity="warning">Selecione um perfil na aba "LinkedIn" para ver seus agendamentos.</Alert>}
+                {!selectedTarget && <Alert severity="warning">Selecione um perfil na aba "LinkedIn" para ver seus agendamentos.</Alert>}
                 {isLoadingSchedules && <LinearProgress />}
-                {!isLoadingSchedules && mySchedules.length === 0 && selectedProfile && (
+                {!isLoadingSchedules && mySchedules.length === 0 && selectedTarget && (
                     <Typography sx={{mt: 2, textAlign: 'center'}}>Nenhum agendamento encontrado para este perfil.</Typography>
                 )}
                 {mySchedules.length > 0 && (
