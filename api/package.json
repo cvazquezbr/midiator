@@ -1,0 +1,11 @@
+{
+  "name": "midiator-api",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@vercel/blob": "^1.1.1",
+    "cookie": "^1.0.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.16.3"
+  }
+}
