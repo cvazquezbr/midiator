@@ -118,7 +118,7 @@ export const generateCampaignImage = async ({ content, aspectRatio }) => {
     O público-alvo é: ${personaString}.
     O estilo deve ser consistente com a marca: ${autorString}.
     ${colorPalettePrompt}
-    A imagem deve ser puramente visual, conceitual ou abstrata, e não deve conter nenhum texto, letras ou números.
+    A IMAGEM DEVE SER PURAMENTE VISUAL, CONCEITUAL OU ABSTRATA, E NÃO DEVE CONTER NENHUM TEXTO, LETRAS OU NÚMEROS.
     A razão de aspecto da imagem deve ser ${aspectRatio}.
   `;
 

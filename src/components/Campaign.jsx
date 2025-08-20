@@ -504,7 +504,7 @@ const Campaign = ({
                     {campaignContent && (
                         <Box sx={{ mt: 2 }}>
                              <Grid item xs={12} md={6}>
-                                <FormControl fullWidth variant="outlined" disabled={campaignContent !== null}>
+                                <FormControl fullWidth variant="outlined" disabled={!campaignContent}>
                                     <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
                                     <Select
                                         labelId="aspect-ratio-label"
