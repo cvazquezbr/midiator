@@ -14,120 +14,65 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
-import {
-  saveWordpressConfig,
-  getWordpressConfig,
-  removeWordpressConfig,
-} from '../utils/wordpressCredentials';
+import { useSettings } from '../context/SettingsContext';
 import WordpressInfobox from './WordpressInfobox';
 
 const WordpressAuthSetup = () => {
-  const [config, setConfig] = useState({
-    username: '',
-    password: '',
-    wordpressUrl: '',
-    tagsUrl: '/wp-json/wp/v2/tags',
-    mediaUrl: '/wp-json/wp/v2/media',
-    postsUrl: '/wp-json/wp/v2/posts',
-  });
-  const [currentConfig, setCurrentConfig] = useState(null);
+  const { settings, updateSetting } = useSettings();
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
   const [showInfobox, setShowInfobox] = useState(false);
 
-  useEffect(() => {
-    const storedConfig = getWordpressConfig();
-    const initialConfig = {
-      username: '',
-      password: '',
-      wordpressUrl: '',
-      tagsUrl: '/wp-json/wp/v2/tags',
-      mediaUrl: '/wp-json/wp/v2/media',
-      postsUrl: '/wp-json/wp/v2/posts',
-    };
-
-    if (storedConfig) {
-      setCurrentConfig(storedConfig);
-      setConfig({ ...initialConfig, ...storedConfig });
-    } else {
-      setCurrentConfig(null);
-      setConfig(initialConfig);
-    }
-    setError('');
-  }, []);
+  const wordpressConfig = settings.wordpress || {};
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setConfig((prevConfig) => ({
-      ...prevConfig,
-      [name]: value,
-    }));
-    if (error) setError('');
-  };
-
-  const handleSave = () => {
-    if (config.username.trim() && config.password.trim() && config.wordpressUrl.trim()) {
-      saveWordpressConfig(config);
-      setCurrentConfig(config);
-      toast.success('Configuração do WordPress salva com sucesso!');
-    } else {
-      setError('Por favor, preencha a URL, o nome de usuário e a senha de aplicação.');
-    }
+    const newWordpressConfig = { ...wordpressConfig, [name]: value };
+    updateSetting('wordpress', newWordpressConfig);
+    setTestResult(null);
   };
 
   const handleRemove = () => {
-    removeWordpressConfig();
-    setCurrentConfig(null);
-    setConfig({
-      username: '',
-      password: '',
-      wordpressUrl: '',
-      tagsUrl: '/wp-json/wp/v2/tags',
-      mediaUrl: '/wp-json/wp/v2/media',
-      postsUrl: '/wp-json/wp/v2/posts',
-    });
+    updateSetting('wordpress', {});
     toast.info('Configuração do WordPress removida.');
   };
 
   const handleTestConnection = async () => {
     setIsTesting(true);
-    setError('');
+    setTestResult(null);
 
-    const { username, password, wordpressUrl } = config;
+    const { username, password, wordpressUrl } = wordpressConfig;
 
-    if (!username.trim() || !password.trim() || !wordpressUrl.trim()) {
+    if (!username?.trim() || !password?.trim() || !wordpressUrl?.trim()) {
       toast.error('Preencha os campos de URL, usuário e senha para testar.');
       setIsTesting(false);
       return;
     }
 
-    let fullUrl = wordpressUrl.startsWith('http') ? wordpressUrl : `https://${wordpressUrl}`;
-    fullUrl = fullUrl.replace(/\/$/, '');
-
-    const testUrl = `${fullUrl}/wp-json/wp/v2/users/me`;
-    const credentials = btoa(`${username}:${password}`);
-
     try {
-      const response = await fetch(testUrl, {
-        method: 'GET',
+      const response = await fetch('/api/wordpress/test', {
+        method: 'POST',
         headers: {
-          'Authorization': `Basic ${credentials}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ wordpressUrl, username, password }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        toast.success(`Conexão bem-sucedida. Conectado como ${data.name}.`);
-      } else if (response.status === 401) {
-        toast.error('Credenciais inválidas ou URL incorreta.');
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setTestResult({ type: 'success', message: data.message });
+        toast.success(data.message);
       } else {
-        const errorData = await response.json().catch(() => ({ message: 'Não foi possível ler a resposta de erro.' }));
-        toast.error(`Erro ${response.status}: ${errorData.message || 'Ocorreu um erro desconhecido.'}`);
+        setTestResult({ type: 'error', message: data.message || 'Ocorreu um erro desconhecido.' });
+        toast.error(data.message || 'Ocorreu um erro desconhecido.');
       }
     } catch (err) {
       console.error('Erro no teste de conexão:', err);
-      toast.error('Erro de rede. Verifique a URL e sua conexão com a internet.');
+      const errorMessage = 'Erro de rede. Verifique sua conexão ou a URL do servidor.';
+      setTestResult({ type: 'error', message: errorMessage });
+      toast.error(errorMessage);
     } finally {
       setIsTesting(false);
     }
@@ -146,9 +91,9 @@ const WordpressAuthSetup = () => {
           Insira suas credenciais e URLs de endpoints do WordPress. A senha de aplicação será armazenada localmente no seu navegador.
         </Typography>
 
-        {currentConfig && (
+        {wordpressConfig.wordpressUrl && (
           <Typography variant="caption" color="textSecondary" gutterBottom>
-            Configuração atual salva para o site: {currentConfig.wordpressUrl}
+            Configuração atual salva para o site: {wordpressConfig.wordpressUrl}
           </Typography>
         )}
 
@@ -157,7 +102,7 @@ const WordpressAuthSetup = () => {
                 <TextField
                     name="wordpressUrl"
                     label="URL do WordPress"
-                    value={config.wordpressUrl}
+                    value={wordpressConfig.wordpressUrl || ''}
                     onChange={handleChange}
                     fullWidth
                     required
@@ -169,7 +114,7 @@ const WordpressAuthSetup = () => {
                 <TextField
                     name="username"
                     label="Nome de usuário do WordPress"
-                    value={config.username}
+                    value={wordpressConfig.username || ''}
                     onChange={handleChange}
                     fullWidth
                     required
@@ -182,7 +127,7 @@ const WordpressAuthSetup = () => {
                         name="password"
                         label="Senha de Aplicação"
                         type={showPassword ? 'text' : 'password'}
-                        value={config.password}
+                        value={wordpressConfig.password || ''}
                         onChange={handleChange}
                         fullWidth
                         required
@@ -203,7 +148,7 @@ const WordpressAuthSetup = () => {
                 <TextField
                     name="tagsUrl"
                     label="URL para incluir tag"
-                    value={config.tagsUrl}
+                    value={wordpressConfig.tagsUrl || '/wp-json/wp/v2/tags'}
                     onChange={handleChange}
                     fullWidth
                     variant="outlined"
@@ -213,7 +158,7 @@ const WordpressAuthSetup = () => {
                 <TextField
                     name="mediaUrl"
                     label="URL para subir mídia"
-                    value={config.mediaUrl}
+                    value={wordpressConfig.mediaUrl || '/wp-json/wp/v2/media'}
                     onChange={handleChange}
                     fullWidth
                     variant="outlined"
@@ -223,7 +168,7 @@ const WordpressAuthSetup = () => {
                 <TextField
                     name="postsUrl"
                     label="URL para enviar post"
-                    value={config.postsUrl}
+                    value={wordpressConfig.postsUrl || '/wp-json/wp/v2/posts'}
                     onChange={handleChange}
                     fullWidth
                     variant="outlined"
@@ -231,22 +176,21 @@ const WordpressAuthSetup = () => {
             </Grid>
         </Grid>
 
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
+        {testResult && (
+            <Alert severity={testResult.type} sx={{ mt: 2 }}>
+                {testResult.message}
+            </Alert>
         )}
         <Box sx={{ pt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Button onClick={handleTestConnection} disabled={isTesting} variant="outlined">
             {isTesting ? 'Testando...' : 'Testar Conexão'}
           </Button>
           <Box>
-            {currentConfig && (
+            {wordpressConfig.wordpressUrl && (
               <Button onClick={handleRemove} color="error">
                 Remover
               </Button>
             )}
-            <Button onClick={handleSave} variant="contained" sx={{ ml: 1 }}>
-              Salvar
-            </Button>
           </Box>
         </Box>
       </Box>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getGoogleCloudTTSCredentials, saveGoogleCloudTTSCredentials, removeGoogleCloudTTSCredentials } from '../utils/googleCloudTTSCredentials';
+import { useSettings } from '../context/SettingsContext';
 import googleCloudTTSAPI from '../utils/googleCloudTTSAPI';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Alert } from '@mui/material';
 import { InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
@@ -7,40 +7,20 @@ import { toast } from 'sonner';
 import GoogleCloudTTSInfobox from './GoogleCloudTTSInfobox';
 
 const GoogleCloudTTSAuth = () => {
-  const [credentials, setCredentials] = useState('');
-  const [currentStoredCredentials, setCurrentStoredCredentials] = useState(null);
+  const { settings, updateSetting } = useSettings();
   const [error, setError] = useState('');
   const [showInfobox, setShowInfobox] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
 
-  useEffect(() => {
-    const storedCredentials = getGoogleCloudTTSCredentials();
-    setCurrentStoredCredentials(storedCredentials);
-    setCredentials(storedCredentials ? JSON.stringify(storedCredentials, null, 2) : '');
-    setError('');
-  }, []);
+  const credentials = settings.googleCloudTTSCredentials || '';
 
-  const handleSave = () => {
-    try {
-      if (!credentials.trim()) {
-        removeGoogleCloudTTSCredentials();
-        setCurrentStoredCredentials(null);
-        toast.info('Credenciais removidas pois o campo estava vazio.');
-        return;
-      }
-      const parsedCredentials = JSON.parse(credentials);
-      saveGoogleCloudTTSCredentials(parsedCredentials);
-      setCurrentStoredCredentials(parsedCredentials);
-      toast.success('Credenciais do Google Cloud TTS salvas com sucesso!');
-    } catch (err) {
-      setError('JSON de credenciais inválido. Por favor, verifique o formato e cole o conteúdo completo do arquivo.');
-    }
+  const handleChange = (e) => {
+    updateSetting('googleCloudTTSCredentials', e.target.value);
+    if (error) setError('');
   };
 
   const handleRemove = () => {
-    removeGoogleCloudTTSCredentials();
-    setCurrentStoredCredentials(null);
-    setCredentials('');
+    updateSetting('googleCloudTTSCredentials', '');
     toast.info('Credenciais do Google Cloud TTS removidas.');
   };
 
@@ -78,13 +58,13 @@ const GoogleCloudTTSAuth = () => {
           Cole o conteúdo do seu arquivo JSON de credenciais de conta de serviço do Google Cloud.
         </Typography>
 
-        {currentStoredCredentials && (
+        {credentials && (
           <Typography variant="caption" color="textSecondary" gutterBottom>
-            Credenciais configuradas para: {currentStoredCredentials.client_email}
+            Credenciais configuradas.
           </Typography>
         )}
 
-        <Box sx={{ mt: currentStoredCredentials ? 1 : 2, mb: 2 }}>
+        <Box sx={{ mt: credentials ? 1 : 2, mb: 2 }}>
           <TextField
             autoFocus
             margin="dense"
@@ -96,10 +76,7 @@ const GoogleCloudTTSAuth = () => {
             rows={5}
             variant="outlined"
             value={credentials}
-            onChange={(e) => {
-              setCredentials(e.target.value);
-              if (error) setError('');
-            }}
+            onChange={handleChange}
             placeholder="Cole o JSON de credenciais aqui..."
           />
         </Box>
@@ -112,14 +89,11 @@ const GoogleCloudTTSAuth = () => {
             {isTesting ? 'Testando...' : 'Testar Conexão'}
           </Button>
           <Box>
-            {currentStoredCredentials && (
+            {credentials && (
               <Button onClick={handleRemove} color="error">
                 Remover
               </Button>
             )}
-            <Button onClick={handleSave} variant="contained" sx={{ ml: 1 }}>
-              Salvar
-            </Button>
           </Box>
         </Box>
       </Box>

@@ -13,6 +13,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { Toaster, toast } from 'sonner';
 
 import { useUserAuth } from '../context/UserAuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { loadSettingsFromDb } from '../utils/credentialsManager';
 import { saveCampaign, loadCampaign, updateCampaign } from '../utils/campaignState';
 import { saveLinkedinConfig } from '../utils/linkedinCredentials';
@@ -55,6 +56,7 @@ import ColorThief from 'colorthief';
 
 function HomePage() {
   const { user } = useUserAuth();
+  const { updateSetting } = useSettings();
 
   // Component State
   const [activeStep, setActiveStep] = useState(0);
@@ -284,12 +286,13 @@ function HomePage() {
 
           if (response.ok) {
             const newConfig = {
+              ...linkedinConfig,
               accessToken: data.access_token,
               expiry: Date.now() + data.expires_in * 1000,
             };
-            saveLinkedinConfig(newConfig);
-            setLinkedinConfig(newConfig);
+            updateSetting('linkedin', newConfig);
             toast.success('Conexão com o LinkedIn estabelecida com sucesso!');
+            setShowSetupModal(true);
           } else {
             throw new Error(data.error || 'Falha na troca de token do LinkedIn.');
           }
