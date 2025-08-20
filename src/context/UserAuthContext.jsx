@@ -13,6 +13,7 @@ export const useUserAuth = () => {
 
 export const UserAuthContextProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [googleAccessToken, setGoogleAccessToken] = useState(null);
   const [loading, setLoading] = useState(true); // True initially to check for session
 
   const fetchUser = useCallback(async () => {
@@ -21,13 +22,16 @@ export const UserAuthContextProvider = ({ children }) => {
       if (res.ok) {
         const userData = await res.json();
         setUser(userData);
+        setGoogleAccessToken(userData.googleAccessToken);
       } else {
         // This is an expected case if the user is not logged in
         setUser(null);
+        setGoogleAccessToken(null);
       }
     } catch (error) {
       console.error('Could not fetch user session:', error);
       setUser(null);
+      setGoogleAccessToken(null);
       toast.error('Could not connect to the server to verify your session.');
     } finally {
       setLoading(false);
@@ -50,6 +54,7 @@ export const UserAuthContextProvider = ({ children }) => {
       const data = await res.json();
       if (res.ok) {
         setUser(data.user);
+        setGoogleAccessToken(data.user.googleAccessToken);
         toast.success('Login successful!');
         return true;
       } else {
@@ -99,6 +104,7 @@ export const UserAuthContextProvider = ({ children }) => {
       const data = await res.json();
       if (res.ok) {
         setUser(data.user);
+        setGoogleAccessToken(data.user.googleAccessToken);
         toast.success('Successfully signed in with Google!');
         return true;
       } else {
@@ -119,6 +125,7 @@ export const UserAuthContextProvider = ({ children }) => {
       const res = await fetch('/api/auth/logout', { method: 'POST' });
       if (res.ok) {
         setUser(null);
+        setGoogleAccessToken(null);
         toast.info('You have been logged out.');
       } else {
         toast.error('Logout request failed.');
@@ -133,7 +140,8 @@ export const UserAuthContextProvider = ({ children }) => {
   const value = {
     user,
     loading,
-    googleAccessToken: user?.googleAccessToken,
+    googleAccessToken,
+    setGoogleAccessToken,
     login,
     signup,
     logout,

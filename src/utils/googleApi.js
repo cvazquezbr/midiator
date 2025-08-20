@@ -3,11 +3,53 @@
  * usando um token de acesso fornecido.
  */
 
+const fetchWithRefresh = async (url, options, accessToken, setAccessToken) => {
+    let response = await fetch(url, {
+        ...options,
+        headers: {
+            ...options.headers,
+            'Authorization': `Bearer ${accessToken}`,
+        },
+    });
+
+    if (response.status === 401) {
+        console.log('Access token expired, attempting to refresh...');
+        try {
+            const refreshResponse = await fetch('/api/auth/refresh-google-token', { method: 'POST' });
+            if (!refreshResponse.ok) {
+                const errorBody = await refreshResponse.json();
+                throw new Error(errorBody.error || 'Failed to refresh token');
+            }
+            const { googleAccessToken: newAccessToken } = await refreshResponse.json();
+
+            // Here you should update the token in your auth context
+            // This is a simplified example; you'll need to pass a setter function or use a state management library
+            if (setAccessToken) {
+                setAccessToken(newAccessToken);
+            }
+
+            // Retry the original request with the new token
+            const newOptions = { ...options };
+            newOptions.headers['Authorization'] = `Bearer ${newAccessToken}`;
+
+            console.log('Retrying request with new token...');
+            response = await fetch(url, newOptions);
+        } catch (error) {
+            console.error('Token refresh failed:', error);
+            // Optionally, force the user to log out or re-authenticate
+            window.location.href = '/login'; // Or show a modal
+            throw error;
+        }
+    }
+
+    return response;
+};
+
 /**
  * Procura por uma pasta com um nome específico dentro de uma pasta pai (opcional).
  * Retorna a primeira pasta encontrada ou null.
  */
-export const findFolderByName = async (name, parentId, accessToken) => {
+export const findFolderByName = async (name, parentId, accessToken, setAccessToken) => {
   if (!accessToken) throw new Error('Access token não fornecido.');
 
   let query = `mimeType='application/vnd.google-apps.folder' and name='${name.replace(/'/g, "\\'")}' and trashed=false`;
@@ -17,9 +59,12 @@ export const findFolderByName = async (name, parentId, accessToken) => {
     query += ` and 'root' in parents`;
   }
 
-  const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,parents)&orderBy=createdTime desc`, {
-    headers: { 'Authorization': `Bearer ${accessToken}` }
-  });
+  const response = await fetchWithRefresh(
+    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,parents)&orderBy=createdTime desc`,
+    {},
+    accessToken,
+    setAccessToken
+  );
 
   if (!response.ok) {
     const errorBody = await response.json();
@@ -33,13 +78,16 @@ export const findFolderByName = async (name, parentId, accessToken) => {
 /**
  * Lista arquivos em uma pasta específica.
  */
-export const listFiles = async (folderId, accessToken, pageSize = 100) => {
+export const listFiles = async (folderId, accessToken, setAccessToken, pageSize = 100) => {
   if (!accessToken) throw new Error('Access token não fornecido.');
 
   const query = `'${folderId}' in parents and trashed=false`;
-  const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=${pageSize}&fields=files(id,name,mimeType,thumbnailLink)`, {
-    headers: { 'Authorization': `Bearer ${accessToken}` }
-  });
+  const response = await fetchWithRefresh(
+    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=${pageSize}&fields=files(id,name,mimeType,thumbnailLink)`,
+    {},
+    accessToken,
+    setAccessToken
+  );
 
   if (!response.ok) {
     const errorBody = await response.json();
@@ -52,12 +100,15 @@ export const listFiles = async (folderId, accessToken, pageSize = 100) => {
 /**
  * Obtém o conteúdo de um arquivo como um Blob.
  */
-export const getFileAsBlob = async (fileId, accessToken) => {
+export const getFileAsBlob = async (fileId, accessToken, setAccessToken) => {
   if (!accessToken) throw new Error('Access token não fornecido.');
 
-  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-    headers: { 'Authorization': `Bearer ${accessToken}` }
-  });
+  const response = await fetchWithRefresh(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+    {},
+    accessToken,
+    setAccessToken
+  );
 
   if (!response.ok) {
     const errorBody = await response.text();
@@ -70,7 +121,7 @@ export const getFileAsBlob = async (fileId, accessToken) => {
 /**
  * Cria uma nova planilha Google Sheets com os dados fornecidos
  */
-export const createSpreadsheet = async (title, data, accessToken, folderId = null) => {
+export const createSpreadsheet = async (title, data, accessToken, setAccessToken, folderId = null) => {
   if (!accessToken) throw new Error('Access token não fornecido.');
 
   const sheetsData = [
@@ -111,14 +162,18 @@ export const createSpreadsheet = async (title, data, accessToken, folderId = nul
     sheets: sheetsData
   };
 
-  const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
+  const response = await fetchWithRefresh(
+    'https://sheets.googleapis.com/v4/spreadsheets',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(spreadsheetRequestBody)
     },
-    body: JSON.stringify(spreadsheetRequestBody)
-  });
+    accessToken,
+    setAccessToken
+  );
 
   if (!response.ok) {
     const errorBody = await response.json();
@@ -138,29 +193,36 @@ export const createSpreadsheet = async (title, data, accessToken, folderId = nul
 /**
  * Move um arquivo para uma pasta específica no Google Drive.
  */
-export const moveFileToFolder = async (fileId, folderId, accessToken) => {
+export const moveFileToFolder = async (fileId, folderId, accessToken, setAccessToken) => {
     if (!accessToken) throw new Error('Access token não fornecido.');
 
-    const file = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=parents`, {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-    }).then(res => res.json());
+    const fileResponse = await fetchWithRefresh(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?fields=parents`,
+        {},
+        accessToken,
+        setAccessToken
+    );
+    const file = await fileResponse.json();
+
 
     const previousParents = file.parents ? file.parents.join(',') : '';
 
-    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?addParents=${folderId}&removeParents=${previousParents}`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
+    await fetchWithRefresh(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?addParents=${folderId}&removeParents=${previousParents}`,
+        { method: 'PATCH' },
+        accessToken,
+        setAccessToken
+    );
 };
 
 /**
  * Cria uma pasta no Google Drive. Verifica se já existe antes de criar.
  */
-export const createFolder = async (name, parentId, accessToken) => {
+export const createFolder = async (name, parentId, accessToken, setAccessToken) => {
   if (!accessToken) throw new Error('Access token não fornecido para criar pasta.');
 
   // Primeiro, verifica se a pasta já existe para evitar duplicatas.
-  const existingFolder = await findFolderByName(name, parentId, accessToken);
+  const existingFolder = await findFolderByName(name, parentId, accessToken, setAccessToken);
   if (existingFolder) {
     console.warn(`Pasta '${name}' já existe com ID: ${existingFolder.id}. Usando a existente.`);
     return existingFolder;
@@ -175,14 +237,18 @@ export const createFolder = async (name, parentId, accessToken) => {
     metadata.parents = [parentId];
   }
 
-  const response = await fetch('https://www.googleapis.com/drive/v3/files', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
+  const response = await fetchWithRefresh(
+    'https://www.googleapis.com/drive/v3/files',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(metadata),
     },
-    body: JSON.stringify(metadata),
-  });
+    accessToken,
+    setAccessToken
+  );
 
   if (!response.ok) {
     const errorBody = await response.json();
@@ -196,7 +262,7 @@ export const createFolder = async (name, parentId, accessToken) => {
  * Faz upload de um arquivo (Blob) para o Google Drive.
  * Esta versão usa 'uploadType=resumable' que é mais robusto e preferível para blobs.
  */
-export const uploadFile = async (fileBlob, fileName, folderId, accessToken) => {
+export const uploadFile = async (fileBlob, fileName, folderId, accessToken, setAccessToken) => {
   if (!accessToken) throw new Error('Access token não fornecido para upload.');
 
   const metadata = {
@@ -207,14 +273,18 @@ export const uploadFile = async (fileBlob, fileName, folderId, accessToken) => {
   }
 
   // 1. Iniciar uma sessão de upload resumível
-  const initResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json; charset=UTF-8',
+  const initResponse = await fetchWithRefresh(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: JSON.stringify(metadata),
     },
-    body: JSON.stringify(metadata),
-  });
+    accessToken,
+    setAccessToken
+  );
 
   if (!initResponse.ok) {
     const errorBody = await initResponse.json();
@@ -246,16 +316,17 @@ export const uploadFile = async (fileBlob, fileName, folderId, accessToken) => {
 /**
  * Lista as pastas do Google Drive do usuário.
  */
-export const listFolders = async (accessToken, pageSize = 100) => {
+export const listFolders = async (accessToken, setAccessToken, pageSize = 100) => {
   if (!accessToken) throw new Error('Access token não fornecido para listar pastas.');
 
   const query = "mimeType='application/vnd.google-apps.folder' and 'me' in owners and trashed=false";
 
-  const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=${pageSize}&fields=files(id,name)&orderBy=name`, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`
-    }
-  });
+  const response = await fetchWithRefresh(
+    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=${pageSize}&fields=files(id,name)&orderBy=name`,
+    {},
+    accessToken,
+    setAccessToken
+  );
 
   if (!response.ok) {
     const errorBody = await response.json();

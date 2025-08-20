@@ -18,7 +18,7 @@ import {
 import { Folder, Close } from '@mui/icons-material';
 import { listFolders, createFolder } from '../utils/googleApi';
 
-const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder, googleAccessToken }) => {
+const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder, googleAccessToken, setGoogleAccessToken }) => {
   const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -33,7 +33,7 @@ const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder, googleAccessTo
     setLoading(true);
     setError('');
     try {
-      const folderList = await listFolders(googleAccessToken);
+      const folderList = await listFolders(googleAccessToken, setGoogleAccessToken);
       setFolders(folderList);
     } catch (err) {
       setError(`Falha ao buscar pastas: ${err.message}`);
@@ -63,7 +63,7 @@ const GoogleDriveFolderPicker = ({ open, onClose, onSelectFolder, googleAccessTo
     setLoading(true);
     setError('');
     try {
-      const newFolder = await createFolder(newFolderName.trim(), null, googleAccessToken);
+      const newFolder = await createFolder(newFolderName.trim(), null, googleAccessToken, setGoogleAccessToken);
       onSelectFolder(newFolder);
       onClose();
     } catch (err) {
