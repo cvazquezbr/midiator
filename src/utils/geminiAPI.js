@@ -1,6 +1,6 @@
+import { getGeminiModel } from './geminiCredentials';
+
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-const GEMINI_MODEL = 'gemini-1.5-flash-latest';
-const GEMINI_IMAGE_MODEL = 'gemini-1.5-flash-latest'; // Corrected to a valid model for image-related tasks
 
 class GeminiAPI {
   constructor() {
@@ -36,10 +36,11 @@ class GeminiAPI {
       throw new Error('O prompt não pode ser vazio.');
     }
 
-    console.log(`[${purpose}] Iniciando chamada à API Gemini.`);
+    const model = getGeminiModel() || 'gemini-1.5-flash-latest';
+    console.log(`[${purpose}] Iniciando chamada à API Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
-    const apiUrl = `${GEMINI_API_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${this.apiKey}`;
+    const apiUrl = `${GEMINI_API_BASE_URL}/${model}:generateContent?key=${this.apiKey}`;
 
     try {
       const response = await fetch(apiUrl, {
@@ -97,10 +98,11 @@ class GeminiAPI {
       throw new Error('O prompt não pode ser vazio.');
     }
 
-    console.log(`[${purpose}] Iniciando chamada à API de Imagem Gemini.`);
+    const model = getGeminiModel() || 'gemini-1.5-flash-latest';
+    console.log(`[${purpose}] Iniciando chamada à API de Imagem Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
-    const apiUrl = `${GEMINI_API_BASE_URL}/${GEMINI_IMAGE_MODEL}:generateContent?key=${this.apiKey}`;
+    const apiUrl = `${GEMINI_API_BASE_URL}/${model}:generateContent?key=${this.apiKey}`;
 
     try {
       const response = await fetch(apiUrl, {

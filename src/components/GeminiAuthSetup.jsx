@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getGeminiApiKey, saveGeminiApiKey, removeGeminiApiKey } from '../utils/geminiCredentials';
+import { getGeminiApiKey, saveGeminiApiKey, removeGeminiApiKey, getGeminiModel, saveGeminiModel } from '../utils/geminiCredentials';
 import geminiAPI from '../utils/geminiAPI';
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Alert } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Box, IconButton, Alert, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { Visibility, VisibilityOff, InfoOutlined as InfoIcon, Close as CloseIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import GeminiInfobox from './GeminiInfobox';
@@ -10,22 +10,28 @@ const GeminiAuthSetup = () => {
   const [apiKey, setApiKey] = useState('');
   const [currentStoredKey, setCurrentStoredKey] = useState(null);
   const [showKey, setShowKey] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('gemini-2.5-pro');
   const [error, setError] = useState('');
   const [showInfobox, setShowInfobox] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
     const storedKey = getGeminiApiKey();
+    const storedModel = getGeminiModel();
     setCurrentStoredKey(storedKey);
     setApiKey(storedKey || '');
+    if (storedModel) {
+      setSelectedModel(storedModel);
+    }
     setError('');
   }, []);
 
   const handleSave = () => {
     if (apiKey.trim()) {
       saveGeminiApiKey(apiKey.trim());
+      saveGeminiModel(selectedModel);
       setCurrentStoredKey(apiKey.trim());
-      toast.success('Chave da API Gemini salva com sucesso!');
+      toast.success('Configurações da API Gemini salvas com sucesso!');
     } else {
       setError('Por favor, insira uma chave da API Gemini válida.');
     }
@@ -107,6 +113,21 @@ const GeminiAuthSetup = () => {
             {showKey ? <VisibilityOff /> : <Visibility />}
           </IconButton>
         </Box>
+
+        <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel id="gemini-model-select-label">Modelo Gemini</InputLabel>
+            <Select
+                labelId="gemini-model-select-label"
+                id="gemini-model-select"
+                value={selectedModel}
+                label="Modelo Gemini"
+                onChange={(e) => setSelectedModel(e.target.value)}
+            >
+                <MenuItem value="gemini-1.5-pro-latest">Gemini 1.5 Pro (latest)</MenuItem>
+                <MenuItem value="gemini-1.5-flash-latest">Gemini 1.5 Flash (latest)</MenuItem>
+                <MenuItem value="gemini-1.0-pro">Gemini 1.0 Pro</MenuItem>
+            </Select>
+        </FormControl>
 
         {error && (
           <Alert severity="error">{error}</Alert>

@@ -39,3 +39,34 @@ export const removeGeminiApiKey = () => {
     console.error('Erro ao remover a chave da API Gemini do localStorage:', error);
   }
 };
+
+const GEMINI_MODEL_STORAGE_KEY = 'gemini_model';
+
+/**
+ * Salva o modelo Gemini selecionado no localStorage.
+ * @param {string} model - O modelo a ser salvo.
+ */
+export const saveGeminiModel = (model) => {
+  if (typeof model !== 'string' || model.trim() === '') {
+    console.error('Modelo Gemini inválido fornecido para salvar.');
+    return;
+  }
+  try {
+    localStorage.setItem(GEMINI_MODEL_STORAGE_KEY, model);
+  } catch (error) {
+    console.error('Erro ao salvar o modelo Gemini no localStorage:', error);
+  }
+};
+
+/**
+ * Recupera o modelo Gemini selecionado do localStorage.
+ * @returns {string | null} O modelo ou null se não estiver definido.
+ */
+export const getGeminiModel = () => {
+  try {
+    return localStorage.getItem(GEMINI_MODEL_STORAGE_KEY);
+  } catch (error) {
+    console.error('Erro ao recuperar o modelo Gemini do localStorage:', error);
+    return null;
+  }
+};
