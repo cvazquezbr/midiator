@@ -32,6 +32,7 @@ import SetupModal from '../components/SetupModal';
 import CampaignStandardsModal from '../components/CampaignStandardsModal';
 import SaveCampaignModal from '../components/SaveCampaignModal';
 import LoadCampaignModal from '../components/LoadCampaignModal';
+import BackgroundImageSelector from '../components/BackgroundImageSelector';
 
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
@@ -53,8 +54,10 @@ import { parseCsv } from '../utils/csvParser.js';
 import { lightTheme, darkTheme } from '../theme.js';
 import ColorThief from 'colorthief';
 
+import { findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
+
 function HomePage() {
-  const { user } = useUserAuth();
+  const { user, googleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
 
   // Component State
@@ -124,6 +127,7 @@ function HomePage() {
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
+  const [showBgSelector, setShowBgSelector] = useState(false);
   const [currentCampaign, setCurrentCampaign] = useState(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
@@ -310,7 +314,48 @@ function HomePage() {
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
   const updateImageAndPalette = (imageUrl) => { setBackgroundImage(imageUrl); const img = new Image(); img.crossOrigin = 'Anonymous'; img.onload = () => { setOriginalImageSize({ width: img.width, height: img.height }); try { const colorThief = new ColorThief(); const palette = colorThief.getPalette(img, 5); setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`)); } catch (error) { console.error("Error extracting color palette:", error); setColorPalette([]); } }; img.onerror = (err) => { console.error("Error loading image to extract colors:", err); setBackgroundImage(null); setColorPalette([]); }; img.src = imageUrl; };
-  const parseImageFile = (file) => { if (file) { const reader = new FileReader(); reader.onload = (e) => { const imageUrl = e.target.result; updateImageAndPalette(imageUrl); const imageStepIndex = steps.findIndex(step => step.label === 'Imagem e Formatação'); if (imageStepIndex !== -1) { setActiveStep(imageStepIndex); } }; reader.readAsDataURL(file); } };
+  const parseImageFile = async (file) => {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageUrl = e.target.result;
+      // Immediately update the background for a good UX
+      updateImageAndPalette(imageUrl);
+
+      const imageStepIndex = steps.findIndex(step => step.label === 'Imagem e Formatação');
+      if (imageStepIndex !== -1) {
+        setActiveStep(imageStepIndex);
+      }
+
+      // Ask user to save to Drive library
+      if (window.confirm("Deseja salvar esta imagem na sua biblioteca de fundos no Google Drive?")) {
+        const uploadToDrive = async () => {
+            const toastId = toast.loading("Salvando imagem na biblioteca...");
+            try {
+                if (!googleAccessToken) {
+                    throw new Error("Por favor, conecte sua conta Google primeiro.");
+                }
+                let midiatorFolder = await findFolderByName('midiator', null, googleAccessToken);
+                if (!midiatorFolder) {
+                    midiatorFolder = await createFolder('midiator', null, googleAccessToken);
+                }
+                let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id, googleAccessToken);
+                if (!backgroundsFolder) {
+                    backgroundsFolder = await createFolder('backgrounds', midiatorFolder.id, googleAccessToken);
+                }
+                await uploadFile(file, file.name, backgroundsFolder.id, googleAccessToken);
+                toast.success("Imagem salva com sucesso na sua biblioteca!", { id: toastId });
+            } catch (err) {
+                console.error("Failed to upload background to Drive:", err);
+                toast.error(`Falha ao salvar imagem: ${err.message}`, { id: toastId });
+            }
+        };
+        uploadToDrive();
+      }
+    };
+    reader.readAsDataURL(file);
+  };
   const handleImageUpload = (event) => { const file = event.target.files[0]; parseImageFile(file); };
   const handleImageDrop = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(false); const file = event.dataTransfer.files[0]; parseImageFile(file); };
   const handleImageDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
@@ -400,7 +445,7 @@ function HomePage() {
               imageInputRef={imageInputRef}
               handleImageUpload={handleImageUpload}
               backgroundImage={backgroundImage}
-              setBackgroundImage={setBackgroundImage}
+              onChangeBackgroundImage={() => setShowBgSelector(true)}
               csvHeaders={csvHeaders}
               fieldPositions={fieldPositions}
               setFieldPositions={setFieldPositions}
@@ -446,6 +491,12 @@ function HomePage() {
       <LoadCampaignModal open={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadCampaign} onEdit={(campaign) => { setCurrentCampaign(campaign); setShowSaveModal(true); }} />
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
       <CampaignStandardsModal open={showCampaignStandardsModal} onClose={() => { setShowCampaignStandardsModal(false); loadCampaignStandards(); }} onShowMemorial={() => setShowMemorialDescritivoModal(true)} onGeneratePalette={async (briefing) => { try { const palette = await generateColorPalette(briefing); return palette; } catch (error) { toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores."); throw error; } }} />
+      <BackgroundImageSelector
+        open={showBgSelector}
+        onClose={() => setShowBgSelector(false)}
+        onSelect={updateImageAndPalette}
+        onLocalUpload={parseImageFile}
+      />
       <LoadingDialog open={isGeneratingCampaign || isSaving || isLoading} title={ isSaving ? `Salvando Campanha... (${uploadProgress.current}/${uploadProgress.total})` : isLoading ? "Carregando configuração..." : "Gerando conteúdo..." } description={ isSaving ? "Aguarde um momento, estamos fazendo o upload dos seus arquivos." : isLoading ? "Estamos desempacotando sua configuração. Quase pronto!" : "A IA está pensando e escrevendo. Isso pode levar alguns segundos." } progress={isSaving ? (uploadProgress.total > 0 ? (uploadProgress.current / uploadProgress.total) * 100 : 0) : null} />
       <TextEditorDialog
         open={editingField !== null || editingFollowup !== null}
