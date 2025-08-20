@@ -27,7 +27,7 @@ const ImageStep = ({
   imageInputRef,
   handleImageUpload,
   backgroundImage,
-  setBackgroundImage,
+  onChangeBackgroundImage,
   csvHeaders,
   fieldPositions,
   setFieldPositions,
@@ -134,7 +134,7 @@ const ImageStep = ({
 
   return (
     <Box>
-      <Button onClick={() => setBackgroundImage(null)} sx={{ mb: 2 }}>
+      <Button onClick={onChangeBackgroundImage} sx={{ mb: 2 }}>
         &larr; Alterar Imagem de Fundo
       </Button>
       <Grid container spacing={isMobile ? 0 : 2}>

@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import { Refresh, Upload } from '@mui/icons-material';
 import { useUserAuth } from '../context/UserAuthContext';
-import { findFolderByName, listFiles, getFileAsBlob } from '../utils/googleApi';
+import { findFolderByName, listFiles, getFileAsBlob, uploadFile, createFolder } from '../utils/googleApi';
 import { toast } from 'sonner';
 
 const BrandElementManager = ({ onElementSelect }) => {
@@ -46,9 +46,11 @@ const BrandElementManager = ({ onElementSelect }) => {
       }));
 
       setImages(imagesWithLinks);
+      return imagesWithLinks; // Return the fetched images
     } catch (err) {
       setError(err.message || 'Ocorreu um erro desconhecido.');
       console.error("Error fetching brand elements:", err);
+      return []; // Return empty array on error
     } finally {
       setIsLoading(false);
     }
@@ -85,49 +87,67 @@ const BrandElementManager = ({ onElementSelect }) => {
     }
   };
 
-  const handleFileUpload = (event) => {
+  const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageUrl = e.target.result;
-      const img = new Image();
-      img.onload = () => {
-        const MAX_RESOLUTION = 1920;
-        if (img.width > MAX_RESOLUTION || img.height > MAX_RESOLUTION) {
-          toast.error(`A imagem excede a resolução máxima de ${MAX_RESOLUTION}px. Por favor, escolha uma imagem menor.`);
-          // Reset the file input so the user can select the same file again if they want
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-          return;
+    // Reset file input so the same file can be re-uploaded
+    if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+    }
+
+    // Basic validation
+    if (!file.type.startsWith('image/')) {
+        toast.error('Por favor, selecione um arquivo de imagem (PNG, JPG).');
+        return;
+    }
+    const MAX_SIZE_MB = 5;
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+        toast.error(`O arquivo é muito grande. O tamanho máximo é de ${MAX_SIZE_MB}MB.`);
+        return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    const toastId = toast.loading('Fazendo upload da imagem...');
+
+    try {
+        // 1. Find or create midiator folder
+        let midiatorFolder = await findFolderByName('midiator', null, googleAccessToken);
+        if (!midiatorFolder) {
+            toast.info("Criando pasta 'midiator' no seu Google Drive...");
+            midiatorFolder = await createFolder('midiator', null, googleAccessToken);
         }
 
-        const newElement = {
-          id: `brand_${new Date().getTime()}`,
-          url: imageUrl,
-          x: 10, y: 10,
-          width: 20, height: (img.height / img.width) * 20, // Maintain aspect ratio
-          rotation: 0,
-          filters: {
-            brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100,
-          }
-        };
-        onElementSelect(newElement);
-        toast.success("Imagem adicionada com sucesso!");
-
-        // Reset the file input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
+        // 2. Find or create elementos folder
+        let elementosFolder = await findFolderByName('elementos', midiatorFolder.id, googleAccessToken);
+        if (!elementosFolder) {
+            toast.info("Criando pasta 'elementos' no seu Google Drive...");
+            elementosFolder = await createFolder('elementos', midiatorFolder.id, googleAccessToken);
         }
-      };
-      img.onerror = () => {
-        toast.error("Ocorreu um erro ao carregar o arquivo de imagem.");
-      };
-      img.src = imageUrl;
-    };
-    reader.readAsDataURL(file);
+
+        // 3. Upload the file
+        const uploadedFile = await uploadFile(file, file.name, elementosFolder.id, googleAccessToken);
+        toast.success(`'${file.name}' foi enviado com sucesso!`, { id: toastId });
+
+        // 4. Refresh the list of brand elements
+        const refreshedImages = await fetchBrandElements();
+
+        // 5. Automatically select the new element
+        const newImage = refreshedImages.find(img => img.id === uploadedFile.id);
+        if (newImage) {
+            // A small delay can still be good for the user to perceive the list updating
+            setTimeout(() => handleSelect(newImage), 100);
+        }
+
+
+    } catch (err) {
+        setError(`Falha no upload: ${err.message}`);
+        toast.error(`Falha no upload: ${err.message}`, { id: toastId });
+        console.error("Upload failed:", err);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
