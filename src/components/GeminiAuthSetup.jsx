@@ -15,7 +15,8 @@ const GeminiAuthSetup = () => {
   const [testResult, setTestResult] = useState(null);
 
   const apiKey = settings.gemini_api_key || '';
-  const selectedModel = settings.gemini_model || 'gemini-1.5-pro-latest';
+  const selectedModel = settings.gemini_model || 'gemini-1.5-pro';
+  const selectedImageModel = settings.gemini_image_model || 'imagen-3';
 
   const handleApiKeyChange = (e) => {
     updateSetting('gemini_api_key', e.target.value);
@@ -24,6 +25,10 @@ const GeminiAuthSetup = () => {
 
   const handleModelChange = (e) => {
     updateSetting('gemini_model', e.target.value);
+  };
+
+  const handleImageModelChange = (e) => {
+    updateSetting('gemini_image_model', e.target.value);
   };
 
   const handleRemove = () => {
@@ -106,9 +111,26 @@ const GeminiAuthSetup = () => {
                 label="Modelo Gemini"
                 onChange={handleModelChange}
             >
-                <MenuItem value="gemini-1.5-pro-latest">Gemini 1.5 Pro (latest)</MenuItem>
-                <MenuItem value="gemini-1.5-flash-latest">Gemini 1.5 Flash (latest)</MenuItem>
+                <MenuItem value="gemini-2.5-pro">Gemini 2.5 Pro</MenuItem>
+                <MenuItem value="gemini-2.5-flash">Gemini 2.5 Flash</MenuItem>
+                <MenuItem value="gemini-1.5-pro">Gemini 1.5 Pro</MenuItem>
+                <MenuItem value="gemini-1.5-flash">Gemini 1.5 Flash</MenuItem>
+                <MenuItem value="gemini-1.5-pro-preview-0514">Gemini 1.5 Pro (Preview 0514)</MenuItem>
                 <MenuItem value="gemini-1.0-pro">Gemini 1.0 Pro</MenuItem>
+            </Select>
+        </FormControl>
+
+        <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel id="gemini-image-model-select-label">Modelo Gemini (imagem)</InputLabel>
+            <Select
+                labelId="gemini-image-model-select-label"
+                id="gemini-image-model-select"
+                value={selectedImageModel}
+                label="Modelo Gemini (imagem)"
+                onChange={handleImageModelChange}
+            >
+                <MenuItem value="imagen-3">Imagen 3</MenuItem>
+                <MenuItem value="gemini-2.0-flash-preview-image-generation">Gemini 2.0 Flash (Preview)</MenuItem>
             </Select>
         </FormControl>
 

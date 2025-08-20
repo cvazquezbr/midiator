@@ -1,4 +1,4 @@
-import { getGeminiModel } from './geminiCredentials';
+import { getGeminiModel, getGeminiImageModel } from './geminiCredentials';
 
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -36,7 +36,7 @@ class GeminiAPI {
       throw new Error('O prompt não pode ser vazio.');
     }
 
-    const model = getGeminiModel() || 'gemini-1.5-flash-latest';
+    const model = getGeminiModel() || 'gemini-1.5-pro';
     console.log(`[${purpose}] Iniciando chamada à API Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
@@ -98,7 +98,7 @@ class GeminiAPI {
       throw new Error('O prompt não pode ser vazio.');
     }
 
-    const model = getGeminiModel() || 'gemini-1.5-flash-latest';
+    const model = getGeminiImageModel() || 'imagen-3';
     console.log(`[${purpose}] Iniciando chamada à API de Imagem Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
