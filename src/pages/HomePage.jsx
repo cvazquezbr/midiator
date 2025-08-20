@@ -135,10 +135,6 @@ function HomePage() {
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
 
-  // Use a ref to hold the latest campaignContent to avoid stale state in callbacks.
-  const campaignContentRef = useRef(campaignContent);
-  campaignContentRef.current = campaignContent;
-
   const getAppState = () => ({ activeStep, darkMode, sidebarOpen, csvData, csvHeaders, backgroundImage, colorPalette, standardsColors, problema, solucao, campaignContent, persona, autor, instrucoes, formato, aspectRatio, generatedImageUrl, conteudoMedio, conteudoPequeno, followupPosts, followupPostsQuantity, isScheduled, scheduleDate, weeklySchedule, selectedProfile, selectedImages, selectedVideos, inputMethod, promptNumRecords, promptText, fieldPositions, fieldStyles, displayedImageSize, originalImageSize, generatedImagesData, generatedAudioData, generatedVideosData, imageFilters, brandElements });
   const applyAppState = (state) => {
     if (!state) return;
@@ -317,28 +313,7 @@ function HomePage() {
   const handleCSVUpload = (event) => { const file = event.target.files[0]; parseCsvFile(file); };
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
-  const updateImageAndPalette = useCallback((imageUrl) => {
-    setBackgroundImage(imageUrl);
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-    img.onload = () => {
-      setOriginalImageSize({ width: img.width, height: img.height });
-      try {
-        const colorThief = new ColorThief();
-        const palette = colorThief.getPalette(img, 5);
-        setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`));
-      } catch (error) {
-        console.error("Error extracting color palette:", error);
-        setColorPalette([]);
-      }
-    };
-    img.onerror = (err) => {
-      console.error("Error loading image to extract colors:", err);
-      setBackgroundImage(null);
-      setColorPalette([]);
-    };
-    img.src = imageUrl;
-  }, []); // State setters are stable.
+  const updateImageAndPalette = (imageUrl) => { setBackgroundImage(imageUrl); const img = new Image(); img.crossOrigin = 'Anonymous'; img.onload = () => { setOriginalImageSize({ width: img.width, height: img.height }); try { const colorThief = new ColorThief(); const palette = colorThief.getPalette(img, 5); setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`)); } catch (error) { console.error("Error extracting color palette:", error); setColorPalette([]); } }; img.onerror = (err) => { console.error("Error loading image to extract colors:", err); setBackgroundImage(null); setColorPalette([]); }; img.src = imageUrl; };
   const parseImageFile = async (file) => {
     if (!file) return;
 
@@ -437,26 +412,7 @@ function HomePage() {
       setIsGeneratingCampaign(false);
     }
   };
-  const handleGenerateImage = useCallback(async (content) => {
-    const finalContent = content || campaignContentRef.current;
-    if (!finalContent) {
-      toast.error("Por favor, gere o conteúdo do texto primeiro.");
-      return false;
-    }
-    setIsGeneratingImage(true);
-    try {
-      const imageUrl = await generateCampaignImage({ content: finalContent, aspectRatio });
-      setGeneratedImageUrl(imageUrl);
-      updateImageAndPalette(imageUrl);
-      return true;
-    } catch (imageError) {
-      toast.error(`Ocorreu um erro ao gerar a imagem da campanha: ${imageError.message}`);
-      setGeneratedImageUrl(null);
-      return false;
-    } finally {
-      setIsGeneratingImage(false);
-    }
-  }, [aspectRatio, updateImageAndPalette]);
+  const handleGenerateImage = async (content = campaignContent) => { if (!content) { toast.error("Por favor, gere o conteúdo do texto primeiro."); return false; } setIsGeneratingImage(true); try { const imageUrl = await generateCampaignImage({ content, aspectRatio }); setGeneratedImageUrl(imageUrl); updateImageAndPalette(imageUrl); return true; } catch (imageError) { toast.error(`Ocorreu um erro ao gerar a imagem da campanha: ${imageError.message}`); setGeneratedImageUrl(null); return false; } finally { setIsGeneratingImage(false); } };
   const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
   const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
   const handleGenerateFollowupPosts = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingFollowup(true); try { const plan = await generateFollowupPlan({ content, followupPostsQuantity }); const posts = await generateFollowupPosts({ content, plan }); setFollowupPosts(posts); } catch (error) { toast.error(`Ocorreu um erro ao gerar os posts de follow-up: ${error.message}`); } finally { setIsGeneratingFollowup(false); } };

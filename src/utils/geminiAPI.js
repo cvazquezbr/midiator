@@ -91,87 +91,18 @@ class GeminiAPI {
    * @returns {Promise<string>} The base64 encoded image data.
    */
   async generateImage(promptString, purpose = 'Geração de Imagem') {
-    if (!this.isInitialized) {
-      throw new Error('GeminiAPI não foi inicializada. Chame initialize() primeiro.');
-    }
-    if (!promptString) {
-      throw new Error('O prompt não pode ser vazio.');
-    }
+    // A análise do log do usuário e da documentação da API Gemini indica que
+    // a API `generativelanguage.googleapis.com` com um modelo como 'gemini-1.5-flash-latest'
+    // não suporta a geração de imagens de texto para imagem. Ela retorna uma resposta de texto.
+    // A implementação atual está chamando o endpoint de geração de texto por engano.
+    // A correção adequada exigiria a integração com uma API diferente (como a Vertex AI com um modelo Imagen),
+    // o que é uma mudança arquitetônica significativa.
+    // Para evitar mais confusão e falhas, esta função agora lançará um erro informativo.
 
-    const model = getGeminiModel() || 'gemini-1.5-flash-latest';
-    console.log(`[${purpose}] Iniciando chamada à API de Imagem Gemini com o modelo ${model}.`);
-    console.log(`[${purpose}] Prompt:`, promptString);
+    console.error(`[${purpose}] A função de geração de imagem foi chamada, mas está configurada incorretamente.`);
+    console.error(`[${purpose}] O modelo configurado (provavelmente um modelo de texto como 'gemini-1.5-flash') e o endpoint ':generateContent' não podem criar imagens.`);
 
-    const apiUrl = `${GEMINI_API_BASE_URL}/${model}:generateContent?key=${this.apiKey}`;
-
-    try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: promptString
-            }]
-          }],
-          safetySettings: [
-            {
-              category: 'HARM_CATEGORY_HARASSMENT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-            },
-            {
-              category: 'HARM_CATEGORY_HATE_SPEECH',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-            },
-            {
-              category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-            },
-            {
-              category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
-            },
-          ],
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: { message: response.statusText } }));
-        const errorMessage = errorData.error?.message || `Erro ${response.status}`;
-        console.error('Erro da API Gemini (Imagem):', errorData);
-        throw new Error(`Erro da API Gemini (Imagem): ${errorMessage}`);
-      }
-
-      const responseData = await response.json();
-      console.log(`[${purpose}] Resposta da API de Imagem Gemini (bruta):`, responseData);
-
-      // Check for prompt feedback which indicates a safety block
-      if (responseData.promptFeedback && responseData.promptFeedback.blockReason) {
-        const blockReason = responseData.promptFeedback.blockReason;
-        const safetyRatings = responseData.promptFeedback.safetyRatings;
-        console.error(`[${purpose}] A solicitação foi bloqueada pela API Gemini. Razão: ${blockReason}`);
-        console.error(`[${purpose}] Detalhes de Segurança:`, safetyRatings);
-        throw new Error(`A geração de imagem foi bloqueada por questões de segurança: ${blockReason}. Verifique o conteúdo do seu prompt.`);
-      }
-
-      const imagePart = responseData.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
-      if (imagePart) {
-        console.log(`[${purpose}] Imagem Base64 recebida (tamanho: ${imagePart.inlineData.data.length} bytes).`);
-        return imagePart.inlineData.data;
-      } else {
-        // This case handles when there are no candidates, but it wasn't explicitly blocked.
-        console.error('Formato de resposta inesperado da API Gemini (Imagem). Nenhum candidato ou parte de imagem encontrada:', responseData);
-        throw new Error('Nenhuma imagem foi retornada pela API. A resposta não continha dados de imagem.');
-      }
-    } catch (error) {
-      console.error('Erro ao chamar a API de imagem Gemini:', error);
-      if (error instanceof Error && error.message.startsWith('Erro da API Gemini')) {
-        throw error;
-      }
-      throw new Error(`Falha na comunicação com a API de imagem Gemini: ${error.message}`);
-    }
+    throw new Error('Funcionalidade de geração de imagem não está configurada corretamente. A API chamada é para geração de texto, não de imagem. É necessária uma alteração na configuração da API para um serviço de imagem como o Vertex AI Imagen.');
   }
 }
 
