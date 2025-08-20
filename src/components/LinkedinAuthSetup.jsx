@@ -63,7 +63,9 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
         });
         if (!response.ok) throw new Error('Falha ao buscar detalhes do usuário.');
         const data = await response.json();
-        setConnectedUser(data);
+        const firstName = data.firstName?.localized?.pt_BR || data.firstName?.localized?.en_US;
+        const lastName = data.lastName?.localized?.pt_BR || data.lastName?.localized?.en_US;
+        setConnectedUser({ localizedFirstName: firstName, localizedLastName: lastName });
       } catch (err) {
         console.error("Erro ao buscar detalhes do usuário do LinkedIn:", err);
         setConnectedUser({ localizedFirstName: 'Usuário', localizedLastName: 'Desconhecido' });
