@@ -56,7 +56,7 @@ class LinkedInAPI {
 
 // Wrapper function to handle caching, as requested.
 export const getLinkedInProfiles = async (linkedinConfig, forceRefresh = false) => {
-    const cacheKey = 'linkedin_profiles_cache';
+    const cacheKey = 'linkedin_profiles_cache_v2'; // v2 to invalidate old cache
 
     if (forceRefresh) {
         sessionStorage.removeItem(cacheKey);
