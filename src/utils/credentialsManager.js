@@ -1,6 +1,5 @@
 import { getGeminiApiKey, saveGeminiApiKey } from './geminiCredentials';
 import { getGoogleCloudTTSCredentials, saveGoogleCloudTTSCredentials } from './googleCloudTTSCredentials';
-import { getLinkedinConfig, saveLinkedinConfig } from './linkedinCredentials';
 import { getWordpressConfig, saveWordpressConfig } from './wordpressCredentials';
 import { getTimezone, saveTimezone } from './timezone';
 
@@ -10,7 +9,7 @@ const CREDENTIAL_KEYS = {
   GOOGLE_DRIVE_API_KEY: 'google_drive_api_key',
   GOOGLE_DRIVE_CLIENT_ID: 'google_drive_client_id',
   GOOGLE_TTS: 'googleCloudTTSCredentials',
-  LINKEDIN: 'linkedinConfig',
+  // LINKEDIN: 'linkedinConfig', // This is now handled by SettingsContext
   WORDPRESS: 'wordpressConfig',
   TIMEZONE: 'user_timezone',
 };
@@ -36,10 +35,6 @@ export const gatherCredentials = () => {
   // Google Cloud TTS
   const googleTts = getGoogleCloudTTSCredentials();
   if (googleTts) credentials[CREDENTIAL_KEYS.GOOGLE_TTS] = googleTts;
-
-  // LinkedIn
-  const linkedin = getLinkedinConfig();
-  if (linkedin && (linkedin.clientId || linkedin.accessToken)) credentials[CREDENTIAL_KEYS.LINKEDIN] = linkedin;
 
   // WordPress
   const wordpress = getWordpressConfig();
@@ -81,9 +76,6 @@ export const applySettings = (settings) => {
   }
   if (settings[CREDENTIAL_KEYS.GOOGLE_TTS]) {
     saveGoogleCloudTTSCredentials(settings[CREDENTIAL_KEYS.GOOGLE_TTS]);
-  }
-  if (settings[CREDENTIAL_KEYS.LINKEDIN]) {
-    saveLinkedinConfig(settings[CREDENTIAL_KEYS.LINKEDIN]);
   }
   if (settings[CREDENTIAL_KEYS.WORDPRESS]) {
     saveWordpressConfig(settings[CREDENTIAL_KEYS.WORDPRESS]);
