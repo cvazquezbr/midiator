@@ -14,7 +14,6 @@ import { Toaster, toast } from 'sonner';
 
 import { useUserAuth } from '../context/UserAuthContext';
 import { useSettings } from '../context/SettingsContext';
-import { useSettings } from '../context/SettingsContext';
 import { loadSettingsFromDb } from '../utils/credentialsManager';
 import { saveCampaign, loadCampaign, updateCampaign } from '../utils/campaignState';
 import { saveLinkedinConfig } from '../utils/linkedinCredentials';

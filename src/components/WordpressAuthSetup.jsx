@@ -20,8 +20,8 @@ import WordpressInfobox from './WordpressInfobox';
 const WordpressAuthSetup = () => {
   const { settings, updateSetting } = useSettings();
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
   const [showInfobox, setShowInfobox] = useState(false);
 
   const wordpressConfig = settings.wordpress || {};
@@ -30,7 +30,7 @@ const WordpressAuthSetup = () => {
     const { name, value } = e.target;
     const newWordpressConfig = { ...wordpressConfig, [name]: value };
     updateSetting('wordpress', newWordpressConfig);
-    if (error) setError('');
+    setTestResult(null);
   };
 
   const handleRemove = () => {
@@ -40,42 +40,39 @@ const WordpressAuthSetup = () => {
 
   const handleTestConnection = async () => {
     setIsTesting(true);
-    setError('');
+    setTestResult(null);
 
-    const { username, password, wordpressUrl } = config;
+    const { username, password, wordpressUrl } = wordpressConfig;
 
-    if (!username.trim() || !password.trim() || !wordpressUrl.trim()) {
+    if (!username?.trim() || !password?.trim() || !wordpressUrl?.trim()) {
       toast.error('Preencha os campos de URL, usuário e senha para testar.');
       setIsTesting(false);
       return;
     }
 
-    let fullUrl = wordpressUrl.startsWith('http') ? wordpressUrl : `https://${wordpressUrl}`;
-    fullUrl = fullUrl.replace(/\/$/, '');
-
-    const testUrl = `${fullUrl}/wp-json/wp/v2/users/me`;
-    const credentials = btoa(`${username}:${password}`);
-
     try {
-      const response = await fetch(testUrl, {
-        method: 'GET',
+      const response = await fetch('/api/wordpress/test', {
+        method: 'POST',
         headers: {
-          'Authorization': `Basic ${credentials}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ wordpressUrl, username, password }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        toast.success(`Conexão bem-sucedida. Conectado como ${data.name}.`);
-      } else if (response.status === 401) {
-        toast.error('Credenciais inválidas ou URL incorreta.');
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setTestResult({ type: 'success', message: data.message });
+        toast.success(data.message);
       } else {
-        const errorData = await response.json().catch(() => ({ message: 'Não foi possível ler a resposta de erro.' }));
-        toast.error(`Erro ${response.status}: ${errorData.message || 'Ocorreu um erro desconhecido.'}`);
+        setTestResult({ type: 'error', message: data.message || 'Ocorreu um erro desconhecido.' });
+        toast.error(data.message || 'Ocorreu um erro desconhecido.');
       }
     } catch (err) {
       console.error('Erro no teste de conexão:', err);
-      toast.error('Erro de rede. Verifique a URL e sua conexão com a internet.');
+      const errorMessage = 'Erro de rede. Verifique sua conexão ou a URL do servidor.';
+      setTestResult({ type: 'error', message: errorMessage });
+      toast.error(errorMessage);
     } finally {
       setIsTesting(false);
     }
@@ -179,8 +176,10 @@ const WordpressAuthSetup = () => {
             </Grid>
         </Grid>
 
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
+        {testResult && (
+            <Alert severity={testResult.type} sx={{ mt: 2 }}>
+                {testResult.message}
+            </Alert>
         )}
         <Box sx={{ pt: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Button onClick={handleTestConnection} disabled={isTesting} variant="outlined">

@@ -131,15 +131,6 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
     toast.info('Configuração do LinkedIn e conexão removidas.');
   };
 
-  if (isLoading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 3 }}>
-        <CircularProgress />
-        <Typography sx={{ ml: 2 }}>Carregando configurações...</Typography>
-      </Box>
-    );
-  }
-
   return (
     <>
       <Box sx={{ p: 1 }}>
