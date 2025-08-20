@@ -354,7 +354,7 @@ async function handleGetProfiles(request, response) {
   try {
     const [personalResponse, orgAclsResponse] = await Promise.all([
       fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
-      fetch('https://api.linkedin.com/v2/organizationAcls?q=roleAssignee', { headers })
+      fetch('https://api.linkedin.com/rest/organizationAcls?q=roleAssignee', { headers })
     ]);
 
     if (!personalResponse.ok) {
