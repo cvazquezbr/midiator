@@ -11,16 +11,19 @@ const GoogleCloudTTSAuth = () => {
   const [error, setError] = useState('');
   const [showInfobox, setShowInfobox] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
 
   const credentials = settings.googleCloudTTSCredentials || '';
 
   const handleChange = (e) => {
     updateSetting('googleCloudTTSCredentials', e.target.value);
     if (error) setError('');
+    setTestResult(null);
   };
 
   const handleRemove = () => {
     updateSetting('googleCloudTTSCredentials', '');
+    setTestResult(null);
     toast.info('Credenciais do Google Cloud TTS removidas.');
   };
 
@@ -30,16 +33,17 @@ const GoogleCloudTTSAuth = () => {
       return;
     }
     setIsTesting(true);
+    setTestResult(null);
     try {
       const parsedCredentials = JSON.parse(credentials);
       // Initialize the API with the provided credentials for the test
       googleCloudTTSAPI.initialize(parsedCredentials);
       // Perform a test call
       await googleCloudTTSAPI.synthesize('teste');
-      toast.success('Conexão com a API Google Cloud TTS bem-sucedida!');
+      setTestResult({ severity: 'success', message: 'Conexão com a API Google Cloud TTS bem-sucedida!' });
     } catch (err) {
       console.error('Erro no teste de conexão com Google Cloud TTS:', err);
-      toast.error(`Falha na conexão: ${err.message}`);
+      setTestResult({ severity: 'error', message: `Falha na conexão: ${err.message}` });
     } finally {
       setIsTesting(false);
     }
@@ -82,7 +86,12 @@ const GoogleCloudTTSAuth = () => {
         </Box>
 
         {error && (
-          <Alert severity="error">{error}</Alert>
+          <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>
+        )}
+        {testResult && (
+            <Alert severity={testResult.severity} sx={{ mt: 2 }}>
+                {testResult.message}
+            </Alert>
         )}
         <Box sx={{ pt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Button onClick={handleTestConnection} disabled={isTesting} variant="outlined">

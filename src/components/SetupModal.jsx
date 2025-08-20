@@ -16,6 +16,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Autocomplete,
+  TextField,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -63,10 +65,11 @@ const GeneralSettings = () => {
   const { settings, updateSetting } = useSettings();
   const timezone = settings.user_timezone || 'UTC';
 
-  const handleTimezoneChange = (event) => {
-    const newTimezone = event.target.value;
-    updateSetting('user_timezone', newTimezone);
-    toast.info(`Timezone set to ${newTimezone}. This will be saved with your other settings.`);
+  const handleTimezoneChange = (event, newValue) => {
+    if (newValue) {
+      updateSetting('user_timezone', newValue);
+      toast.info(`Timezone set to ${newValue}. This will be saved with your other settings.`);
+    }
   };
 
   return (
@@ -74,30 +77,28 @@ const GeneralSettings = () => {
       <Typography variant="h6" gutterBottom>
         General Settings
       </Typography>
-      <FormControl fullWidth sx={{ mt: 2 }}>
-        <InputLabel id="timezone-select-label">Your Timezone</InputLabel>
-        <Select
-          labelId="timezone-select-label"
-          value={timezone}
-          label="Your Timezone"
-          onChange={handleTimezoneChange}
-        >
-          {IANA_TIMEZONES.map((tz) => (
-            <MenuItem key={tz} value={tz}>
-              {tz}
-            </MenuItem>
-          ))}
-        </Select>
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-          This timezone will be used to correctly schedule your posts.
-        </Typography>
-      </FormControl>
+      <Autocomplete
+        options={IANA_TIMEZONES}
+        value={timezone}
+        onChange={handleTimezoneChange}
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            label="Your Timezone"
+            fullWidth
+            sx={{ mt: 2 }}
+          />
+        )}
+      />
+      <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+        This timezone will be used to correctly schedule your posts.
+      </Typography>
     </Box>
   );
 };
 
 
-const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
+const SetupModal = ({ open, onClose }) => {
   const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
   const { saveSettings, isLoading } = useSettings();
@@ -161,7 +162,7 @@ const SetupModal = ({ open, onClose, onBeforeLinkedinRedirect }) => {
           <WordpressAuthSetup />
         </TabPanel>
         <TabPanel value={value} index={4}>
-          <LinkedinAuthSetup onBeforeRedirect={onBeforeLinkedinRedirect} />
+          <LinkedinAuthSetup onBeforeRedirect={handleSave} />
         </TabPanel>
       </DialogContent>
       <DialogActions>
