@@ -13,7 +13,7 @@ const BrandElementManager = ({ onElementSelect }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [loadingImageId, setLoadingImageId] = useState(null);
-  const { googleAccessToken, setGoogleAccessToken } = useUserAuth();
+  const { googleAccessToken } = useUserAuth(); // Only used to check for connection status
   const fileInputRef = React.useRef(null);
 
   const fetchBrandElements = useCallback(async () => {
@@ -25,17 +25,20 @@ const BrandElementManager = ({ onElementSelect }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const midiatorFolder = await findFolderByName('midiator', null, googleAccessToken, setGoogleAccessToken);
+      const midiatorFolder = await findFolderByName('midiator');
       if (!midiatorFolder) {
         throw new Error("A pasta 'midiator' não foi encontrada no seu Google Drive.");
       }
 
-      const elementosFolder = await findFolderByName('elementos', midiatorFolder.id, googleAccessToken, setGoogleAccessToken);
+      const elementosFolder = await findFolderByName('elementos', midiatorFolder.id);
       if (!elementosFolder) {
-        throw new Error("A subpasta 'elementos' não foi encontrada dentro da pasta 'midiator'.");
+        // This is not an error, it just means there are no elements yet.
+        setImages([]);
+        console.log("Pasta 'elementos' não encontrada. Nenhum elemento para carregar.");
+        return [];
       }
 
-      const fileList = await listFiles(elementosFolder.id, googleAccessToken, setGoogleAccessToken, 100);
+      const fileList = await listFiles(elementosFolder.id); // Corrected call
       const imageFiles = fileList.files.filter(file => file.mimeType.startsWith('image/'));
 
       const imagesWithLinks = imageFiles.map(file => ({
@@ -46,15 +49,15 @@ const BrandElementManager = ({ onElementSelect }) => {
       }));
 
       setImages(imagesWithLinks);
-      return imagesWithLinks; // Return the fetched images
+      return imagesWithLinks;
     } catch (err) {
       setError(err.message || 'Ocorreu um erro desconhecido.');
       console.error("Error fetching brand elements:", err);
-      return []; // Return empty array on error
+      return [];
     } finally {
       setIsLoading(false);
     }
-  }, [googleAccessToken, setGoogleAccessToken]);
+  }, [googleAccessToken]);
 
   useEffect(() => {
     fetchBrandElements();
@@ -66,13 +69,13 @@ const BrandElementManager = ({ onElementSelect }) => {
     setError(null);
 
     try {
-      const blob = await getFileAsBlob(image.id, googleAccessToken, setGoogleAccessToken);
+      const blob = await getFileAsBlob(image.id); // Corrected call
       const blobUrl = URL.createObjectURL(blob);
 
       const newElement = {
         id: `brand_${new Date().getTime()}`,
         gDriveId: image.id,
-        url: blobUrl, // Use the blob URL
+        url: blobUrl,
         x: 10, y: 10, width: 20, height: 20, rotation: 0,
         filters: {
           brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100,
@@ -91,12 +94,10 @@ const BrandElementManager = ({ onElementSelect }) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Reset file input so the same file can be re-uploaded
     if (fileInputRef.current) {
         fileInputRef.current.value = '';
     }
 
-    // Basic validation
     if (!file.type.startsWith('image/')) {
         toast.error('Por favor, selecione um arquivo de imagem (PNG, JPG).');
         return;
@@ -112,34 +113,30 @@ const BrandElementManager = ({ onElementSelect }) => {
     const toastId = toast.loading('Fazendo upload da imagem...');
 
     try {
-        // 1. Find or create midiator folder
-        let midiatorFolder = await findFolderByName('midiator', null, googleAccessToken, setGoogleAccessToken);
+        let midiatorFolder = await findFolderByName('midiator');
         if (!midiatorFolder) {
             toast.info("Criando pasta 'midiator' no seu Google Drive...");
-            midiatorFolder = await createFolder('midiator', null, googleAccessToken, setGoogleAccessToken);
+            midiatorFolder = await createFolder('midiator');
         }
 
-        // 2. Find or create elementos folder
-        let elementosFolder = await findFolderByName('elementos', midiatorFolder.id, googleAccessToken, setGoogleAccessToken);
+        let elementosFolder = await findFolderByName('elementos', midiatorFolder.id);
         if (!elementosFolder) {
             toast.info("Criando pasta 'elementos' no seu Google Drive...");
-            elementosFolder = await createFolder('elementos', midiatorFolder.id, googleAccessToken, setGoogleAccessToken);
+            elementosFolder = await createFolder('elementos', midiatorFolder.id);
         }
 
-        // 3. Upload the file
-        const uploadedFile = await uploadFile(file, file.name, elementosFolder.id, googleAccessToken, setGoogleAccessToken);
+        const uploadedFile = await uploadFile(file, file.name, elementosFolder.id);
+        if (!uploadedFile) {
+            throw new Error("Falha no upload do arquivo.");
+        }
         toast.success(`'${file.name}' foi enviado com sucesso!`, { id: toastId });
 
-        // 4. Refresh the list of brand elements
         const refreshedImages = await fetchBrandElements();
 
-        // 5. Automatically select the new element
         const newImage = refreshedImages.find(img => img.id === uploadedFile.id);
         if (newImage) {
-            // A small delay can still be good for the user to perceive the list updating
             setTimeout(() => handleSelect(newImage), 100);
         }
-
 
     } catch (err) {
         setError(`Falha no upload: ${err.message}`);
