@@ -16,6 +16,7 @@ import { useUserAuth } from '../context/UserAuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { loadSettingsFromDb } from '../utils/credentialsManager';
 import { saveCampaign, loadCampaign, updateCampaign } from '../utils/campaignState';
+import { checkAuthStatus } from '../utils/auth';
 
 import MainAppBar from '../components/MainAppBar';
 import Sidebar from '../components/Sidebar';
@@ -184,6 +185,13 @@ function HomePage() {
   };
 
   const handleSaveCampaign = async (name) => {
+    try {
+      await checkAuthStatus();
+    } catch (error) {
+      toast.error(error.message);
+      return;
+    }
+
     const appState = getAppState();
     setIsSaving(true);
     setUploadProgress({ current: 0, total: 0 });
@@ -198,13 +206,20 @@ function HomePage() {
         setCurrentCampaign(newCampaign);
       }
     } catch (err) {
-      // The error is already toasted in serializeCampaignData
+      // Errors from save/update are already toasted.
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleLoadCampaign = async (id) => {
+    try {
+      await checkAuthStatus();
+    } catch (error) {
+      toast.error(error.message);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const loadedState = await loadCampaign(id);
