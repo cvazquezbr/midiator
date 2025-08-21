@@ -334,34 +334,36 @@ const Publisher = ({
   // Fetch LinkedIn profiles on component mount
   useEffect(() => {
     const fetchProfiles = async () => {
-      setIsLoadingProfiles(true);
-      setProfileError('');
-      try {
-        const profiles = await getLinkedInProfiles(settings?.linkedin);
-        setLinkedinProfiles({
-            personal: profiles.personal,
-            organizations: profiles.organizations || []
-        });
+      // Only fetch if settings are available and profiles haven't been loaded yet.
+      if (settings?.linkedin && !linkedinProfiles.personal && linkedinProfiles.organizations.length === 0) {
+        setIsLoadingProfiles(true);
+        setProfileError('');
+        try {
+          const profiles = await getLinkedInProfiles(settings.linkedin);
+          setLinkedinProfiles({
+              personal: profiles.personal,
+              organizations: profiles.organizations || []
+          });
 
-        // Set a default profile only if the cleaned list is not empty and no profile is already selected.
-        if (profiles.personal && !selectedTarget) {
-            setSelectedTarget({
-                id: profiles.personal.id,
-                name: `${profiles.personal.name} (Perfil Pessoal)`,
-                type: 'personal'
-            });
+          // Set a default profile only if the cleaned list is not empty and no profile is already selected.
+          if (profiles.personal && !selectedTarget) {
+              setSelectedTarget({
+                  id: profiles.personal.id,
+                  name: `${profiles.personal.name} (Perfil Pessoal)`,
+                  type: 'personal'
+              });
+          }
+        } catch (error) {
+          console.error("Erro ao buscar perfis do LinkedIn:", error);
+          setProfileError(error.message);
+          setLinkedinProfiles({ personal: null, organizations: [] });
+        } finally {
+          setIsLoadingProfiles(false);
         }
-
-      } catch (error) {
-        console.error("Erro ao buscar perfis do LinkedIn:", error);
-        setProfileError(error.message);
-        setLinkedinProfiles({ personal: null, organizations: [] }); // Also clear profiles on error
-      } finally {
-        setIsLoadingProfiles(false);
       }
     };
     fetchProfiles();
-  }, [settings?.linkedin, selectedTarget]); // Rerun if settings change
+  }, [settings?.linkedin]); // Rerun only if settings change
 
   // Effect to clear selection if media data is removed.
   useEffect(() => {
