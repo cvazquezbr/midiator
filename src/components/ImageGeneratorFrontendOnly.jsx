@@ -276,10 +276,7 @@ const ImageGeneratorFrontendOnly = ({
       }
     } catch (error) {
       console.error('Erro na geração de imagens:', error);
-      const message = error.message.includes('Failed to load image')
-        ? 'Falha ao carregar a imagem de fundo. Verifique se a imagem está acessível e tente novamente.'
-        : `Erro na geração de imagens: ${error.message}`;
-      toast.error(message);
+      alert(`Erro na geração de imagens: ${error.message}`);
     } finally {
       setIsGenerating(false);
       setShowProgressModal(false);
