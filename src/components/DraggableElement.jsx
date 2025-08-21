@@ -116,86 +116,96 @@ const DraggableElement = ({
     const cos = Math.cos(rad);
     const sin = Math.sin(rad);
 
-    // Get the mouse deltas in the element's coordinate system
     const rotatedDeltaX = deltaXPercent * cos + deltaYPercent * sin;
     const rotatedDeltaY = -deltaXPercent * sin + deltaYPercent * cos;
 
     let { width: newWidth, height: newHeight } = initialSize;
-    let { x: newX, y: newY } = initialPosition;
-
     const initialCenterX = initialPosition.x + initialSize.width / 2;
     const initialCenterY = initialPosition.y + initialSize.height / 2;
+
     let newCenterX = initialCenterX;
     let newCenterY = initialCenterY;
+    let dw = 0; // change in width
+    let dh = 0; // change in height
 
     switch (handleName) {
-        case 'e':
-            newWidth += rotatedDeltaX;
-            newCenterX += (rotatedDeltaX / 2) * cos;
-            newCenterY += (rotatedDeltaX / 2) * sin;
-            break;
-        case 'w':
-            newWidth -= rotatedDeltaX;
-            newCenterX -= (rotatedDeltaX / 2) * cos;
-            newCenterY -= (rotatedDeltaX / 2) * sin;
-            break;
-        case 's':
-            newHeight += rotatedDeltaY;
-            newCenterX -= (rotatedDeltaY / 2) * sin;
-            newCenterY += (rotatedDeltaY / 2) * cos;
-            break;
-        case 'n':
-            newHeight -= rotatedDeltaY;
-            newCenterX += (rotatedDeltaY / 2) * sin;
-            newCenterY -= (rotatedDeltaY / 2) * cos;
-            break;
-        // Corner handles
-        case 'se':
-            newWidth += rotatedDeltaX;
-            newHeight += rotatedDeltaY;
-            newCenterX += (rotatedDeltaX / 2) * cos - (rotatedDeltaY / 2) * sin;
-            newCenterY += (rotatedDeltaX / 2) * sin + (rotatedDeltaY / 2) * cos;
-            break;
-        case 'sw':
-            newWidth -= rotatedDeltaX;
-            newHeight += rotatedDeltaY;
-            newCenterX -= (rotatedDeltaX / 2) * cos - (rotatedDeltaY / 2) * sin;
-            newCenterY -= (rotatedDeltaX / 2) * sin + (rotatedDeltaY / 2) * cos;
-            break;
-        case 'ne':
-            newWidth += rotatedDeltaX;
-            newHeight -= rotatedDeltaY;
-            newCenterX += (rotatedDeltaX / 2) * cos + (rotatedDeltaY / 2) * sin;
-            newCenterY += (rotatedDeltaX / 2) * sin - (rotatedDeltaY / 2) * cos;
-            break;
-        case 'nw':
-            newWidth -= rotatedDeltaX;
-            newHeight -= rotatedDeltaY;
-            newCenterX -= (rotatedDeltaX / 2) * cos + (rotatedDeltaY / 2) * sin;
-            newCenterY -= (rotatedDeltaX / 2) * sin - (rotatedDeltaY / 2) * cos;
-            break;
+      case 'e':
+        dw = rotatedDeltaX;
+        newWidth += dw;
+        newCenterX += (dw / 2) * cos;
+        newCenterY += (dw / 2) * sin;
+        break;
+      case 'w':
+        dw = -rotatedDeltaX;
+        newWidth += dw;
+        newCenterX -= (dw / 2) * cos;
+        newCenterY -= (dw / 2) * sin;
+        break;
+      case 's':
+        dh = rotatedDeltaY;
+        newHeight += dh;
+        newCenterX += (dh / 2) * -sin;
+        newCenterY += (dh / 2) * cos;
+        break;
+      case 'n':
+        dh = -rotatedDeltaY;
+        newHeight += dh;
+        newCenterX -= (dh / 2) * -sin;
+        newCenterY -= (dh / 2) * cos;
+        break;
+      case 'se':
+        dw = rotatedDeltaX;
+        dh = rotatedDeltaY;
+        newWidth += dw;
+        newHeight += dh;
+        newCenterX += (dw / 2) * cos - (dh / 2) * sin;
+        newCenterY += (dw / 2) * sin + (dh / 2) * cos;
+        break;
+      case 'sw':
+        dw = -rotatedDeltaX;
+        dh = rotatedDeltaY;
+        newWidth += dw;
+        newHeight += dh;
+        newCenterX += (dw / 2) * cos - (dh / 2) * sin;
+        newCenterY += (dw / 2) * sin + (dh / 2) * cos;
+        break;
+      case 'ne':
+        dw = rotatedDeltaX;
+        dh = -rotatedDeltaY;
+        newWidth += dw;
+        newHeight += dh;
+        newCenterX += (dw / 2) * cos - (dh / 2) * sin;
+        newCenterY += (dw / 2) * sin + (dh / 2) * cos;
+        break;
+      case 'nw':
+        dw = -rotatedDeltaX;
+        dh = -rotatedDeltaY;
+        newWidth += dw;
+        newHeight += dh;
+        newCenterX += (dw / 2) * cos - (dh / 2) * sin;
+        newCenterY += (dw / 2) * sin + (dh / 2) * cos;
+        break;
     }
 
     newWidth = Math.max(5, newWidth);
     newHeight = Math.max(3, newHeight);
 
-    newX = newCenterX - newWidth / 2;
-    newY = newCenterY - newHeight / 2;
+    let newX = newCenterX - newWidth / 2;
+    let newY = newCenterY - newHeight / 2;
 
     // Boundary checks
     newX = Math.max(0, newX);
     newY = Math.max(0, newY);
 
     if (newX + newWidth > 100) {
-        newWidth = 100 - newX;
+      newWidth = 100 - newX;
     }
     if (newY + newHeight > 100) {
-        newHeight = 100 - newY;
+      newHeight = 100 - newY;
     }
 
     newX = Math.max(0, Math.min(newX, 100 - newWidth));
     newY = Math.max(0, Math.min(newY, 100 - newHeight));
-
 
     return { newX, newY, newWidth, newHeight };
   };
