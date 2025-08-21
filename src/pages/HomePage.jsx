@@ -58,7 +58,7 @@ import ColorThief from 'colorthief';
 import { findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
 
 function HomePage() {
-  const { user, googleAccessToken } = useUserAuth();
+  const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
 
   // Component State
@@ -401,15 +401,15 @@ function HomePage() {
                 if (!googleAccessToken) {
                     throw new Error("Por favor, conecte sua conta Google primeiro.");
                 }
-                let midiatorFolder = await findFolderByName('midiator', null, googleAccessToken);
+                let midiatorFolder = await findFolderByName('midiator', null, googleAccessToken, setGoogleAccessToken);
                 if (!midiatorFolder) {
-                    midiatorFolder = await createFolder('midiator', null, googleAccessToken);
+                    midiatorFolder = await createFolder('midiator', null, googleAccessToken, setGoogleAccessToken);
                 }
-                let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id, googleAccessToken);
+                let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id, googleAccessToken, setGoogleAccessToken);
                 if (!backgroundsFolder) {
-                    backgroundsFolder = await createFolder('backgrounds', midiatorFolder.id, googleAccessToken);
+                    backgroundsFolder = await createFolder('backgrounds', midiatorFolder.id, googleAccessToken, setGoogleAccessToken);
                 }
-                await uploadFile(file, file.name, backgroundsFolder.id, googleAccessToken);
+                await uploadFile(file, file.name, backgroundsFolder.id, googleAccessToken, setGoogleAccessToken);
                 toast.success("Imagem salva com sucesso na sua biblioteca!", { id: toastId });
             } catch (err) {
                 console.error("Failed to upload background to Drive:", err);

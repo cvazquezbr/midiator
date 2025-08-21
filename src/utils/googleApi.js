@@ -1,3 +1,5 @@
+import { toast } from 'sonner';
+
 /**
  * Utilitário para interagir com as APIs do Google (Drive, Sheets, etc.)
  * usando um token de acesso fornecido.
@@ -55,72 +57,92 @@ const fetchWithRefresh = async (url, options, accessToken, setAccessToken) => {
  * Retorna a primeira pasta encontrada ou null.
  */
 export const findFolderByName = async (name, parentId, accessToken, setAccessToken) => {
-  if (!accessToken) throw new Error('Access token não fornecido.');
+  try {
+    if (!accessToken) return null;
 
-  let query = `mimeType='application/vnd.google-apps.folder' and name='${name.replace(/'/g, "\\'")}' and trashed=false`;
-  if (parentId) {
-    query += ` and '${parentId}' in parents`;
-  } else {
-    query += ` and 'root' in parents`;
+    let query = `mimeType='application/vnd.google-apps.folder' and name='${name.replace(/'/g, "\\'")}' and trashed=false`;
+    if (parentId) {
+      query += ` and '${parentId}' in parents`;
+    } else {
+      query += ` and 'root' in parents`;
+    }
+
+    const response = await fetchWithRefresh(
+      `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,parents)&orderBy=createdTime desc`,
+      {},
+      accessToken,
+      setAccessToken
+    );
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      console.error(`Failed to find folder '${name}':`, errorBody.error?.message || response.statusText);
+      return null;
+    }
+
+    const result = await response.json();
+    return result.files && result.files.length > 0 ? result.files[0] : null;
+  } catch (error) {
+    console.error(`Error in findFolderByName for '${name}':`, error);
+    toast.error('Falha na comunicação com o Google Drive.');
+    return null;
   }
-
-  const response = await fetchWithRefresh(
-    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,parents)&orderBy=createdTime desc`,
-    {},
-    accessToken,
-    setAccessToken
-  );
-
-  if (!response.ok) {
-    const errorBody = await response.json();
-    throw new Error(`Erro ao buscar pasta: ${errorBody.error.message}`);
-  }
-
-  const result = await response.json();
-  return result.files && result.files.length > 0 ? result.files[0] : null;
 };
 
 /**
  * Lista arquivos em uma pasta específica.
  */
 export const listFiles = async (folderId, accessToken, setAccessToken, pageSize = 100) => {
-  if (!accessToken) throw new Error('Access token não fornecido.');
+  try {
+    if (!accessToken) return { files: [] };
 
-  const query = `'${folderId}' in parents and trashed=false`;
-  const response = await fetchWithRefresh(
-    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=${pageSize}&fields=files(id,name,mimeType,thumbnailLink)`,
-    {},
-    accessToken,
-    setAccessToken
-  );
+    const query = `'${folderId}' in parents and trashed=false`;
+    const response = await fetchWithRefresh(
+      `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=${pageSize}&fields=files(id,name,mimeType,thumbnailLink)`,
+      {},
+      accessToken,
+      setAccessToken
+    );
 
-  if (!response.ok) {
-    const errorBody = await response.json();
-    throw new Error(`Erro ao listar arquivos: ${errorBody.error.message}`);
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      console.error(`Failed to list files in folder '${folderId}':`, errorBody.error?.message || response.statusText);
+      return { files: [] };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Error in listFiles for folder '${folderId}':`, error);
+    toast.error('Falha ao listar arquivos do Google Drive.');
+    return { files: [] };
   }
-
-  return await response.json();
 };
 
 /**
  * Obtém o conteúdo de um arquivo como um Blob.
  */
 export const getFileAsBlob = async (fileId, accessToken, setAccessToken) => {
-  if (!accessToken) throw new Error('Access token não fornecido.');
+  try {
+    if (!accessToken) throw new Error('Access token não fornecido.');
 
-  const response = await fetchWithRefresh(
-    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-    {},
-    accessToken,
-    setAccessToken
-  );
+    const response = await fetchWithRefresh(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      {},
+      accessToken,
+      setAccessToken
+    );
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Erro ao baixar arquivo: ${errorBody}`);
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Erro ao baixar arquivo: ${errorBody}`);
+    }
+
+    return response.blob();
+  } catch (error) {
+    console.error(`Error in getFileAsBlob for file '${fileId}':`, error);
+    toast.error('Falha ao baixar arquivo do Google Drive.');
+    return null;
   }
-
-  return response.blob();
 };
 
 /**
@@ -224,43 +246,51 @@ export const moveFileToFolder = async (fileId, folderId, accessToken, setAccessT
  * Cria uma pasta no Google Drive. Verifica se já existe antes de criar.
  */
 export const createFolder = async (name, parentId, accessToken, setAccessToken) => {
-  if (!accessToken) throw new Error('Access token não fornecido para criar pasta.');
+  try {
+    if (!accessToken) throw new Error('Access token não fornecido para criar pasta.');
 
-  // Primeiro, verifica se a pasta já existe para evitar duplicatas.
-  const existingFolder = await findFolderByName(name, parentId, accessToken, setAccessToken);
-  if (existingFolder) {
-    console.warn(`Pasta '${name}' já existe com ID: ${existingFolder.id}. Usando a existente.`);
-    return existingFolder;
-  }
+    // Primeiro, verifica se a pasta já existe para evitar duplicatas.
+    const existingFolder = await findFolderByName(name, parentId, accessToken, setAccessToken);
+    if (existingFolder) {
+      console.warn(`Pasta '${name}' já existe com ID: ${existingFolder.id}. Usando a existente.`);
+      return existingFolder;
+    }
 
-  const metadata = {
-    name: name,
-    mimeType: 'application/vnd.google-apps.folder',
-  };
+    const metadata = {
+      name: name,
+      mimeType: 'application/vnd.google-apps.folder',
+    };
 
-  if (parentId) {
-    metadata.parents = [parentId];
-  }
+    if (parentId) {
+      metadata.parents = [parentId];
+    }
 
-  const response = await fetchWithRefresh(
-    'https://www.googleapis.com/drive/v3/files',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetchWithRefresh(
+      'https://www.googleapis.com/drive/v3/files',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(metadata),
       },
-      body: JSON.stringify(metadata),
-    },
-    accessToken,
-    setAccessToken
-  );
+      accessToken,
+      setAccessToken
+    );
 
-  if (!response.ok) {
-    const errorBody = await response.json();
-    throw new Error(`Erro ao criar pasta: ${errorBody.error.message}`);
+    if (!response.ok) {
+      const errorBody = await response.json();
+      throw new Error(`Erro ao criar pasta: ${errorBody.error.message}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Error in createFolder for '${name}':`, error);
+    toast.error(`Falha ao criar a pasta '${name}' no Google Drive.`);
+    // We throw here because folder creation is often a critical step in a chain.
+    // The calling function needs to know it failed.
+    throw error;
   }
-
-  return await response.json();
 };
 
 /**
@@ -268,54 +298,60 @@ export const createFolder = async (name, parentId, accessToken, setAccessToken) 
  * Esta versão usa 'uploadType=resumable' que é mais robusto e preferível para blobs.
  */
 export const uploadFile = async (fileBlob, fileName, folderId, accessToken, setAccessToken) => {
-  if (!accessToken) throw new Error('Access token não fornecido para upload.');
+  try {
+    if (!accessToken) throw new Error('Access token não fornecido para upload.');
 
-  const metadata = {
-    name: fileName,
-  };
-  if (folderId) {
-    metadata.parents = [folderId];
-  }
+    const metadata = {
+      name: fileName,
+    };
+    if (folderId) {
+      metadata.parents = [folderId];
+    }
 
-  // 1. Iniciar uma sessão de upload resumível
-  const initResponse = await fetchWithRefresh(
-    'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json; charset=UTF-8',
+    // 1. Iniciar uma sessão de upload resumível
+    const initResponse = await fetchWithRefresh(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: JSON.stringify(metadata),
       },
-      body: JSON.stringify(metadata),
-    },
-    accessToken,
-    setAccessToken
-  );
+      accessToken,
+      setAccessToken
+    );
 
-  if (!initResponse.ok) {
-    const errorBody = await initResponse.json();
-    throw new Error(`Erro ao iniciar upload: ${errorBody.error.message}`);
+    if (!initResponse.ok) {
+      const errorBody = await initResponse.json();
+      throw new Error(`Erro ao iniciar upload: ${errorBody.error.message}`);
+    }
+
+    const location = initResponse.headers.get('Location');
+    if (!location) {
+      throw new Error('Não foi possível obter o URL de upload resumível.');
+    }
+
+    // 2. Fazer o upload do conteúdo do arquivo
+    const uploadResponse = await fetch(location, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': fileBlob.type,
+      },
+      body: fileBlob,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorBody = await uploadResponse.json();
+      throw new Error(`Erro durante o upload do arquivo: ${errorBody.error.message}`);
+    }
+
+    return await uploadResponse.json();
+  } catch (error) {
+    console.error(`Error in uploadFile for '${fileName}':`, error);
+    toast.error(`Falha ao fazer upload do arquivo '${fileName}' para o Google Drive.`);
+    throw error;
   }
-
-  const location = initResponse.headers.get('Location');
-  if (!location) {
-    throw new Error('Não foi possível obter o URL de upload resumível.');
-  }
-
-  // 2. Fazer o upload do conteúdo do arquivo
-  const uploadResponse = await fetch(location, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': fileBlob.type,
-    },
-    body: fileBlob,
-  });
-
-  if (!uploadResponse.ok) {
-    const errorBody = await uploadResponse.json();
-    throw new Error(`Erro durante o upload do arquivo: ${errorBody.error.message}`);
-  }
-
-  return await uploadResponse.json();
 };
 
 /**
