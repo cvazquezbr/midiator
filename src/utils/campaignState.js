@@ -1,151 +1,118 @@
-// This file now handles the logic for serializing, deserializing,
-// and communicating with the campaign API endpoints.
 import { upload } from '@vercel/blob/client';
 import { toast } from 'sonner';
 import fetchWithAuth from './fetchWithAuth';
 
-const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error('Request timed out')),
-      timeout
-    );
-
-    fetch(resource, options)
-      .then(response => {
-        clearTimeout(timer);
-        resolve(response);
-      })
-      .catch(err => {
-        clearTimeout(timer);
-        reject(err);
-      });
-  });
-};
-
-// Helper to upload a blob-like asset to Vercel Blob storage.
-const uploadAsset = async (asset, filename, campaignId, userId) => {
-  if (!asset) {
-    return null;
+/**
+ * A simplified and robust asset uploader.
+ * It now expects a Blob object directly.
+ */
+const uploadAsset = async (blob, filename, campaignId, userId) => {
+  if (!blob || !(blob instanceof Blob)) {
+    console.error('[uploadAsset] Invalid blob provided.', { blob, filename });
+    throw new Error(`Asset "${filename}" could not be uploaded because it is not a valid file.`);
   }
   if (!userId) {
     throw new Error("User ID is required to upload assets.");
   }
 
-  // If it's already a permanent http(s) URL, do nothing.
-  if (typeof asset === 'string' && asset.startsWith('http')) {
-    return asset;
-  }
-
-  let fileToUpload;
-  if (asset instanceof Blob) {
-    // Asset is already a blob. Ensure it's a File object with a name.
-    fileToUpload = new File([asset], filename, { type: asset.type });
-  } else if (typeof asset === 'string' && (asset.startsWith('blob:') || asset.startsWith('data:'))) {
-    // Asset is a temporary client-side URL. Fetch it and convert to a File.
-    const response = await fetchWithTimeout(asset, {}, 15000); // Use 15s timeout
-    if (!response.ok) {
-      throw new Error(`Failed to fetch blob URL: ${asset}`);
-    }
-    const blob = await response.blob();
-    fileToUpload = new File([blob], filename, { type: blob.type });
-  } else {
-    console.warn(`Unsupported asset type for upload: ${typeof asset}`, asset);
-    return asset;
-  }
-
-  if (!fileToUpload) {
-    return null;
-  }
-
-  // Construct the full path for the blob storage.
+  const fileToUpload = new File([blob], filename, { type: blob.type });
   const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
+
+  console.log(`[uploadAsset] Uploading file: ${filename} to path: ${fullPath}`);
 
   try {
     const newBlob = await upload(fullPath, fileToUpload, {
       access: 'public',
       handleUploadUrl: '/api/upload',
-      clientPayload: JSON.stringify({ campaignId }), // Pass campaignId in payload for the backend
+      clientPayload: JSON.stringify({ campaignId }),
     });
+    console.log(`[uploadAsset] Successfully uploaded ${filename}, URL: ${newBlob.url}`);
     return newBlob.url;
   } catch (error) {
-    console.error(`Error uploading asset to Vercel Blob: ${filename}`, error);
+    console.error(`[uploadAsset] Error uploading asset to Vercel Blob: ${filename}`, error);
     throw new Error(`Failed to upload asset: ${filename}. Please try again.`);
   }
 };
 
-
 /**
  * Gathers and serializes the current application state for saving.
  * Blobs are uploaded to Vercel Blob storage.
- * @param {object} state - The current application state from HomePage.
- * @param {string} campaignId - The ID of the campaign for pathing.
- * @param {function} setProgress - A function to update the upload progress.
- * @param {string} userId - The ID of the user for pathing.
- * @returns {Promise<object>} A promise that resolves to a serializable object.
  */
 export const serializeCampaignData = async (state, campaignId, setProgress, userId) => {
+  console.log('[serializeCampaignData] Starting serialization...');
   try {
     // Helper to process a list of assets, uploading their blobs
     const serializeAssetList = async (assetList) => {
       if (!assetList) return [];
       return Promise.all(
         assetList.map(async (asset) => {
-          // Only upload if the URL is a local blob/data URL.
-          if (asset && asset.url && (asset.url.startsWith('blob:') || asset.url.startsWith('data:'))) {
-            const newUrl = await uploadAsset(asset.url, asset.filename, campaignId, userId);
+          // Check for the blob object directly. This is the main fix.
+          if (asset && asset.blob instanceof Blob) {
+            const newUrl = await uploadAsset(asset.blob, asset.filename, campaignId, userId);
             setProgress(prev => ({ ...prev, current: prev.current + 1 }));
             return { ...asset, url: newUrl, blob: undefined }; // Store URL, remove blob
           }
-          // If asset has no URL or an http URL, just return it (without the blob).
+          // If asset has no blob, it might already have a permanent URL.
+          // Ensure blob property is removed.
           return { ...asset, blob: undefined };
         })
       );
     };
 
+    // Helper to fetch a blob/data URL and convert it to a Blob object.
+    // This is now only used for standalone URLs like backgroundImage.
+    const fetchUrlAsBlob = async (url) => {
+        if (!url || !(url.startsWith('blob:') || url.startsWith('data:'))) return null;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) return null;
+            return await response.blob();
+        } catch (error) {
+            console.error(`Failed to fetch URL for conversion: ${url}`, error);
+            return null;
+        }
+    }
+
     // --- Determine which assets need uploading ---
     const assetsToUpload = [
-      ...(state.generatedImagesData || []).filter(a => a && a.url && a.url.startsWith('blob:')),
-      ...(state.generatedAudioData || []).filter(a => a && a.url && a.url.startsWith('blob:')),
-      ...(state.generatedVideosData || []).filter(a => a && a.url && a.url.startsWith('blob:')),
-      ...(state.brandElements || []).filter(el => el && el.url && (el.url.startsWith('blob:') || el.url.startsWith('data:'))),
+      ...(state.generatedImagesData || []).filter(a => a && a.blob instanceof Blob),
+      ...(state.generatedAudioData || []).filter(a => a && a.blob instanceof Blob),
+      ...(state.generatedVideosData || []).filter(a => a && a.blob instanceof Blob),
+      ...(state.brandElements || []).filter(el => el && el.blob instanceof Blob),
     ];
     if (state.backgroundImage && (state.backgroundImage.startsWith('blob:') || state.backgroundImage.startsWith('data:'))) {
-      assetsToUpload.push({ url: state.backgroundImage, filename: 'background_image.png' });
+        assetsToUpload.push({ isStandalone: true }); // Add placeholders for progress counting
     }
     if (state.generatedImageUrl && (state.generatedImageUrl.startsWith('blob:') || state.generatedImageUrl.startsWith('data:'))) {
-      assetsToUpload.push({ url: state.generatedImageUrl, filename: 'generated_campaign_image.png' });
+        assetsToUpload.push({ isStandalone: true });
     }
     setProgress({ current: 0, total: assetsToUpload.length });
+    console.log(`[serializeCampaignData] Determined ${assetsToUpload.length} assets need uploading.`);
     // --- End asset determination ---
-
 
     const serializableGeneratedImages = await serializeAssetList(state.generatedImagesData);
     const serializableGeneratedAudio = await serializeAssetList(state.generatedAudioData);
     const serializableGeneratedVideos = await serializeAssetList(state.generatedVideosData);
-
-    const serializableBrandElements = await Promise.all(
-      (state.brandElements || []).map(async (el) => {
-        if (el && el.url && (el.url.startsWith('blob:') || el.url.startsWith('data:'))) {
-          const newUrl = await uploadAsset(el.url, el.name || `brand_element_${el.id}`, campaignId, userId);
-          setProgress(prev => ({ ...prev, current: prev.current + 1 }));
-          return { ...el, url: newUrl, blob: undefined };
-        }
-        return { ...el, blob: undefined };
-      })
-    );
+    const serializableBrandElements = await serializeAssetList(state.brandElements);
 
     let newBackgroundImageUrl = state.backgroundImage;
     if (state.backgroundImage && (state.backgroundImage.startsWith('blob:') || state.backgroundImage.startsWith('data:'))) {
-      newBackgroundImageUrl = await uploadAsset(state.backgroundImage, 'background_image.png', campaignId, userId);
-      setProgress(prev => ({ ...prev, current: prev.current + 1 }));
+      const blob = await fetchUrlAsBlob(state.backgroundImage);
+      if(blob) {
+        newBackgroundImageUrl = await uploadAsset(blob, 'background_image.png', campaignId, userId);
+        setProgress(prev => ({ ...prev, current: prev.current + 1 }));
+      }
     }
 
     let newGeneratedImageUrl = state.generatedImageUrl;
     if (state.generatedImageUrl && (state.generatedImageUrl.startsWith('blob:') || state.generatedImageUrl.startsWith('data:'))) {
-      newGeneratedImageUrl = await uploadAsset(state.generatedImageUrl, 'generated_campaign_image.png', campaignId, userId);
-      setProgress(prev => ({ ...prev, current: prev.current + 1 }));
+        const blob = await fetchUrlAsBlob(state.generatedImageUrl);
+        if(blob) {
+            newGeneratedImageUrl = await uploadAsset(blob, 'generated_campaign_image.png', campaignId, userId);
+            setProgress(prev => ({ ...prev, current: prev.current + 1 }));
+        }
     }
+    console.log('[serializeCampaignData] All assets processed.');
 
     // Return the state with blob URLs replaced by permanent Vercel URLs
     return {
@@ -158,20 +125,12 @@ export const serializeCampaignData = async (state, campaignId, setProgress, user
       generatedImageUrl: newGeneratedImageUrl,
     };
   } catch (error) {
-    toast.error(error.message);
+    toast.error(`Error during asset serialization: ${error.message}`);
     throw error;
   }
 };
 
-/**
- * Takes a loaded campaign state and deserializes it for the application.
- * For Vercel Blob, URLs are stored directly, so deserialization is simpler.
- * We just need to ensure local blob URLs are created for components that expect them.
- * @param {object} loadedState - The state object loaded from the database.
- * @returns {Promise<object>} The deserialized state ready for the application.
- */
 export const deserializeCampaignData = async (loadedState) => {
-  // Helper to convert a remote URL back to a blob and a blob URL
   const urlToBlob = async (url) => {
     if (!url || !url.startsWith('http')) return { blob: null, url: url };
     try {
@@ -182,7 +141,7 @@ export const deserializeCampaignData = async (loadedState) => {
     } catch (error) {
       console.error('Error converting URL to blob:', error);
       toast.error(`Could not load an asset: ${error.message}`);
-      return { blob: null, url: url }; // Return original URL on failure
+      return { blob: null, url: url };
     }
   };
 
@@ -190,11 +149,11 @@ export const deserializeCampaignData = async (loadedState) => {
     if (!assetList) return [];
     return Promise.all(
       (assetList || []).map(async (asset) => {
-        if (!asset) return null; // Handle null items in the array
+        if (!asset) return null;
         const { blob, url } = await urlToBlob(asset.url);
         return { ...asset, blob, url };
       })
-    ).then(results => results.filter(Boolean)); // Filter out any nulls that were processed
+    ).then(results => results.filter(Boolean));
   };
 
   loadedState.generatedImagesData = await deserializeAssetList(loadedState.generatedImagesData);
@@ -222,7 +181,6 @@ export const deserializeCampaignData = async (loadedState) => {
       loadedState.generatedImageUrl = url;
   }
 
-  // Backward compatibility for backgroundImage being a raw base64 string
   if (typeof loadedState.backgroundImage === 'string' && !loadedState.backgroundImage.startsWith('http') && !loadedState.backgroundImage.startsWith('blob:')) {
       console.log('[deserializeCampaignData] Found legacy base64 in backgroundImage. Converting to blob.');
       const fetchString = loadedState.backgroundImage.startsWith('data:') ? loadedState.backgroundImage : `data:image/png;base64,${loadedState.backgroundImage}`;
@@ -236,7 +194,6 @@ export const deserializeCampaignData = async (loadedState) => {
       }
   }
 
-  // Backward compatibility for old data structure
   if (loadedState.backgroundImageBase64) {
     const fetchString = loadedState.backgroundImageBase64.startsWith('data:') ? loadedState.backgroundImageBase64 : `data:application/octet-stream;base64,${loadedState.backgroundImageBase64}`;
     const res = await fetch(fetchString);
@@ -244,7 +201,6 @@ export const deserializeCampaignData = async (loadedState) => {
     loadedState.backgroundImage = URL.createObjectURL(blob);
     delete loadedState.backgroundImageBase64;
   }
-
 
   return loadedState;
 };
@@ -287,7 +243,7 @@ export const saveCampaign = async (name, campaignData, setProgress, userId) => {
 
     console.log('[campaignState] Step 2: Sending campaign data to server...');
     const requestBody = JSON.stringify({ name, campaign_data: stateWithAssetUrls });
-    console.log('[campaignState] Request body to be sent:', requestBody);
+    console.log('[campaignState] Request body to be sent:', requestBody.substring(0, 500) + '...');
 
     const createRes = await fetchWithAuth('/api/campaigns', {
       method: 'POST',
@@ -310,7 +266,7 @@ export const saveCampaign = async (name, campaignData, setProgress, userId) => {
   } catch (error) {
       console.error('[campaignState] An error occurred during the save process:', error);
       toast.error(`Save failed: ${error.message}`);
-      throw error; // Re-throw to be caught by the UI component
+      throw error;
   }
 };
 
@@ -323,7 +279,7 @@ export const updateCampaign = async (id, name, campaignData, setProgress, userId
 
         console.log('[campaignState] Step 2: Sending updated campaign data to server...');
         const requestBody = JSON.stringify({ name, campaign_data: stateWithAssetUrls });
-        console.log('[campaignState] Request body to be sent:', requestBody);
+        console.log('[campaignState] Request body to be sent:', requestBody.substring(0, 500) + '...');
 
         const res = await fetchWithAuth(`/api/campaigns/${id}`, {
             method: 'PUT',
@@ -346,7 +302,7 @@ export const updateCampaign = async (id, name, campaignData, setProgress, userId
     } catch (error) {
         console.error(`[campaignState] An error occurred during the update process for campaign ${id}:`, error);
         toast.error(`Update failed: ${error.message}`);
-        throw error; // Re-throw to be caught by the UI component
+        throw error;
     }
 };
 
