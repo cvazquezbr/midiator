@@ -515,8 +515,11 @@ const ImageGeneratorFrontendOnly = ({
     setDriveResult(null);
 
     try {
-      const folder = await createFolder(projectName, null, googleAccessToken);
-      const contentFolder = await createFolder('Conteúdo', folder.id, googleAccessToken);
+      const folder = await createFolder(projectName);
+      if (!folder) throw new Error("Falha ao criar a pasta principal do projeto no Google Drive.");
+
+      const contentFolder = await createFolder('Conteúdo', folder.id);
+      if (!contentFolder) throw new Error("Falha ao criar a subpasta 'Conteúdo' no Google Drive.");
 
       const uploadResults = [];
       const sheetData = [];
@@ -525,10 +528,14 @@ const ImageGeneratorFrontendOnly = ({
       for (let i = 0; i < generatedImages.length; i++) {
         const imageData = generatedImages[i];
         try {
-          const result = await uploadFile(imageData.blob, imageData.filename, contentFolder.id, googleAccessToken);
-          uploadResults.push({ filename: imageData.filename, success: true, fileId: result.id });
-          const row = [i + 1, `https://drive.google.com/file/d/${result.id}/view?usp=sharing`, ...allHeaders.map(header => imageData.record[header] || '')];
-          sheetData.push(row);
+          const result = await uploadFile(imageData.blob, imageData.filename, contentFolder.id);
+          if (result && result.id) {
+            uploadResults.push({ filename: imageData.filename, success: true, fileId: result.id });
+            const row = [i + 1, `https://drive.google.com/file/d/${result.id}/view?usp=sharing`, ...allHeaders.map(header => imageData.record[header] || '')];
+            sheetData.push(row);
+          } else {
+             throw new Error("O upload do arquivo não retornou um ID.");
+          }
         } catch (error) {
           uploadResults.push({ filename: imageData.filename, success: false, error: error.message });
         }
@@ -539,7 +546,6 @@ const ImageGeneratorFrontendOnly = ({
         await createSpreadsheet(
           `Relação de Arquivos - ${projectName}`,
           [headers, ...sheetData],
-          googleAccessToken,
           contentFolder.id
         );
       }
