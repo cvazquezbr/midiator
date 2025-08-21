@@ -3,6 +3,7 @@
 import { upload } from '@vercel/blob/client';
 import { toast } from 'sonner';
 import fetchWithAuth from './fetchWithAuth';
+import { sanitizeStateForSave } from './stateSanitizers';
 
 // Helper to upload a blob-like asset to Vercel Blob storage.
 const uploadAsset = async (asset, filename, campaignId, userId) => {
@@ -267,30 +268,10 @@ export const loadCampaign = async (id) => {
   return deserializeCampaignData(campaign.campaign_data);
 };
 
-// Helper to create a version of the state safe for the initial save,
-// without any local blobs that would cause serialization issues.
-const cleanStateForInitialSave = (state) => {
-  const cleanedState = { ...state };
-
-  // Remove properties that shouldn't be persisted or are heavy
-  delete cleanedState.isSaving;
-  delete cleanedState.isLoading;
-  delete cleanedState.user;
-
-  // Replace asset data with placeholders or remove them
-  cleanedState.generatedImagesData = (state.generatedImagesData || []).map(d => ({ ...d, blob: null, url: d.url || '' }));
-  cleanedState.generatedAudioData = (state.generatedAudioData || []).map(d => ({ ...d, blob: null, url: d.url || '' }));
-  cleanedState.generatedVideosData = (state.generatedVideosData || []).map(d => ({ ...d, blob: null, url: d.url || '' }));
-  cleanedState.brandElements = (state.brandElements || []).map(el => ({ ...el, url: el.url && el.url.startsWith('http') ? el.url : '' }));
-  cleanedState.backgroundImage = state.backgroundImage && state.backgroundImage.startsWith('http') ? state.backgroundImage : null;
-  cleanedState.generatedImageUrl = state.generatedImageUrl && state.generatedImageUrl.startsWith('http') ? state.generatedImageUrl : null;
-
-  return cleanedState;
-};
-
 export const saveCampaign = async (name, campaignState, setProgress, userId) => {
-  // 1. Create a clean state object for the initial save to get an ID.
-  const initialState = cleanStateForInitialSave(campaignState);
+  // 1. Create a clean, minimal state object for the initial save to get a campaign ID.
+  // This version has no blobs and only essential data.
+  const initialState = sanitizeStateForSave(campaignState);
 
   // 2. Make the initial request to create the campaign entry.
   const createRes = await fetchWithAuth('/api/campaigns', {
@@ -307,13 +288,16 @@ export const saveCampaign = async (name, campaignState, setProgress, userId) => 
   const campaignId = newCampaign.id;
 
   // 3. Now that we have a campaign ID, serialize the full state, which includes uploading assets.
-  const finalSerializableData = await serializeCampaignData(campaignState, campaignId, setProgress, userId);
+  const stateWithAssetUrls = await serializeCampaignData(campaignState, campaignId, setProgress, userId);
 
-  // 4. Update the campaign with the final data including asset URLs.
+  // 4. Sanitize the final state again to ensure it's clean before the final PUT.
+  const finalSanitizedData = sanitizeStateForSave(stateWithAssetUrls);
+
+  // 5. Update the campaign with the final data including asset URLs.
   const updateRes = await fetchWithAuth(`/api/campaigns/${campaignId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, campaign_data: finalSerializableData }),
+    body: JSON.stringify({ name, campaign_data: finalSanitizedData }),
   });
 
   if (!updateRes.ok) {
@@ -322,21 +306,23 @@ export const saveCampaign = async (name, campaignState, setProgress, userId) => 
     throw new Error(err.error || 'Failed to update campaign with assets.');
   }
 
-  // 5. Return the final, updated campaign data.
+  // 6. Return the final, updated campaign data.
   return updateRes.json();
 };
 
 export const updateCampaign = async (id, name, campaignState, setProgress, userId) => {
   console.log('[updateCampaign] Starting.');
-  // For an existing campaign, we already have the ID.
-  // We can directly serialize the data, which will upload any new/changed assets.
-  const serializableData = await serializeCampaignData(campaignState, id, setProgress, userId);
+  // 1. Serialize the data, which will upload any new/changed assets and return state with URLs.
+  const stateWithAssetUrls = await serializeCampaignData(campaignState, id, setProgress, userId);
+
+  // 2. Sanitize the result to create a clean, minimal payload for the PUT request.
+  const finalSanitizedData = sanitizeStateForSave(stateWithAssetUrls);
 
   console.log(`[updateCampaign] About to PUT to /api/campaigns/${id}.`);
   const res = await fetchWithAuth(`/api/campaigns/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, campaign_data: serializableData }),
+    body: JSON.stringify({ name, campaign_data: finalSanitizedData }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
