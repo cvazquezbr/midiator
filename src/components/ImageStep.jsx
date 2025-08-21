@@ -94,20 +94,29 @@ const ImageStep = ({
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                   PNG, JPG ou JPEG
                 </Typography>
-                <Button
-                  variant="contained"
-                  component="label"
-                  sx={{ borderRadius: 2 }}
-                >
-                  Selecionar Imagem
-                  <input
-                    type="file"
-                    accept=".png,.jpg,.jpeg"
-                    hidden
-                    ref={imageInputRef}
-                    onChange={handleImageUpload}
-                  />
-                </Button>
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 3 }}>
+                  <Button
+                    variant="contained"
+                    component="label"
+                    sx={{ borderRadius: 2 }}
+                  >
+                    Selecionar Imagem
+                    <input
+                      type="file"
+                      accept=".png,.jpg,.jpeg"
+                      hidden
+                      ref={imageInputRef}
+                      onChange={handleImageUpload}
+                    />
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    sx={{ borderRadius: 2 }}
+                    onClick={onChangeBackgroundImage}
+                  >
+                    Escolher da Galeria
+                  </Button>
+                </Box>
               </Card>
             </Grid>
 
