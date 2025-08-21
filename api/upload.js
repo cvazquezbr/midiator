@@ -32,17 +32,34 @@ const handler = async (req, res) => {
     const jsonResponse = await handleUpload({
       body,
       request: req,
-      onBeforeGenerateToken: async (pathname /*, clientPayload */) => {
+      onBeforeGenerateToken: async (pathname, clientPayload) => {
         if (!req.user || !req.user.sub) {
           throw new Error('Authentication is required to upload files.');
         }
 
-        // The pathname will be the one sent from the client.
+        const payload = clientPayload ? JSON.parse(clientPayload) : {};
+        const { campaignId } = payload;
+
+        // Sanitize pathname to prevent directory traversal.
+        // The client should only send the filename.
+        const sanitizedPathname = pathname.split('/').pop();
+        if (!sanitizedPathname) {
+          throw new Error('Invalid filename provided.');
+        }
+
+        // Construct the final path. If campaignId is not provided,
+        // files will be stored in a generic user folder.
+        const finalPathname = campaignId
+          ? `${req.user.sub}/${campaignId}/${sanitizedPathname}`
+          : `${req.user.sub}/${sanitizedPathname}`;
+
         return {
           allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'audio/mpeg', 'video/webm', 'audio/webm', 'audio/wav'],
           tokenPayload: JSON.stringify({
-            userId: req.user.sub, // Associate the upload with the user from the withAuth middleware
+            userId: req.user.sub,
+            campaignId: campaignId, // Include campaignId in the token payload
           }),
+          pathname: finalPathname, // Override the pathname
         };
       },
       onUploadCompleted: async ({ blob, tokenPayload }) => {
