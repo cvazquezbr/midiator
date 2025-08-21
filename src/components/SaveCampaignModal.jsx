@@ -9,7 +9,7 @@ import {
   Typography
 } from '@mui/material';
 
-const SaveCampaignModal = ({ open, onClose, onSave, campaignToEdit = null }) => {
+const SaveCampaignModal = ({ open, onClose, onSave, campaignToEdit = null, isSaving }) => {
   const [name, setName] = useState('');
 
   useEffect(() => {
@@ -21,7 +21,7 @@ const SaveCampaignModal = ({ open, onClose, onSave, campaignToEdit = null }) => 
   }, [campaignToEdit, open]);
 
   const handleSave = () => {
-    if (name.trim()) {
+    if (name.trim() && !isSaving) {
       onSave(name.trim());
       onClose();
     }
@@ -48,12 +48,13 @@ const SaveCampaignModal = ({ open, onClose, onSave, campaignToEdit = null }) => 
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSave()}
+          disabled={isSaving}
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={handleSave} disabled={!name.trim()} variant="contained">
-          {campaignToEdit ? 'Rename' : 'Save'}
+        <Button onClick={onClose} disabled={isSaving}>Cancel</Button>
+        <Button onClick={handleSave} disabled={!name.trim() || isSaving} variant="contained">
+          {isSaving ? 'Saving...' : (campaignToEdit ? 'Rename' : 'Save')}
         </Button>
       </DialogActions>
     </Dialog>

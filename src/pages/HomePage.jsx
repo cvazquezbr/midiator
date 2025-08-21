@@ -185,29 +185,40 @@ function HomePage() {
   };
 
   const handleSaveCampaign = async (name) => {
+    console.log('[handleSaveCampaign] Starting...');
     try {
+      console.log('[handleSaveCampaign] Checking auth status...');
       await checkAuthStatus();
+      console.log('[handleSaveCampaign] Auth check successful.');
     } catch (error) {
+      console.error('[handleSaveCampaign] Auth check failed:', error.message);
       toast.error(error.message);
       return;
     }
 
+    console.log('[handleSaveCampaign] Proceeding with save...');
     const appState = getAppState();
     setIsSaving(true);
     setUploadProgress({ current: 0, total: 0 });
     try {
       if (currentCampaign) {
+        console.log(`[handleSaveCampaign] Updating campaign: ${currentCampaign.id}`);
         const updated = await updateCampaign(currentCampaign.id, name, appState, setUploadProgress);
         toast.success(`Campaign "${name}" updated.`);
         setCurrentCampaign(updated);
+        console.log(`[handleSaveCampaign] Campaign updated successfully.`);
       } else {
+        console.log(`[handleSaveCampaign] Saving new campaign: ${name}`);
         const newCampaign = await saveCampaign(name, appState, setUploadProgress);
         toast.success(`Campaign "${name}" saved.`);
         setCurrentCampaign(newCampaign);
+        console.log(`[handleSaveCampaign] New campaign saved successfully.`);
       }
     } catch (err) {
+      console.error('[handleSaveCampaign] Error during save/update:', err);
       // Errors from save/update are already toasted.
     } finally {
+      console.log('[handleSaveCampaign] Finalizing...');
       setIsSaving(false);
     }
   };
@@ -546,7 +557,7 @@ function HomePage() {
         </Box>
       </Box>
       <SetupModal open={showSetupModal} onClose={() => setShowSetupModal(false)} />
-      <SaveCampaignModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={handleSaveCampaign} campaignToEdit={currentCampaign} />
+      <SaveCampaignModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={handleSaveCampaign} campaignToEdit={currentCampaign} isSaving={isSaving} />
       <LoadCampaignModal open={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadCampaign} onEdit={(campaign) => { setCurrentCampaign(campaign); setShowSaveModal(true); }} />
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
       <CampaignStandardsModal open={showCampaignStandardsModal} onClose={() => { setShowCampaignStandardsModal(false); loadCampaignStandards(); }} onShowMemorial={() => setShowMemorialDescritivoModal(true)} onGeneratePalette={async (briefing) => { try { const palette = await generateColorPalette(briefing); return palette; } catch (error) { toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores."); throw error; } }} />
