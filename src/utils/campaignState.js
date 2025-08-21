@@ -68,6 +68,7 @@ const uploadAsset = async (asset, filename, campaignId, userId) => {
  * @returns {Promise<object>} A promise that resolves to a serializable object.
  */
 export const serializeCampaignData = async (state, campaignId, setProgress, userId) => {
+  console.log('[serializeCampaignData] Starting.');
   const assetsToUpload = [
     ...(state.generatedImagesData || []).filter(a => a.blob),
     ...(state.generatedAudioData || []).filter(a => a.blob),
