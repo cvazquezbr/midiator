@@ -41,22 +41,27 @@ const uploadAsset = async (blob, filename, campaignId, userId) => {
 export const serializeCampaignData = async (state, campaignId, setProgress, userId) => {
   console.log('[serializeCampaignData] Starting serialization...');
   try {
-    // Helper to process a list of assets, uploading their blobs
+    // Helper to process a list of assets, uploading their blobs sequentially.
     const serializeAssetList = async (assetList) => {
       if (!assetList) return [];
-      return Promise.all(
-        assetList.map(async (asset) => {
-          // Check for the blob object directly. This is the main fix.
-          if (asset && asset.blob instanceof Blob) {
-            const newUrl = await uploadAsset(asset.blob, asset.filename, campaignId, userId);
-            setProgress(prev => ({ ...prev, current: prev.current + 1 }));
-            return { ...asset, url: newUrl, blob: undefined }; // Store URL, remove blob
-          }
+      const serializedList = [];
+      for (const asset of assetList) {
+        // Use a default filename if one is not provided.
+        const filename = asset.filename || `asset_${Date.now()}`;
+        console.log(`[serializeAssetList] Processing asset: ${filename}`);
+
+        if (asset && asset.blob instanceof Blob) {
+          const newUrl = await uploadAsset(asset.blob, filename, campaignId, userId);
+          setProgress(prev => ({ ...prev, current: prev.current + 1 }));
+          serializedList.push({ ...asset, url: newUrl, blob: undefined });
+        } else {
           // If asset has no blob, it might already have a permanent URL.
           // Ensure blob property is removed.
-          return { ...asset, blob: undefined };
-        })
-      );
+          serializedList.push({ ...asset, blob: undefined });
+        }
+        console.log(`[serializeAssetList] Finished processing asset: ${filename}`);
+      }
+      return serializedList;
     };
 
     // Helper to fetch a blob/data URL and convert it to a Blob object.
