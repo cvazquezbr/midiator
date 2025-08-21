@@ -5,9 +5,12 @@ import { toast } from 'sonner';
 import fetchWithAuth from './fetchWithAuth';
 
 // Helper to upload a blob-like asset to Vercel Blob storage.
-const uploadAsset = async (asset, filename, campaignId) => {
+const uploadAsset = async (asset, filename, campaignId, userId) => {
   if (!asset) {
     return null;
+  }
+  if (!userId) {
+    throw new Error("User ID is required to upload assets.");
   }
 
   // If it's already a permanent http(s) URL, do nothing.
@@ -26,9 +29,8 @@ const uploadAsset = async (asset, filename, campaignId) => {
     fileToUpload = new File([blob], filename, { type: blob.type });
   } else {
     // If it's any other type of string or an unsupported type, we don't upload.
-    // This prevents saving invalid data.
     console.warn(`Unsupported asset type for upload: ${typeof asset}`, asset);
-    return asset; // Return the original asset to avoid breaking the state shape.
+    return asset;
   }
 
   if (!fileToUpload) {
@@ -38,17 +40,19 @@ const uploadAsset = async (asset, filename, campaignId) => {
 
   console.log(`[uploadAsset] Attempting to upload ${filename}. Size: ${fileToUpload.size} bytes.`);
 
+  // Construct the full path for the blob storage.
+  const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
+
   try {
-    const newBlob = await upload(filename, fileToUpload, {
+    const newBlob = await upload(fullPath, fileToUpload, {
       access: 'public',
       handleUploadUrl: '/api/upload',
-      clientPayload: JSON.stringify({ campaignId }),
+      clientPayload: JSON.stringify({ campaignId }), // Pass campaignId in payload for the backend
     });
-    // Return the public URL of the uploaded file.
     return newBlob.url;
   } catch (error) {
-    console.error('Error uploading asset to Vercel Blob:', error);
-    throw new Error(`Failed to upload asset: ${filename}`);
+    console.error(`Error uploading asset to Vercel Blob: ${filename}`, error);
+    throw new Error(`Failed to upload asset: ${filename}. Please try again.`);
   }
 };
 
@@ -59,9 +63,10 @@ const uploadAsset = async (asset, filename, campaignId) => {
  * @param {object} state - The current application state from HomePage.
  * @param {string} campaignId - The ID of the campaign for pathing.
  * @param {function} setProgress - A function to update the upload progress.
+ * @param {string} userId - The ID of the user for pathing.
  * @returns {Promise<object>} A promise that resolves to a serializable object.
  */
-export const serializeCampaignData = async (state, campaignId, setProgress) => {
+export const serializeCampaignData = async (state, campaignId, setProgress, userId) => {
   const assetsToUpload = [
     ...(state.generatedImagesData || []).filter(a => a.blob),
     ...(state.generatedAudioData || []).filter(a => a.blob),
@@ -90,7 +95,7 @@ export const serializeCampaignData = async (state, campaignId, setProgress) => {
     return Promise.all(
       assetList.map(async (asset) => {
         if (!asset.blob) return asset; // Skip if no blob to upload
-        const newUrl = await uploadAsset(asset.blob, asset.filename, campaignId);
+        const newUrl = await uploadAsset(asset.blob, asset.filename, campaignId, userId);
         updateProgress();
         return { ...asset, url: newUrl, blob: undefined }; // Store URL, remove blob
       })
@@ -105,7 +110,7 @@ export const serializeCampaignData = async (state, campaignId, setProgress) => {
     const serializableBrandElements = await Promise.all(
       (state.brandElements || []).map(async (el) => {
         if (el.url && (el.url.startsWith('blob:') || el.url.startsWith('data:'))) {
-          const newUrl = await uploadAsset(el.url, el.name || `brand_element_${el.id}`, campaignId);
+          const newUrl = await uploadAsset(el.url, el.name || `brand_element_${el.id}`, campaignId, userId);
           updateProgress();
           return { ...el, url: newUrl };
         }
@@ -115,13 +120,13 @@ export const serializeCampaignData = async (state, campaignId, setProgress) => {
 
     let newBackgroundImageUrl = state.backgroundImage;
     if (state.backgroundImage && (state.backgroundImage.startsWith('blob:') || state.backgroundImage.startsWith('data:'))) {
-      newBackgroundImageUrl = await uploadAsset(state.backgroundImage, 'background_image.png', campaignId);
+      newBackgroundImageUrl = await uploadAsset(state.backgroundImage, 'background_image.png', campaignId, userId);
       updateProgress();
     }
 
     let newGeneratedImageUrl = state.generatedImageUrl;
     if (state.generatedImageUrl && (state.generatedImageUrl.startsWith('blob:') || state.generatedImageUrl.startsWith('data:'))) {
-      newGeneratedImageUrl = await uploadAsset(state.generatedImageUrl, 'generated_campaign_image.png', campaignId);
+      newGeneratedImageUrl = await uploadAsset(state.generatedImageUrl, 'generated_campaign_image.png', campaignId, userId);
       updateProgress();
     }
 
@@ -264,7 +269,7 @@ const cleanStateForInitialSave = (state) => {
   return cleanedState;
 };
 
-export const saveCampaign = async (name, campaignState, setProgress) => {
+export const saveCampaign = async (name, campaignState, setProgress, userId) => {
   // 1. Create a clean state object for the initial save to get an ID.
   const initialState = cleanStateForInitialSave(campaignState);
 
@@ -283,7 +288,7 @@ export const saveCampaign = async (name, campaignState, setProgress) => {
   const campaignId = newCampaign.id;
 
   // 3. Now that we have a campaign ID, serialize the full state, which includes uploading assets.
-  const finalSerializableData = await serializeCampaignData(campaignState, campaignId, setProgress);
+  const finalSerializableData = await serializeCampaignData(campaignState, campaignId, setProgress, userId);
 
   // 4. Update the campaign with the final data including asset URLs.
   const updateRes = await fetchWithAuth(`/api/campaigns/${campaignId}`, {
@@ -302,10 +307,10 @@ export const saveCampaign = async (name, campaignState, setProgress) => {
   return updateRes.json();
 };
 
-export const updateCampaign = async (id, name, campaignState, setProgress) => {
+export const updateCampaign = async (id, name, campaignState, setProgress, userId) => {
   // For an existing campaign, we already have the ID.
   // We can directly serialize the data, which will upload any new/changed assets.
-  const serializableData = await serializeCampaignData(campaignState, id, setProgress);
+  const serializableData = await serializeCampaignData(campaignState, id, setProgress, userId);
   const res = await fetchWithAuth(`/api/campaigns/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

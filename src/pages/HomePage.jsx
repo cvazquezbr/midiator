@@ -203,13 +203,13 @@ function HomePage() {
     try {
       if (currentCampaign) {
         console.log(`[handleSaveCampaign] Updating campaign: ${currentCampaign.id}`);
-        const updated = await updateCampaign(currentCampaign.id, name, appState, setUploadProgress);
+        const updated = await updateCampaign(currentCampaign.id, name, appState, setUploadProgress, user.sub);
         toast.success(`Campaign "${name}" updated.`);
         setCurrentCampaign(updated);
         console.log(`[handleSaveCampaign] Campaign updated successfully.`);
       } else {
         console.log(`[handleSaveCampaign] Saving new campaign: ${name}`);
-        const newCampaign = await saveCampaign(name, appState, setUploadProgress);
+        const newCampaign = await saveCampaign(name, appState, setUploadProgress, user.sub);
         toast.success(`Campaign "${name}" saved.`);
         setCurrentCampaign(newCampaign);
         console.log(`[handleSaveCampaign] New campaign saved successfully.`);
