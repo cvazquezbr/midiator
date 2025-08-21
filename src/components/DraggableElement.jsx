@@ -112,125 +112,77 @@ const DraggableElement = ({
   }, [containerSize.width, containerSize.height]);
 
   const calculateResizedDimensionsAndPosition = (initialPosition, initialSize, deltaXPercent, deltaYPercent, handleName, rotationDegrees) => {
-    let newX = initialPosition.x;
-    let newY = initialPosition.y;
-    let newWidth = initialSize.width;
-    let newHeight = initialSize.height;
-
     const rad = rotationDegrees * (Math.PI / 180);
     const cos = Math.cos(rad);
     const sin = Math.sin(rad);
 
+    // Get the mouse deltas in the element's coordinate system
     const rotatedDeltaX = deltaXPercent * cos + deltaYPercent * sin;
     const rotatedDeltaY = -deltaXPercent * sin + deltaYPercent * cos;
 
+    let { width: newWidth, height: newHeight } = initialSize;
+    let { x: newX, y: newY } = initialPosition;
+
     const initialCenterX = initialPosition.x + initialSize.width / 2;
     const initialCenterY = initialPosition.y + initialSize.height / 2;
-
-    const corners = {
-        nw: { x: initialPosition.x, y: initialPosition.y },
-        ne: { x: initialPosition.x + initialSize.width, y: initialPosition.y },
-        sw: { x: initialPosition.x, y: initialPosition.y + initialSize.height },
-        se: { x: initialPosition.x + initialSize.width, y: initialPosition.y + initialSize.height },
-    };
-
-    const rotatePoint = (point, center, angleRad) => {
-        const s = Math.sin(angleRad);
-        const c = Math.cos(angleRad);
-        point.x -= center.x;
-        point.y -= center.y;
-        const xnew = point.x * c - point.y * s;
-        const ynew = point.x * s + point.y * c;
-        point.x = xnew + center.x;
-        point.y = ynew + center.y;
-        return point;
-    };
-
-    const initialRotatedCorners = {};
-    for (const key in corners) {
-        initialRotatedCorners[key] = rotatePoint({ ...corners[key] }, { x: initialCenterX, y: initialCenterY }, rad);
-    }
-
-    let fixedAnchorPoint = { x: 0, y: 0 };
-    let oppositeHandleName = '';
+    let newCenterX = initialCenterX;
+    let newCenterY = initialCenterY;
 
     switch (handleName) {
-        case 'n':
-            fixedAnchorPoint = {
-                x: (initialRotatedCorners.sw.x + initialRotatedCorners.se.x) / 2,
-                y: (initialRotatedCorners.sw.y + initialRotatedCorners.se.y) / 2
-            };
-            oppositeHandleName = 's_mid';
-            newHeight -= rotatedDeltaY;
-            newWidth = initialSize.width;
-            break;
         case 'e':
-            fixedAnchorPoint = {
-                x: (initialRotatedCorners.nw.x + initialRotatedCorners.sw.x) / 2,
-                y: (initialRotatedCorners.nw.y + initialRotatedCorners.sw.y) / 2
-            };
-            oppositeHandleName = 'w_mid';
             newWidth += rotatedDeltaX;
-            newHeight = initialSize.height;
-            break;
-        case 's':
-            fixedAnchorPoint = {
-                x: (initialRotatedCorners.nw.x + initialRotatedCorners.ne.x) / 2,
-                y: (initialRotatedCorners.nw.y + initialRotatedCorners.ne.y) / 2
-            };
-            oppositeHandleName = 'n_mid';
-            newHeight += rotatedDeltaY;
-            newWidth = initialSize.width;
+            newCenterX += (rotatedDeltaX / 2) * cos;
+            newCenterY += (rotatedDeltaX / 2) * sin;
             break;
         case 'w':
-            fixedAnchorPoint = {
-                x: (initialRotatedCorners.ne.x + initialRotatedCorners.se.x) / 2,
-                y: (initialRotatedCorners.ne.y + initialRotatedCorners.se.y) / 2
-            };
-            oppositeHandleName = 'e_mid';
             newWidth -= rotatedDeltaX;
-            newHeight = initialSize.height;
+            newCenterX -= (rotatedDeltaX / 2) * cos;
+            newCenterY -= (rotatedDeltaX / 2) * sin;
             break;
-        case 'nw': fixedAnchorPoint = initialRotatedCorners.se; oppositeHandleName = 'se';
-            newWidth -= rotatedDeltaX; newHeight -= rotatedDeltaY; break;
-        case 'ne': fixedAnchorPoint = initialRotatedCorners.sw; oppositeHandleName = 'sw';
-            newWidth += rotatedDeltaX; newHeight -= rotatedDeltaY; break;
-        case 'se': fixedAnchorPoint = initialRotatedCorners.nw; oppositeHandleName = 'nw';
-            newWidth += rotatedDeltaX; newHeight += rotatedDeltaY; break;
-        case 'sw': fixedAnchorPoint = initialRotatedCorners.ne; oppositeHandleName = 'ne';
-            newWidth -= rotatedDeltaX; newHeight += rotatedDeltaY; break;
+        case 's':
+            newHeight += rotatedDeltaY;
+            newCenterX -= (rotatedDeltaY / 2) * sin;
+            newCenterY += (rotatedDeltaY / 2) * cos;
+            break;
+        case 'n':
+            newHeight -= rotatedDeltaY;
+            newCenterX += (rotatedDeltaY / 2) * sin;
+            newCenterY -= (rotatedDeltaY / 2) * cos;
+            break;
+        // Corner handles
+        case 'se':
+            newWidth += rotatedDeltaX;
+            newHeight += rotatedDeltaY;
+            newCenterX += (rotatedDeltaX / 2) * cos - (rotatedDeltaY / 2) * sin;
+            newCenterY += (rotatedDeltaX / 2) * sin + (rotatedDeltaY / 2) * cos;
+            break;
+        case 'sw':
+            newWidth -= rotatedDeltaX;
+            newHeight += rotatedDeltaY;
+            newCenterX -= (rotatedDeltaX / 2) * cos - (rotatedDeltaY / 2) * sin;
+            newCenterY -= (rotatedDeltaX / 2) * sin + (rotatedDeltaY / 2) * cos;
+            break;
+        case 'ne':
+            newWidth += rotatedDeltaX;
+            newHeight -= rotatedDeltaY;
+            newCenterX += (rotatedDeltaX / 2) * cos + (rotatedDeltaY / 2) * sin;
+            newCenterY += (rotatedDeltaX / 2) * sin - (rotatedDeltaY / 2) * cos;
+            break;
+        case 'nw':
+            newWidth -= rotatedDeltaX;
+            newHeight -= rotatedDeltaY;
+            newCenterX -= (rotatedDeltaX / 2) * cos + (rotatedDeltaY / 2) * sin;
+            newCenterY -= (rotatedDeltaX / 2) * sin - (rotatedDeltaY / 2) * cos;
+            break;
     }
 
     newWidth = Math.max(5, newWidth);
     newHeight = Math.max(3, newHeight);
-
-    let localAnchorXComp, localAnchorYComp;
-    switch (oppositeHandleName) {
-        case 'nw': localAnchorXComp = -newWidth / 2; localAnchorYComp = -newHeight / 2; break;
-        case 'ne': localAnchorXComp = newWidth / 2; localAnchorYComp = -newHeight / 2; break;
-        case 'sw': localAnchorXComp = -newWidth / 2; localAnchorYComp = newHeight / 2; break;
-        case 'se': localAnchorXComp = newWidth / 2; localAnchorYComp = newHeight / 2; break;
-        case 'n_mid': localAnchorXComp = 0; localAnchorYComp = -newHeight / 2; break;
-        case 'e_mid': localAnchorXComp = newWidth / 2; localAnchorYComp = 0; break;
-        case 's_mid': localAnchorXComp = 0; localAnchorYComp = newHeight / 2; break;
-        case 'w_mid': localAnchorXComp = -newWidth / 2; localAnchorYComp = 0; break;
-        default:
-            console.error("Unknown oppositeHandleName:", oppositeHandleName);
-            localAnchorXComp = 0; localAnchorYComp = 0;
-    }
-
-    const termX = localAnchorXComp * cos - localAnchorYComp * sin;
-    const termY = localAnchorXComp * sin + localAnchorYComp * cos;
-
-    const newCenterX = fixedAnchorPoint.x - termX;
-    const newCenterY = fixedAnchorPoint.y - termY;
 
     newX = newCenterX - newWidth / 2;
     newY = newCenterY - newHeight / 2;
 
-    newWidth = Math.max(5, newWidth);
-    newHeight = Math.max(3, newHeight);
-
+    // Boundary checks
     newX = Math.max(0, newX);
     newY = Math.max(0, newY);
 
@@ -243,6 +195,7 @@ const DraggableElement = ({
 
     newX = Math.max(0, Math.min(newX, 100 - newWidth));
     newY = Math.max(0, Math.min(newY, 100 - newHeight));
+
 
     return { newX, newY, newWidth, newHeight };
   };
