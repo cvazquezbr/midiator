@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import { Refresh, Upload, CloudQueue } from '@mui/icons-material';
 import { useUserAuth } from '../context/UserAuthContext';
-import { findFolderByName, listFiles, getFileAsBlob, createFolder } from '../utils/googleApi';
+import { findFolderByName, listFiles, getFileAsBlob } from '../utils/googleApi';
 import { toast } from 'sonner';
 
 const BackgroundImageSelector = ({ open, onClose, onSelect, onLocalUpload }) => {
@@ -14,7 +14,7 @@ const BackgroundImageSelector = ({ open, onClose, onSelect, onLocalUpload }) => 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [loadingImageId, setLoadingImageId] = useState(null);
-  const { googleAccessToken } = useUserAuth();
+  const { googleAccessToken } = useUserAuth(); // Keep this to check if user is connected
   const fileInputRef = useRef(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
@@ -27,17 +27,24 @@ const BackgroundImageSelector = ({ open, onClose, onSelect, onLocalUpload }) => 
     setIsLoading(true);
     setError(null);
     try {
-      let midiatorFolder = await findFolderByName('midiator', null, googleAccessToken);
+      // Calls no longer need token arguments
+      let midiatorFolder = await findFolderByName('midiator');
       if (!midiatorFolder) {
-        midiatorFolder = await createFolder('midiator', null, googleAccessToken);
+        // If the root folder doesn't exist, no point in creating it here.
+        // It should be created when a user first saves a background.
+        console.log("[BgSelector] 'midiator' folder not found. No backgrounds to load.");
+        setImages([]);
+        return;
       }
 
-      let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id, googleAccessToken);
+      let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id);
       if (!backgroundsFolder) {
-        backgroundsFolder = await createFolder('backgrounds', midiatorFolder.id, googleAccessToken);
+        console.log("[BgSelector] 'backgrounds' folder not found. No backgrounds to load.");
+        setImages([]);
+        return;
       }
 
-      const fileList = await listFiles(backgroundsFolder.id, googleAccessToken);
+      const fileList = await listFiles(backgroundsFolder.id);
       const imageFiles = fileList.files.filter(file => file.mimeType.startsWith('image/'));
 
       const imagesWithLinks = imageFiles.map(file => ({
@@ -48,7 +55,7 @@ const BackgroundImageSelector = ({ open, onClose, onSelect, onLocalUpload }) => 
 
       setImages(imagesWithLinks);
     } catch (err) {
-      setError(err.message || 'Ocorreu um erro desconhecido.');
+      setError(err.message || 'Ocorreu um erro desconhecido ao buscar os backgrounds.');
       console.error("Error fetching backgrounds:", err);
     } finally {
       setIsLoading(false);
@@ -66,7 +73,8 @@ const BackgroundImageSelector = ({ open, onClose, onSelect, onLocalUpload }) => 
     setLoadingImageId(image.id);
     setError(null);
     try {
-      const blob = await getFileAsBlob(image.id, googleAccessToken);
+      // Call no longer needs token argument
+      const blob = await getFileAsBlob(image.id);
       const blobUrl = URL.createObjectURL(blob);
       onSelect(blobUrl);
       onClose(); // Close dialog on selection

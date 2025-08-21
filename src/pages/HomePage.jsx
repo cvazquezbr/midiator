@@ -55,7 +55,7 @@ import { parseCsv } from '../utils/csvParser.js';
 import { lightTheme, darkTheme } from '../theme.js';
 import ColorThief from 'colorthief';
 
-import { findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
+import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
 
 function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
@@ -185,6 +185,7 @@ function HomePage() {
   };
 
   const handleSaveCampaign = async (name) => {
+    console.log(`[HomePage] Attempting to save campaign: "${name}"`);
     try {
       await checkAuthStatus();
     } catch (error) {
@@ -192,8 +193,6 @@ function HomePage() {
       return;
     }
 
-    // Manually construct a minimal, clean state object to pass to the save functions.
-    // This prevents trying to serialize the entire, complex application state.
     const campaignDataToSave = {
       activeStep,
       problema,
@@ -217,20 +216,26 @@ function HomePage() {
       generatedVideosData,
       standardsColors,
     };
+    console.log("[HomePage] Campaign data object created:", campaignDataToSave);
+
 
     setIsSaving(true);
     setUploadProgress({ current: 0, total: 0 });
     try {
       if (currentCampaign) {
+        console.log(`[HomePage] Updating existing campaign, ID: ${currentCampaign.id}`);
         const updated = await updateCampaign(currentCampaign.id, name, campaignDataToSave, setUploadProgress, user.sub);
         toast.success(`Campaign "${name}" updated.`);
         setCurrentCampaign(updated);
       } else {
+        console.log(`[HomePage] Saving new campaign.`);
         const newCampaign = await saveCampaign(name, campaignDataToSave, setUploadProgress, user.sub);
         toast.success(`Campaign "${name}" saved.`);
         setCurrentCampaign(newCampaign);
       }
+      console.log("[HomePage] Save/Update operation completed successfully.");
     } catch (err) {
+      console.error("[HomePage] Error during save/update campaign:", err);
       toast.error(err.message || 'An unknown error occurred while saving the campaign.');
     } finally {
       setIsSaving(false);
@@ -272,6 +277,15 @@ function HomePage() {
     const apiKey = getGeminiApiKey();
     if (apiKey) geminiAPI.initialize(apiKey);
   }, [loadCampaignStandards]);
+
+  // Configure googleApi module with the token and setter from context
+  useEffect(() => {
+    if (googleAccessToken) {
+      console.log("[HomePage] googleAccessToken updated, configuring googleApi module.");
+      setGoogleApiToken(googleAccessToken);
+      setGoogleApiTokenSetter(setGoogleAccessToken);
+    }
+  }, [googleAccessToken, setGoogleAccessToken]);
 
   useEffect(() => {
     const loadInitialSettings = async () => {
@@ -381,11 +395,11 @@ function HomePage() {
   }, []); // State setters are stable.
   const parseImageFile = async (file) => {
     if (!file) return;
+    console.log(`[HomePage] Parsing image file: ${file.name}`);
 
     const reader = new FileReader();
     reader.onload = (e) => {
       const imageUrl = e.target.result;
-      // Immediately update the background for a good UX
       updateImageAndPalette(imageUrl);
 
       const imageStepIndex = steps.findIndex(step => step.label === 'Imagem e Formatação');
@@ -393,26 +407,39 @@ function HomePage() {
         setActiveStep(imageStepIndex);
       }
 
-      // Ask user to save to Drive library
       if (window.confirm("Deseja salvar esta imagem na sua biblioteca de fundos no Google Drive?")) {
         const uploadToDrive = async () => {
             const toastId = toast.loading("Salvando imagem na biblioteca...");
+            console.log("[HomePage] Starting image upload to Drive process.");
             try {
                 if (!googleAccessToken) {
                     throw new Error("Por favor, conecte sua conta Google primeiro.");
                 }
-                let midiatorFolder = await findFolderByName('midiator', null, googleAccessToken, setGoogleAccessToken);
+
+                let midiatorFolder = await findFolderByName('midiator');
                 if (!midiatorFolder) {
-                    midiatorFolder = await createFolder('midiator', null, googleAccessToken, setGoogleAccessToken);
+                    console.log("[HomePage] 'midiator' folder not found, creating it.");
+                    midiatorFolder = await createFolder('midiator');
+                    if (!midiatorFolder) throw new Error("Falha ao criar a pasta 'midiator' no Drive.");
                 }
-                let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id, googleAccessToken, setGoogleAccessToken);
+
+                let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id);
                 if (!backgroundsFolder) {
-                    backgroundsFolder = await createFolder('backgrounds', midiatorFolder.id, googleAccessToken, setGoogleAccessToken);
+                    console.log("[HomePage] 'backgrounds' folder not found, creating it.");
+                    backgroundsFolder = await createFolder('backgrounds', midiatorFolder.id);
+                    if (!backgroundsFolder) throw new Error("Falha ao criar a pasta 'backgrounds' no Drive.");
                 }
-                await uploadFile(file, file.name, backgroundsFolder.id, googleAccessToken, setGoogleAccessToken);
+
+                const uploadedFile = await uploadFile(file, file.name, backgroundsFolder.id);
+                if (!uploadedFile) {
+                    throw new Error("O upload do arquivo para o Drive falhou e não retornou informações.");
+                }
+
                 toast.success("Imagem salva com sucesso na sua biblioteca!", { id: toastId });
+                console.log("[HomePage] Image successfully uploaded to Drive:", uploadedFile);
+
             } catch (err) {
-                console.error("Failed to upload background to Drive:", err);
+                console.error("[HomePage] Failed to upload background to Drive:", err);
                 toast.error(`Falha ao salvar imagem: ${err.message}`, { id: toastId });
             }
         };
