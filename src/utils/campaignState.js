@@ -327,6 +327,7 @@ export const saveCampaign = async (name, campaignState, setProgress, userId) => 
 };
 
 export const updateCampaign = async (id, name, campaignState, setProgress, userId) => {
+  console.log('[updateCampaign] Starting.');
   // For an existing campaign, we already have the ID.
   // We can directly serialize the data, which will upload any new/changed assets.
   const serializableData = await serializeCampaignData(campaignState, id, setProgress, userId);
@@ -341,6 +342,7 @@ export const updateCampaign = async (id, name, campaignState, setProgress, userI
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || 'Failed to update campaign.');
   }
+  console.log('[updateCampaign] PUT request successful.');
   return res.json();
 };
 
