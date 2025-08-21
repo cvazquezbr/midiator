@@ -23,7 +23,7 @@ const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {
  * Manually handles the Vercel Blob upload process.
  * It now accepts a dataUrl, converts it to a blob, and then uploads.
  */
-const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
+export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
   if (!dataUrl || !dataUrl.startsWith('data:')) {
     console.error('[uploadAsset] Invalid dataUrl provided.', { dataUrl, filename });
     throw new Error(`Asset "${filename}" could not be uploaded because it is not a valid data URL.`);
