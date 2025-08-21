@@ -28,7 +28,6 @@ const uploadAsset = async (asset, filename, campaignId, userId) => {
     const blob = await response.blob();
     fileToUpload = new File([blob], filename, { type: blob.type });
   } else {
-    // If it's any other type of string or an unsupported type, we don't upload.
     console.warn(`Unsupported asset type for upload: ${typeof asset}`, asset);
     return asset;
   }
@@ -243,8 +242,8 @@ export const loadCampaign = async (id) => {
 };
 
 export const saveCampaign = async (name, campaignData, setProgress, userId) => {
-  // The campaignData is pre-sanitized by the caller, containing only essential fields.
-  // First, we do an initial POST with this clean data to get a campaign ID.
+  // The campaignData from HomePage is already a minimal, clean object.
+  // We do an initial POST with this data to get a campaign ID.
   const createRes = await fetchWithAuth('/api/campaigns', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -277,7 +276,7 @@ export const saveCampaign = async (name, campaignData, setProgress, userId) => {
 };
 
 export const updateCampaign = async (id, name, campaignData, setProgress, userId) => {
-  // The campaignData is already pre-sanitized.
+  // The campaignData is already pre-sanitized by the caller.
   // First, serialize it, which uploads assets and returns a state with public URLs.
   const stateWithAssetUrls = await serializeCampaignData(campaignData, id, setProgress, userId);
 
