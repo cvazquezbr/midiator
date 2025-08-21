@@ -4,6 +4,25 @@ import { upload } from '@vercel/blob/client';
 import { toast } from 'sonner';
 import fetchWithAuth from './fetchWithAuth';
 
+const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error('Request timed out')),
+      timeout
+    );
+
+    fetch(resource, options)
+      .then(response => {
+        clearTimeout(timer);
+        resolve(response);
+      })
+      .catch(err => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+};
+
 // Helper to upload a blob-like asset to Vercel Blob storage.
 const uploadAsset = async (asset, filename, campaignId, userId) => {
   if (!asset) {
@@ -24,7 +43,7 @@ const uploadAsset = async (asset, filename, campaignId, userId) => {
     fileToUpload = new File([asset], filename, { type: asset.type });
   } else if (typeof asset === 'string' && (asset.startsWith('blob:') || asset.startsWith('data:'))) {
     // Asset is a temporary client-side URL. Fetch it and convert to a File.
-    const response = await fetch(asset);
+    const response = await fetchWithTimeout(asset, {}, 15000); // Use 15s timeout
     if (!response.ok) {
       throw new Error(`Failed to fetch blob URL: ${asset}`);
     }
