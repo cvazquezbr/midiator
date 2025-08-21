@@ -54,25 +54,33 @@ const uploadAsset = async (blob, filename, campaignId, userId) => {
 export const serializeCampaignData = async (state, campaignId, setProgress, userId) => {
   console.log('[serializeCampaignData] Starting serialization...');
   try {
-    // Helper to process a list of assets, uploading their blobs sequentially.
+    // Helper to process a list of assets, uploading their blobs sequentially and resiliently.
     const serializeAssetList = async (assetList) => {
       if (!assetList) return [];
       const serializedList = [];
       for (const asset of assetList) {
-        // Use a default filename if one is not provided.
         const filename = asset.filename || `asset_${Date.now()}`;
         console.log(`[serializeAssetList] Processing asset: ${filename}`);
 
         if (asset && asset.blob instanceof Blob) {
-          const newUrl = await uploadAsset(asset.blob, filename, campaignId, userId);
-          setProgress(prev => ({ ...prev, current: prev.current + 1 }));
-          serializedList.push({ ...asset, url: newUrl, blob: undefined });
+          try {
+            const newUrl = await uploadAsset(asset.blob, filename, campaignId, userId);
+            setProgress(prev => ({ ...prev, current: prev.current + 1 }));
+            serializedList.push({ ...asset, url: newUrl, blob: undefined });
+            console.log(`[serializeAssetList] Successfully processed and uploaded asset: ${filename}`);
+          } catch (error) {
+            console.error(`[serializeAssetList] Failed to process asset ${filename}. Skipping this file.`, error);
+            toast.error(`Failed to upload ${filename}: ${error.message}`);
+            // Push the original asset back, but without the blob, so it doesn't get re-uploaded.
+            // The URL will be the old blob: URL, which will fail to load, but this is better
+            // than the whole save failing. The user is notified via the toast.
+            serializedList.push({ ...asset, blob: undefined });
+          }
         } else {
           // If asset has no blob, it might already have a permanent URL.
-          // Ensure blob property is removed.
           serializedList.push({ ...asset, blob: undefined });
+          console.log(`[serializeAssetList] Asset ${filename} has no blob, skipping upload.`);
         }
-        console.log(`[serializeAssetList] Finished processing asset: ${filename}`);
       }
       return serializedList;
     };
