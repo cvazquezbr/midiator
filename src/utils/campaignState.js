@@ -148,6 +148,9 @@ export const serializeCampaignData = async (state, campaignId, setProgress, user
   // These are client-side only representations
   delete stateToSave.backgroundImageUrl;
 
+  const jsonString = JSON.stringify(stateToSave);
+  console.log(`[serializeCampaignData] Final state size: ~${(jsonString.length / 1024).toFixed(2)} KB`);
+
   return stateToSave;
   } catch (error) {
     toast.error(error.message);
@@ -211,6 +214,22 @@ export const deserializeCampaignData = async (loadedState) => {
   if (loadedState.generatedImageUrl) {
       const { url } = await urlToBlob(loadedState.generatedImageUrl);
       loadedState.generatedImageUrl = url;
+  }
+
+  // Backward compatibility for backgroundImage being a raw base64 string
+  if (typeof loadedState.backgroundImage === 'string' && !loadedState.backgroundImage.startsWith('http') && !loadedState.backgroundImage.startsWith('blob:')) {
+      // It's not a URL, so it's likely a legacy base64 string.
+      console.log('[deserializeCampaignData] Found legacy base64 in backgroundImage. Converting to blob.');
+      // It might not have the data: prefix, so we add a generic one.
+      const fetchString = loadedState.backgroundImage.startsWith('data:') ? loadedState.backgroundImage : `data:image/png;base64,${loadedState.backgroundImage}`;
+      try {
+        const res = await fetch(fetchString);
+        const blob = await res.blob();
+        loadedState.backgroundImage = URL.createObjectURL(blob);
+      } catch (e) {
+        console.error("Failed to convert legacy backgroundImage to blob", e);
+        loadedState.backgroundImage = null; // Clear the invalid data
+      }
   }
 
   // Backward compatibility for old data structure
@@ -311,6 +330,8 @@ export const updateCampaign = async (id, name, campaignState, setProgress, userI
   // For an existing campaign, we already have the ID.
   // We can directly serialize the data, which will upload any new/changed assets.
   const serializableData = await serializeCampaignData(campaignState, id, setProgress, userId);
+
+  console.log(`[updateCampaign] About to PUT to /api/campaigns/${id}.`);
   const res = await fetchWithAuth(`/api/campaigns/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
