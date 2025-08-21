@@ -247,11 +247,10 @@ function HomePage() {
 
     setIsLoading(true);
     try {
-      const loadedState = await loadCampaign(id);
-      applyAppState(loadedState);
-      const campaign = await res.json();
-      setCurrentCampaign({ id, name: campaign.name });
-      toast.success(`Campaign loaded successfully!`);
+      const loadedCampaign = await loadCampaign(id);
+      applyAppState(loadedCampaign.campaign_data);
+      setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
+      toast.success(`Campaign "${loadedCampaign.name}" loaded successfully!`);
     } catch (err) {
       toast.error(err.message);
     } finally {

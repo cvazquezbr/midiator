@@ -78,10 +78,10 @@ export const serializeCampaignData = async (state, campaignId, setProgress, user
     };
 
     const assetsToUpload = [
-      ...(state.generatedImagesData || []).filter(a => a.blob),
-      ...(state.generatedAudioData || []).filter(a => a.blob),
-      ...(state.generatedVideosData || []).filter(a => a.blob),
-      ...(state.brandElements || []).filter(el => el.url && (el.url.startsWith('blob:') || el.url.startsWith('data:'))),
+      ...(state.generatedImagesData || []).filter(a => a && a.blob),
+      ...(state.generatedAudioData || []).filter(a => a && a.blob),
+      ...(state.generatedVideosData || []).filter(a => a && a.blob),
+      ...(state.brandElements || []).filter(el => el && el.url && (el.url.startsWith('blob:') || el.url.startsWith('data:'))),
     ];
     if (state.backgroundImage && (state.backgroundImage.startsWith('blob:') || state.backgroundImage.startsWith('data:'))) {
       assetsToUpload.push({ blob: state.backgroundImage, filename: 'background_image.png' });
@@ -238,7 +238,10 @@ export const loadCampaign = async (id) => {
     throw new Error(err.error || 'Failed to load campaign.');
   }
   const campaign = await res.json();
-  return deserializeCampaignData(campaign.campaign_data);
+  // Deserialize the campaign_data part, but return the whole campaign object
+  // so we have access to top-level properties like `name` and `id`.
+  campaign.campaign_data = await deserializeCampaignData(campaign.campaign_data);
+  return campaign;
 };
 
 export const saveCampaign = async (name, campaignData, setProgress, userId) => {
