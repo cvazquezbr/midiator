@@ -18,19 +18,32 @@ const uploadAsset = async (blob, filename, campaignId, userId) => {
   const fileToUpload = new File([blob], filename, { type: blob.type });
   const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
 
-  console.log(`[uploadAsset] Uploading file: ${filename} to path: ${fullPath}`);
+  console.log(`[uploadAsset] Uploading file: ${filename} to path: ${fullPath}. Timeout is 30s.`);
 
   try {
-    const newBlob = await upload(fullPath, fileToUpload, {
+    const uploadPromise = upload(fullPath, fileToUpload, {
       access: 'public',
       handleUploadUrl: '/api/upload',
       clientPayload: JSON.stringify({ campaignId }),
     });
-    console.log(`[uploadAsset] Successfully uploaded ${filename}, URL: ${newBlob.url}`);
-    return newBlob.url;
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Upload for ${filename} timed out after 30 seconds.`)), 30000)
+    );
+
+    const newBlob = await Promise.race([uploadPromise, timeoutPromise]);
+
+    // The type assertion is safe because if timeoutPromise rejects, it's caught by the catch block.
+    // So if we get here, it's always the result from uploadPromise.
+    const resultUrl = (newBlob).url;
+    console.log(`[uploadAsset] Successfully uploaded ${filename}, URL: ${resultUrl}`);
+    return resultUrl;
+
   } catch (error) {
     console.error(`[uploadAsset] Error uploading asset to Vercel Blob: ${filename}`, error);
-    throw new Error(`Failed to upload asset: ${filename}. Please try again.`);
+    // The error object might not have a 'message' property, so we stringify it.
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to upload asset: ${filename}. Reason: ${errorMessage}`);
   }
 };
 
