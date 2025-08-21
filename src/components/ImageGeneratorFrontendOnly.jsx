@@ -264,7 +264,6 @@ const ImageGeneratorFrontendOnly = ({
           record,
           index: i,
           filename: `midiator_${String(i + 1).padStart(3, '0')}.png`,
-          backgroundImage,
           customFieldPositions: existingImageDataItem?.customFieldPositions,
           customFieldStyles: existingImageDataItem?.customFieldStyles,
         };
