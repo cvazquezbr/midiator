@@ -307,33 +307,43 @@ async function handleUploadImage(request, response) {
 }
 
 async function handleCreatePost(request, response) {
-  const { accessToken, payload } = request.body;
+    const { accessToken, payload } = request.body;
 
-  if (!accessToken || !payload || !payload.content || !payload.targetId) {
-    return response.status(400).json({ error: 'Missing parameters for creating post.' });
-  }
-
-  const { content, targetId, targetType = 'personal' } = payload;
-
-  const author = targetType === 'organization'
-    ? `urn:li:organization:${targetId}`
-    : `urn:li:person:${targetId}`;
-
-  const postData = {
-    author,
-    lifecycleState: 'PUBLISHED',
-    specificContent: {
-      'com.linkedin.ugc.ShareContent': {
-        shareCommentary: { text: content },
-        shareMediaCategory: 'NONE' // Simplified for now, as per report
-      }
-    },
-    visibility: {
-      'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
+    if (!accessToken || !payload) {
+        return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
     }
-  };
 
-  const createPostUrl = 'https://api.linkedin.com/v2/ugcPosts';
+    const { author, content, images } = payload;
+
+    if (!author || !content) {
+        return response.status(400).json({ error: 'Missing author or content for creating post.' });
+    }
+
+    const shareContent = {
+        shareCommentary: { text: content },
+        shareMediaCategory: 'NONE',
+    };
+
+    if (images && images.length > 0) {
+        shareContent.shareMediaCategory = 'IMAGE';
+        shareContent.media = images.map(assetURN => ({
+            status: 'READY',
+            media: assetURN,
+        }));
+    }
+
+    const postData = {
+        author,
+        lifecycleState: 'PUBLISHED',
+        specificContent: {
+            'com.linkedin.ugc.ShareContent': shareContent,
+        },
+        visibility: {
+            'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
+        },
+    };
+
+    const createPostUrl = 'https://api.linkedin.com/rest/posts';
 
   try {
     const linkedinResponse = await fetch(createPostUrl, {
