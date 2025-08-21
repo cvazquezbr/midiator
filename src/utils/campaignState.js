@@ -4,7 +4,7 @@ import { upload } from '@vercel/blob/client';
 import { toast } from 'sonner';
 
 // Helper to upload a blob-like asset to Vercel Blob storage.
-const uploadAsset = async (asset, filename) => {
+const uploadAsset = async (asset, filename, campaignId) => {
   if (!asset) {
     return null;
   }
@@ -38,6 +38,7 @@ const uploadAsset = async (asset, filename) => {
     const newBlob = await upload(filename, fileToUpload, {
       access: 'public',
       handleUploadUrl: '/api/upload',
+      clientPayload: JSON.stringify({ campaignId }),
     });
     // Return the public URL of the uploaded file.
     return newBlob.url;
@@ -52,22 +53,24 @@ const uploadAsset = async (asset, filename) => {
  * Gathers and serializes the current application state for saving.
  * Blobs are uploaded to Vercel Blob storage.
  * @param {object} state - The current application state from HomePage.
+ * @param {string} campaignId - The ID of the campaign for pathing.
  * @param {function} setProgress - A function to update the upload progress.
  * @returns {Promise<object>} A promise that resolves to a serializable object.
  */
-export const serializeCampaignData = async (state, setProgress) => {
+export const serializeCampaignData = async (state, campaignId, setProgress) => {
   const assetsToUpload = [
     ...(state.generatedImagesData || []).filter(a => a.blob),
     ...(state.generatedAudioData || []).filter(a => a.blob),
     ...(state.generatedVideosData || []).filter(a => a.blob),
-    ...(state.brandElements || []).filter(el => el.url && el.url.startsWith('blob:')),
+    ...(state.brandElements || []).filter(el => el.url && (el.url.startsWith('blob:') || el.url.startsWith('data:'))),
   ];
-  if (state.backgroundImage && state.backgroundImage.startsWith('blob:')) {
-    assetsToUpload.push({ blob: state.backgroundImage, filename: 'background_image' });
+  if (state.backgroundImage && (state.backgroundImage.startsWith('blob:') || state.backgroundImage.startsWith('data:'))) {
+    assetsToUpload.push({ blob: state.backgroundImage, filename: 'background_image.png' });
   }
-  if (state.generatedImageUrl && state.generatedImageUrl.startsWith('blob:')) {
-    assetsToUpload.push({ blob: state.generatedImageUrl, filename: 'generated_campaign_image' });
+  if (state.generatedImageUrl && (state.generatedImageUrl.startsWith('blob:') || state.generatedImageUrl.startsWith('data:'))) {
+    assetsToUpload.push({ blob: state.generatedImageUrl, filename: 'generated_campaign_image.png' });
   }
+
 
   const totalAssets = assetsToUpload.length;
   let uploadedCount = 0;
@@ -83,7 +86,7 @@ export const serializeCampaignData = async (state, setProgress) => {
     return Promise.all(
       assetList.map(async (asset) => {
         if (!asset.blob) return asset; // Skip if no blob to upload
-        const newUrl = await uploadAsset(asset.blob, asset.filename);
+        const newUrl = await uploadAsset(asset.blob, asset.filename, campaignId);
         updateProgress();
         return { ...asset, url: newUrl, blob: undefined }; // Store URL, remove blob
       })
@@ -97,8 +100,8 @@ export const serializeCampaignData = async (state, setProgress) => {
 
     const serializableBrandElements = await Promise.all(
       (state.brandElements || []).map(async (el) => {
-        if (el.url && el.url.startsWith('blob:')) {
-          const newUrl = await uploadAsset(el.url, el.name || `brand_element_${el.id}`);
+        if (el.url && (el.url.startsWith('blob:') || el.url.startsWith('data:'))) {
+          const newUrl = await uploadAsset(el.url, el.name || `brand_element_${el.id}`, campaignId);
           updateProgress();
           return { ...el, url: newUrl };
         }
@@ -108,13 +111,13 @@ export const serializeCampaignData = async (state, setProgress) => {
 
     let newBackgroundImageUrl = state.backgroundImage;
     if (state.backgroundImage && (state.backgroundImage.startsWith('blob:') || state.backgroundImage.startsWith('data:'))) {
-      newBackgroundImageUrl = await uploadAsset(state.backgroundImage, 'background_image.png');
+      newBackgroundImageUrl = await uploadAsset(state.backgroundImage, 'background_image.png', campaignId);
       updateProgress();
     }
 
     let newGeneratedImageUrl = state.generatedImageUrl;
     if (state.generatedImageUrl && (state.generatedImageUrl.startsWith('blob:') || state.generatedImageUrl.startsWith('data:'))) {
-      newGeneratedImageUrl = await uploadAsset(state.generatedImageUrl, 'generated_campaign_image.png');
+      newGeneratedImageUrl = await uploadAsset(state.generatedImageUrl, 'generated_campaign_image.png', campaignId);
       updateProgress();
     }
 
@@ -236,22 +239,69 @@ export const loadCampaign = async (id) => {
   return deserializeCampaignData(campaign.campaign_data);
 };
 
+// Helper to create a version of the state safe for the initial save,
+// without any local blobs that would cause serialization issues.
+const cleanStateForInitialSave = (state) => {
+  const cleanedState = { ...state };
+
+  // Remove properties that shouldn't be persisted or are heavy
+  delete cleanedState.isSaving;
+  delete cleanedState.isLoading;
+  delete cleanedState.user;
+
+  // Replace asset data with placeholders or remove them
+  cleanedState.generatedImagesData = (state.generatedImagesData || []).map(d => ({ ...d, blob: null, url: d.url || '' }));
+  cleanedState.generatedAudioData = (state.generatedAudioData || []).map(d => ({ ...d, blob: null, url: d.url || '' }));
+  cleanedState.generatedVideosData = (state.generatedVideosData || []).map(d => ({ ...d, blob: null, url: d.url || '' }));
+  cleanedState.brandElements = (state.brandElements || []).map(el => ({ ...el, url: el.url && el.url.startsWith('http') ? el.url : '' }));
+  cleanedState.backgroundImage = state.backgroundImage && state.backgroundImage.startsWith('http') ? state.backgroundImage : null;
+  cleanedState.generatedImageUrl = state.generatedImageUrl && state.generatedImageUrl.startsWith('http') ? state.generatedImageUrl : null;
+
+  return cleanedState;
+};
+
 export const saveCampaign = async (name, campaignState, setProgress) => {
-  const serializableData = await serializeCampaignData(campaignState, setProgress);
-  const res = await fetch('/api/campaigns', {
+  // 1. Create a clean state object for the initial save to get an ID.
+  const initialState = cleanStateForInitialSave(campaignState);
+
+  // 2. Make the initial request to create the campaign entry.
+  const createRes = await fetch('/api/campaigns', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, campaign_data: serializableData }),
+    body: JSON.stringify({ name, campaign_data: initialState }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to save campaign.');
+
+  if (!createRes.ok) {
+    const err = await createRes.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to create campaign entry.');
   }
-  return res.json();
+  const newCampaign = await createRes.json();
+  const campaignId = newCampaign.id;
+
+  // 3. Now that we have a campaign ID, serialize the full state, which includes uploading assets.
+  const finalSerializableData = await serializeCampaignData(campaignState, campaignId, setProgress);
+
+  // 4. Update the campaign with the final data including asset URLs.
+  const updateRes = await fetch(`/api/campaigns/${campaignId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, campaign_data: finalSerializableData }),
+  });
+
+  if (!updateRes.ok) {
+    const err = await updateRes.json().catch(() => ({}));
+    // We could try to delete the created campaign entry here as a cleanup step, but for now, we'll just report the error.
+    throw new Error(err.error || 'Failed to update campaign with assets.');
+  }
+
+  // 5. Return the final, updated campaign data.
+  return updateRes.json();
 };
 
 export const updateCampaign = async (id, name, campaignState, setProgress) => {
-  const serializableData = await serializeCampaignData(campaignState, setProgress);
+  // For an existing campaign, we already have the ID.
+  // We can directly serialize the data, which will upload any new/changed assets.
+  const serializableData = await serializeCampaignData(campaignState, id, setProgress);
   const res = await fetch(`/api/campaigns/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
