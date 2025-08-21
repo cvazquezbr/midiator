@@ -1,10 +1,9 @@
-import { upload } from '@vercel/blob/client';
 import { toast } from 'sonner';
 import fetchWithAuth from './fetchWithAuth';
 
 /**
- * A simplified and robust asset uploader.
- * It now expects a Blob object directly.
+ * Manually handles the Vercel Blob upload process to provide better error handling and timeouts.
+ * This function replaces the direct use of `@vercel/blob/client`'s `upload` function.
  */
 const uploadAsset = async (blob, filename, campaignId, userId) => {
   if (!blob || !(blob instanceof Blob)) {
@@ -15,37 +14,51 @@ const uploadAsset = async (blob, filename, campaignId, userId) => {
     throw new Error("User ID is required to upload assets.");
   }
 
-  const fileToUpload = new File([blob], filename, { type: blob.type });
   const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
-
-  console.log(`[uploadAsset] Uploading file: ${filename} to path: ${fullPath}. Timeout is 30s.`);
+  console.log(`[uploadAsset] Starting manual upload for: ${fullPath}`);
 
   try {
-    const uploadPromise = upload(fullPath, fileToUpload, {
-      access: 'public',
-      handleUploadUrl: '/api/upload',
-      clientPayload: JSON.stringify({ campaignId }),
+    // Step 1: Request a signed URL from our serverless function.
+    console.log(`[uploadAsset] Step 1: Requesting signed URL for ${fullPath}...`);
+    const response = await fetch(`/api/upload?filename=${encodeURIComponent(fullPath)}`, {
+      method: 'POST', // The server handler expects a POST
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pathname: fullPath, clientPayload: JSON.stringify({ campaignId }) }),
     });
 
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Upload for ${filename} timed out after 30 seconds.`)), 30000)
-    );
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to get upload URL. Server responded with ${response.status}: ${errorText}`);
+    }
 
-    const newBlob = await Promise.race([uploadPromise, timeoutPromise]);
+    const newBlob = await response.json();
+    console.log(`[uploadAsset] Step 1 complete. Received signed URL:`, { url: newBlob.url, uploadUrl: newBlob.uploadUrl });
 
-    // The type assertion is safe because if timeoutPromise rejects, it's caught by the catch block.
-    // So if we get here, it's always the result from uploadPromise.
-    const resultUrl = (newBlob).url;
-    console.log(`[uploadAsset] Successfully uploaded ${filename}, URL: ${resultUrl}`);
-    return resultUrl;
+    // Step 2: Upload the file to the signed URL.
+    console.log(`[uploadAsset] Step 2: Uploading file to signed URL...`);
+    const uploadResponse = await fetch(newBlob.uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'x-ms-blob-type': 'BlockBlob', // Required header for Vercel Blob (Azure)
+        'Content-Type': blob.type,
+      },
+      body: blob,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      throw new Error(`Upload failed. Storage provider responded with ${uploadResponse.status}: ${errorText}`);
+    }
+
+    console.log(`[uploadAsset] Step 2 complete. Successfully uploaded ${filename}. Final URL: ${newBlob.url}`);
+    return newBlob.url;
 
   } catch (error) {
-    console.error(`[uploadAsset] Error uploading asset to Vercel Blob: ${filename}`, error);
-    // The error object might not have a 'message' property, so we stringify it.
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(`Failed to upload asset: ${filename}. Reason: ${errorMessage}`);
+    console.error(`[uploadAsset] A network error occurred during upload for ${filename}:`, error);
+    throw new Error(`Failed to upload ${filename}. Reason: ${error.message}`);
   }
 };
+
 
 /**
  * Gathers and serializes the current application state for saving.
@@ -71,13 +84,9 @@ export const serializeCampaignData = async (state, campaignId, setProgress, user
           } catch (error) {
             console.error(`[serializeAssetList] Failed to process asset ${filename}. Skipping this file.`, error);
             toast.error(`Failed to upload ${filename}: ${error.message}`);
-            // Push the original asset back, but without the blob, so it doesn't get re-uploaded.
-            // The URL will be the old blob: URL, which will fail to load, but this is better
-            // than the whole save failing. The user is notified via the toast.
             serializedList.push({ ...asset, blob: undefined });
           }
         } else {
-          // If asset has no blob, it might already have a permanent URL.
           serializedList.push({ ...asset, blob: undefined });
           console.log(`[serializeAssetList] Asset ${filename} has no blob, skipping upload.`);
         }
@@ -85,8 +94,6 @@ export const serializeCampaignData = async (state, campaignId, setProgress, user
       return serializedList;
     };
 
-    // Helper to fetch a blob/data URL and convert it to a Blob object.
-    // This is now only used for standalone URLs like backgroundImage.
     const fetchUrlAsBlob = async (url) => {
         if (!url || !(url.startsWith('blob:') || url.startsWith('data:'))) return null;
         try {
@@ -99,7 +106,6 @@ export const serializeCampaignData = async (state, campaignId, setProgress, user
         }
     }
 
-    // --- Determine which assets need uploading ---
     const assetsToUpload = [
       ...(state.generatedImagesData || []).filter(a => a && a.blob instanceof Blob),
       ...(state.generatedAudioData || []).filter(a => a && a.blob instanceof Blob),
@@ -107,7 +113,7 @@ export const serializeCampaignData = async (state, campaignId, setProgress, user
       ...(state.brandElements || []).filter(el => el && el.blob instanceof Blob),
     ];
     if (state.backgroundImage && (state.backgroundImage.startsWith('blob:') || state.backgroundImage.startsWith('data:'))) {
-        assetsToUpload.push({ isStandalone: true }); // Add placeholders for progress counting
+        assetsToUpload.push({ isStandalone: true });
     }
     if (state.generatedImageUrl && (state.generatedImageUrl.startsWith('blob:') || state.generatedImageUrl.startsWith('data:'))) {
         assetsToUpload.push({ isStandalone: true });
@@ -115,7 +121,6 @@ export const serializeCampaignData = async (state, campaignId, setProgress, user
     setProgress({ current: 0, total: assetsToUpload.length });
     console.log(`[serializeCampaignData] Determined ${assetsToUpload.length} assets need uploading.`);
 
-    // Yield to the event loop before starting heavy processing
     await new Promise(resolve => setTimeout(resolve, 0));
     console.log('[serializeCampaignData] Continuing after yield. Starting asset serialization...');
 
@@ -143,7 +148,6 @@ export const serializeCampaignData = async (state, campaignId, setProgress, user
     }
     console.log('[serializeCampaignData] All assets processed.');
 
-    // Return the state with blob URLs replaced by permanent Vercel URLs
     return {
       ...state,
       generatedImagesData: serializableGeneratedImages,
