@@ -98,7 +98,7 @@ class GeminiAPI {
       throw new Error('O prompt não pode ser vazio.');
     }
 
-    const model = getGeminiImageModel() || 'gemini-pro-vision';
+    const model = getGeminiImageModel() || 'gemini-2.0-flash-preview-image-generation';
     console.log(`[${purpose}] Iniciando chamada à API de Imagem Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
