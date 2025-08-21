@@ -249,7 +249,8 @@ function HomePage() {
     try {
       const loadedState = await loadCampaign(id);
       applyAppState(loadedState);
-      setCurrentCampaign({ id, name: loadedState.campaignContent?.titulo || 'Untitled' });
+      const campaign = await res.json();
+      setCurrentCampaign({ id, name: campaign.name });
       toast.success(`Campaign loaded successfully!`);
     } catch (err) {
       toast.error(err.message);
