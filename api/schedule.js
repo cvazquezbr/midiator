@@ -1,7 +1,6 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 import { markdownToLinkedinText } from './utils.js';
-import fetch from 'node-fetch';
 
 // Helper function to create a schedule
 async function handleCreateSchedule(request, response) {
@@ -129,6 +128,7 @@ async function handleUpdateSchedule(request, response) {
 
 // The main scheduler logic
 async function handleRunScheduler(request, response) {
+    const fetch = (await import('node-fetch')).default;
     console.log('Scheduler run initiated...');
     let publishedCount = 0;
     let failedCount = 0;
