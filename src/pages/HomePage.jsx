@@ -231,7 +231,7 @@ function HomePage() {
         setCurrentCampaign(newCampaign);
       }
     } catch (err) {
-      // Errors are toasted inside campaignState.js
+      toast.error(err.message || 'An unknown error occurred while saving the campaign.');
     } finally {
       setIsSaving(false);
     }
