@@ -1,9 +1,27 @@
 import { toast } from 'sonner';
 import fetchWithAuth from './fetchWithAuth';
 
+const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error('Request timed out')),
+      timeout
+    );
+
+    fetch(resource, options)
+      .then(response => {
+        clearTimeout(timer);
+        resolve(response);
+      })
+      .catch(err => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+};
+
 /**
  * Manually handles the Vercel Blob upload process to provide better error handling and timeouts.
- * This function replaces the direct use of `@vercel/blob/client`'s `upload` function.
  */
 const uploadAsset = async (blob, filename, campaignId, userId) => {
   if (!blob || !(blob instanceof Blob)) {
@@ -18,13 +36,13 @@ const uploadAsset = async (blob, filename, campaignId, userId) => {
   console.log(`[uploadAsset] Starting manual upload for: ${fullPath}`);
 
   try {
-    // Step 1: Request a signed URL from our serverless function.
+    // Step 1: Request a signed URL from our serverless function with a 15s timeout.
     console.log(`[uploadAsset] Step 1: Requesting signed URL for ${fullPath}...`);
-    const response = await fetch(`/api/upload?filename=${encodeURIComponent(fullPath)}`, {
-      method: 'POST', // The server handler expects a POST
+    const response = await fetchWithTimeout(`/api/upload?filename=${encodeURIComponent(fullPath)}`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pathname: fullPath, clientPayload: JSON.stringify({ campaignId }) }),
-    });
+    }, 15000);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -34,16 +52,16 @@ const uploadAsset = async (blob, filename, campaignId, userId) => {
     const newBlob = await response.json();
     console.log(`[uploadAsset] Step 1 complete. Received signed URL:`, { url: newBlob.url, uploadUrl: newBlob.uploadUrl });
 
-    // Step 2: Upload the file to the signed URL.
+    // Step 2: Upload the file to the signed URL with a 60s timeout.
     console.log(`[uploadAsset] Step 2: Uploading file to signed URL...`);
-    const uploadResponse = await fetch(newBlob.uploadUrl, {
+    const uploadResponse = await fetchWithTimeout(newBlob.uploadUrl, {
       method: 'PUT',
       headers: {
-        'x-ms-blob-type': 'BlockBlob', // Required header for Vercel Blob (Azure)
+        'x-ms-blob-type': 'BlockBlob',
         'Content-Type': blob.type,
       },
       body: blob,
-    });
+    }, 60000);
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
@@ -62,12 +80,10 @@ const uploadAsset = async (blob, filename, campaignId, userId) => {
 
 /**
  * Gathers and serializes the current application state for saving.
- * Blobs are uploaded to Vercel Blob storage.
  */
 export const serializeCampaignData = async (state, campaignId, setProgress, userId) => {
   console.log('[serializeCampaignData] Starting serialization...');
   try {
-    // Helper to process a list of assets, uploading their blobs sequentially and resiliently.
     const serializeAssetList = async (assetList) => {
       if (!assetList) return [];
       const serializedList = [];
