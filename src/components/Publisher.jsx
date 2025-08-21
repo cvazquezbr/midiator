@@ -58,6 +58,7 @@ import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { useUserAuth } from '../context/UserAuthContext';
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
+import { getCampaigns } from '../utils/campaignState.js';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -113,14 +114,33 @@ const Publisher = ({
   const [unifiedMedia, setUnifiedMedia] = useState([]);
   const [previewedMedia, setPreviewedMedia] = useState(null);
   const [schedulePreview, setSchedulePreview] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState('');
+
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+        try {
+            const userCampaigns = await getCampaigns();
+            setCampaigns(userCampaigns);
+        } catch (error) {
+            toast.error(`Failed to load campaigns: ${error.message}`);
+        }
+    };
+    fetchCampaigns();
+  }, []);
 
   const fetchSchedules = React.useCallback(async () => {
-    if (tabValue === 2 && selectedTarget) {
+    if (tabValue === 2) {
       setIsLoadingSchedules(true);
       try {
-        const schedules = await getSchedulesForUser(selectedTarget.id);
-        schedules.sort((a, b) => new Date(b.scheduledAt) - new Date(a.scheduledAt));
-        setMySchedules(schedules);
+        const schedules = await getSchedulesForUser();
+        // The backend now returns post_content, which is a stringified JSON
+        const parsedSchedules = schedules.map(s => ({
+          ...s,
+          post_content: typeof s.post_content === 'string' ? JSON.parse(s.post_content) : s.post_content,
+        }));
+        parsedSchedules.sort((a, b) => new Date(b.scheduled_at) - new Date(a.scheduled_at));
+        setMySchedules(parsedSchedules);
       } catch (error) {
         console.error("Failed to fetch user schedules:", error);
         toast.error(`Failed to fetch schedules: ${error.message}`);
@@ -128,12 +148,16 @@ const Publisher = ({
         setIsLoadingSchedules(false);
       }
     }
-  }, [tabValue, selectedTarget]);
+  }, [tabValue]);
 
   const handleViewDetails = async (scheduleId) => {
     try {
       const scheduleDetails = await getSchedule(scheduleId);
-      setViewingSchedule(scheduleDetails);
+      const parsedSchedule = {
+        ...scheduleDetails,
+        post_content: typeof scheduleDetails.post_content === 'string' ? JSON.parse(scheduleDetails.post_content) : scheduleDetails.post_content,
+      };
+      setViewingSchedule(parsedSchedule);
     } catch (error) {
       toast.error(`Failed to get schedule details: ${error.message}`);
     }
@@ -162,24 +186,12 @@ const Publisher = ({
 
   const handleDeleteSchedule = async (scheduleId) => {
     try {
-        // Find the schedule to get the authorUrn
-        const scheduleToDelete = mySchedules.find(s => s.id === scheduleId);
-        if (!scheduleToDelete) {
-            throw new Error("Agendamento não encontrado.");
-        }
-
-        await deleteSchedule(scheduleId, scheduleToDelete.authorUrn);
-
-        // Update the UI by removing the schedule from the list
+        await deleteSchedule(scheduleId);
         setMySchedules(prevSchedules => prevSchedules.filter(s => s.id !== scheduleId));
-
-        // Optional: Show a success toast
-        // toast.success("Agendamento excluído com sucesso!");
-
+        toast.success("Agendamento excluído com sucesso!");
     } catch (error) {
         console.error("Failed to delete schedule:", error);
-        // Optional: Show an error toast
-        // toast.error(`Falha ao excluir agendamento: ${error.message}`);
+        toast.error(`Falha ao excluir agendamento: ${error.message}`);
     }
   };
 
@@ -187,10 +199,10 @@ const Publisher = ({
     setTabValue(newValue);
   };
 
-  // Fetch schedules when the tab is opened or the selected profile changes
+  // Fetch schedules when the tab is opened
   useEffect(() => {
     fetchSchedules();
-  }, [tabValue, selectedTarget, fetchSchedules]);
+  }, [fetchSchedules]);
 
   // State for WordPress
   const [isPublishingWp, setIsPublishingWp] = useState(false);
@@ -398,167 +410,75 @@ const Publisher = ({
 
   const handleScheduleLinkedIn = async () => {
     setIsPublishingLi(true);
-    setPublishingStatusLi('Iniciando agendamento e upload para o Google Drive...');
+    setPublishingStatusLi('Agendando post principal...');
     try {
-        if (!googleAccessToken) {
-          throw new Error('A conexão com o Google não está ativa. Faça o login novamente.');
+      if (!selectedTarget) {
+        throw new Error("Selecione um perfil do LinkedIn para agendar.");
+      }
+
+      const getScheduledTime = (date) => {
+        const dayIndex = date.getDay();
+        return weeklySchedule[dayIndex] || '12:00'; // Default to noon
+      };
+
+      const userTimezone = getTimezone() || 'UTC';
+
+      // --- Schedule Main Post ---
+      const mainPostDate = new Date(scheduleDate);
+      const [mainHours, mainMinutes] = getScheduledTime(mainPostDate).split(':');
+      mainPostDate.setHours(parseInt(mainHours, 10), parseInt(mainMinutes, 10), 0, 0);
+      const mainPostUtcDate = fromZonedTime(mainPostDate, userTimezone);
+
+      const mainPostPayload = {
+        campaign_id: selectedCampaignId || null,
+        scheduled_at: mainPostUtcDate.toISOString(),
+        authorUrn: `urn:li:${selectedTarget.type}:${selectedTarget.id}`,
+        content: {
+            titulo: campaignContent?.titulo || '',
+            conteudo: campaignContent?.conteudo || '',
+            cta: campaignContent?.cta || '',
+            hashtags: campaignContent?.hashtags || [],
+        },
+      };
+
+      await createSchedule(mainPostPayload);
+      setPublishingStatusLi('Post principal agendado. Agendando follow-ups...');
+
+      // --- Schedule Follow-up Posts ---
+      if (followupPosts && followupPosts.length > 0) {
+        for (const [index, post] of followupPosts.entries()) {
+          const followupDate = new Date(scheduleDate);
+          followupDate.setDate(scheduleDate.getDate() + index + 1);
+          const [fHours, fMinutes] = getScheduledTime(followupDate).split(':');
+          followupDate.setHours(parseInt(fHours, 10), parseInt(fMinutes, 10), 0, 0);
+          const followupUtcDate = fromZonedTime(followupDate, userTimezone);
+
+          const followupPayload = {
+            campaign_id: selectedCampaignId || null, // Associate with the same campaign
+            scheduled_at: followupUtcDate.toISOString(),
+            authorUrn: `urn:li:${selectedTarget.type}:${selectedTarget.id}`,
+            content: {
+              titulo: post.titulo || '',
+              conteudo: post.conteudo || '',
+              cta: post.cta || '',
+              hashtags: post.hashtags_sugeridas || [],
+            },
+          };
+          await createSchedule(followupPayload);
         }
+      }
 
-        const driveFolderId = settings.linkedin?.folderId;
-
-        if (!driveFolderId) {
-            throw new Error('O ID da Pasta no Google Drive não está configurado na autenticação do LinkedIn.');
-        }
-
-        const campaignTitle = campaignContent?.titulo || `Campanha Sem Título - ${new Date().toISOString()}`;
-
-        setPublishingStatusLi(`Criando pasta "${campaignTitle}" no Google Drive...`);
-        const campaignFolder = await createFolder(campaignTitle, driveFolderId, googleAccessToken);
-
-        // Lida com upload de imagens
-        const imagesToUpload = generatedImagesData.filter((_, index) => selectedImages[index]);
-        const uploadedImageIds = [];
-        if (imagesToUpload.length > 0) {
-            setPublishingStatusLi(`Fazendo upload de ${imagesToUpload.length} imagens...`);
-            for (const image of imagesToUpload) {
-                const fileName = `imagem_${imagesToUpload.indexOf(image) + 1}.png`;
-                const uploadedFile = await uploadFile(image.blob, fileName, campaignFolder.id, googleAccessToken);
-                uploadedImageIds.push(uploadedFile.id);
-            }
-        }
-
-        // Lida com upload de vídeo
-        const videosToUpload = generatedVideosData.filter((_, index) => selectedVideos[index]);
-        let uploadedVideoId = '';
-        if (videosToUpload.length > 0) {
-            setPublishingStatusLi(`Fazendo upload do vídeo...`);
-            const video = videosToUpload[0];
-            const fileName = `video.mp4`; // ou o tipo de arquivo apropriado
-            const uploadedFile = await uploadFile(video.blob, fileName, campaignFolder.id, googleAccessToken);
-            uploadedVideoId = uploadedFile.id;
-        }
-
-        setPublishingStatusLi('Criando planilha de controle no Google Drive...');
-
-        const headers = ['Data', 'Horário', 'Author URN', 'Título', 'Conteúdo', 'Convite (CTA)', 'Hashtags', 'Imagens (IDs no Drive)', 'Video (ID no Drive)'];
-
-        const formatDate = (date) => date.toLocaleDateString('pt-BR');
-        const getScheduledTime = (date) => {
-            const dayIndex = date.getDay(); // 0 for Sunday, 1 for Monday, etc.
-            const time = weeklySchedule[dayIndex];
-            if (!time) {
-                console.warn(`Nenhum horário agendado para o dia ${dayIndex}. Usando 12:00 como padrão.`);
-                return '12:00';
-            }
-            return time;
-        };
-
-        const mainPostRow = [
-            formatDate(scheduleDate),
-            getScheduledTime(scheduleDate),
-            selectedProfile,
-            campaignContent?.titulo || '',
-            campaignContent?.conteudo || '',
-            campaignContent?.cta || '',
-            campaignContent?.hashtags?.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') || '',
-            uploadedImageIds.join(', '),
-            uploadedVideoId
-        ];
-
-        const sheetData = [headers, mainPostRow];
-
-        if (followupPosts && followupPosts.length > 0) {
-            followupPosts.forEach((post, index) => {
-                const followupDate = new Date(scheduleDate);
-                followupDate.setDate(scheduleDate.getDate() + index + 1);
-
-                const followupRow = [
-                    formatDate(followupDate),
-                    getScheduledTime(followupDate),
-                    selectedProfile,
-                    post.titulo || '', // Usando o título do post
-                    post.conteudo || '',
-                    post.cta || '',
-                    post.hashtags_sugeridas?.map(h => h.startsWith('#') ? h : `#${h}`).join(' ') || '',
-                    '', // Sem imagem para follow-up
-                    ''  // Sem vídeo para follow-up
-                ];
-                sheetData.push(followupRow);
-            });
-        }
-
-        const spreadsheet = await createSpreadsheet(
-            `Controle - ${campaignTitle}`,
-            sheetData,
-            googleAccessToken,
-            campaignFolder.id
-        );
-
-        setPublishingStatusLi('Salvando agendamento no servidor para automação...');
-
-        const accessToken = settings.linkedin?.accessToken;
-        if (!accessToken) {
-            throw new Error('Não foi possível encontrar o Access Token do LinkedIn para o agendamento automático.');
-        }
-
-        const userTimezone = getTimezone() || 'UTC';
-        const mainPostDate = new Date(scheduleDate);
-        const [hours, minutes] = getScheduledTime(mainPostDate).split(':');
-        mainPostDate.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-        const mainPostUtcDate = fromZonedTime(mainPostDate, userTimezone);
-
-        const mainPostSchedule = {
-            scheduledAt: mainPostUtcDate.toISOString(),
-            authorUrn: selectedProfile,
-            content: campaignContent,
-            accessToken: accessToken,
-            imageDriveIds: uploadedImageIds,
-            videoDriveId: uploadedVideoId,
-            is_main_post: true,
-        };
-
-        const createdMainPost = await createSchedule(mainPostSchedule);
-
-        if (!createdMainPost || !createdMainPost.id) {
-          throw new Error("Failed to create the main post schedule and retrieve its ID.");
-        }
-        const mainPostId = createdMainPost.id;
-
-        if (followupPosts && followupPosts.length > 0) {
-            for (const [index, post] of followupPosts.entries()) {
-                const followupDate = new Date(scheduleDate);
-                followupDate.setDate(scheduleDate.getDate() + index + 1);
-                const [fHours, fMinutes] = getScheduledTime(followupDate).split(':');
-                followupDate.setHours(parseInt(fHours, 10), parseInt(fMinutes, 10), 0, 0);
-                const followupUtcDate = fromZonedTime(followupDate, userTimezone);
-
-                const followupSchedule = {
-                    scheduledAt: followupUtcDate.toISOString(),
-                    authorUrn: selectedProfile,
-                    content: {
-                        titulo: post.titulo || '',
-                        conteudo: post.conteudo || '',
-                        cta: post.cta || '',
-                        hashtags: post.hashtags_sugeridas || [],
-                    },
-                    accessToken: accessToken,
-                    imageDriveIds: [], // Follow-ups are text-only
-                    videoDriveId: '',
-                    is_main_post: false,
-                    main_post_id: mainPostId,
-                };
-                await createSchedule(followupSchedule);
-            }
-        }
-
-        setPublishingStatusLi(`Agendamento salvo no Google Drive e no servidor! Planilha: ${spreadsheet.spreadsheetUrl}`);
-        setPublishedPostUrlLi(spreadsheet.spreadsheetUrl);
+      toast.success('Todos os posts foram agendados com sucesso!');
+      setPublishingStatusLi('Agendamento concluído!');
+      fetchSchedules(); // Refresh the schedules list
+      setTabValue(2); // Switch to the schedules tab
 
     } catch (error) {
-        console.error('Erro ao salvar agendamento no Google Drive:', error);
-        setPublishingStatusLi(`Erro no agendamento: ${error.message}`);
+      console.error('Erro ao agendar no LinkedIn:', error);
+      setPublishingStatusLi(`Erro no agendamento: ${error.message}`);
+      toast.error(`Erro no agendamento: ${error.message}`);
     } finally {
-        setIsPublishingLi(false);
+      setIsPublishingLi(false);
     }
   };
 
@@ -786,6 +706,26 @@ const Publisher = ({
               {isScheduled && (
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
                   <Grid container spacing={3} sx={{ mt: 1 }}>
+                    <Grid item xs={12}>
+                        <FormControl fullWidth>
+                            <InputLabel id="campaign-select-label">Associar Campanha (Opcional)</InputLabel>
+                            <Select
+                                labelId="campaign-select-label"
+                                value={selectedCampaignId}
+                                label="Associar Campanha (Opcional)"
+                                onChange={(e) => setSelectedCampaignId(e.target.value)}
+                            >
+                                <MenuItem value="">
+                                    <em>Nenhuma</em>
+                                </MenuItem>
+                                {campaigns.map((campaign) => (
+                                    <MenuItem key={campaign.id} value={campaign.id}>
+                                        {campaign.name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Grid>
                     {/* Left Column */}
                     <Grid item xs={12} md={5}>
                       <Grid container direction="column" spacing={3}>
@@ -852,8 +792,8 @@ const Publisher = ({
               </Button>
 
               {isScheduled && (
-                <Button variant="outlined" size="large" sx={{ml: 2}} onClick={handleScheduleLinkedIn}>
-                    Salvar Agendamento
+                <Button variant="outlined" size="large" sx={{ml: 2}} onClick={handleScheduleLinkedIn} disabled={isPublishingLi}>
+                    {isPublishingLi ? 'Agendando...' : 'Salvar Agendamento'}
                 </Button>
               )}
 
@@ -956,6 +896,7 @@ const Publisher = ({
                         <Table sx={{ minWidth: 650 }} aria-label="simple table">
                             <TableHead>
                                 <TableRow>
+                                    <TableCell>Imagem</TableCell>
                                     <TableCell>Título</TableCell>
                                     <TableCell align="right">Data Agendada</TableCell>
                                     <TableCell align="right">Status</TableCell>
@@ -966,11 +907,16 @@ const Publisher = ({
                             <TableBody>
                                 {mySchedules.map((row) => (
                                     <TableRow key={row.id}>
+                                        <TableCell>
+                                            {row.campaign_data?.images?.[0] && (
+                                                <img src={row.campaign_data.images[0]} alt="Campaign" style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }} />
+                                            )}
+                                        </TableCell>
                                         <TableCell component="th" scope="row">
-                                            {row.content.titulo}
+                                            {row.post_content.titulo}
                                         </TableCell>
                                         <TableCell align="right">
-                                            {formatInTimeZone(new Date(row.scheduledAt), getTimezone() || 'UTC', 'dd/MM/yyyy HH:mm:ss zzz', { locale: ptBR })}
+                                            {formatInTimeZone(new Date(row.scheduled_at), getTimezone() || 'UTC', 'dd/MM/yyyy HH:mm:ss zzz', { locale: ptBR })}
                                         </TableCell>
                                         <TableCell align="right">
                                             <Chip
@@ -978,15 +924,15 @@ const Publisher = ({
                                                 color={row.status === 'published' ? 'success' : (row.status === 'failed' ? 'error' : 'primary')}
                                                 size="small"
                                             />
-                                            {row.status === 'failed' && row.error && (
-                                                <Tooltip title={row.error}>
+                                            {row.status === 'failed' && row.error_message && (
+                                                <Tooltip title={row.error_message}>
                                                     <Info fontSize="small" sx={{verticalAlign: 'middle', ml: 0.5, color: 'error.main'}}/>
                                                 </Tooltip>
                                             )}
                                         </TableCell>
                                         <TableCell align="right">
-                                            {row.status === 'published' && row.postId ? (
-                                                <MuiLink href={`https://www.linkedin.com/feed/update/${row.postId}/`} target="_blank" rel="noopener">
+                                            {row.status === 'published' && row.linkedin_post_url ? (
+                                                <MuiLink href={row.linkedin_post_url} target="_blank" rel="noopener">
                                                     Ver Post
                                                 </MuiLink>
                                             ) : '-'}
@@ -1025,16 +971,16 @@ const Publisher = ({
         <DialogContent>
             {viewingSchedule ? (
                 <Box>
-                    <Typography variant="h6" gutterBottom>{viewingSchedule.content.titulo}</Typography>
-                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', my: 2 }}>{viewingSchedule.content.conteudo}</Typography>
-                    <Typography variant="body2" color="text.secondary"><strong>CTA:</strong> {viewingSchedule.content.cta}</Typography>
+                    <Typography variant="h6" gutterBottom>{viewingSchedule.post_content.titulo}</Typography>
+                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', my: 2 }}>{viewingSchedule.post_content.conteudo}</Typography>
+                    <Typography variant="body2" color="text.secondary"><strong>CTA:</strong> {viewingSchedule.post_content.cta}</Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        <strong>Hashtags:</strong> {(viewingSchedule.content.hashtags || []).join(' ')}
+                        <strong>Hashtags:</strong> {(viewingSchedule.post_content.hashtags || []).join(' ')}
                     </Typography>
                     <Divider sx={{ my: 2 }} />
-                    <Typography variant="body2"><strong>Scheduled for:</strong> {formatInTimeZone(new Date(viewingSchedule.scheduledAt), getTimezone() || 'UTC', 'dd/MM/yyyy HH:mm:ss zzz', { locale: ptBR })}</Typography>
+                    <Typography variant="body2"><strong>Scheduled for:</strong> {formatInTimeZone(new Date(viewingSchedule.scheduled_at), getTimezone() || 'UTC', 'dd/MM/yyyy HH:mm:ss zzz', { locale: ptBR })}</Typography>
                     <Typography variant="body2"><strong>Status:</strong> {viewingSchedule.status}</Typography>
-                    {viewingSchedule.error && <Typography variant="body2" color="error"><strong>Error:</strong> {viewingSchedule.error}</Typography>}
+                    {viewingSchedule.error_message && <Typography variant="body2" color="error"><strong>Error:</strong> {viewingSchedule.error_message}</Typography>}
                 </Box>
             ) : <CircularProgress />}
         </DialogContent>
