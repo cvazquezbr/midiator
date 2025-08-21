@@ -3,13 +3,20 @@ import { query } from './db.js';
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function fetchWithRetry(fetch, url, options, retries = 3, backoff = 1000) {
+async function fetchWithRetry(fetch, url, options, retries = 5, initialBackoff = 1000) {
+  let backoff = initialBackoff;
   for (let i = 0; i < retries; i++) {
     const response = await fetch(url, options);
     if (response.status === 429) {
-      const retryAfter = parseInt(response.headers.get('Retry-After'), 10) * 1000 || backoff;
-      console.warn(`Rate limit hit. Retrying after ${retryAfter}ms...`);
+      // Use Retry-After header if available, otherwise use exponential backoff
+      const retryAfterHeader = response.headers.get('Retry-After');
+      const retryAfter = retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : backoff;
+
+      console.warn(`Rate limit hit. Retrying after ${retryAfter}ms... (Attempt ${i + 1}/${retries})`);
       await delay(retryAfter);
+
+      // Increase backoff for next potential retry
+      backoff *= 2;
       continue;
     }
     return response;
@@ -159,11 +166,13 @@ async function handleGetProfiles(fetch, request, response) {
     if (orgAclsResponse.ok) {
       const orgAclsData = await orgAclsResponse.json();
       const orgUrns = orgAclsData.elements?.map(el => el.organization) || [];
-      const orgIds = orgUrns.map(urn => urn.split(':').pop());
-      if (orgIds.length > 0) {
+      // Ensure IDs are unique to prevent asking for the same org multiple times
+      const uniqueOrgIds = [...new Set(orgUrns.map(urn => urn.split(':').pop()))];
+
+      if (uniqueOrgIds.length > 0) {
         const allOrgDetails = {};
-        for (let i = 0; i < orgIds.length; i += 50) {
-          const chunk = orgIds.slice(i, i + 50);
+        for (let i = 0; i < uniqueOrgIds.length; i += 50) {
+          const chunk = uniqueOrgIds.slice(i, i + 50);
           const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${chunk.join(',')})`;
           const batchOrgResponse = await fetchWithRetry(fetch, batchOrgUrl, { headers });
           if (batchOrgResponse.ok) Object.assign(allOrgDetails, (await batchOrgResponse.json()).results);
