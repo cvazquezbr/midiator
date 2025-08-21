@@ -16,7 +16,7 @@ async function handleCreateSchedule(request, response) {
         const { rows } = await query(
             `INSERT INTO linkedin_schedules (user_id, campaign_id, scheduled_at, user_selected_time, post_content, status)
              VALUES ($1, $2, $3, $4, $5, 'scheduled') RETURNING *`,
-            [userId, campaign_id, executionDate.toISOString(), scheduled_at, JSON.stringify({ ...content, authorUrn })]
+            [userId, campaign_id || null, executionDate.toISOString(), scheduled_at, JSON.stringify({ ...content, authorUrn })]
         );
 
         return response.status(201).json(rows[0]);
@@ -301,14 +301,22 @@ const mainHandler = async (request, response) => {
         return response.status(405).end('Method Not Allowed');
     }
 
-    const { action } = request.body;
+    const { action, payload } = request.body;
+
+    // Pass the entire request object to handlers that need it (for user, etc.)
     switch (action) {
-        case 'createSchedule': return handleCreateSchedule(request, response);
-        case 'getSchedules': return handleGetSchedules(request, response);
-        case 'deleteSchedule': return handleDeleteSchedule(request, response);
-        case 'getSchedule': return handleGetScheduleById(request, response);
-        case 'updateSchedule': return handleUpdateSchedule(request, response);
-        default: return response.status(400).json({ error: `Invalid action specified: ${action}` });
+        case 'createSchedule':
+            return handleCreateSchedule(request, response);
+        case 'getSchedules':
+            return handleGetSchedules(request, response);
+        case 'deleteSchedule':
+            return handleDeleteSchedule(request, response);
+        case 'getSchedule':
+            return handleGetScheduleById(request, response);
+        case 'updateSchedule':
+            return handleUpdateSchedule(request, response);
+        default:
+            return response.status(400).json({ error: `Invalid action specified: ${action}` });
     }
 };
 
