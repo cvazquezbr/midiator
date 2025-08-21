@@ -256,11 +256,12 @@ const ImageGeneratorFrontendOnly = ({
           }
           ctx.restore();
         }
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+        const dataUrl = canvas.toDataURL('image/png', 1.0);
         const existingImageDataItem = generatedImages.find(img => img.index === i);
         const imageData = {
-          blob,
-          url: URL.createObjectURL(blob),
+          // No longer storing the blob directly in the main state
+          url: dataUrl, // The dataUrl is used for display
+          dataUrl: dataUrl, // And also stored explicitly for upload
           record,
           index: i,
           filename: `midiator_${String(i + 1).padStart(3, '0')}.png`,
@@ -294,21 +295,25 @@ const ImageGeneratorFrontendOnly = ({
   };
 
   const handleShare = async (imageData) => {
-    if (!imageData || !imageData.blob) {
+    if (!imageData || !imageData.url) {
       alert('A imagem não está disponível para compartilhamento.');
       return;
     }
-    const file = new File([imageData.blob], imageData.filename, { type: imageData.blob.type });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
+    try {
+      const response = await fetch(imageData.url);
+      const blob = await response.blob();
+      const file = new File([blob], imageData.filename, { type: blob.type });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: 'Compartilhar Imagem', text: `Confira a imagem: ${imageData.filename}` });
-      } catch (error) {
-        if (error.name !== 'AbortError') {
-          alert('Ocorreu um erro ao tentar compartilhar a imagem.');
-        }
+      } else {
+        alert('Seu navegador não suporta o compartilhamento de arquivos.');
       }
-    } else {
-      alert('Seu navegador não suporta o compartilhamento de arquivos.');
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        alert('Ocorreu um erro ao tentar compartilhar a imagem.');
+        console.error("Share error:", error);
+      }
     }
   };
 
