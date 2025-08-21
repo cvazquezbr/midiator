@@ -31,8 +31,10 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Tooltip,
+  IconButton,
 } from '@mui/material';
-import { Language, Publish, LinkedIn } from '@mui/icons-material';
+import { Language, Publish, LinkedIn, Delete, Edit, Visibility, Replay } from '@mui/icons-material';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker, DateTimePicker } from '@mui/x-date-pickers';
@@ -46,23 +48,19 @@ import {
   TableHead,
   TableRow,
   Chip,
-  Tooltip,
-  IconButton,
 } from '@mui/material';
-import { Info, Delete, Edit, Visibility, Replay } from '@mui/icons-material';
+import { Info } from '@mui/icons-material';
 import { toast } from 'sonner';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getTimezone } from '../utils/timezone';
 import { publishToWordPress } from '../utils/wordpressAPI';
-import { publishToLinkedIn, getLinkedInProfiles } from '../utils/linkedinAPI';
-import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
+import { getLinkedInProfiles, publishToLinkedIn } from '../utils/linkedinAPI';
 import { useUserAuth } from '../context/UserAuthContext';
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
 import { getCampaigns } from '../utils/campaignState.js';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -92,7 +90,6 @@ const Publisher = ({
   setScheduleDate,
   weeklySchedule,
   setWeeklySchedule,
-  selectedProfile,
   selectedImages,
   setSelectedImages,
   selectedVideos,
@@ -104,13 +101,12 @@ const Publisher = ({
   const [viewingSchedule, setViewingSchedule] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  // Local states for Publisher component
   const [linkedinProfiles, setLinkedinProfiles] = useState({ personal: null, organizations: [] });
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [profileError, setProfileError] = useState('');
   const [selectedTarget, setSelectedTarget] = useState(null);
   const [publishResults, setPublishResults] = useState([]);
-  const [content, setContent] = useState(''); // Assuming campaignContent will be mapped to this
+  const [content, setContent] = useState('');
   const [unifiedMedia, setUnifiedMedia] = useState([]);
   const [previewedMedia, setPreviewedMedia] = useState(null);
   const [schedulePreview, setSchedulePreview] = useState([]);
@@ -134,7 +130,6 @@ const Publisher = ({
       setIsLoadingSchedules(true);
       try {
         const schedules = await getSchedulesForUser();
-        // The backend now returns post_content, which is a stringified JSON
         const parsedSchedules = schedules.map(s => ({
           ...s,
           post_content: typeof s.post_content === 'string' ? JSON.parse(s.post_content) : s.post_content,
@@ -176,7 +171,7 @@ const Publisher = ({
       await updateSchedule(editingSchedule.id, utcDate.toISOString());
       toast.success("Schedule updated successfully!");
       setEditingSchedule(null);
-      fetchSchedules(); // Refresh the list
+      fetchSchedules();
     } catch (error) {
       toast.error(`Failed to update schedule: ${error.message}`);
     } finally {
@@ -199,24 +194,18 @@ const Publisher = ({
     setTabValue(newValue);
   };
 
-  // Fetch schedules when the tab is opened
   useEffect(() => {
     fetchSchedules();
   }, [fetchSchedules]);
 
-  // State for WordPress
   const [isPublishingWp, setIsPublishingWp] = useState(false);
   const [publishingStatusWp, setPublishingStatusWp] = useState('');
   const [publishedPostUrlWp, setPublishedPostUrlWp] = useState(null);
 
-  // State for LinkedIn
   const [isPublishingLi, setIsPublishingLi] = useState(false);
   const [publishingStatusLi, setPublishingStatusLi] = useState('');
   const [publishedPostUrlLi, setPublishedPostUrlLi] = useState(null);
 
-  const { googleAccessToken } = useUserAuth();
-
-    // Map campaign content to a simple text state for the publisher
     useEffect(() => {
         if (campaignContent) {
             const postText = [
@@ -255,15 +244,24 @@ const Publisher = ({
   };
 
   const handleRefreshProfiles = async () => {
+    if (!settings?.linkedin) {
+        toast.error("Configuração do LinkedIn não encontrada. Verifique as configurações.");
+        return;
+    }
     setIsLoadingProfiles(true);
     setProfileError('');
+    const toastId = toast.loading("Buscando perfis do LinkedIn...");
     try {
-        const profiles = await getLinkedInProfiles(settings?.linkedin, true); // force a refresh
+        const profiles = await getLinkedInProfiles(settings.linkedin, true); // force a refresh
         setLinkedinProfiles({
             personal: profiles.personal,
             organizations: profiles.organizations || []
         });
-        // Auto-select first profile if none is selected
+        if (!profiles.personal && (!profiles.organizations || profiles.organizations.length === 0)) {
+             toast.info("Nenhum perfil pessoal ou de organização encontrado.", { id: toastId });
+        } else {
+             toast.success("Perfis do LinkedIn atualizados.", { id: toastId });
+        }
         if (!selectedTarget && profiles.personal) {
             setSelectedTarget({
                 id: profiles.personal.id,
@@ -273,7 +271,9 @@ const Publisher = ({
         }
     } catch (error) {
         console.error("Erro ao buscar perfis do LinkedIn:", error);
-        setProfileError(error.message);
+        const errorMessage = error.message || "Ocorreu um erro desconhecido.";
+        setProfileError(errorMessage);
+        toast.error(`Falha ao buscar perfis: ${errorMessage}`, { id: toastId });
         setLinkedinProfiles({ personal: null, organizations: [] });
     } finally {
         setIsLoadingProfiles(false);
@@ -285,18 +285,14 @@ const Publisher = ({
       setSchedulePreview([]);
       return;
     }
-
     const daysOfWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-
     const getScheduledTime = (date) => {
       const dayIndex = date.getDay();
       return weeklySchedule[dayIndex] || 'N/A';
     };
-
     const preview = followupPosts.map((post, index) => {
       const postDate = new Date(scheduleDate);
       postDate.setDate(postDate.getDate() + index + 1);
-
       return {
         key: `followup-${index}`,
         date: postDate.toLocaleDateString('pt-BR'),
@@ -305,9 +301,7 @@ const Publisher = ({
         title: post.tipo_gancho || `Follow-up ${index + 1}`
       };
     });
-
     setSchedulePreview(preview);
-
   }, [followupPosts, scheduleDate, weeklySchedule]);
 
   const formatBytes = (bytes, decimals = 2) => {
@@ -331,60 +325,22 @@ const Publisher = ({
     }
   }, [generatedImagesData, generatedVideosData]);
 
-  // Fetch LinkedIn profiles on component mount
-  useEffect(() => {
-    const fetchProfiles = async () => {
-      // Only fetch if settings are available and profiles haven't been loaded yet.
-      if (settings?.linkedin && !linkedinProfiles.personal && linkedinProfiles.organizations.length === 0) {
-        setIsLoadingProfiles(true);
-        setProfileError('');
-        try {
-          const profiles = await getLinkedInProfiles(settings.linkedin);
-          setLinkedinProfiles({
-              personal: profiles.personal,
-              organizations: profiles.organizations || []
-          });
-
-          // Set a default profile only if the cleaned list is not empty and no profile is already selected.
-          if (profiles.personal && !selectedTarget) {
-              setSelectedTarget({
-                  id: profiles.personal.id,
-                  name: `${profiles.personal.name} (Perfil Pessoal)`,
-                  type: 'personal'
-              });
-          }
-        } catch (error) {
-          console.error("Erro ao buscar perfis do LinkedIn:", error);
-          setProfileError(error.message);
-          setLinkedinProfiles({ personal: null, organizations: [] });
-        } finally {
-          setIsLoadingProfiles(false);
-        }
-      }
-    };
-    fetchProfiles();
-  }, [settings?.linkedin]); // Rerun only if settings change
-
-  // Effect to clear selection if media data is removed.
   useEffect(() => {
     if (!generatedImagesData || generatedImagesData.length === 0) {
       setSelectedImages({});
     }
   }, [generatedImagesData, setSelectedImages]);
 
-  // Effect to clear selection if media data is removed.
   useEffect(() => {
     if (!generatedVideosData || generatedVideosData.length === 0) {
       setSelectedVideos({});
     }
   }, [generatedVideosData, setSelectedVideos]);
 
-
   const handlePublishWordPress = async () => {
     setIsPublishingWp(true);
     setPublishingStatusWp('Iniciando publicação...');
     setPublishedPostUrlWp(null);
-
     try {
       if (!campaignContent || !campaignContent.conteudoFormatado || !generatedImagesData || generatedImagesData.length === 0) {
         throw new Error('Dados da campanha ou imagens não estão disponíveis.');
@@ -417,20 +373,15 @@ const Publisher = ({
       if (!selectedTarget) {
         throw new Error("Selecione um perfil do LinkedIn para agendar.");
       }
-
       const getScheduledTime = (date) => {
         const dayIndex = date.getDay();
-        return weeklySchedule[dayIndex] || '12:00'; // Default to noon
+        return weeklySchedule[dayIndex] || '12:00';
       };
-
       const userTimezone = getTimezone() || 'UTC';
-
-      // --- Schedule Main Post ---
       const mainPostDate = new Date(scheduleDate);
       const [mainHours, mainMinutes] = getScheduledTime(mainPostDate).split(':');
       mainPostDate.setHours(parseInt(mainHours, 10), parseInt(mainMinutes, 10), 0, 0);
       const mainPostUtcDate = fromZonedTime(mainPostDate, userTimezone);
-
       const mainPostPayload = {
         campaign_id: selectedCampaignId || null,
         scheduled_at: mainPostUtcDate.toISOString(),
@@ -442,11 +393,8 @@ const Publisher = ({
             hashtags: campaignContent?.hashtags || [],
         },
       };
-
       await createSchedule(mainPostPayload);
       setPublishingStatusLi('Post principal agendado. Agendando follow-ups...');
-
-      // --- Schedule Follow-up Posts ---
       if (followupPosts && followupPosts.length > 0) {
         for (const [index, post] of followupPosts.entries()) {
           const followupDate = new Date(scheduleDate);
@@ -454,9 +402,8 @@ const Publisher = ({
           const [fHours, fMinutes] = getScheduledTime(followupDate).split(':');
           followupDate.setHours(parseInt(fHours, 10), parseInt(fMinutes, 10), 0, 0);
           const followupUtcDate = fromZonedTime(followupDate, userTimezone);
-
           const followupPayload = {
-            campaign_id: selectedCampaignId || null, // Associate with the same campaign
+            campaign_id: selectedCampaignId || null,
             scheduled_at: followupUtcDate.toISOString(),
             authorUrn: `urn:li:${selectedTarget.type}:${selectedTarget.id}`,
             content: {
@@ -469,12 +416,10 @@ const Publisher = ({
           await createSchedule(followupPayload);
         }
       }
-
       toast.success('Todos os posts foram agendados com sucesso!');
       setPublishingStatusLi('Agendamento concluído!');
-      fetchSchedules(); // Refresh the schedules list
-      setTabValue(2); // Switch to the schedules tab
-
+      fetchSchedules();
+      setTabValue(2);
     } catch (error) {
       console.error('Erro ao agendar no LinkedIn:', error);
       setPublishingStatusLi(`Erro no agendamento: ${error.message}`);
@@ -489,28 +434,22 @@ const Publisher = ({
       handleScheduleLinkedIn();
       return;
     }
-
     if (!content.trim() || !selectedTarget) {
       toast.error('Conteúdo e alvo de publicação são obrigatórios');
       return;
     }
-
     setIsPublishingLi(true);
     setPublishingStatusLi('Publicando...');
-
     try {
       const campaignData = {
         content: content.trim(),
         targetId: selectedTarget.id,
         targetType: selectedTarget.type
       };
-
       const result = await publishToLinkedIn(campaignData, settings?.linkedin);
       const postLink = `https://www.linkedin.com/feed/update/${result.id}/`;
-
       setPublishingStatusLi('Publicado com sucesso!');
       setPublishedPostUrlLi(postLink);
-
       setPublishResults(prev => [{
         id: Date.now(),
         target: selectedTarget.name,
@@ -519,14 +458,9 @@ const Publisher = ({
         timestamp: new Date().toLocaleString('pt-BR'),
         link: postLink
       }, ...prev]);
-
-      // Do not clear content automatically, user might want to post to another network.
-      // setContent('');
-
     } catch (error) {
       console.error('Erro na publicação:', error);
       setPublishingStatusLi(`Erro ao publicar: ${error.message}`);
-
       setPublishResults(prev => [{
         id: Date.now(),
         target: selectedTarget.name,
@@ -556,14 +490,11 @@ const Publisher = ({
             </Tabs>
           </Box>
           <TabPanel value={tabValue} index={0}>
-            {/* LinkedIn Publisher */}
             <Box>
               <Typography variant="h6" gutterBottom>
                 <LinkedIn sx={{ verticalAlign: 'middle', mr: 1 }} />
                 LinkedIn
               </Typography>
-
-              {/* Profile Selection */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <FormControl fullWidth sx={{ my: 2 }}>
                         <InputLabel id="linkedin-profile-select-label">Publicar como</InputLabel>
@@ -572,11 +503,7 @@ const Publisher = ({
                             id="linkedin-profile-select"
                             value={selectedTarget ? JSON.stringify(selectedTarget) : ''}
                             label="Publicar como"
-                            onChange={(e) => {
-                                if(e.target.value) {
-                                    setSelectedTarget(JSON.parse(e.target.value));
-                                }
-                            }}
+                            onChange={(e) => { if(e.target.value) { setSelectedTarget(JSON.parse(e.target.value)); } }}
                             disabled={isLoadingProfiles || isPublishingLi}
                         >
                             {isLoadingProfiles && <MenuItem value=""><em><CircularProgress size={20} /> Carregando perfis...</em></MenuItem>}
@@ -600,8 +527,6 @@ const Publisher = ({
                         {profileError}
                     </Alert>
                 )}
-
-                {/* Content Text Area */}
                 <TextField
                     label="Conteúdo da Publicação"
                     multiline
@@ -614,8 +539,6 @@ const Publisher = ({
                     placeholder="O que você gostaria de compartilhar?"
                     maxLength={3000}
                 />
-
-              {/* Media Selection */}
               <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
                 Selecionar Mídia
               </Typography>
@@ -640,20 +563,14 @@ const Publisher = ({
                               onChange={(e) => {
                                 const isChecked = e.target.checked;
                                 if (media.type === 'image') {
-                                  // Se uma imagem é selecionada, desmarca qualquer vídeo
-                                  if (isChecked) {
-                                    setSelectedVideos({});
-                                  }
+                                  if (isChecked) setSelectedVideos({});
                                   setSelectedImages(prev => ({ ...prev, [index]: isChecked }));
-                                } else { // media.type === 'video'
+                                } else {
                                   const videoIndex = index - generatedImagesData.length;
-                                  // Se um vídeo é selecionado
                                   if (isChecked) {
-                                    // Desmarca todas as imagens e outros vídeos
                                     setSelectedImages({});
                                     setSelectedVideos({ [videoIndex]: true });
                                   } else {
-                                    // Desmarca o vídeo atual
                                     setSelectedVideos({ [videoIndex]: false });
                                   }
                                 }
@@ -697,14 +614,11 @@ const Publisher = ({
                   </Paper>
                 </Grid>
               </Grid>
-
-              {/* Scheduling */}
               <FormControlLabel
                 control={<Switch checked={isScheduled} onChange={(e) => setIsScheduled(e.target.checked)} />}
                 label="Agendar publicação"
                 sx={{ my: 2, display: 'block' }}
               />
-
               {isScheduled && (
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
                   <Grid container spacing={3} sx={{ mt: 1 }}>
@@ -728,7 +642,6 @@ const Publisher = ({
                             </Select>
                         </FormControl>
                     </Grid>
-                    {/* Left Column */}
                     <Grid item xs={12} md={5}>
                       <Grid container direction="column" spacing={3}>
                         <Grid item>
@@ -769,7 +682,6 @@ const Publisher = ({
                         </Grid>
                       </Grid>
                     </Grid>
-                    {/* Right Column */}
                     <Grid item xs={12} md={7}>
                         <Typography variant="h6" gutterBottom>2. Horários da Semana</Typography>
                         <TimeHeatMap
@@ -782,7 +694,6 @@ const Publisher = ({
                   </Grid>
                 </LocalizationProvider>
               )}
-
               <Button
                 variant="contained"
                 size="large"
@@ -792,13 +703,11 @@ const Publisher = ({
               >
                 {isPublishingLi ? 'Publicando...' : 'Publicar Agora no LinkedIn'}
               </Button>
-
               {isScheduled && (
                 <Button variant="outlined" size="large" sx={{ml: 2}} onClick={handleScheduleLinkedIn} disabled={isPublishingLi}>
                     {isPublishingLi ? 'Agendando...' : 'Salvar Agendamento'}
                 </Button>
               )}
-
               {isPublishingLi && <LinearProgress sx={{ my: 2 }} />}
               {publishingStatusLi && (
                 <Alert
@@ -813,8 +722,6 @@ const Publisher = ({
                   )}
                 </Alert>
               )}
-
-            {/* Publishing History */}
             {publishResults.length > 0 && (
                 <Box sx={{ mt: 4 }}>
                     <Typography variant="h6" gutterBottom>Histórico de Publicações Recentes</Typography>
@@ -848,7 +755,6 @@ const Publisher = ({
                     </Paper>
                 </Box>
             )}
-
             </Box>
           </TabPanel>
           <TabPanel value={tabValue} index={1}>
@@ -966,8 +872,6 @@ const Publisher = ({
           </TabPanel>
         </Box>
       </CardContent>
-
-      {/* View Details Modal */}
       <Dialog open={!!viewingSchedule} onClose={() => setViewingSchedule(null)} fullWidth maxWidth="md">
         <DialogTitle>Schedule Details</DialogTitle>
         <DialogContent>
@@ -990,8 +894,6 @@ const Publisher = ({
           <Button onClick={() => setViewingSchedule(null)}>Close</Button>
         </DialogActions>
       </Dialog>
-
-      {/* Edit Schedule Modal */}
       <Dialog open={!!editingSchedule} onClose={() => setEditingSchedule(null)} fullWidth maxWidth="sm">
         <DialogTitle>Edit Schedule Time</DialogTitle>
         <DialogContent>
