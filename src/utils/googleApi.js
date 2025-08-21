@@ -30,6 +30,9 @@ const fetchWithRefresh = async (url, options, accessToken, setAccessToken) => {
 
             // Retry the original request with the new token
             const newOptions = { ...options };
+            if (!newOptions.headers) {
+                newOptions.headers = {};
+            }
             newOptions.headers['Authorization'] = `Bearer ${newAccessToken}`;
 
             console.log('Retrying request with new token...');
