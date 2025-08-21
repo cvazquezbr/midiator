@@ -2,6 +2,7 @@
 // and communicating with the campaign API endpoints.
 import { upload } from '@vercel/blob/client';
 import { toast } from 'sonner';
+import fetchWithAuth from './fetchWithAuth';
 
 // Helper to upload a blob-like asset to Vercel Blob storage.
 const uploadAsset = async (asset, filename, campaignId) => {
@@ -221,7 +222,7 @@ export const deserializeCampaignData = async (loadedState) => {
 // --- API Functions ---
 
 export const getCampaigns = async () => {
-  const res = await fetch('/api/campaigns');
+  const res = await fetchWithAuth('/api/campaigns');
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || 'Failed to fetch campaigns.');
@@ -230,7 +231,7 @@ export const getCampaigns = async () => {
 };
 
 export const loadCampaign = async (id) => {
-  const res = await fetch(`/api/campaigns/${id}`);
+  const res = await fetchWithAuth(`/api/campaigns/${id}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || 'Failed to load campaign.');
@@ -265,7 +266,7 @@ export const saveCampaign = async (name, campaignState, setProgress) => {
   const initialState = cleanStateForInitialSave(campaignState);
 
   // 2. Make the initial request to create the campaign entry.
-  const createRes = await fetch('/api/campaigns', {
+  const createRes = await fetchWithAuth('/api/campaigns', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, campaign_data: initialState }),
@@ -282,7 +283,7 @@ export const saveCampaign = async (name, campaignState, setProgress) => {
   const finalSerializableData = await serializeCampaignData(campaignState, campaignId, setProgress);
 
   // 4. Update the campaign with the final data including asset URLs.
-  const updateRes = await fetch(`/api/campaigns/${campaignId}`, {
+  const updateRes = await fetchWithAuth(`/api/campaigns/${campaignId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, campaign_data: finalSerializableData }),
@@ -302,7 +303,7 @@ export const updateCampaign = async (id, name, campaignState, setProgress) => {
   // For an existing campaign, we already have the ID.
   // We can directly serialize the data, which will upload any new/changed assets.
   const serializableData = await serializeCampaignData(campaignState, id, setProgress);
-  const res = await fetch(`/api/campaigns/${id}`, {
+  const res = await fetchWithAuth(`/api/campaigns/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, campaign_data: serializableData }),
@@ -315,7 +316,7 @@ export const updateCampaign = async (id, name, campaignState, setProgress) => {
 };
 
 export const deleteCampaign = async (id) => {
-  const res = await fetch(`/api/campaigns/${id}`, { method: 'DELETE' });
+  const res = await fetchWithAuth(`/api/campaigns/${id}`, { method: 'DELETE' });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || 'Failed to delete campaign.');
