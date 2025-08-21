@@ -264,6 +264,7 @@ const ImageGeneratorFrontendOnly = ({
           record,
           index: i,
           filename: `midiator_${String(i + 1).padStart(3, '0')}.png`,
+          backgroundImage,
           customFieldPositions: existingImageDataItem?.customFieldPositions,
           customFieldStyles: existingImageDataItem?.customFieldStyles,
         };
@@ -275,7 +276,10 @@ const ImageGeneratorFrontendOnly = ({
       }
     } catch (error) {
       console.error('Erro na geração de imagens:', error);
-      alert(`Erro na geração de imagens: ${error.message}`);
+      const message = error.message.includes('Failed to load image')
+        ? 'Falha ao carregar a imagem de fundo. Verifique se a imagem está acessível e tente novamente.'
+        : `Erro na geração de imagens: ${error.message}`;
+      toast.error(message);
     } finally {
       setIsGenerating(false);
       setShowProgressModal(false);
