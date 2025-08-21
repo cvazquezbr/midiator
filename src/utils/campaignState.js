@@ -88,7 +88,10 @@ export const serializeCampaignData = async (state, campaignId, setProgress, user
     }
     setProgress({ current: 0, total: assetsToUpload.length });
     console.log(`[serializeCampaignData] Determined ${assetsToUpload.length} assets need uploading.`);
-    // --- End asset determination ---
+
+    // Yield to the event loop before starting heavy processing
+    await new Promise(resolve => setTimeout(resolve, 0));
+    console.log('[serializeCampaignData] Continuing after yield. Starting asset serialization...');
 
     const serializableGeneratedImages = await serializeAssetList(state.generatedImagesData);
     const serializableGeneratedAudio = await serializeAssetList(state.generatedAudioData);
