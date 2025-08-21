@@ -40,26 +40,22 @@ const handler = async (req, res) => {
         const payload = clientPayload ? JSON.parse(clientPayload) : {};
         const { campaignId } = payload;
 
-        // Sanitize pathname to prevent directory traversal.
-        // The client should only send the filename.
-        const sanitizedPathname = pathname.split('/').pop();
-        if (!sanitizedPathname) {
-          throw new Error('Invalid filename provided.');
-        }
+        // The client now sends the full path. We just need to sanitize it
+        // and verify the user is allowed to write to it.
+        const sanitizedPathname = pathname.replace(/^\/|\/$/g, '').replace(/\.\./g, '');
 
-        // Construct the final path. If campaignId is not provided,
-        // files will be stored in a generic user folder.
-        const finalPathname = campaignId
-          ? `${req.user.sub}/${campaignId}/${sanitizedPathname}`
-          : `${req.user.sub}/${sanitizedPathname}`;
+        // The path must start with the user's ID to ensure they are not writing to other users' folders.
+        if (!sanitizedPathname.startsWith(req.user.sub)) {
+          throw new Error('User is not allowed to upload to this path.');
+        }
 
         return {
           allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'audio/mpeg', 'video/webm', 'audio/webm', 'audio/wav'],
           tokenPayload: JSON.stringify({
             userId: req.user.sub,
-            campaignId: campaignId, // Include campaignId in the token payload
+            campaignId: campaignId, // Keep this for potential future use
           }),
-          pathname: finalPathname, // Override the pathname
+          pathname: sanitizedPathname, // Use the sanitized path from the client
         };
       },
       onUploadCompleted: async ({ blob, tokenPayload }) => {
