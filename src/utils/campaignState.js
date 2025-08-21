@@ -32,8 +32,11 @@ const uploadAsset = async (asset, filename, campaignId) => {
   }
 
   if (!fileToUpload) {
+    console.error('[uploadAsset] fileToUpload is null or undefined for filename:', filename);
     return null;
   }
+
+  console.log(`[uploadAsset] Attempting to upload ${filename}. Size: ${fileToUpload.size} bytes.`);
 
   try {
     const newBlob = await upload(filename, fileToUpload, {
