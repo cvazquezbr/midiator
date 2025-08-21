@@ -190,22 +190,45 @@ const DraggableElement = ({
     newWidth = Math.max(5, newWidth);
     newHeight = Math.max(3, newHeight);
 
+    // New Rotation-Aware Boundary Checks
+    const halfW = newWidth / 2;
+    const halfH = newHeight / 2;
+
+    const corners = [
+      { x: newCenterX - halfW, y: newCenterY - halfH }, // nw
+      { x: newCenterX + halfW, y: newCenterY - halfH }, // ne
+      { x: newCenterX + halfW, y: newCenterY + halfH }, // se
+      { x: newCenterX - halfW, y: newCenterY + halfH }, // sw
+    ];
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+    corners.forEach(corner => {
+      const rotatedX = (corner.x - newCenterX) * cos - (corner.y - newCenterY) * sin + newCenterX;
+      const rotatedY = (corner.x - newCenterX) * sin + (corner.y - newCenterY) * cos + newCenterY;
+
+      minX = Math.min(minX, rotatedX);
+      maxX = Math.max(maxX, rotatedX);
+      minY = Math.min(minY, rotatedY);
+      maxY = Math.max(maxY, rotatedY);
+    });
+
+    if (minX < 0) {
+      newCenterX -= minX;
+    }
+    if (maxX > 100) {
+      newCenterX -= (maxX - 100);
+    }
+    if (minY < 0) {
+      newCenterY -= minY;
+    }
+    if (maxY > 100) {
+      newCenterY -= (maxY - 100);
+    }
+
+    // Recalculate final unrotated top-left position from the adjusted center
     let newX = newCenterX - newWidth / 2;
     let newY = newCenterY - newHeight / 2;
-
-    // Boundary checks
-    newX = Math.max(0, newX);
-    newY = Math.max(0, newY);
-
-    if (newX + newWidth > 100) {
-      newWidth = 100 - newX;
-    }
-    if (newY + newHeight > 100) {
-      newHeight = 100 - newY;
-    }
-
-    newX = Math.max(0, Math.min(newX, 100 - newWidth));
-    newY = Math.max(0, Math.min(newY, 100 - newHeight));
 
     return { newX, newY, newWidth, newHeight };
   };
