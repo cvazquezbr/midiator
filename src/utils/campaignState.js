@@ -2,34 +2,19 @@ import { toast } from 'sonner';
 import { upload } from '@vercel/blob/client';
 import fetchWithAuth from './fetchWithAuth';
 
-const dataURLtoBlob = (dataurl) => {
-  console.log('[dataURLtoBlob] Starting conversion...');
-  const arr = dataurl.split(',');
-  if (arr.length < 2) {
-    throw new Error('Invalid dataURL');
+/**
+ * Asynchronously converts a data URL to a Blob object.
+ * This is non-blocking and preferred for performance over synchronous methods.
+ */
+const dataURLtoBlob = async (dataUrl) => {
+  try {
+    const response = await fetch(dataUrl);
+    const blob = await response.blob();
+    return blob;
+  } catch (error) {
+    console.error('[dataURLtoBlob] Failed to convert data URL to Blob:', error);
+    throw new Error('Could not convert image data before upload.');
   }
-  const mimeMatch = arr[0].match(/:(.*?);/);
-  if (!mimeMatch) {
-    throw new Error('Could not determine mime type from dataURL');
-  }
-  const mime = mimeMatch[1];
-  console.log(`[dataURLtoBlob] Mime type: ${mime}. Decoding base64 string...`);
-
-  const bstr = atob(arr[1]);
-  let n = bstr.length;
-  console.log(`[dataURLtoBlob] Decoded string length: ${n}. Allocating Uint8Array...`);
-
-  const u8arr = new Uint8Array(n);
-  console.log('[dataURLtoBlob] Array allocated. Populating array...');
-
-  while (n--) {
-    u8arr[n] = bstr.charCodeAt(n);
-  }
-  console.log('[dataURLtoBlob] Array populated. Creating Blob...');
-
-  const blob = new Blob([u8arr], { type: mime });
-  console.log('[dataURLtoBlob] Conversion complete.');
-  return blob;
 };
 
 /**
@@ -49,8 +34,8 @@ export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
   const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
 
   try {
-    console.log('[uploadAsset] Converting dataURL to Blob...');
-    const blob = dataURLtoBlob(dataUrl);
+    console.log('[uploadAsset] Converting dataURL to Blob asynchronously...');
+    const blob = await dataURLtoBlob(dataUrl);
     console.log(`[uploadAsset] Converted dataURL to Blob. Size: ${blob.size} bytes. Path: ${fullPath}`);
 
     console.log('[uploadAsset] Calling Vercel SDK upload function...');
