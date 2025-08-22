@@ -60,6 +60,7 @@ const handler = async (req, res) => {
         console.log(`[API /upload] Path authorized: ${sanitizedPathname}`);
 
         return {
+          addRandomSuffix: true,
           allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'audio/mpeg', 'video/webm', 'audio/webm', 'audio/wav'],
           tokenPayload: JSON.stringify({ userId }),
           pathname: sanitizedPathname,
