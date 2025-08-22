@@ -1,4 +1,4 @@
-import { handleUpload } from '@vercel/blob/server';
+import { handleUpload } from '@vercel/blob/client';
 import { withAuth } from './middleware/auth.js';
 
 const handler = async (req, res) => {
@@ -10,18 +10,21 @@ const handler = async (req, res) => {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
+  const body = await req.json();
+
   try {
     const jsonResponse = await handleUpload({
+      body,
       request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         console.log(`[API /upload] onBeforeGenerateToken: Pathname: ${pathname}`);
 
         // Authentication check
-        if (!req.user || !req.user.sub) {
+        if (!req.user || !req.user.uuid) {
           console.error('[API /upload] Auth error: User not found in request.');
           throw new Error('Authentication is required to upload files.');
         }
-        const userId = req.user.sub;
+        const userId = req.user.uuid;
         console.log(`[API /upload] Authenticated user: ${userId}`);
 
         const payload = clientPayload ? JSON.parse(clientPayload) : {};
