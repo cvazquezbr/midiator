@@ -1,25 +1,47 @@
 import fetchWithAuth from './fetchWithAuth';
 
 /**
- * Checks if the user's session is still active by making a lightweight API call.
- * The fetchWithAuth wrapper will handle the redirect on 401.
- * @returns {Promise<boolean>} True if the session is active, otherwise the function will throw and redirect.
+ * Checks if the user's session is active. If the session is expired (401),
+ * it attempts to refresh the token. If refreshing fails, it redirects to login.
+ * @returns {Promise<boolean>} True if the session is active or was successfully renewed.
+ * @throws {Error} If an unrecoverable error occurs.
  */
 export const checkAuthStatus = async () => {
   try {
+    console.log('[checkAuthStatus] Checking /api/auth/me...');
     const res = await fetchWithAuth('/api/auth/me');
-    if (!res.ok) {
-      // The fetchWithAuth wrapper handles 401s by redirecting.
-      // For other errors (e.g., 500), we throw an error to be caught by the caller.
-      const errorData = await res.json().catch(() => ({ error: 'Failed to parse error response.' }));
-      throw new Error(errorData.error || `Failed to verify authentication status: ${res.statusText}`);
+
+    if (res.ok) {
+      console.log('[checkAuthStatus] Session is active.');
+      return true; // User is authenticated
     }
-    // If the request succeeds with a 2xx status, the user is authenticated.
-    return true;
+
+    if (res.status === 401) {
+      console.log('[checkAuthStatus] Session expired (401). Attempting token refresh...');
+
+      const refreshRes = await fetchWithAuth('/api/auth/refresh-google-token', { method: 'POST' });
+
+      if (refreshRes.ok) {
+        console.log('[checkAuthStatus] Token refresh successful. Auth status is now valid.');
+        // The cookie is automatically set by the server. The context will re-sync on the next page load or API call.
+        // For immediate UI updates, a more complex state management approach would be needed,
+        // but this ensures subsequent requests from this point on will be authenticated.
+        return true;
+      } else {
+        console.error('[checkAuthStatus] Token refresh failed. Redirecting to login.');
+        window.location.href = '/login?session_expired=true';
+        throw new Error('Session expired and refresh failed.');
+      }
+    }
+
+    // Handle other non-ok statuses (e.g., 500)
+    const errorData = await res.json().catch(() => ({ error: 'Failed to parse error response.' }));
+    throw new Error(errorData.error || `Failed to verify authentication status: ${res.statusText}`);
+
   } catch (error) {
-    // If fetchWithAuth redirected, this error might not even be thrown in the original context.
-    // If it is (e.g., network error), we re-throw it so the calling function can handle it.
-    console.error('Auth check failed:', error.message);
+    console.error('An unhandled error occurred during auth check:', error.message);
+    // For network errors etc., we can also redirect.
+    window.location.href = '/login?error=auth_check_failed';
     throw error;
   }
 };

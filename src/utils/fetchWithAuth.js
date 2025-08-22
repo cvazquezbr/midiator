@@ -1,15 +1,18 @@
+/**
+ * A wrapper around fetch that includes credentials and handles authorization.
+ * It no longer performs a hard redirect on 401, allowing the caller to handle it.
+ */
 const fetchWithAuth = async (url, options = {}) => {
-  const response = await fetch(url, options);
+  // By default, we always want to include credentials (like cookies)
+  const defaultOptions = {
+    ...options,
+    credentials: 'include',
+  };
 
-  if (response.status === 401) {
-    // Unauthorized. Redirect to login page.
-    // You might want to clear any stored user data here as well.
-    // Adding a query parameter to show a message on the login page.
-    window.location.href = '/login?session_expired=true';
-    // Throw an error to prevent further processing in the original call stack.
-    throw new Error('Session expired. Redirecting to login.');
-  }
+  const response = await fetch(url, defaultOptions);
 
+  // The caller is now responsible for handling the 401 response.
+  // This allows for more flexible error handling, like token refresh.
   return response;
 };
 
