@@ -58,7 +58,7 @@ import ColorThief from 'colorthief';
 import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
 
 function HomePage() {
-  const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
+  const { user, googleAccessToken, setGoogleAccessToken, fetchUser } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
 
   // Component State
@@ -195,14 +195,21 @@ function HomePage() {
 
     try {
       await checkAuthStatus();
+      // After checking auth status, which may have renewed the token,
+      // we must re-fetch the user data to update the context.
+      await fetchUser();
     } catch (error) {
-      toast.error(error.message);
+      // Errors from checkAuthStatus (like failed refresh) or fetchUser will be caught here.
+      // checkAuthStatus will handle the redirect if necessary.
+      toast.error(error.message || "Could not verify your session.");
       return;
     }
 
-    // Guard clause to ensure user ID is available before proceeding.
+    // This console.log is now removed as the guard clause below is the real check.
+
+    // Guard clause to ensure user ID is available from the now-refreshed context.
     if (!user || !user.sub) {
-      toast.error("User session is invalid or has expired. Please try logging out and back in before saving.");
+      toast.error("Your session appears to be invalid. Please try logging out and logging back in.");
       return;
     }
 

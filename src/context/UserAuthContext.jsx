@@ -146,6 +146,7 @@ export const UserAuthContextProvider = ({ children }) => {
     signup,
     logout,
     googleLogin,
+    fetchUser, // Expose fetchUser to allow components to trigger a manual refresh
   };
 
   // Render children only after the initial loading is complete
