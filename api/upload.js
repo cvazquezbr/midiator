@@ -1,12 +1,7 @@
 import { handleUpload } from '@vercel/blob/client';
 import { withAuth } from './middleware/auth.js';
 
-// This config is crucial to disable the default body parser
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// By removing the `config` export, we re-enable the default Next.js body parser.
 
 const handler = async (req, res) => {
   console.log('[API /upload] Received request');
@@ -17,13 +12,13 @@ const handler = async (req, res) => {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  try {
-    // No longer parsing the body here.
-    // The raw `req` object will be passed to `handleUpload`.
+  // The body is now automatically parsed by Next.js and available on `req.body`.
+  const body = req.body;
 
+  try {
     const jsonResponse = await handleUpload({
-      body: req,
-      request: req,
+      body, // Pass the parsed body object.
+      request: req, // Pass the original request for other properties.
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         console.log(`[API /upload] onBeforeGenerateToken: Pathname: ${pathname}`);
 
