@@ -78,7 +78,7 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
     assetsToUploadCount += cleanState.brandElements.filter(el => el.url && el.url.startsWith('data:')).length;
   }
   if (Array.isArray(cleanState.generatedImagesData)) {
-    assetsToUploadCount += cleanState.generatedImagesData.filter(img => img.dataUrl && img.dataUrl.startsWith('data:')).length;
+    assetsToUploadCount += cleanState.generatedImagesData.filter(img => img.url && img.url.startsWith('data:')).length;
   }
   // Future asset types can be counted here.
 
@@ -124,12 +124,13 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
     // Generated Post Images
     if (Array.isArray(cleanState.generatedImagesData)) {
        for (const image of cleanState.generatedImagesData) {
-        if (image.dataUrl && image.dataUrl.startsWith('data:')) {
+        // Corrected property check from image.dataUrl to image.url
+        if (image.url && image.url.startsWith('data:')) {
           const filename = image.filename || `post_image_${image.index}_${Date.now()}.png`;
           console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-          const permanentUrl = await uploadAsset(image.dataUrl, filename, campaignId, userId);
-          image.url = permanentUrl;
-          delete image.dataUrl; // Clean up the temporary field
+          const dataUrlToUpload = image.url; // The data is in the .url property
+          const permanentUrl = await uploadAsset(dataUrlToUpload, filename, campaignId, userId);
+          image.url = permanentUrl; // Overwrite the original property with the new URL
           assetsUploadedCount++;
           onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
         }
@@ -193,7 +194,6 @@ export const saveCampaign = async (name, campaignData, setProgress, userId) => {
     const stateToSave = await serializeCampaignData(campaignData, userId, null, setProgress);
     console.log('[campaignState] Step 1 COMPLETE.');
 
-    console.log('[campaignState] VERIFICATION: Final object being sent to the database:', stateToSave);
     console.log('[campaignState] Step 2: Sending campaign data to server...');
     const requestBody = JSON.stringify({ name, campaign_data: stateToSave });
 
@@ -227,7 +227,6 @@ export const updateCampaign = async (id, name, campaignData, setProgress, userId
         const stateToSave = await serializeCampaignData(campaignData, userId, id, setProgress);
         console.log('[campaignState] Step 1 COMPLETE.');
 
-        console.log('[campaignState] VERIFICATION: Final object being sent to the database for update:', stateToSave);
         console.log('[campaignState] Step 2: Sending updated campaign data to server...');
         const requestBody = JSON.stringify({ name, campaign_data: stateToSave });
 
