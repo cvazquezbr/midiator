@@ -192,6 +192,12 @@ function HomePage() {
 
   const handleSaveCampaign = async (name) => {
     console.log(`[HomePage] Attempting to save campaign: "${name}"`);
+
+    // Diagnostic log to check the state of image URLs at the time of saving
+    console.log('[HomePage] DIAGNOSTIC: Checking image states before saving...');
+    console.log(`[HomePage] DIAGNOSTIC: backgroundImage is a data URL?`, String(backgroundImage).substring(0, 30) === 'data:image/png;base64,iVBORw0K' ? 'Yes' : `No, value is: ${String(backgroundImage).substring(0, 100)}...`);
+    console.log(`[HomePage] DIAGNOSTIC: generatedImageUrl is a data URL?`, String(generatedImageUrl).substring(0, 30) === 'data:image/png;base64,iVBORw0K' ? 'Yes' : `No, value is: ${String(generatedImageUrl).substring(0, 100)}...`);
+
     try {
       await checkAuthStatus();
     } catch (error) {
