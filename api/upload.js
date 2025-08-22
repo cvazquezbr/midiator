@@ -10,11 +10,8 @@ const handler = async (req, res) => {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const body = await req.json();
-
   try {
     const jsonResponse = await handleUpload({
-      body,
       request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         console.log(`[API /upload] onBeforeGenerateToken: Pathname: ${pathname}`);
