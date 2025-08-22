@@ -3,25 +3,11 @@ import { upload } from '@vercel/blob/client';
 import fetchWithAuth from './fetchWithAuth';
 
 /**
- * Asynchronously converts a data URL to a Blob object.
- * This is non-blocking and preferred for performance over synchronous methods.
- */
-const dataURLtoBlob = async (dataUrl) => {
-  try {
-    const response = await fetch(dataUrl);
-    const blob = await response.blob();
-    return blob;
-  } catch (error) {
-    console.error('[dataURLtoBlob] Failed to convert data URL to Blob:', error);
-    throw new Error('Could not convert image data before upload.');
-  }
-};
-
-/**
  * Handles the Vercel Blob upload process using the official client SDK.
+ * This version includes hyper-granular logging to diagnose hangs.
  */
 export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
-  console.log(`[uploadAsset] Preparing to upload: ${filename}`);
+  console.log(`[uploadAsset] Preparing to upload: ${filename}. Data URL length: ${dataUrl.length}`);
 
   if (!dataUrl || !dataUrl.startsWith('data:')) {
     console.error('[uploadAsset] Invalid dataUrl provided.', { filename });
@@ -32,25 +18,32 @@ export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
   }
 
   const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
+  let blob;
 
   try {
-    console.log('[uploadAsset] Converting dataURL to Blob asynchronously...');
-    const blob = await dataURLtoBlob(dataUrl);
-    console.log(`[uploadAsset] Converted dataURL to Blob. Size: ${blob.size} bytes. Path: ${fullPath}`);
+    // Step 1: Convert data URL to Blob
+    console.log('[uploadAsset] DIAGNOSTIC: About to fetch data URL.');
+    const response = await fetch(dataUrl);
+    console.log(`[uploadAsset] DIAGNOSTIC: Fetch complete. Status: ${response.status}.`);
 
-    console.log('[uploadAsset] Calling Vercel SDK upload function...');
+    console.log('[uploadAsset] DIAGNOSTIC: About to convert response to blob.');
+    blob = await response.blob();
+    console.log(`[uploadAsset] DIAGNOSTIC: Blob conversion complete. Size: ${blob.size} bytes.`);
+
+    // Step 2: Upload to Vercel
+    console.log('[uploadAsset] DIAGNOSTIC: About to call Vercel upload SDK.');
     const newBlob = await upload(fullPath, blob, {
       access: 'public',
       handleUploadUrl: '/api/upload',
       clientPayload: JSON.stringify({ campaignId }),
     });
-    console.log('[uploadAsset] Vercel SDK upload function returned.');
+    console.log('[uploadAsset] DIAGNOSTIC: Vercel upload SDK returned.');
 
     console.log(`[uploadAsset] Successfully uploaded ${filename}. URL: ${newBlob.url}`);
     return newBlob.url;
 
   } catch (error) {
-    console.error(`[uploadAsset] Vercel upload failed for ${filename}:`, error);
+    console.error(`[uploadAsset] A critical error occurred during the upload process for ${filename}:`, error);
     throw new Error(`Failed to upload ${filename}. Please check the console for details.`);
   }
 };
