@@ -36,9 +36,9 @@ import {
   Share
 } from '@mui/icons-material';
 import GeneratedImageEditor from './GeneratedImageEditor';
+import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { composeImage } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
-import { uploadAsset } from '../utils/campaignState'; // Import the uploader
 
 const ImageGeneratorFrontendOnly = ({
   csvData,
@@ -55,7 +55,6 @@ const ImageGeneratorFrontendOnly = ({
   brandElements,
   onBrandElementsChange
 }) => {
-  const { user } = useUserAuth(); // Get user for upload path
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -65,6 +64,11 @@ const ImageGeneratorFrontendOnly = ({
   const [selectedPreview, setSelectedPreview] = useState(null);
   const [editingGeneratedImageIndex, setEditingGeneratedImageIndex] = useState(null);
   const [showGeneratedImageEditor, setShowGeneratedImageEditor] = useState(false);
+  const { googleAccessToken } = useUserAuth();
+  const isGoogleDriveConnected = !!googleAccessToken;
+  const [projectName, setProjectName] = useState('');
+  const [isUploadingToDrive, setIsUploadingToDrive] = useState(false);
+  const [driveResult, setDriveResult] = useState(null);
   const [replacingImageIndex, setReplacingImageIndex] = useState(null);
   const individualImageInputRef = useRef(null);
   const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -179,23 +183,13 @@ const ImageGeneratorFrontendOnly = ({
     isCancelledRef.current = false;
     const images = [];
     try {
-      // Upload the main background image once if it's a data URL
-      let processedBackgroundImageUrl = backgroundImage;
-      if (backgroundImage.startsWith('data:')) {
-        console.log("Uploading main background image...");
-        processedBackgroundImageUrl = await uploadAsset(backgroundImage, `bg_${Date.now()}.png`, null, user.sub);
-        console.log("Main background image uploaded:", processedBackgroundImageUrl);
-      }
-
-      const composedBackgroundImageUrl = await composeImage(processedBackgroundImageUrl, imageFilters, brandElements);
+      const composedBackgroundImageUrl = await composeImage(backgroundImage, imageFilters, brandElements);
       const img = new Image();
-      img.crossOrigin = "Anonymous"; // Important for cross-origin images
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = reject;
         img.src = composedBackgroundImageUrl;
       });
-
       for (let i = 0; i < csvData.length; i++) {
         if (isCancelledRef.current) break;
         const record = csvData[i];
@@ -265,12 +259,12 @@ const ImageGeneratorFrontendOnly = ({
         const dataUrl = canvas.toDataURL('image/png', 1.0);
         const existingImageDataItem = generatedImages.find(img => img.index === i);
         const imageData = {
-          url: dataUrl,
-          dataUrl: dataUrl,
+          url: dataUrl, // The dataUrl is used for display
+          dataUrl: dataUrl, // And also stored explicitly for upload
           record,
           index: i,
           filename: `midiator_${String(i + 1).padStart(3, '0')}.png`,
-          backgroundImage: processedBackgroundImageUrl, // Store the permanent URL
+          backgroundImage,
           customFieldPositions: existingImageDataItem?.customFieldPositions,
           customFieldStyles: existingImageDataItem?.customFieldStyles,
         };
@@ -370,16 +364,8 @@ const ImageGeneratorFrontendOnly = ({
       return;
     }
     try {
-        let processedBackgroundImageUrl = currentBackgroundImage;
-        if (currentBackgroundImage.startsWith('data:')) {
-            console.log(`Uploading custom background for image ${index}...`);
-            processedBackgroundImageUrl = await uploadAsset(currentBackgroundImage, `bg_custom_${index}_${Date.now()}.png`, null, user.sub);
-            console.log(`Custom background for image ${index} uploaded:`, processedBackgroundImageUrl);
-        }
-
-      const composedBackgroundImageUrl = await composeImage(processedBackgroundImageUrl, imageFilters, elementsToUse);
+      const composedBackgroundImageUrl = await composeImage(currentBackgroundImage, imageFilters, elementsToUse);
       const img = new Image();
-      img.crossOrigin = "Anonymous";
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = (err) => reject(new Error('Failed to load composed background for regeneration.', { cause: err }));
@@ -455,7 +441,7 @@ const ImageGeneratorFrontendOnly = ({
         record,
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        backgroundImage: processedBackgroundImageUrl,
+        backgroundImage: currentBackgroundImage,
         customFieldPositions: positionsToUse,
         customFieldStyles: stylesToUse,
         customBrandElements: elementsToUse,
@@ -464,6 +450,7 @@ const ImageGeneratorFrontendOnly = ({
       setGeneratedImages(prevImages => {
         const updatedImages = prevImages.map(img => {
           if (img.index === index) {
+            // No need to revoke URL if it's a data URL
             return newImageData;
           }
           return img;
@@ -510,10 +497,70 @@ const ImageGeneratorFrontendOnly = ({
     setReplacingImageIndex(null);
   };
 
-  // This function is no longer used for campaign saving, but might be used by other features.
-  // It's been updated to use the tokenless API.
   const uploadToGoogleDrive = async () => {
-    // ... (This function's content is omitted for brevity as it's not the focus of the current fix)
+    if (!projectName.trim()) {
+      alert('Por favor, digite um nome para o projeto.');
+      return;
+    }
+    if (generatedImages.length === 0) {
+      alert('Nenhuma imagem foi gerada ainda.');
+      return;
+    }
+    if (!googleAccessToken) {
+      alert('Conexão com Google não está ativa. Por favor, faça login.');
+      return;
+    }
+    if (isUploadingToDrive) return;
+
+    setIsUploadingToDrive(true);
+    setDriveResult(null);
+
+    try {
+      const folder = await createFolder(projectName, null, googleAccessToken);
+      const contentFolder = await createFolder('Conteúdo', folder.id, googleAccessToken);
+
+      const uploadResults = [];
+      const sheetData = [];
+      const allHeaders = Array.from(new Set(generatedImages.flatMap(img => Object.keys(img.record))));
+
+      for (let i = 0; i < generatedImages.length; i++) {
+        const imageData = generatedImages[i];
+        try {
+          const response = await fetch(imageData.dataUrl);
+          const blob = await response.blob();
+          const result = await uploadFile(blob, imageData.filename, contentFolder.id, googleAccessToken);
+          uploadResults.push({ filename: imageData.filename, success: true, fileId: result.id });
+          const row = [i + 1, `https://drive.google.com/file/d/${result.id}/view?usp=sharing`, ...allHeaders.map(header => imageData.record[header] || '')];
+          sheetData.push(row);
+        } catch (error) {
+          uploadResults.push({ filename: imageData.filename, success: false, error: error.message });
+        }
+      }
+
+      if (sheetData.length > 0) {
+        const headers = ['Nº', 'Link do Arquivo', ...allHeaders];
+        await createSpreadsheet(
+          `Relação de Arquivos - ${projectName}`,
+          [headers, ...sheetData],
+          googleAccessToken,
+          contentFolder.id
+        );
+      }
+
+      setDriveResult({
+        folderId: folder.id,
+        folderName: projectName,
+        uploads: uploadResults,
+        successCount: uploadResults.filter(r => r.success).length,
+        totalCount: uploadResults.length,
+        contentFolderId: contentFolder.id
+      });
+    } catch (error) {
+      console.error('Erro no upload para Google Drive:', error);
+      alert(`Erro no upload: ${error.message}`);
+    } finally {
+      setIsUploadingToDrive(false);
+    }
   };
 
   return (
@@ -568,10 +615,236 @@ const ImageGeneratorFrontendOnly = ({
             </Box>
           )}
 
-          {/* Omitted for brevity */}
+          {generatedImages.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Divider sx={{ mb: 2 }} />
+              <Typography variant="h6" gutterBottom>
+                <Google sx={{ mr: 1, verticalAlign: 'middle' }} />
+                Integração Google Drive
+              </Typography>
 
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    label="Nome do Projeto"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    placeholder="Ex: Certificados 2024"
+                  />
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <Tooltip title={!isGoogleDriveConnected ? "Conecte-se ao Google Drive nas configurações para ativar esta opção" : ""}>
+                    <span>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        onClick={uploadToGoogleDrive}
+                        disabled={isUploadingToDrive || !isGoogleDriveConnected}
+                        startIcon={<CloudUpload />}
+                        fullWidth
+                      >
+                        {isUploadingToDrive ? 'Enviando...' : 'Enviar para Google Drive'}
+                      </Button>
+                    </span>
+                  </Tooltip>
+                </Grid>
+              </Grid>
+
+              {isUploadingToDrive && (
+                <Box sx={{ mt: 2 }}>
+                  <LinearProgress />
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    Enviando para Google Drive...
+                  </Typography>
+                </Box>
+              )}
+
+              {driveResult && (
+                <Alert
+                  severity={driveResult.successCount === driveResult.totalCount ? "success" : "warning"}
+                  sx={{ mt: 2 }}
+                >
+                  Upload concluído: {driveResult.successCount}/{driveResult.totalCount} arquivos enviados com sucesso.
+                  {driveResult.successCount < driveResult.totalCount && (
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      Alguns arquivos falharam no upload. Verifique sua conexão e tente novamente.
+                    </Typography>
+                  )}
+                </Alert>
+              )}
+            </Box>
+          )}
+
+          {generatedImages.length > 0 && (
+            <Box sx={{ mt: 3 }}>
+              <Divider sx={{ mb: 2 }} />
+              <Typography variant="h6" gutterBottom>
+                Imagens Geradas ({generatedImages.length})
+              </Typography>
+
+              <Grid container spacing={2}>
+                {generatedImages.map((imageData, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={index}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <Chip
+                            label={`#${index + 1}`}
+                            size="small"
+                            color="primary"
+                            sx={{ mr: 1 }}
+                          />
+                          <Typography variant="body2" noWrap sx={{ flexGrow: 1 }}>
+                            {imageData.filename}
+                          </Typography>
+                        </Box>
+
+<Box sx={{
+                          width: 'auto',
+                          maxWidth: '100%',
+                          height: 'auto',
+                          maxHeight: '180px',
+                          display: 'inline-flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          padding: '10px',
+                          backgroundColor: 'white',
+                          borderRadius: '4px',
+                          mb: 1,
+                          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2), 0 6px 20px rgba(0, 0, 0, 0.19)',
+                          cursor: 'pointer',
+                          '&:hover img': {
+                            transform: 'scale(1.03)',
+                          },
+                          '&:hover': {
+                            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.25), 0 10px 25px rgba(0, 0, 0, 0.22)',
+                            transform: 'translateY(-2px)',
+                          },
+                          transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out',
+                        }}
+                        onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
+                        >
+                          <img
+                            key={imageData.url}
+                            src={imageData.url}
+                            alt={`Preview ${index + 1}`}
+                            style={{
+                              display: 'block',
+                              maxWidth: '100%',
+                              maxHeight: '150px',
+                              width: 'auto',
+                              height: 'auto',
+                              objectFit: 'contain',
+                              transition: 'transform 0.3s ease-in-out',
+                              boxShadow: 'inset 0 0 2px rgba(0,0,0,0.1)',
+                            }}
+                          />
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
+                            title="Editar Posições/Estilos"
+                          >
+                            <Edit />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleReplaceImageClick(imageData.index)}
+                            title="Substituir Imagem de Fundo"
+                          >
+                            <SwapHoriz />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => downloadImage(imageData)}
+                            title="Download"
+                          >
+                            <Download />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleShare(imageData)}
+                            title="Compartilhar"
+                          >
+                            <Share />
+                          </IconButton>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          )}
         </CardContent>
       </Card>
+
+      <Dialog open={previewOpen} onClose={closePreview} maxWidth="lg" fullWidth>
+        <DialogTitle>
+          Preview - {selectedPreview?.filename}
+          <IconButton onClick={closePreview} sx={{ position: 'absolute', right: 8, top: 8 }}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          {selectedPreview && (
+            <Box sx={{ textAlign: 'center' }}>
+              <img src={selectedPreview.url} alt={selectedPreview.filename} style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }} />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => downloadImage(selectedPreview)} startIcon={<Download />}>Download</Button>
+          <Button onClick={closePreview}>Fechar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {showGeneratedImageEditor && editingGeneratedImageIndex !== null && (() => {
+        const imageToEdit = generatedImages.find(img => img.index === editingGeneratedImageIndex);
+        if (!imageToEdit) {
+          console.error(`[IGFO] Render: Could not find image with index ${editingGeneratedImageIndex} to edit.`);
+          return null;
+        }
+        const positionsToLoad = imageToEdit.customFieldPositions !== undefined ? imageToEdit.customFieldPositions : fieldPositions;
+        const stylesToLoad = imageToEdit.customFieldStyles !== undefined ? imageToEdit.customFieldStyles : fieldStyles;
+        const brandElementsToLoad = imageToEdit.customBrandElements !== undefined ? imageToEdit.customBrandElements : brandElements;
+        return (
+          <GeneratedImageEditor
+            open={showGeneratedImageEditor}
+            onClose={handleCloseGeneratedImageEditor}
+            imageData={imageToEdit}
+            globalCsvHeaders={csvHeaders}
+            initialFieldPositions={JSON.parse(JSON.stringify(positionsToLoad || {}))}
+            initialFieldStyles={JSON.parse(JSON.stringify(stylesToLoad || {}))}
+            onSave={handleSaveIndividualModifications}
+            colorPalette={colorPalette}
+            globalBackgroundImage={backgroundImage}
+            originalImageSize={imageToEdit.customOriginalImageSize || originalImageSize}
+            imageFilters={imageFilters}
+            brandElements={brandElementsToLoad}
+          />
+        );
+      })()}
+
+      <input
+        type="file"
+        accept="image/png, image/jpeg"
+        style={{ display: 'none' }}
+        ref={individualImageInputRef}
+        onChange={handleIndividualImageUpload}
+      />
+      <ProgressModal
+        open={showProgressModal}
+        progress={progress}
+        total={csvData.length}
+        onCancel={handleCancelGeneration}
+        title="Gerando Imagens"
+        progressText={`Gerando imagem ${progress} de ${csvData.length}...`}
+      />
     </Box>
   );
 };
