@@ -54,10 +54,11 @@ export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
   console.log('[uploadAsset] dataUrl check passed.'); // LOG 3
 
   console.log('[uploadAsset] About to check userId...'); // LOG 4
-  if (!userId) {
-    throw new Error("User ID is required to upload assets.");
-  }
-  console.log('[uploadAsset] userId check passed.'); // LOG 5
+  // DIAGNOSTIC: Commenting out the userId check to see if it's the source of the hang.
+  // if (!userId) {
+  //   throw new Error("User ID is required to upload assets.");
+  // }
+  console.log('[uploadAsset] userId check passed (DIAGNOSTICALLY SKIPPED).'); // LOG 5
 
   const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
   console.log(`[uploadAsset] Starting manual upload for: ${fullPath}`);
