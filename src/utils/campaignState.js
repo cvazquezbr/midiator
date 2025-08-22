@@ -3,6 +3,7 @@ import { upload } from '@vercel/blob/client';
 import fetchWithAuth from './fetchWithAuth';
 
 const dataURLtoBlob = (dataurl) => {
+  console.log('[dataURLtoBlob] Starting conversion...');
   const arr = dataurl.split(',');
   if (arr.length < 2) {
     throw new Error('Invalid dataURL');
@@ -12,13 +13,23 @@ const dataURLtoBlob = (dataurl) => {
     throw new Error('Could not determine mime type from dataURL');
   }
   const mime = mimeMatch[1];
+  console.log(`[dataURLtoBlob] Mime type: ${mime}. Decoding base64 string...`);
+
   const bstr = atob(arr[1]);
   let n = bstr.length;
+  console.log(`[dataURLtoBlob] Decoded string length: ${n}. Allocating Uint8Array...`);
+
   const u8arr = new Uint8Array(n);
+  console.log('[dataURLtoBlob] Array allocated. Populating array...');
+
   while (n--) {
     u8arr[n] = bstr.charCodeAt(n);
   }
-  return new Blob([u8arr], { type: mime });
+  console.log('[dataURLtoBlob] Array populated. Creating Blob...');
+
+  const blob = new Blob([u8arr], { type: mime });
+  console.log('[dataURLtoBlob] Conversion complete.');
+  return blob;
 };
 
 /**
@@ -38,22 +49,23 @@ export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
   const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
 
   try {
+    console.log('[uploadAsset] Converting dataURL to Blob...');
     const blob = dataURLtoBlob(dataUrl);
     console.log(`[uploadAsset] Converted dataURL to Blob. Size: ${blob.size} bytes. Path: ${fullPath}`);
 
+    console.log('[uploadAsset] Calling Vercel SDK upload function...');
     const newBlob = await upload(fullPath, blob, {
       access: 'public',
       handleUploadUrl: '/api/upload',
       clientPayload: JSON.stringify({ campaignId }),
-      // The SDK handles retries and timeouts, so we don't need fetchWithTimeout.
     });
+    console.log('[uploadAsset] Vercel SDK upload function returned.');
 
     console.log(`[uploadAsset] Successfully uploaded ${filename}. URL: ${newBlob.url}`);
     return newBlob.url;
 
   } catch (error) {
     console.error(`[uploadAsset] Vercel upload failed for ${filename}:`, error);
-    // The error from the SDK is often descriptive enough.
     throw new Error(`Failed to upload ${filename}. Please check the console for details.`);
   }
 };
@@ -71,8 +83,11 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
   let assetsToUploadCount = 0;
   let assetsUploadedCount = 0;
 
-  // 1. Count assets that need uploading for the progress bar.
+  // 1. Count all assets that need uploading for the progress bar.
   if (cleanState.backgroundImage && cleanState.backgroundImage.startsWith('data:')) {
+    assetsToUploadCount++;
+  }
+  if (cleanState.generatedImageUrl && cleanState.generatedImageUrl.startsWith('data:')) {
     assetsToUploadCount++;
   }
   if (Array.isArray(cleanState.brandElements)) {
@@ -98,9 +113,18 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
       onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
     }
 
+    // Main Campaign Image
+    if (cleanState.generatedImageUrl && cleanState.generatedImageUrl.startsWith('data:')) {
+      const filename = `campaign_image_${Date.now()}.png`;
+      console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
+      const permanentUrl = await uploadAsset(cleanState.generatedImageUrl, filename, campaignId, userId);
+      cleanState.generatedImageUrl = permanentUrl;
+      assetsUploadedCount++;
+      onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
+    }
+
     // Brand Elements
     if (Array.isArray(cleanState.brandElements)) {
-      // Use a standard for-loop to process sequentially.
       for (const [index, element] of cleanState.brandElements.entries()) {
         if (element.url && element.url.startsWith('data:')) {
           const filename = `brand_${element.name || index}_${Date.now()}.png`;
@@ -113,11 +137,11 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
       }
     }
 
-    // Generated Images
+    // Generated Post Images
     if (Array.isArray(cleanState.generatedImagesData)) {
        for (const image of cleanState.generatedImagesData) {
         if (image.dataUrl && image.dataUrl.startsWith('data:')) {
-          const filename = image.filename || `image_${image.index}_${Date.now()}.png`;
+          const filename = image.filename || `post_image_${image.index}_${Date.now()}.png`;
           console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
           const permanentUrl = await uploadAsset(image.dataUrl, filename, campaignId, userId);
           image.url = permanentUrl;
