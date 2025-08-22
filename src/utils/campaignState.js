@@ -19,6 +19,25 @@ const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {
   });
 };
 
+const dataURLtoBlob = (dataurl) => {
+  const arr = dataurl.split(',');
+  if (arr.length < 2) {
+    throw new Error('Invalid dataURL');
+  }
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  if (!mimeMatch) {
+    throw new Error('Could not determine mime type from dataURL');
+  }
+  const mime = mimeMatch[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+};
+
 /**
  * Manually handles the Vercel Blob upload process.
  * It now accepts a dataUrl, converts it to a blob, and then uploads.
@@ -37,8 +56,9 @@ export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
   console.log(`[uploadAsset] Starting manual upload for: ${fullPath}`);
 
   try {
-    const response = await fetch(dataUrl);
-    const blob = await response.blob();
+    console.log('[uploadAsset] Converting data URL to blob...');
+    const blob = dataURLtoBlob(dataUrl);
+    console.log(`[uploadAsset] Conversion complete. Blob size: ${blob.size} bytes`);
 
     console.log(`[uploadAsset] Step 1: Requesting signed URL for ${fullPath}...`);
     const signedUrlResponse = await fetchWithTimeout(`/api/upload?filename=${encodeURIComponent(fullPath)}`, {
