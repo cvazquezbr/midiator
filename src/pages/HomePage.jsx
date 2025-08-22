@@ -210,9 +210,8 @@ function HomePage() {
     }
 
     // This console.log is now removed as the guard clause below is the real check.
-    console.log('[HomePage] Checking user object before save:', user);
     // Guard clause to ensure user ID is available from the now-refreshed context.
-    if (!user || !user.sub) {
+    if (!user || !user.uuid) {
       toast.error("Your session appears to be invalid. Please try logging out and logging back in.");
       return;
     }
@@ -248,12 +247,12 @@ function HomePage() {
     try {
       if (currentCampaign) {
         console.log(`[HomePage] Updating existing campaign, ID: ${currentCampaign.id}`);
-        const updated = await updateCampaign(currentCampaign.id, name, campaignDataToSave, setUploadProgress, user.sub);
+        const updated = await updateCampaign(currentCampaign.id, name, campaignDataToSave, setUploadProgress, user.uuid);
         toast.success(`Campaign "${name}" updated.`);
         setCurrentCampaign(updated);
       } else {
         console.log(`[HomePage] Saving new campaign.`);
-        const newCampaign = await saveCampaign(name, campaignDataToSave, setUploadProgress, user.sub);
+        const newCampaign = await saveCampaign(name, campaignDataToSave, setUploadProgress, user.uuid);
         toast.success(`Campaign "${name}" saved.`);
         setCurrentCampaign(newCampaign);
       }
@@ -326,7 +325,7 @@ function HomePage() {
         }
     };
     loadInitialSettings();
-  }, [user?.sub]);
+  }, [user?.uuid]);
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
