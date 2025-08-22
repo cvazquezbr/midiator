@@ -44,65 +44,57 @@ const dataURLtoBlob = (dataurl) => {
  * This function is now exported to be used by components directly.
  */
 export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
-  console.log('[uploadAsset] Function called.'); // LOG 1
-
-  console.log('[uploadAsset] About to check dataUrl...'); // LOG 2
+  // Perform lightweight checks first to avoid memory issues before validation.
   if (!dataUrl || !dataUrl.startsWith('data:')) {
-    console.error('[uploadAsset] Invalid dataUrl provided. The dataUrl is either missing or does not start with "data:".', { filename });
+    console.error('[uploadAsset] Invalid dataUrl provided.', { filename });
     throw new Error(`Asset "${filename}" could not be uploaded because it is not a valid data URL.`);
   }
-  console.log('[uploadAsset] dataUrl check passed.'); // LOG 3
-
-  console.log('[uploadAsset] About to check userId...'); // LOG 4
-  // DIAGNOSTIC: Commenting out the userId check to see if it's the source of the hang.
-  // if (!userId) {
-  //   throw new Error("User ID is required to upload assets.");
-  // }
-  console.log('[uploadAsset] userId check passed (DIAGNOSTICALLY SKIPPED).'); // LOG 5
+  if (!userId) {
+    throw new Error("User ID is required to upload assets for tracking.");
+  }
 
   const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
-  console.log(`[uploadAsset] Starting manual upload for: ${fullPath}`);
+  console.log(`[uploadAsset] Starting upload for: ${fullPath}`);
 
   try {
-    console.log('[uploadAsset] PRE-CONVERSION: Converting data URL to blob...');
+    // Now, perform the memory-intensive conversion.
     const blob = dataURLtoBlob(dataUrl);
-    console.log(`[uploadAsset] POST-CONVERSION: Conversion complete. Blob size: ${blob.size} bytes`);
 
-    console.log(`[uploadAsset] PRE-FETCH-SIGNED-URL: Requesting signed URL for ${fullPath}...`);
-    const signedUrlResponse = await fetchWithTimeout(`/api/upload?filename=${encodeURIComponent(fullPath)}`, {
+    // Request the signed URL from our serverless function.
+    const signedUrlResponse = await fetchWithTimeout(`/api/upload`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pathname: fullPath, clientPayload: JSON.stringify({ campaignId }) }),
+      body: JSON.stringify({
+        action: 'upload', // Required by the Vercel Blob handler
+        pathname: fullPath,
+        clientPayload: JSON.stringify({ campaignId }),
+      }),
     }, 15000);
-    console.log('[uploadAsset] POST-FETCH-SIGNED-URL: Got response from /api/upload.');
 
     if (!signedUrlResponse.ok) {
       const errorText = await signedUrlResponse.text();
       throw new Error(`Failed to get upload URL. Server responded with ${signedUrlResponse.status}: ${errorText}`);
     }
 
-    console.log('[uploadAsset] PRE-JSON-PARSE: Parsing signed URL response...');
     const newBlobData = await signedUrlResponse.json();
-    console.log(`[uploadAsset] POST-JSON-PARSE: Received signed URL data.`);
 
-    console.log(`[uploadAsset] PRE-UPLOAD-BLOB: Uploading file to signed URL...`);
+    // Upload the file to the blob storage using the signed URL.
     const uploadResponse = await fetchWithTimeout(newBlobData.uploadUrl, {
       method: 'PUT',
       headers: { 'x-ms-blob-type': 'BlockBlob', 'Content-Type': blob.type },
       body: blob,
     }, 60000);
-    console.log('[uploadAsset] POST-UPLOAD-BLOB: Got response from blob storage.');
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
       throw new Error(`Upload failed. Storage provider responded with ${uploadResponse.status}: ${errorText}`);
     }
 
-    console.log(`[uploadAsset] Final success log. Returning URL: ${newBlobData.url}`);
+    console.log(`[uploadAsset] Successfully uploaded ${filename}. URL: ${newBlobData.url}`);
     return newBlobData.url;
 
   } catch (error) {
-    console.error(`[uploadAsset] A network error or other exception occurred during upload for ${filename}:`, error);
+    console.error(`[uploadAsset] An error occurred during the upload for ${filename}:`, error);
     throw new Error(`Failed to upload ${filename}. Reason: ${error.message}`);
   }
 };
