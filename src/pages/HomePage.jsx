@@ -161,7 +161,11 @@ function HomePage() {
     setGeneratedVideosData(Array.isArray(state.generatedVideosData) ? state.generatedVideosData : []);
     setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
 
-    setBackgroundImage(state.backgroundImage ?? null);
+    if (state.backgroundImage) {
+      updateImageAndPalette(state.backgroundImage);
+    } else {
+      setBackgroundImage(null);
+    }
     setProblema(state.problema ?? '');
     setSolucao(state.solucao ?? '');
     setCampaignContent(state.campaignContent ?? null);
@@ -322,7 +326,7 @@ function HomePage() {
         }
     };
     loadInitialSettings();
-  }, [user]);
+  }, [user?.sub]);
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
@@ -501,7 +505,6 @@ function HomePage() {
       if (!regenerate) {
         // Reset dependent states for a fresh generation
         setFollowupPosts([]);
-        setGeneratedImageUrl(null);
 
         const [imageSuccess] = await Promise.all([
           handleGenerateImage(normalizedContent),
