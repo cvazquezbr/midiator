@@ -44,6 +44,7 @@ const dataURLtoBlob = (dataurl) => {
  * This function is now exported to be used by components directly.
  */
 export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
+  console.log('[uploadAsset] Function called.');
   if (!dataUrl || !dataUrl.startsWith('data:')) {
     console.error('[uploadAsset] Invalid dataUrl provided.', { dataUrl, filename });
     throw new Error(`Asset "${filename}" could not be uploaded because it is not a valid data URL.`);
@@ -51,47 +52,51 @@ export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
   if (!userId) {
     throw new Error("User ID is required to upload assets.");
   }
+  console.log('[uploadAsset] Passed initial checks.');
 
   const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
   console.log(`[uploadAsset] Starting manual upload for: ${fullPath}`);
 
   try {
-    console.log('[uploadAsset] Converting data URL to blob...');
+    console.log('[uploadAsset] PRE-CONVERSION: Converting data URL to blob...');
     const blob = dataURLtoBlob(dataUrl);
-    console.log(`[uploadAsset] Conversion complete. Blob size: ${blob.size} bytes`);
+    console.log(`[uploadAsset] POST-CONVERSION: Conversion complete. Blob size: ${blob.size} bytes`);
 
-    console.log(`[uploadAsset] Step 1: Requesting signed URL for ${fullPath}...`);
+    console.log(`[uploadAsset] PRE-FETCH-SIGNED-URL: Requesting signed URL for ${fullPath}...`);
     const signedUrlResponse = await fetchWithTimeout(`/api/upload?filename=${encodeURIComponent(fullPath)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pathname: fullPath, clientPayload: JSON.stringify({ campaignId }) }),
     }, 15000);
+    console.log('[uploadAsset] POST-FETCH-SIGNED-URL: Got response from /api/upload.');
 
     if (!signedUrlResponse.ok) {
       const errorText = await signedUrlResponse.text();
       throw new Error(`Failed to get upload URL. Server responded with ${signedUrlResponse.status}: ${errorText}`);
     }
 
+    console.log('[uploadAsset] PRE-JSON-PARSE: Parsing signed URL response...');
     const newBlobData = await signedUrlResponse.json();
-    console.log(`[uploadAsset] Step 1 complete. Received signed URL.`);
+    console.log(`[uploadAsset] POST-JSON-PARSE: Received signed URL data.`);
 
-    console.log(`[uploadAsset] Step 2: Uploading file to signed URL...`);
+    console.log(`[uploadAsset] PRE-UPLOAD-BLOB: Uploading file to signed URL...`);
     const uploadResponse = await fetchWithTimeout(newBlobData.uploadUrl, {
       method: 'PUT',
       headers: { 'x-ms-blob-type': 'BlockBlob', 'Content-Type': blob.type },
       body: blob,
     }, 60000);
+    console.log('[uploadAsset] POST-UPLOAD-BLOB: Got response from blob storage.');
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
       throw new Error(`Upload failed. Storage provider responded with ${uploadResponse.status}: ${errorText}`);
     }
 
-    console.log(`[uploadAsset] Step 2 complete. Successfully uploaded ${filename}. Final URL: ${newBlobData.url}`);
+    console.log(`[uploadAsset] Final success log. Returning URL: ${newBlobData.url}`);
     return newBlobData.url;
 
   } catch (error) {
-    console.error(`[uploadAsset] A network error occurred during upload for ${filename}:`, error);
+    console.error(`[uploadAsset] A network error or other exception occurred during upload for ${filename}:`, error);
     throw new Error(`Failed to upload ${filename}. Reason: ${error.message}`);
   }
 };
