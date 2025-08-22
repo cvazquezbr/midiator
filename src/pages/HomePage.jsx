@@ -143,14 +143,25 @@ function HomePage() {
   const getAppState = () => ({ activeStep, darkMode, sidebarOpen, csvData, csvHeaders, backgroundImage, colorPalette, standardsColors, problema, solucao, campaignContent, persona, autor, instrucoes, formato, aspectRatio, generatedImageUrl, conteudoMedio, conteudoPequeno, followupPosts, followupPostsQuantity, isScheduled, scheduleDate, weeklySchedule, selectedProfile, selectedImages, selectedVideos, inputMethod, promptNumRecords, promptText, fieldPositions, fieldStyles, displayedImageSize, originalImageSize, generatedImagesData, generatedAudioData, generatedVideosData, imageFilters, brandElements });
   const applyAppState = (state) => {
     if (!state) return;
+
+    console.log("Applying loaded state:", state);
+
     setActiveStep(state.activeStep ?? 0);
     setDarkMode(state.darkMode ?? false);
     setSidebarOpen(state.sidebarOpen ?? !isMobile);
-    setCsvData(state.csvData ?? []);
-    setCsvHeaders(state.csvHeaders ?? []);
+
+    // More robust checking for array properties
+    setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
+    setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
+    setColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
+    setStandardsColors(Array.isArray(state.standardsColors) ? state.standardsColors : []);
+    setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
+    setGeneratedImagesData(Array.isArray(state.generatedImagesData) ? state.generatedImagesData : []);
+    setGeneratedAudioData(Array.isArray(state.generatedAudioData) ? state.generatedAudioData : []);
+    setGeneratedVideosData(Array.isArray(state.generatedVideosData) ? state.generatedVideosData : []);
+    setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
+
     setBackgroundImage(state.backgroundImage ?? null);
-    setColorPalette(state.colorPalette ?? []);
-    setStandardsColors(state.standardsColors ?? []);
     setProblema(state.problema ?? '');
     setSolucao(state.solucao ?? '');
     setCampaignContent(state.campaignContent ?? null);
@@ -162,7 +173,6 @@ function HomePage() {
     setGeneratedImageUrl(state.generatedImageUrl ?? null);
     setConteudoMedio(state.conteudoMedio ?? '');
     setConteudoPequeno(state.conteudoPequeno ?? '');
-    setFollowupPosts(state.followupPosts ?? []);
     setFollowupPostsQuantity(state.followupPostsQuantity ?? 5);
     setIsScheduled(state.isScheduled ?? false);
     setScheduleDate(state.scheduleDate ? new Date(state.scheduleDate) : new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
@@ -177,11 +187,7 @@ function HomePage() {
     setFieldStyles(state.fieldStyles ?? {});
     setDisplayedImageSize(state.displayedImageSize ?? { width: 0, height: 0 });
     setOriginalImageSize(state.originalImageSize ?? { width: 0, height: 0 });
-    setGeneratedImagesData(state.generatedImagesData ?? []);
-    setGeneratedAudioData(state.generatedAudioData ?? []);
-    setGeneratedVideosData(state.generatedVideosData ?? []);
     setImageFilters(state.imageFilters ?? { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 });
-    setBrandElements(state.brandElements ?? []);
   };
 
   const handleSaveCampaign = async (name) => {
@@ -253,6 +259,7 @@ function HomePage() {
     setIsLoading(true);
     try {
       const loadedCampaign = await loadCampaign(id);
+      console.log("Loaded campaign data from DB:", loadedCampaign); // Diagnostic log
       applyAppState(loadedCampaign.campaign_data);
       setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
       toast.success(`Campaign "${loadedCampaign.name}" loaded successfully!`);
