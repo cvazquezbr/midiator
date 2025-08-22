@@ -1,25 +1,12 @@
-import { handleUpload } from '@vercel/blob/client';
+import { handleUpload } from '@vercel/blob/server';
 import { withAuth } from './middleware/auth.js';
 
-// Helper function to parse the request body in a Vercel serverless function environment
-function parseJson(req) {
-  return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk.toString();
-    });
-    req.on('end', () => {
-      try {
-        resolve(JSON.parse(body));
-      } catch (error) {
-        reject(error);
-      }
-    });
-    req.on('error', (error) => {
-      reject(error);
-    });
-  });
-}
+// This config is crucial to disable the default body parser
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 const handler = async (req, res) => {
   console.log('[API /upload] Received request');
@@ -31,10 +18,11 @@ const handler = async (req, res) => {
   }
 
   try {
-    const body = await parseJson(req);
+    // No longer parsing the body here.
+    // The raw `req` object will be passed to `handleUpload`.
 
     const jsonResponse = await handleUpload({
-      body,
+      body: req,
       request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         console.log(`[API /upload] onBeforeGenerateToken: Pathname: ${pathname}`);
