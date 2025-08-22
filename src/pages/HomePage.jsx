@@ -150,14 +150,18 @@ function HomePage() {
     setDarkMode(state.darkMode ?? false);
     setSidebarOpen(state.sidebarOpen ?? !isMobile);
 
-    // More robust checking for array properties
     setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
     setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
     setColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
     setStandardsColors(Array.isArray(state.standardsColors) ? state.standardsColors : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
     setGeneratedImagesData(Array.isArray(state.generatedImagesData) ? state.generatedImagesData : []);
-    setGeneratedAudioData(Array.isArray(state.generatedAudioData) ? state.generatedAudioData : []);
+    // FIX: Filter out invalid audio data on load to prevent crashes
+    setGeneratedAudioData(
+      Array.isArray(state.generatedAudioData)
+        ? state.generatedAudioData.filter(a => a && typeof a.duration === 'number')
+        : []
+    );
     setGeneratedVideosData(Array.isArray(state.generatedVideosData) ? state.generatedVideosData : []);
     setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
 
@@ -199,18 +203,11 @@ function HomePage() {
 
     try {
       await checkAuthStatus();
-      // After checking auth status, which may have renewed the token,
-      // we must re-fetch the user data to update the context.
-      // await fetchUser(); // This was causing a re-load of settings, interrupting the save flow.
     } catch (error) {
-      // Errors from checkAuthStatus (like failed refresh) or fetchUser will be caught here.
-      // checkAuthStatus will handle the redirect if necessary.
       toast.error(error.message || "Could not verify your session.");
       return;
     }
 
-    // This console.log is now removed as the guard clause below is the real check.
-    // Guard clause to ensure user ID is available from the now-refreshed context.
     if (!user || !user.uuid) {
       toast.error("Your session appears to be invalid. Please try logging out and logging back in.");
       return;
