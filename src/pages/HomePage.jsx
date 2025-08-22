@@ -210,7 +210,7 @@ function HomePage() {
     }
 
     // This console.log is now removed as the guard clause below is the real check.
-
+    console.log('[HomePage] Checking user object before save:', user);
     // Guard clause to ensure user ID is available from the now-refreshed context.
     if (!user || !user.sub) {
       toast.error("Your session appears to be invalid. Please try logging out and logging back in.");
