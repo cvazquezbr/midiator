@@ -104,91 +104,79 @@ export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
  * and replacing their data URLs with permanent cloud URLs.
  */
 export const serializeCampaignData = async (state, userId, campaignId = null, onProgress = () => {}) => {
-  console.log('[serializeCampaignData] Starting serialization and upload process...');
+  console.log('[serializeCampaignData] Starting memory-efficient serialization...');
 
   const cleanState = JSON.parse(JSON.stringify(state));
-  const assetsToUpload = [];
+  let assetsToUploadCount = 0;
+  let assetsUploadedCount = 0;
 
-  // 1. Gather all assets that need uploading
-  // Main background image
+  // 1. First, just count how many assets need uploading for the progress bar.
   if (cleanState.backgroundImage && cleanState.backgroundImage.startsWith('data:')) {
-    assetsToUpload.push({
-      type: 'backgroundImage',
-      dataUrl: cleanState.backgroundImage,
-      filename: `background_${Date.now()}.png`,
-    });
+    assetsToUploadCount++;
   }
-
-  // Brand elements
-  if (cleanState.brandElements && Array.isArray(cleanState.brandElements)) {
-    cleanState.brandElements.forEach((element, index) => {
-      if (element.url && element.url.startsWith('data:')) {
-        assetsToUpload.push({
-          type: 'brandElement',
-          dataUrl: element.url,
-          filename: `brand_${element.name || index}_${Date.now()}.png`,
-          index: index,
-        });
-      }
-    });
+  if (Array.isArray(cleanState.brandElements)) {
+    assetsToUploadCount += cleanState.brandElements.filter(el => el.url && el.url.startsWith('data:')).length;
   }
-
-  // Generated images
-  if (cleanState.generatedImagesData && Array.isArray(cleanState.generatedImagesData)) {
-    cleanState.generatedImagesData.forEach((image, index) => {
-      // The frontend now saves the dataUrl property for uploads
-      if (image.dataUrl && image.dataUrl.startsWith('data:')) {
-        assetsToUpload.push({
-          type: 'generatedImage',
-          dataUrl: image.dataUrl,
-          filename: image.filename || `image_${index}_${Date.now()}.png`,
-          index: index,
-        });
-      }
-    });
+  if (Array.isArray(cleanState.generatedImagesData)) {
+    assetsToUploadCount += cleanState.generatedImagesData.filter(img => img.dataUrl && img.dataUrl.startsWith('data:')).length;
   }
+  // Add other asset types here for counting in the future.
 
-  // Placeholder for future media types
-  // if (cleanState.generatedAudioData) { ... }
-  // if (cleanState.generatedVideosData) { ... }
+  console.log(`[serializeCampaignData] Found ${assetsToUploadCount} assets to upload.`);
+  onProgress({ current: 0, total: assetsToUploadCount });
 
-  console.log(`[serializeCampaignData] Found ${assetsToUpload.length} assets to upload.`);
-  onProgress({ current: 0, total: assetsToUpload.length });
-
-  // 2. Upload assets sequentially
-  for (let i = 0; i < assetsToUpload.length; i++) {
-    const asset = assetsToUpload[i];
-    console.log(`[serializeCampaignData] Uploading asset ${i + 1}/${assetsToUpload.length}: ${asset.filename}`);
-    try {
-      const permanentUrl = await uploadAsset(asset.dataUrl, asset.filename, campaignId, userId);
-
-      // 3. Update the cleanState with the new permanent URL
-      switch (asset.type) {
-        case 'backgroundImage':
-          cleanState.backgroundImage = permanentUrl;
-          break;
-        case 'brandElement':
-          cleanState.brandElements[asset.index].url = permanentUrl;
-          break;
-        case 'generatedImage':
-          cleanState.generatedImagesData[asset.index].url = permanentUrl;
-          // Important: Clean up the temporary data from the object that will be saved
-          delete cleanState.generatedImagesData[asset.index].dataUrl;
-          break;
-        // ... other cases
-      }
-      console.log(`[serializeCampaignData] Upload successful for ${asset.filename}`);
-      onProgress({ current: i + 1, total: assetsToUpload.length });
-    } catch (error) {
-      console.error(`[serializeCampaignData] Failed to upload ${asset.filename}:`, error);
-      throw new Error(`O upload do arquivo ${asset.filename} falhou. A campanha não foi salva.`);
+  // 2. Process each asset type sequentially without creating a large intermediate array.
+  try {
+    // Background Image
+    if (cleanState.backgroundImage && cleanState.backgroundImage.startsWith('data:')) {
+      const filename = `background_${Date.now()}.png`;
+      console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
+      const permanentUrl = await uploadAsset(cleanState.backgroundImage, filename, campaignId, userId);
+      cleanState.backgroundImage = permanentUrl;
+      assetsUploadedCount++;
+      onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
     }
+
+    // Brand Elements
+    if (Array.isArray(cleanState.brandElements)) {
+      for (const [index, element] of cleanState.brandElements.entries()) {
+        if (element.url && element.url.startsWith('data:')) {
+          const filename = `brand_${element.name || index}_${Date.now()}.png`;
+          console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
+          const permanentUrl = await uploadAsset(element.url, filename, campaignId, userId);
+          element.url = permanentUrl; // Directly mutate the element in the copied state
+          assetsUploadedCount++;
+          onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
+        }
+      }
+    }
+
+    // Generated Images
+    if (Array.isArray(cleanState.generatedImagesData)) {
+      for (const image of cleanState.generatedImagesData) {
+        if (image.dataUrl && image.dataUrl.startsWith('data:')) {
+          const filename = image.filename || `image_${image.index}_${Date.now()}.png`;
+          console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
+          const permanentUrl = await uploadAsset(image.dataUrl, filename, campaignId, userId);
+          image.url = permanentUrl;
+          delete image.dataUrl; // Clean up the temporary field
+          assetsUploadedCount++;
+          onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
+        }
+      }
+    }
+
+    // Add other asset types here for processing in the future.
+
+  } catch (error) {
+    // The error from uploadAsset is already descriptive.
+    console.error(`[serializeCampaignData] A failure occurred during sequential upload.`, error);
+    throw error; // Re-throw to be caught by the calling function (save/updateCampaign)
   }
 
   // 4. Final cleanup of any remaining temporary fields
-  // This is a safeguard. The primary cleanup happens after each successful upload.
   const finalCleanup = (assetArray) => {
-    if (assetArray && Array.isArray(assetArray)) {
+    if (Array.isArray(assetArray)) {
       assetArray.forEach(asset => {
         delete asset.dataUrl;
         delete asset.blob;
