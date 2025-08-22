@@ -1,4 +1,4 @@
-import { handleUpload } from '@vercel/blob/server';
+import { handleUpload } from '@vercel/blob/client';
 import { withAuth } from './middleware/auth.js';
 
 // This config is crucial to disable the default body parser
