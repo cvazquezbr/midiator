@@ -201,7 +201,7 @@ function HomePage() {
       await checkAuthStatus();
       // After checking auth status, which may have renewed the token,
       // we must re-fetch the user data to update the context.
-      await fetchUser();
+      // await fetchUser(); // This was causing a re-load of settings, interrupting the save flow.
     } catch (error) {
       // Errors from checkAuthStatus (like failed refresh) or fetchUser will be caught here.
       // checkAuthStatus will handle the redirect if necessary.
