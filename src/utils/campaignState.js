@@ -4,10 +4,10 @@ import fetchWithAuth from './fetchWithAuth';
 
 /**
  * Handles the Vercel Blob upload process using the official client SDK.
- * This version includes hyper-granular logging to diagnose hangs.
+ * This version includes hyper-granular logging and explicit catch handlers.
  */
 export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
-  console.log(`[uploadAsset] Preparing to upload: ${filename}. Data URL length: ${dataUrl.length}`);
+  console.log(`[uploadAsset] Preparing to upload: ${filename}.`);
 
   if (!dataUrl || !dataUrl.startsWith('data:')) {
     console.error('[uploadAsset] Invalid dataUrl provided.', { filename });
@@ -18,33 +18,39 @@ export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
   }
 
   const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
-  let blob;
 
   try {
-    // Step 1: Convert data URL to Blob
-    console.log('[uploadAsset] DIAGNOSTIC: About to fetch data URL.');
-    const response = await fetch(dataUrl);
-    console.log(`[uploadAsset] DIAGNOSTIC: Fetch complete. Status: ${response.status}.`);
+    console.log('[uploadAsset] Step 1: Fetching data URL...');
+    const response = await fetch(dataUrl).catch(e => {
+      console.error('[uploadAsset] FATAL: The `fetch(dataUrl)` promise rejected.', e);
+      throw e;
+    });
+    console.log('[uploadAsset] Step 1 COMPLETE. Fetch status:', response.status);
 
-    console.log('[uploadAsset] DIAGNOSTIC: About to convert response to blob.');
-    blob = await response.blob();
-    console.log(`[uploadAsset] DIAGNOSTIC: Blob conversion complete. Size: ${blob.size} bytes.`);
+    console.log('[uploadAsset] Step 2: Converting response to blob...');
+    const blob = await response.blob().catch(e => {
+      console.error('[uploadAsset] FATAL: The `response.blob()` promise rejected.', e);
+      throw e;
+    });
+    console.log('[uploadAsset] Step 2 COMPLETE. Blob size:', blob.size);
 
-    // Step 2: Upload to Vercel
-    console.log('[uploadAsset] DIAGNOSTIC: About to call Vercel upload SDK.');
+    console.log('[uploadAsset] Step 3: Calling Vercel upload SDK...');
     const newBlob = await upload(fullPath, blob, {
       access: 'public',
       handleUploadUrl: '/api/upload',
       clientPayload: JSON.stringify({ campaignId }),
+    }).catch(e => {
+      console.error('[uploadAsset] FATAL: The Vercel `upload()` promise rejected.', e);
+      throw e;
     });
-    console.log('[uploadAsset] DIAGNOSTIC: Vercel upload SDK returned.');
+    console.log('[uploadAsset] Step 3 COMPLETE. Vercel SDK returned.');
 
     console.log(`[uploadAsset] Successfully uploaded ${filename}. URL: ${newBlob.url}`);
     return newBlob.url;
 
   } catch (error) {
-    console.error(`[uploadAsset] A critical error occurred during the upload process for ${filename}:`, error);
-    throw new Error(`Failed to upload ${filename}. Please check the console for details.`);
+    console.error(`[uploadAsset] A critical error occurred in the upload chain for ${filename}:`, error);
+    throw new Error(`Failed to upload ${filename}. An operation failed silently. Check the logs above for a FATAL message.`);
   }
 };
 
