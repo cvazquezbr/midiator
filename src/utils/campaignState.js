@@ -1,23 +1,6 @@
 import { toast } from 'sonner';
+import { upload } from '@vercel/blob/client';
 import fetchWithAuth from './fetchWithAuth';
-
-const fetchWithTimeout = (resource, options = {}, timeout = 15000) => {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error('Request timed out')),
-      timeout
-    );
-    fetch(resource, options)
-      .then(response => {
-        clearTimeout(timer);
-        resolve(response);
-      })
-      .catch(err => {
-        clearTimeout(timer);
-        reject(err);
-      });
-  });
-};
 
 const dataURLtoBlob = (dataurl) => {
   const arr = dataurl.split(',');
@@ -39,78 +22,56 @@ const dataURLtoBlob = (dataurl) => {
 };
 
 /**
- * Manually handles the Vercel Blob upload process.
- * It now accepts a dataUrl, converts it to a blob, and then uploads.
- * This function is now exported to be used by components directly.
+ * Handles the Vercel Blob upload process using the official client SDK.
  */
 export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
-  // Perform lightweight checks first to avoid memory issues before validation.
+  console.log(`[uploadAsset] Preparing to upload: ${filename}`);
+
   if (!dataUrl || !dataUrl.startsWith('data:')) {
     console.error('[uploadAsset] Invalid dataUrl provided.', { filename });
-    throw new Error(`Asset "${filename}" could not be uploaded because it is not a valid data URL.`);
+    throw new Error(`Asset "${filename}" is not a valid data URL.`);
   }
   if (!userId) {
-    throw new Error("User ID is required to upload assets for tracking.");
+    throw new Error("User ID is required for upload.");
   }
 
   const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
-  console.log(`[uploadAsset] Starting upload for: ${fullPath}`);
 
   try {
-    // Now, perform the memory-intensive conversion.
     const blob = dataURLtoBlob(dataUrl);
+    console.log(`[uploadAsset] Converted dataURL to Blob. Size: ${blob.size} bytes. Path: ${fullPath}`);
 
-    // Request the signed URL from our serverless function.
-    const signedUrlResponse = await fetchWithTimeout(`/api/upload`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'upload', // Required by the Vercel Blob handler
-        pathname: fullPath,
-        clientPayload: JSON.stringify({ campaignId }),
-      }),
-    }, 15000);
+    const newBlob = await upload(fullPath, blob, {
+      access: 'public',
+      handleUploadUrl: '/api/upload',
+      clientPayload: JSON.stringify({ campaignId }),
+      // The SDK handles retries and timeouts, so we don't need fetchWithTimeout.
+    });
 
-    if (!signedUrlResponse.ok) {
-      const errorText = await signedUrlResponse.text();
-      throw new Error(`Failed to get upload URL. Server responded with ${signedUrlResponse.status}: ${errorText}`);
-    }
-
-    const newBlobData = await signedUrlResponse.json();
-
-    // Upload the file to the blob storage using the signed URL.
-    const uploadResponse = await fetchWithTimeout(newBlobData.uploadUrl, {
-      method: 'PUT',
-      headers: { 'x-ms-blob-type': 'BlockBlob', 'Content-Type': blob.type },
-      body: blob,
-    }, 60000);
-
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      throw new Error(`Upload failed. Storage provider responded with ${uploadResponse.status}: ${errorText}`);
-    }
-
-    console.log(`[uploadAsset] Successfully uploaded ${filename}. URL: ${newBlobData.url}`);
-    return newBlobData.url;
+    console.log(`[uploadAsset] Successfully uploaded ${filename}. URL: ${newBlob.url}`);
+    return newBlob.url;
 
   } catch (error) {
-    console.error(`[uploadAsset] An error occurred during the upload for ${filename}:`, error);
-    throw new Error(`Failed to upload ${filename}. Reason: ${error.message}`);
+    console.error(`[uploadAsset] Vercel upload failed for ${filename}:`, error);
+    // The error from the SDK is often descriptive enough.
+    throw new Error(`Failed to upload ${filename}. Please check the console for details.`);
   }
 };
+
 
 /**
  * Prepares campaign data for saving by uploading all local media assets sequentially
  * and replacing their data URLs with permanent cloud URLs.
  */
 export const serializeCampaignData = async (state, userId, campaignId = null, onProgress = () => {}) => {
-  console.log('[serializeCampaignData] Starting memory-efficient serialization...');
+  console.log('[serializeCampaignData] Starting serialization and upload...');
 
+  // Deep copy to avoid mutating the original state object directly.
   const cleanState = JSON.parse(JSON.stringify(state));
   let assetsToUploadCount = 0;
   let assetsUploadedCount = 0;
 
-  // 1. First, just count how many assets need uploading for the progress bar.
+  // 1. Count assets that need uploading for the progress bar.
   if (cleanState.backgroundImage && cleanState.backgroundImage.startsWith('data:')) {
     assetsToUploadCount++;
   }
@@ -120,12 +81,12 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
   if (Array.isArray(cleanState.generatedImagesData)) {
     assetsToUploadCount += cleanState.generatedImagesData.filter(img => img.dataUrl && img.dataUrl.startsWith('data:')).length;
   }
-  // Add other asset types here for counting in the future.
+  // Future asset types can be counted here.
 
   console.log(`[serializeCampaignData] Found ${assetsToUploadCount} assets to upload.`);
   onProgress({ current: 0, total: assetsToUploadCount });
 
-  // 2. Process each asset type sequentially without creating a large intermediate array.
+  // 2. Process each asset type sequentially.
   try {
     // Background Image
     if (cleanState.backgroundImage && cleanState.backgroundImage.startsWith('data:')) {
@@ -139,12 +100,13 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
 
     // Brand Elements
     if (Array.isArray(cleanState.brandElements)) {
+      // Use a standard for-loop to process sequentially.
       for (const [index, element] of cleanState.brandElements.entries()) {
         if (element.url && element.url.startsWith('data:')) {
           const filename = `brand_${element.name || index}_${Date.now()}.png`;
           console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
           const permanentUrl = await uploadAsset(element.url, filename, campaignId, userId);
-          element.url = permanentUrl; // Directly mutate the element in the copied state
+          element.url = permanentUrl;
           assetsUploadedCount++;
           onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
         }
@@ -153,7 +115,7 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
 
     // Generated Images
     if (Array.isArray(cleanState.generatedImagesData)) {
-      for (const image of cleanState.generatedImagesData) {
+       for (const image of cleanState.generatedImagesData) {
         if (image.dataUrl && image.dataUrl.startsWith('data:')) {
           const filename = image.filename || `image_${image.index}_${Date.now()}.png`;
           console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
@@ -166,25 +128,21 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
       }
     }
 
-    // Add other asset types here for processing in the future.
-
   } catch (error) {
-    // The error from uploadAsset is already descriptive.
     console.error(`[serializeCampaignData] A failure occurred during sequential upload.`, error);
-    throw error; // Re-throw to be caught by the calling function (save/updateCampaign)
+    toast.error(`Upload failed: ${error.message}`);
+    throw error;
   }
 
-  // 4. Final cleanup of any remaining temporary fields
+  // 3. Final cleanup of any remaining temporary fields
   const finalCleanup = (assetArray) => {
     if (Array.isArray(assetArray)) {
       assetArray.forEach(asset => {
         delete asset.dataUrl;
         delete asset.blob;
-        delete asset.backgroundImage; // Old field, good to keep cleaning
       });
     }
   };
-  finalCleanup(cleanState.brandElements);
   finalCleanup(cleanState.generatedImagesData);
 
   console.log('[serializeCampaignData] All uploads and cleanup complete.');
@@ -192,16 +150,32 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
 };
 
 export const deserializeCampaignData = async (loadedState) => {
+  // For now, this function is a placeholder. In the future, it could
+  // be used to pre-fetch or transform URLs if needed.
   return loadedState;
 };
 
 // --- API Functions ---
 export const getCampaigns = async () => {
-  // ... (omitted for brevity, no changes)
+  const res = await fetchWithAuth('/api/campaigns');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to fetch campaigns.');
+  }
+  return res.json();
 };
 
 export const loadCampaign = async (id) => {
-  // ... (omitted for brevity, no changes)
+  const res = await fetchWithAuth(`/api/campaigns/${id}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to load campaign.');
+  }
+  const campaign = await res.json();
+  if (campaign.campaign_data) {
+    campaign.campaign_data = await deserializeCampaignData(campaign.campaign_data);
+  }
+  return campaign;
 };
 
 export const saveCampaign = async (name, campaignData, setProgress, userId) => {
@@ -213,7 +187,6 @@ export const saveCampaign = async (name, campaignData, setProgress, userId) => {
 
     console.log('[campaignState] Step 2: Sending campaign data to server...');
     const requestBody = JSON.stringify({ name, campaign_data: stateToSave });
-    console.log('[campaignState] Request body to be sent:', requestBody.substring(0, 500) + '...');
 
     const createRes = await fetchWithAuth('/api/campaigns', {
       method: 'POST',
@@ -232,6 +205,7 @@ export const saveCampaign = async (name, campaignData, setProgress, userId) => {
     return result;
   } catch (error) {
       console.error('[campaignState] An error occurred during the save process:', error);
+      // Toast is now handled in serializeCampaignData, but keep one here for other errors.
       toast.error(`Save failed: ${error.message}`);
       throw error;
   }
@@ -246,7 +220,6 @@ export const updateCampaign = async (id, name, campaignData, setProgress, userId
 
         console.log('[campaignState] Step 2: Sending updated campaign data to server...');
         const requestBody = JSON.stringify({ name, campaign_data: stateToSave });
-        console.log('[campaignState] Request body to be sent:', requestBody.substring(0, 500) + '...');
 
         const res = await fetchWithAuth(`/api/campaigns/${id}`, {
             method: 'PUT',

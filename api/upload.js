@@ -1,80 +1,62 @@
-import { handleUpload } from '@vercel/blob/client';
+import { handleUpload } from '@vercel/blob/server';
 import { withAuth } from './middleware/auth.js';
 
-// Helper to parse the body for Vercel Serverless Functions
-async function parseJson(req) {
-  return new Promise((resolve, reject) => {
-    let data = '';
-    req.on('data', (chunk) => {
-      data += chunk;
-    });
-    req.on('end', () => {
-      try {
-        resolve(JSON.parse(data));
-      } catch (error) {
-        reject(error);
-      }
-    });
-    req.on('error', (error) => {
-      reject(error);
-    });
-  });
-}
-
 const handler = async (req, res) => {
+  console.log('[API /upload] Received request');
+
   if (req.method !== 'POST') {
+    console.warn(`[API /upload] Method not allowed: ${req.method}`);
+    res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
-    const body = await parseJson(req);
-
     const jsonResponse = await handleUpload({
-      body,
       request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
+        console.log(`[API /upload] onBeforeGenerateToken: Pathname: ${pathname}`);
+
+        // Authentication check
         if (!req.user || !req.user.sub) {
+          console.error('[API /upload] Auth error: User not found in request.');
           throw new Error('Authentication is required to upload files.');
         }
+        const userId = req.user.sub;
+        console.log(`[API /upload] Authenticated user: ${userId}`);
 
         const payload = clientPayload ? JSON.parse(clientPayload) : {};
-        const { campaignId } = payload;
+        console.log('[API /upload] Client payload parsed:', payload);
 
-        // The client now sends the full path. We just need to sanitize it
-        // and verify the user is allowed to write to it.
+        // Path sanitization and validation
         const sanitizedPathname = pathname.replace(/^\/|\/$/g, '').replace(/\.\./g, '');
-
-        // The path must start with the user's ID to ensure they are not writing to other users' folders.
-        if (!sanitizedPathname.startsWith(req.user.sub)) {
+        if (!sanitizedPathname.startsWith(userId)) {
+          console.error(`[API /upload] AuthZ error: User ${userId} tried to upload to forbidden path ${sanitizedPathname}.`);
           throw new Error('User is not allowed to upload to this path.');
         }
 
+        console.log(`[API /upload] Path authorized: ${sanitizedPathname}`);
+
         return {
           allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'audio/mpeg', 'video/webm', 'audio/webm', 'audio/wav'],
-          tokenPayload: JSON.stringify({
-            userId: req.user.sub,
-            campaignId: campaignId, // Keep this for potential future use
-          }),
-          pathname: sanitizedPathname, // Use the sanitized path from the client
+          tokenPayload: JSON.stringify({ userId }),
+          pathname: sanitizedPathname,
         };
       },
       onUploadCompleted: async ({ blob, tokenPayload }) => {
-        // This is where you can add custom logic after an upload is complete.
-        // For example, you can save the blob's URL to your database.
-        // Here, we're just logging it.
-        console.log('Blob upload completed for user', JSON.parse(tokenPayload).userId);
-        console.log('Blob details:', blob);
+        const { userId } = JSON.parse(tokenPayload);
+        console.log(`[API /upload] onUploadCompleted: Blob upload finished for user ${userId}.`);
+        console.log('[API /upload] Blob details:', { url: blob.url, pathname: blob.pathname, contentType: blob.contentType, contentLength: blob.contentLength });
       },
     });
 
+    console.log('[API /upload] handleUpload completed successfully. Sending response to client.');
     return res.status(200).json(jsonResponse);
+
   } catch (error) {
-    console.error('Error in Vercel Blob upload handler:', error);
-    // Return a 500 error for server-side issues
+    console.error('[API /upload] An unhandled error occurred in the upload handler:', error);
     return res.status(500).json({
-      error: 'Ocorreu um erro interno no servidor durante o upload.',
+      error: 'An internal server error occurred during the upload.',
       details: error.message,
-      suggestion: 'Verifique se o armazenamento de Blob (Vercel Blob, S3, etc.) está corretamente configurado e conectado ao projeto Vercel.'
     });
   }
 };
