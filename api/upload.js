@@ -1,6 +1,26 @@
 import { handleUpload } from '@vercel/blob/client';
 import { withAuth } from './middleware/auth.js';
 
+// Helper function to parse the request body in a Vercel serverless function environment
+function parseJson(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(body));
+      } catch (error) {
+        reject(error);
+      }
+    });
+    req.on('error', (error) => {
+      reject(error);
+    });
+  });
+}
+
 const handler = async (req, res) => {
   console.log('[API /upload] Received request');
 
@@ -11,7 +31,10 @@ const handler = async (req, res) => {
   }
 
   try {
+    const body = await parseJson(req);
+
     const jsonResponse = await handleUpload({
+      body,
       request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         console.log(`[API /upload] onBeforeGenerateToken: Pathname: ${pathname}`);
