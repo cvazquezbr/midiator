@@ -35,6 +35,16 @@ import googleCloudTTSAPI from '../utils/googleCloudTTSAPI';
 import { useSettings } from '../context/SettingsContext';
 import ProgressModal from './ProgressModal';
 
+// Helper function to convert a Blob to a base64 data URL
+const blobToDataURL = (blob) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
 const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAudioData }) => {
   const [audioData, setAudioData] = useState(initialAudioData || []);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -83,7 +93,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
       utterance.onend = () => {
         const baseDuration = textWithoutEmojis.length * 50;
         const adjustedDuration = baseDuration / rate; // Ajustar duração baseada na velocidade
-        resolve({ text, duration: adjustedDuration / 1000, blob: null, source: 'browser', rate });
+        resolve({ text, duration: adjustedDuration / 1000, blob: null, url: null, source: 'browser', rate });
       };
       utterance.onerror = (event) => {
         reject(event.error);
@@ -148,12 +158,16 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
     // A velocidade é passada para o método synthesize
     const audioContent = await googleCloudTTSAPI.synthesize(cleanText, voice, rate);
     const blob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
+
+    // Convert blob to a data URL for serialization
+    const dataURL = await blobToDataURL(blob);
+
+    const audio = new Audio(dataURL);
     
     return new Promise(resolve => {
       audio.onloadedmetadata = () => {
-        resolve({ text, duration: audio.duration, blob, source: 'google-tts', rate });
+        // Add the `url` property to the resolved object
+        resolve({ text, duration: audio.duration, blob, url: dataURL, source: 'google-tts', rate });
       };
     });
   };
@@ -227,7 +241,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
         const utterance = new SpeechSynthesisUtterance(audio.text);
         utterance.lang = 'pt-BR';
         utterance.rate = speechRate;
-        utterance.onend = () => {
+        utterance.onended = () => {
           setCurrentlyPlaying(null);
         };
         speechSynthesis.speak(utterance);
