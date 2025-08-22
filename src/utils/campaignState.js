@@ -44,15 +44,20 @@ const dataURLtoBlob = (dataurl) => {
  * This function is now exported to be used by components directly.
  */
 export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
-  console.log('[uploadAsset] Function called.');
+  console.log('[uploadAsset] Function called.'); // LOG 1
+
+  console.log('[uploadAsset] About to check dataUrl...'); // LOG 2
   if (!dataUrl || !dataUrl.startsWith('data:')) {
-    console.error('[uploadAsset] Invalid dataUrl provided.', { dataUrl, filename });
+    console.error('[uploadAsset] Invalid dataUrl provided. The dataUrl is either missing or does not start with "data:".', { filename });
     throw new Error(`Asset "${filename}" could not be uploaded because it is not a valid data URL.`);
   }
+  console.log('[uploadAsset] dataUrl check passed.'); // LOG 3
+
+  console.log('[uploadAsset] About to check userId...'); // LOG 4
   if (!userId) {
     throw new Error("User ID is required to upload assets.");
   }
-  console.log('[uploadAsset] Passed initial checks.');
+  console.log('[uploadAsset] userId check passed.'); // LOG 5
 
   const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
   console.log(`[uploadAsset] Starting manual upload for: ${fullPath}`);
