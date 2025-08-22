@@ -193,6 +193,7 @@ export const saveCampaign = async (name, campaignData, setProgress, userId) => {
     const stateToSave = await serializeCampaignData(campaignData, userId, null, setProgress);
     console.log('[campaignState] Step 1 COMPLETE.');
 
+    console.log('[campaignState] VERIFICATION: Final object being sent to the database:', stateToSave);
     console.log('[campaignState] Step 2: Sending campaign data to server...');
     const requestBody = JSON.stringify({ name, campaign_data: stateToSave });
 
@@ -226,6 +227,7 @@ export const updateCampaign = async (id, name, campaignData, setProgress, userId
         const stateToSave = await serializeCampaignData(campaignData, userId, id, setProgress);
         console.log('[campaignState] Step 1 COMPLETE.');
 
+        console.log('[campaignState] VERIFICATION: Final object being sent to the database for update:', stateToSave);
         console.log('[campaignState] Step 2: Sending updated campaign data to server...');
         const requestBody = JSON.stringify({ name, campaign_data: stateToSave });
 
