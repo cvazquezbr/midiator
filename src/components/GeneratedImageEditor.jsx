@@ -73,7 +73,8 @@ const GeneratedImageEditor = ({
   };
 
   // Local state for image filters and toggles
-  const [editedImageFilters, setEditedImageFilters] = useState(imageFilters);
+  const defaultFilters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 };
+  const [editedImageFilters, setEditedImageFilters] = useState(imageFilters || defaultFilters);
 
   const handleInternalFieldSelection = useCallback((fieldToSelect) => {
     setSelectedFieldInternal(fieldToSelect);
@@ -144,7 +145,7 @@ const GeneratedImageEditor = ({
       setEditedStyles(newEditedStyles);
       setStylesAreInitialized(true);
 
-      setEditedImageFilters(imageFilters);
+      setEditedImageFilters(imageFilters || defaultFilters);
     } else {
       setStylesAreInitialized(false);
     }

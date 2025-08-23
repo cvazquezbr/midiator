@@ -532,7 +532,10 @@ const FieldPositioner = ({
             content: sampleData,
             zIndex: position.zIndex || 0,
             rotation: position.rotation,
-            fontScale: (imageSize.width && originalImageSize?.width) ? imageSize.width / originalImageSize.width : 1,
+            fontScale: Math.min(
+              (imageSize.width && originalImageSize?.width) ? imageSize.width / originalImageSize.width : 1,
+              (imageSize.height && originalImageSize?.height) ? imageSize.height / originalImageSize.height : 1
+            ),
             enableHtmlRendering: isHtmlField(header),
           };
         })
