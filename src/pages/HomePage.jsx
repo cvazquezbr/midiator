@@ -624,29 +624,7 @@ function HomePage() {
               }}
             />
           </div>
-          <div hidden={activeStep !== 3}>
-            <ImageGeneratorFrontendOnly
-              csvData={csvData}
-              backgroundImage={backgroundImage}
-              fieldPositions={fieldPositions}
-              fieldStyles={fieldStyles}
-              displayedImageSize={displayedImageSize}
-              csvHeaders={csvHeaders}
-              colorPalette={colorPalette}
-              setGeneratedImagesData={setGeneratedImagesData}
-              initialGeneratedImagesData={generatedImagesData}
-              onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
-              originalImageSize={originalImageSize}
-              imageFilters={imageFilters}
-              brandElements={brandElements}
-              onBrandElementsChange={setBrandElements}
-              onOpenHtmlEditor={(fieldId) => setEditingField(fieldId)}
-              isHtmlField={(fieldName) => {
-                if (!fieldName) return false;
-                return fieldName && ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'].some(field => fieldName.toLowerCase().includes(field.toLowerCase()));
-              }}
-            />
-          </div>
+          <div hidden={activeStep !== 3}><ImageGeneratorFrontendOnly csvData={csvData} backgroundImage={backgroundImage} fieldPositions={fieldPositions} fieldStyles={fieldStyles} displayedImageSize={displayedImageSize} csvHeaders={csvHeaders} colorPalette={colorPalette} setGeneratedImagesData={setGeneratedImagesData} initialGeneratedImagesData={generatedImagesData} onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} originalImageSize={originalImageSize} imageFilters={imageFilters} brandElements={brandElements} onBrandElementsChange={setBrandElements} /></div>
           <div hidden={activeStep !== 4}><AudioGenerator csvData={csvData} fieldPositions={fieldPositions} onAudiosGenerated={setGeneratedAudioData} initialAudioData={generatedAudioData} /></div>
           <div hidden={activeStep !== 5}><VideoGenerator2 generatedImages={generatedImagesData} generatedAudioData={generatedAudioData} onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)} /></div>
           <div hidden={activeStep !== 6}><Publisher settings={settings} campaignContent={campaignContent} generatedImagesData={generatedImagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedProfile={selectedProfile} setSelectedProfile={setSelectedProfile} selectedImages={selectedImages} setSelectedImages={setSelectedImages} selectedVideos={selectedVideos} setSelectedVideos={setSelectedVideos} /></div>

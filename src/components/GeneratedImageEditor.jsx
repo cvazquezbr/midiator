@@ -18,6 +18,7 @@ import FormattingPanel from './FormattingPanel'; // Reutilizar o FormattingPanel
 import FormattingDrawer from './FormattingDrawer'; // Importar o FormattingDrawer
 import { Fab } from '@mui/material';
 import { Edit } from '@mui/icons-material';
+import TextEditorDialog from './TextEditorDialog';
 
 // Define a comprehensive default style object
 const COMPLETE_DEFAULT_STYLE = {
@@ -54,9 +55,7 @@ const GeneratedImageEditor = ({
   globalBackgroundImage, // Imagem de fundo global, como fallback
   originalImageSize,
   imageFilters, // Adicionado
-  brandElements,
-  onOpenHtmlEditor,
-  isHtmlField
+  brandElements
 }) => {
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
@@ -65,8 +64,21 @@ const GeneratedImageEditor = ({
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null); // Estado para o campo selecionado internamente
   const [stylesAreInitialized, setStylesAreInitialized] = useState(false); // New state for initialization tracking
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [editingField, setEditingField] = useState(null);
   const theme = useTheme();
   const isLargeScreen = useMediaQuery(theme.breakpoints.up('md'));
+
+  const isHtmlField = useCallback((fieldName) => {
+    if (!fieldName) return false;
+    // Using the same logic as in HomePage
+    return ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'].some(field =>
+      fieldName.toLowerCase().includes(field.toLowerCase())
+    );
+  }, []);
+
+  const handleOpenHtmlEditor = (fieldId) => {
+    setEditingField(fieldId);
+  };
 
   // Local state for image filters and toggles
   const [editedImageFilters, setEditedImageFilters] = useState(imageFilters);
@@ -218,7 +230,7 @@ const GeneratedImageEditor = ({
                   brandElements={editedBrandElements}
                   setBrandElements={setEditedBrandElements}
                   onDeselectField={handleDeselectField}
-                  onOpenHtmlEditor={onOpenHtmlEditor}
+                  onOpenHtmlEditor={handleOpenHtmlEditor}
                   isHtmlField={isHtmlField}
                 />
               </Grid>
@@ -252,11 +264,23 @@ const GeneratedImageEditor = ({
             fieldPositions={editedPositions}
             setFieldPositions={setEditedPositions}
             csvHeaders={editorCsvHeaders}
-            onOpenHtmlEditor={onOpenHtmlEditor}
+            onOpenHtmlEditor={handleOpenHtmlEditor}
             isHtmlField={isHtmlField}
           />
         </>
       )}
+      <TextEditorDialog
+        open={editingField !== null}
+        title={`Editar Conteúdo de "${editingField}"`}
+        content={editedRecord && editingField ? editedRecord[editingField] : ''}
+        onSave={(newContent) => {
+          if (editedRecord && editingField) {
+            setEditedRecord(prev => ({ ...prev, [editingField]: newContent }));
+          }
+          setEditingField(null);
+        }}
+        onClose={() => setEditingField(null)}
+      />
     </Dialog>
   );
 };
