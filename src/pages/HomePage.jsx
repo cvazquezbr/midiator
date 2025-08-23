@@ -235,6 +235,8 @@ function HomePage() {
       generatedAudioData,
       generatedVideosData,
       standardsColors,
+      csvData,
+      csvHeaders,
     };
     console.log("[HomePage] Campaign data object created:", campaignDataToSave);
 
