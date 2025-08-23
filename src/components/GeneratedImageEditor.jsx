@@ -206,6 +206,7 @@ const GeneratedImageEditor = ({
                 imageFilters={editedImageFilters}
                 brandElements={editedBrandElements}
                 setBrandElements={setEditedBrandElements}
+                currentPreviewIndex={0}
               />
             </Grid>
             {isLargeScreen && (
