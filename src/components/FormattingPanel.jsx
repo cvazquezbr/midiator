@@ -118,6 +118,11 @@ const FormattingPanel = ({
 
   const [isTextField, setIsTextField] = React.useState(false);
   const [currentElement, setCurrentElement] = React.useState(null);
+  const [expandedPanel, setExpandedPanel] = React.useState(false);
+
+  const handleAccordionChange = (panel) => (event, isExpanded) => {
+    setExpandedPanel(isExpanded ? panel : false);
+  };
 
   React.useEffect(() => {
     if (selectedField) {
@@ -214,8 +219,244 @@ const FormattingPanel = ({
               />
             </Box>
 
+            {isTextField ? (
+              <>
+                <Button
+                  variant="contained"
+                  startIcon={<Edit />}
+                  onClick={() => onOpenHtmlEditor(selectedField)}
+                  fullWidth
+                  sx={{ mb: 2 }}
+                >
+                  Editar Conteúdo
+                </Button>
+
+                {/* Fonte e Estilo */}
+                <Accordion expanded={expandedPanel === 'fontStyle'} onChange={handleAccordionChange('fontStyle')}>
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography variant="subtitle1">
+                      <FormatSize sx={{ mr: 1, verticalAlign: 'middle' }} />
+                      Fonte e Estilo
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Grid container spacing={2}>
+                      <Grid item xs={8}>
+                        <FormControl fullWidth size="small">
+                          <InputLabel>Fonte</InputLabel>
+                          <Select
+                            value={currentElement.style.fontFamily || 'Arial'}
+                            label="Fonte"
+                            onChange={(e) => updateFieldStyle(selectedField, 'fontFamily', e.target.value)}
+                          >
+                            {fonts.map(font => (
+                              <MenuItem key={font} value={font} style={{ fontFamily: font }}>
+                                {font}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={4}>
+                        <TextField
+                          label="Cor"
+                          type="color"
+                          value={currentElement.style.color || '#000000'}
+                          onChange={(e) => updateFieldStyle(selectedField, 'color', e.target.value)}
+                          fullWidth
+                          size="small"
+                        />
+                      </Grid>
+                      {standardsColors && standardsColors.length > 0 && (
+                        <Grid item xs={12}>
+                          <Typography variant="caption">Cores da Campanha</Typography>
+                          <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                            {standardsColors.map((color, index) => (
+                              <Tooltip title={color.name} key={index}>
+                                <Box
+                                  sx={{
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: '50%',
+                                    backgroundColor: color.hex,
+                                    cursor: 'pointer',
+                                    border: '1px solid #ccc',
+                                  }}
+                                  onClick={() => updateFieldStyle(selectedField, 'color', color.hex)}
+                                />
+                              </Tooltip>
+                            ))}
+                          </Box>
+                        </Grid>
+                      )}
+                      <Grid item xs={12}>
+                        <ToggleButtonGroup
+                          value={[]}
+                          aria-label="text formatting"
+                          size="small"
+                          fullWidth
+                        >
+                          <ToggleButton
+                            value="bold"
+                            aria-label="bold"
+                            selected={currentElement.style.fontWeight === 'bold'}
+                            onClick={() => updateFieldStyle(selectedField, 'fontWeight', currentElement.style.fontWeight === 'bold' ? 'normal' : 'bold')}
+                          >
+                            <FormatBold />
+                          </ToggleButton>
+                          <ToggleButton
+                            value="italic"
+                            aria-label="italic"
+                            selected={currentElement.style.fontStyle === 'italic'}
+                            onClick={() => updateFieldStyle(selectedField, 'fontStyle', currentElement.style.fontStyle === 'italic' ? 'normal' : 'italic')}
+                          >
+                            <FormatItalic />
+                          </ToggleButton>
+                          <ToggleButton
+                            value="underline"
+                            aria-label="underline"
+                            selected={currentElement.style.textDecoration === 'underline'}
+                            onClick={() => updateFieldStyle(selectedField, 'textDecoration', currentElement.style.textDecoration === 'underline' ? 'none' : 'underline')}
+                          >
+                            <FormatUnderlined />
+                          </ToggleButton>
+                        </ToggleButtonGroup>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography variant="caption" display="block" gutterBottom>Alinhamento do Texto na Caixa</Typography>
+                        <ToggleButtonGroup
+                          value={currentElement.style.textAlign || 'left'}
+                          exclusive
+                          onChange={(e, newAlignment) => { if (newAlignment) updateFieldStyle(selectedField, 'textAlign', newAlignment); }}
+                          aria-label="text alignment"
+                          size="small"
+                          fullWidth
+                        >
+                          <ToggleButton value="left" aria-label="left aligned"><FormatAlignLeft /></ToggleButton>
+                          <ToggleButton value="center" aria-label="centered"><FormatAlignCenter /></ToggleButton>
+                          <ToggleButton value="right" aria-label="right aligned"><FormatAlignRight /></ToggleButton>
+                        </ToggleButtonGroup>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <ToggleButtonGroup
+                          value={currentElement.style.verticalAlign || 'top'}
+                          exclusive
+                          onChange={(e, newAlignment) => { if (newAlignment) updateFieldStyle(selectedField, 'verticalAlign', newAlignment); }}
+                          aria-label="vertical alignment"
+                          size="small"
+                          fullWidth
+                        >
+                          <ToggleButton value="top" aria-label="top aligned"><VerticalAlignTop /></ToggleButton>
+                          <ToggleButton value="middle" aria-label="middle aligned"><VerticalAlignCenter /></ToggleButton>
+                          <ToggleButton value="bottom" aria-label="bottom aligned"><VerticalAlignBottom /></ToggleButton>
+                        </ToggleButtonGroup>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography gutterBottom sx={{ mt: 1 }}>
+                          Tamanho: {currentElement.style.fontSize || 24}px
+                        </Typography>
+                        <Slider
+                          value={currentElement.style.fontSize || 24}
+                          onChange={(e, value) => updateFieldStyle(selectedField, 'fontSize', value)}
+                          min={8}
+                          max={120}
+                          valueLabelDisplay="auto"
+                          marks={[{ value: 12, label: '12' }, { value: 24, label: '24' }, { value: 48, label: '48' }, { value: 72, label: '72' }]}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography gutterBottom sx={{ mt: 1 }}>
+                          Espaçamento entre Linhas: {currentElement.style.lineHeightMultiplier || 1.2}x
+                        </Typography>
+                        <Slider
+                          value={currentElement.style.lineHeightMultiplier || 1.2}
+                          onChange={(e, value) => updateFieldStyle(selectedField, 'lineHeightMultiplier', value)}
+                          min={0.8}
+                          max={3}
+                          step={0.1}
+                          valueLabelDisplay="auto"
+                          marks={[{ value: 1, label: '1x' }, { value: 1.5, label: '1.5x' }, { value: 2, label: '2x' }]}
+                        />
+                      </Grid>
+                    </Grid>
+                  </AccordionDetails>
+                </Accordion>
+
+                {/* Efeitos */}
+                <Accordion expanded={expandedPanel === 'effects'} onChange={handleAccordionChange('effects')}>
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography variant="subtitle1">
+                      <Palette sx={{ mr: 1, verticalAlign: 'middle' }} />
+                      Efeitos
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12}>
+                        <FormControlLabel control={<Switch checked={currentElement.style.textStroke || false} onChange={(e) => updateFieldStyle(selectedField, 'textStroke', e.target.checked)} size="small" />} label="Contorno" />
+                        {currentElement.style.textStroke && (
+                          <Grid container spacing={2} sx={{ mt: 1 }}>
+                            <Grid item xs={6}><TextField label="Cor do Contorno" type="color" value={currentElement.style.strokeColor || '#ffffff'} onChange={(e) => updateFieldStyle(selectedField, 'strokeColor', e.target.value)} fullWidth size="small" /></Grid>
+                            <Grid item xs={6}><Typography gutterBottom>Espessura: {currentElement.style.strokeWidth || 2}px</Typography><Slider value={currentElement.style.strokeWidth || 2} onChange={(e, value) => updateFieldStyle(selectedField, 'strokeWidth', value)} min={1} max={10} size="small" /></Grid>
+                          </Grid>
+                        )}
+                      </Grid>
+                      <Grid item xs={12}>
+                        <FormControlLabel control={<Switch checked={currentElement.style.textShadow || false} onChange={(e) => updateFieldStyle(selectedField, 'textShadow', e.target.checked)} size="small" />} label="Sombra" />
+                        {currentElement.style.textShadow && (
+                          <Grid container spacing={2} sx={{ mt: 1 }}>
+                            <Grid item xs={6}><TextField label="Cor da Sombra" type="color" value={currentElement.style.shadowColor || '#000000'} onChange={(e) => updateFieldStyle(selectedField, 'shadowColor', e.target.value)} fullWidth size="small" /></Grid>
+                            <Grid item xs={6}><Typography gutterBottom>Desfoque: {currentElement.style.shadowBlur || 4}px</Typography><Slider value={currentElement.style.shadowBlur || 4} onChange={(e, value) => updateFieldStyle(selectedField, 'shadowBlur', value)} min={0} max={20} size="small" /></Grid>
+                            <Grid item xs={6}><Typography gutterBottom>Offset X: {currentElement.style.shadowOffsetX || 2}px</Typography><Slider value={currentElement.style.shadowOffsetX || 2} onChange={(e, value) => updateFieldStyle(selectedField, 'shadowOffsetX', value)} min={-20} max={20} size="small" /></Grid>
+                            <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.style.shadowOffsetY || 2}px</Typography><Slider value={currentElement.style.shadowOffsetY || 2} onChange={(e, value) => updateFieldStyle(selectedField, 'shadowOffsetY', value)} min={-20} max={20} size="small" /></Grid>
+                          </Grid>
+                        )}
+                      </Grid>
+                    </Grid>
+                  </AccordionDetails>
+                </Accordion>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}><Button variant="outlined" size="small" onClick={() => copyStyleToAll(selectedField)} startIcon={<ContentCopy />} fullWidth>Aplicar a Todos</Button></Grid>
+                  <Grid item xs={12} sm={6}><Button variant="outlined" size="small" onClick={() => resetFieldStyle(selectedField)} color="secondary" fullWidth>Resetar Estilo</Button></Grid>
+                </Grid>
+              </>
+            ) : (
+              <Accordion sx={{ mt: 2 }} expanded={expandedPanel === 'elementFilters'} onChange={handleAccordionChange('elementFilters')}>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                  <Typography variant="subtitle1">🖼️ Filtros do Elemento</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Box sx={{ p: 1 }}>
+                    <Typography gutterBottom>Brilho: {currentElement.filters.brightness}%</Typography>
+                    <Slider value={currentElement.filters.brightness} onChange={(e, v) => updateBrandElementFilter(selectedField, 'brightness', v)} min={0} max={200} step={1} />
+                    <Typography gutterBottom>Contraste: {currentElement.filters.contrast}%</Typography>
+                    <Slider value={currentElement.filters.contrast} onChange={(e, v) => updateBrandElementFilter(selectedField, 'contrast', v)} min={0} max={200} step={1} />
+                    <Typography gutterBottom>Saturação: {currentElement.filters.saturate}%</Typography>
+                    <Slider value={currentElement.filters.saturate} onChange={(e, v) => updateBrandElementFilter(selectedField, 'saturate', v)} min={0} max={200} step={1} />
+                    <Typography gutterBottom>Desfoque: {currentElement.filters.blur}px</Typography>
+                    <Slider value={currentElement.filters.blur} onChange={(e, v) => updateBrandElementFilter(selectedField, 'blur', v)} min={0} max={20} step={1} />
+                    <Typography gutterBottom>Opacidade: {currentElement.filters.opacity}%</Typography>
+                    <Slider value={currentElement.filters.opacity} onChange={(e, v) => updateBrandElementFilter(selectedField, 'opacity', v)} min={0} max={100} step={1} />
+                  </Box>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={() => handleDeleteBrandElement(selectedField)}
+                    sx={{ mt: 2 }}
+                    fullWidth
+                  >
+                    Excluir Elemento
+                  </Button>
+                </AccordionDetails>
+              </Accordion>
+            )}
+
             {/* Posicionamento e Tamanho */}
-            <Accordion defaultExpanded>
+            <Accordion expanded={expandedPanel === 'positionSize'} onChange={handleAccordionChange('positionSize')}>
               <AccordionSummary expandIcon={<ExpandMore />}>
                 <Typography variant="subtitle1">
                   📐 Posição e Tamanho
@@ -313,241 +554,6 @@ const FormattingPanel = ({
                 </Grid>
               </AccordionDetails>
             </Accordion>
-
-            {isTextField ? (
-              <>
-                {/* Fonte e Estilo */}
-                <Button
-                  variant="contained"
-                  startIcon={<Edit />}
-                  onClick={() => onOpenHtmlEditor(selectedField)}
-                  fullWidth
-                  sx={{ mb: 2 }}
-                >
-                  Editar Conteúdo
-                </Button>
-                <Accordion defaultExpanded>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1">
-                      <FormatSize sx={{ mr: 1, verticalAlign: 'middle' }} />
-                      Fonte e Estilo
-                    </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Grid container spacing={2}>
-                      <Grid item xs={8}>
-                        <FormControl fullWidth size="small">
-                          <InputLabel>Fonte</InputLabel>
-                          <Select
-                            value={currentElement.style.fontFamily || 'Arial'}
-                            label="Fonte"
-                            onChange={(e) => updateFieldStyle(selectedField, 'fontFamily', e.target.value)}
-                          >
-                            {fonts.map(font => (
-                              <MenuItem key={font} value={font} style={{ fontFamily: font }}>
-                                {font}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={4}>
-                        <TextField
-                          label="Cor"
-                          type="color"
-                          value={currentElement.style.color || '#000000'}
-                          onChange={(e) => updateFieldStyle(selectedField, 'color', e.target.value)}
-                          fullWidth
-                          size="small"
-                        />
-                      </Grid>
-                      {standardsColors && standardsColors.length > 0 && (
-                        <Grid item xs={12}>
-                          <Typography variant="caption">Cores da Campanha</Typography>
-                          <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
-                            {standardsColors.map((color, index) => (
-                              <Tooltip title={color.name} key={index}>
-                                <Box
-                                  sx={{
-                                    width: 24,
-                                    height: 24,
-                                    borderRadius: '50%',
-                                    backgroundColor: color.hex,
-                                    cursor: 'pointer',
-                                    border: '1px solid #ccc',
-                                  }}
-                                  onClick={() => updateFieldStyle(selectedField, 'color', color.hex)}
-                                />
-                              </Tooltip>
-                            ))}
-                          </Box>
-                        </Grid>
-                      )}
-                      <Grid item xs={12}>
-                        <ToggleButtonGroup
-                          value={[]}
-                          aria-label="text formatting"
-                          size="small"
-                          fullWidth
-                        >
-                          <ToggleButton
-                            value="bold"
-                            aria-label="bold"
-                            selected={currentElement.style.fontWeight === 'bold'}
-                            onClick={() => updateFieldStyle(selectedField, 'fontWeight', currentElement.style.fontWeight === 'bold' ? 'normal' : 'bold')}
-                          >
-                            <FormatBold />
-                          </ToggleButton>
-                          <ToggleButton
-                            value="italic"
-                            aria-label="italic"
-                            selected={currentElement.style.fontStyle === 'italic'}
-                            onClick={() => updateFieldStyle(selectedField, 'fontStyle', currentElement.style.fontStyle === 'italic' ? 'normal' : 'italic')}
-                          >
-                            <FormatItalic />
-                          </ToggleButton>
-                          <ToggleButton
-                            value="underline"
-                            aria-label="underline"
-                            selected={currentElement.style.textDecoration === 'underline'}
-                            onClick={() => updateFieldStyle(selectedField, 'textDecoration', currentElement.style.textDecoration === 'underline' ? 'none' : 'underline')}
-                          >
-                            <FormatUnderlined />
-                          </ToggleButton>
-                        </ToggleButtonGroup>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Typography gutterBottom sx={{ mt: 1 }}>
-                          Tamanho: {currentElement.style.fontSize || 24}px
-                        </Typography>
-                        <Slider
-                          value={currentElement.style.fontSize || 24}
-                          onChange={(e, value) => updateFieldStyle(selectedField, 'fontSize', value)}
-                          min={8}
-                          max={120}
-                          valueLabelDisplay="auto"
-                          marks={[{ value: 12, label: '12' }, { value: 24, label: '24' }, { value: 48, label: '48' }, { value: 72, label: '72' }]}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Typography gutterBottom sx={{ mt: 1 }}>
-                          Espaçamento entre Linhas: {currentElement.style.lineHeightMultiplier || 1.2}x
-                        </Typography>
-                        <Slider
-                          value={currentElement.style.lineHeightMultiplier || 1.2}
-                          onChange={(e, value) => updateFieldStyle(selectedField, 'lineHeightMultiplier', value)}
-                          min={0.8}
-                          max={3}
-                          step={0.1}
-                          valueLabelDisplay="auto"
-                          marks={[{ value: 1, label: '1x' }, { value: 1.5, label: '1.5x' }, { value: 2, label: '2x' }]}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Typography variant="caption" display="block" gutterBottom>Alinhamento do Texto na Caixa</Typography>
-                        <ToggleButtonGroup
-                          value={currentElement.style.textAlign || 'left'}
-                          exclusive
-                          onChange={(e, newAlignment) => { if (newAlignment) updateFieldStyle(selectedField, 'textAlign', newAlignment); }}
-                          aria-label="text alignment"
-                          size="small"
-                          fullWidth
-                        >
-                          <ToggleButton value="left" aria-label="left aligned"><FormatAlignLeft /></ToggleButton>
-                          <ToggleButton value="center" aria-label="centered"><FormatAlignCenter /></ToggleButton>
-                          <ToggleButton value="right" aria-label="right aligned"><FormatAlignRight /></ToggleButton>
-                        </ToggleButtonGroup>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <ToggleButtonGroup
-                          value={currentElement.style.verticalAlign || 'top'}
-                          exclusive
-                          onChange={(e, newAlignment) => { if (newAlignment) updateFieldStyle(selectedField, 'verticalAlign', newAlignment); }}
-                          aria-label="vertical alignment"
-                          size="small"
-                          fullWidth
-                        >
-                          <ToggleButton value="top" aria-label="top aligned"><VerticalAlignTop /></ToggleButton>
-                          <ToggleButton value="middle" aria-label="middle aligned"><VerticalAlignCenter /></ToggleButton>
-                          <ToggleButton value="bottom" aria-label="bottom aligned"><VerticalAlignBottom /></ToggleButton>
-                        </ToggleButtonGroup>
-                      </Grid>
-                    </Grid>
-                  </AccordionDetails>
-                </Accordion>
-
-                {/* Efeitos */}
-                <Accordion>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1">
-                      <Palette sx={{ mr: 1, verticalAlign: 'middle' }} />
-                      Efeitos
-                    </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <FormControlLabel control={<Switch checked={currentElement.style.textStroke || false} onChange={(e) => updateFieldStyle(selectedField, 'textStroke', e.target.checked)} size="small" />} label="Contorno" />
-                        {currentElement.style.textStroke && (
-                          <Grid container spacing={2} sx={{ mt: 1 }}>
-                            <Grid item xs={6}><TextField label="Cor do Contorno" type="color" value={currentElement.style.strokeColor || '#ffffff'} onChange={(e) => updateFieldStyle(selectedField, 'strokeColor', e.target.value)} fullWidth size="small" /></Grid>
-                            <Grid item xs={6}><Typography gutterBottom>Espessura: {currentElement.style.strokeWidth || 2}px</Typography><Slider value={currentElement.style.strokeWidth || 2} onChange={(e, value) => updateFieldStyle(selectedField, 'strokeWidth', value)} min={1} max={10} size="small" /></Grid>
-                          </Grid>
-                        )}
-                      </Grid>
-                      <Grid item xs={12}>
-                        <FormControlLabel control={<Switch checked={currentElement.style.textShadow || false} onChange={(e) => updateFieldStyle(selectedField, 'textShadow', e.target.checked)} size="small" />} label="Sombra" />
-                        {currentElement.style.textShadow && (
-                          <Grid container spacing={2} sx={{ mt: 1 }}>
-                            <Grid item xs={6}><TextField label="Cor da Sombra" type="color" value={currentElement.style.shadowColor || '#000000'} onChange={(e) => updateFieldStyle(selectedField, 'shadowColor', e.target.value)} fullWidth size="small" /></Grid>
-                            <Grid item xs={6}><Typography gutterBottom>Desfoque: {currentElement.style.shadowBlur || 4}px</Typography><Slider value={currentElement.style.shadowBlur || 4} onChange={(e, value) => updateFieldStyle(selectedField, 'shadowBlur', value)} min={0} max={20} size="small" /></Grid>
-                            <Grid item xs={6}><Typography gutterBottom>Offset X: {currentElement.style.shadowOffsetX || 2}px</Typography><Slider value={currentElement.style.shadowOffsetX || 2} onChange={(e, value) => updateFieldStyle(selectedField, 'shadowOffsetX', value)} min={-20} max={20} size="small" /></Grid>
-                            <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.style.shadowOffsetY || 2}px</Typography><Slider value={currentElement.style.shadowOffsetY || 2} onChange={(e, value) => updateFieldStyle(selectedField, 'shadowOffsetY', value)} min={-20} max={20} size="small" /></Grid>
-                          </Grid>
-                        )}
-                      </Grid>
-                    </Grid>
-                  </AccordionDetails>
-                </Accordion>
-
-                <Divider sx={{ my: 2 }} />
-
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}><Button variant="outlined" size="small" onClick={() => copyStyleToAll(selectedField)} startIcon={<ContentCopy />} fullWidth>Aplicar a Todos</Button></Grid>
-                  <Grid item xs={12} sm={6}><Button variant="outlined" size="small" onClick={() => resetFieldStyle(selectedField)} color="secondary" fullWidth>Resetar Estilo</Button></Grid>
-                </Grid>
-              </>
-            ) : (
-              <Accordion sx={{ mt: 2 }} defaultExpanded>
-                <AccordionSummary expandIcon={<ExpandMore />}>
-                  <Typography variant="subtitle1">🖼️ Filtros do Elemento</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Box sx={{ p: 1 }}>
-                    <Typography gutterBottom>Brilho: {currentElement.filters.brightness}%</Typography>
-                    <Slider value={currentElement.filters.brightness} onChange={(e, v) => updateBrandElementFilter(selectedField, 'brightness', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Contraste: {currentElement.filters.contrast}%</Typography>
-                    <Slider value={currentElement.filters.contrast} onChange={(e, v) => updateBrandElementFilter(selectedField, 'contrast', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Saturação: {currentElement.filters.saturate}%</Typography>
-                    <Slider value={currentElement.filters.saturate} onChange={(e, v) => updateBrandElementFilter(selectedField, 'saturate', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Desfoque: {currentElement.filters.blur}px</Typography>
-                    <Slider value={currentElement.filters.blur} onChange={(e, v) => updateBrandElementFilter(selectedField, 'blur', v)} min={0} max={20} step={1} />
-                    <Typography gutterBottom>Opacidade: {currentElement.filters.opacity}%</Typography>
-                    <Slider value={currentElement.filters.opacity} onChange={(e, v) => updateBrandElementFilter(selectedField, 'opacity', v)} min={0} max={100} step={1} />
-                  </Box>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="small"
-                    onClick={() => handleDeleteBrandElement(selectedField)}
-                    sx={{ mt: 2 }}
-                    fullWidth
-                  >
-                    Excluir Elemento
-                  </Button>
-                </AccordionDetails>
-              </Accordion>
-            )}
           </>
         ) : (
           <Typography variant="h6" color="textSecondary" align="center" gutterBottom sx={{ mt: 4 }}>
@@ -558,7 +564,7 @@ const FormattingPanel = ({
         <Divider sx={{ my: 2 }} />
 
         {/* Filtros de Imagem de Fundo */}
-        <Accordion defaultExpanded>
+        <Accordion expanded={expandedPanel === 'backgroundFilters'} onChange={handleAccordionChange('backgroundFilters')}>
           <AccordionSummary expandIcon={<ExpandMore />}>
             <Typography variant="subtitle1">🎨 Filtros de Imagem de Fundo</Typography>
           </AccordionSummary>
@@ -579,7 +585,7 @@ const FormattingPanel = ({
         </Accordion>
 
         {/* Brand Elements */}
-        <Accordion>
+        <Accordion expanded={expandedPanel === 'brandElements'} onChange={handleAccordionChange('brandElements')}>
           <AccordionSummary expandIcon={<ExpandMore />}>
             <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
               <BrandingWatermark sx={{ mr: 1 }} /> Elementos da Marca
