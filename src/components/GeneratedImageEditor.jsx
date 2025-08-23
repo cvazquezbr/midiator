@@ -96,6 +96,19 @@ const GeneratedImageEditor = ({
       const positions = JSON.parse(JSON.stringify(initialFieldPositions));
       const brands = JSON.parse(JSON.stringify(brandElements || []));
 
+      // Defensively add filters to brand elements
+      brands.forEach(el => {
+        if (!el.filters) {
+          el.filters = {
+            brightness: 100,
+            contrast: 100,
+            saturate: 100,
+            blur: 0,
+            opacity: 100,
+          };
+        }
+      });
+
       // Use a set to track assigned z-indices and find the max
       const zIndices = new Set();
       Object.values(positions).forEach(p => { if (p.zIndex !== undefined) zIndices.add(p.zIndex); });
