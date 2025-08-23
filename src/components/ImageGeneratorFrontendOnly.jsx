@@ -53,7 +53,9 @@ const ImageGeneratorFrontendOnly = ({
   originalImageSize,
   imageFilters,
   brandElements,
-  onBrandElementsChange
+  onBrandElementsChange,
+  onOpenHtmlEditor,
+  isHtmlField
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -702,12 +704,9 @@ const ImageGeneratorFrontendOnly = ({
                         </Box>
 
 <Box sx={{
-                          width: 'auto',
-                          maxWidth: '100%',
-                          height: 'auto',
-                          maxHeight: '180px',
-                          display: 'inline-flex',
-                          flexDirection: 'column',
+                          width: '100%',
+                          height: '180px',
+                          display: 'flex',
                           justifyContent: 'center',
                           alignItems: 'center',
                           padding: '10px',
@@ -744,34 +743,38 @@ const ImageGeneratorFrontendOnly = ({
                           />
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
-                            title="Editar Posições/Estilos"
-                          >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleReplaceImageClick(imageData.index)}
-                            title="Substituir Imagem de Fundo"
-                          >
-                            <SwapHoriz />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => downloadImage(imageData)}
-                            title="Download"
-                          >
-                            <Download />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleShare(imageData)}
-                            title="Compartilhar"
-                          >
-                            <Share />
-                          </IconButton>
+                          <Tooltip title="Editar Posições/Estilos">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
+                            >
+                              <Edit />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Substituir Imagem de Fundo">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleReplaceImageClick(imageData.index)}
+                            >
+                              <SwapHoriz />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Download">
+                            <IconButton
+                              size="small"
+                              onClick={() => downloadImage(imageData)}
+                            >
+                              <Download />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Compartilhar">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleShare(imageData)}
+                            >
+                              <Share />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       </CardContent>
                     </Card>
@@ -826,6 +829,8 @@ const ImageGeneratorFrontendOnly = ({
             originalImageSize={imageToEdit.customOriginalImageSize || originalImageSize}
             imageFilters={imageFilters}
             brandElements={brandElementsToLoad}
+            onOpenHtmlEditor={onOpenHtmlEditor}
+            isHtmlField={isHtmlField}
           />
         );
       })()}
