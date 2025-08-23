@@ -495,6 +495,10 @@ const FieldPositioner = ({
     setCurrentPreviewIndex(csvData.length - 1);
   };
 
+  const aspectRatio = (originalImageSize?.width && originalImageSize?.height)
+    ? `${originalImageSize.width} / ${originalImageSize.height}`
+    : '16 / 9';
+
   // Efeito para gerenciar scroll durante interações
   useEffect(() => {
     if (isInteracting) {
@@ -623,8 +627,9 @@ const FieldPositioner = ({
                 '&.interacting': {
                   touchAction: 'none'
                 },
+                aspectRatio: aspectRatio,
                 maxWidth: '800px',
-    maxHeight: '85vh',
+                maxHeight: '85vh',
                 mx: 'auto',
               }}
               onMouseDown={(e) => {
