@@ -239,6 +239,7 @@ function HomePage() {
       standardsColors,
       csvData,
       csvHeaders,
+      promptText,
     };
     console.log("[HomePage] Campaign data object created:", campaignDataToSave);
 
