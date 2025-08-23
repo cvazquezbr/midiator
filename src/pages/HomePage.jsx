@@ -41,8 +41,8 @@ import geminiAPI from '../utils/geminiAPI';
 import { stripHtml } from '../lib/utils';
 import '../App.css';
 import LoadingDialog from '../components/LoadingDialog';
-import ProgressModal from '../components/ProgressModal';
 import TextEditorDialog from '../components/TextEditorDialog';
+import MyCampaignsStep from '../components/MyCampaignsStep';
 import Campaign from '../components/Campaign';
 import ImageStep from '../components/ImageStep';
 import MemorialDescritivoModal from '../components/MemorialDescritivoModal';
@@ -339,7 +339,7 @@ function HomePage() {
   }, [isMobile]);
 
   useEffect(() => {
-    if (activeStep === 1 && campaignContent) {
+    if (activeStep === 2 && campaignContent) {
       const { titulo, conteudo, cta } = campaignContent;
       setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
     }
@@ -392,7 +392,7 @@ function HomePage() {
     handleLinkedInRedirect();
   }, []); // Should only run once on page load
 
-  const steps = [ { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Imagem e Formatação', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Gerar Imagens', description: 'Gere as imagens finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish } ];
+  const steps = [ { label: 'Minhas Campanhas', description: 'Carregue ou gerencie suas campanhas salvas.', icon: CampaignIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Imagem e Formatação', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Gerar Imagens', description: 'Gere as imagens finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish } ];
   const parseCsvFile = async (file) => { if (!file) return; try { const { data: newCsvData, headers: newHeaders } = await parseCsv(file); if (newCsvData && newCsvData.length > 0) { setCsvData(newCsvData); setCsvHeaders(newHeaders); const updatedFieldPositions = {}; const updatedFieldStyles = {}; const defaultStylesBase = { fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: '#000000', textStroke: false, strokeColor: '#ffffff', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' }; newHeaders.forEach((header, index) => { updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true }; if (fieldStyles[header]) { updatedFieldStyles[header] = fieldStyles[header]; } else { if (index === 0) { updatedFieldStyles[header] = { ...defaultStylesBase, fontFamily: 'Anton', fontSize: 72 }; } else { updatedFieldStyles[header] = { ...defaultStylesBase }; } } }); setFieldPositions(updatedFieldPositions); setFieldStyles(updatedFieldStyles); setInputMethod('manual'); } } catch (error) { toast.error(error.message || 'Ocorreu um erro desconhecido ao processar o arquivo CSV.'); } };
   const handleCSVUpload = (event) => { const file = event.target.files[0]; parseCsvFile(file); };
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
@@ -482,7 +482,7 @@ function HomePage() {
   const handleImageDragLeave = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(false); };
   const handleNext = () => { setActiveStep((prevActiveStep) => prevActiveStep + 1); };
   const handleBack = () => { setActiveStep((prevActiveStep) => prevActiveStep - 1); };
-  const canProceedToStep = () => { switch (activeStep) { case 0: return campaignContent !== null; case 1: return csvData.length > 0; case 2: return backgroundImage !== null; default: return true; } };
+  const canProceedToStep = () => { switch (activeStep) { case 0: return true; case 1: return campaignContent !== null; case 2: return csvData.length > 0; case 3: return backgroundImage !== null; default: return true; } };
   const getFieldStats = () => { const visibleFields = Object.values(fieldPositions).filter(pos => pos.visible).length; const totalFields = csvHeaders.length; const styledFields = Object.keys(fieldStyles).length; return { visibleFields, totalFields, styledFields }; };
   const { visibleFields, totalFields, styledFields } = getFieldStats();
   const handleZIndexChange = (elementId, action) => { if (!elementId) return; let allElements = [ ...Object.entries(fieldPositions).map(([id, pos]) => ({ id, zIndex: pos.zIndex, isBrand: false })), ...brandElements.map(el => ({ id: el.id, zIndex: el.zIndex, isBrand: true })), ]; allElements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0)); const currentIndex = allElements.findIndex(el => el.id === elementId); if (currentIndex === -1) return; const [currentElement] = allElements.splice(currentIndex, 1); switch (action) { case 'front': allElements.push(currentElement); break; case 'back': allElements.unshift(currentElement); break; case 'forward': allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement); break; case 'backward': allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement); break; default: allElements.splice(currentIndex, 0, currentElement); return; } const newPositions = { ...fieldPositions }; const newBrandElements = [...brandElements]; allElements.forEach((el, index) => { el.zIndex = index; if (el.isBrand) { const brandEl = newBrandElements.find(b => b.id === el.id); if (brandEl) brandEl.zIndex = index; } else { if (newPositions[el.id]) { newPositions[el.id].zIndex = index; } } }); setFieldPositions(newPositions); setBrandElements(newBrandElements); };
@@ -633,14 +633,15 @@ function HomePage() {
     <ThemeProvider theme={currentTheme}>
       <CssBaseline />
       <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-        <MainAppBar darkMode={darkMode} setDarkMode={setDarkMode} setShowSetupModal={setShowSetupModal} setShowCampaignStandardsModal={setShowCampaignStandardsModal} setShowMemorialDescritivoModal={setShowMemorialDescritivoModal} onMenuClick={() => setSidebarOpen(!sidebarOpen)} isMobile={isMobile} onSaveCampaign={() => setShowSaveModal(true)} onLoadCampaign={() => setShowLoadModal(true)} />
+        <MainAppBar darkMode={darkMode} setDarkMode={setDarkMode} setShowSetupModal={setShowSetupModal} setShowCampaignStandardsModal={setShowCampaignStandardsModal} setShowMemorialDescritivoModal={setShowMemorialDescritivoModal} onMenuClick={() => setSidebarOpen(!sidebarOpen)} isMobile={isMobile} onSaveCampaign={() => setShowSaveModal(true)} onLoadCampaign={() => setShowLoadModal(true)} activeStep={activeStep} />
         <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImage={backgroundImage} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
         {!isMobile && <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out', backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', '&:hover': { backgroundColor: 'background.default' } }} >{sidebarOpen ? <ChevronLeft /> : <ChevronRight />}</Fab>}
         <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, transition: theme.transitions.create('margin', { easing: theme.transitions.easing.sharp, duration: theme.transitions.duration.leavingScreen }) }} >
           <Toolbar />
-          <div hidden={activeStep !== 0}><Container maxWidth="lg"><Campaign steps={steps} {...campaignData} setProblema={setProblema} setSolucao={setSolucao} isGeneratingCampaign={isGeneratingCampaign} handleGenerateCampaignContent={handleGenerateCampaignContent} handleResetCampaign={handleResetCampaign} handleExportHtml={() => exportHtml(campaignData)} editingField={editingField} setEditingField={setEditingField} isGeneratingSummaryMedio={isGeneratingSummaryMedio} handleGenerateSummary={handleGenerateSummary} isGeneratingSummaryPequeno={isGeneratingSummaryPequeno} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} setCampaignContent={setCampaignContent} onEditFollowup={handleEditFollowup} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} setAspectRatio={setAspectRatio} /></Container></div>
-          <div hidden={activeStep !== 1}><Container maxWidth="lg"><PostsCurtosStep steps={steps} inputMethod={inputMethod} setInputMethod={setInputMethod} handleDrop={handleDrop} handleDragOver={handleDragOver} fileInputRef={fileInputRef} handleCSVUpload={handleCSVUpload} downloadExampleCsv={downloadExampleCsv} setShowSetupModal={setShowSetupModal} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} handleGenerateIAContent={handleGenerateIAContent} isGenerating={isGenerating} csvData={csvData} csvHeaders={csvHeaders} onDadosAlterados={handleDadosAlterados} darkMode={darkMode} exportCsv={exportCsv} /></Container></div>
-          <div hidden={activeStep !== 2}>
+          <div hidden={activeStep !== 0}><Container maxWidth="lg"><MyCampaignsStep onLoadCampaign={handleLoadCampaign} onEditCampaign={(campaign) => { setCurrentCampaign(campaign); setShowSaveModal(true); }} /></Container></div>
+          <div hidden={activeStep !== 1}><Container maxWidth="lg"><Campaign steps={steps} {...campaignData} setProblema={setProblema} setSolucao={setSolucao} isGeneratingCampaign={isGeneratingCampaign} handleGenerateCampaignContent={handleGenerateCampaignContent} handleResetCampaign={handleResetCampaign} handleExportHtml={() => exportHtml(campaignData)} editingField={editingField} setEditingField={setEditingField} isGeneratingSummaryMedio={isGeneratingSummaryMedio} handleGenerateSummary={handleGenerateSummary} isGeneratingSummaryPequeno={isGeneratingSummaryPequeno} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} setCampaignContent={setCampaignContent} onEditFollowup={handleEditFollowup} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} setAspectRatio={setAspectRatio} /></Container></div>
+          <div hidden={activeStep !== 2}><Container maxWidth="lg"><PostsCurtosStep steps={steps} inputMethod={inputMethod} setInputMethod={setInputMethod} handleDrop={handleDrop} handleDragOver={handleDragOver} fileInputRef={fileInputRef} handleCSVUpload={handleCSVUpload} downloadExampleCsv={downloadExampleCsv} setShowSetupModal={setShowSetupModal} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} handleGenerateIAContent={handleGenerateIAContent} isGenerating={isGenerating} csvData={csvData} csvHeaders={csvHeaders} onDadosAlterados={handleDadosAlterados} darkMode={darkMode} exportCsv={exportCsv} /></Container></div>
+          <div hidden={activeStep !== 3}>
             <ImageStep
               steps={steps}
               isDraggingOverImage={isDraggingOverImage}
@@ -681,10 +682,10 @@ function HomePage() {
               setCurrentPreviewIndex={setCurrentPreviewIndex}
             />
           </div>
-          <div hidden={activeStep !== 3}><ImageGeneratorFrontendOnly csvData={csvData} backgroundImage={backgroundImage} fieldPositions={fieldPositions} fieldStyles={fieldStyles} displayedImageSize={displayedImageSize} csvHeaders={csvHeaders} colorPalette={colorPalette} setGeneratedImagesData={setGeneratedImagesData} initialGeneratedImagesData={generatedImagesData} onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} originalImageSize={originalImageSize} imageFilters={imageFilters} brandElements={brandElements} onBrandElementsChange={setBrandElements} /></div>
-          <div hidden={activeStep !== 4}><AudioGenerator csvData={csvData} fieldPositions={fieldPositions} onAudiosGenerated={setGeneratedAudioData} initialAudioData={generatedAudioData} /></div>
-          <div hidden={activeStep !== 5}><VideoGenerator2 generatedImages={generatedImagesData} generatedAudioData={generatedAudioData} onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)} /></div>
-          <div hidden={activeStep !== 6}><Publisher settings={settings} campaignContent={campaignContent} generatedImagesData={generatedImagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedProfile={selectedProfile} setSelectedProfile={setSelectedProfile} selectedImages={selectedImages} setSelectedImages={setSelectedImages} selectedVideos={selectedVideos} setSelectedVideos={setSelectedVideos} /></div>
+          <div hidden={activeStep !== 4}><ImageGeneratorFrontendOnly csvData={csvData} backgroundImage={backgroundImage} fieldPositions={fieldPositions} fieldStyles={fieldStyles} displayedImageSize={displayedImageSize} csvHeaders={csvHeaders} colorPalette={colorPalette} setGeneratedImagesData={setGeneratedImagesData} initialGeneratedImagesData={generatedImagesData} onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} originalImageSize={originalImageSize} imageFilters={imageFilters} brandElements={brandElements} onBrandElementsChange={setBrandElements} /></div>
+          <div hidden={activeStep !== 5}><AudioGenerator csvData={csvData} fieldPositions={fieldPositions} onAudiosGenerated={setGeneratedAudioData} initialAudioData={generatedAudioData} /></div>
+          <div hidden={activeStep !== 6}><VideoGenerator2 generatedImages={generatedImagesData} generatedAudioData={generatedAudioData} onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)} /></div>
+          <div hidden={activeStep !== 7}><Publisher settings={settings} campaignContent={campaignContent} generatedImagesData={generatedImagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedProfile={selectedProfile} setSelectedProfile={setSelectedProfile} selectedImages={selectedImages} setSelectedVideos={setSelectedVideos} /></div>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} ><Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button><Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box><Button onClick={handleNext} disabled={activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)} variant="contained" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Próximo</Button></Box>
         </Box>
       </Box>
@@ -699,15 +700,24 @@ function HomePage() {
         onSelect={updateImageAndPalette}
         onLocalUpload={parseImageFile}
       />
-      <ProgressModal
-        open={isGenerating}
-        progress={generationProgress}
-        total={100}
-        onCancel={() => setIsGenerating(false)}
-        title="Gerando Conteúdo com IA"
-        progressText="Aguarde, a IA está criando os posts..."
+      <LoadingDialog
+        open={isGeneratingCampaign || isSaving || isLoading || isGenerating}
+        title={
+          isSaving
+            ? `Salvando Campanha... (${uploadProgress.current}/${uploadProgress.total})`
+            : isLoading
+            ? "Carregando configuração..."
+            : "Gerando conteúdo..."
+        }
+        description={
+          isSaving
+            ? "Aguarde um momento, estamos fazendo o upload dos seus arquivos."
+            : isLoading
+            ? "Estamos desempacotando sua configuração. Quase pronto!"
+            : "A IA está pensando e escrevendo. Isso pode levar alguns segundos."
+        }
+        progress={isSaving ? (uploadProgress.total > 0 ? (uploadProgress.current / uploadProgress.total) * 100 : 0) : null}
       />
-      <LoadingDialog open={isGeneratingCampaign || isSaving || isLoading} title={ isSaving ? `Salvando Campanha... (${uploadProgress.current}/${uploadProgress.total})` : isLoading ? "Carregando configuração..." : "Gerando conteúdo..." } description={ isSaving ? "Aguarde um momento, estamos fazendo o upload dos seus arquivos." : isLoading ? "Estamos desempacotando sua configuração. Quase pronto!" : "A IA está pensando e escrevendo. Isso pode levar alguns segundos." } progress={isSaving ? (uploadProgress.total > 0 ? (uploadProgress.current / uploadProgress.total) * 100 : 0) : null} />
       <TextEditorDialog
         open={editingField !== null || editingFollowup !== null}
         title={
