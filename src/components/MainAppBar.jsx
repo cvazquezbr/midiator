@@ -36,7 +36,6 @@ const MainAppBar = ({
   setShowMemorialDescritivoModal,
   onSaveCampaign, // New prop
   onLoadCampaign, // New prop
-  activeStep,
 }) => {
   const { user, logout } = useUserAuth();
   const navigate = useNavigate();
@@ -108,12 +107,10 @@ const MainAppBar = ({
               <SaveIcon sx={{ mr: 1 }} />
               Salvar Campanha
             </MenuItem>
-            {activeStep !== 0 && (
-              <MenuItem onClick={() => { onLoadCampaign(); handleCampaignMenuClose(); }}>
-                <FolderOpenIcon sx={{ mr: 1 }} />
-                Carregar Campanha
-              </MenuItem>
-            )}
+            <MenuItem onClick={() => { onLoadCampaign(); handleCampaignMenuClose(); }}>
+              <FolderOpenIcon sx={{ mr: 1 }} />
+              Carregar Campanha
+            </MenuItem>
           </Menu>
 
           <Tooltip title="Configurações">
