@@ -576,7 +576,7 @@ const DraggableElementInternal = ({
                   height: '100%',
                   objectFit: 'contain',
                   pointerEvents: 'none',
-                  filter: getFilterString(element.filters),
+                  filter: getFilterString(style),
                 }}
               />
             ) : isEditing ? (
