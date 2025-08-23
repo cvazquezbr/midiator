@@ -390,7 +390,7 @@ function HomePage() {
   }, []); // Should only run once on page load
 
   const steps = [ { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Imagem e Formatação', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Gerar Imagens', description: 'Gere as imagens finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish } ];
-  const parseCsvFile = async (file) => { if (!file) return; try { const { data: newCsvData, headers: newHeaders } = await parseCsv(file); if (newCsvData && newCsvData.length > 0) { setCsvData(newCsvData); setCsvHeaders(newHeaders); const updatedFieldPositions = {}; const updatedFieldStyles = {}; const defaultStylesBase = { fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: '#000000', textStroke: false, strokeColor: '#ffffff', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' }; newHeaders.forEach((header, index) => { updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true }; if (fieldStyles[header]) { updatedFieldStyles[header] = fieldStyles[header]; } else { if (index === 0) { updatedFieldStyles[header] = { ...defaultStylesBase, fontFamily: 'Anton', fontSize: 72 }; } else { updatedFieldStyles[header] = { ...defaultStylesBase }; } } }); setFieldPositions(updatedFieldPositions); setFieldStyles(updatedFieldStyles); } } catch (error) { toast.error(error.message || 'Ocorreu um erro desconhecido ao processar o arquivo CSV.'); } };
+  const parseCsvFile = async (file) => { if (!file) return; try { const { data: newCsvData, headers: newHeaders } = await parseCsv(file); if (newCsvData && newCsvData.length > 0) { setCsvData(newCsvData); setCsvHeaders(newHeaders); const updatedFieldPositions = {}; const updatedFieldStyles = {}; const defaultStylesBase = { fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: '#000000', textStroke: false, strokeColor: '#ffffff', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' }; newHeaders.forEach((header, index) => { updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true }; if (fieldStyles[header]) { updatedFieldStyles[header] = fieldStyles[header]; } else { if (index === 0) { updatedFieldStyles[header] = { ...defaultStylesBase, fontFamily: 'Anton', fontSize: 72 }; } else { updatedFieldStyles[header] = { ...defaultStylesBase }; } } }); setFieldPositions(updatedFieldPositions); setFieldStyles(updatedFieldStyles); setInputMethod('manual'); } } catch (error) { toast.error(error.message || 'Ocorreu um erro desconhecido ao processar o arquivo CSV.'); } };
   const handleCSVUpload = (event) => { const file = event.target.files[0]; parseCsvFile(file); };
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
@@ -564,7 +564,56 @@ function HomePage() {
   };
   const handleEditFollowup = (index, content) => { setEditingFollowup({ index, content }); };
   const handleSaveFollowup = (newContent) => { if (editingFollowup === null) return; const updatedPosts = followupPosts.map((post, index) => { if (index === editingFollowup.index) { return { ...post, conteudo: newContent }; } return post; }); setFollowupPosts(updatedPosts); setEditingFollowup(null); };
-  const handleGenerateIAContent = async () => { setIsGenerating(true); try { const iaResponseText = await generateIAContent({ promptText, promptNumRecords }); const parsedResult = parseIaResponseToCsvData(iaResponseText); if (parsedResult && parsedResult.data && parsedResult.data.length > 0) { setCsvData(parsedResult.data); setCsvHeaders(parsedResult.headers); const updatedFieldPositions = {}; const updatedFieldStyles = {}; const defaultStylesBase = { fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false, strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' }; parsedResult.headers.forEach((header, index) => { updatedFieldPositions[header] = { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true }; updatedFieldStyles[header] = { ...defaultStylesBase }; }); setFieldPositions(updatedFieldPositions); setFieldStyles(updatedFieldStyles); } else { toast.error('Não foi possível processar a resposta da IA para o formato de tabela.'); } } catch (error) { toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`); } finally { setIsGenerating(false); } };
+  const handleGenerateIAContent = async () => {
+    setIsGenerating(true);
+    try {
+      const iaResponseText = await generateIAContent({ promptText, promptNumRecords });
+      const parsedResult = parseIaResponseToCsvData(iaResponseText);
+      if (parsedResult && parsedResult.data && parsedResult.data.length > 0) {
+        setCsvData(parsedResult.data);
+        setCsvHeaders(parsedResult.headers);
+        const updatedFieldPositions = {};
+        const updatedFieldStyles = {};
+        const defaultStylesBase = {
+          fontFamily: 'Arial',
+          fontSize: 24,
+          fontWeight: 'normal',
+          fontStyle: 'normal',
+          textDecoration: 'none',
+          color: darkMode ? '#FFFFFF' : '#000000',
+          textStroke: false,
+          strokeColor: darkMode ? '#000000' : '#FFFFFF',
+          strokeWidth: 2,
+          textShadow: false,
+          shadowColor: '#000000',
+          shadowBlur: 4,
+          shadowOffsetX: 2,
+          shadowOffsetY: 2,
+          textAlign: 'left',
+          verticalAlign: 'top'
+        };
+        parsedResult.headers.forEach((header, index) => {
+          updatedFieldPositions[header] = {
+            x: 10 + (index % 5) * 18,
+            y: 10 + Math.floor(index / 5) * 12,
+            width: 15,
+            height: 10,
+            visible: true
+          };
+          updatedFieldStyles[header] = { ...defaultStylesBase };
+        });
+        setFieldPositions(updatedFieldPositions);
+        setFieldStyles(updatedFieldStyles);
+        setInputMethod('manual'); // Switch to the editor view
+      } else {
+        toast.error('Não foi possível processar a resposta da IA para o formato de tabela.');
+      }
+    } catch (error) {
+      toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
   const currentTheme = darkMode ? darkTheme : lightTheme;
   const campaignData = { problema, solucao, campaignContent, persona, autor, formato, instrucoes, aspectRatio, followupPosts, colors: standardsColors, };
 
@@ -638,7 +687,24 @@ function HomePage() {
         onSelect={updateImageAndPalette}
         onLocalUpload={parseImageFile}
       />
-      <LoadingDialog open={isGeneratingCampaign || isSaving || isLoading} title={ isSaving ? `Salvando Campanha... (${uploadProgress.current}/${uploadProgress.total})` : isLoading ? "Carregando configuração..." : "Gerando conteúdo..." } description={ isSaving ? "Aguarde um momento, estamos fazendo o upload dos seus arquivos." : isLoading ? "Estamos desempacotando sua configuração. Quase pronto!" : "A IA está pensando e escrevendo. Isso pode levar alguns segundos." } progress={isSaving ? (uploadProgress.total > 0 ? (uploadProgress.current / uploadProgress.total) * 100 : 0) : null} />
+      <LoadingDialog
+        open={isGeneratingCampaign || isSaving || isLoading || isGenerating}
+        title={
+          isSaving
+            ? `Salvando Campanha... (${uploadProgress.current}/${uploadProgress.total})`
+            : isLoading
+            ? "Carregando configuração..."
+            : "Gerando conteúdo..."
+        }
+        description={
+          isSaving
+            ? "Aguarde um momento, estamos fazendo o upload dos seus arquivos."
+            : isLoading
+            ? "Estamos desempacotando sua configuração. Quase pronto!"
+            : "A IA está pensando e escrevendo. Isso pode levar alguns segundos."
+        }
+        progress={isSaving ? (uploadProgress.total > 0 ? (uploadProgress.current / uploadProgress.total) * 100 : 0) : null}
+      />
       <TextEditorDialog
         open={editingField !== null || editingFollowup !== null}
         title={
