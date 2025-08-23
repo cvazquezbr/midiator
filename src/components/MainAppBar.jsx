@@ -40,7 +40,6 @@ const MainAppBar = ({
   const { user, logout } = useUserAuth();
   const navigate = useNavigate();
   const [userMenuAnchorEl, setUserMenuAnchorEl] = React.useState(null);
-  const [campaignMenuAnchorEl, setCampaignMenuAnchorEl] = React.useState(null);
 
   const handleUserMenu = (event) => {
     setUserMenuAnchorEl(event.currentTarget);
@@ -48,14 +47,6 @@ const MainAppBar = ({
 
   const handleUserMenuClose = () => {
     setUserMenuAnchorEl(null);
-  };
-
-  const handleCampaignMenu = (event) => {
-    setCampaignMenuAnchorEl(event.currentTarget);
-  };
-
-  const handleCampaignMenuClose = () => {
-    setCampaignMenuAnchorEl(null);
   };
 
   const handleLogout = async () => {
@@ -88,31 +79,15 @@ const MainAppBar = ({
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 1 } }}>
-          <Tooltip title="Campanhas">
+          <Tooltip title="Salvar Campanha">
             <IconButton
-              onClick={handleCampaignMenu}
+              onClick={onSaveCampaign}
               sx={{ color: 'white' }}
-              aria-label="Campanhas"
+              aria-label="Salvar Campanha"
             >
-              <FolderIcon />
+              <SaveIcon />
             </IconButton>
           </Tooltip>
-          <Menu
-            id="campaign-menu-appbar"
-            anchorEl={campaignMenuAnchorEl}
-            open={Boolean(campaignMenuAnchorEl)}
-            onClose={handleCampaignMenuClose}
-          >
-            <MenuItem onClick={() => { onSaveCampaign(); handleCampaignMenuClose(); }}>
-              <SaveIcon sx={{ mr: 1 }} />
-              Salvar Campanha
-            </MenuItem>
-            <MenuItem onClick={() => { onLoadCampaign(); handleCampaignMenuClose(); }}>
-              <FolderOpenIcon sx={{ mr: 1 }} />
-              Carregar Campanha
-            </MenuItem>
-          </Menu>
-
           <Tooltip title="Configurações">
             <IconButton
               onClick={() => setShowSetupModal(true)}
