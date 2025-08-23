@@ -68,14 +68,6 @@ const GeneratedImageEditor = ({
   const theme = useTheme();
   const isLargeScreen = useMediaQuery(theme.breakpoints.up('md'));
 
-  const isHtmlField = useCallback((fieldName) => {
-    if (!fieldName) return false;
-    // Using the same logic as in HomePage
-    return ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'].some(field =>
-      fieldName.toLowerCase().includes(field.toLowerCase())
-    );
-  }, []);
-
   const handleOpenHtmlEditor = (fieldId) => {
     setEditingField(fieldId);
   };
@@ -231,7 +223,6 @@ const GeneratedImageEditor = ({
                   setBrandElements={setEditedBrandElements}
                   onDeselectField={handleDeselectField}
                   onOpenHtmlEditor={handleOpenHtmlEditor}
-                  isHtmlField={isHtmlField}
                 />
               </Grid>
             )}
@@ -265,7 +256,6 @@ const GeneratedImageEditor = ({
             setFieldPositions={setEditedPositions}
             csvHeaders={editorCsvHeaders}
             onOpenHtmlEditor={handleOpenHtmlEditor}
-            isHtmlField={isHtmlField}
           />
         </>
       )}

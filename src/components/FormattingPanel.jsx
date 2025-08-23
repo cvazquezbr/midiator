@@ -62,7 +62,6 @@ const FormattingPanel = ({
   onZIndexChange,
   onDeselectField,
   onOpenHtmlEditor,
-  isHtmlField,
   standardsColors,
 }) => {
   const fonts = [
@@ -318,17 +317,15 @@ const FormattingPanel = ({
             {isTextField ? (
               <>
                 {/* Fonte e Estilo */}
-                {isHtmlField(selectedField) && (
-                  <Button
-                    variant="contained"
-                    startIcon={<Edit />}
-                    onClick={() => onOpenHtmlEditor(selectedField)}
-                    fullWidth
-                    sx={{ mb: 2 }}
-                  >
-                    Editar Conteúdo HTML
-                  </Button>
-                )}
+                <Button
+                  variant="contained"
+                  startIcon={<Edit />}
+                  onClick={() => onOpenHtmlEditor(selectedField)}
+                  fullWidth
+                  sx={{ mb: 2 }}
+                >
+                  Editar Conteúdo
+                </Button>
                 <Accordion defaultExpanded>
                   <AccordionSummary expandIcon={<ExpandMore />}>
                     <Typography variant="subtitle1">

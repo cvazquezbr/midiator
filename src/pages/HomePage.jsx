@@ -618,10 +618,6 @@ function HomePage() {
               }}
               currentPreviewIndex={currentPreviewIndex}
               setCurrentPreviewIndex={setCurrentPreviewIndex}
-              isHtmlField={(fieldName) => {
-                if (!fieldName) return false;
-                return fieldName && ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'].some(field => fieldName.toLowerCase().includes(field.toLowerCase()))
-              }}
             />
           </div>
           <div hidden={activeStep !== 3}><ImageGeneratorFrontendOnly csvData={csvData} backgroundImage={backgroundImage} fieldPositions={fieldPositions} fieldStyles={fieldStyles} displayedImageSize={displayedImageSize} csvHeaders={csvHeaders} colorPalette={colorPalette} setGeneratedImagesData={setGeneratedImagesData} initialGeneratedImagesData={generatedImagesData} onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} originalImageSize={originalImageSize} imageFilters={imageFilters} brandElements={brandElements} onBrandElementsChange={setBrandElements} /></div>
