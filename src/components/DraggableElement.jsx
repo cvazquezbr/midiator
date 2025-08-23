@@ -612,6 +612,13 @@ const DraggableElementInternal = ({
                       overflow: 'hidden',
                       wordWrap: 'break-word',
                       pointerEvents: 'none',
+                      // Apply all text styles directly here to override HTML content styles
+                      fontFamily: style.fontFamily,
+                      fontSize: `${scaledFontSize}px`,
+                      fontWeight: style.fontWeight,
+                      fontStyle: style.fontStyle,
+                      color: style.color,
+                      lineHeight: `${scaledLineHeight}px`,
                       textAlign: style.textAlign || 'left',
                     }}
                   />

@@ -624,6 +624,7 @@ const FieldPositioner = ({
                   touchAction: 'none'
                 },
                 maxWidth: '800px',
+    maxHeight: '85vh',
                 mx: 'auto',
               }}
               onMouseDown={(e) => {
