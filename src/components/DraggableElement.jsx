@@ -4,7 +4,7 @@ import RichTextEditor from './RichTextEditor';
 import styles from './DraggableElement.module.css';
 import TextEditorDialog from './TextEditorDialog';
 
-const DraggableElement = ({
+const DraggableElementInternal = ({
   element, // Combined object for field/element data
   position,
   style,
@@ -662,6 +662,8 @@ const DraggableElement = ({
     </>
   );
 };
+
+const DraggableElement = React.memo(DraggableElementInternal);
 
 export default DraggableElement;
 
