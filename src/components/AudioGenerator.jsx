@@ -193,8 +193,12 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
         let audio;
         if (audioMode.startsWith('google-tts')) {
           audio = await generateAudioGoogleTTS(textToSpeak, voice, speechRate);
+          audio.index = i;
+          audio.filename = `audio_${String(i + 1).padStart(3, '0')}.mp3`;
         } else {
           audio = await generateAudioBrowser(textToSpeak, speechRate);
+          audio.index = i;
+          audio.filename = `audio_${String(i + 1).padStart(3, '0')}.mp3`;
         }
         generatedAudios.push(audio);
       } catch (error) {
