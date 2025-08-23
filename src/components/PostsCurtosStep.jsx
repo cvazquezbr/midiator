@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -11,15 +11,16 @@ import {
   TextField,
   Link as MuiLink,
   Alert,
+  Slider,
 } from '@mui/material';
 import {
   CloudUpload,
-  Add,
   InsertDriveFileOutlined,
   AutoAwesomeOutlined as GeminiIcon,
 } from '@mui/icons-material';
 import CsvInfobox from './CsvInfobox';
 import RecordManager from '../features/RecordManager/RecordManager';
+import { getGeminiApiKey } from '../utils/geminiCredentials';
 
 const PostsCurtosStep = ({
   inputMethod,
@@ -43,6 +44,12 @@ const PostsCurtosStep = ({
   exportCsv, // Nova prop
 }) => {
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
+  const [isGeminiKeyConfigured, setIsGeminiKeyConfigured] = useState(true);
+
+  useEffect(() => {
+    const key = getGeminiApiKey();
+    setIsGeminiKeyConfigured(!!key);
+  }, []);
 
   const handleDragEnter = (event) => {
     event.preventDefault();
@@ -110,17 +117,21 @@ const PostsCurtosStep = ({
           <>
             {inputMethod === 'ia' && (
               <Box sx={{ maxWidth: 600, mx: 'auto' }}>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  A geração de conteúdo usará a chave de API Gemini configurada em sua conta. Certifique-se de que ela está salva nas <MuiLink component="button" variant="body2" onClick={() => setShowSetupModal(true)}>Configurações</MuiLink>.
-                </Alert>
-                <TextField
-                  label="Quantidade de Elementos"
-                  type="number"
+                {!isGeminiKeyConfigured && (
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    A chave de API do Gemini não está configurada. Por favor, vá para <MuiLink component="button" variant="body2" onClick={() => setShowSetupModal(true)}>Configurações</MuiLink> para adicioná-la.
+                  </Alert>
+                )}
+                <Typography gutterBottom>Quantidade de Posts</Typography>
+                <Slider
                   value={promptNumRecords}
-                  onChange={(e) => setPromptNumRecords(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                  inputProps={{ min: 1 }}
-                  variant="outlined"
-                  fullWidth
+                  onChange={(e, newValue) => setPromptNumRecords(newValue)}
+                  aria-labelledby="discrete-slider"
+                  valueLabelDisplay="auto"
+                  step={1}
+                  marks
+                  min={1}
+                  max={5}
                   sx={{ mb: 3 }}
                 />
                 <TextField
