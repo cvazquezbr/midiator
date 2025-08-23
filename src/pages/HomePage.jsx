@@ -41,6 +41,7 @@ import geminiAPI from '../utils/geminiAPI';
 import { stripHtml } from '../lib/utils';
 import '../App.css';
 import LoadingDialog from '../components/LoadingDialog';
+import ProgressModal from '../components/ProgressModal';
 import TextEditorDialog from '../components/TextEditorDialog';
 import Campaign from '../components/Campaign';
 import ImageStep from '../components/ImageStep';
@@ -132,6 +133,7 @@ function HomePage() {
   const [currentCampaign, setCurrentCampaign] = useState(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+  const [generationProgress, setGenerationProgress] = useState(0);
 
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -564,7 +566,64 @@ function HomePage() {
   };
   const handleEditFollowup = (index, content) => { setEditingFollowup({ index, content }); };
   const handleSaveFollowup = (newContent) => { if (editingFollowup === null) return; const updatedPosts = followupPosts.map((post, index) => { if (index === editingFollowup.index) { return { ...post, conteudo: newContent }; } return post; }); setFollowupPosts(updatedPosts); setEditingFollowup(null); };
-  const handleGenerateIAContent = async () => { setIsGenerating(true); try { const iaResponseText = await generateIAContent({ promptText, promptNumRecords }); const parsedResult = parseIaResponseToCsvData(iaResponseText); if (parsedResult && parsedResult.data && parsedResult.data.length > 0) { setCsvData(parsedResult.data); setCsvHeaders(parsedResult.headers); const updatedFieldPositions = {}; const updatedFieldStyles = {}; const defaultStylesBase = { fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false, strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' }; parsedResult.headers.forEach((header, index) => { updatedFieldPositions[header] = { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true }; updatedFieldStyles[header] = { ...defaultStylesBase }; }); setFieldPositions(updatedFieldPositions); setFieldStyles(updatedFieldStyles); } else { toast.error('Não foi possível processar a resposta da IA para o formato de tabela.'); } } catch (error) { toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`); } finally { setIsGenerating(false); } };
+  const handleGenerateIAContent = async () => {
+    setIsGenerating(true);
+    setGenerationProgress(0);
+
+    try {
+      // Since we don't have a real progress, we'll just simulate it.
+      const iaResponseText = await generateIAContent({
+        promptText,
+        promptNumRecords
+      });
+      setGenerationProgress(50); // Simulate progress
+
+      const parsedResult = parseIaResponseToCsvData(iaResponseText);
+      if (parsedResult && parsedResult.data && parsedResult.data.length > 0) {
+        setCsvData(parsedResult.data);
+        setCsvHeaders(parsedResult.headers);
+        const updatedFieldPositions = {};
+        const updatedFieldStyles = {};
+        const defaultStylesBase = {
+          fontFamily: 'Arial',
+          fontSize: 24,
+          fontWeight: 'normal',
+          fontStyle: 'normal',
+          textDecoration: 'none',
+          color: darkMode ? '#FFFFFF' : '#000000',
+          textStroke: false,
+          strokeColor: darkMode ? '#000000' : '#FFFFFF',
+          strokeWidth: 2,
+          textShadow: false,
+          shadowColor: '#000000',
+          shadowBlur: 4,
+          shadowOffsetX: 2,
+          shadowOffsetY: 2,
+          textAlign: 'left',
+          verticalAlign: 'top'
+        };
+        parsedResult.headers.forEach((header, index) => {
+          updatedFieldPositions[header] = {
+            x: 10 + (index % 5) * 18,
+            y: 10 + Math.floor(index / 5) * 12,
+            width: 15,
+            height: 10,
+            visible: true
+          };
+          updatedFieldStyles[header] = { ...defaultStylesBase };
+        });
+        setFieldPositions(updatedFieldPositions);
+        setFieldStyles(updatedFieldStyles);
+        setGenerationProgress(100);
+      } else {
+        toast.error('Não foi possível processar a resposta da IA para o formato de tabela.');
+      }
+    } catch (error) {
+      toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
   const currentTheme = darkMode ? darkTheme : lightTheme;
   const campaignData = { problema, solucao, campaignContent, persona, autor, formato, instrucoes, aspectRatio, followupPosts, colors: standardsColors, };
 
@@ -637,6 +696,14 @@ function HomePage() {
         onClose={() => setShowBgSelector(false)}
         onSelect={updateImageAndPalette}
         onLocalUpload={parseImageFile}
+      />
+      <ProgressModal
+        open={isGenerating}
+        progress={generationProgress}
+        total={100}
+        onCancel={() => setIsGenerating(false)}
+        title="Gerando Conteúdo com IA"
+        progressText="Aguarde, a IA está criando os posts..."
       />
       <LoadingDialog open={isGeneratingCampaign || isSaving || isLoading} title={ isSaving ? `Salvando Campanha... (${uploadProgress.current}/${uploadProgress.total})` : isLoading ? "Carregando configuração..." : "Gerando conteúdo..." } description={ isSaving ? "Aguarde um momento, estamos fazendo o upload dos seus arquivos." : isLoading ? "Estamos desempacotando sua configuração. Quase pronto!" : "A IA está pensando e escrevendo. Isso pode levar alguns segundos." } progress={isSaving ? (uploadProgress.total > 0 ? (uploadProgress.current / uploadProgress.total) * 100 : 0) : null} />
       <TextEditorDialog
