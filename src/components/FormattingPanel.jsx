@@ -41,7 +41,9 @@ import {
   FlipToFront,
   FlipToBack,
   ArrowUpward,
-  ArrowDownward
+  ArrowDownward,
+  AspectRatio,
+  Tune
 } from '@mui/icons-material';
 import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
@@ -416,6 +418,106 @@ const FormattingPanel = ({
                   </AccordionDetails>
                 </Accordion>
 
+                {/* Posicionamento e Tamanho */}
+                <Accordion expanded={expandedPanel === 'positionSize'} onChange={handleAccordionChange('positionSize')}>
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
+                      <AspectRatio sx={{ mr: 1 }} /> Posição e Tamanho
+                    </Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <TextField
+                          label="X (%)"
+                          type="number"
+                          size="small"
+                          value={currentElement.x?.toFixed(1) || '0.0'}
+                          onChange={(e) => handlePositionPropertyChange('x', e.target.value)}
+                          inputProps={{ min: 0, max: 100, step: 0.1 }}
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={6}>
+                        <TextField
+                          label="Y (%)"
+                          type="number"
+                          size="small"
+                          value={currentElement.y?.toFixed(1) || '0.0'}
+                          onChange={(e) => handlePositionPropertyChange('y', e.target.value)}
+                          inputProps={{ min: 0, max: 100, step: 0.1 }}
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={6}>
+                        <TextField
+                          label="Largura (%)"
+                          type="number"
+                          size="small"
+                          value={currentElement.width?.toFixed(1) || '20.0'}
+                          onChange={(e) => handlePositionPropertyChange('width', e.target.value)}
+                          inputProps={{ min: 5, max: 100, step: 0.1 }}
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={6}>
+                        <TextField
+                          label="Altura (%)"
+                          type="number"
+                          size="small"
+                          value={currentElement.height?.toFixed(1) || '10.0'}
+                          onChange={(e) => handlePositionPropertyChange('height', e.target.value)}
+                          inputProps={{ min: 3, max: 100, step: 0.1 }}
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography gutterBottom>Rotação: {currentElement.rotation?.toFixed(0) || '0'}°</Typography>
+                        <Slider
+                          value={currentElement.rotation || 0}
+                          onChange={(e, value) => handlePositionPropertyChange('rotation', value)}
+                          min={0}
+                          max={360}
+                          step={1}
+                          valueLabelDisplay="auto"
+                          marks={[
+                            { value: 0, label: '0°' },
+                            { value: 90, label: '90°' },
+                            { value: 180, label: '180°' },
+                            { value: 270, label: '270°' },
+                            { value: 360, label: '360°' },
+                          ]}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography variant="caption" display="block" gutterBottom>Ordem das Camadas</Typography>
+                        <ToggleButtonGroup size="small" fullWidth aria-label="layer order controls">
+                          <Tooltip title="Enviar para o Fundo">
+                            <ToggleButton value="back" onClick={() => onZIndexChange(selectedField, 'back')}>
+                              <FlipToBack />
+                            </ToggleButton>
+                          </Tooltip>
+                          <Tooltip title="Recuar">
+                            <ToggleButton value="backward" onClick={() => onZIndexChange(selectedField, 'backward')}>
+                              <ArrowDownward />
+                            </ToggleButton>
+                          </Tooltip>
+                          <Tooltip title="Avançar">
+                            <ToggleButton value="forward" onClick={() => onZIndexChange(selectedField, 'forward')}>
+                              <ArrowUpward />
+                            </ToggleButton>
+                          </Tooltip>
+                          <Tooltip title="Trazer para Frente">
+                            <ToggleButton value="front" onClick={() => onZIndexChange(selectedField, 'front')}>
+                              <FlipToFront />
+                            </ToggleButton>
+                          </Tooltip>
+                        </ToggleButtonGroup>
+                      </Grid>
+                    </Grid>
+                  </AccordionDetails>
+                </Accordion>
+
                 <Divider sx={{ my: 2 }} />
 
                 <Grid container spacing={2}>
@@ -454,106 +556,6 @@ const FormattingPanel = ({
                 </AccordionDetails>
               </Accordion>
             )}
-
-            {/* Posicionamento e Tamanho */}
-            <Accordion expanded={expandedPanel === 'positionSize'} onChange={handleAccordionChange('positionSize')}>
-              <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography variant="subtitle1">
-                  📐 Posição e Tamanho
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Grid container spacing={2}>
-                  <Grid item xs={6}>
-                    <TextField
-                      label="X (%)"
-                      type="number"
-                      size="small"
-                      value={currentElement.x?.toFixed(1) || '0.0'}
-                      onChange={(e) => handlePositionPropertyChange('x', e.target.value)}
-                      inputProps={{ min: 0, max: 100, step: 0.1 }}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      label="Y (%)"
-                      type="number"
-                      size="small"
-                      value={currentElement.y?.toFixed(1) || '0.0'}
-                      onChange={(e) => handlePositionPropertyChange('y', e.target.value)}
-                      inputProps={{ min: 0, max: 100, step: 0.1 }}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      label="Largura (%)"
-                      type="number"
-                      size="small"
-                      value={currentElement.width?.toFixed(1) || '20.0'}
-                      onChange={(e) => handlePositionPropertyChange('width', e.target.value)}
-                      inputProps={{ min: 5, max: 100, step: 0.1 }}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      label="Altura (%)"
-                      type="number"
-                      size="small"
-                      value={currentElement.height?.toFixed(1) || '10.0'}
-                      onChange={(e) => handlePositionPropertyChange('height', e.target.value)}
-                      inputProps={{ min: 3, max: 100, step: 0.1 }}
-                      fullWidth
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography gutterBottom>Rotação: {currentElement.rotation?.toFixed(0) || '0'}°</Typography>
-                    <Slider
-                      value={currentElement.rotation || 0}
-                      onChange={(e, value) => handlePositionPropertyChange('rotation', value)}
-                      min={0}
-                      max={360}
-                      step={1}
-                      valueLabelDisplay="auto"
-                      marks={[
-                        { value: 0, label: '0°' },
-                        { value: 90, label: '90°' },
-                        { value: 180, label: '180°' },
-                        { value: 270, label: '270°' },
-                        { value: 360, label: '360°' },
-                      ]}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="caption" display="block" gutterBottom>Ordem das Camadas</Typography>
-                    <ToggleButtonGroup size="small" fullWidth aria-label="layer order controls">
-                      <Tooltip title="Enviar para o Fundo">
-                        <ToggleButton value="back" onClick={() => onZIndexChange(selectedField, 'back')}>
-                          <FlipToBack />
-                        </ToggleButton>
-                      </Tooltip>
-                      <Tooltip title="Recuar">
-                        <ToggleButton value="backward" onClick={() => onZIndexChange(selectedField, 'backward')}>
-                          <ArrowDownward />
-                        </ToggleButton>
-                      </Tooltip>
-                      <Tooltip title="Avançar">
-                        <ToggleButton value="forward" onClick={() => onZIndexChange(selectedField, 'forward')}>
-                          <ArrowUpward />
-                        </ToggleButton>
-                      </Tooltip>
-                      <Tooltip title="Trazer para Frente">
-                        <ToggleButton value="front" onClick={() => onZIndexChange(selectedField, 'front')}>
-                          <FlipToFront />
-                        </ToggleButton>
-                      </Tooltip>
-                    </ToggleButtonGroup>
-                  </Grid>
-                </Grid>
-              </AccordionDetails>
-            </Accordion>
           </>
         ) : (
           <Typography variant="h6" color="textSecondary" align="center" gutterBottom sx={{ mt: 4 }}>
@@ -566,7 +568,9 @@ const FormattingPanel = ({
         {/* Filtros de Imagem de Fundo */}
         <Accordion expanded={expandedPanel === 'backgroundFilters'} onChange={handleAccordionChange('backgroundFilters')}>
           <AccordionSummary expandIcon={<ExpandMore />}>
-            <Typography variant="subtitle1">🎨 Filtros de Imagem de Fundo</Typography>
+            <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
+                <Tune sx={{ mr: 1 }} /> Filtros do Fundo
+            </Typography>
           </AccordionSummary>
           <AccordionDetails>
             <Box sx={{ p: 1 }}>

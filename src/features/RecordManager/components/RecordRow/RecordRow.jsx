@@ -39,7 +39,9 @@ const RecordRow = ({ registro, colunas, onEditar, onExcluir, darkMode = false })
             </td>
             {colunas.map(colunaNome => (
                 <td key={`${registro.id}-${colunaNome}`} data-label={colunaNome} className={styles.dataCell}>
-                    {registro[colunaNome] !== undefined && registro[colunaNome] !== null ? String(registro[colunaNome]) : ''}
+                    <span className={styles.cellContent}>
+                        {registro[colunaNome] !== undefined && registro[colunaNome] !== null ? String(registro[colunaNome]) : ''}
+                    </span>
                 </td>
             ))}
         </tr>
