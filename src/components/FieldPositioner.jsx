@@ -652,8 +652,9 @@ const FieldPositioner = ({
                 alt="Background"
                 style={{
                   width: '100%',
-                  height: 'auto',
+                  height: '100%',
                   display: 'block',
+                  objectFit: 'contain',
                   pointerEvents: 'none',
                   userSelect: 'none',
                   WebkitUserDrag: 'none',
