@@ -62,7 +62,6 @@ export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
 export const serializeCampaignData = async (state, userId, campaignId = null, onProgress = () => {}) => {
   console.log('[serializeCampaignData] Starting serialization and upload...');
 
-  // Deep copy to avoid mutating the original state object directly.
   const cleanState = JSON.parse(JSON.stringify(state));
   let assetsToUploadCount = 0;
   let assetsUploadedCount = 0;
@@ -78,9 +77,14 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
     assetsToUploadCount += cleanState.brandElements.filter(el => el.url && el.url.startsWith('data:')).length;
   }
   if (Array.isArray(cleanState.generatedImagesData)) {
-    assetsToUploadCount += cleanState.generatedImagesData.filter(img => img.dataUrl && img.dataUrl.startsWith('data:')).length;
+    assetsToUploadCount += cleanState.generatedImagesData.filter(img => img.url && img.url.startsWith('data:')).length;
   }
-  // Future asset types can be counted here.
+  if (Array.isArray(cleanState.generatedAudioData)) {
+    assetsToUploadCount += cleanState.generatedAudioData.filter(audio => audio.url && audio.url.startsWith('data:')).length;
+  }
+  if (Array.isArray(cleanState.generatedVideosData)) {
+    assetsToUploadCount += cleanState.generatedVideosData.filter(video => video.url && video.url.startsWith('data:')).length;
+  }
 
   console.log(`[serializeCampaignData] Found ${assetsToUploadCount} assets to upload.`);
   onProgress({ current: 0, total: assetsToUploadCount });
@@ -124,7 +128,6 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
     // Generated Post Images
     if (Array.isArray(cleanState.generatedImagesData)) {
        for (const image of cleanState.generatedImagesData) {
-        // Bug fix: Was checking `image.dataUrl`, but the property is `image.url`.
         if (image.url && image.url.startsWith('data:')) {
           const filename = image.filename || `post_image_${image.index}_${Date.now()}.png`;
           console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
@@ -134,9 +137,37 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
           assetsUploadedCount++;
           onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
         }
-        // This is the crucial fix: The `backgroundImage` property is duplicated inside each
-        // generated image object and must be removed to prevent payload size errors.
         delete image.backgroundImage;
+      }
+    }
+
+    // Generated Audio
+    if (Array.isArray(cleanState.generatedAudioData)) {
+      for (const audio of cleanState.generatedAudioData) {
+        if (audio.url && audio.url.startsWith('data:')) {
+          const filename = audio.filename || `audio_${audio.index}_${Date.now()}.mp3`;
+          console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
+          const dataUrlToUpload = audio.url;
+          const permanentUrl = await uploadAsset(dataUrlToUpload, filename, campaignId, userId);
+          audio.url = permanentUrl;
+          assetsUploadedCount++;
+          onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
+        }
+      }
+    }
+
+    // Generated Videos
+    if (Array.isArray(cleanState.generatedVideosData)) {
+      for (const video of cleanState.generatedVideosData) {
+        if (video.url && video.url.startsWith('data:')) {
+          const filename = video.filename || `video_${video.index}_${Date.now()}.mp4`;
+          console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
+          const dataUrlToUpload = video.url;
+          const permanentUrl = await uploadAsset(dataUrlToUpload, filename, campaignId, userId);
+          video.url = permanentUrl;
+          assetsUploadedCount++;
+          onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
+        }
       }
     }
 
@@ -156,6 +187,8 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
     }
   };
   finalCleanup(cleanState.generatedImagesData);
+  finalCleanup(cleanState.generatedAudioData);
+  finalCleanup(cleanState.generatedVideosData);
 
   console.log('[serializeCampaignData] All uploads and cleanup complete.');
   return cleanState;
