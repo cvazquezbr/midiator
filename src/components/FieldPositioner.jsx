@@ -107,6 +107,7 @@ const FieldPositioner = ({
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
   const [composedImageUrl, setComposedImageUrl] = useState(null);
@@ -499,6 +500,17 @@ const FieldPositioner = ({
     ? `${originalImageSize.width} / ${originalImageSize.height}`
     : '16 / 9';
 
+  // Effect to calculate font scale based on container and original image sizes
+  useEffect(() => {
+    if (imageSize.width > 0 && originalImageSize?.width > 0 && imageSize.height > 0 && originalImageSize?.height > 0) {
+      const widthScale = imageSize.width / originalImageSize.width;
+      const heightScale = imageSize.height / originalImageSize.height;
+      setFontScale(Math.min(widthScale, heightScale));
+    } else {
+      setFontScale(1);
+    }
+  }, [imageSize, originalImageSize]);
+
   // Efeito para gerenciar scroll durante interações
   useEffect(() => {
     if (isInteracting) {
@@ -532,10 +544,7 @@ const FieldPositioner = ({
             content: sampleData,
             zIndex: position.zIndex || 0,
             rotation: position.rotation,
-            fontScale: Math.min(
-              (imageSize.width && originalImageSize?.width) ? imageSize.width / originalImageSize.width : 1,
-              (imageSize.height && originalImageSize?.height) ? imageSize.height / originalImageSize.height : 1
-            ),
+            fontScale: fontScale,
             enableHtmlRendering: isHtmlField(header),
           };
         })
@@ -560,7 +569,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => a.zIndex - b.zIndex);
     return elements;
-  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, imageSize, originalImageSize, isHtmlField]);
+  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, imageSize, originalImageSize, isHtmlField, fontScale]);
 
   if (!backgroundImage) {
     return (
