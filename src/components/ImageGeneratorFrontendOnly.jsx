@@ -702,11 +702,11 @@ const ImageGeneratorFrontendOnly = ({
                         </Box>
 
 <Box sx={{
-                          width: 'auto',
+                          width: '100%',
                           maxWidth: '100%',
                           height: 'auto',
                           maxHeight: '180px',
-                          display: 'inline-flex',
+                          display: 'flex',
                           flexDirection: 'column',
                           justifyContent: 'center',
                           alignItems: 'center',

@@ -738,13 +738,13 @@ function HomePage() {
             if (editingFollowup) return editingFollowup.content;
             if (!editingField) return '';
 
-            // Step 0: Campaign content
-            if (activeStep === 0) {
+            // Step 1: Campaign content
+            if (activeStep === 1) {
               return campaignContent ? campaignContent[editingField] || '' : '';
             }
 
-            // Step 2: Image/Formatting step (from CSV)
-            if (activeStep === 2) {
+            // Step 3: Image/Formatting step (from CSV)
+            if (activeStep === 3) {
               const currentRecord = csvData[currentPreviewIndex];
               return currentRecord ? currentRecord[editingField] || '' : '';
             }
