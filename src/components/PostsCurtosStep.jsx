@@ -199,10 +199,7 @@ const PostsCurtosStep = ({
         {showRecordManager && (
           <Box>
             <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
-                <Button onClick={() => {
-                    onDadosAlterados([], []);
-                    setInputMethod('ia'); // Volta para o método padrão
-                }}>
+                <Button onClick={() => setInputMethod('ia')}>
                     &larr; Voltar para obter dados
                 </Button>
                 <Button
