@@ -124,7 +124,18 @@ const FormattingPanel = ({
     if (selectedField) {
       const brandEl = brandElements?.find(el => el.id === selectedField);
       if (brandEl) {
-        setCurrentElement(brandEl);
+        // Defensively add filters if they are missing
+        const elementWithFilters = {
+          ...brandEl,
+          filters: brandEl.filters || {
+            brightness: 100,
+            contrast: 100,
+            saturate: 100,
+            blur: 0,
+            opacity: 100,
+          },
+        };
+        setCurrentElement(elementWithFilters);
         setIsTextField(false);
       } else if (fieldPositions[selectedField]) {
         setCurrentElement({
