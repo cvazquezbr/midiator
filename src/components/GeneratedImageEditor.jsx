@@ -271,6 +271,10 @@ const GeneratedImageEditor = ({
             setFieldPositions={setEditedPositions}
             csvHeaders={editorCsvHeaders}
             onOpenHtmlEditor={handleOpenHtmlEditor}
+            imageFilters={editedImageFilters}
+            setImageFilters={setEditedImageFilters}
+            brandElements={editedBrandElements}
+            setBrandElements={setEditedBrandElements}
           />
         </>
       )}
