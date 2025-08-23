@@ -47,7 +47,7 @@ const LoginPage = () => {
 
   const initiateGoogleLogin = useGoogleLogin({
     flow: 'auth-code',
-    scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/spreadsheets',
+    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets',
     access_type: 'offline',
     onSuccess: async (codeResponse) => {
       setLoading(true);
