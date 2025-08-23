@@ -27,13 +27,27 @@ const fetchWithRefresh = async (url, options) => {
         headers: { ...options.headers, 'Authorization': `Bearer ${currentAccessToken}` },
     });
 
-    if (response.status === 401) {
-        console.log('[googleApi] Access token expired, attempting to refresh...');
+    if (response.status === 401 || response.status === 403) {
+        console.log(`[googleApi] API call resulted in ${response.status}. Attempting to handle.`);
+
+        if (response.status === 403) {
+             const errorBody = await response.json().catch(() => ({}));
+             const reason = errorBody.error?.errors[0]?.reason;
+             if (reason === 'insufficientPermissions') {
+                console.error('[googleApi] Error: Insufficient permissions for Google Drive.');
+                toast.error('Você não concedeu permissão para o app acessar o Google Drive. Por favor, faça login novamente e aceite a permissão.');
+                throw new Error('Permissões insuficientes para o Google Drive. Tente fazer login novamente.');
+             }
+        }
+
+        console.log('[googleApi] Access token expired or invalid, attempting to refresh...');
         try {
             const refreshResponse = await fetch('/api/auth/refresh-google-token', { method: 'POST' });
             if (!refreshResponse.ok) {
-                const errorBody = await refreshResponse.json();
-                throw new Error(errorBody.error || 'Failed to refresh token from API');
+                const errorBody = await refreshResponse.json().catch(() => ({ error: 'Failed to parse refresh error' }));
+                // Se o refresh falhar, é muito provável que o usuário precise logar novamente.
+                toast.error('Sua sessão com o Google expirou. Por favor, faça login novamente para reconectar.');
+                throw new Error(errorBody.error || 'Não foi possível renovar a sessão com o Google.');
             }
             const { googleAccessToken: newAccessToken } = await refreshResponse.json();
             console.log('[googleApi] Successfully received new access token.');
@@ -47,10 +61,21 @@ const fetchWithRefresh = async (url, options) => {
             console.log('[googleApi] Retrying original request with new token...');
             const newOptions = { ...options, headers: { ...options.headers, 'Authorization': `Bearer ${newAccessToken}` } };
             response = await fetch(url, newOptions);
+
+            // After retrying, if it's still forbidden, the issue is likely permanent permission denial.
+            if (response.status === 403) {
+                 console.error('[googleApi] Error: Insufficient permissions even after token refresh.');
+                 toast.error('O acesso ao Google Drive foi negado. Verifique as permissões da sua conta Google.');
+                 throw new Error('Acesso ao Google Drive negado.');
+            }
+
         } catch (error) {
-            console.error('[googleApi] Token refresh failed:', error);
-            toast.error('Sua sessão com o Google expirou. Por favor, faça login novamente.');
-            throw new Error(`Sua sessão com o Google expirou. Detalhes: ${error.message}`);
+            console.error('[googleApi] Token refresh or retry failed:', error);
+            // Evita duplicação de toasts, a mensagem mais específica já foi dada.
+            if (!error.message.includes('Sua sessão com o Google expirou')) {
+              toast.error('Ocorreu uma falha na autenticação com o Google. Tente fazer o login novamente.');
+            }
+            throw error; // Re-throw the original error to be caught by the calling function
         }
     }
     return response;
@@ -61,7 +86,7 @@ export const findFolderByName = async (name, parentId = null) => {
   try {
     if (!currentAccessToken) {
       toast.error('Conexão com o Google Drive não estabelecida.');
-      return null;
+      throw new Error('Sessão com o Google não iniciada para buscar pasta.');
     }
     let query = `mimeType='application/vnd.google-apps.folder' and name='${name.replace(/'/g, "\\'")}' and trashed=false`;
     if (parentId) query += ` and '${parentId}' in parents`;
@@ -70,8 +95,10 @@ export const findFolderByName = async (name, parentId = null) => {
     const response = await fetchWithRefresh(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,parents)&orderBy=createdTime desc`, {});
     if (!response.ok) {
       const errorBody = await response.json().catch(() => ({}));
-      console.error(`[googleApi] Failed to find folder '${name}':`, errorBody.error?.message || response.statusText);
-      return null;
+      const errorMessage = errorBody.error?.message || response.statusText;
+      console.error(`[googleApi] Failed to find folder '${name}':`, errorMessage);
+      // O toast de erro já deve ter sido acionado pelo fetchWithRefresh
+      throw new Error(`Não foi possível encontrar a pasta '${name}': ${errorMessage}`);
     }
     const result = await response.json();
     if (result.files && result.files.length > 0) {
@@ -79,11 +106,11 @@ export const findFolderByName = async (name, parentId = null) => {
         return result.files[0];
     }
     console.log(`[googleApi] Folder '${name}' not found.`);
-    return null;
+    return null; // Retornar null é um resultado esperado, não um erro.
   } catch (error) {
     console.error(`[googleApi] Error in findFolderByName for '${name}':`, error);
-    toast.error(error.message || 'Falha na comunicação com o Google Drive.');
-    return null;
+    // O toast já foi dado no fetchWithRefresh, aqui apenas relançamos para a lógica de chamada saber que falhou.
+    throw error;
   }
 };
 
@@ -134,32 +161,39 @@ export const createFolder = async (name, parentId = null) => {
   try {
     if (!currentAccessToken) {
       toast.error('Conexão com o Google Drive não estabelecida.');
-      return null;
+      throw new Error('Sessão com o Google não iniciada para criar pasta.');
     }
+    // findFolderByName will throw on API error, so we only need to handle the "found" case.
     const existingFolder = await findFolderByName(name, parentId);
     if (existingFolder) {
       console.warn(`[googleApi] Folder '${name}' already exists with ID: ${existingFolder.id}. Using existing.`);
       return existingFolder;
     }
+
     console.log(`[googleApi] Folder '${name}' does not exist. Creating anew.`);
     const metadata = { name, mimeType: 'application/vnd.google-apps.folder' };
     if (parentId) metadata.parents = [parentId];
+
     const response = await fetchWithRefresh('https://www.googleapis.com/drive/v3/files', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(metadata),
     });
+
     if (!response.ok) {
-      const errorBody = await response.json();
-      throw new Error(`Erro ao criar pasta: ${errorBody.error.message}`);
+      const errorBody = await response.json().catch(() => ({}));
+      const errorMessage = errorBody.error?.message || response.statusText;
+      console.error(`[googleApi] Failed to create folder '${name}':`, errorMessage);
+      throw new Error(`Não foi possível criar a pasta '${name}': ${errorMessage}`);
     }
+
     const newFolder = await response.json();
     console.log(`[googleApi] Successfully created folder '${name}' with ID: ${newFolder.id}`);
     return newFolder;
   } catch (error) {
     console.error(`[googleApi] Error in createFolder for '${name}':`, error);
-    toast.error(error.message || `Falha ao criar a pasta '${name}' no Google Drive.`);
-    return null;
+    // O toast já foi dado no fetchWithRefresh, aqui apenas relançamos.
+    throw error;
   }
 };
 
@@ -168,40 +202,57 @@ export const uploadFile = async (fileBlob, fileName, folderId) => {
   try {
     if (!currentAccessToken) {
       toast.error('Conexão com o Google Drive não estabelecida.');
-      return null;
+      throw new Error('Sessão com o Google não iniciada para fazer upload.');
     }
     const metadata = { name: fileName };
     if (folderId) metadata.parents = [folderId];
+
     console.log(`[googleApi] Initializing resumable upload for '${fileName}'`);
     const initResponse = await fetchWithRefresh('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json; charset=UTF-8' },
       body: JSON.stringify(metadata),
     });
+
     if (!initResponse.ok) {
-      const errorBody = await initResponse.json();
-      throw new Error(`Erro ao iniciar upload: ${errorBody.error.message}`);
+      const errorBody = await initResponse.json().catch(() => ({}));
+      const errorMessage = errorBody.error?.message || initResponse.statusText;
+      throw new Error(`Erro ao iniciar upload: ${errorMessage}`);
     }
+
     const location = initResponse.headers.get('Location');
-    if (!location) throw new Error('Não foi possível obter o URL de upload resumível.');
+    if (!location) {
+      throw new Error('Não foi possível obter o URL de upload resumível.');
+    }
+
     console.log(`[googleApi] Resumable URL obtained for '${fileName}'`);
     console.log(`[googleApi] Sending file content for '${fileName}'`);
+
+    // The actual upload does not need the auth token in the header,
+    // as the resumable URL is pre-authenticated. So we use a normal fetch.
     const uploadResponse = await fetch(location, {
       method: 'PUT',
       headers: { 'Content-Type': fileBlob.type },
       body: fileBlob,
     });
+
     if (!uploadResponse.ok) {
-      const errorBody = await uploadResponse.json();
-      throw new Error(`Erro durante o upload do arquivo: ${errorBody.error.message}`);
+      const errorBody = await uploadResponse.json().catch(() => ({}));
+      const errorMessage = errorBody.error?.message || uploadResponse.statusText;
+      throw new Error(`Erro durante o upload do arquivo: ${errorMessage}`);
     }
+
     const uploadedFile = await uploadResponse.json();
     console.log(`[googleApi] Successfully uploaded file '${fileName}' with ID: ${uploadedFile.id}`);
     return uploadedFile;
   } catch (error) {
     console.error(`[googleApi] Error in uploadFile for '${fileName}':`, error);
-    toast.error(error.message || `Falha ao fazer upload do arquivo '${fileName}'.`);
-    return null;
+    // O toast já foi dado no fetchWithRefresh ou será o do erro específico de upload.
+    // Se não for um dos erros já tratados, apresentamos um genérico.
+    if (!error.message.includes('Google')) {
+        toast.error(error.message || `Falha ao fazer upload do arquivo '${fileName}'.`);
+    }
+    throw error;
   }
 };
 
