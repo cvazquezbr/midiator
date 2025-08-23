@@ -188,7 +188,6 @@ const ImageStep = ({
               onZIndexChange={onZIndexChange}
               onDeselectField={onDeselectField}
               onOpenHtmlEditor={onOpenHtmlEditor}
-              isHtmlField={isHtmlField}
               standardsColors={standardsColors}
             />
           </Grid>
@@ -211,7 +210,6 @@ const ImageStep = ({
               onZIndexChange={onZIndexChange}
               onDeselectField={onDeselectField}
               onOpenHtmlEditor={onOpenHtmlEditor}
-              isHtmlField={isHtmlField}
               standardsColors={standardsColors}
             />
           </>
