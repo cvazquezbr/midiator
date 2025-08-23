@@ -71,7 +71,7 @@ const PostsCurtosStep = ({
   };
 
   // Show RecordManager if data exists or if user chose manual creation
-  const showRecordManager = (csvData && csvData.length > 0) || inputMethod === 'manual';
+  const showRecordManager = inputMethod === 'manual';
 
   // Show creation options if there's no data and method is not manual
   const showCreationOptions = !showRecordManager;
@@ -197,7 +197,7 @@ const PostsCurtosStep = ({
         )}
 
         {showRecordManager && (
-          <Box>
+          <Box sx={{ width: '100%' }}>
             <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
                 <Button onClick={() => setInputMethod('ia')}>
                     &larr; Voltar para obter dados
