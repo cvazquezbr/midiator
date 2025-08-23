@@ -9,8 +9,8 @@ import fetchWithAuth from './fetchWithAuth';
 export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
   console.log(`[uploadAsset] Preparing to upload: ${filename}.`);
 
-  if (!dataUrl || !dataUrl.startsWith('data:')) {
-    console.error('[uploadAsset] Invalid dataUrl provided.', { filename });
+  if (!dataUrl || (!dataUrl.startsWith('data:') && !dataUrl.startsWith('blob:'))) {
+    console.error('[uploadAsset] Invalid dataUrl provided (must be a data: or blob: URL).', { filename });
     throw new Error(`Asset "${filename}" is not a valid data URL.`);
   }
   if (!userId) {
@@ -67,23 +67,25 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
   let assetsUploadedCount = 0;
 
   // 1. Count all assets that need uploading for the progress bar.
-  if (cleanState.backgroundImage && cleanState.backgroundImage.startsWith('data:')) {
+  const needsUpload = (url) => url && (url.startsWith('data:') || url.startsWith('blob:'));
+
+  if (needsUpload(cleanState.backgroundImage)) {
     assetsToUploadCount++;
   }
-  if (cleanState.generatedImageUrl && cleanState.generatedImageUrl.startsWith('data:')) {
+  if (needsUpload(cleanState.generatedImageUrl)) {
     assetsToUploadCount++;
   }
   if (Array.isArray(cleanState.brandElements)) {
-    assetsToUploadCount += cleanState.brandElements.filter(el => el.url && el.url.startsWith('data:')).length;
+    assetsToUploadCount += cleanState.brandElements.filter(el => needsUpload(el.url)).length;
   }
   if (Array.isArray(cleanState.generatedImagesData)) {
-    assetsToUploadCount += cleanState.generatedImagesData.filter(img => img.url && img.url.startsWith('data:')).length;
+    assetsToUploadCount += cleanState.generatedImagesData.filter(img => needsUpload(img.url)).length;
   }
   if (Array.isArray(cleanState.generatedAudioData)) {
-    assetsToUploadCount += cleanState.generatedAudioData.filter(audio => audio.url && audio.url.startsWith('data:')).length;
+    assetsToUploadCount += cleanState.generatedAudioData.filter(audio => needsUpload(audio.url)).length;
   }
   if (Array.isArray(cleanState.generatedVideosData)) {
-    assetsToUploadCount += cleanState.generatedVideosData.filter(video => video.url && video.url.startsWith('data:')).length;
+    assetsToUploadCount += cleanState.generatedVideosData.filter(video => needsUpload(video.url)).length;
   }
 
   console.log(`[serializeCampaignData] Found ${assetsToUploadCount} assets to upload.`);
@@ -92,7 +94,7 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
   // 2. Process each asset type sequentially.
   try {
     // Background Image
-    if (cleanState.backgroundImage && cleanState.backgroundImage.startsWith('data:')) {
+    if (needsUpload(cleanState.backgroundImage)) {
       const filename = `background_${Date.now()}.png`;
       console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
       const permanentUrl = await uploadAsset(cleanState.backgroundImage, filename, campaignId, userId);
@@ -102,7 +104,7 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
     }
 
     // Main Campaign Image
-    if (cleanState.generatedImageUrl && cleanState.generatedImageUrl.startsWith('data:')) {
+    if (needsUpload(cleanState.generatedImageUrl)) {
       const filename = `campaign_image_${Date.now()}.png`;
       console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
       const permanentUrl = await uploadAsset(cleanState.generatedImageUrl, filename, campaignId, userId);
@@ -114,7 +116,7 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
     // Brand Elements
     if (Array.isArray(cleanState.brandElements)) {
       for (const [index, element] of cleanState.brandElements.entries()) {
-        if (element.url && element.url.startsWith('data:')) {
+        if (needsUpload(element.url)) {
           const filename = `brand_${element.name || index}_${Date.now()}.png`;
           console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
           const permanentUrl = await uploadAsset(element.url, filename, campaignId, userId);
@@ -128,7 +130,7 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
     // Generated Post Images
     if (Array.isArray(cleanState.generatedImagesData)) {
        for (const image of cleanState.generatedImagesData) {
-        if (image.url && image.url.startsWith('data:')) {
+        if (needsUpload(image.url)) {
           const filename = image.filename || `post_image_${image.index}_${Date.now()}.png`;
           console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
           const dataUrlToUpload = image.url;
@@ -144,7 +146,7 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
     // Generated Audio
     if (Array.isArray(cleanState.generatedAudioData)) {
       for (const audio of cleanState.generatedAudioData) {
-        if (audio.url && audio.url.startsWith('data:')) {
+        if (needsUpload(audio.url)) {
           const filename = audio.filename || `audio_${audio.index}_${Date.now()}.mp3`;
           console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
           const dataUrlToUpload = audio.url;
@@ -159,7 +161,7 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
     // Generated Videos
     if (Array.isArray(cleanState.generatedVideosData)) {
       for (const video of cleanState.generatedVideosData) {
-        if (video.url && video.url.startsWith('data:')) {
+        if (needsUpload(video.url)) {
           const filename = video.filename || `video_${video.index}_${Date.now()}.mp4`;
           console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
           const dataUrlToUpload = video.url;
