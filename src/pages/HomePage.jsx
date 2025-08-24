@@ -58,6 +58,22 @@ import ColorThief from 'colorthief';
 
 import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
 
+const dataURLtoBlob = (dataurl) => {
+    if (!dataurl) return null;
+    const arr = dataurl.split(',');
+    if (arr.length < 2) return null;
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) return null;
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while(n--){
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], {type:mime});
+};
+
 function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken, fetchUser } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
@@ -156,13 +172,28 @@ function HomePage() {
     setColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
     setStandardsColors(Array.isArray(state.standardsColors) ? state.standardsColors : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
-    setGeneratedImagesData(Array.isArray(state.generatedImagesData) ? state.generatedImagesData : []);
+    const loadedGeneratedImagesData = Array.isArray(state.generatedImagesData) ? state.generatedImagesData : [];
+    const regeneratedImagesData = loadedGeneratedImagesData.map(img => {
+        if (img.dataUrl && (!img.blob || (typeof img.blob === 'object' && Object.keys(img.blob).length === 0))) {
+            const blob = dataURLtoBlob(img.dataUrl);
+            if (blob) {
+                return { ...img, blob };
+            }
+        }
+        return img;
+    });
+    setGeneratedImagesData(regeneratedImagesData);
+
     // FIX: Filter out invalid audio data on load to prevent crashes
     setGeneratedAudioData(
       Array.isArray(state.generatedAudioData)
         ? state.generatedAudioData.filter(a => a && typeof a.duration === 'number')
         : []
     );
+
+    // TODO: Videos are likely not being persisted correctly on save/load.
+    // The generated URL is a temporary object URL, and the blob is lost on serialization.
+    // This needs a more involved fix in how videos are saved.
     setGeneratedVideosData(Array.isArray(state.generatedVideosData) ? state.generatedVideosData : []);
     setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
 

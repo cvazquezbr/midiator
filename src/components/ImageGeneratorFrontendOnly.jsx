@@ -40,6 +40,22 @@ import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi'
 import { composeImage } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
 
+const dataURLtoBlob = (dataurl) => {
+    if (!dataurl) return null;
+    const arr = dataurl.split(',');
+    if (arr.length < 2) return null;
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) return null;
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while(n--){
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], {type:mime});
+};
+
 const ImageGeneratorFrontendOnly = ({
   csvData,
   backgroundImage,
@@ -257,10 +273,12 @@ const ImageGeneratorFrontendOnly = ({
           ctx.restore();
         }
         const dataUrl = canvas.toDataURL('image/png', 1.0);
+        const blob = dataURLtoBlob(dataUrl);
         const existingImageDataItem = generatedImages.find(img => img.index === i);
         const imageData = {
           url: dataUrl, // The dataUrl is used for display
           dataUrl: dataUrl, // And also stored explicitly for upload
+          blob,
           record,
           index: i,
           filename: `midiator_${String(i + 1).padStart(3, '0')}.png`,
@@ -435,9 +453,11 @@ const ImageGeneratorFrontendOnly = ({
         ctx.restore();
       }
       const dataUrl = canvas.toDataURL('image/png', 1.0);
+      const blob = dataURLtoBlob(dataUrl);
       const newImageData = {
         url: dataUrl,
         dataUrl: dataUrl,
+        blob,
         record,
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
