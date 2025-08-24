@@ -542,9 +542,9 @@ TOM DE VOZ:
 
 Exemplo de como o BLOCO CSV deve se parecer na sua resposta (não inclua este exemplo na sua resposta final, apenas o bloco gerado):
 \`\`\`csv
-Titulo;Texto Principal;Ponte para o Próximo
-✨ Grande Novidade;Descubra algo incrível que vai mudar seu dia! Você está pronto para a surpresa?;➡️ Veja o próximo!
-🎉 Outra Dica;Continuando nossa jornada com mais um segredo. Já se perguntou como isso é possível?;CTA Final Aqui!
+Titulo;Texto Principal;Ponte para o Próximo;prompt_imagem_carrossel
+✨ Grande Novidade;Descubra algo incrível que vai mudar seu dia! Você está pronto para a surpresa?;➡️ Veja o próximo!;A vibrant, abstract background with swirling gradients of blue and gold.
+🎉 Outra Dica;Continuando nossa jornada com mais um segredo. Já se perguntou como isso é possível?;CTA Final Aqui!;An image of a brain with glowing neural pathways, symbolizing new knowledge.
 \`\`\`
 Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` com os dados.`;
 
