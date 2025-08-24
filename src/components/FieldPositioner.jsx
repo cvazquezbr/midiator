@@ -107,7 +107,6 @@ const FieldPositioner = ({
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
-  // New state for the actual rendered image dimensions and offsets
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
@@ -212,25 +211,25 @@ const FieldPositioner = ({
 
         // Calculate the actual rendered size and position of the image due to 'object-fit: contain'
         if (originalImageSize?.width && originalImageSize?.height && width > 0 && height > 0) {
-          const containerAspectRatio = width / height;
-          const imageAspectRatio = originalImageSize.width / originalImageSize.height;
+            const containerAspectRatio = width / height;
+            const imageAspectRatio = originalImageSize.width / originalImageSize.height;
 
-          let renderedWidth, renderedHeight, x, y;
+            let renderedWidth, renderedHeight, x, y;
 
-          if (containerAspectRatio > imageAspectRatio) {
-            // Container is wider than the image (letterboxed on sides)
-            renderedHeight = height;
-            renderedWidth = height * imageAspectRatio;
-            x = (width - renderedWidth) / 2;
-            y = 0;
-          } else {
-            // Container is taller or equal aspect ratio (letterboxed on top/bottom)
-            renderedWidth = width;
-            renderedHeight = width / imageAspectRatio;
-            x = 0;
-            y = (height - renderedHeight) / 2;
-          }
-          setRenderedImageMetrics({ width: renderedWidth, height: renderedHeight, x, y });
+            if (containerAspectRatio > imageAspectRatio) {
+                // Container is wider than the image (letterboxed on sides)
+                renderedHeight = height;
+                renderedWidth = height * imageAspectRatio;
+                x = (width - renderedWidth) / 2;
+                y = 0;
+            } else {
+                // Container is taller or equal aspect ratio (letterboxed on top/bottom)
+                renderedWidth = width;
+                renderedHeight = width / imageAspectRatio;
+                x = 0;
+                y = (height - renderedHeight) / 2;
+            }
+            setRenderedImageMetrics({ width: renderedWidth, height: renderedHeight, x, y });
         }
       }
     });
@@ -669,10 +668,6 @@ const FieldPositioner = ({
                 maxHeight: '85vh',
                 mx: 'auto',
               }}
-              onMouseDown={(e) => {
-                if (e.target.closest('.text-box')) return;
-                handleFieldSelectInternal(null)
-              }}
               onTouchStart={handleContainerTouchStart}
               onTouchEnd={handleContainerTouchEnd}
             >
@@ -707,7 +702,18 @@ const FieldPositioner = ({
                   top: `${renderedImageMetrics.y}px`,
                   width: `${renderedImageMetrics.width}px`,
                   height: `${renderedImageMetrics.height}px`,
-                  pointerEvents: 'none', // Allow clicks to pass through to the main container for deselection
+                }}
+                onClick={(e) => {
+                  // If the click is on the wrapper itself, deselect the field
+                  if (e.target === e.currentTarget) {
+                    handleFieldSelectInternal(null);
+                  }
+                }}
+                onTouchStart={(e) => {
+                  // Handle touch for deselection on mobile
+                  if (e.target === e.currentTarget) {
+                    handleFieldSelectInternal(null);
+                  }
                 }}
               >
                 {renderedImageMetrics.width > 0 && renderableElements.map(element => (
