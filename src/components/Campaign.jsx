@@ -25,6 +25,7 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
+import { toast } from 'sonner';
 import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
 import { useSettings } from '../context/SettingsContext';
