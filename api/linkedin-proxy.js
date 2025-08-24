@@ -1,5 +1,6 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
+import { kv } from './kv.js';
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -166,17 +167,41 @@ async function handleGetProfiles(fetch, request, response) {
     if (orgAclsResponse.ok) {
       const orgAclsData = await orgAclsResponse.json();
       const orgUrns = orgAclsData.elements?.map(el => el.organization) || [];
-      // Ensure IDs are unique to prevent asking for the same org multiple times
       const uniqueOrgIds = [...new Set(orgUrns.map(urn => urn.split(':').pop()))];
 
       if (uniqueOrgIds.length > 0) {
         const allOrgDetails = {};
-        for (let i = 0; i < uniqueOrgIds.length; i += 50) {
-          const chunk = uniqueOrgIds.slice(i, i + 50);
-          const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${chunk.join(',')})`;
-          const batchOrgResponse = await fetchWithRetry(fetch, batchOrgUrl, { headers });
-          if (batchOrgResponse.ok) Object.assign(allOrgDetails, (await batchOrgResponse.json()).results);
+        const cacheKeys = uniqueOrgIds.map(id => `linkedin:org:${id}`);
+        const cachedResults = await kv.mget(cacheKeys);
+
+        const orgsToFetch = [];
+        cachedResults.forEach((result, index) => {
+          if (result) {
+            allOrgDetails[uniqueOrgIds[index]] = JSON.parse(result);
+          } else {
+            orgsToFetch.push(uniqueOrgIds[index]);
+          }
+        });
+
+        if (orgsToFetch.length > 0) {
+          for (let i = 0; i < orgsToFetch.length; i += 50) {
+            const chunk = orgsToFetch.slice(i, i + 50);
+            const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${chunk.join(',')})`;
+            const batchOrgResponse = await fetchWithRetry(fetch, batchOrgUrl, { headers });
+            if (batchOrgResponse.ok) {
+              const fetchedData = await batchOrgResponse.json();
+              const orgResults = fetchedData.results;
+              Object.assign(allOrgDetails, orgResults);
+
+              const pipeline = kv.pipeline();
+              for (const [orgId, orgData] of Object.entries(orgResults)) {
+                pipeline.set(`linkedin:org:${orgId}`, JSON.stringify(orgData), 'EX', 3600); // Cache for 1 hour
+              }
+              await pipeline.exec();
+            }
+          }
         }
+
         organizations = orgAclsData.elements.map(acl => {
           const orgId = acl.organization.split(':').pop();
           const orgDetails = allOrgDetails[orgId];
