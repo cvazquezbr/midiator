@@ -37,6 +37,7 @@ import {
     FactCheckOutlined as FactCheckIcon,
     AutoAwesomeOutlined as GeminiIcon,
     Edit as EditIcon,
+    Close as CloseIcon,
 } from '@mui/icons-material';
 
 const problemaHint = (
@@ -672,7 +673,21 @@ const Campaign = ({
 
 
                 <Dialog open={isHintModalOpen} onClose={() => setHintModalOpen(false)} maxWidth="lg" fullWidth>
-                    <DialogTitle>Como Descrever o Problema ou Necessidade</DialogTitle>
+                    <DialogTitle>
+                        Como Descrever o Problema ou Necessidade
+                        <IconButton
+                            aria-label="close"
+                            onClick={() => setHintModalOpen(false)}
+                            sx={{
+                                position: 'absolute',
+                                right: 8,
+                                top: 8,
+                                color: (theme) => theme.palette.grey[500],
+                            }}
+                        >
+                            <CloseIcon />
+                        </IconButton>
+                    </DialogTitle>
                     <DialogContent>
                         <Grid container spacing={4} sx={{ mt: 1 }}>
                             <Grid item xs={12} md={6}>
@@ -680,6 +695,17 @@ const Campaign = ({
                                 <Typography variant="body2" color="text.secondary" sx={{mb: 2}}>
                                     Use as sugestões abaixo como ponto de partida ou para refinar sua ideia. Clique em uma para usá-la.
                                 </Typography>
+
+                                <Button
+                                    variant="contained"
+                                    startIcon={<GeminiIcon />}
+                                    onClick={handleRegenerateProblems}
+                                    disabled={isLoadingProblems}
+                                    sx={{ mb: 2 }}
+                                >
+                                    Sugerir Problemas
+                                </Button>
+
                                 {isLoadingProblems && (
                                     <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
                                         <CircularProgress />
@@ -720,21 +746,26 @@ const Campaign = ({
                         </Grid>
                     </DialogContent>
                     <DialogActions>
-                        <Button
-                            variant="contained"
-                            startIcon={<GeminiIcon />}
-                            onClick={handleRegenerateProblems}
-                            disabled={isLoadingProblems}
-                            sx={{ mr: 'auto' }} // Pushes this button to the left
-                        >
-                            Sugerir Problemas
-                        </Button>
                         <Button onClick={() => setHintModalOpen(false)}>Fechar</Button>
                     </DialogActions>
                 </Dialog>
 
                 <Dialog open={isSolucaoHintModalOpen} onClose={() => setSolucaoHintModalOpen(false)} maxWidth="lg" fullWidth>
-                    <DialogTitle>Como Descrever a Solução ou Proposta</DialogTitle>
+                    <DialogTitle>
+                        Como Descrever a Solução ou Proposta
+                        <IconButton
+                            aria-label="close"
+                            onClick={() => setSolucaoHintModalOpen(false)}
+                            sx={{
+                                position: 'absolute',
+                                right: 8,
+                                top: 8,
+                                color: (theme) => theme.palette.grey[500],
+                            }}
+                        >
+                            <CloseIcon />
+                        </IconButton>
+                    </DialogTitle>
                     <DialogContent>
                         <Grid container spacing={4} sx={{ mt: 1 }}>
                             <Grid item xs={12} md={6}>
@@ -742,6 +773,17 @@ const Campaign = ({
                                 <Typography variant="body2" color="text.secondary" sx={{mb: 2}}>
                                     Use as sugestões abaixo como ponto de partida ou para refinar sua ideia. Clique em uma para usá-la.
                                 </Typography>
+
+                                <Button
+                                    variant="contained"
+                                    startIcon={<GeminiIcon />}
+                                    onClick={handleRegenerateSolutions}
+                                    disabled={isLoadingSolutions || !problema.trim()}
+                                    sx={{ mb: 2 }}
+                                >
+                                    Sugerir Soluções
+                                </Button>
+
                                 {isLoadingSolutions && (
                                     <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
                                         <CircularProgress />
@@ -782,15 +824,6 @@ const Campaign = ({
                         </Grid>
                     </DialogContent>
                     <DialogActions>
-                        <Button
-                            variant="contained"
-                            startIcon={<GeminiIcon />}
-                            onClick={handleRegenerateSolutions}
-                            disabled={isLoadingSolutions || !problema.trim()}
-                            sx={{ mr: 'auto' }} // Pushes this button to the left
-                        >
-                            Sugerir Soluções
-                        </Button>
                         <Button onClick={() => setSolucaoHintModalOpen(false)}>Fechar</Button>
                     </DialogActions>
                 </Dialog>
