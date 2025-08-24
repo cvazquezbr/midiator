@@ -49,6 +49,7 @@ import MemorialDescritivoModal from '../components/MemorialDescritivoModal';
 import {
   generateCampaignContent, generateCampaignImage, generateFormattedContent, generateFollowupPlan, generateFollowupPosts, generateIAContent, generateColorPalette,
 } from '../utils/generationHandlers.js';
+import { composeSingleImage } from '../utils/imageComposer.js';
 import { exportCsv, exportHtml } from '../utils/exportUtils.js';
 import { downloadExampleCsv } from '../utils/fileUtils.js';
 import { parseIaResponseToCsvData } from '../utils/iaResponseParser.js';
@@ -685,47 +686,61 @@ function HomePage() {
 
       if (generateImagesAutomatically) {
         toast.info('Geração de posts concluída. Iniciando geração automática de imagens...');
-        let firstImageSet = false;
+        let templateBackgroundImageUrl = null;
         let currentImagesData = [...initialImagesData];
 
-        for (let i = 0; i < currentImagesData.length; i++) {
-          const record = currentImagesData[i].record;
-          const imagePrompt = record.prompt_imagem_carrossel;
-
+        // 1. Generate the template background image from the first available prompt
+        for (const item of currentImagesData) {
+          const imagePrompt = item.record.prompt_imagem_carrossel;
           if (imagePrompt && imagePrompt.trim() !== '') {
             try {
-              const rawBgImageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
-
-              // Launder the data URL
-              const blob = await (await fetch(rawBgImageUrl)).blob();
-              const cleanUrl = URL.createObjectURL(blob);
-
-              if (!firstImageSet) {
-                setBackgroundImage(cleanUrl);
-                firstImageSet = true;
-              }
-
-              const finalImageData = await composeSingleImage({
-                record: record,
-                index: i,
-                itemBackgroundImage: cleanUrl,
-                imageFilters,
-                brandElements,
-                fieldPositions: updatedFieldPositions,
-                fieldStyles: updatedFieldStyles,
-              });
-
-              currentImagesData[i] = finalImageData;
-              setGeneratedImagesData([...currentImagesData]);
-              toast.success(`Imagem final para o post #${i + 1} gerada.`);
-
+              toast.loading('Gerando imagem de fundo do modelo...');
+              templateBackgroundImageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
+              updateImageAndPalette(templateBackgroundImageUrl); // This sets the main background
+              toast.dismiss();
+              toast.success('Imagem de fundo do modelo gerada.');
+              break; // Stop after finding the first valid prompt and generating the image
             } catch (error) {
-              console.error(`Error during automatic generation for post ${i + 1}:`, error);
-              toast.error(`Falha na geração automática para o post #${i + 1}: ${error.message}`);
+              toast.dismiss();
+              toast.error(`Falha ao gerar a imagem de fundo do modelo: ${error.message}`);
+              setIsGenerating(false);
+              return; // Stop the whole process if template generation fails
             }
           }
         }
-        toast.success('Geração automática de imagens concluída!');
+
+        if (!templateBackgroundImageUrl) {
+            toast.warning('Nenhum prompt de imagem encontrado nos posts. A geração automática de imagens foi ignorada.');
+        } else {
+            // 2. Compose all final images using the single template background
+            for (let i = 0; i < currentImagesData.length; i++) {
+                const record = currentImagesData[i].record;
+                try {
+                    const finalImageData = await composeSingleImage({
+                        record: record,
+                        index: i,
+                        itemBackgroundImage: templateBackgroundImageUrl, // Use the same template for all
+                        imageFilters,
+                        brandElements,
+                        fieldPositions: updatedFieldPositions,
+                        fieldStyles: updatedFieldStyles,
+                    });
+
+                    currentImagesData[i] = finalImageData;
+                    // Update state incrementally to show progress
+                    setGeneratedImagesData([...currentImagesData]);
+                    toast.success(`Imagem final para o post #${i + 1} gerada.`);
+
+                } catch (error) {
+                    console.error(`Error during automatic composition for post ${i + 1}:`, error);
+                    toast.error(`Falha na composição automática para o post #${i + 1}: ${error.message}`);
+                    // Still update the image data so the failed ones are noticeable
+                    currentImagesData[i] = { ...currentImagesData[i], url: null, error: true };
+                    setGeneratedImagesData([...currentImagesData]);
+                }
+            }
+            toast.success('Geração automática de imagens concluída!');
+        }
       }
     } catch (error) {
       toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
