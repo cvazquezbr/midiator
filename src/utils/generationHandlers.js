@@ -160,7 +160,7 @@ export const generateFormattedContent = async ({ content }) => {
 /**
  * Generates a plan for follow-up posts for the campaign.
  */
-export const generateFollowupPlan = async ({ content, followupPostsQuantity }) => {
+export const generateFollowupPlan = async ({ content, neededQuantity, existingPosts = [] }) => {
   if (!content?.conteudo) {
     throw new Error("Conteúdo principal deve ser gerado primeiro.");
   }
@@ -173,8 +173,15 @@ export const generateFollowupPlan = async ({ content, followupPostsQuantity }) =
   const { persona } = getCampaignPrompt();
   const personaString = formatObjectForPrompt(persona, ['description']);
 
+  const existingPostsString = existingPosts.length > 0
+    ? `
+POSTS JÁ EXISTENTES (NÃO REPITA ESTES TEMAS OU ETAPAS):
+${existingPosts.map(p => `- Título: "${p.titulo}", Etapa AIDA: ${p.etapa_aida}`).join('\n')}
+`
+    : '';
+
   const prompt =
-  `Você é um estrategista de marketing de conteúdo. Sua tarefa é criar um plano para ${followupPostsQuantity} posts sequenciais no LinkedIn, baseados em um conteúdo principal, seguindo o modelo AIDA.
+  `Você é um estrategista de marketing de conteúdo. Sua tarefa é criar um plano para ${neededQuantity} novos posts sequenciais no LinkedIn, baseados em um conteúdo principal e complementando os posts já existentes.
 
 CONTEÚDO PRINCIPAL:
 Tema: "${stripHtml(content.titulo)}"
@@ -182,7 +189,7 @@ Detalhes: "${stripHtml(content.conteudo)}"
 
 PERSONA-ALVO:
 ${personaString}
-
+${existingPostsString}
 ESTRUTURA DA SEQUÊNCIA (AIDA):
 1.  **Atenção:** Gancho impactante (dado, insight contraintuitivo).
 2.  **Interesse:** Conexão com problema/oportunidade da persona.
@@ -190,10 +197,11 @@ ESTRUTURA DA SEQUÊNCIA (AIDA):
 4.  **Ação:** CTA direto para o conteúdo principal.
 
 INSTRUÇÕES:
+-   Crie um plano para exatamente ${neededQuantity} novos posts.
 -   Para cada post, defina um título curto e chamativo.
 -   Defina o "coração do prompt" que será usado para gerar o conteúdo completo em uma etapa posterior.
 -   O "coração do prompt" deve ser uma instrução clara e concisa para um redator, incluindo o tipo de gancho, o ângulo e a emoção a ser evocada.
--   Varie os formatos e gatilhos para cada etapa do funil AIDA.
+-   Varie os formatos e gatilhos para cada etapa do funil AIDA, evitando as etapas já cobertas nos posts existentes.
 
 FORMATO DE RESPOSTA:
 Retorne um array JSON com a seguinte estrutura. Não inclua markdown ou qualquer outro texto fora do JSON.

@@ -602,7 +602,33 @@ function HomePage() {
   }, [aspectRatio, updateImageAndPalette]);
   const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
   const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
-  const handleGenerateFollowupPosts = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingFollowup(true); try { const plan = await generateFollowupPlan({ content, followupPostsQuantity }); const posts = await generateFollowupPosts({ content, plan }); setFollowupPosts(posts); } catch (error) { toast.error(`Ocorreu um erro ao gerar os posts de follow-up: ${error.message}`); } finally { setIsGeneratingFollowup(false); } };
+  const handleGenerateFollowupPosts = async (content = campaignContent) => {
+    if (!content?.conteudo) {
+      toast.error("Por favor, gere o conteúdo principal primeiro.");
+      return;
+    }
+
+    if (followupPosts.length >= followupPostsQuantity) {
+      toast.info('A quantidade de posts desejada já foi atingida ou superada.');
+      return;
+    }
+
+    setIsGeneratingFollowup(true);
+    try {
+      const neededQuantity = followupPostsQuantity - followupPosts.length;
+      const plan = await generateFollowupPlan({
+        content,
+        neededQuantity,
+        existingPosts: followupPosts,
+      });
+      const newPosts = await generateFollowupPosts({ content, plan });
+      setFollowupPosts(prevPosts => [...prevPosts, ...newPosts]);
+    } catch (error) {
+      toast.error(`Ocorreu um erro ao gerar os posts de follow-up: ${error.message}`);
+    } finally {
+      setIsGeneratingFollowup(false);
+    }
+  };
   const handleResetCampaign = () => {
     console.log('[HomePage] DIAGNOSTIC: handleResetCampaign called. Setting generatedImageUrl to null.');
     setCampaignContent(null);
