@@ -32,9 +32,9 @@ class LinkedInAPI {
     return organizations;
   }
 
-  async getAllManagedProfiles() {
+  async getAllManagedProfiles(forceRefresh = false) {
     // The proxy now handles fetching both personal and organization profiles together.
-    return this._proxyFetch('getProfiles');
+    return this._proxyFetch('getProfiles', { forceRefresh });
   }
 
   async getPersonalProfile() {
@@ -81,7 +81,7 @@ export const getLinkedInProfiles = async (linkedinConfig, forceRefresh = false) 
     }
 
     const api = new LinkedInAPI(linkedinConfig.accessToken);
-    const profiles = await api.getAllManagedProfiles();
+    const profiles = await api.getAllManagedProfiles(forceRefresh);
 
     try {
         sessionStorage.setItem(cacheKey, JSON.stringify(profiles));
