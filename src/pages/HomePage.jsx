@@ -689,72 +689,83 @@ function HomePage() {
   const handleGenerateIAContent = async () => {
     setIsGenerating(true);
     try {
+      // 1. Generate CSV content
       const iaResponseText = await generateIAContent({ promptText, promptNumRecords });
       const parsedResult = parseIaResponseToCsvData(iaResponseText);
-      if (parsedResult && parsedResult.data && parsedResult.data.length > 0) {
-        const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
-        setCsvData(csvDataResult);
-        setCsvHeaders(csvHeadersResult);
 
-        const updatedFieldPositions = {};
-        const updatedFieldStyles = {};
-        const defaultStylesBase = {
-          fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
-          textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
-          strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
-          shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
-          textAlign: 'left', verticalAlign: 'top'
-        };
-        csvHeadersResult.forEach((header, index) => {
-          updatedFieldPositions[header] = { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true };
-          updatedFieldStyles[header] = { ...defaultStylesBase };
-        });
-        setFieldPositions(updatedFieldPositions);
-        setFieldStyles(updatedFieldStyles);
+      if (!parsedResult || !parsedResult.data || parsedResult.data.length === 0) {
+        toast.error('Não foi possível processar a resposta da IA para o formato de tabela.');
+        setIsGenerating(false);
+        return;
+      }
 
-        let initialImagesData = csvDataResult.map((record, index) => ({
-            index, record, blob: null, url: null,
-            filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-            backgroundImage: backgroundImage,
-        }));
-        setGeneratedImagesData(initialImagesData);
+      const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
 
-        if (generateImagesAutomatically) {
-          toast.info('Geração de posts concluída. Iniciando geração automática de imagens de fundo...');
-          let firstImageSet = false;
+      // 2. Perform all initial state updates based on CSV data
+      setCsvData(csvDataResult);
+      setCsvHeaders(csvHeadersResult);
 
-          for (let i = 0; i < initialImagesData.length; i++) {
-            const record = initialImagesData[i].record;
-            const imagePrompt = record.prompt_imagem_carrossel;
+      const updatedFieldPositions = {};
+      const updatedFieldStyles = {};
+      const defaultStylesBase = {
+        fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
+        textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
+        strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
+        shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
+        textAlign: 'left', verticalAlign: 'top'
+      };
+      csvHeadersResult.forEach((header, index) => {
+        updatedFieldPositions[header] = { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true };
+        updatedFieldStyles[header] = { ...defaultStylesBase };
+      });
+      setFieldPositions(updatedFieldPositions);
+      setFieldStyles(updatedFieldStyles);
 
-            if (imagePrompt && imagePrompt.trim() !== '') {
-              try {
-                const imageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
+      let initialImagesData = csvDataResult.map((record, index) => ({
+          index, record, blob: null, url: null,
+          filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+          backgroundImage: backgroundImage, // Initialize with global background
+      }));
+      setGeneratedImagesData(initialImagesData);
 
-                if (!firstImageSet) {
-                  setBackgroundImage(imageUrl);
-                  firstImageSet = true;
-                }
+      // Switch view now that basic data is ready
+      setInputMethod('manual');
 
-                initialImagesData = initialImagesData.map((img, idx) =>
-                  idx === i ? { ...img, backgroundImage: imageUrl } : img
-                );
+      // 3. Conditionally run the async image generation loop
+      if (generateImagesAutomatically) {
+        toast.info('Geração de posts concluída. Iniciando geração automática de imagens de fundo...');
+        let firstImageSet = false;
+        let currentImagesData = [...initialImagesData]; // Create a mutable copy to track updates
 
-                setGeneratedImagesData(initialImagesData);
-                toast.success(`Imagem para o post #${i + 1} gerada.`);
-              } catch (error) {
-                console.error(`Error generating image for post ${i + 1}:`, error);
-                toast.error(`Falha ao gerar imagem para o post #${i + 1}: ${error.message}`);
+        for (let i = 0; i < currentImagesData.length; i++) {
+          const record = currentImagesData[i].record;
+          const imagePrompt = record.prompt_imagem_carrossel;
+
+          if (imagePrompt && imagePrompt.trim() !== '') {
+            try {
+              const imageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
+
+              // Set the first successfully generated image as the global default background
+              if (!firstImageSet) {
+                setBackgroundImage(imageUrl); // This will also be the default for subsequent manual operations
+                firstImageSet = true;
               }
+
+              // Update the local array
+              currentImagesData[i] = { ...currentImagesData[i], backgroundImage: imageUrl };
+
+              // Set state with the updated array to reflect progress in the UI
+              setGeneratedImagesData([...currentImagesData]);
+              toast.success(`Imagem para o post #${i + 1} gerada.`);
+            } catch (error) {
+              console.error(`Error generating image for post ${i + 1}:`, error);
+              toast.error(`Falha ao gerar imagem para o post #${i + 1}: ${error.message}`);
             }
           }
-          toast.success('Geração automática de imagens de fundo concluída!');
         }
-
-        setInputMethod('manual');
-      } else {
-        toast.error('Não foi possível processar a resposta da IA para o formato de tabela.');
+        toast.success('Geração automática de imagens de fundo concluída!');
       }
+
     } catch (error) {
       toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
     } finally {
