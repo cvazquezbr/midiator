@@ -500,9 +500,9 @@ INSTRUÇÕES DE FORMATAÇÃO DA SAÍDA (MUITO IMPORTANTE):
 A SUA RESPOSTA DEVE CONTER *APENAS E SOMENTE* UM BLOCO DE TEXTO FORMATADO COMO CSV, SEM NENHUM TEXTO ADICIONAL ANTES OU DEPOIS DO BLOCO CSV.
 O BLOCO CSV DEVE SER DELIMITADO EXATAMENTE POR TRÊS CRASE SEGUIDAS E A PALAVRA "csv" (\`\`\`csv) NO INÍCIO, E TRÊS CRASE SEGUIDAS (\`\`\`) NO FINAL.
 DENTRO DO BLOCO CSV:
-- A primeira linha DEVE SER o cabeçalho: Titulo;Texto Principal;Ponte para o Próximo
+- A primeira linha DEVE SER o cabeçalho: Titulo;Texto Principal;Ponte para o Próximo;prompt_imagem_carrossel
 - As linhas subsequentes DEVERÃO ser os dados de cada elemento, com os campos separados por PONTO E VÍRGULA (;).
-- NÃO inclua números de elemento ou qualquer outra coluna além de "Titulo", "Texto Principal", e "Ponte para o Próximo".
+- NÃO inclua números de elemento ou qualquer outra coluna além de "Titulo", "Texto Principal", "Ponte para o Próximo", e "prompt_imagem_carrossel".
 - NÃO inclua explicações, introduções, ou qualquer texto fora do bloco \`\`\`csv ... \`\`\`.
 
 REQUISITOS PARA O CONTEÚDO DE CADA ELEMENTO (LINHA DO CSV):
@@ -523,6 +523,12 @@ REQUISITOS PARA O CONTEÚDO DE CADA ELEMENTO (LINHA DO CSV):
    - Exemplos:
      → "Próximo: O passo que muda tudo!"
      → "Siga para o segredo nº3 👇"
+4. **prompt_imagem_carrossel** (Coluna 4):
+   - Um prompt de texto detalhado para um modelo de geração de imagem (como DALL-E ou Midjourney).
+   - O prompt deve descrever uma imagem de fundo visualmente atraente e conceitual para um post de carrossel, sobre a qual os campos de texto seriam sobrepostos.
+   - A imagem descrita NÃO DEVE CONTER TEXTO.
+   - O prompt deve ser em inglês, para compatibilidade com os modelos de imagem.
+   - Exemplo: "A vibrant, abstract background with swirling gradients of blue and gold, representing the flow of data and innovation, with a soft, clean area for text overlay."
 
 ESTRUTURA NARRATIVA SUGERIDA:
 - Elemento 1: Dado impactante ou pergunta instigante extraída do início do TEXTO BASE.

@@ -7,7 +7,7 @@ import Papa from 'papaparse';
  */
 export const parseIaResponseToCsvData = (responseText) => {
   // Definição dos cabeçalhos esperados pelo GerenciadorRegistros
-  const finalHeaders = ["Título", "Texto Principal", "Ponte para o Próximo"];
+  const finalHeaders = ["Título", "Texto Principal", "Ponte para o Próximo", "prompt_imagem_carrossel"];
   const data = [];
 
   if (!responseText || typeof responseText !== 'string') {
@@ -50,6 +50,7 @@ export const parseIaResponseToCsvData = (responseText) => {
         if (iaHeaderLower.includes('titulo') || iaHeaderLower.includes('título')) headerMap[iaHeaderTrimmed] = "Título";
         else if (iaHeaderLower.includes('texto_principal') || iaHeaderLower.includes('texto principal')) headerMap[iaHeaderTrimmed] = "Texto Principal";
         else if (iaHeaderLower.includes('ponte_proximo') || iaHeaderLower.includes('ponte para o próximo')) headerMap[iaHeaderTrimmed] = "Ponte para o Próximo";
+        else if (iaHeaderLower.includes('prompt_imagem_carrossel')) headerMap[iaHeaderTrimmed] = "prompt_imagem_carrossel";
         else if (iaHeaderLower.includes('id_elemento') || iaHeaderLower.includes('id') || iaHeaderLower.includes('num_slide') || iaHeaderLower.includes('elemento')) headerMap[iaHeaderTrimmed] = "id";
       });
       console.log("[parseIaResponseToCsvData] Mapa de Cabeçalhos construído:", headerMap);
