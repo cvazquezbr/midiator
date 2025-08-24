@@ -29,7 +29,7 @@ import { toast } from 'sonner';
 import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
 import { useSettings } from '../context/SettingsContext';
-import { uploadImageToDrive } from '../utils/googleApi';
+import { uploadImageToDrive, getOrCreateBackgroundsFolderId } from '../utils/googleApi';
 import {
     Campaign as CampaignIcon,
     ExpandMore as ExpandMoreIcon,
@@ -312,15 +312,14 @@ const Campaign = ({
             setIsSavingToDrive(false);
             return;
         }
-        const folderId = settings?.linkedin?.folderId;
-        if (!folderId) {
-            setImageTabError("Nenhuma pasta de coleção configurada. Vá para a aba 'Setup' e configure a pasta do Google Drive.");
-            setIsSavingToDrive(false);
-            return;
-        }
 
         try {
-            // Fetch the image from its URL to get the blob
+            const folderId = await getOrCreateBackgroundsFolderId();
+            if (!folderId) {
+                // The utility function should throw, but as a safeguard:
+                throw new Error("Não foi possível obter a pasta de coleção do Google Drive.");
+            }
+
             const response = await fetch(generatedImageUrl);
             if (!response.ok) {
                 throw new Error('Não foi possível baixar a imagem gerada.');
@@ -328,9 +327,9 @@ const Campaign = ({
             const imageBlob = await response.blob();
 
             await uploadImageToDrive(imageBlob, folderId);
-            // O sucesso já é notificado dentro de uploadImageToDrive
+            // Success toast is handled inside uploadImageToDrive
         } catch (error) {
-            // O erro já é notificado dentro de uploadImageToDrive
+            // Error toast is also handled inside the utility functions
             setImageTabError(error.message || "Ocorreu uma falha ao salvar na coleção.");
             console.error("Falha ao salvar na coleção:", error);
         } finally {
