@@ -692,93 +692,66 @@ function HomePage() {
       const iaResponseText = await generateIAContent({ promptText, promptNumRecords });
       const parsedResult = parseIaResponseToCsvData(iaResponseText);
       if (parsedResult && parsedResult.data && parsedResult.data.length > 0) {
-        setCsvData(parsedResult.data);
-        setCsvHeaders(parsedResult.headers);
+        const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
+        setCsvData(csvDataResult);
+        setCsvHeaders(csvHeadersResult);
+
         const updatedFieldPositions = {};
         const updatedFieldStyles = {};
         const defaultStylesBase = {
-          fontFamily: 'Arial',
-          fontSize: 24,
-          fontWeight: 'normal',
-          fontStyle: 'normal',
-          textDecoration: 'none',
-          color: darkMode ? '#FFFFFF' : '#000000',
-          textStroke: false,
-          strokeColor: darkMode ? '#000000' : '#FFFFFF',
-          strokeWidth: 2,
-          textShadow: false,
-          shadowColor: '#000000',
-          shadowBlur: 4,
-          shadowOffsetX: 2,
-          shadowOffsetY: 2,
-          textAlign: 'left',
-          verticalAlign: 'top'
+          fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
+          textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
+          strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
+          shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
+          textAlign: 'left', verticalAlign: 'top'
         };
-        parsedResult.headers.forEach((header, index) => {
-          updatedFieldPositions[header] = {
-            x: 10 + (index % 5) * 18,
-            y: 10 + Math.floor(index / 5) * 12,
-            width: 15,
-            height: 10,
-            visible: true
-          };
+        csvHeadersResult.forEach((header, index) => {
+          updatedFieldPositions[header] = { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true };
           updatedFieldStyles[header] = { ...defaultStylesBase };
         });
         setFieldPositions(updatedFieldPositions);
         setFieldStyles(updatedFieldStyles);
 
+        let initialImagesData = csvDataResult.map((record, index) => ({
+            index, record, blob: null, url: null,
+            filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+            backgroundImage: backgroundImage,
+        }));
+        setGeneratedImagesData(initialImagesData);
+
         if (generateImagesAutomatically) {
           toast.info('Geração de posts concluída. Iniciando geração automática de imagens de fundo...');
-          // Initialize generatedImagesData with the correct length and structure
-          const initialImagesData = parsedResult.data.map((record, index) => ({
-              index,
-              record,
-              blob: null,
-              url: null,
-              filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-              backgroundImage: backgroundImage, // Start with global background as placeholder
-          }));
-          setGeneratedImagesData(initialImagesData);
+          let firstImageSet = false;
 
-          const imagePromises = parsedResult.data.map((record, index) => {
+          for (let i = 0; i < initialImagesData.length; i++) {
+            const record = initialImagesData[i].record;
             const imagePrompt = record.prompt_imagem_carrossel;
-            if (imagePrompt && imagePrompt.trim() !== '') {
-              // Using a simple object for content, as generateCampaignImage primarily uses content.titulo
-              return generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio })
-                .then(imageUrl => ({ index, imageUrl }))
-                .catch(error => {
-                    console.error(`Error generating image for post ${index + 1}:`, error);
-                    return { index, error };
-                });
-            }
-            return Promise.resolve({ index, imageUrl: null });
-          });
 
-          // We use a traditional for...of loop to process promises sequentially
-          // This avoids overwhelming the API with parallel requests.
-          const results = [];
-          for (const promise of imagePromises) {
-              const result = await promise;
-              results.push(result);
-              // Update state after each image is generated to provide real-time feedback
-              setGeneratedImagesData(currentImages => {
-                  const newImages = [...currentImages];
-                  const targetImage = newImages.find(img => img.index === result.index);
-                  if (targetImage) {
-                      if (result.imageUrl) {
-                          targetImage.backgroundImage = result.imageUrl;
-                          toast.success(`Imagem para o post #${result.index + 1} gerada.`);
-                      } else if (result.error) {
-                          toast.error(`Falha ao gerar imagem para o post #${result.index + 1}: ${result.error.message}`);
-                      }
-                  }
-                  return newImages;
-              });
+            if (imagePrompt && imagePrompt.trim() !== '') {
+              try {
+                const imageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
+
+                if (!firstImageSet) {
+                  setBackgroundImage(imageUrl);
+                  firstImageSet = true;
+                }
+
+                initialImagesData = initialImagesData.map((img, idx) =>
+                  idx === i ? { ...img, backgroundImage: imageUrl } : img
+                );
+
+                setGeneratedImagesData(initialImagesData);
+                toast.success(`Imagem para o post #${i + 1} gerada.`);
+              } catch (error) {
+                console.error(`Error generating image for post ${i + 1}:`, error);
+                toast.error(`Falha ao gerar imagem para o post #${i + 1}: ${error.message}`);
+              }
+            }
           }
           toast.success('Geração automática de imagens de fundo concluída!');
         }
 
-        setInputMethod('manual'); // Switch to the editor view
+        setInputMethod('manual');
       } else {
         toast.error('Não foi possível processar a resposta da IA para o formato de tabela.');
       }
