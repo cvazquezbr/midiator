@@ -270,7 +270,20 @@ function HomePage() {
       csvData,
       csvHeaders,
     };
-    console.log("[HomePage] Campaign data object created:", campaignDataToSave);
+
+    const dataForSaving = {
+      ...campaignDataToSave,
+      generatedImagesData: campaignDataToSave.generatedImagesData.map(img => {
+        const { blob, ...rest } = img;
+        return rest;
+      }),
+      generatedVideosData: campaignDataToSave.generatedVideosData.map(vid => {
+        const { blob, ...rest } = vid;
+        return rest;
+      }),
+    };
+
+    console.log("[HomePage] Campaign data object created for saving:", dataForSaving);
 
 
     setIsSaving(true);
@@ -278,12 +291,12 @@ function HomePage() {
     try {
       if (currentCampaign) {
         console.log(`[HomePage] Updating existing campaign, ID: ${currentCampaign.id}`);
-        const updated = await updateCampaign(currentCampaign.id, name, campaignDataToSave, setUploadProgress, user.uuid);
+        const updated = await updateCampaign(currentCampaign.id, name, dataForSaving, setUploadProgress, user.uuid);
         toast.success(`Campaign "${name}" updated.`);
         setCurrentCampaign(updated);
       } else {
         console.log(`[HomePage] Saving new campaign.`);
-        const newCampaign = await saveCampaign(name, campaignDataToSave, setUploadProgress, user.uuid);
+        const newCampaign = await saveCampaign(name, dataForSaving, setUploadProgress, user.uuid);
         toast.success(`Campaign "${name}" saved.`);
         setCurrentCampaign(newCampaign);
       }
