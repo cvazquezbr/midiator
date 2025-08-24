@@ -689,7 +689,6 @@ function HomePage() {
   const handleGenerateIAContent = async () => {
     setIsGenerating(true);
     try {
-      // 1. Generate CSV content
       const iaResponseText = await generateIAContent({ promptText, promptNumRecords });
       const parsedResult = parseIaResponseToCsvData(iaResponseText);
 
@@ -700,8 +699,6 @@ function HomePage() {
       }
 
       const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
-
-      // 2. Perform all initial state updates based on CSV data
       setCsvData(csvDataResult);
       setCsvHeaders(csvHeadersResult);
 
@@ -724,18 +721,15 @@ function HomePage() {
       let initialImagesData = csvDataResult.map((record, index) => ({
           index, record, blob: null, url: null,
           filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-          backgroundImage: backgroundImage, // Initialize with global background
+          backgroundImage: backgroundImage,
       }));
       setGeneratedImagesData(initialImagesData);
-
-      // Switch view now that basic data is ready
       setInputMethod('manual');
 
-      // 3. Conditionally run the async image generation loop
       if (generateImagesAutomatically) {
-        toast.info('Geração de posts concluída. Iniciando geração automática de imagens de fundo...');
+        toast.info('Geração de posts concluída. Iniciando geração automática de imagens...');
         let firstImageSet = false;
-        let currentImagesData = [...initialImagesData]; // Create a mutable copy to track updates
+        let currentImagesData = [...initialImagesData];
 
         for (let i = 0; i < currentImagesData.length; i++) {
           const record = currentImagesData[i].record;
@@ -743,27 +737,36 @@ function HomePage() {
 
           if (imagePrompt && imagePrompt.trim() !== '') {
             try {
-              const imageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
+              const bgImageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
 
-              // Set the first successfully generated image as the global default background
               if (!firstImageSet) {
-                setBackgroundImage(imageUrl); // This will also be the default for subsequent manual operations
+                setBackgroundImage(bgImageUrl);
                 firstImageSet = true;
               }
 
-              // Update the local array
-              currentImagesData[i] = { ...currentImagesData[i], backgroundImage: imageUrl };
+              currentImagesData[i] = { ...currentImagesData[i], backgroundImage: bgImageUrl };
 
-              // Set state with the updated array to reflect progress in the UI
+              const finalImageData = await composeSingleImage({
+                record: currentImagesData[i].record,
+                index: i,
+                itemBackgroundImage: bgImageUrl,
+                imageFilters,
+                brandElements,
+                fieldPositions: updatedFieldPositions,
+                fieldStyles: updatedFieldStyles,
+              });
+
+              currentImagesData[i] = finalImageData;
               setGeneratedImagesData([...currentImagesData]);
-              toast.success(`Imagem para o post #${i + 1} gerada.`);
+              toast.success(`Imagem final para o post #${i + 1} gerada.`);
+
             } catch (error) {
-              console.error(`Error generating image for post ${i + 1}:`, error);
-              toast.error(`Falha ao gerar imagem para o post #${i + 1}: ${error.message}`);
+              console.error(`Error during automatic generation for post ${i + 1}:`, error);
+              toast.error(`Falha na geração automática para o post #${i + 1}: ${error.message}`);
             }
           }
         }
-        toast.success('Geração automática de imagens de fundo concluída!');
+        toast.success('Geração automática de imagens concluída!');
       }
 
     } catch (error) {

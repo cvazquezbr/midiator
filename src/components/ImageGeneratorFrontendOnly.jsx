@@ -40,21 +40,7 @@ import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi'
 import { composeImage } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
 
-const dataURLtoBlob = (dataurl) => {
-    if (!dataurl) return null;
-    const arr = dataurl.split(',');
-    if (arr.length < 2) return null;
-    const mimeMatch = arr[0].match(/:(.*?);/);
-    if (!mimeMatch) return null;
-    const mime = mimeMatch[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while(n--){
-        u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new Blob([u8arr], {type:mime});
-};
+import { composeSingleImage } from '../utils/imageComposer';
 
 const ImageGeneratorFrontendOnly = ({
   csvData,
@@ -122,71 +108,9 @@ const ImageGeneratorFrontendOnly = ({
     }
   }, [initialGeneratedImagesData]);
 
-  const wrapTextInArea = (ctx, text, x, y, maxWidth, maxHeight, style) => {
-    if (!text) return [];
-    const fontSize = style.fontSize || 24;
-    const lineHeight = fontSize * (style.lineHeightMultiplier || 1.2);
-    const maxLines = Math.floor(maxHeight / lineHeight);
-    ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${fontSize}px ${style.fontFamily || 'Arial'}`;
-    const words = text.toString().split(' ');
-    const lines = [];
-    let currentLine = words[0] || '';
-    for (let i = 1; i < words.length; i++) {
-      const word = words[i];
-      const testLine = currentLine + ' ' + word;
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && currentLine !== '') {
-        lines.push(currentLine);
-        if (lines.length >= maxLines) break;
-        currentLine = word;
-      } else {
-        currentLine = testLine;
-      }
-    }
-    if (lines.length < maxLines && currentLine) {
-      lines.push(currentLine);
-    }
-    return lines;
-  };
-
-  const applyTextEffects = (ctx, style) => {
-    ctx.fillStyle = style.color || '#000000';
-    ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${style.fontSize || 24}px ${style.fontFamily || 'Arial'}`;
-    ctx.textAlign = style.textAlign || 'left';
-    ctx.textBaseline = style.textBaseline || 'top';
-    if (style.textShadow) {
-      ctx.shadowColor = style.shadowColor || '#000000';
-      ctx.shadowBlur = style.shadowBlur || 4;
-      ctx.shadowOffsetX = style.shadowOffsetX || 2;
-      ctx.shadowOffsetY = style.shadowOffsetY || 2;
-    } else {
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
-    }
-    if (style.textStroke) {
-      ctx.strokeStyle = style.strokeColor || '#ffffff';
-      ctx.lineWidth = style.strokeWidth || 2;
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-    }
-  };
-
-  const drawTextWithEffects = async (ctx, text, x, y, style, maxWidth, maxHeight) => {
-    if (containsHtml(text)) {
-      await renderHtmlToCanvas(ctx, text, x, y, maxWidth, maxHeight, style);
-    } else {
-      if (style.textStroke) {
-        ctx.strokeText(text, x, y);
-      }
-      ctx.fillText(text, x, y);
-    }
-  };
-
   const generateImages = async () => {
-    if (!backgroundImage || csvData.length === 0) {
-      alert('Por favor, carregue um arquivo CSV e uma imagem de fundo.');
+    if ((!backgroundImage && initialGeneratedImagesData.some(img => !img.backgroundImage)) || csvData.length === 0) {
+      alert('Por favor, carregue um arquivo CSV e uma imagem de fundo global, ou garanta que todas as imagens tenham um fundo individual.');
       return;
     }
     if (!fontsLoaded) {
@@ -197,114 +121,41 @@ const ImageGeneratorFrontendOnly = ({
     setShowProgressModal(true);
     setProgress(0);
     isCancelledRef.current = false;
-    const images = [];
+
+    const imagePromises = csvData.map((record, i) => {
+      if (isCancelledRef.current) return Promise.resolve(null);
+
+      const initialImageDataItem = initialGeneratedImagesData.find(img => img.index === i);
+      const itemBackgroundImage = initialImageDataItem?.backgroundImage || backgroundImage;
+
+      return composeSingleImage({
+        record,
+        index: i,
+        itemBackgroundImage,
+        imageFilters,
+        brandElements,
+        fieldPositions,
+        fieldStyles,
+      })
+      .then(imageData => {
+        setProgress(p => p + 1);
+        return imageData;
+      })
+      .catch(error => {
+        console.error(`Erro ao gerar imagem para o registro ${i}:`, error);
+        alert(`Erro ao gerar imagem para o registro ${i}: ${error.message}`);
+        return null; // Retorna nulo para este item em caso de erro
+      });
+    });
+
     try {
-      for (let i = 0; i < csvData.length; i++) {
-        if (isCancelledRef.current) break;
-
-        const record = csvData[i];
-        const initialImageDataItem = initialGeneratedImagesData.find(img => img.index === i);
-        const itemBackgroundImage = initialImageDataItem?.backgroundImage || backgroundImage;
-
-        if (!itemBackgroundImage) {
-          console.warn(`No background image for record ${i}, skipping.`);
-          continue;
-        }
-
-        const composedBackgroundImageUrl = await composeImage(itemBackgroundImage, imageFilters, brandElements);
-        const img = new Image();
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = (err) => reject(new Error(`Failed to load background image for record ${i}`, { cause: err }));
-          img.src = composedBackgroundImageUrl;
-        });
-
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.textRenderingOptimization = 'optimizeQuality';
-        ctx.drawImage(img, 0, 0);
-
-        for (const field of Object.keys(record)) {
-          const position = fieldPositions[field];
-          const style = fieldStyles[field];
-          if (!position || !position.visible || !style) continue;
-          const text = record[field] || "";
-          if (!text) continue;
-          ctx.save();
-          const posPx = {
-            x: Math.round((position.x / 100) * img.width),
-            y: Math.round((position.y / 100) * img.height),
-            width: Math.round((position.width / 100) * img.width),
-            height: Math.round((position.height / 100) * img.height)
-          };
-          if (position.rotation) {
-            const centerX = posPx.x + posPx.width / 2;
-            const centerY = posPx.y + posPx.height / 2;
-            ctx.translate(centerX, centerY);
-            ctx.rotate(position.rotation * Math.PI / 180);
-            ctx.translate(-centerX, -centerY);
-          }
-          const fontSize = style.fontSize || 24;
-          applyTextEffects(ctx, { ...style, fontSize: fontSize });
-          const fixedPadding = 8;
-          const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
-          const effectiveTextHeight = Math.max(0, posPx.height - (2 * fixedPadding));
-          const textContentStartX = posPx.x + fixedPadding;
-          const textContentStartY = posPx.y + fixedPadding;
-          const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: fontSize });
-          const lineHeight = fontSize * (style.lineHeightMultiplier || 1.2);
-          let currentLineRenderY = textContentStartY;
-          if (style.verticalAlign === 'middle') {
-            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
-            currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
-          } else if (style.verticalAlign === 'bottom') {
-            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
-            currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
-          }
-          if (containsHtml(text)) {
-            await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
-          } else {
-            for (const line of lines) {
-              let currentLineRenderX;
-              if (style.textAlign === 'center') {
-                currentLineRenderX = textContentStartX + effectiveTextWidth / 2;
-              } else if (style.textAlign === 'right') {
-                currentLineRenderX = textContentStartX + effectiveTextWidth;
-              } else {
-                currentLineRenderX = textContentStartX;
-              }
-              const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
-              await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
-            }
-          }
-          ctx.restore();
-        }
-        const dataUrl = canvas.toDataURL('image/png', 1.0);
-        const blob = dataURLtoBlob(dataUrl);
-        const imageData = {
-          url: dataUrl,
-          dataUrl: dataUrl,
-          blob,
-          record,
-          index: i,
-          filename: `midiator_${String(i + 1).padStart(3, '0')}.png`,
-          backgroundImage: itemBackgroundImage,
-          customFieldPositions: initialImageDataItem?.customFieldPositions,
-          customFieldStyles: initialImageDataItem?.customFieldStyles,
-        };
-        images.push(imageData);
-        setProgress(i + 1);
-      }
+      const images = (await Promise.all(imagePromises)).filter(Boolean); // Filtra os nulos de erros ou cancelamentos
       if (!isCancelledRef.current) {
         setGeneratedImages(images);
       }
     } catch (error) {
-      console.error('Erro na geração de imagens:', error);
-      alert(`Erro na geração de imagens: ${error.message}`);
+      console.error('Erro geral durante a geração de imagens em lote:', error);
+      alert(`Ocorreu um erro geral durante a geração das imagens: ${error.message}`);
     } finally {
       setIsGenerating(false);
       setShowProgressModal(false);
