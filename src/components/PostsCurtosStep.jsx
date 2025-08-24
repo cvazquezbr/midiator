@@ -12,6 +12,8 @@ import {
   Link as MuiLink,
   Alert,
   Slider,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import {
   CloudUpload,
@@ -35,6 +37,8 @@ const PostsCurtosStep = ({
   setPromptNumRecords,
   promptText,
   setPromptText,
+  generateImagesAutomatically,
+  setGenerateImagesAutomatically,
   handleGenerateIAContent,
   isGenerating,
   csvData,
@@ -144,6 +148,16 @@ const PostsCurtosStep = ({
                   fullWidth
                   placeholder="Ex: Um carrossel sobre os benefícios da meditação para reduzir o estresse..."
                   sx={{ mb: 3 }}
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={generateImagesAutomatically}
+                      onChange={(e) => setGenerateImagesAutomatically(e.target.checked)}
+                    />
+                  }
+                  label="Gerar imagens de fundo automaticamente para cada post"
+                  sx={{ mb: 2, display: 'block' }}
                 />
                 <Button
                   variant="contained"

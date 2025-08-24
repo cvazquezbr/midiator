@@ -125,6 +125,7 @@ function HomePage() {
   const [inputMethod, setInputMethod] = useState('ia');
   const [promptNumRecords, setPromptNumRecords] = useState(10);
   const [promptText, setPromptText] = useState('');
+  const [generateImagesAutomatically, setGenerateImagesAutomatically] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -725,6 +726,58 @@ function HomePage() {
         });
         setFieldPositions(updatedFieldPositions);
         setFieldStyles(updatedFieldStyles);
+
+        if (generateImagesAutomatically) {
+          toast.info('Geração de posts concluída. Iniciando geração automática de imagens de fundo...');
+          // Initialize generatedImagesData with the correct length and structure
+          const initialImagesData = parsedResult.data.map((record, index) => ({
+              index,
+              record,
+              blob: null,
+              url: null,
+              filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+              backgroundImage: backgroundImage, // Start with global background as placeholder
+          }));
+          setGeneratedImagesData(initialImagesData);
+
+          const imagePromises = parsedResult.data.map((record, index) => {
+            const imagePrompt = record.prompt_imagem_carrossel;
+            if (imagePrompt && imagePrompt.trim() !== '') {
+              // Using a simple object for content, as generateCampaignImage primarily uses content.titulo
+              return generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio })
+                .then(imageUrl => ({ index, imageUrl }))
+                .catch(error => {
+                    console.error(`Error generating image for post ${index + 1}:`, error);
+                    return { index, error };
+                });
+            }
+            return Promise.resolve({ index, imageUrl: null });
+          });
+
+          // We use a traditional for...of loop to process promises sequentially
+          // This avoids overwhelming the API with parallel requests.
+          const results = [];
+          for (const promise of imagePromises) {
+              const result = await promise;
+              results.push(result);
+              // Update state after each image is generated to provide real-time feedback
+              setGeneratedImagesData(currentImages => {
+                  const newImages = [...currentImages];
+                  const targetImage = newImages.find(img => img.index === result.index);
+                  if (targetImage) {
+                      if (result.imageUrl) {
+                          targetImage.backgroundImage = result.imageUrl;
+                          toast.success(`Imagem para o post #${result.index + 1} gerada.`);
+                      } else if (result.error) {
+                          toast.error(`Falha ao gerar imagem para o post #${result.index + 1}: ${result.error.message}`);
+                      }
+                  }
+                  return newImages;
+              });
+          }
+          toast.success('Geração automática de imagens de fundo concluída!');
+        }
+
         setInputMethod('manual'); // Switch to the editor view
       } else {
         toast.error('Não foi possível processar a resposta da IA para o formato de tabela.');
@@ -755,7 +808,7 @@ function HomePage() {
             />
           </div>
           <div hidden={activeStep !== 1}><Container maxWidth="lg"><Campaign steps={steps} activeStep={activeStep} {...campaignData} setProblema={setProblema} setSolucao={setSolucao} isGeneratingCampaign={isGeneratingCampaign} handleGenerateCampaignContent={handleGenerateCampaignContent} handleResetCampaign={handleResetCampaign} handleExportHtml={() => exportHtml(campaignData)} editingField={editingField} setEditingField={setEditingField} isGeneratingSummaryMedio={isGeneratingSummaryMedio} handleGenerateSummary={handleGenerateSummary} isGeneratingSummaryPequeno={isGeneratingSummaryPequeno} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} setCampaignContent={setCampaignContent} onEditFollowup={handleEditFollowup} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} setAspectRatio={setAspectRatio} /></Container></div>
-          <div hidden={activeStep !== 2}><PostsCurtosStep steps={steps} inputMethod={inputMethod} setInputMethod={setInputMethod} handleDrop={handleDrop} handleDragOver={handleDragOver} fileInputRef={fileInputRef} handleCSVUpload={handleCSVUpload} downloadExampleCsv={downloadExampleCsv} setShowSetupModal={setShowSetupModal} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} handleGenerateIAContent={handleGenerateIAContent} isGenerating={isGenerating} csvData={csvData} csvHeaders={csvHeaders} onDadosAlterados={handleDadosAlterados} darkMode={darkMode} exportCsv={exportCsv} /></div>
+          <div hidden={activeStep !== 2}><PostsCurtosStep steps={steps} inputMethod={inputMethod} setInputMethod={setInputMethod} handleDrop={handleDrop} handleDragOver={handleDragOver} fileInputRef={fileInputRef} handleCSVUpload={handleCSVUpload} downloadExampleCsv={downloadExampleCsv} setShowSetupModal={setShowSetupModal} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} generateImagesAutomatically={generateImagesAutomatically} setGenerateImagesAutomatically={setGenerateImagesAutomatically} handleGenerateIAContent={handleGenerateIAContent} isGenerating={isGenerating} csvData={csvData} csvHeaders={csvHeaders} onDadosAlterados={handleDadosAlterados} darkMode={darkMode} exportCsv={exportCsv} /></div>
           <div hidden={activeStep !== 3}>
             <ImageStep
               steps={steps}
