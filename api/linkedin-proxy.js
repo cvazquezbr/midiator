@@ -152,7 +152,7 @@ async function handleCreatePost(fetch, request, response) {
 }
 
 async function handleGetProfiles(fetch, request, response) {
-  const { accessToken } = request.body;
+  const { accessToken, forceRefresh } = request.body;
   if (!accessToken) return response.status(400).json({ error: 'Missing accessToken for getProfiles.' });
   const headers = { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': '202507' };
   try {
@@ -168,10 +168,14 @@ async function handleGetProfiles(fetch, request, response) {
       const orgAclsData = await orgAclsResponse.json();
       const orgUrns = orgAclsData.elements?.map(el => el.organization) || [];
       const uniqueOrgIds = [...new Set(orgUrns.map(urn => urn.split(':').pop()))];
+      const cacheKeys = uniqueOrgIds.map(id => `linkedin:org:${id}`);
+
+      if (forceRefresh && cacheKeys.length > 0) {
+        await kv.del(cacheKeys);
+      }
 
       if (uniqueOrgIds.length > 0) {
         const allOrgDetails = {};
-        const cacheKeys = uniqueOrgIds.map(id => `linkedin:org:${id}`);
         const cachedResults = await kv.mget(cacheKeys);
 
         const orgsToFetch = [];
