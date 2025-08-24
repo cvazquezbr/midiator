@@ -648,7 +648,7 @@ function HomePage() {
       const iaResponseText = await generateIAContent({ promptText, promptNumRecords });
       const parsedResult = parseIaResponseToCsvData(iaResponseText);
 
-      if (!parsedResult || !parsedResult.data || parsedResult.data.length === 0) {
+      if (!parsedResult || !parsedResult.data || !parsedResult.data.length > 0) {
         toast.error('Não foi possível processar a resposta da IA para o formato de tabela.');
         return; // Exit early
       }
@@ -694,25 +694,27 @@ function HomePage() {
 
           if (imagePrompt && imagePrompt.trim() !== '') {
             try {
-              const bgImageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
+              const rawBgImageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
+
+              // Launder the data URL
+              const blob = await (await fetch(rawBgImageUrl)).blob();
+              const cleanUrl = URL.createObjectURL(blob);
 
               if (!firstImageSet) {
-                setBackgroundImage(bgImageUrl);
+                setBackgroundImage(cleanUrl);
                 firstImageSet = true;
               }
 
-              // This is the crucial part: call the full composition utility
               const finalImageData = await composeSingleImage({
                 record: record,
                 index: i,
-                itemBackgroundImage: bgImageUrl,
+                itemBackgroundImage: cleanUrl,
                 imageFilters,
                 brandElements,
                 fieldPositions: updatedFieldPositions,
                 fieldStyles: updatedFieldStyles,
               });
 
-              // Update the array with the fully composed image data
               currentImagesData[i] = finalImageData;
               setGeneratedImagesData([...currentImagesData]);
               toast.success(`Imagem final para o post #${i + 1} gerada.`);
@@ -797,7 +799,7 @@ function HomePage() {
           <div hidden={activeStep !== 5}><AudioGenerator csvData={csvData} fieldPositions={fieldPositions} onAudiosGenerated={setGeneratedAudioData} initialAudioData={generatedAudioData} /></div>
           <div hidden={activeStep !== 6}><VideoGenerator2 generatedImages={generatedImagesData} generatedAudioData={generatedAudioData} onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)} /></div>
           <div hidden={activeStep !== 7}><Publisher settings={settings} campaignContent={campaignContent} generatedImagesData={generatedImagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedProfile={selectedProfile} setSelectedProfile={setSelectedProfile} selectedImages={selectedImages} setSelectedImages={setSelectedImages} selectedVideos={selectedVideos} setSelectedVideos={setSelectedVideos} /></div>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} ><Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button><Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box><Button onClick={handleNext} disabled={activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)} variant="contained" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Próximo</Button></Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} ><Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button><Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box><Button onClick={handleNext} disabled={isGenerating || activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)} variant="contained" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Próximo</Button></Box>
         </Box>
       </Box>
       <SetupModal open={showSetupModal} onClose={() => setShowSetupModal(false)} />
