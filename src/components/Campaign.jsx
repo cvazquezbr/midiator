@@ -27,6 +27,8 @@ import {
 } from '@mui/material';
 import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
+import { useSettings } from '../context/SettingsContext';
+import { uploadImageToDrive } from '../utils/googleApi';
 import {
     Campaign as CampaignIcon,
     ExpandMore as ExpandMoreIcon,
@@ -38,6 +40,7 @@ import {
     AutoAwesomeOutlined as GeminiIcon,
     Edit as EditIcon,
     Close as CloseIcon,
+    Save as SaveIcon,
 } from '@mui/icons-material';
 
 const problemaHint = (
@@ -178,9 +181,11 @@ const Campaign = ({
     setCampaignContent,
     onEditFollowup,
 }) => {
+    const { settings } = useSettings();
     const [activeTab, setActiveTab] = useState(0);
     const [isHintModalOpen, setHintModalOpen] = React.useState(false);
     const [isSolucaoHintModalOpen, setSolucaoHintModalOpen] = React.useState(false);
+    const [isSavingToDrive, setIsSavingToDrive] = React.useState(false);
     const [commonProblems, setCommonProblems] = React.useState([]);
     const [isLoadingProblems, setIsLoadingProblems] = React.useState(false);
     const [problemsError, setProblemsError] = React.useState(null);
@@ -294,6 +299,36 @@ const Campaign = ({
             fetchSolutionsOnOpen();
         }
     }, [isSolucaoHintModalOpen, fetchSolutionsOnOpen]);
+
+    const handleSaveToDrive = async () => {
+        if (!generatedImageUrl) {
+            toast.error("Nenhuma imagem gerada para salvar.");
+            return;
+        }
+        const folderId = settings?.linkedin?.folderId;
+        if (!folderId) {
+            toast.error("Nenhuma pasta de coleção configurada. Vá para a aba 'Setup' e configure a pasta do Google Drive.");
+            return;
+        }
+
+        setIsSavingToDrive(true);
+        try {
+            // Fetch the image from its URL to get the blob
+            const response = await fetch(generatedImageUrl);
+            if (!response.ok) {
+                throw new Error('Não foi possível baixar a imagem gerada.');
+            }
+            const imageBlob = await response.blob();
+
+            await uploadImageToDrive(imageBlob, folderId);
+            // O sucesso já é notificado dentro de uploadImageToDrive
+        } catch (error) {
+            // O erro já é notificado dentro de uploadImageToDrive
+            console.error("Falha ao salvar na coleção:", error);
+        } finally {
+            setIsSavingToDrive(false);
+        }
+    };
 
     return (
         <Card>
@@ -521,11 +556,16 @@ const Campaign = ({
                             </Grid>
                             {generatedImageUrl && !isGeneratingImage && (
                                 <Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, flexWrap: 'wrap', gap: 1 }}>
                                         <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
-                                        <Button onClick={() => handleGenerateImage(campaignContent)} disabled={isGeneratingImage} startIcon={<GeminiIcon />}>
-                                            {isGeneratingImage ? 'Gerando...' : 'Regerar Imagem'}
-                                        </Button>
+                                        <Box>
+                                            <Button onClick={handleSaveToDrive} disabled={isSavingToDrive || isGeneratingImage} startIcon={<SaveIcon />}>
+                                                {isSavingToDrive ? 'Salvando...' : 'Salvar na Coleção'}
+                                            </Button>
+                                            <Button onClick={() => handleGenerateImage(campaignContent)} disabled={isGeneratingImage || isSavingToDrive} startIcon={<GeminiIcon />} sx={{ ml: 1 }}>
+                                                {isGeneratingImage ? 'Gerando...' : 'Regerar Imagem'}
+                                            </Button>
+                                        </Box>
                                     </Box>
                                     <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', borderRadius: '8px', mt: 2 }} />
                                 </Box>
