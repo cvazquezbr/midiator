@@ -606,14 +606,6 @@ const Publisher = ({
                             <video src={previewedMedia.url} controls style={{ maxHeight: '100%', maxWidth: '100%' }} />
                           )}
                         </Box>
-                        <Box sx={{ mt: 1, textAlign: 'center' }}>
-                          <Typography variant="caption" color="text.secondary">
-                            Tipo: {previewedMedia.fileType}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                            Tamanho: {previewedMedia.fileSize}
-                          </Typography>
-                        </Box>
                       </>
                     ) : (
                       <Typography>Selecione uma mídia para visualizar</Typography>
