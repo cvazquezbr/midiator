@@ -360,3 +360,30 @@ export const uploadImageToDrive = async (imageBlob, folderId) => {
         throw error;
     }
 };
+
+export const getOrCreateBackgroundsFolderId = async () => {
+    console.log("[googleApi] Getting or creating the 'midiator/backgrounds' folder structure.");
+    try {
+        let midiatorFolder = await findFolderByName('midiator');
+        if (!midiatorFolder) {
+            console.log("[googleApi] 'midiator' folder not found, creating it.");
+            midiatorFolder = await createFolder('midiator');
+            if (!midiatorFolder) throw new Error("Falha ao criar a pasta 'midiator' no Drive.");
+        }
+
+        let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id);
+        if (!backgroundsFolder) {
+            console.log("[googleApi] 'backgrounds' folder not found, creating it.");
+            backgroundsFolder = await createFolder('backgrounds', midiatorFolder.id);
+            if (!backgroundsFolder) throw new Error("Falha ao criar a pasta 'backgrounds' no Drive.");
+        }
+
+        console.log(`[googleApi] 'backgrounds' folder ID is: ${backgroundsFolder.id}`);
+        return backgroundsFolder.id;
+
+    } catch (error) {
+        console.error("[googleApi] Failed to get or create backgrounds folder:", error);
+        toast.error(`Falha ao acessar a pasta de coleção: ${error.message}`);
+        throw error;
+    }
+};
