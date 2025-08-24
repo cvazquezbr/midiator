@@ -87,31 +87,39 @@ export const parseIaResponseToCsvData = (responseText) => {
   }
 
   // Se chegou aqui, o parsing do bloco CSV falhou ou não havia bloco CSV. Tentar fallback.
-  console.log("[parseIaResponseToCsvData] Tentando parser de fallback (formato DeepSeek).");
+  console.log("[parseIaResponseToCsvData] Tentando parser de fallback (formato Chave: Valor).");
   const fallbackLines = responseText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   let currentRecord = {};
-  const fallbackData = []; // Usar um novo array para o fallback
+  const fallbackData = [];
 
   for (const line of fallbackLines) {
     if (line.toLowerCase().startsWith("título:") || line.toLowerCase().startsWith("titulo:")) {
-      if (Object.keys(currentRecord).length > 0 && currentRecord["Título"]) fallbackData.push(currentRecord);
+      // Quando encontramos um novo título, salvamos o registro anterior (se ele tiver um título)
+      if (currentRecord["Título"]) {
+        fallbackData.push(currentRecord);
+      }
       currentRecord = { "Título": line.substring(line.indexOf(':') + 1).trim() };
     } else if (line.toLowerCase().startsWith("texto principal:")) {
       currentRecord["Texto Principal"] = line.substring(line.indexOf(':') + 1).trim();
     } else if (line.toLowerCase().startsWith("ponte para o próximo:") || line.toLowerCase().startsWith("ponte:")) {
       currentRecord["Ponte para o Próximo"] = line.substring(line.indexOf(':') + 1).trim();
-      if (currentRecord["Título"]) fallbackData.push(currentRecord);
-      currentRecord = {};
+    } else if (line.toLowerCase().startsWith("prompt_imagem_carrossel:")) {
+      currentRecord["prompt_imagem_carrossel"] = line.substring(line.indexOf(':') + 1).trim();
     }
   }
-  if (Object.keys(currentRecord).length > 0 && currentRecord["Título"]) fallbackData.push(currentRecord);
+  // Adiciona o último registro que estava sendo processado
+  if (currentRecord["Título"]) {
+    fallbackData.push(currentRecord);
+  }
 
   if (fallbackData.length > 0) {
-    console.log("[parseIaResponseToCsvData] Parseado como fallback (formato DeepSeek):", JSON.parse(JSON.stringify(fallbackData)));
+    console.log("[parseIaResponseToCsvData] Parseado com sucesso via fallback:", JSON.parse(JSON.stringify(fallbackData)));
+    // Garante que todos os registros tenham todas as colunas esperadas
     const processedData = fallbackData.map(record => ({
       "Título": record["Título"] || "",
       "Texto Principal": record["Texto Principal"] || "",
       "Ponte para o Próximo": record["Ponte para o Próximo"] || "",
+      "prompt_imagem_carrossel": record["prompt_imagem_carrossel"] || "",
     }));
     return { data: processedData, headers: finalHeaders };
   } else {
