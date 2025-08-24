@@ -224,21 +224,28 @@ const Publisher = ({
 
   const getPublishingTargets = () => {
     const targets = [];
+    const addedIds = new Set();
     if (linkedinProfiles.personal) {
-      targets.push({
-        id: linkedinProfiles.personal.id,
-        name: `${linkedinProfiles.personal.name} (Perfil Pessoal)`,
-        type: 'personal'
-      });
+        const personalTarget = {
+            id: linkedinProfiles.personal.id,
+            name: `${linkedinProfiles.personal.name} (Perfil Pessoal)`,
+            type: 'personal'
+        };
+        targets.push(personalTarget);
+        addedIds.add(personalTarget.id);
     }
+
     if (linkedinProfiles.organizations && linkedinProfiles.organizations.length > 0) {
-      linkedinProfiles.organizations.forEach(org => {
-        targets.push({
-          id: org.id,
-          name: `${org.name} (Página)`,
-          type: 'organization'
+        linkedinProfiles.organizations.forEach(org => {
+            if (!addedIds.has(org.id)) {
+                targets.push({
+                    id: org.id,
+                    name: `${org.name} (Página)`,
+                    type: 'organization'
+                });
+                addedIds.add(org.id);
+            }
         });
-      });
     }
     return targets;
   };
