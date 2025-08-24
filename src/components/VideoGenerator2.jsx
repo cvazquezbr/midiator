@@ -261,32 +261,37 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData, onVideoGenerated
 
   // Função para gerar comando FFmpeg com chromakey aprimorado
   const generateChromaKeyFilter = () => {
-    const colorHex = `0x${chromaKeyColor.replace('#', '')}`;
-    
-    let filter = '';
-    
+    const colorHex = chromaKeyColor.startsWith('#') ? chromaKeyColor.substring(1) : chromaKeyColor;
+    const colorForFilter = `0x${colorHex}`;
+
+    let filter;
+
+    // Choose between the more powerful 'chromakey' (YUV) and 'colorkey' (RGB)
     if (chromaKeyColorspace === 'yuv' || chromaKeyYuv) {
-      // Usar filtro chromakey (YUV)
-      filter = `chromakey=${colorHex}:${chromaKeySimilarity}:${chromaKeyBlend}`;
-      
-      if (chromaKeyYuv) {
-        filter += ':yuv=1';
-      }
+      filter = `chromakey=color=${colorForFilter}:similarity=${chromaKeySimilarity}:blend=${chromaKeyBlend}`;
+      if (chromaKeyYuv) filter += ':yuv=1';
     } else {
-      // Usar filtro colorkey (RGB)
-      filter = `colorkey=${colorHex}:${chromaKeySimilarity}:${chromaKeyBlend}`;
+      filter = `colorkey=color=${colorForFilter}:similarity=${chromaKeySimilarity}:blend=${chromaKeyBlend}`;
     }
-    
-    // Adicionar supressão de spill se configurado
+
+    // Add spill suppression using the 'despill' filter
     if (chromaKeySpillSuppress > 0) {
-      filter += `,despill=type=green:mix=${chromaKeySpillSuppress}:expand=0`;
+      // Determine spill color automatically from the key color
+      const r = parseInt(colorHex.substring(0, 2), 16);
+      const g = parseInt(colorHex.substring(2, 4), 16);
+      const b = parseInt(colorHex.substring(4, 6), 16);
+      const spillType = g > r && g > b ? 'green' : b > r && b > g ? 'blue' : 'green'; // Default to green
+
+      filter += `,despill=type=${spillType}:mix=${chromaKeySpillSuppress}:expand=0`;
     }
-    
-    // Adicionar suavização de bordas se configurado
+
+    // Add edge smoothing using a blur filter
     if (chromaKeyEdgeSmoothing > 0) {
-      filter += `,boxblur=${chromaKeyEdgeSmoothing}:${chromaKeyEdgeSmoothing}`;
+      // Using a simple boxblur for softening edges
+      const blurStrength = chromaKeyEdgeSmoothing.toFixed(2);
+      filter += `,boxblur=${blurStrength}:${blurStrength}`;
     }
-    
+
     return filter;
   };
 
@@ -435,43 +440,65 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData, onVideoGenerated
 
       // --- Audio Filter Chain ---
       if (hasAudio) {
+        // This array will hold filter definitions that create audio sources (e.g., silence).
         const audioPreProcessingFilters = [];
-        const slideAudioStreams = []; // Will hold the label for each slide's audio stream
 
+        // This array will hold the labels of the final audio stream for each slide.
+        // Each stream will include narration/silence and a transition sound/delay if applicable.
+        const slideAudioStreams = [];
+
+        // Determine the input index for the first narration audio file in the FFmpeg command.
+        // It follows the image inputs and a potential transition sound input.
         const transitionAudioInputIndex = generatedImages.length;
-        let audioInputIndex = transitionAudioInputIndex + 1;
-        let audioBlobCounter = 0;
+        let firstNarrationInputIndex = transitionAudioInputIndex;
+        if (effectiveSlideDelay > 0 && transitionSound !== 'delay') {
+            firstNarrationInputIndex++;
+        }
 
+        let narrationBlobCounter = 0;
+
+        // Step 1: For each slide, create a combined audio stream containing its narration (or silence)
+        // followed by its transition sound (or silence).
         for (let i = 0; i < generatedImages.length; i++) {
           const audioData = generatedAudioData[i];
           const hasNarration = audioData && audioData.blob;
           const isLastSlide = i === generatedImages.length - 1;
 
-          let currentAudioSegment;
+          let slideContentAudio;
           
-          // 1. Get the main audio for the slide (narration or silence)
+          // Get the primary audio for the slide's content (either narration or generated silence).
           if (hasNarration) {
-            currentAudioSegment = `[${audioInputIndex + audioBlobCounter}:a]`;
-            audioBlobCounter++;
+            slideContentAudio = `[${firstNarrationInputIndex + narrationBlobCounter}:a]`;
+            narrationBlobCounter++;
           } else {
-            // For slides without audio, create a silent segment of `slideDuration`.
             const silenceLabel = `silence${i}`;
             audioPreProcessingFilters.push(`anullsrc=channel_layout=stereo:sample_rate=44100:d=${slideDuration}[${silenceLabel}]`);
-            currentAudioSegment = `[${silenceLabel}]`;
+            slideContentAudio = `[${silenceLabel}]`;
           }
 
-          // 2. Concatenate with transition sound if necessary
+          // If it's not the last slide, append the transition sound or a silent delay.
           if (!isLastSlide && effectiveSlideDelay > 0) {
-            const transitionInput = `[${transitionAudioInputIndex}:a]`;
-            const combinedLabel = `ca${i}`;
-            audioPreProcessingFilters.push(`${currentAudioSegment}${transitionInput}concat=n=2:v=0:a=1[${combinedLabel}]`);
+            let transitionAudio;
+            if (transitionSound === 'delay') {
+                const delayLabel = `delay${i}`;
+                audioPreProcessingFilters.push(`anullsrc=channel_layout=stereo:sample_rate=44100:d=${slideDelay}[${delayLabel}]`);
+                transitionAudio = `[${delayLabel}]`;
+            } else {
+                // The transition sound is a single file at a fixed input index.
+                transitionAudio = `[${transitionAudioInputIndex}:a]`;
+            }
+            // Concatenate the slide's content audio with its transition audio.
+            const combinedLabel = `ca${i}`; // 'ca' for "combined audio"
+            audioPreProcessingFilters.push(`${slideContentAudio}${transitionAudio}concat=n=2:v=0:a=1[${combinedLabel}]`);
             slideAudioStreams.push(`[${combinedLabel}]`);
           } else {
-            slideAudioStreams.push(currentAudioSegment);
+            // For the last slide, there's no transition, so just use its content audio.
+            slideAudioStreams.push(slideContentAudio);
           }
         }
         
-        // 3. Chain all slide audio streams with acrossfade
+        // Step 2: Chain all the prepared slide audio streams together using `acrossfade`
+        // to match the `xfade` video transitions.
         if (slideAudioStreams.length > 0) {
           let audioChain = slideAudioStreams[0];
           const acrossfadeFilters = [];
@@ -484,13 +511,13 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData, onVideoGenerated
               }
           }
           
+          // Step 3: Append the final delay to the very end of the entire audio chain.
           if (finalSlideDelay > 0) {
-            const silenceLabel = 'final_silence';
+            const finalSilenceLabel = 'final_silence';
             const finalAudioOut = 'final_audio';
-            const finalSilenceFilter = `anullsrc=d=${finalSlideDelay}:r=44100:cl=stereo[${silenceLabel}]`;
-            const concatFilter = `${audioChain}[${silenceLabel}]concat=n=2:v=0:a=1[${finalAudioOut}]`;
+            const finalSilenceFilter = `anullsrc=d=${finalSlideDelay}:r=44100:cl=stereo[${finalSilenceLabel}]`;
+            const concatFilter = `${audioChain}[${finalSilenceLabel}]concat=n=2:v=0:a=1[${finalAudioOut}]`;
             
-            // The silence source is a pre-processing filter. The concat is a main filter.
             audioPreProcessingFilters.push(finalSilenceFilter);
             acrossfadeFilters.push(concatFilter);
             audioChain = `[${finalAudioOut}]`;
@@ -500,10 +527,12 @@ const VideoGenerator2 = ({ generatedImages, generatedAudioData, onVideoGenerated
           const allAudioFilters = [...audioPreProcessingFilters, ...acrossfadeFilters];
           filterComplex = [...filterParts, ...transitionFilters, ...allAudioFilters].join(";");
         } else {
+          // This case should not happen if hasAudio is true, but for safety:
           filterComplex = [...filterParts, ...transitionFilters].join(";");
         }
 
       } else {
+        // If there's no audio at all, the filter complex only contains video filters.
         filterComplex = [...filterParts, ...transitionFilters].join(";");
       }
 
