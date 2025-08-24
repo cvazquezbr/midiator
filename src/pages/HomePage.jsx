@@ -58,22 +58,6 @@ import ColorThief from 'colorthief';
 
 import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
 
-const dataURLtoBlob = (dataurl) => {
-    if (!dataurl) return null;
-    const arr = dataurl.split(',');
-    if (arr.length < 2) return null;
-    const mimeMatch = arr[0].match(/:(.*?);/);
-    if (!mimeMatch) return null;
-    const mime = mimeMatch[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while(n--){
-        u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new Blob([u8arr], {type:mime});
-};
-
 function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken, fetchUser } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
@@ -173,28 +157,13 @@ function HomePage() {
     setColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
     setStandardsColors(Array.isArray(state.standardsColors) ? state.standardsColors : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
-    const loadedGeneratedImagesData = Array.isArray(state.generatedImagesData) ? state.generatedImagesData : [];
-    const regeneratedImagesData = loadedGeneratedImagesData.map(img => {
-        if (img.dataUrl && (!img.blob || (typeof img.blob === 'object' && Object.keys(img.blob).length === 0))) {
-            const blob = dataURLtoBlob(img.dataUrl);
-            if (blob) {
-                return { ...img, blob };
-            }
-        }
-        return img;
-    });
-    setGeneratedImagesData(regeneratedImagesData);
-
+    setGeneratedImagesData(Array.isArray(state.generatedImagesData) ? state.generatedImagesData : []);
     // FIX: Filter out invalid audio data on load to prevent crashes
     setGeneratedAudioData(
       Array.isArray(state.generatedAudioData)
         ? state.generatedAudioData.filter(a => a && typeof a.duration === 'number')
         : []
     );
-
-    // TODO: Videos are likely not being persisted correctly on save/load.
-    // The generated URL is a temporary object URL, and the blob is lost on serialization.
-    // This needs a more involved fix in how videos are saved.
     setGeneratedVideosData(Array.isArray(state.generatedVideosData) ? state.generatedVideosData : []);
     setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
 
@@ -271,20 +240,7 @@ function HomePage() {
       csvData,
       csvHeaders,
     };
-
-    const dataForSaving = {
-      ...campaignDataToSave,
-      generatedImagesData: campaignDataToSave.generatedImagesData.map(img => {
-        const { blob, ...rest } = img;
-        return rest;
-      }),
-      generatedVideosData: campaignDataToSave.generatedVideosData.map(vid => {
-        const { blob, ...rest } = vid;
-        return rest;
-      }),
-    };
-
-    console.log("[HomePage] Campaign data object created for saving:", dataForSaving);
+    console.log("[HomePage] Campaign data object created:", campaignDataToSave);
 
 
     setIsSaving(true);
@@ -292,12 +248,12 @@ function HomePage() {
     try {
       if (currentCampaign) {
         console.log(`[HomePage] Updating existing campaign, ID: ${currentCampaign.id}`);
-        const updated = await updateCampaign(currentCampaign.id, name, dataForSaving, setUploadProgress, user.uuid);
+        const updated = await updateCampaign(currentCampaign.id, name, campaignDataToSave, setUploadProgress, user.uuid);
         toast.success(`Campaign "${name}" updated.`);
         setCurrentCampaign(updated);
       } else {
         console.log(`[HomePage] Saving new campaign.`);
-        const newCampaign = await saveCampaign(name, dataForSaving, setUploadProgress, user.uuid);
+        const newCampaign = await saveCampaign(name, campaignDataToSave, setUploadProgress, user.uuid);
         toast.success(`Campaign "${name}" saved.`);
         setCurrentCampaign(newCampaign);
       }
@@ -694,14 +650,12 @@ function HomePage() {
 
       if (!parsedResult || !parsedResult.data || parsedResult.data.length === 0) {
         toast.error('Não foi possível processar a resposta da IA para o formato de tabela.');
-        setIsGenerating(false);
-        return;
+        return; // Exit early
       }
 
       const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
-      setCsvData(csvDataResult);
-      setCsvHeaders(csvHeadersResult);
 
+      // Centralized state setup
       const updatedFieldPositions = {};
       const updatedFieldStyles = {};
       const defaultStylesBase = {
@@ -715,14 +669,17 @@ function HomePage() {
         updatedFieldPositions[header] = { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true };
         updatedFieldStyles[header] = { ...defaultStylesBase };
       });
-      setFieldPositions(updatedFieldPositions);
-      setFieldStyles(updatedFieldStyles);
 
-      let initialImagesData = csvDataResult.map((record, index) => ({
+      const initialImagesData = csvDataResult.map((record, index) => ({
           index, record, blob: null, url: null,
           filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
           backgroundImage: backgroundImage,
       }));
+
+      setCsvData(csvDataResult);
+      setCsvHeaders(csvHeadersResult);
+      setFieldPositions(updatedFieldPositions);
+      setFieldStyles(updatedFieldStyles);
       setGeneratedImagesData(initialImagesData);
       setInputMethod('manual');
 
@@ -744,10 +701,9 @@ function HomePage() {
                 firstImageSet = true;
               }
 
-              currentImagesData[i] = { ...currentImagesData[i], backgroundImage: bgImageUrl };
-
+              // This is the crucial part: call the full composition utility
               const finalImageData = await composeSingleImage({
-                record: currentImagesData[i].record,
+                record: record,
                 index: i,
                 itemBackgroundImage: bgImageUrl,
                 imageFilters,
@@ -756,6 +712,7 @@ function HomePage() {
                 fieldStyles: updatedFieldStyles,
               });
 
+              // Update the array with the fully composed image data
               currentImagesData[i] = finalImageData;
               setGeneratedImagesData([...currentImagesData]);
               toast.success(`Imagem final para o post #${i + 1} gerada.`);
@@ -768,7 +725,6 @@ function HomePage() {
         }
         toast.success('Geração automática de imagens concluída!');
       }
-
     } catch (error) {
       toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
     } finally {
