@@ -312,3 +312,51 @@ export const createSpreadsheet = async (title, data, folderId = null) => {
   console.log(`[googleApi] Successfully created spreadsheet '${title}' with ID: ${spreadsheetId}`);
   return createdSpreadsheet;
 };
+
+export const uploadImageToDrive = async (imageBlob, folderId) => {
+    if (!imageBlob || !folderId) {
+        throw new Error('Dados da imagem ou ID da pasta não fornecidos.');
+    }
+
+    // Função para converter Blob para Base64
+    const toBase64 = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result.split(',')[1]); // Remove o prefixo "data:image/png;base64,"
+        reader.onerror = (error) => reject(error);
+    });
+
+    try {
+        const imageBase64 = await toBase64(imageBlob);
+        const fileName = `imagem_gerada_${new Date().toISOString()}.png`;
+
+        // Usa fetchWithAuth para garantir que o token de autenticação da *nossa aplicação* seja enviado
+        const response = await fetch('/api/google-proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'uploadImageToFolder',
+                payload: {
+                    imageBase64,
+                    fileName,
+                    folderId,
+                    imageType: imageBlob.type,
+                },
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido ao salvar imagem.' }));
+            throw new Error(errorData.message || 'Falha ao salvar imagem no Google Drive.');
+        }
+
+        const result = await response.json();
+        toast.success(`Imagem "${result.name}" salva na coleção com sucesso!`);
+        return result;
+
+    } catch (error) {
+        console.error('Erro ao fazer upload da imagem para o Drive via proxy:', error);
+        toast.error(error.message);
+        throw error;
+    }
+};
