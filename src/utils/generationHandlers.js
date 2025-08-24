@@ -500,9 +500,10 @@ INSTRUÇÕES DE FORMATAÇÃO DA SAÍDA (MUITO IMPORTANTE):
 A SUA RESPOSTA DEVE CONTER *APENAS E SOMENTE* UM BLOCO DE TEXTO FORMATADO COMO CSV, SEM NENHUM TEXTO ADICIONAL ANTES OU DEPOIS DO BLOCO CSV.
 O BLOCO CSV DEVE SER DELIMITADO EXATAMENTE POR TRÊS CRASE SEGUIDAS E A PALAVRA "csv" (\`\`\`csv) NO INÍCIO, E TRÊS CRASE SEGUIDAS (\`\`\`) NO FINAL.
 DENTRO DO BLOCO CSV:
-- A primeira linha DEVE SER o cabeçalho: Titulo;Texto Principal;Ponte para o Próximo;prompt_imagem_carrossel
-- As linhas subsequentes DEVERÃO ser os dados de cada elemento, com os campos separados por PONTO E VÍRGULA (;).
-- NÃO inclua números de elemento ou qualquer outra coluna além de "Titulo", "Texto Principal", "Ponte para o Próximo", e "prompt_imagem_carrossel".
+- CADA CAMPO EM CADA LINHA DEVE SER OBRIGATORIAMENTE ENVOLVIDO POR ASPAS DUPLAS ("").
+- A primeira linha DEVE SER o cabeçalho, com cada cabeçalho envolvido por aspas duplas: "Titulo";"Texto Principal";"Ponte para o Próximo";"prompt_imagem_carrossel"
+- As linhas subsequentes DEVERÃO ser os dados de cada elemento, com os campos separados por PONTO E VÍRGULA (;) e cada campo envolvido por aspas duplas.
+- NÃO inclua números de elemento ou qualquer outra coluna além das 4 especificadas.
 - NÃO inclua explicações, introduções, ou qualquer texto fora do bloco \`\`\`csv ... \`\`\`.
 
 REQUISITOS PARA O CONTEÚDO DE CADA ELEMENTO (LINHA DO CSV):
@@ -542,9 +543,9 @@ TOM DE VOZ:
 
 Exemplo de como o BLOCO CSV deve se parecer na sua resposta (não inclua este exemplo na sua resposta final, apenas o bloco gerado):
 \`\`\`csv
-Titulo;Texto Principal;Ponte para o Próximo;prompt_imagem_carrossel
-✨ Grande Novidade;Descubra algo incrível que vai mudar seu dia! Você está pronto para a surpresa?;➡️ Veja o próximo!;A vibrant, abstract background with swirling gradients of blue and gold.
-🎉 Outra Dica;Continuando nossa jornada com mais um segredo. Já se perguntou como isso é possível?;CTA Final Aqui!;An image of a brain with glowing neural pathways, symbolizing new knowledge.
+"Titulo";"Texto Principal";"Ponte para o Próximo";"prompt_imagem_carrossel"
+"✨ Grande Novidade";"Descubra algo incrível que vai mudar seu dia! Você está pronto para a surpresa?";"➡️ Veja o próximo!";"A vibrant, abstract background with swirling gradients of blue and gold."
+"🎉 Outra Dica";"Continuando nossa jornada com mais um segredo; já se perguntou como isso é possível?";"CTA Final Aqui!";"An image of a brain with glowing neural pathways; symbolizing new knowledge."
 \`\`\`
 Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` com os dados.`;
 
