@@ -153,6 +153,7 @@ const TabPanel = (props) => {
 
 const Campaign = ({
     steps,
+    activeStep,
     problema,
     setProblema,
     solucao,
@@ -193,6 +194,7 @@ const Campaign = ({
     const [commonSolutions, setCommonSolutions] = React.useState([]);
     const [isLoadingSolutions, setIsLoadingSolutions] = React.useState(false);
     const [solutionsError, setSolutionsError] = React.useState(null);
+    const [imageTabError, setImageTabError] = React.useState('');
 
     const emptyLabelStyle = {
         '& .MuiInputLabel-root:not(.Mui-focused):not(.MuiFormLabel-filled)': {
@@ -302,17 +304,21 @@ const Campaign = ({
     }, [isSolucaoHintModalOpen, fetchSolutionsOnOpen]);
 
     const handleSaveToDrive = async () => {
+        setIsSavingToDrive(true);
+        setImageTabError('');
+
         if (!generatedImageUrl) {
-            toast.error("Nenhuma imagem gerada para salvar.");
+            setImageTabError("Nenhuma imagem gerada para salvar.");
+            setIsSavingToDrive(false);
             return;
         }
         const folderId = settings?.linkedin?.folderId;
         if (!folderId) {
-            toast.error("Nenhuma pasta de coleção configurada. Vá para a aba 'Setup' e configure a pasta do Google Drive.");
+            setImageTabError("Nenhuma pasta de coleção configurada. Vá para a aba 'Setup' e configure a pasta do Google Drive.");
+            setIsSavingToDrive(false);
             return;
         }
 
-        setIsSavingToDrive(true);
         try {
             // Fetch the image from its URL to get the blob
             const response = await fetch(generatedImageUrl);
@@ -325,6 +331,7 @@ const Campaign = ({
             // O sucesso já é notificado dentro de uploadImageToDrive
         } catch (error) {
             // O erro já é notificado dentro de uploadImageToDrive
+            setImageTabError(error.message || "Ocorreu uma falha ao salvar na coleção.");
             console.error("Falha ao salvar na coleção:", error);
         } finally {
             setIsSavingToDrive(false);
@@ -336,7 +343,7 @@ const Campaign = ({
             <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 4 } }}>
                 <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
                     <CampaignIcon />
-                    {steps && steps.length > 0 ? steps[0].label : 'Campanha'}
+                    {steps && activeStep && steps[activeStep] ? steps[activeStep].label : 'Campanha'}
                 </Typography>
 
                 <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -555,6 +562,7 @@ const Campaign = ({
                                     </Select>
                                 </FormControl>
                             </Grid>
+                            {imageTabError && <Grid item xs={12}><Alert severity="error">{imageTabError}</Alert></Grid>}
                             {generatedImageUrl && !isGeneratingImage && (
                                 <Box>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, flexWrap: 'wrap', gap: 1 }}>
