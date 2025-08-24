@@ -190,7 +190,7 @@ async function handleGetProfiles(fetch, request, response) {
         if (orgsToFetch.length > 0) {
           for (let i = 0; i < orgsToFetch.length; i += 50) {
             const chunk = orgsToFetch.slice(i, i + 50);
-            const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=List(${chunk.join(',')})`;
+            const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=${encodeURIComponent(`List(${chunk.join(',')})`)}`;
             const batchOrgResponse = await fetchWithRetry(fetch, batchOrgUrl, { headers });
             if (batchOrgResponse.ok) {
               const fetchedData = await batchOrgResponse.json();
