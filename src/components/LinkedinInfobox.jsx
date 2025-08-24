@@ -19,7 +19,7 @@ const LinkedinInfobox = ({ settings }) => {
   const [profiles, setProfiles] = useState({
     personal: null,
     organizations: [],
-    loading: true,
+    loading: false,
     error: null
   });
 
@@ -43,13 +43,19 @@ const LinkedinInfobox = ({ settings }) => {
             error: error.message
           }));
         }
-      } else {
-        setProfiles(prev => ({ ...prev, loading: false, error: "Conecte sua conta do LinkedIn para ver seus perfis." }));
       }
     };
 
     fetchProfiles();
   }, [settings]);
+
+  if (!settings?.linkedin?.accessToken && !profiles.error) {
+    return (
+      <Alert severity="info">
+        Instruções de Configuração
+      </Alert>
+    );
+  }
 
   if (profiles.loading) {
     return (
