@@ -199,16 +199,26 @@ const ImageGeneratorFrontendOnly = ({
     isCancelledRef.current = false;
     const images = [];
     try {
-      const composedBackgroundImageUrl = await composeImage(backgroundImage, imageFilters, brandElements);
-      const img = new Image();
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = composedBackgroundImageUrl;
-      });
       for (let i = 0; i < csvData.length; i++) {
         if (isCancelledRef.current) break;
+
         const record = csvData[i];
+        const initialImageDataItem = initialGeneratedImagesData.find(img => img.index === i);
+        const itemBackgroundImage = initialImageDataItem?.backgroundImage || backgroundImage;
+
+        if (!itemBackgroundImage) {
+          console.warn(`No background image for record ${i}, skipping.`);
+          continue;
+        }
+
+        const composedBackgroundImageUrl = await composeImage(itemBackgroundImage, imageFilters, brandElements);
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = (err) => reject(new Error(`Failed to load background image for record ${i}`, { cause: err }));
+          img.src = composedBackgroundImageUrl;
+        });
+
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         canvas.width = img.width;
@@ -217,6 +227,7 @@ const ImageGeneratorFrontendOnly = ({
         ctx.imageSmoothingQuality = 'high';
         ctx.textRenderingOptimization = 'optimizeQuality';
         ctx.drawImage(img, 0, 0);
+
         for (const field of Object.keys(record)) {
           const position = fieldPositions[field];
           const style = fieldStyles[field];
@@ -274,17 +285,16 @@ const ImageGeneratorFrontendOnly = ({
         }
         const dataUrl = canvas.toDataURL('image/png', 1.0);
         const blob = dataURLtoBlob(dataUrl);
-        const existingImageDataItem = generatedImages.find(img => img.index === i);
         const imageData = {
-          url: dataUrl, // The dataUrl is used for display
-          dataUrl: dataUrl, // And also stored explicitly for upload
+          url: dataUrl,
+          dataUrl: dataUrl,
           blob,
           record,
           index: i,
           filename: `midiator_${String(i + 1).padStart(3, '0')}.png`,
-          backgroundImage,
-          customFieldPositions: existingImageDataItem?.customFieldPositions,
-          customFieldStyles: existingImageDataItem?.customFieldStyles,
+          backgroundImage: itemBackgroundImage,
+          customFieldPositions: initialImageDataItem?.customFieldPositions,
+          customFieldStyles: initialImageDataItem?.customFieldStyles,
         };
         images.push(imageData);
         setProgress(i + 1);
