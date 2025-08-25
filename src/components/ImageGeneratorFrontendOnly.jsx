@@ -40,7 +40,7 @@ import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi'
 import { composeImage } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
 
-import { composeSingleImage } from '../utils/imageComposer';
+import { composeSingleImage, applyTextEffects, wrapTextInArea, drawTextWithEffects, dataURLtoBlob } from '../utils/imageComposer';
 
 const ImageGeneratorFrontendOnly = ({
   csvData,
@@ -722,7 +722,7 @@ const ImageGeneratorFrontendOnly = ({
             initialFieldStyles={JSON.parse(JSON.stringify(stylesToLoad || {}))}
             onSave={handleSaveIndividualModifications}
             colorPalette={colorPalette}
-            globalBackgroundImage={backgroundImage}
+            globalBackgroundImage={imageToEdit.backgroundImage || backgroundImage}
             originalImageSize={imageToEdit.customOriginalImageSize || originalImageSize}
             imageFilters={imageFilters}
             brandElements={brandElementsToLoad}
