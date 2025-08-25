@@ -240,7 +240,6 @@ const GeneratedImageEditor = ({
                   setBrandElements={setEditedBrandElements}
                   onDeselectField={handleDeselectField}
                   onOpenHtmlEditor={handleOpenHtmlEditor}
-                  colorPalette={colorPalette}
                 />
               </Grid>
             )}
@@ -278,7 +277,6 @@ const GeneratedImageEditor = ({
             setImageFilters={setEditedImageFilters}
             brandElements={editedBrandElements}
             setBrandElements={setEditedBrandElements}
-            colorPalette={colorPalette}
           />
         </>
       )}

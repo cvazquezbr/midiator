@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ProgressModal from './ProgressModal';
 import { containsHtml, renderHtmlToCanvas } from '../utils/htmlRenderer';
 import {
@@ -36,6 +36,7 @@ import {
   Share
 } from '@mui/icons-material';
 import GeneratedImageEditor from './GeneratedImageEditor';
+import MemoizedGeneratedImageEditor from './MemoizedGeneratedImageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { composeImage, composeSingleImage, dataURLtoBlob, wrapTextInArea, applyTextEffects, drawTextWithEffects } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
@@ -744,46 +745,21 @@ const ImageGeneratorFrontendOnly = ({
         </DialogActions>
       </Dialog>
 
-      {showGeneratedImageEditor && editingGeneratedImageIndex !== null && (() => {
-        const imageToEdit = generatedImages.find(img => img.index === editingGeneratedImageIndex);
-
-        const memoizedPositions = useMemo(() => {
-            const positionsSource = imageToEdit?.customFieldPositions !== undefined ? imageToEdit.customFieldPositions : fieldPositions;
-            return JSON.parse(JSON.stringify(positionsSource || {}));
-        }, [imageToEdit, fieldPositions]);
-
-        const memoizedStyles = useMemo(() => {
-            const stylesSource = imageToEdit?.customFieldStyles !== undefined ? imageToEdit.customFieldStyles : fieldStyles;
-            return JSON.parse(JSON.stringify(stylesSource || {}));
-        }, [imageToEdit, fieldStyles]);
-
-        const memoizedBrandElements = useMemo(() => {
-            return imageToEdit?.customBrandElements !== undefined ? imageToEdit.customBrandElements : brandElements;
-        }, [imageToEdit, brandElements]);
-
-
-        if (!imageToEdit) {
-          console.error(`[IGFO] Render: Could not find image with index ${editingGeneratedImageIndex} to edit.`);
-          return null;
-        }
-
-        return (
-          <GeneratedImageEditor
-            open={showGeneratedImageEditor}
-            onClose={handleCloseGeneratedImageEditor}
-            imageData={imageToEdit}
-            globalCsvHeaders={csvHeaders}
-            initialFieldPositions={memoizedPositions}
-            initialFieldStyles={memoizedStyles}
-            onSave={handleSaveIndividualModifications}
-            colorPalette={colorPalette}
-            globalBackgroundImage={imageToEdit.backgroundImage || backgroundImage}
-            originalImageSize={imageToEdit.customOriginalImageSize || originalImageSize}
-            imageFilters={imageFilters}
-            brandElements={memoizedBrandElements}
-          />
-        );
-      })()}
+      <MemoizedGeneratedImageEditor
+        showGeneratedImageEditor={showGeneratedImageEditor}
+        handleCloseGeneratedImageEditor={handleCloseGeneratedImageEditor}
+        generatedImages={generatedImages}
+        editingGeneratedImageIndex={editingGeneratedImageIndex}
+        csvHeaders={csvHeaders}
+        fieldPositions={fieldPositions}
+        fieldStyles={fieldStyles}
+        brandElements={brandElements}
+        handleSaveIndividualModifications={handleSaveIndividualModifications}
+        colorPalette={colorPalette}
+        backgroundImage={backgroundImage}
+        originalImageSize={originalImageSize}
+        imageFilters={imageFilters}
+      />
 
       <input
         type="file"
