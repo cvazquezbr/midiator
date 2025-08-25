@@ -163,13 +163,32 @@ const ImageGeneratorFrontendOnly = ({
   };
 
   const handleCancelGeneration = () => { isCancelledRef.current = true; };
-  const downloadImage = (imageData) => {
-    const link = document.createElement('a');
-    link.href = imageData.url;
-    link.download = imageData.filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadImage = async (imageData) => {
+    try {
+      if (!imageData || !imageData.url) {
+        throw new Error('Image data or URL is missing.');
+      }
+      // Fetch the image data. This works for data: URLs and regular URLs.
+      const response = await fetch(imageData.url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const blob = await response.blob();
+
+      // Create a temporary link to trigger the download.
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = imageData.filename || 'download.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the temporary URL.
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      alert(`Could not download ${imageData.filename}: ${error.message}`);
+    }
   };
 
   const handleShare = async (imageData) => {
@@ -243,12 +262,12 @@ const ImageGeneratorFrontendOnly = ({
       return;
     }
     try {
-      const composedBackgroundImageUrl = await composeImage(currentBackgroundImage, imageFilters, elementsToUse);
+      const composedBackgroundCanvas = await composeImage(currentBackgroundImage, imageFilters, elementsToUse);
       const img = new Image();
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = (err) => reject(new Error('Failed to load composed background for regeneration.', { cause: err }));
-        img.src = composedBackgroundImageUrl;
+        img.src = composedBackgroundCanvas.toDataURL();
       });
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
