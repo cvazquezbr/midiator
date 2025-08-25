@@ -701,12 +701,12 @@ function HomePage() {
 
       if (!parsedResult || !parsedResult.data || !parsedResult.data.length > 0) {
         toast.error('Não foi possível processar a resposta da IA para o formato de tabela.');
-        return; // Exit early
+        return;
       }
 
       const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
 
-      // Centralized state setup
+      // Reset field positions and styles for the new content
       const updatedFieldPositions = {};
       const updatedFieldStyles = {};
       const defaultStylesBase = {
@@ -721,23 +721,39 @@ function HomePage() {
         updatedFieldStyles[header] = { ...defaultStylesBase };
       });
 
-      const initialImagesData = csvDataResult.map((record, index) => ({
-          index, record, blob: null, url: null,
+      // Create the new image data array, preserving backgrounds from the previous state
+      const newGeneratedImagesData = csvDataResult.map((record, index) => {
+        const existingImage = generatedImagesData.find(img => img.index === index);
+        if (existingImage) {
+          return {
+            ...existingImage,
+            record: record, // Update the record with new text
+          };
+        }
+        // For new records, fall back to the global background
+        return {
+          index,
+          record,
+          blob: null,
+          url: null,
           filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
           backgroundImage: backgroundImage,
-      }));
+        };
+      });
 
+      // Set all states together
       setCsvData(csvDataResult);
       setCsvHeaders(csvHeadersResult);
       setFieldPositions(updatedFieldPositions);
       setFieldStyles(updatedFieldStyles);
-      setGeneratedImagesData(initialImagesData);
+      setGeneratedImagesData(newGeneratedImagesData);
       setInputMethod('manual');
 
       if (generateImagesAutomatically) {
         toast.info('Geração de posts concluída. Iniciando geração automática de imagens...');
         let firstImageSet = false;
-        let currentImagesData = [...initialImagesData];
+        // Use the newly created array, not a stale copy of the old state
+        let currentImagesData = [...newGeneratedImagesData];
 
         for (let i = 0; i < currentImagesData.length; i++) {
           const record = currentImagesData[i].record;
@@ -747,7 +763,6 @@ function HomePage() {
             try {
               const rawBgImageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
 
-              // Convert the generated image URL to a stable base64 data URL
               const blob = await (await fetch(rawBgImageUrl)).blob();
               const stableDataUrl = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -761,6 +776,8 @@ function HomePage() {
                 firstImageSet = true;
               }
 
+              // The final image must be composed with the unique background (stableDataUrl),
+              // not the potentially stale one in the currentImagesData array item.
               const finalImageData = await composeSingleImage({
                 record: record,
                 index: i,
@@ -770,6 +787,9 @@ function HomePage() {
                 fieldPositions: updatedFieldPositions,
                 fieldStyles: updatedFieldStyles,
               });
+
+              // Also update the item in our local array with the new background
+              finalImageData.backgroundImage = stableDataUrl;
 
               currentImagesData[i] = finalImageData;
               setGeneratedImagesData([...currentImagesData]);
