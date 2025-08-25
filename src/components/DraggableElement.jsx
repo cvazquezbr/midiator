@@ -3,6 +3,7 @@ import { Box } from '@mui/material';
 import RichTextEditor from './RichTextEditor';
 import styles from './DraggableElement.module.css';
 import TextEditorDialog from './TextEditorDialog';
+import { wrapTextInArea } from '../utils/imageComposer';
 
 const DraggableElementInternal = ({
   element, // Combined object for field/element data
@@ -479,29 +480,6 @@ const DraggableElementInternal = ({
     }
   }, [isDragging, isResizing, isRotating, dragStart, initialPosition, initialSize, initialRotation, handleMouseMove, handleMouseUp, handleTouchEnd, handleTouchMove]);
 
-  const wrapText = (text, maxWidth, fontSize) => {
-    if (!text) return [''];
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${fontSize}px ${style.fontFamily || 'Arial'}`;
-    const words = text.toString().split(' ');
-    const lines = [];
-    let currentLine = words[0] || '';
-    for (let i = 1; i < words.length; i++) {
-      const word = words[i];
-      const testLine = currentLine + ' ' + word;
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && currentLine !== '') {
-        lines.push(currentLine);
-        currentLine = word;
-      } else {
-        currentLine = testLine;
-      }
-    }
-    lines.push(currentLine);
-    return lines;
-  };
-
   const fontScale = fontScaleProp || 1;
 
   const baseFontSize = style.fontSize || 24;
@@ -511,7 +489,10 @@ const DraggableElementInternal = ({
 
   const originalBoxWidth = (position.width / 100) * (originalImageSize?.width || 1);
   const paddingInPixels = 8 * 2;
-  const textLines = enableHtmlRendering ? [content] : wrapText(editedContent, originalBoxWidth - paddingInPixels, baseFontSize);
+  // Create a dummy canvas context to pass to the wrapping function, to mimic the final render environment
+  const dummyCanvas = document.createElement('canvas');
+  const dummyCtx = dummyCanvas.getContext('2d');
+  const textLines = enableHtmlRendering ? [content] : wrapTextInArea(dummyCtx, editedContent, { ...style, fontSize: scaledFontSize }, pixelPosition.width - paddingInPixels, pixelPosition.height - paddingInPixels);
 
   const handleSize = isMobile ? 24 : 12;
 
