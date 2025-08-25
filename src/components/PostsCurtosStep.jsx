@@ -156,7 +156,7 @@ const PostsCurtosStep = ({
                       onChange={(e) => setGenerateImagesAutomatically(e.target.checked)}
                     />
                   }
-                  label="Gerar imagens de fundo automaticamente para cada post"
+                  label="Gerar imagens"
                   sx={{ mb: 2, display: 'block' }}
                 />
                 <Button

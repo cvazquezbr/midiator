@@ -108,9 +108,9 @@ function HomePage() {
   const [selectedImages, setSelectedImages] = useState({});
   const [selectedVideos, setSelectedVideos] = useState({});
   const [inputMethod, setInputMethod] = useState('ia');
-  const [promptNumRecords, setPromptNumRecords] = useState(10);
+  const [promptNumRecords, setPromptNumRecords] = useState(5);
   const [promptText, setPromptText] = useState('');
-  const [generateImagesAutomatically, setGenerateImagesAutomatically] = useState(false);
+  const [generateImagesAutomatically, setGenerateImagesAutomatically] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
