@@ -696,19 +696,24 @@ function HomePage() {
             try {
               const rawBgImageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
 
-              // Launder the data URL
+              // Convert the generated image URL to a stable base64 data URL
               const blob = await (await fetch(rawBgImageUrl)).blob();
-              const cleanUrl = URL.createObjectURL(blob);
+              const stableDataUrl = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+              });
 
               if (!firstImageSet) {
-                setBackgroundImage(cleanUrl);
+                setBackgroundImage(stableDataUrl);
                 firstImageSet = true;
               }
 
               const finalImageData = await composeSingleImage({
                 record: record,
                 index: i,
-                itemBackgroundImage: cleanUrl,
+                itemBackgroundImage: stableDataUrl,
                 imageFilters,
                 brandElements,
                 fieldPositions: updatedFieldPositions,
