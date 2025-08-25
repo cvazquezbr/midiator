@@ -79,14 +79,7 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
     assetsToUploadCount += cleanState.brandElements.filter(el => needsUpload(el.url)).length;
   }
   if (Array.isArray(cleanState.generatedImagesData)) {
-    for (const img of cleanState.generatedImagesData) {
-        if (needsUpload(img.url)) {
-            assetsToUploadCount++;
-        }
-        if (needsUpload(img.backgroundImage)) {
-            assetsToUploadCount++;
-        }
-    }
+    assetsToUploadCount += cleanState.generatedImagesData.filter(img => needsUpload(img.url)).length;
   }
   if (Array.isArray(cleanState.generatedAudioData)) {
     assetsToUploadCount += cleanState.generatedAudioData.filter(audio => needsUpload(audio.url)).length;
@@ -137,24 +130,16 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
     // Generated Post Images
     if (Array.isArray(cleanState.generatedImagesData)) {
        for (const image of cleanState.generatedImagesData) {
-        // Upload the main composite image if it's a data URL
         if (needsUpload(image.url)) {
           const filename = image.filename || `post_image_${image.index}_${Date.now()}.png`;
-          console.log(`[serializeCampaignData] Uploading asset (composite) ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-          const permanentUrl = await uploadAsset(image.url, filename, campaignId, userId);
+          console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
+          const dataUrlToUpload = image.url;
+          const permanentUrl = await uploadAsset(dataUrlToUpload, filename, campaignId, userId);
           image.url = permanentUrl;
           assetsUploadedCount++;
           onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
         }
-        // Upload the specific background image if it's a data URL
-        if (needsUpload(image.backgroundImage)) {
-            const filename = `post_bg_${image.index}_${Date.now()}.png`;
-            console.log(`[serializeCampaignData] Uploading asset (background) ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-            const permanentUrl = await uploadAsset(image.backgroundImage, filename, campaignId, userId);
-            image.backgroundImage = permanentUrl;
-            assetsUploadedCount++;
-            onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
-        }
+        delete image.backgroundImage;
       }
     }
 
