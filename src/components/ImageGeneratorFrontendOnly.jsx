@@ -221,16 +221,45 @@ const ImageGeneratorFrontendOnly = ({
   };
 
   const handleSaveIndividualModifications = (modifiedImageData) => {
-    const { index: imageIndex, record: updatedCsvRecord, fieldPositions: newPositions, fieldStyles: newStyles, brandElements: editedBrandElements, fontScale } = modifiedImageData;
-    const updatedImages = generatedImages.map(img => (img.index === imageIndex) ? { ...img, record: updatedCsvRecord, customFieldPositions: newPositions, customFieldStyles: newStyles, customBrandElements: editedBrandElements, fontScale: fontScale } : img);
+    const { index: imageIndex } = modifiedImageData;
+
+    const updatedImages = generatedImages.map(img => {
+      if (img.index !== imageIndex) {
+        return img;
+      }
+      // The modifiedImageData from the editor contains the correct backgroundImage
+      // and all the edited fields. We merge it with the existing `img` state
+      // to ensure properties like `url` and `blob` are preserved until regeneration.
+      return {
+        ...img,
+        ...modifiedImageData,
+        // Ensure custom fields are named consistently
+        customFieldPositions: modifiedImageData.fieldPositions,
+        customFieldStyles: modifiedImageData.fieldStyles,
+        customBrandElements: modifiedImageData.brandElements,
+      };
+    });
+
     setGeneratedImages(updatedImages);
+
     if (onThumbnailRecordTextUpdate) {
-      onThumbnailRecordTextUpdate(imageIndex, updatedCsvRecord);
+      onThumbnailRecordTextUpdate(imageIndex, modifiedImageData.record);
     }
+
     const imageToRegenerate = updatedImages.find(im => im.index === imageIndex);
+
     if (imageToRegenerate) {
       const bgToUse = imageToRegenerate.backgroundImage || backgroundImage;
-      regenerateSingleImage(imageIndex, imageToRegenerate.record, bgToUse, newPositions, newStyles, null, editedBrandElements, fontScale);
+      regenerateSingleImage(
+        imageIndex,
+        imageToRegenerate.record,
+        bgToUse,
+        imageToRegenerate.customFieldPositions,
+        imageToRegenerate.customFieldStyles,
+        null,
+        imageToRegenerate.customBrandElements,
+        imageToRegenerate.fontScale
+      );
     }
     handleCloseGeneratedImageEditor();
   };
