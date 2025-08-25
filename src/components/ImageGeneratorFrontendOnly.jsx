@@ -310,10 +310,10 @@ const ImageGeneratorFrontendOnly = ({
         const lineHeight = scaledFontSize * (style.lineHeightMultiplier || 1.2);
         let currentLineRenderY = textContentStartY;
         if (style.verticalAlign === 'middle') {
-          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
+          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - scaledFontSize) : 0);
           currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
         } else if (style.verticalAlign === 'bottom') {
-          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
+          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - scaledFontSize) : 0);
           currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
         }
         if (containsHtml(text)) {
