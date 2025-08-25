@@ -69,7 +69,7 @@ export const applyTextEffects = (ctx, style) => {
     }
 };
 
-const drawTextWithEffects = async (ctx, text, x, y, style, maxWidth, maxHeight) => {
+export const drawTextWithEffects = async (ctx, text, x, y, style, maxWidth, maxHeight) => {
     if (containsHtml(text)) {
         await renderHtmlToCanvas(ctx, text, x, y, maxWidth, maxHeight, style);
     } else {
