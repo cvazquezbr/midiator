@@ -108,7 +108,6 @@ const FieldPositioner = ({
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
-  const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
@@ -181,31 +180,8 @@ const FieldPositioner = ({
       for (let entry of entries) {
         const { width, height } = entry.contentRect;
         setImageSize({ width, height });
-
-        // Calculate the actual rendered size and position of the image due to 'object-fit: contain'
-        if (originalImageSize?.width && originalImageSize?.height && width > 0 && height > 0) {
-            const containerAspectRatio = width / height;
-            const imageAspectRatio = originalImageSize.width / originalImageSize.height;
-
-            let renderedWidth, renderedHeight, x, y;
-
-            if (containerAspectRatio > imageAspectRatio) {
-                // Container is wider than the image (letterboxed on sides)
-                renderedHeight = height;
-                renderedWidth = height * imageAspectRatio;
-                x = (width - renderedWidth) / 2;
-                y = 0;
-            } else {
-                // Container is taller or equal aspect ratio (letterboxed on top/bottom)
-                renderedWidth = width;
-                renderedHeight = width / imageAspectRatio;
-                x = 0;
-                y = (height - renderedHeight) / 2;
-            }
-            setRenderedImageMetrics({ width: renderedWidth, height: renderedHeight, x, y });
-            if (onImageDisplayedSizeChange) {
-              onImageDisplayedSizeChange({ width: renderedWidth, height: renderedHeight });
-            }
+        if (onImageDisplayedSizeChange) {
+          onImageDisplayedSizeChange({ width, height });
         }
       }
     });
@@ -213,7 +189,7 @@ const FieldPositioner = ({
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [onImageDisplayedSizeChange, backgroundImage, originalImageSize]);
+  }, [onImageDisplayedSizeChange]);
 
   // Effect to initialize or update field positions and styles based on csvHeaders and props.
   // This ensures that every field in csvHeaders has a corresponding position and a complete style object.
@@ -321,10 +297,6 @@ const FieldPositioner = ({
   };
 
   const autoArrangeFields = () => {
-    if (!originalImageSize?.width || !originalImageSize?.height) {
-      alert("A imagem original ainda não foi carregada. Por favor, aguarde.");
-      return;
-    }
     // 1. Define Safe Zone and Field Roles
     const safeZoneMargins = {
       top: 10, // 10%
@@ -366,8 +338,8 @@ const FieldPositioner = ({
         visible: true,
       };
 
-      const titleBoxWidthPx = (titleWidth / 100) * originalImageSize.width;
-      const titleBoxHeightPx = (titleHeight / 100) * originalImageSize.height;
+      const titleBoxWidthPx = (titleWidth / 100) * (originalImageSize?.width || imageSize.width);
+      const titleBoxHeightPx = (titleHeight / 100) * (originalImageSize?.height || imageSize.height);
       const titleText = csvData[currentPreviewIndex]?.[titleField] || `[${titleField}]`;
 
       const bestFontSize = findBestFitFontSize(
@@ -419,7 +391,7 @@ const FieldPositioner = ({
       const fontSizePx = sideLabelStyle.fontSize || 24;
 
       // A altura da caixa (que se torna a largura do texto após rotação) é baseada na altura da fonte.
-      const labelHeight = (fontSizePx / originalImageSize.height) * 100 * 1.5;
+      const labelHeight = (fontSizePx / (originalImageSize?.height || imageSize.height || 1)) * 100 * 1.5;
       // A largura da caixa (que se torna a altura do texto) é uma grande parte da altura da zona segura.
       const labelWidth = safeZone.height * 0.7;
 
@@ -506,9 +478,9 @@ const FieldPositioner = ({
 
   // Effect to calculate font scale based on the actual rendered image size
   useEffect(() => {
-    if (renderedImageMetrics.width > 0 && originalImageSize?.width > 0) {
+    if (imageSize.width > 0 && originalImageSize?.width > 0) {
       // The scale is uniform, so we can just use the width ratio.
-      const scale = renderedImageMetrics.width / originalImageSize.width;
+      const scale = imageSize.width / originalImageSize.width;
       setFontScale(scale);
       if (onFontScaleChange) {
         onFontScaleChange(scale);
@@ -519,7 +491,7 @@ const FieldPositioner = ({
         onFontScaleChange(1);
       }
     }
-  }, [renderedImageMetrics, originalImageSize, onFontScaleChange]);
+  }, [imageSize, originalImageSize, onFontScaleChange]);
 
   // Efeito para gerenciar scroll durante interações
   useEffect(() => {
@@ -579,7 +551,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => a.zIndex - b.zIndex);
     return elements;
-  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, imageSize, originalImageSize, isHtmlField, fontScale, renderedImageMetrics]);
+  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, imageSize, originalImageSize, isHtmlField, fontScale]);
 
   if (!backgroundImage) {
     return (
@@ -642,7 +614,7 @@ const FieldPositioner = ({
                 border: '2px solid #ddd',
                 borderRadius: 2,
                 overflow: 'hidden',
-                backgroundColor: '#fff',
+                backgroundColor: '#000',
                 cursor: 'default',
                 touchAction: 'pan-x pan-y',
                 WebkitOverflowScrolling: 'touch',
@@ -654,11 +626,21 @@ const FieldPositioner = ({
                 maxHeight: '85vh',
                 mx: 'auto',
               }}
-              onTouchStart={handleContainerTouchStart}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  handleFieldSelectInternal(null);
+                }
+              }}
+              onTouchStart={(e) => {
+                if (e.target === e.currentTarget) {
+                  handleFieldSelectInternal(null);
+                }
+                handleContainerTouchStart(e)
+              }}
               onTouchEnd={handleContainerTouchEnd}
             >
               {isComposing && (
-                <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white', backgroundColor: 'rgba(0,0,0,0.5)', padding: '10px', borderRadius: '8px' }}>
+                <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 999, color: 'white', backgroundColor: 'rgba(0,0,0,0.5)', padding: '10px', borderRadius: '8px' }}>
                   <Typography>Atualizando...</Typography>
                 </Box>
               )}
@@ -666,10 +648,12 @@ const FieldPositioner = ({
                 src={backgroundImage}
                 alt="Background"
                 style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
                   width: '100%',
                   height: '100%',
                   display: 'block',
-                  objectFit: 'contain',
                   pointerEvents: 'none',
                   userSelect: 'none',
                   WebkitUserDrag: 'none',
@@ -679,55 +663,31 @@ const FieldPositioner = ({
                 draggable={false}
               />
 
-              {/* Wrapper for draggable elements, positioned over the actual image */}
-              <Box
-                className="elements-wrapper"
-                sx={{
-                  position: 'absolute',
-                  left: `${renderedImageMetrics.x}px`,
-                  top: `${renderedImageMetrics.y}px`,
-                  width: `${renderedImageMetrics.width}px`,
-                  height: `${renderedImageMetrics.height}px`,
-                }}
-                onClick={(e) => {
-                  // If the click is on the wrapper itself, deselect the field
-                  if (e.target === e.currentTarget) {
-                    handleFieldSelectInternal(null);
-                  }
-                }}
-                onTouchStart={(e) => {
-                  // Handle touch for deselection on mobile
-                  if (e.target === e.currentTarget) {
-                    handleFieldSelectInternal(null);
-                  }
-                }}
-              >
-                {renderedImageMetrics.width > 0 && renderableElements.map(element => (
-                  <DraggableElement
-                    key={element.id}
-                    element={element.type === 'image' ? { ...element.position, type: 'image' } : { id: element.id, type: 'text' }}
-                    position={element.position}
-                    style={element.style}
-                    content={element.content}
-                    isSelected={selectedField === element.id}
-                    onSelect={handleFieldSelectInternal}
-                    onPositionChange={handlePositionChange}
-                    onSizeChange={handleSizeChange}
-                    containerSize={renderedImageMetrics} // Use the actual rendered image size
-                    onContentChange={element.type === 'text' ? handleContentChange : undefined}
-                    onDoubleClick={() => {
-                      if (element.type === 'text' && isHtmlField(element.id)) {
-                        onOpenHtmlEditor(element.id);
-                      }
-                    }}
-                    rotation={element.rotation}
-                    originalImageSize={originalImageSize}
-                    fontScale={element.fontScale}
-                    enableHtmlRendering={element.enableHtmlRendering}
-                    darkMode={darkMode}
-                  />
-                ))}
-              </Box>
+              {imageSize.width > 0 && renderableElements.map(element => (
+                <DraggableElement
+                  key={element.id}
+                  element={element.type === 'image' ? { ...element.position, type: 'image' } : { id: element.id, type: 'text' }}
+                  position={element.position}
+                  style={element.style}
+                  content={element.content}
+                  isSelected={selectedField === element.id}
+                  onSelect={handleFieldSelectInternal}
+                  onPositionChange={handlePositionChange}
+                  onSizeChange={handleSizeChange}
+                  containerSize={imageSize} // Use the aspect-ratio-corrected container size
+                  onContentChange={element.type === 'text' ? handleContentChange : undefined}
+                  onDoubleClick={() => {
+                    if (element.type === 'text' && isHtmlField(element.id)) {
+                      onOpenHtmlEditor(element.id);
+                    }
+                  }}
+                  rotation={element.rotation}
+                  originalImageSize={originalImageSize}
+                  fontScale={element.fontScale}
+                  enableHtmlRendering={element.enableHtmlRendering}
+                  darkMode={darkMode}
+                />
+              ))}
             </Box>
 
             {csvData && csvData.length > 1 && (
