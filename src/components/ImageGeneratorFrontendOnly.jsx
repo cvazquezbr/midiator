@@ -242,7 +242,7 @@ const ImageGeneratorFrontendOnly = ({
   };
 
   const handleSaveIndividualModifications = (modifiedImageData) => {
-    const { index: imageIndex, record: updatedCsvRecord, fieldPositions: newPositions, fieldStyles: newStyles, brandElements: editedBrandElements, customOriginalImageSize } = modifiedImageData;
+    const { index: imageIndex, record: updatedCsvRecord, fieldPositions: newPositions, fieldStyles: newStyles, brandElements: editedBrandElements, customOriginalImageSize, fontScale } = modifiedImageData;
     const updatedImages = generatedImages.map(img => (img.index === imageIndex) ? { ...img, record: updatedCsvRecord, customFieldPositions: newPositions, customFieldStyles: newStyles, customBrandElements: editedBrandElements, customOriginalImageSize: customOriginalImageSize } : img);
     setGeneratedImages(updatedImages);
     if (onThumbnailRecordTextUpdate) {
@@ -251,12 +251,12 @@ const ImageGeneratorFrontendOnly = ({
     const imageToRegenerate = updatedImages.find(im => im.index === imageIndex);
     if (imageToRegenerate) {
       const bgToUse = imageToRegenerate.backgroundImage || backgroundImage;
-      regenerateSingleImage(imageIndex, imageToRegenerate.record, bgToUse, newPositions, newStyles, customOriginalImageSize, editedBrandElements);
+      regenerateSingleImage(imageIndex, imageToRegenerate.record, bgToUse, newPositions, newStyles, customOriginalImageSize, editedBrandElements, fontScale);
     }
     handleCloseGeneratedImageEditor();
   };
 
-  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements) => {
+  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1) => {
     if (!currentBackgroundImage || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
       alert('Pré-requisitos para regeneração não atendidos. Fontes foram carregadas?');
       return;
@@ -298,15 +298,16 @@ const ImageGeneratorFrontendOnly = ({
           ctx.rotate(position.rotation * Math.PI / 180);
           ctx.translate(-centerX, -centerY);
         }
-        const fontSize = style.fontSize || 24;
-        applyTextEffects(ctx, { ...style, fontSize: fontSize });
+        const baseFontSize = style.fontSize || 24;
+        const scaledFontSize = baseFontSize * fontScale;
+        applyTextEffects(ctx, { ...style, fontSize: scaledFontSize });
         const fixedPadding = 8;
         const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
         const effectiveTextHeight = Math.max(0, posPx.height - (2 * fixedPadding));
         const textContentStartX = posPx.x + fixedPadding;
         const textContentStartY = posPx.y + fixedPadding;
-        const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: fontSize });
-        const lineHeight = fontSize * (style.lineHeightMultiplier || 1.2);
+        const lines = wrapTextInArea(ctx, text, { ...style, fontSize: scaledFontSize }, effectiveTextWidth, effectiveTextHeight);
+        const lineHeight = scaledFontSize * (style.lineHeightMultiplier || 1.2);
         let currentLineRenderY = textContentStartY;
         if (style.verticalAlign === 'middle') {
           const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - fontSize) : 0);
@@ -316,7 +317,7 @@ const ImageGeneratorFrontendOnly = ({
           currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
         }
         if (containsHtml(text)) {
-          await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
+          await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, { ...style, fontSize: scaledFontSize }, effectiveTextWidth, effectiveTextHeight);
         } else {
           for (const line of lines) {
             let currentLineRenderX;
@@ -328,7 +329,7 @@ const ImageGeneratorFrontendOnly = ({
               currentLineRenderX = textContentStartX;
             }
             const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
-            await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: fontSize }, effectiveTextWidth, effectiveTextHeight);
+            await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: scaledFontSize }, effectiveTextWidth, effectiveTextHeight);
           }
         }
         ctx.restore();
