@@ -161,8 +161,7 @@ export const composeSingleImage = async ({
     imageFilters,
     brandElements,
     fieldPositions,
-    fieldStyles,
-    fontScale = 1
+    fieldStyles
 }) => {
     if (!itemBackgroundImage) {
         throw new Error(`Background image is missing for record index ${index}.`);
@@ -202,30 +201,27 @@ export const composeSingleImage = async ({
             ctx.translate(-centerX, -centerY);
         }
 
-        const finalFontSize = (style.fontSize || 24) * (fontScale || 1);
-        const finalStyle = { ...style, fontSize: finalFontSize };
-
-        applyTextEffects(ctx, finalStyle);
+        applyTextEffects(ctx, style);
         const fixedPadding = 8;
         const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
         const effectiveTextHeight = Math.max(0, posPx.height - (2 * fixedPadding));
         const textContentStartX = posPx.x + fixedPadding;
         const textContentStartY = posPx.y + fixedPadding;
 
-        const lines = wrapTextInArea(ctx, text, finalStyle, effectiveTextWidth, effectiveTextHeight);
-        const lineHeight = finalFontSize * (style.lineHeightMultiplier || 1.2);
+        const lines = wrapTextInArea(ctx, text, style, effectiveTextWidth, effectiveTextHeight);
+        const lineHeight = (style.fontSize || 24) * (style.lineHeightMultiplier || 1.2);
 
         let currentLineRenderY = textContentStartY;
         if (style.verticalAlign === 'middle') {
-            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
+            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - (style.fontSize || 24)) : 0);
             currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
         } else if (style.verticalAlign === 'bottom') {
-            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
+            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - (style.fontSize || 24)) : 0);
             currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
         }
 
         if (containsHtml(text)) {
-            await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, finalStyle, effectiveTextWidth, effectiveTextHeight);
+            await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, style, effectiveTextWidth, effectiveTextHeight);
         } else {
             for (const line of lines) {
                 let currentLineRenderX;
@@ -237,7 +233,7 @@ export const composeSingleImage = async ({
                     currentLineRenderX = textContentStartX;
                 }
                 const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
-                await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, finalStyle, effectiveTextWidth, effectiveTextHeight);
+                await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, style, effectiveTextWidth, effectiveTextHeight);
             }
         }
         ctx.restore();
