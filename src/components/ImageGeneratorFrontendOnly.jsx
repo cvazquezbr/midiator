@@ -36,6 +36,7 @@ import {
   Share
 } from '@mui/icons-material';
 import GeneratedImageEditor from './GeneratedImageEditor';
+import StoryCard from './StoryCard';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { composeImage, composeSingleImage, dataURLtoBlob, wrapTextInArea, applyTextEffects, drawTextWithEffects } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
@@ -618,95 +619,96 @@ const ImageGeneratorFrontendOnly = ({
                 Imagens Geradas ({generatedImages.length})
               </Typography>
 
-              <Grid container spacing={2}>
+              <Grid container spacing={3}>
                 {generatedImages.map((imageData, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={index}>
+                  <Grid item xs={12} md={12} lg={8} key={index}>
                     <Card variant="outlined">
                       <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                          <Chip
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                           <Chip
                             label={`#${index + 1}`}
                             size="small"
                             color="primary"
                             sx={{ mr: 1 }}
                           />
-                          <Typography variant="body2" noWrap sx={{ flexGrow: 1 }}>
+                          <Typography variant="body1" noWrap sx={{ flexGrow: 1, fontWeight: 'bold' }}>
                             {imageData.filename}
                           </Typography>
                         </Box>
 
-<Box sx={{
-                          width: '100%',
-                          maxWidth: '100%',
-                          height: 'auto',
-                          maxHeight: '180px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          padding: '10px',
-                          backgroundColor: 'white',
-                          borderRadius: '4px',
-                          mb: 1,
-                          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2), 0 6px 20px rgba(0, 0, 0, 0.19)',
-                          cursor: 'pointer',
-                          '&:hover img': {
-                            transform: 'scale(1.03)',
-                          },
-                          '&:hover': {
-                            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.25), 0 10px 25px rgba(0, 0, 0, 0.22)',
-                            transform: 'translateY(-2px)',
-                          },
-                          transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out',
-                        }}
-                        onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
-                        >
-                          <img
-                            key={index}
-                            src={imageData.url}
-                            alt={`Preview ${index + 1}`}
-                            style={{
-                              display: 'block',
-                              maxWidth: '100%',
-                              maxHeight: '150px',
-                              width: 'auto',
-                              height: 'auto',
-                              objectFit: 'contain',
-                              transition: 'transform 0.3s ease-in-out',
-                              boxShadow: 'inset 0 0 2px rgba(0,0,0,0.1)',
-                            }}
-                          />
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
-                            title="Editar Posições/Estilos"
-                          >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleReplaceImageClick(imageData.index)}
-                            title="Substituir Imagem de Fundo"
-                          >
-                            <SwapHoriz />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => downloadImage(imageData)}
-                            title="Download"
-                          >
-                            <Download />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleShare(imageData)}
-                            title="Compartilhar"
-                          >
-                            <Share />
-                          </IconButton>
-                        </Box>
+                        <Grid container spacing={2}>
+                          {/* Coluna da Imagem Original */}
+                          <Grid item xs={12} sm={6}>
+                             <Typography variant="subtitle2" gutterBottom>Preview do Post</Typography>
+                             <Box
+                              sx={{
+                                width: '100%',
+                                maxWidth: '100%',
+                                height: 'auto',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                padding: '10px',
+                                backgroundColor: 'white',
+                                borderRadius: '4px',
+                                mb: 1,
+                                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2), 0 6px 20px rgba(0, 0, 0, 0.19)',
+                                cursor: 'pointer',
+                                '&:hover img': { transform: 'scale(1.03)' },
+                                '&:hover': {
+                                  boxShadow: '0 8px 16px rgba(0, 0, 0, 0.25), 0 10px 25px rgba(0, 0, 0, 0.22)',
+                                  transform: 'translateY(-2px)',
+                                },
+                                transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out',
+                              }}
+                              onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
+                            >
+                              <img
+                                src={imageData.url}
+                                alt={`Preview ${index + 1}`}
+                                style={{
+                                  display: 'block',
+                                  maxWidth: '100%',
+                                  maxHeight: '250px', // Aumentado para melhor visualização
+                                  width: 'auto',
+                                  height: 'auto',
+                                  objectFit: 'contain',
+                                  transition: 'transform 0.3s ease-in-out',
+                                  boxShadow: 'inset 0 0 2px rgba(0,0,0,0.1)',
+                                }}
+                              />
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-around', gap: 1, mt: 1 }}>
+                              <Tooltip title="Editar Posições/Estilos">
+                                <IconButton size="small" onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}>
+                                  <Edit />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Substituir Imagem de Fundo">
+                                <IconButton size="small" onClick={() => handleReplaceImageClick(imageData.index)}>
+                                  <SwapHoriz />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Download">
+                                <IconButton size="small" onClick={() => downloadImage(imageData)}>
+                                  <Download />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Compartilhar">
+                                <IconButton size="small" onClick={() => handleShare(imageData)}>
+                                  <Share />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                          </Grid>
+
+                          {/* Coluna do Story Card */}
+                          <Grid item xs={12} sm={6}>
+                             <Typography variant="subtitle2" gutterBottom>Story (9:16)</Typography>
+                             <StoryCard imageData={imageData} onShare={handleShare} />
+                          </Grid>
+                        </Grid>
                       </CardContent>
                     </Card>
                   </Grid>
