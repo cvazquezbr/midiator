@@ -37,10 +37,8 @@ import {
 } from '@mui/icons-material';
 import GeneratedImageEditor from './GeneratedImageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
-import { composeImage } from '../utils/imageComposer';
+import { composeImage, composeSingleImage, dataURLtoBlob, wrapTextInArea, applyTextEffects } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
-
-import { composeSingleImage } from '../utils/imageComposer';
 
 const ImageGeneratorFrontendOnly = ({
   csvData,

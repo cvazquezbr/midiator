@@ -93,8 +93,6 @@ const GeneratedImageEditor = ({
 
   useEffect(() => {
     if (imageData && initialFieldPositions && initialFieldStyles) {
-      setSelectedFieldInternal(null);
-
       const positions = JSON.parse(JSON.stringify(initialFieldPositions));
       const brands = JSON.parse(JSON.stringify(brandElements || []));
 

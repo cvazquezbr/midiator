@@ -169,6 +169,7 @@ export const composeSingleImage = async ({
 
     // 1. Compose the background with filters and brand elements
     const backgroundCanvas = await composeImage(itemBackgroundImage, imageFilters, brandElements);
+    const composedBackgroundDataUrl = backgroundCanvas.toDataURL('image/png', 1.0);
 
     // 2. Create a new canvas to draw the final image with text
     const finalCanvas = document.createElement('canvas');
@@ -251,7 +252,7 @@ export const composeSingleImage = async ({
         record,
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        backgroundImage: itemBackgroundImage,
+        backgroundImage: composedBackgroundDataUrl,
         // customFieldPositions and customFieldStyles are not handled here as this is for initial generation
     };
 };
