@@ -566,13 +566,13 @@ const ImageGeneratorFrontendOnly = ({
               </Typography>
 
               <Grid container spacing={2}>
-                {generatedImages.map((imageData, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={index}>
+                {generatedImages.map((imageData) => (
+                  <Grid item xs={12} sm={6} md={4} key={imageData.index || imageData.filename}>
                     <Card variant="outlined">
                       <CardContent>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                           <Chip
-                            label={`#${index + 1}`}
+                            label={`#${imageData.index + 1}`}
                             size="small"
                             color="primary"
                             sx={{ mr: 1 }}
@@ -611,7 +611,7 @@ const ImageGeneratorFrontendOnly = ({
                           <img
                             key={imageData.url}
                             src={imageData.url}
-                            alt={`Preview ${index + 1}`}
+                            alt={`Preview ${imageData.index + 1}`}
                             style={{
                               display: 'block',
                               maxWidth: '100%',
