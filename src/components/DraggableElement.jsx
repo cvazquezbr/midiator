@@ -260,7 +260,6 @@ const DraggableElementInternal = ({
   ];
 
   const doHandleMouseDown = (e, type, handle = null) => {
-    e.preventDefault();
     e.stopPropagation();
 
     if (setIsMoving) setIsMoving(true);
