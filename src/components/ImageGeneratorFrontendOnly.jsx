@@ -107,6 +107,56 @@ const ImageGeneratorFrontendOnly = ({
     }
   }, [initialGeneratedImagesData]);
 
+  // Effect for regenerating thumbnails on load
+  useEffect(() => {
+    if (initialGeneratedImagesData && initialGeneratedImagesData.length > 0 && fontsLoaded) {
+      const regenerateMissingThumbnails = async () => {
+        const imagesToRegenerate = initialGeneratedImagesData.filter(img => img.record && img.backgroundImage && !img.url);
+
+        if (imagesToRegenerate.length === 0) return;
+
+        console.log(`[Thumbnail-Regen] Found ${imagesToRegenerate.length} images missing thumbnails. Regenerating...`);
+
+        const imagePromises = initialGeneratedImagesData.map(imgData => {
+          // If the URL already exists, or it's not an image we should regenerate, return it as is.
+          if (imgData.url || !imagesToRegenerate.some(r => r.index === imgData.index)) {
+            return Promise.resolve(imgData);
+          }
+
+          // Define parameters for regeneration, falling back to global props.
+          const positionsToUse = imgData.customFieldPositions || fieldPositions;
+          const stylesToUse = imgData.customFieldStyles || fieldStyles;
+          const elementsToUse = imgData.customBrandElements !== undefined ? imgData.customBrandElements : brandElements;
+
+          // Call the composition function to regenerate the merged image
+          return composeSingleImage({
+            record: imgData.record,
+            index: imgData.index,
+            itemBackgroundImage: imgData.backgroundImage,
+            imageFilters,
+            brandElements: elementsToUse,
+            fieldPositions: positionsToUse,
+            fieldStyles: stylesToUse,
+          }).catch(error => {
+            console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${imgData.index}:`, error);
+            return imgData; // On error, return the original data to not lose it
+          });
+        });
+
+        const newImages = await Promise.all(imagePromises);
+
+        // Update state only if there are actual changes
+        if (JSON.stringify(newImages) !== JSON.stringify(generatedImages)) {
+          setGeneratedImages(newImages);
+          console.log('[Thumbnail-Regen] Successfully regenerated thumbnails and updated state.');
+        }
+      };
+
+      regenerateMissingThumbnails();
+    }
+  }, [initialGeneratedImagesData, fontsLoaded, fieldPositions, fieldStyles, imageFilters, brandElements]);
+
+
   const generateImages = async () => {
     if ((!backgroundImage && initialGeneratedImagesData.some(img => !img.backgroundImage)) || csvData.length === 0) {
       alert('Por favor, carregue um arquivo CSV e uma imagem de fundo global, ou garanta que todas as imagens tenham um fundo individual.');
