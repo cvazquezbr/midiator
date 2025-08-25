@@ -261,7 +261,7 @@ const ImageGeneratorFrontendOnly = ({
         bgToUse,
         imageToRegenerate.customFieldPositions,
         imageToRegenerate.customFieldStyles,
-        null,
+        imageToRegenerate.customOriginalImageSize, // Pass the correct size
         imageToRegenerate.customBrandElements,
         imageToRegenerate.fontScale
       );
