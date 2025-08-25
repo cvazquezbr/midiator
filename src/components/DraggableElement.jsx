@@ -3,7 +3,6 @@ import { Box } from '@mui/material';
 import RichTextEditor from './RichTextEditor';
 import styles from './DraggableElement.module.css';
 import TextEditorDialog from './TextEditorDialog';
-import { wrapTextInArea } from '../utils/imageComposer';
 
 const DraggableElementInternal = ({
   element, // Combined object for field/element data
@@ -489,10 +488,7 @@ const DraggableElementInternal = ({
 
   const originalBoxWidth = (position.width / 100) * (originalImageSize?.width || 1);
   const paddingInPixels = 8 * 2;
-  // Create a dummy canvas context to pass to the wrapping function, to mimic the final render environment
-  const dummyCanvas = document.createElement('canvas');
-  const dummyCtx = dummyCanvas.getContext('2d');
-  const textLines = enableHtmlRendering ? [content] : wrapTextInArea(dummyCtx, editedContent, { ...style, fontSize: scaledFontSize }, pixelPosition.width - paddingInPixels, pixelPosition.height - paddingInPixels);
+  const textLines = []; // This is no longer used for rendering plain text directly.
 
   const handleSize = isMobile ? 24 : 12;
 
@@ -604,11 +600,7 @@ const DraggableElementInternal = ({
                     }}
                   />
                 ) : (
-                  textLines.map((line, index) => (
-                    <div key={index} style={{ marginBottom: index < textLines.length - 1 ? '2px' : 0 }}>
-                      {line}
-                    </div>
-                  ))
+                  <div style={{whiteSpace: 'pre-wrap', width: '100%', height: '100%'}}>{content}</div>
                 )}
               </Box>
             )}
