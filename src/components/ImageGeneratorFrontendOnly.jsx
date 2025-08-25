@@ -243,21 +243,16 @@ const ImageGeneratorFrontendOnly = ({
       return;
     }
     try {
-      const composedBackgroundImageUrl = await composeImage(currentBackgroundImage, imageFilters, elementsToUse);
-      const img = new Image();
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = (err) => reject(new Error('Failed to load composed background for regeneration.', { cause: err }));
-        img.src = composedBackgroundImageUrl;
-      });
+      const composedBackgroundCanvas = await composeImage(currentBackgroundImage, imageFilters, elementsToUse);
+
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = img.width;
-      canvas.height = img.height;
+      canvas.width = composedBackgroundCanvas.width;
+      canvas.height = composedBackgroundCanvas.height;
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       ctx.textRenderingOptimization = 'optimizeQuality';
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(composedBackgroundCanvas, 0, 0);
       for (const field of Object.keys(record)) {
         const position = positionsToUse[field];
         const style = stylesToUse[field];
