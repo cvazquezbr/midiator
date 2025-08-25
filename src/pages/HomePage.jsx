@@ -55,6 +55,7 @@ import { parseIaResponseToCsvData } from '../utils/iaResponseParser.js';
 import { parseCsv } from '../utils/csvParser.js';
 import { lightTheme, darkTheme } from '../theme.js';
 import ColorThief from 'colorthief';
+import { composeSingleImage } from '../utils/imageComposer.js';
 
 import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
 
