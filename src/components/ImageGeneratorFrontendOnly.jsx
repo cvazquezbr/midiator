@@ -261,10 +261,10 @@ const ImageGeneratorFrontendOnly = ({
         if (!text) continue;
         ctx.save();
         const posPx = {
-          x: Math.round((position.x / 100) * img.width),
-          y: Math.round((position.y / 100) * img.height),
-          width: Math.round((position.width / 100) * img.width),
-          height: Math.round((position.height / 100) * img.height)
+          x: Math.round((position.x / 100) * canvas.width),
+          y: Math.round((position.y / 100) * canvas.height),
+          width: Math.round((position.width / 100) * canvas.width),
+          height: Math.round((position.height / 100) * canvas.height)
         };
         if (position.rotation) {
           const centerX = posPx.x + posPx.width / 2;
