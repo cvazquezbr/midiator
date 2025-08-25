@@ -254,16 +254,24 @@ const ImageGeneratorFrontendOnly = ({
     const imageToRegenerate = updatedImages.find(im => im.index === imageIndex);
 
     if (imageToRegenerate) {
+      // Explicitly define the parameters to be used for regeneration,
+      // falling back to global props if custom ones don't exist.
       const bgToUse = imageToRegenerate.backgroundImage || backgroundImage;
+      const positionsToUse = imageToRegenerate.customFieldPositions || fieldPositions;
+      const stylesToUse = imageToRegenerate.customFieldStyles || fieldStyles;
+      const elementsToUse = imageToRegenerate.customBrandElements !== undefined ? imageToRegenerate.customBrandElements : brandElements;
+      const scaleToUse = imageToRegenerate.fontScale !== undefined ? imageToRegenerate.fontScale : 1;
+      const sizeToUse = imageToRegenerate.customOriginalImageSize || originalImageSize;
+
       regenerateSingleImage(
         imageIndex,
         imageToRegenerate.record,
         bgToUse,
-        imageToRegenerate.customFieldPositions,
-        imageToRegenerate.customFieldStyles,
-        imageToRegenerate.customOriginalImageSize, // Pass the correct size
-        imageToRegenerate.customBrandElements,
-        imageToRegenerate.fontScale
+        positionsToUse,
+        stylesToUse,
+        sizeToUse,
+        elementsToUse,
+        scaleToUse
       );
     }
     handleCloseGeneratedImageEditor();
