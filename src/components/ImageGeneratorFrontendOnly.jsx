@@ -40,7 +40,7 @@ import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi'
 import { composeImage } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
 
-import { composeSingleImage, applyTextEffects, wrapTextInArea, drawTextWithEffects, dataURLtoBlob } from '../utils/imageComposer';
+import { composeSingleImage } from '../utils/imageComposer';
 
 const ImageGeneratorFrontendOnly = ({
   csvData,
