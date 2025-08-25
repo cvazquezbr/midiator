@@ -262,104 +262,25 @@ const ImageGeneratorFrontendOnly = ({
       return;
     }
     try {
-      const composedBackgroundCanvas = await composeImage(currentBackgroundImage, imageFilters, elementsToUse);
-      const img = new Image();
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = (err) => reject(new Error('Failed to load composed background for regeneration.', { cause: err }));
-        img.src = composedBackgroundCanvas.toDataURL();
+      // Use the new unified rendering function
+      const newImageData = await composeSingleImage({
+        record: record,
+        index: index,
+        itemBackgroundImage: currentBackgroundImage,
+        imageFilters: imageFilters,
+        brandElements: elementsToUse,
+        fieldPositions: positionsToUse,
+        fieldStyles: stylesToUse,
+        fontScale: fontScale,
+        originalImageSize: customSize,
       });
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const finalImageSize = customSize || { width: img.width, height: img.height };
-      canvas.width = finalImageSize.width;
-      canvas.height = finalImageSize.height;
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      ctx.textRenderingOptimization = 'optimizeQuality';
-      ctx.drawImage(img, 0, 0);
-      for (const field of Object.keys(record)) {
-        const position = positionsToUse[field];
-        const style = stylesToUse[field];
-        if (!position || !position.visible || !style) continue;
-        const text = record[field] || "";
-        if (!text) continue;
-        ctx.save();
-        const posPx = {
-          x: Math.round((position.x / 100) * finalImageSize.width),
-          y: Math.round((position.y / 100) * finalImageSize.height),
-          width: Math.round((position.width / 100) * finalImageSize.width),
-          height: Math.round((position.height / 100) * finalImageSize.height)
-        };
-        if (position.rotation) {
-          const centerX = posPx.x + posPx.width / 2;
-          const centerY = posPx.y + posPx.height / 2;
-          ctx.translate(centerX, centerY);
-          ctx.rotate(position.rotation * Math.PI / 180);
-          ctx.translate(-centerX, -centerY);
-        }
-        const baseFontSize = style.fontSize || 24;
-        const scaledFontSize = baseFontSize * fontScale;
-        applyTextEffects(ctx, { ...style, fontSize: scaledFontSize });
-        const fixedPadding = 8;
-        const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
-        const effectiveTextHeight = Math.max(0, posPx.height - (2 * fixedPadding));
-        const textContentStartX = posPx.x + fixedPadding;
-        const textContentStartY = posPx.y + fixedPadding;
-        const lines = wrapTextInArea(ctx, text, { ...style, fontSize: scaledFontSize }, effectiveTextWidth, effectiveTextHeight);
-        const lineHeight = scaledFontSize * (style.lineHeightMultiplier || 1.2);
-        let currentLineRenderY = textContentStartY;
-        if (style.verticalAlign === 'middle') {
-          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - scaledFontSize) : 0);
-          currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
-        } else if (style.verticalAlign === 'bottom') {
-          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - scaledFontSize) : 0);
-          currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
-        }
-        if (containsHtml(text)) {
-          await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, { ...style, fontSize: scaledFontSize }, effectiveTextWidth, effectiveTextHeight);
-        } else {
-          for (const line of lines) {
-            let currentLineRenderX;
-            if (style.textAlign === 'center') {
-              currentLineRenderX = textContentStartX + effectiveTextWidth / 2;
-            } else if (style.textAlign === 'right') {
-              currentLineRenderX = textContentStartX + effectiveTextWidth;
-            } else {
-              currentLineRenderX = textContentStartX;
-            }
-            const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
-            await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: scaledFontSize }, effectiveTextWidth, effectiveTextHeight);
-          }
-        }
-        ctx.restore();
-      }
-      const dataUrl = canvas.toDataURL('image/png', 1.0);
-      const blob = dataURLtoBlob(dataUrl);
-      const newImageData = {
-        url: dataUrl,
-        dataUrl: dataUrl,
-        blob,
-        record,
-        index,
-        filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        backgroundImage: currentBackgroundImage,
-        customFieldPositions: positionsToUse,
-        customFieldStyles: stylesToUse,
-        customBrandElements: elementsToUse,
-        customOriginalImageSize: customSize,
-      };
+
       setGeneratedImages(prevImages => {
-        const updatedImages = prevImages.map(img => {
-          if (img.index === index) {
-            // No need to revoke URL if it's a data URL
-            return newImageData;
-          }
-          return img;
-        });
+        const updatedImages = prevImages.map(img => (img.index === index) ? newImageData : img);
         return updatedImages;
       });
     } catch (error) {
+      console.error(`Error regenerating image for index ${index}:`, error);
       alert(`Erro na regeneração da imagem (índice ${index}): ${error.message}`);
     }
   };

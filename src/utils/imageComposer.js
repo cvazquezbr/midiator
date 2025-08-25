@@ -1,6 +1,4 @@
-import { containsHtml, renderHtmlToCanvas } from './htmlRenderer';
-
-// Helper functions moved from ImageGeneratorFrontendOnly.jsx and adapted for utility use
+import html2canvas from 'html2canvas';
 
 export const dataURLtoBlob = (dataurl) => {
     if (!dataurl) return null;
@@ -18,74 +16,11 @@ export const dataURLtoBlob = (dataurl) => {
     return new Blob([u8arr], {type:mime});
 };
 
-export const wrapTextInArea = (ctx, text, style, maxWidth, maxHeight) => {
-    if (!text) return [];
-    const fontSize = style.fontSize || 24;
-    const lineHeight = fontSize * (style.lineHeightMultiplier || 1.2);
-    const maxLines = Math.floor(maxHeight / lineHeight);
-    ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${fontSize}px ${style.fontFamily || 'Arial'}`;
-    const words = text.toString().split(' ');
-    const lines = [];
-    let currentLine = words[0] || '';
-    for (let i = 1; i < words.length; i++) {
-        const word = words[i];
-        const testLine = currentLine + ' ' + word;
-        const metrics = ctx.measureText(testLine);
-        if (metrics.width > maxWidth && currentLine !== '') {
-            lines.push(currentLine);
-            if (lines.length >= maxLines) break;
-            currentLine = word;
-        } else {
-            currentLine = testLine;
-        }
-    }
-    if (lines.length < maxLines && currentLine) {
-        lines.push(currentLine);
-    }
-    return lines;
-};
-
-export const applyTextEffects = (ctx, style) => {
-    ctx.fillStyle = style.color || '#000000';
-    ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${style.fontSize || 24}px ${style.fontFamily || 'Arial'}`;
-    ctx.textAlign = style.textAlign || 'left';
-    ctx.textBaseline = 'top'; // Consistent baseline
-    if (style.textShadow) {
-        ctx.shadowColor = style.shadowColor || '#000000';
-        ctx.shadowBlur = style.shadowBlur || 4;
-        ctx.shadowOffsetX = style.shadowOffsetX || 2;
-        ctx.shadowOffsetY = style.shadowOffsetY || 2;
-    } else {
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-    }
-    if (style.textStroke) {
-        ctx.strokeStyle = style.strokeColor || '#ffffff';
-        ctx.lineWidth = style.strokeWidth || 2;
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-    }
-};
-
-export const drawTextWithEffects = async (ctx, text, x, y, style, maxWidth, maxHeight) => {
-    if (containsHtml(text)) {
-        await renderHtmlToCanvas(ctx, text, x, y, maxWidth, maxHeight, style);
-    } else {
-        if (style.textStroke) {
-            ctx.strokeText(text, x, y);
-        }
-        ctx.fillText(text, x, y);
-    }
-};
-
 const loadImage = (src) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    if (src.startsWith('http')) {
-        img.crossOrigin = 'Anonymous';
-    }
+    // Allow cross-origin images for html2canvas
+    img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = (err) => reject(new Error(`Failed to load image: ${src}`, { cause: err }));
     img.src = src;
@@ -93,65 +28,8 @@ const loadImage = (src) => {
 };
 
 /**
- * Composes a new image by applying filters and brand elements to a background.
- * @param {string} backgroundImageUrl - The URL or base64 string of the background image.
- * @param {object} imageFilters - An object containing filter values for the background.
- * @param {Array<object>} brandElements - An array of brand element objects to overlay.
- * @returns {Promise<HTMLCanvasElement>} A promise that resolves with the canvas containing the composed background.
- */
-export const composeImage = async (
-  backgroundImageUrl,
-  imageFilters = {},
-  brandElements = []
-) => {
-  try {
-    const bgImg = await loadImage(backgroundImageUrl);
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = bgImg.width;
-    canvas.height = bgImg.height;
-
-    const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = imageFilters;
-    ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
-    ctx.drawImage(bgImg, 0, 0);
-    ctx.filter = 'none';
-
-    for (const element of brandElements) {
-      if (!element.url) continue;
-      try {
-        const elementImg = await loadImage(element.url);
-        ctx.save();
-        const elX = (element.x / 100) * canvas.width;
-        const elY = (element.y / 100) * canvas.height;
-        const elWidth = (element.width / 100) * canvas.width;
-        const elHeight = (element.height / 100) * canvas.height;
-        if (element.rotation) {
-            const centerX = elX + elWidth / 2;
-            const centerY = elY + elHeight / 2;
-            ctx.translate(centerX, centerY);
-            ctx.rotate(element.rotation * Math.PI / 180);
-            ctx.translate(-centerX, -centerY);
-        }
-        if (element.filters) {
-            const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = element.filters;
-            ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
-        }
-        ctx.drawImage(elementImg, elX, elY, elWidth, elHeight);
-        ctx.restore();
-      } catch (error) {
-        console.error(`[composeImage] Failed to load or draw brand element ${element.id}:`, error);
-      }
-    }
-    return canvas;
-  } catch (error) {
-    console.error('Error composing image:', error);
-    throw error;
-  }
-};
-
-/**
- * Creates a complete composite image with text and returns full imageData object.
- * @param {object} params - The parameters for composition.
+ * Creates a complete composite image by rendering a DOM structure to a canvas using html2canvas.
+ * This ensures a 1:1 match with the browser's rendering engine.
  * @returns {Promise<object>} A promise that resolves with the final imageData object.
  */
 export const composeSingleImage = async ({
@@ -161,89 +39,147 @@ export const composeSingleImage = async ({
     imageFilters,
     brandElements,
     fieldPositions,
-    fieldStyles
+    fieldStyles,
+    fontScale = 1,
+    originalImageSize, // The native resolution of the background image
 }) => {
     if (!itemBackgroundImage) {
         throw new Error(`Background image is missing for record index ${index}.`);
     }
 
-    // 1. Compose the background with filters and brand elements
-    const backgroundCanvas = await composeImage(itemBackgroundImage, imageFilters, brandElements);
+    // 1. Load the background image to determine the canvas dimensions
+    const bgImg = await loadImage(itemBackgroundImage);
+    const renderWidth = originalImageSize?.width || bgImg.width;
+    const renderHeight = originalImageSize?.height || bgImg.height;
 
-    // 2. Create a new canvas to draw the final image with text
-    const finalCanvas = document.createElement('canvas');
-    const ctx = finalCanvas.getContext('2d');
-    finalCanvas.width = backgroundCanvas.width;
-    finalCanvas.height = backgroundCanvas.height;
-    ctx.drawImage(backgroundCanvas, 0, 0);
+    // 2. Create an off-screen container to build the DOM structure
+    const container = document.createElement('div');
+    document.body.appendChild(container);
 
-    // 3. Draw text fields onto the canvas
-    for (const field of Object.keys(record)) {
-        const position = fieldPositions[field];
-        const style = fieldStyles[field];
-        if (!position || !position.visible || !style) continue;
-        const text = record[field] || "";
-        if (!text) continue;
+    // Style the container to be the exact size of the final image, but hidden
+    Object.assign(container.style, {
+        position: 'absolute',
+        left: '-9999px',
+        top: '-9999px',
+        width: `${renderWidth}px`,
+        height: `${renderHeight}px`,
+        margin: '0',
+        padding: '0',
+        overflow: 'hidden', // Ensure nothing spills out
+    });
 
-        ctx.save();
-        const posPx = {
-            x: Math.round((position.x / 100) * finalCanvas.width),
-            y: Math.round((position.y / 100) * finalCanvas.height),
-            width: Math.round((position.width / 100) * finalCanvas.width),
-            height: Math.round((position.height / 100) * finalCanvas.height)
-        };
+    // 3. Create and style the background image element
+    const backgroundEl = document.createElement('img');
+    backgroundEl.src = itemBackgroundImage;
+    const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = imageFilters || {};
+    Object.assign(backgroundEl.style, {
+        position: 'absolute',
+        top: '0',
+        left: '0',
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain', // or 'cover' depending on desired behavior
+        filter: `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`,
+    });
+    container.appendChild(backgroundEl);
 
-        if (position.rotation) {
-            const centerX = posPx.x + posPx.width / 2;
-            const centerY = posPx.y + posPx.height / 2;
-            ctx.translate(centerX, centerY);
-            ctx.rotate(position.rotation * Math.PI / 180);
-            ctx.translate(-centerX, -centerY);
+    // 4. Create and style all text and brand elements
+    const elementsToRender = [
+        ...Object.keys(record).map(header => ({
+            id: header,
+            type: 'text',
+            content: record[header] || '',
+            position: fieldPositions[header],
+            style: fieldStyles[header],
+        })),
+        ...(brandElements || []).map(el => ({
+            id: el.id,
+            type: 'image',
+            content: el.url,
+            position: el,
+            style: el.filters || {},
+        })),
+    ];
+
+    // Sort by z-index to ensure correct stacking
+    elementsToRender.sort((a, b) => (a.position?.zIndex || 0) - (b.position?.zIndex || 0));
+
+    elementsToRender.forEach(element => {
+        if (!element.position || !element.position.visible) return;
+
+        const el = document.createElement(element.type === 'image' ? 'img' : 'div');
+
+        // Base styles for the element's box
+        Object.assign(el.style, {
+            position: 'absolute',
+            left: `${element.position.x}%`,
+            top: `${element.position.y}%`,
+            width: `${element.position.width}%`,
+            height: `${element.position.height}%`,
+            transform: `rotate(${element.position.rotation || 0}deg)`,
+            display: 'flex',
+            padding: '8px', // Consistent padding
+            boxSizing: 'border-box',
+        });
+
+        if (element.type === 'image') {
+            el.src = element.content;
+            const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = element.style;
+            Object.assign(el.style, {
+                objectFit: 'contain',
+                filter: `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`,
+            });
+        } else { // Text element
+            const style = element.style;
+            const baseFontSize = style.fontSize || 24;
+            const scaledFontSize = baseFontSize * fontScale;
+            const lineHeight = scaledFontSize * (style.lineHeightMultiplier || 1.2);
+
+            Object.assign(el.style, {
+                fontFamily: style.fontFamily || 'Arial',
+                fontSize: `${scaledFontSize}px`,
+                fontWeight: style.fontWeight || 'normal',
+                fontStyle: style.fontStyle || 'normal',
+                color: style.color || '#000000',
+                textDecoration: style.textDecoration || 'none',
+                lineHeight: `${lineHeight}px`,
+                textAlign: style.textAlign || 'left',
+                justifyContent: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
+                alignItems: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
+                textShadow: style.textShadow ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}` : 'none',
+                WebkitTextStroke: style.textStroke ? `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}` : 'none',
+                wordWrap: 'break-word',
+            });
+            el.innerHTML = element.content;
         }
 
-        applyTextEffects(ctx, style);
-        const fixedPadding = 8;
-        const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
-        const effectiveTextHeight = Math.max(0, posPx.height - (2 * fixedPadding));
-        const textContentStartX = posPx.x + fixedPadding;
-        const textContentStartY = posPx.y + fixedPadding;
+        container.appendChild(el);
+    });
 
-        const lines = wrapTextInArea(ctx, text, style, effectiveTextWidth, effectiveTextHeight);
-        const lineHeight = (style.fontSize || 24) * (style.lineHeightMultiplier || 1.2);
+    let dataUrl = '';
+    try {
+        // 5. Use html2canvas to render the container
+        const canvas = await html2canvas(container, {
+            useCORS: true, // Important for loading cross-origin images
+            backgroundColor: null, // Make background transparent
+            width: renderWidth,
+            height: renderHeight,
+            scale: 1, // Render at native resolution
+        });
 
-        let currentLineRenderY = textContentStartY;
-        if (style.verticalAlign === 'middle') {
-            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - (style.fontSize || 24)) : 0);
-            currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
-        } else if (style.verticalAlign === 'bottom') {
-            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - (style.fontSize || 24)) : 0);
-            currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
-        }
-
-        if (containsHtml(text)) {
-            await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, style, effectiveTextWidth, effectiveTextHeight);
-        } else {
-            for (const line of lines) {
-                let currentLineRenderX;
-                if (style.textAlign === 'center') {
-                    currentLineRenderX = textContentStartX + effectiveTextWidth / 2;
-                } else if (style.textAlign === 'right') {
-                    currentLineRenderX = textContentStartX + effectiveTextWidth;
-                } else {
-                    currentLineRenderX = textContentStartX;
-                }
-                const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
-                await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, style, effectiveTextWidth, effectiveTextHeight);
-            }
-        }
-        ctx.restore();
+        // 6. Get the data URL from the resulting canvas
+        dataUrl = canvas.toDataURL('image/png', 1.0);
+    } catch (e) {
+        console.error("html2canvas rendering failed:", e);
+        throw e;
+    } finally {
+        // 7. Clean up the DOM
+        document.body.removeChild(container);
     }
 
-    // 4. Generate final data URL and blob
-    const dataUrl = finalCanvas.toDataURL('image/png', 1.0);
     const blob = dataURLtoBlob(dataUrl);
 
-    // 5. Return the complete imageData object
+    // 8. Return the complete imageData object
     return {
         url: dataUrl,
         dataUrl: dataUrl,
