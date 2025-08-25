@@ -536,7 +536,57 @@ function HomePage() {
   const { visibleFields, totalFields, styledFields } = getFieldStats();
   const handleZIndexChange = (elementId, action) => { if (!elementId) return; let allElements = [ ...Object.entries(fieldPositions).map(([id, pos]) => ({ id, zIndex: pos.zIndex, isBrand: false })), ...brandElements.map(el => ({ id: el.id, zIndex: el.zIndex, isBrand: true })), ]; allElements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0)); const currentIndex = allElements.findIndex(el => el.id === elementId); if (currentIndex === -1) return; const [currentElement] = allElements.splice(currentIndex, 1); switch (action) { case 'front': allElements.push(currentElement); break; case 'back': allElements.unshift(currentElement); break; case 'forward': allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement); break; case 'backward': allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement); break; default: allElements.splice(currentIndex, 0, currentElement); return; } const newPositions = { ...fieldPositions }; const newBrandElements = [...brandElements]; allElements.forEach((el, index) => { el.zIndex = index; if (el.isBrand) { const brandEl = newBrandElements.find(b => b.id === el.id); if (brandEl) brandEl.zIndex = index; } else { if (newPositions[el.id]) { newPositions[el.id].zIndex = index; } } }); setFieldPositions(newPositions); setBrandElements(newBrandElements); };
   const handleSidebarStepClick = (index) => { setActiveStep(index); if (isMobile) { setSidebarOpen(false); } };
-  const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => { setCsvData(novosRegistros); setCsvHeaders(novasColunas); const updatedFieldPositions = {}; const updatedFieldStyles = {}; const defaultStylesBase = { fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false, strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' }; novasColunas.forEach((header, index) => { updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true }; updatedFieldStyles[header] = fieldStyles[header] || { ...defaultStylesBase }; }); setFieldPositions(updatedFieldPositions); setFieldStyles(updatedFieldStyles); setGeneratedImagesData(prevGeneratedImages => { if (prevGeneratedImages.length !== novosRegistros.length) { const rebuiltGeneratedImages = novosRegistros.map((record, index) => ({ index, record, blob: null, url: null, filename: `midiator_${String(index + 1).padStart(3, '0')}.png`, backgroundImage: backgroundImage, })); return rebuiltGeneratedImages; } else { const updatedGeneratedImages = prevGeneratedImages.map((oldImage, index) => ({ ...oldImage, record: novosRegistros[index], index: index, })); return updatedGeneratedImages; } }); }, [darkMode, fieldPositions, fieldStyles, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles, backgroundImage]);
+  const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
+    setCsvData(novosRegistros);
+    setCsvHeaders(novasColunas);
+
+    // This logic doesn't need to be inside the setGeneratedImagesData callback
+    const updatedFieldPositions = {};
+    const updatedFieldStyles = {};
+    const defaultStylesBase = {
+      fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
+      textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
+      strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
+      shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
+      textAlign: 'left', verticalAlign: 'top'
+    };
+    novasColunas.forEach((header, index) => {
+      updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true };
+      updatedFieldStyles[header] = fieldStyles[header] || { ...defaultStylesBase };
+    });
+    setFieldPositions(updatedFieldPositions);
+    setFieldStyles(updatedFieldStyles);
+
+    // When rebuilding the generatedImagesData array due to a change in the number of records,
+    // we must check if a specific background image already exists for that index in the *previous*
+    // state. If it does, we preserve it. Otherwise, we fall back to the global background.
+    setGeneratedImagesData(prevGeneratedImages => {
+        const newGeneratedImages = novosRegistros.map((record, index) => {
+            const existingImage = prevGeneratedImages.find(img => img.index === index);
+
+            // If an image with the same index exists, preserve its properties,
+            // especially the unique 'backgroundImage', and just update the record.
+            if (existingImage) {
+                return {
+                    ...existingImage,
+                    record: record, // Update the data record
+                };
+            }
+
+            // If no image exists for this index (e.g., a new row was added),
+            // create a new image data object using the global background.
+            return {
+                index,
+                record,
+                blob: null,
+                url: null,
+                filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+                backgroundImage: backgroundImage, // Use global background for new rows
+            };
+        });
+        return newGeneratedImages;
+    });
+  }, [darkMode, fieldPositions, fieldStyles, backgroundImage, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles]);
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => { setCsvData(newCsvData); }, [setCsvData]);
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => { setCsvData(prevCsvData => { if (recordIndex < 0 || recordIndex >= prevCsvData.length) { return prevCsvData; } return prevCsvData.map((row, idx) => { if (idx === recordIndex) { return updatedRecord; } return row; }); }); }, [setCsvData]);
   const handleGenerateCampaignContent = async (regenerate = false) => {
@@ -706,7 +756,7 @@ function HomePage() {
               });
 
               if (!firstImageSet) {
-                setBackgroundImage(stableDataUrl);
+                updateImageAndPalette(stableDataUrl);
                 firstImageSet = true;
               }
 
