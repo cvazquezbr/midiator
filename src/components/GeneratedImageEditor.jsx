@@ -156,8 +156,9 @@ const GeneratedImageEditor = ({
 
   const handleSave = () => {
     onSave({
-      ...imageData, // Mantém outros dados da imagem original (index etc.)
-      record: editedRecord, // Passa o record atualizado
+      ...imageData, // Keeps original data like index
+      record: editedRecord, // Passes the updated record
+      backgroundImage: currentBackgroundImageForEditor, // Explicitly pass back the background being used
       fieldPositions: editedPositions,
       fieldStyles: editedStyles,
       brandElements: editedBrandElements,
