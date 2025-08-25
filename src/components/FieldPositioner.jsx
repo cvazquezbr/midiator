@@ -321,6 +321,10 @@ const FieldPositioner = ({
   };
 
   const autoArrangeFields = () => {
+    if (!originalImageSize?.width || !originalImageSize?.height) {
+      alert("A imagem original ainda não foi carregada. Por favor, aguarde.");
+      return;
+    }
     // 1. Define Safe Zone and Field Roles
     const safeZoneMargins = {
       top: 10, // 10%
@@ -362,8 +366,8 @@ const FieldPositioner = ({
         visible: true,
       };
 
-      const titleBoxWidthPx = (titleWidth / 100) * (originalImageSize?.width || imageSize.width);
-      const titleBoxHeightPx = (titleHeight / 100) * (originalImageSize?.height || imageSize.height);
+      const titleBoxWidthPx = (titleWidth / 100) * originalImageSize.width;
+      const titleBoxHeightPx = (titleHeight / 100) * originalImageSize.height;
       const titleText = csvData[currentPreviewIndex]?.[titleField] || `[${titleField}]`;
 
       const bestFontSize = findBestFitFontSize(
@@ -415,7 +419,7 @@ const FieldPositioner = ({
       const fontSizePx = sideLabelStyle.fontSize || 24;
 
       // A altura da caixa (que se torna a largura do texto após rotação) é baseada na altura da fonte.
-      const labelHeight = (fontSizePx / (originalImageSize?.height || imageSize.height || 1)) * 100 * 1.5;
+      const labelHeight = (fontSizePx / originalImageSize.height) * 100 * 1.5;
       // A largura da caixa (que se torna a altura do texto) é uma grande parte da altura da zona segura.
       const labelWidth = safeZone.height * 0.7;
 
