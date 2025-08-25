@@ -63,6 +63,7 @@ const GeneratedImageEditor = ({
   const [editedRecord, setEditedRecord] = useState(null); // State for the CSV record being edited
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null); // Estado para o campo selecionado internamente
   const [stylesAreInitialized, setStylesAreInitialized] = useState(false); // New state for initialization tracking
+  const [fontScale, setFontScale] = useState(1);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
   const theme = useTheme();
@@ -163,6 +164,7 @@ const GeneratedImageEditor = ({
       fieldStyles: editedStyles,
       brandElements: editedBrandElements,
       customOriginalImageSize: originalImageSize, // Pass back the size used for editing
+      fontScale: fontScale,
     });
     onClose();
   };
@@ -218,6 +220,7 @@ const GeneratedImageEditor = ({
                 onSelectFieldExternal={handleInternalFieldSelection} // Use memoized handler
                 onCsvDataUpdate={handleFieldPositionerCsvDataUpdate} // Use memoized handler
                 originalImageSize={originalImageSize}
+                onFontScaleChange={setFontScale}
                 imageFilters={editedImageFilters}
                 brandElements={editedBrandElements}
                 setBrandElements={setEditedBrandElements}
