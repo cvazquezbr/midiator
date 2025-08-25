@@ -44,6 +44,8 @@ const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
   shadowOffsetY: 2,
 };
 
+import { composeImage } from '../utils/imageComposer';
+
 // Helper function to find the best font size to fit text within a box
 const findBestFitFontSize = (text, fontFamily, fontWeight, boxWidth, boxHeight) => {
   if (!text || !boxWidth || !boxHeight) {
@@ -110,6 +112,35 @@ const FieldPositioner = ({
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
+  const [composedImageUrl, setComposedImageUrl] = useState(null);
+  const [isComposing, setIsComposing] = useState(false);
+
+  useEffect(() => {
+    if (!backgroundImage) {
+      setComposedImageUrl(null);
+      return;
+    }
+
+    const generateComposedImage = async () => {
+      setIsComposing(true);
+      try {
+        const composedUrl = await composeImage(
+          backgroundImage,
+          imageFilters
+          // Do not pass brandElements here to prevent ghosting.
+          // They are rendered as interactive DraggableElement components on top.
+        );
+        setComposedImageUrl(composedUrl);
+      } catch (error) {
+        console.error("Error composing image in FieldPositioner:", error);
+        setComposedImageUrl(backgroundImage); // Fallback to original image
+      } finally {
+        setIsComposing(false);
+      }
+    };
+
+    generateComposedImage();
+  }, [backgroundImage, imageFilters]);
 
   const isHtmlField = useCallback((fieldName) => {
     if (!fieldName) return false;
@@ -496,14 +527,18 @@ const FieldPositioner = ({
 
   // Effect to calculate font scale based on the actual rendered image size
   useEffect(() => {
-    let scale = 1;
     if (renderedImageMetrics.width > 0 && originalImageSize?.width > 0) {
       // The scale is uniform, so we can just use the width ratio.
-      scale = renderedImageMetrics.width / originalImageSize.width;
-    }
-    setFontScale(scale);
-    if (onFontScaleChange) {
-      onFontScaleChange(scale);
+      const scale = renderedImageMetrics.width / originalImageSize.width;
+      setFontScale(scale);
+      if (onFontScaleChange) {
+        onFontScaleChange(scale);
+      }
+    } else {
+      setFontScale(1);
+      if (onFontScaleChange) {
+        onFontScaleChange(1);
+      }
     }
   }, [renderedImageMetrics, originalImageSize, onFontScaleChange]);
 
@@ -643,8 +678,13 @@ const FieldPositioner = ({
               onTouchStart={handleContainerTouchStart}
               onTouchEnd={handleContainerTouchEnd}
             >
+              {isComposing && (
+                <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white', backgroundColor: 'rgba(0,0,0,0.5)', padding: '10px', borderRadius: '8px' }}>
+                  <Typography>Atualizando...</Typography>
+                </Box>
+              )}
               <img
-                src={backgroundImage}
+                src={composedImageUrl || backgroundImage}
                 alt="Background"
                 style={{
                   width: '100%',
@@ -654,8 +694,8 @@ const FieldPositioner = ({
                   pointerEvents: 'none',
                   userSelect: 'none',
                   WebkitUserDrag: 'none',
+                  opacity: isComposing ? 0.5 : 1,
                   transition: 'opacity 0.3s',
-                  filter: `brightness(${imageFilters.brightness}%) contrast(${imageFilters.contrast}%) saturate(${imageFilters.saturate}%) blur(${imageFilters.blur}px) opacity(${imageFilters.opacity}%)`,
                 }}
                 draggable={false}
               />

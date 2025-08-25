@@ -49,7 +49,6 @@ import MemorialDescritivoModal from '../components/MemorialDescritivoModal';
 import {
   generateCampaignContent, generateCampaignImage, generateFormattedContent, generateFollowupPlan, generateFollowupPosts, generateIAContent, generateColorPalette,
 } from '../utils/generationHandlers.js';
-import { composeSingleImage } from '../utils/imageComposer.js';
 import { exportCsv, exportHtml } from '../utils/exportUtils.js';
 import { downloadExampleCsv } from '../utils/fileUtils.js';
 import { parseIaResponseToCsvData } from '../utils/iaResponseParser.js';
@@ -686,7 +685,7 @@ function HomePage() {
 
       if (generateImagesAutomatically) {
         toast.info('Geração de posts concluída. Iniciando geração automática de imagens...');
-        let isFirstImage = true;
+        let firstImageSet = false;
         let currentImagesData = [...initialImagesData];
 
         for (let i = 0; i < currentImagesData.length; i++) {
@@ -695,20 +694,21 @@ function HomePage() {
 
           if (imagePrompt && imagePrompt.trim() !== '') {
             try {
-              // 1. Generate a unique background for this specific post
-              const uniqueBgImageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
+              const rawBgImageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
 
-              // 2. If it's the first image, set it as the main template background for the editor
-              if (isFirstImage) {
-                updateImageAndPalette(uniqueBgImageUrl);
-                isFirstImage = false;
+              // Launder the data URL
+              const blob = await (await fetch(rawBgImageUrl)).blob();
+              const cleanUrl = URL.createObjectURL(blob);
+
+              if (!firstImageSet) {
+                setBackgroundImage(cleanUrl);
+                firstImageSet = true;
               }
 
-              // 3. Compose the final image using its own unique background
               const finalImageData = await composeSingleImage({
                 record: record,
                 index: i,
-                itemBackgroundImage: uniqueBgImageUrl, // Use the unique background
+                itemBackgroundImage: cleanUrl,
                 imageFilters,
                 brandElements,
                 fieldPositions: updatedFieldPositions,
@@ -716,21 +716,15 @@ function HomePage() {
               });
 
               currentImagesData[i] = finalImageData;
-              // Do not update state here to prevent flickering. We'll update once at the end.
-              toast.success(`Imagem para o post #${i + 1} gerada com sucesso.`);
+              setGeneratedImagesData([...currentImagesData]);
+              toast.success(`Imagem final para o post #${i + 1} gerada.`);
 
             } catch (error) {
               console.error(`Error during automatic generation for post ${i + 1}:`, error);
-              toast.error(`Falha na geração para o post #${i + 1}: ${error.message}`);
-              currentImagesData[i] = { ...currentImagesData[i], url: null, error: true };
+              toast.error(`Falha na geração automática para o post #${i + 1}: ${error.message}`);
             }
-          } else {
-            // Handle cases where a post has no image prompt
-            currentImagesData[i] = { ...currentImagesData[i], url: null, error: false, message: "Sem prompt de imagem" };
           }
         }
-        // Update the state once with all the new images
-        setGeneratedImagesData(currentImagesData);
         toast.success('Geração automática de imagens concluída!');
       }
     } catch (error) {

@@ -479,6 +479,29 @@ const DraggableElementInternal = ({
     }
   }, [isDragging, isResizing, isRotating, dragStart, initialPosition, initialSize, initialRotation, handleMouseMove, handleMouseUp, handleTouchEnd, handleTouchMove]);
 
+  const wrapText = (text, maxWidth, fontSize) => {
+    if (!text) return [''];
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${fontSize}px ${style.fontFamily || 'Arial'}`;
+    const words = text.toString().split(' ');
+    const lines = [];
+    let currentLine = words[0] || '';
+    for (let i = 1; i < words.length; i++) {
+      const word = words[i];
+      const testLine = currentLine + ' ' + word;
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && currentLine !== '') {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    lines.push(currentLine);
+    return lines;
+  };
+
   const fontScale = fontScaleProp || 1;
 
   const baseFontSize = style.fontSize || 24;
@@ -488,7 +511,7 @@ const DraggableElementInternal = ({
 
   const originalBoxWidth = (position.width / 100) * (originalImageSize?.width || 1);
   const paddingInPixels = 8 * 2;
-  const textLines = []; // This is no longer used for rendering plain text directly.
+  const textLines = enableHtmlRendering ? [content] : wrapText(editedContent, originalBoxWidth - paddingInPixels, baseFontSize);
 
   const handleSize = isMobile ? 24 : 12;
 
@@ -600,7 +623,11 @@ const DraggableElementInternal = ({
                     }}
                   />
                 ) : (
-                  <div style={{whiteSpace: 'pre-wrap', width: '100%', height: '100%'}}>{content}</div>
+                  textLines.map((line, index) => (
+                    <div key={index} style={{ marginBottom: index < textLines.length - 1 ? '2px' : 0 }}>
+                      {line}
+                    </div>
+                  ))
                 )}
               </Box>
             )}

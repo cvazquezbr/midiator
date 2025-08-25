@@ -163,32 +163,13 @@ const ImageGeneratorFrontendOnly = ({
   };
 
   const handleCancelGeneration = () => { isCancelledRef.current = true; };
-  const downloadImage = async (imageData) => {
-    try {
-      if (!imageData || !imageData.url) {
-        throw new Error('Image data or URL is missing.');
-      }
-      // Fetch the image data. This works for data: URLs and regular URLs.
-      const response = await fetch(imageData.url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const blob = await response.blob();
-
-      // Create a temporary link to trigger the download.
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = imageData.filename || 'download.png';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Clean up the temporary URL.
-      URL.revokeObjectURL(link.href);
-    } catch (error) {
-      console.error('Error downloading image:', error);
-      alert(`Could not download ${imageData.filename}: ${error.message}`);
-    }
+  const downloadImage = (imageData) => {
+    const link = document.createElement('a');
+    link.href = imageData.url;
+    link.download = imageData.filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleShare = async (imageData) => {
@@ -242,8 +223,8 @@ const ImageGeneratorFrontendOnly = ({
   };
 
   const handleSaveIndividualModifications = (modifiedImageData) => {
-    const { index: imageIndex, record: updatedCsvRecord, fieldPositions: newPositions, fieldStyles: newStyles, brandElements: editedBrandElements, customOriginalImageSize, fontScale } = modifiedImageData;
-    const updatedImages = generatedImages.map(img => (img.index === imageIndex) ? { ...img, record: updatedCsvRecord, customFieldPositions: newPositions, customFieldStyles: newStyles, customBrandElements: editedBrandElements, customOriginalImageSize: customOriginalImageSize } : img);
+    const { index: imageIndex, record: updatedCsvRecord, fieldPositions: newPositions, fieldStyles: newStyles, brandElements: editedBrandElements, fontScale } = modifiedImageData;
+    const updatedImages = generatedImages.map(img => (img.index === imageIndex) ? { ...img, record: updatedCsvRecord, customFieldPositions: newPositions, customFieldStyles: newStyles, customBrandElements: editedBrandElements, fontScale: fontScale } : img);
     setGeneratedImages(updatedImages);
     if (onThumbnailRecordTextUpdate) {
       onThumbnailRecordTextUpdate(imageIndex, updatedCsvRecord);
@@ -251,7 +232,7 @@ const ImageGeneratorFrontendOnly = ({
     const imageToRegenerate = updatedImages.find(im => im.index === imageIndex);
     if (imageToRegenerate) {
       const bgToUse = imageToRegenerate.backgroundImage || backgroundImage;
-      regenerateSingleImage(imageIndex, imageToRegenerate.record, bgToUse, newPositions, newStyles, customOriginalImageSize, editedBrandElements, fontScale);
+      regenerateSingleImage(imageIndex, imageToRegenerate.record, bgToUse, newPositions, newStyles, null, editedBrandElements, fontScale);
     }
     handleCloseGeneratedImageEditor();
   };
@@ -262,25 +243,105 @@ const ImageGeneratorFrontendOnly = ({
       return;
     }
     try {
-      // Use the new unified rendering function
-      const newImageData = await composeSingleImage({
-        record: record,
-        index: index,
-        itemBackgroundImage: currentBackgroundImage,
-        imageFilters: imageFilters,
-        brandElements: elementsToUse,
-        fieldPositions: positionsToUse,
-        fieldStyles: stylesToUse,
-        fontScale: fontScale,
-        originalImageSize: customSize,
+      const composedBackgroundImageUrl = await composeImage(currentBackgroundImage, imageFilters, elementsToUse);
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = (err) => reject(new Error('Failed to load composed background for regeneration.', { cause: err }));
+        img.src = composedBackgroundImageUrl;
       });
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.textRenderingOptimization = 'optimizeQuality';
+      ctx.drawImage(img, 0, 0);
+      for (const field of Object.keys(record)) {
+        const position = positionsToUse[field];
+        const style = stylesToUse[field];
+        if (!position || !position.visible || !style) continue;
+        const text = record[field] || "";
+        if (!text) continue;
+        ctx.save();
+        const posPx = {
+          x: Math.round((position.x / 100) * img.width),
+          y: Math.round((position.y / 100) * img.height),
+          width: Math.round((position.width / 100) * img.width),
+          height: Math.round((position.height / 100) * img.height)
+        };
+        if (position.rotation) {
+          const centerX = posPx.x + posPx.width / 2;
+          const centerY = posPx.y + posPx.height / 2;
+          ctx.translate(centerX, centerY);
+          ctx.rotate(position.rotation * Math.PI / 180);
+          ctx.translate(-centerX, -centerY);
+        }
 
+        const finalFontSize = (style.fontSize || 24) * (fontScale || 1);
+
+        applyTextEffects(ctx, { ...style, fontSize: finalFontSize });
+        const fixedPadding = 8;
+        const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
+        const effectiveTextHeight = Math.max(0, posPx.height - (2 * fixedPadding));
+        const textContentStartX = posPx.x + fixedPadding;
+        const textContentStartY = posPx.y + fixedPadding;
+        const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: finalFontSize });
+        const lineHeight = finalFontSize * (style.lineHeightMultiplier || 1.2);
+        let currentLineRenderY = textContentStartY;
+        if (style.verticalAlign === 'middle') {
+          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
+          currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
+        } else if (style.verticalAlign === 'bottom') {
+          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
+          currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
+        }
+        if (containsHtml(text)) {
+          await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, { ...style, fontSize: finalFontSize }, effectiveTextWidth, effectiveTextHeight);
+        } else {
+          for (const line of lines) {
+            let currentLineRenderX;
+            if (style.textAlign === 'center') {
+              currentLineRenderX = textContentStartX + effectiveTextWidth / 2;
+            } else if (style.textAlign === 'right') {
+              currentLineRenderX = textContentStartX + effectiveTextWidth;
+            } else {
+              currentLineRenderX = textContentStartX;
+            }
+            const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
+            await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: finalFontSize }, effectiveTextWidth, effectiveTextHeight);
+          }
+        }
+        ctx.restore();
+      }
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      const blob = dataURLtoBlob(dataUrl);
+      const newImageData = {
+        url: dataUrl,
+        dataUrl: dataUrl,
+        blob,
+        record,
+        index,
+        filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+        backgroundImage: currentBackgroundImage,
+        customFieldPositions: positionsToUse,
+        customFieldStyles: stylesToUse,
+        customBrandElements: elementsToUse,
+        customOriginalImageSize: customSize,
+        fontScale: fontScale,
+      };
       setGeneratedImages(prevImages => {
-        const updatedImages = prevImages.map(img => (img.index === index) ? newImageData : img);
+        const updatedImages = prevImages.map(img => {
+          if (img.index === index) {
+            // No need to revoke URL if it's a data URL
+            return newImageData;
+          }
+          return img;
+        });
         return updatedImages;
       });
     } catch (error) {
-      console.error(`Error regenerating image for index ${index}:`, error);
       alert(`Erro na regeneração da imagem (índice ${index}): ${error.message}`);
     }
   };
@@ -303,11 +364,11 @@ const ImageGeneratorFrontendOnly = ({
           const img = new Image();
           img.onload = () => {
             const newSize = { width: img.width, height: img.height };
-            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, newSize);
+            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, newSize, imageToUpdate.customBrandElements || brandElements, imageToUpdate.fontScale || 1);
           };
           img.onerror = () => {
             console.error('Failed to load the new background image to get its dimensions.');
-            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles);
+            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, null, imageToUpdate.customBrandElements || brandElements, imageToUpdate.fontScale || 1);
           };
           img.src = newBgUrl;
         }
@@ -407,11 +468,11 @@ const ImageGeneratorFrontendOnly = ({
                 variant="contained"
                 color="primary"
                 onClick={generateImages}
-                disabled={isGenerating || !fontsLoaded}
+                disabled={isGenerating || !fontsLoaded || (generatedImages.length > 0 && generatedImages.some(img => img.url))}
                 startIcon={<ImageIcon />}
                 fullWidth
               >
-                {isGenerating ? 'Gerando...' : 'Gerar Imagens'}
+                {generatedImages.length > 0 && generatedImages.some(img => img.url) ? 'Imagens Já Geradas' : (isGenerating ? 'Gerando...' : 'Gerar Imagens')}
               </Button>
             </Grid>
 
@@ -508,13 +569,13 @@ const ImageGeneratorFrontendOnly = ({
               </Typography>
 
               <Grid container spacing={2}>
-                {generatedImages.map((imageData) => (
-                  <Grid item xs={12} sm={6} md={4} key={imageData.index || imageData.filename}>
+                {generatedImages.map((imageData, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={index}>
                     <Card variant="outlined">
                       <CardContent>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                           <Chip
-                            label={`#${imageData.index + 1}`}
+                            label={`#${index + 1}`}
                             size="small"
                             color="primary"
                             sx={{ mr: 1 }}
@@ -553,7 +614,7 @@ const ImageGeneratorFrontendOnly = ({
                           <img
                             key={imageData.url}
                             src={imageData.url}
-                            alt={`Preview ${imageData.index + 1}`}
+                            alt={`Preview ${index + 1}`}
                             style={{
                               display: 'block',
                               maxWidth: '100%',

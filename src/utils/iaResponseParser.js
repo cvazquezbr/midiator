@@ -6,22 +6,26 @@ import Papa from 'papaparse';
  * @returns {{data: Array<Object>, headers: Array<string>}} - The parsed data and headers.
  */
 export const parseIaResponseToCsvData = (responseText) => {
+  // Definição dos cabeçalhos esperados pelo GerenciadorRegistros
   const finalHeaders = ["Título", "Texto Principal", "Ponte para o Próximo", "prompt_imagem_carrossel"];
+  const data = [];
 
   if (!responseText || typeof responseText !== 'string') {
-    console.error("[parseIaResponseToCsvData] Invalid or empty AI response.");
+    console.error("[parseIaResponseToCsvData] Resposta da IA inválida ou vazia.");
     return { data: [], headers: finalHeaders };
   }
 
-  console.log("[parseIaResponseToCsvData] Raw response received for parsing:", responseText);
+  console.log("[parseIaResponseToCsvData] Resposta bruta recebida para parsing:", responseText);
 
+  // 1. Extrair o bloco CSV
   const csvBlockRegex = /```csv\s*([\s\S]+?)\s*```/;
   const csvMatch = responseText.match(csvBlockRegex);
+  console.log("[parseIaResponseToCsvData] Resultado do match da regex (csvMatch):", csvMatch);
 
   if (csvMatch && csvMatch[1] && csvMatch[1].trim() !== "") {
-    console.log("[parseIaResponseToCsvData] CSV block found. Proceeding with PapaParse.");
     const csvContent = csvMatch[1].trim();
-    const data = [];
+    console.log("[parseIaResponseToCsvData] Conteúdo CSV bruto extraído (csvMatch[1]):", csvMatch[1]);
+    console.log("[parseIaResponseToCsvData] Conteúdo CSV após trim (csvContent):", csvContent);
 
     const parseResult = Papa.parse(csvContent, {
       header: true,
@@ -29,14 +33,17 @@ export const parseIaResponseToCsvData = (responseText) => {
       dynamicTyping: true,
     });
 
+    console.log("[parseIaResponseToCsvData] Resultado do Papa.parse:", parseResult);
+
     if (parseResult.errors && parseResult.errors.length > 0) {
-      console.error("[parseIaResponseToCsvData] Errors during PapaParse:", parseResult.errors.map(err => ({ ...err, input: undefined })));
+      console.error("[parseIaResponseToCsvData] Erros durante o parsing com PapaParse:", parseResult.errors.map(err => ({ ...err, input: undefined })));
     }
 
     if (parseResult.data && parseResult.data.length > 0) {
       const actualHeadersFromIA = parseResult.meta.fields || [];
-      const headerMap = {};
+      console.log("[parseIaResponseToCsvData] Cabeçalhos reais detectados pela IA (via PapaParse):", actualHeadersFromIA);
 
+      const headerMap = {};
       actualHeadersFromIA.forEach(iaHeader => {
         const iaHeaderTrimmed = iaHeader.trim();
         const iaHeaderLower = iaHeaderTrimmed.toLowerCase();
@@ -46,6 +53,7 @@ export const parseIaResponseToCsvData = (responseText) => {
         else if (iaHeaderLower.includes('prompt_imagem_carrossel')) headerMap[iaHeaderTrimmed] = "prompt_imagem_carrossel";
         else if (iaHeaderLower.includes('id_elemento') || iaHeaderLower.includes('id') || iaHeaderLower.includes('num_slide') || iaHeaderLower.includes('elemento')) headerMap[iaHeaderTrimmed] = "id";
       });
+      console.log("[parseIaResponseToCsvData] Mapa de Cabeçalhos construído:", headerMap);
 
       parseResult.data.forEach(rawRecord => {
         const record = {};
@@ -65,31 +73,28 @@ export const parseIaResponseToCsvData = (responseText) => {
             if (!record[appFinalHeader]) record[appFinalHeader] = "";
           });
           data.push(record);
+        } else {
+          console.warn("[parseIaResponseToCsvData] Registro ignorado por não ter um 'Título' mapeado:", rawRecord);
         }
       });
-
-      if (data.length > 0) {
-        console.log(`[parseIaResponseToCsvData] Successfully parsed ${data.length} records via PapaParse.`);
-        return { data, headers: finalHeaders };
-      } else {
-        console.warn("[parseIaResponseToCsvData] PapaParse ran but resulted in 0 valid records after filtering.");
-      }
+      console.log("[parseIaResponseToCsvData] Dados Parseados com Sucesso (Gemini CSV via PapaParse):", data);
+      return { data, headers: finalHeaders };
     } else {
-      console.warn("[parseIaResponseToCsvData] PapaParse did not return any data from the CSV block.");
+      console.error("[parseIaResponseToCsvData] PapaParse não retornou dados ou dados eram vazios, mesmo após encontrar bloco CSV.");
     }
-    // If CSV block is found but parsing fails or results in empty data, we stop and do not proceed to fallback.
-    // This prevents accidental duplication of content.
-    return { data: [], headers: finalHeaders };
+  } else {
+    console.error("[parseIaResponseToCsvData] Bloco CSV não encontrado ou vazio na resposta da IA. Detalhes do csvMatch:", csvMatch);
   }
 
-  // Fallback: Only runs if NO ```csv block was found.
-  console.log("[parseIaResponseToCsvData] No CSV block found. Attempting fallback 'Key: Value' parsing.");
+  // Se chegou aqui, o parsing do bloco CSV falhou ou não havia bloco CSV. Tentar fallback.
+  console.log("[parseIaResponseToCsvData] Tentando parser de fallback (formato Chave: Valor).");
   const fallbackLines = responseText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   let currentRecord = {};
   const fallbackData = [];
 
   for (const line of fallbackLines) {
     if (line.toLowerCase().startsWith("título:") || line.toLowerCase().startsWith("titulo:")) {
+      // Quando encontramos um novo título, salvamos o registro anterior (se ele tiver um título)
       if (currentRecord["Título"]) {
         fallbackData.push(currentRecord);
       }
@@ -102,13 +107,14 @@ export const parseIaResponseToCsvData = (responseText) => {
       currentRecord["prompt_imagem_carrossel"] = line.substring(line.indexOf(':') + 1).trim();
     }
   }
-
+  // Adiciona o último registro que estava sendo processado
   if (currentRecord["Título"]) {
     fallbackData.push(currentRecord);
   }
 
   if (fallbackData.length > 0) {
-    console.log(`[parseIaResponseToCsvData] Successfully parsed ${fallbackData.length} records via fallback.`);
+    console.log("[parseIaResponseToCsvData] Parseado com sucesso via fallback:", JSON.parse(JSON.stringify(fallbackData)));
+    // Garante que todos os registros tenham todas as colunas esperadas
     const processedData = fallbackData.map(record => ({
       "Título": record["Título"] || "",
       "Texto Principal": record["Texto Principal"] || "",
@@ -116,8 +122,8 @@ export const parseIaResponseToCsvData = (responseText) => {
       "prompt_imagem_carrossel": record["prompt_imagem_carrossel"] || "",
     }));
     return { data: processedData, headers: finalHeaders };
+  } else {
+    console.error("[parseIaResponseToCsvData] Fallback também não encontrou dados estruturados.");
+    return { data: [], headers: finalHeaders }; // Retorna data vazia se tudo falhar
   }
-
-  console.error("[parseIaResponseToCsvData] Fallback parser also failed to find structured data.");
-  return { data: [], headers: finalHeaders };
 };
