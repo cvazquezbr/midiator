@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {
@@ -60,7 +60,7 @@ import { composeSingleImage } from '../utils/imageComposer.js';
 import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
 
 function HomePage() {
-  const { user, googleAccessToken, setGoogleAccessToken, fetchUser } = useUserAuth();
+  const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
 
   // Component State
@@ -80,9 +80,8 @@ function HomePage() {
   const [problema, setProblema] = useState('');
   const [solucao, setSolucao] = useState('');
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState('');
   const [campaignContent, setCampaignContent] = useState(null);
-  const [campaignGenerationFailed, setCampaignGenerationFailed] = useState(false);
-  const [generationError, setGenerationError] = useState('');
   const [editingField, setEditingField] = useState(null);
   const [persona, setPersona] = useState({});
   const [autor, setAutor] = useState({});
@@ -92,7 +91,6 @@ function HomePage() {
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
   const [conteudoMedio, setConteudoMedio] = useState('');
   const [conteudoPequeno, setConteudoPequeno] = useState('');
-  const [conteudoFormatado, setConteudoFormatado] = useState('');
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
   const [isGeneratingSummaryPequeno, setIsGeneratingSummaryPequeno] = useState(false);
@@ -114,6 +112,7 @@ function HomePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingCampaigns, setIsFetchingCampaigns] = useState(true);
   const [fieldPositions, setFieldPositions] = useState({});
   const [fieldStyles, setFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
@@ -123,7 +122,6 @@ function HomePage() {
   const [generatedVideosData, setGeneratedVideosData] = useState([]);
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [selectedField, setSelectedField] = useState(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [imageFilters, setImageFilters] = useState({ brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 });
   const [brandElements, setBrandElements] = useState([]);
   const [showSetupModal, setShowSetupModal] = useState(false);
@@ -143,7 +141,6 @@ function HomePage() {
   const campaignContentRef = useRef(campaignContent);
   campaignContentRef.current = campaignContent;
 
-  const getAppState = () => ({ activeStep, darkMode, sidebarOpen, csvData, csvHeaders, backgroundImage, colorPalette, standardsColors, problema, solucao, campaignContent, persona, autor, instrucoes, formato, aspectRatio, generatedImageUrl, conteudoMedio, conteudoPequeno, followupPosts, followupPostsQuantity, isScheduled, scheduleDate, weeklySchedule, selectedProfile, selectedImages, selectedVideos, inputMethod, promptNumRecords, promptText, fieldPositions, fieldStyles, displayedImageSize, originalImageSize, generatedImagesData, generatedAudioData, generatedVideosData, imageFilters, brandElements });
   const applyAppState = (state) => {
     if (!state) return;
 
@@ -317,6 +314,8 @@ function HomePage() {
         toast.error("Could not check for existing campaigns. Starting fresh.");
         console.error("Failed to fetch initial campaigns:", error);
         setActiveStep(1); // Default to campaign creation on error
+      } finally {
+        setIsFetchingCampaigns(false);
       }
     };
 
@@ -327,6 +326,7 @@ function HomePage() {
       // This might need adjustment depending on which steps are public.
       // For now, let's assume the flow starts after login.
       setActiveStep(null); // Or some other default state for logged-out users
+      setIsFetchingCampaigns(false);
     }
   }, [user]);
 
@@ -594,40 +594,79 @@ function HomePage() {
     setIsGeneratingCampaign(true);
     setCampaignGenerationFailed(false);
     setGenerationError('');
+    setGenerationStatus('Iniciando geração de campanha...');
+
     try {
+      // Etapa 1: Gerar conteúdo principal
+      setGenerationStatus('Criando o conteúdo geral da campanha...');
       const normalizedContent = await generateCampaignContent({ problema, solucao });
       if (!normalizedContent) {
-        // This case should ideally not happen as generateCampaignContent throws on error,
-        // but as a defensive measure, we stop if the content is falsy.
         throw new Error("A geração do conteúdo principal falhou e não retornou dados.");
       }
       setCampaignContent(normalizedContent);
 
-      if (!regenerate) {
-        // Reset dependent states for a fresh generation
-        setFollowupPosts([]);
+      if (regenerate) {
+        // Se for apenas regeneração, para por aqui.
+        toast.success("Conteúdo principal da campanha foi regenerado.");
+        return;
+      }
 
-        const [imageSuccess] = await Promise.all([
-          handleGenerateImage(normalizedContent),
-          handleGenerateSummary(1800, normalizedContent),
-          handleGenerateSummary(130, normalizedContent),
-          handleGenerateFormattedContent(normalizedContent),
-          handleGenerateFollowupPosts(normalizedContent),
-        ]);
+      // Resetar estados dependentes para uma nova geração completa
+      setFollowupPosts([]);
 
-        if (!imageSuccess) {
-          setCampaignGenerationFailed(true);
-          setGenerationError("A geração de texto foi bem-sucedida, mas a criação da imagem falhou. Você pode tentar gerar a imagem novamente.");
+      // Etapa 2: Gerar imagem principal
+      setGenerationStatus('Gerando a imagem de referência da campanha...');
+      const imageSuccess = await handleGenerateImage(normalizedContent);
+      if (!imageSuccess) {
+        // A geração de imagem falhou, mas o conteúdo de texto foi criado.
+        // O usuário pode tentar gerar a imagem novamente.
+        setCampaignGenerationFailed(true);
+        setGenerationError("A geração de texto foi bem-sucedida, mas a criação da imagem falhou. Você pode tentar gerar a imagem novamente.");
+        toast.warning("Geração de imagem falhou, mas o texto está pronto.");
+      }
+
+      // Etapa 3: Gerar resumos e conteúdo formatado (pode ser em paralelo se quisermos)
+      setGenerationStatus('Gerando resumos e conteúdo formatado...');
+      await Promise.all([
+        handleGenerateSummary(1800, normalizedContent),
+        handleGenerateSummary(130, normalizedContent),
+        handleGenerateFormattedContent(normalizedContent),
+      ]);
+
+      // Etapa 4: Gerar posts de follow-up (sequencialmente com status)
+      if (followupPostsQuantity > 0) {
+        setGenerationStatus('Planejando os posts de follow-up...');
+        const plan = await generateFollowupPlan({
+          content: normalizedContent,
+          neededQuantity: followupPostsQuantity,
+          existingPosts: [], // Sempre começa do zero para uma nova campanha
+        });
+
+        const newPosts = [];
+        for (let i = 0; i < plan.length; i++) {
+          const postPlan = plan[i];
+          setGenerationStatus(`Gerando post de follow-up ${i + 1}/${plan.length}...`);
+          // A lógica de generateFollowupPosts foi movida para cá para podermos ter o status
+          const generatedPost = await generateFollowupPosts({ content: normalizedContent, plan: [postPlan] });
+          if (generatedPost && generatedPost.length > 0) {
+            newPosts.push(...generatedPost);
+            // Atualiza o estado a cada post gerado para o usuário ver o progresso
+            setFollowupPosts([...newPosts]);
+          }
         }
       }
+
+      toast.success("Campanha gerada com sucesso!");
+
     } catch (error) {
       const errorMessage = error.message || 'Ocorreu um erro desconhecido.';
       toast.error(`Ocorreu um erro ao gerar o conteúdo da campanha: ${errorMessage}`);
-      setCampaignContent(null);
+      setCampaignContent(null); // Limpa o conteúdo se qualquer parte crítica falhar
       setCampaignGenerationFailed(true);
       setGenerationError(errorMessage);
     } finally {
       setIsGeneratingCampaign(false);
+      setGenerationStatus('');
     }
   };
   const handleGenerateImage = useCallback(async (content) => {
@@ -695,6 +734,7 @@ function HomePage() {
   const handleSaveFollowup = (newContent) => { if (editingFollowup === null) return; const updatedPosts = followupPosts.map((post, index) => { if (index === editingFollowup.index) { return { ...post, conteudo: newContent }; } return post; }); setFollowupPosts(updatedPosts); setEditingFollowup(null); };
   const handleGenerateIAContent = async () => {
     setIsGenerating(true);
+    setGenerationStatus('Gerando texto para os posts...');
     try {
       const iaResponseText = await generateIAContent({ promptText, promptNumRecords });
       const parsedResult = parseIaResponseToCsvData(iaResponseText);
@@ -760,6 +800,7 @@ function HomePage() {
           const imagePrompt = record.prompt_imagem_carrossel;
 
           if (imagePrompt && imagePrompt.trim() !== '') {
+            setGenerationStatus(`Gerando imagem para o post ${i + 1}/${currentImagesData.length}...`);
             try {
               const rawBgImageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
 
@@ -807,6 +848,7 @@ function HomePage() {
       toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
     } finally {
       setIsGenerating(false);
+      setGenerationStatus('');
     }
   };
   const currentTheme = darkMode ? darkTheme : lightTheme;
@@ -890,16 +932,23 @@ function HomePage() {
         onLocalUpload={parseImageFile}
       />
       <LoadingDialog
-        open={isGeneratingCampaign || isSaving || isLoading || isGenerating}
+        open={isGeneratingCampaign || isSaving || isLoading || isGenerating || isFetchingCampaigns}
         title={
-          isSaving
-            ? `Salvando Campanha... (${uploadProgress.current}/${uploadProgress.total})`
-            : isLoading
-            ? "Carregando configuração..."
-            : "Gerando conteúdo..."
+          isFetchingCampaigns
+            ? "Carregando campanhas..."
+            : generationStatus ||
+              (isSaving
+                ? `Salvando Campanha... (${uploadProgress.current}/${uploadProgress.total})`
+                : isLoading
+                ? "Carregando configuração..."
+                : "Gerando conteúdo...")
         }
         description={
-          isSaving
+          isFetchingCampaigns
+            ? "Aguarde enquanto buscamos suas campanhas."
+            : generationStatus
+            ? "A IA está trabalhando. Isso pode levar alguns instantes."
+            : isSaving
             ? "Aguarde um momento, estamos fazendo o upload dos seus arquivos."
             : isLoading
             ? "Estamos desempacotando sua configuração. Quase pronto!"
