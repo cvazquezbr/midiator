@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ProgressModal from './ProgressModal';
 import { containsHtml, renderHtmlToCanvas } from '../utils/htmlRenderer';
 import {
@@ -241,6 +241,7 @@ const ImageGeneratorFrontendOnly = ({
         customFieldPositions: modifiedImageData.fieldPositions,
         customFieldStyles: modifiedImageData.fieldStyles,
         customBrandElements: modifiedImageData.brandElements,
+        fontScale: modifiedImageData.fontScale,
       };
     });
 
@@ -259,6 +260,7 @@ const ImageGeneratorFrontendOnly = ({
       const positionsToUse = imageToRegenerate.customFieldPositions || fieldPositions;
       const stylesToUse = imageToRegenerate.customFieldStyles || fieldStyles;
       const elementsToUse = imageToRegenerate.customBrandElements !== undefined ? imageToRegenerate.customBrandElements : brandElements;
+      const scaleToUse = imageToRegenerate.fontScale !== undefined ? imageToRegenerate.fontScale : 1;
       const sizeToUse = imageToRegenerate.customOriginalImageSize || originalImageSize;
 
       regenerateSingleImage(
@@ -268,13 +270,14 @@ const ImageGeneratorFrontendOnly = ({
         positionsToUse,
         stylesToUse,
         sizeToUse,
-        elementsToUse
+        elementsToUse,
+        scaleToUse
       );
     }
     handleCloseGeneratedImageEditor();
   };
 
-  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements) => {
+  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1) => {
     if (!currentBackgroundImage || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
       alert('Pré-requisitos para regeneração não atendidos. Fontes, dados ou configurações faltando.');
       return;
@@ -324,7 +327,10 @@ const ImageGeneratorFrontendOnly = ({
           ctx.translate(-centerX, -centerY);
         }
 
-        applyTextEffects(ctx, style);
+        const finalFontSize = (style.fontSize || 24) * (fontScale || 1);
+        const finalStyle = { ...style, fontSize: finalFontSize };
+
+        applyTextEffects(ctx, finalStyle);
 
         const fixedPadding = 8;
         const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
@@ -332,20 +338,20 @@ const ImageGeneratorFrontendOnly = ({
         const textContentStartX = posPx.x + fixedPadding;
         const textContentStartY = posPx.y + fixedPadding;
 
-        const lines = wrapTextInArea(ctx, text, style, effectiveTextWidth, effectiveTextHeight);
-        const lineHeight = (style.fontSize || 24) * (style.lineHeightMultiplier || 1.2);
+        const lines = wrapTextInArea(ctx, text, finalStyle, effectiveTextWidth, effectiveTextHeight);
+        const lineHeight = finalFontSize * (style.lineHeightMultiplier || 1.2);
 
         let currentLineRenderY = textContentStartY;
         if (style.verticalAlign === 'middle') {
-          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - (style.fontSize || 24)) : 0);
+          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
           currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
         } else if (style.verticalAlign === 'bottom') {
-          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - (style.fontSize || 24)) : 0);
+          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
           currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
         }
 
         if (containsHtml(text)) {
-          await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, style, effectiveTextWidth, effectiveTextHeight);
+          await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, finalStyle, effectiveTextWidth, effectiveTextHeight);
         } else {
           for (const line of lines) {
             let currentLineRenderX;
@@ -357,7 +363,7 @@ const ImageGeneratorFrontendOnly = ({
               currentLineRenderX = textContentStartX;
             }
             const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
-            await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, style, effectiveTextWidth, effectiveTextHeight);
+            await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, finalStyle, effectiveTextWidth, effectiveTextHeight);
           }
         }
         ctx.restore();
@@ -379,6 +385,7 @@ const ImageGeneratorFrontendOnly = ({
         customFieldStyles: stylesToUse,
         customBrandElements: elementsToUse,
         customOriginalImageSize: customSize,
+        fontScale: fontScale,
       };
 
       setGeneratedImages(prevImages => {
@@ -739,27 +746,41 @@ const ImageGeneratorFrontendOnly = ({
 
       {showGeneratedImageEditor && editingGeneratedImageIndex !== null && (() => {
         const imageToEdit = generatedImages.find(img => img.index === editingGeneratedImageIndex);
+
+        const memoizedPositions = useMemo(() => {
+            const positionsSource = imageToEdit?.customFieldPositions !== undefined ? imageToEdit.customFieldPositions : fieldPositions;
+            return JSON.parse(JSON.stringify(positionsSource || {}));
+        }, [imageToEdit, fieldPositions]);
+
+        const memoizedStyles = useMemo(() => {
+            const stylesSource = imageToEdit?.customFieldStyles !== undefined ? imageToEdit.customFieldStyles : fieldStyles;
+            return JSON.parse(JSON.stringify(stylesSource || {}));
+        }, [imageToEdit, fieldStyles]);
+
+        const memoizedBrandElements = useMemo(() => {
+            return imageToEdit?.customBrandElements !== undefined ? imageToEdit.customBrandElements : brandElements;
+        }, [imageToEdit, brandElements]);
+
+
         if (!imageToEdit) {
           console.error(`[IGFO] Render: Could not find image with index ${editingGeneratedImageIndex} to edit.`);
           return null;
         }
-        const positionsToLoad = imageToEdit.customFieldPositions !== undefined ? imageToEdit.customFieldPositions : fieldPositions;
-        const stylesToLoad = imageToEdit.customFieldStyles !== undefined ? imageToEdit.customFieldStyles : fieldStyles;
-        const brandElementsToLoad = imageToEdit.customBrandElements !== undefined ? imageToEdit.customBrandElements : brandElements;
+
         return (
           <GeneratedImageEditor
             open={showGeneratedImageEditor}
             onClose={handleCloseGeneratedImageEditor}
             imageData={imageToEdit}
             globalCsvHeaders={csvHeaders}
-            initialFieldPositions={JSON.parse(JSON.stringify(positionsToLoad || {}))}
-            initialFieldStyles={JSON.parse(JSON.stringify(stylesToLoad || {}))}
+            initialFieldPositions={memoizedPositions}
+            initialFieldStyles={memoizedStyles}
             onSave={handleSaveIndividualModifications}
             colorPalette={colorPalette}
             globalBackgroundImage={imageToEdit.backgroundImage || backgroundImage}
             originalImageSize={imageToEdit.customOriginalImageSize || originalImageSize}
             imageFilters={imageFilters}
-            brandElements={brandElementsToLoad}
+            brandElements={memoizedBrandElements}
           />
         );
       })()}

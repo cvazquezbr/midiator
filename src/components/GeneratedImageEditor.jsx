@@ -61,6 +61,7 @@ const GeneratedImageEditor = ({
   const [editedStyles, setEditedStyles] = useState({});
   const [editedBrandElements, setEditedBrandElements] = useState([]);
   const [editedRecord, setEditedRecord] = useState(null); // State for the CSV record being edited
+  const [fontScale, setFontScale] = useState(1);
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null); // Estado para o campo selecionado internamente
   const [stylesAreInitialized, setStylesAreInitialized] = useState(false); // New state for initialization tracking
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -161,6 +162,7 @@ const GeneratedImageEditor = ({
       fieldPositions: editedPositions,
       fieldStyles: editedStyles,
       brandElements: editedBrandElements,
+      fontScale: fontScale,
     });
     onClose();
   };
@@ -217,6 +219,7 @@ const GeneratedImageEditor = ({
                 onCsvDataUpdate={handleFieldPositionerCsvDataUpdate} // Use memoized handler
                 originalImageSize={originalImageSize}
                 imageFilters={editedImageFilters}
+                onFontScaleChange={setFontScale}
                 brandElements={editedBrandElements}
                 setBrandElements={setEditedBrandElements}
                 currentPreviewIndex={0}
@@ -237,6 +240,7 @@ const GeneratedImageEditor = ({
                   setBrandElements={setEditedBrandElements}
                   onDeselectField={handleDeselectField}
                   onOpenHtmlEditor={handleOpenHtmlEditor}
+                  colorPalette={colorPalette}
                 />
               </Grid>
             )}
@@ -274,6 +278,7 @@ const GeneratedImageEditor = ({
             setImageFilters={setEditedImageFilters}
             brandElements={editedBrandElements}
             setBrandElements={setEditedBrandElements}
+            colorPalette={colorPalette}
           />
         </>
       )}

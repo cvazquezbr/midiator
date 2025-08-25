@@ -104,6 +104,7 @@ const FieldPositioner = ({
   onOpenHtmlEditor,
   currentPreviewIndex,
   setCurrentPreviewIndex,
+  onFontScaleChange,
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -505,10 +506,16 @@ const FieldPositioner = ({
       // The scale is uniform, so we can just use the width ratio.
       const scale = renderedImageMetrics.width / originalImageSize.width;
       setFontScale(scale);
+      if (onFontScaleChange) {
+        onFontScaleChange(scale);
+      }
     } else {
       setFontScale(1);
+      if (onFontScaleChange) {
+        onFontScaleChange(1);
+      }
     }
-  }, [renderedImageMetrics, originalImageSize]);
+  }, [renderedImageMetrics, originalImageSize, onFontScaleChange]);
 
   // Efeito para gerenciar scroll durante interações
   useEffect(() => {
