@@ -241,16 +241,25 @@ const ImageGeneratorFrontendOnly = ({
       return;
     }
     try {
-      const composedBackgroundCanvas = await composeImage(currentBackgroundImage, imageFilters, elementsToUse);
+      // The `currentBackgroundImage` is already the composed background with brand elements and filters.
+      // We just need to load it and draw the text on top.
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = (err) => reject(new Error('Failed to load the background image for regeneration.', { cause: err }));
+        // Ensure cross-origin is set for data URLs as well, just in case of tainting issues.
+        img.crossOrigin = 'Anonymous';
+        img.src = currentBackgroundImage;
+      });
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = composedBackgroundCanvas.width;
-      canvas.height = composedBackgroundCanvas.height;
+      canvas.width = customSize ? customSize.width : img.width;
+      canvas.height = customSize ? customSize.height : img.height;
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       ctx.textRenderingOptimization = 'optimizeQuality';
-      ctx.drawImage(composedBackgroundCanvas, 0, 0);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       for (const field of Object.keys(record)) {
         const position = positionsToUse[field];
         const style = stylesToUse[field];

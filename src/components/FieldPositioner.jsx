@@ -112,35 +112,10 @@ const FieldPositioner = ({
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
-  const [composedImageUrl, setComposedImageUrl] = useState(null);
-  const [isComposing, setIsComposing] = useState(false);
+  const [isComposing, setIsComposing] = useState(false); // Keep for loading indicators if needed elsewhere
 
-  useEffect(() => {
-    if (!backgroundImage) {
-      setComposedImageUrl(null);
-      return;
-    }
-
-    const generateComposedImage = async () => {
-      setIsComposing(true);
-      try {
-        const composedUrl = await composeImage(
-          backgroundImage,
-          imageFilters
-          // Do not pass brandElements here to prevent ghosting.
-          // They are rendered as interactive DraggableElement components on top.
-        );
-        setComposedImageUrl(composedUrl);
-      } catch (error) {
-        console.error("Error composing image in FieldPositioner:", error);
-        setComposedImageUrl(backgroundImage); // Fallback to original image
-      } finally {
-        setIsComposing(false);
-      }
-    };
-
-    generateComposedImage();
-  }, [backgroundImage, imageFilters]);
+  // The backgroundImage prop is now assumed to be the final, composed background for the editor preview.
+  // No further composition is needed here.
 
   const isHtmlField = useCallback((fieldName) => {
     if (!fieldName) return false;
@@ -684,7 +659,7 @@ const FieldPositioner = ({
                 </Box>
               )}
               <img
-                src={composedImageUrl || backgroundImage}
+                src={backgroundImage}
                 alt="Background"
                 style={{
                   width: '100%',
