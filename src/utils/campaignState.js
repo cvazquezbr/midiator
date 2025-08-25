@@ -79,7 +79,7 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
     assetsToUploadCount += cleanState.brandElements.filter(el => needsUpload(el.url)).length;
   }
   if (Array.isArray(cleanState.generatedImagesData)) {
-    assetsToUploadCount += cleanState.generatedImagesData.filter(img => needsUpload(img.url)).length;
+    assetsToUploadCount += cleanState.generatedImagesData.filter(img => needsUpload(img.backgroundImage)).length;
   }
   if (Array.isArray(cleanState.generatedAudioData)) {
     assetsToUploadCount += cleanState.generatedAudioData.filter(audio => needsUpload(audio.url)).length;
@@ -129,17 +129,17 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
 
     // Generated Post Images
     if (Array.isArray(cleanState.generatedImagesData)) {
-       for (const image of cleanState.generatedImagesData) {
-        if (needsUpload(image.url)) {
-          const filename = image.filename || `post_image_${image.index}_${Date.now()}.png`;
+      for (const image of cleanState.generatedImagesData) {
+        // Upload the background image if it's a data URL, and keep the property.
+        if (needsUpload(image.backgroundImage)) {
+          const filename = `background_post_${image.index}_${Date.now()}.png`;
           console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-          const dataUrlToUpload = image.url;
-          const permanentUrl = await uploadAsset(dataUrlToUpload, filename, campaignId, userId);
-          image.url = permanentUrl;
+          const permanentUrl = await uploadAsset(image.backgroundImage, filename, campaignId, userId);
+          image.backgroundImage = permanentUrl;
           assetsUploadedCount++;
           onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
         }
-        delete image.backgroundImage;
+        // The merged image 'url' is temporary and will be removed in the final cleanup.
       }
     }
 
@@ -185,6 +185,11 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
       assetArray.forEach(asset => {
         delete asset.dataUrl;
         delete asset.blob;
+        // The `url` for generated images is a temporary merged image, don't save it.
+        // For audio/video it's the final URL, so we only delete it from images.
+        if (asset.hasOwnProperty('backgroundImage')) { // A simple way to identify an image object
+            delete asset.url;
+        }
       });
     }
   };
