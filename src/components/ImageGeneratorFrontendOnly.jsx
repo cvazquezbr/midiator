@@ -661,7 +661,7 @@ const ImageGeneratorFrontendOnly = ({
                         onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
                         >
                           <img
-                            key={imageData.url}
+                            key={index}
                             src={imageData.url}
                             alt={`Preview ${index + 1}`}
                             style={{
