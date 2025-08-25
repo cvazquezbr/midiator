@@ -242,8 +242,8 @@ const ImageGeneratorFrontendOnly = ({
   };
 
   const handleSaveIndividualModifications = (modifiedImageData) => {
-    const { index: imageIndex, record: updatedCsvRecord, fieldPositions: newPositions, fieldStyles: newStyles, brandElements: editedBrandElements } = modifiedImageData;
-    const updatedImages = generatedImages.map(img => (img.index === imageIndex) ? { ...img, record: updatedCsvRecord, customFieldPositions: newPositions, customFieldStyles: newStyles, customBrandElements: editedBrandElements } : img);
+    const { index: imageIndex, record: updatedCsvRecord, fieldPositions: newPositions, fieldStyles: newStyles, brandElements: editedBrandElements, customOriginalImageSize } = modifiedImageData;
+    const updatedImages = generatedImages.map(img => (img.index === imageIndex) ? { ...img, record: updatedCsvRecord, customFieldPositions: newPositions, customFieldStyles: newStyles, customBrandElements: editedBrandElements, customOriginalImageSize: customOriginalImageSize } : img);
     setGeneratedImages(updatedImages);
     if (onThumbnailRecordTextUpdate) {
       onThumbnailRecordTextUpdate(imageIndex, updatedCsvRecord);
@@ -251,7 +251,7 @@ const ImageGeneratorFrontendOnly = ({
     const imageToRegenerate = updatedImages.find(im => im.index === imageIndex);
     if (imageToRegenerate) {
       const bgToUse = imageToRegenerate.backgroundImage || backgroundImage;
-      regenerateSingleImage(imageIndex, imageToRegenerate.record, bgToUse, newPositions, newStyles, null, editedBrandElements);
+      regenerateSingleImage(imageIndex, imageToRegenerate.record, bgToUse, newPositions, newStyles, customOriginalImageSize, editedBrandElements);
     }
     handleCloseGeneratedImageEditor();
   };
@@ -271,8 +271,9 @@ const ImageGeneratorFrontendOnly = ({
       });
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = img.width;
-      canvas.height = img.height;
+      const finalImageSize = customSize || { width: img.width, height: img.height };
+      canvas.width = finalImageSize.width;
+      canvas.height = finalImageSize.height;
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
       ctx.textRenderingOptimization = 'optimizeQuality';
@@ -285,10 +286,10 @@ const ImageGeneratorFrontendOnly = ({
         if (!text) continue;
         ctx.save();
         const posPx = {
-          x: Math.round((position.x / 100) * img.width),
-          y: Math.round((position.y / 100) * img.height),
-          width: Math.round((position.width / 100) * img.width),
-          height: Math.round((position.height / 100) * img.height)
+          x: Math.round((position.x / 100) * finalImageSize.width),
+          y: Math.round((position.y / 100) * finalImageSize.height),
+          width: Math.round((position.width / 100) * finalImageSize.width),
+          height: Math.round((position.height / 100) * finalImageSize.height)
         };
         if (position.rotation) {
           const centerX = posPx.x + posPx.width / 2;

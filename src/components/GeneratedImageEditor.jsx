@@ -162,6 +162,7 @@ const GeneratedImageEditor = ({
       fieldPositions: editedPositions,
       fieldStyles: editedStyles,
       brandElements: editedBrandElements,
+      customOriginalImageSize: originalImageSize, // Pass back the size used for editing
     });
     onClose();
   };
