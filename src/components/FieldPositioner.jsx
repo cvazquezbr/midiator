@@ -123,13 +123,13 @@ const FieldPositioner = ({
     const generateComposedImage = async () => {
       setIsComposing(true);
       try {
-        const composedUrl = await composeImage(
+        const composedCanvas = await composeImage(
           backgroundImage,
           imageFilters
           // Do not pass brandElements here to prevent ghosting.
           // They are rendered as interactive DraggableElement components on top.
         );
-        setComposedImageUrl(composedUrl);
+        setComposedImageUrl(composedCanvas.toDataURL());
       } catch (error) {
         console.error("Error composing image in FieldPositioner:", error);
         setComposedImageUrl(backgroundImage); // Fallback to original image
