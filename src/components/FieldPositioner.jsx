@@ -181,9 +181,6 @@ const FieldPositioner = ({
       for (let entry of entries) {
         const { width, height } = entry.contentRect;
         setImageSize({ width, height });
-        if (onImageDisplayedSizeChange) {
-          onImageDisplayedSizeChange({ width, height });
-        }
 
         // Calculate the actual rendered size and position of the image due to 'object-fit: contain'
         if (originalImageSize?.width && originalImageSize?.height && width > 0 && height > 0) {
@@ -206,6 +203,9 @@ const FieldPositioner = ({
                 y = (height - renderedHeight) / 2;
             }
             setRenderedImageMetrics({ width: renderedWidth, height: renderedHeight, x, y });
+            if (onImageDisplayedSizeChange) {
+              onImageDisplayedSizeChange({ width: renderedWidth, height: renderedHeight });
+            }
         }
       }
     });
