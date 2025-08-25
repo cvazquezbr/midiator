@@ -511,7 +511,7 @@ const DraggableElementInternal = ({
 
   const originalBoxWidth = (position.width / 100) * (originalImageSize?.width || 1);
   const paddingInPixels = 8 * 2;
-  const textLines = enableHtmlRendering ? [content] : wrapText(editedContent, originalBoxWidth - paddingInPixels, baseFontSize);
+  const textLines = enableHtmlRendering ? [content] : wrapText(editedContent, originalBoxWidth - paddingInPixels, scaledFontSize);
 
   const handleSize = isMobile ? 24 : 12;
 
