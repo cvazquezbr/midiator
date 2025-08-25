@@ -51,6 +51,7 @@ const ImageGeneratorFrontendOnly = ({
   initialGeneratedImagesData,
   onThumbnailRecordTextUpdate,
   originalImageSize,
+  displayedImageSize,
   imageFilters,
   brandElements,
   onBrandElementsChange
@@ -120,6 +121,10 @@ const ImageGeneratorFrontendOnly = ({
     setProgress(0);
     isCancelledRef.current = false;
 
+    const fontScale = (displayedImageSize?.width && originalImageSize?.width)
+      ? displayedImageSize.width / originalImageSize.width
+      : 1;
+
     const imagePromises = csvData.map((record, i) => {
       if (isCancelledRef.current) return Promise.resolve(null);
 
@@ -134,6 +139,7 @@ const ImageGeneratorFrontendOnly = ({
         brandElements,
         fieldPositions,
         fieldStyles,
+        fontScale,
       })
       .then(imageData => {
         setProgress(p => p + 1);
