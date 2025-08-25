@@ -2,7 +2,7 @@ import { containsHtml, renderHtmlToCanvas } from './htmlRenderer';
 
 // Helper functions moved from ImageGeneratorFrontendOnly.jsx and adapted for utility use
 
-const dataURLtoBlob = (dataurl) => {
+export const dataURLtoBlob = (dataurl) => {
     if (!dataurl) return null;
     const arr = dataurl.split(',');
     if (arr.length < 2) return null;
@@ -18,7 +18,7 @@ const dataURLtoBlob = (dataurl) => {
     return new Blob([u8arr], {type:mime});
 };
 
-const wrapTextInArea = (ctx, text, style, maxWidth, maxHeight) => {
+export const wrapTextInArea = (ctx, text, style, maxWidth, maxHeight) => {
     if (!text) return [];
     const fontSize = style.fontSize || 24;
     const lineHeight = fontSize * (style.lineHeightMultiplier || 1.2);
@@ -45,7 +45,7 @@ const wrapTextInArea = (ctx, text, style, maxWidth, maxHeight) => {
     return lines;
 };
 
-const applyTextEffects = (ctx, style) => {
+export const applyTextEffects = (ctx, style) => {
     ctx.fillStyle = style.color || '#000000';
     ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${style.fontSize || 24}px ${style.fontFamily || 'Arial'}`;
     ctx.textAlign = style.textAlign || 'left';
