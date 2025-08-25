@@ -227,16 +227,21 @@ const ImageGeneratorFrontendOnly = ({
       if (img.index !== imageIndex) {
         return img;
       }
-      // The modifiedImageData from the editor contains the correct backgroundImage
-      // and all the edited fields. We merge it with the existing `img` state
-      // to ensure properties like `url` and `blob` are preserved until regeneration.
+      // BUG FIX: The root of the "disappearing background" bug on save was here.
+      // `modifiedImageData` comes from the editor and does NOT have a `backgroundImage` property.
+      // The spread `{ ...img, ...modifiedImageData }` was overwriting `img.backgroundImage`
+      // with `undefined`.
+      // The fix is to manually construct the new object, EXPLICITLY preserving the
+      // `backgroundImage` from the existing state (`img`).
       return {
-        ...img,
-        ...modifiedImageData,
-        // Ensure custom fields are named consistently
+        ...img, // Keep blob, url, etc.
+        record: modifiedImageData.record,
+        backgroundImage: img.backgroundImage, // Keep the original background!
+        // Apply modifications from the editor
         customFieldPositions: modifiedImageData.fieldPositions,
         customFieldStyles: modifiedImageData.fieldStyles,
         customBrandElements: modifiedImageData.brandElements,
+        fontScale: modifiedImageData.fontScale,
       };
     });
 
@@ -266,42 +271,46 @@ const ImageGeneratorFrontendOnly = ({
 
   const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1) => {
     if (!currentBackgroundImage || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
-      alert('Pré-requisitos para regeneração não atendidos. Fontes foram carregadas?');
+      alert('Pré-requisitos para regeneração não atendidos. Fontes, dados ou configurações faltando.');
       return;
     }
     try {
-      // The `currentBackgroundImage` is already the composed background with brand elements and filters.
-      // We just need to load it and draw the text on top.
-      const img = new Image();
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = (err) => reject(new Error('Failed to load the background image for regeneration.', { cause: err }));
-        // Ensure cross-origin is set for data URLs as well, just in case of tainting issues.
-        img.crossOrigin = 'Anonymous';
-        img.src = currentBackgroundImage;
-      });
+      // 1. Compose the background with filters and brand elements.
+      // This is the new, correct flow. The background URL is the original, clean one.
+      const backgroundCanvas = await composeImage(
+        currentBackgroundImage,
+        imageFilters, // Global filters from component props
+        elementsToUse   // Specific brand elements for this image
+      );
 
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = customSize ? customSize.width : img.width;
-      canvas.height = customSize ? customSize.height : img.height;
+      // 2. Create the final canvas and draw the composed background on it.
+      const finalCanvas = document.createElement('canvas');
+      const ctx = finalCanvas.getContext('2d');
+      finalCanvas.width = customSize ? customSize.width : backgroundCanvas.width;
+      finalCanvas.height = customSize ? customSize.height : backgroundCanvas.height;
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
-      ctx.textRenderingOptimization = 'optimizeQuality';
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      ctx.drawImage(backgroundCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+
+      // 3. Draw text fields onto the final canvas.
       for (const field of Object.keys(record)) {
         const position = positionsToUse[field];
         const style = stylesToUse[field];
         if (!position || !position.visible || !style) continue;
+
         const text = record[field] || "";
         if (!text) continue;
+
         ctx.save();
+
         const posPx = {
-          x: Math.round((position.x / 100) * canvas.width),
-          y: Math.round((position.y / 100) * canvas.height),
-          width: Math.round((position.width / 100) * canvas.width),
-          height: Math.round((position.height / 100) * canvas.height)
+          x: Math.round((position.x / 100) * finalCanvas.width),
+          y: Math.round((position.y / 100) * finalCanvas.height),
+          width: Math.round((position.width / 100) * finalCanvas.width),
+          height: Math.round((position.height / 100) * finalCanvas.height)
         };
+
         if (position.rotation) {
           const centerX = posPx.x + posPx.width / 2;
           const centerY = posPx.y + posPx.height / 2;
@@ -311,15 +320,19 @@ const ImageGeneratorFrontendOnly = ({
         }
 
         const finalFontSize = (style.fontSize || 24) * (fontScale || 1);
+        const finalStyle = { ...style, fontSize: finalFontSize };
 
-        applyTextEffects(ctx, { ...style, fontSize: finalFontSize });
+        applyTextEffects(ctx, finalStyle);
+
         const fixedPadding = 8;
         const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
         const effectiveTextHeight = Math.max(0, posPx.height - (2 * fixedPadding));
         const textContentStartX = posPx.x + fixedPadding;
         const textContentStartY = posPx.y + fixedPadding;
-        const lines = wrapTextInArea(ctx, text, 0, 0, effectiveTextWidth, effectiveTextHeight, { ...style, fontSize: finalFontSize });
+
+        const lines = wrapTextInArea(ctx, text, finalStyle, effectiveTextWidth, effectiveTextHeight);
         const lineHeight = finalFontSize * (style.lineHeightMultiplier || 1.2);
+
         let currentLineRenderY = textContentStartY;
         if (style.verticalAlign === 'middle') {
           const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
@@ -328,8 +341,9 @@ const ImageGeneratorFrontendOnly = ({
           const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
           currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
         }
+
         if (containsHtml(text)) {
-          await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, { ...style, fontSize: finalFontSize }, effectiveTextWidth, effectiveTextHeight);
+          await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, finalStyle, effectiveTextWidth, effectiveTextHeight);
         } else {
           for (const line of lines) {
             let currentLineRenderX;
@@ -341,13 +355,16 @@ const ImageGeneratorFrontendOnly = ({
               currentLineRenderX = textContentStartX;
             }
             const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
-            await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, { ...style, fontSize: finalFontSize }, effectiveTextWidth, effectiveTextHeight);
+            await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, finalStyle, effectiveTextWidth, effectiveTextHeight);
           }
         }
         ctx.restore();
       }
-      const dataUrl = canvas.toDataURL('image/png', 1.0);
+
+      // 4. Generate final data and update state
+      const dataUrl = finalCanvas.toDataURL('image/png', 1.0);
       const blob = dataURLtoBlob(dataUrl);
+
       const newImageData = {
         url: dataUrl,
         dataUrl: dataUrl,
@@ -355,17 +372,17 @@ const ImageGeneratorFrontendOnly = ({
         record,
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        backgroundImage: currentBackgroundImage,
+        backgroundImage: currentBackgroundImage, // Preserve the original background
         customFieldPositions: positionsToUse,
         customFieldStyles: stylesToUse,
         customBrandElements: elementsToUse,
         customOriginalImageSize: customSize,
         fontScale: fontScale,
       };
+
       setGeneratedImages(prevImages => {
         const updatedImages = prevImages.map(img => {
           if (img.index === index) {
-            // No need to revoke URL if it's a data URL
             return newImageData;
           }
           return img;
@@ -373,6 +390,7 @@ const ImageGeneratorFrontendOnly = ({
         return updatedImages;
       });
     } catch (error) {
+      console.error(`Erro na regeneração da imagem (índice ${index}):`, error);
       alert(`Erro na regeneração da imagem (índice ${index}): ${error.message}`);
     }
   };
