@@ -45,7 +45,7 @@ const COMPLETE_DEFAULT_STYLE = {
   borderWidth: 0,
   borderRadius: 0,
   padding: 5,
-  backgroundOpacity: 1,
+  backgroundOpacity: 0,
 };
 
 const GeneratedImageEditor = ({
@@ -97,9 +97,10 @@ const GeneratedImageEditor = ({
   };
 
   useEffect(() => {
-    if (imageData && initialFieldPositions && initialFieldStyles) {
-      const positions = JSON.parse(JSON.stringify(initialFieldPositions));
-      const brands = JSON.parse(JSON.stringify(brandElements || []));
+    if (open && imageData && initialFieldPositions && initialFieldStyles) {
+      const positions = JSON.parse(JSON.stringify(imageData.customFieldPositions || initialFieldPositions));
+      const brands = JSON.parse(JSON.stringify(imageData.customBrandElements || brandElements || []));
+      const stylesToUse = imageData.customFieldStyles || initialFieldStyles;
 
       // Defensively add filters to brand elements
       brands.forEach(el => {
@@ -143,7 +144,7 @@ const GeneratedImageEditor = ({
       globalCsvHeaders.forEach(field => {
         newEditedStyles[field] = {
           ...COMPLETE_DEFAULT_STYLE,
-          ...(initialFieldStyles?.[field] || {}),
+          ...(stylesToUse?.[field] || {}),
         };
       });
       setEditedStyles(newEditedStyles);
