@@ -349,6 +349,9 @@ const Publisher = ({
     setPublishingStatusWp('Iniciando publicação...');
     setPublishedPostUrlWp(null);
     try {
+      if (!settings.wordpressConfig) {
+        throw new Error('Configuração do WordPress não encontrada. Por favor, configure-a primeiro.');
+      }
       if (!campaignContent || !campaignContent.conteudoFormatado || !generatedImagesData || generatedImagesData.length === 0) {
         throw new Error('Dados da campanha ou imagens não estão disponíveis.');
       }
@@ -362,7 +365,7 @@ const Publisher = ({
         imageBlob: firstImage.blob,
       };
       setPublishingStatusWp('Publicando no WordPress... Isso pode levar um momento.');
-      const post = await publishToWordPress(campaignData);
+      const post = await publishToWordPress(campaignData, settings.wordpressConfig);
       setPublishingStatusWp(`Post "${post.title.rendered}" criado como rascunho com sucesso!`);
       setPublishedPostUrlWp(post.link);
     } catch (error) {
