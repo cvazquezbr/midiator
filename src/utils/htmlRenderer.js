@@ -45,6 +45,12 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
     tempDiv.style.textShadow = `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}`;
   }
 
+  // Decoração e contorno de texto
+  tempDiv.style.textDecoration = style.textDecoration || 'none';
+  if (style.textStroke) {
+    tempDiv.style.webkitTextStroke = `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}`;
+  }
+
   tempDiv.innerHTML = htmlContent;
   document.body.appendChild(tempDiv);
 
