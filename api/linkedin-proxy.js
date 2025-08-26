@@ -140,8 +140,14 @@ async function handleUploadImage(fetch, request, response) {
 async function handleCreatePost(fetch, request, response) {
     const { accessToken, payload } = request.body;
     if (!accessToken || !payload) return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
+
+    console.error('[DEBUG] Received payload for createPost:', JSON.stringify(payload, null, 2));
+
     const { author, content, images } = payload;
-    if (!author || !content) return response.status(400).json({ error: 'Missing author or content for creating post.' });
+    if (!author || !content) {
+        console.error(`[DEBUG] createPost validation failed. Author: ${author}, Content: ${content ? 'provided' : 'missing'}`);
+        return response.status(400).json({ error: 'Missing author or content for creating post.' });
+    }
     const shareContent = { shareCommentary: { text: content }, shareMediaCategory: (images && images.length > 0) ? 'IMAGE' : 'NONE' };
     if (images && images.length > 0) {
         shareContent.media = images.map(assetURN => ({ status: 'READY', media: assetURN }));
