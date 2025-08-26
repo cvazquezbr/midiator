@@ -61,6 +61,22 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
 
   tempDiv.innerHTML = htmlContent;
 
+  // Force styles on all child elements to ensure consistent rendering
+  const allElements = tempDiv.getElementsByTagName('*');
+  for (const el of allElements) {
+      // Force wrapping and prevent default browser styles from interfering
+      el.style.overflowWrap = 'break-word';
+      el.style.wordWrap = 'break-word';
+      el.style.whiteSpace = 'normal';
+      // Force style inheritance from the parent container
+      el.style.color = 'inherit';
+      el.style.fontFamily = 'inherit';
+      el.style.fontWeight = 'inherit';
+      el.style.fontStyle = 'inherit';
+      el.style.textAlign = 'inherit';
+      el.style.lineHeight = 'inherit';
+  }
+
   // Build the DOM structure and append to the body
   container.appendChild(tempDiv);
   document.body.appendChild(container);
