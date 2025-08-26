@@ -69,9 +69,9 @@ export const applyTextEffects = (ctx, style) => {
     }
 };
 
-export const drawTextWithEffects = async (ctx, text, x, y, style, maxWidth, maxHeight, fontScale = 1) => {
+export const drawTextWithEffects = async (ctx, text, x, y, style, maxWidth, maxHeight) => {
     if (containsHtml(text)) {
-        await renderHtmlToCanvas(ctx, text, x, y, maxWidth, maxHeight, style, fontScale);
+        await renderHtmlToCanvas(ctx, text, x, y, maxWidth, maxHeight, style);
     } else {
         if (style.textStroke) {
             ctx.strokeText(text, x, y);
@@ -202,7 +202,7 @@ export const composeSingleImage = async ({
             ctx.translate(-centerX, -centerY);
         }
 
-        const finalFontSize = (style.fontSize || 24) * fontScale;
+        const finalFontSize = style.fontSize || 24;
         const finalStyle = { ...style, fontSize: finalFontSize };
 
         applyTextEffects(ctx, finalStyle);
@@ -225,7 +225,7 @@ export const composeSingleImage = async ({
         }
 
         if (containsHtml(text)) {
-            await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, finalStyle, effectiveTextWidth, effectiveTextHeight, fontScale);
+            await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, finalStyle, effectiveTextWidth, effectiveTextHeight);
         } else {
             for (const line of lines) {
                 let currentLineRenderX;
@@ -237,7 +237,7 @@ export const composeSingleImage = async ({
                     currentLineRenderX = textContentStartX;
                 }
                 const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
-                await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, finalStyle, effectiveTextWidth, effectiveTextHeight, fontScale);
+                await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, finalStyle, effectiveTextWidth, effectiveTextHeight);
             }
         }
         ctx.restore();
