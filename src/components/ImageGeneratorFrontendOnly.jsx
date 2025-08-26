@@ -324,7 +324,7 @@ const ImageGeneratorFrontendOnly = ({
         stylesToUse,
         sizeToUse,
         elementsToUse,
-        1 // Always use 100% scale for regeneration
+        imageToRegenerate.fontScale || 1 // Use the saved fontScale
       );
     }
     handleCloseGeneratedImageEditor();
