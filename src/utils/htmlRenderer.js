@@ -1,7 +1,8 @@
-import html2canvas from 'html2canvas';
+import { containsHtml as originalContainsHtml } from './htmlRenderer';
 
 /**
- * Verifica se uma string contém HTML
+ * Verifica se uma string contém HTML.
+ * A implementação original foi mantida, mas esta função pode ser estendida se necessário.
  * @param {string} text - Texto para verificar
  * @returns {boolean} True se contém HTML
  */
@@ -11,81 +12,84 @@ export const containsHtml = (text) => {
 };
 
 /**
- * Renderiza HTML em um canvas usando html2canvas.
- * Cria um elemento DOM temporário, renderiza o HTML nele e depois o desenha no contexto do canvas principal.
+ * Renderiza HTML em um canvas usando a técnica de SVG foreignObject.
+ * Este método é mais fiável do que o html2canvas para renderizar HTML complexo e com estilos.
  * @param {CanvasRenderingContext2D} ctx - Contexto do canvas principal onde o HTML será desenhado.
  * @param {string} htmlContent - O conteúdo HTML a ser renderizado.
  * @param {number} x - Posição X no canvas principal.
  * @param {number} y - Posição Y no canvas principal.
  * @param {number} maxWidth - Largura máxima para o conteúdo HTML.
  * @param {number} maxHeight - Altura máxima para o conteúdo HTML.
- * @param {Object} style - Estilos CSS a serem aplicados ao elemento HTML temporário.
- *                         Deve incluir propriedades como fontFamily, fontSize, color, textAlign, etc.
+ * @param {Object} style - Estilos CSS a serem aplicados ao elemento HTML.
  */
-export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHeight, style) => {
-  // Construir a string de estilo inline
-  const inlineStyle = `
-    width: ${maxWidth}px;
-    height: ${maxHeight}px;
-    box-sizing: border-box;
-    padding: ${style.padding || 0}px;
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-    font-family: '${style.fontFamily || 'Arial'}';
-    font-size: ${style.fontSize || 24}px;
-    font-weight: ${style.fontWeight || 'normal'};
-    font-style: ${style.fontStyle || 'normal'};
-    color: ${style.color || '#000000'};
-    text-align: ${style.textAlign || 'left'};
-    line-height: ${style.lineHeightMultiplier ? `${style.lineHeightMultiplier * (style.fontSize || 24)}px` : 'normal'};
-    ${style.textShadow ? `text-shadow: ${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'};` : ''}
-    ${style.textStroke ? `-webkit-text-stroke: ${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'};` : ''}
-    text-decoration: ${style.textDecoration || 'none'};
-  `;
+export const renderHtmlToCanvas = (ctx, htmlContent, x, y, maxWidth, maxHeight, style) => {
+  return new Promise((resolve, reject) => {
+    // Construir a string de estilo CSS a partir do objeto de estilo
+    const inlineStyle = `
+      div {
+        width: ${maxWidth}px;
+        height: ${maxHeight}px;
+        box-sizing: border-box;
+        padding: ${style.padding || 0}px;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        font-family: '${style.fontFamily || 'Arial'}';
+        font-size: ${style.fontSize || 24}px;
+        font-weight: ${style.fontWeight || 'normal'};
+        font-style: ${style.fontStyle || 'normal'};
+        color: ${style.color || '#000000'};
+        text-align: ${style.textAlign || 'left'};
+        line-height: ${style.lineHeightMultiplier ? style.lineHeightMultiplier : 'normal'};
+        display: flex;
+        flex-direction: column;
+        justify-content: ${style.verticalAlign === 'middle' ? 'center' : (style.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start')};
+        margin: 0;
+        padding: ${style.padding || 0}px;
+      }
+      ${style.textShadow ? `
+      div {
+        text-shadow: ${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'};
+      }` : ''}
+      ${style.textStroke ? `
+      div {
+        -webkit-text-stroke: ${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'};
+      }` : ''}
+    `;
 
-  // Envolver o conteúdo HTML em um div com os estilos inline
-  const styledHtml = `<div style="${inlineStyle.replace(/\n/g, ' ')}">${htmlContent}</div>`;
+    // Construir o SVG com foreignObject
+    const data = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${maxWidth}" height="${maxHeight}">
+        <foreignObject width="100%" height="100%">
+          <div xmlns="http://www.w3.org/1999/xhtml">
+            <style>${inlineStyle.replace(/\n/g, ' ')}</style>
+            ${htmlContent}
+          </div>
+        </foreignObject>
+      </svg>
+    `;
 
-  const container = document.createElement('div');
-  container.style.position = 'absolute';
-  container.style.left = '-9999px';
-  container.style.top = '-9999px';
-  container.innerHTML = styledHtml;
+    const img = new Image();
+    // Codificar o SVG para uso em um data URL
+    const svgBlob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
 
-  document.body.appendChild(container);
+    img.onload = () => {
+      ctx.drawImage(img, x, y);
+      URL.revokeObjectURL(url);
+      resolve();
+    };
 
-  const elementToRender = container.firstElementChild;
+    img.onerror = (err) => {
+      URL.revokeObjectURL(url);
+      console.error("Erro ao carregar a imagem SVG para o canvas:", err);
+      reject(err);
+    };
 
-  if (!elementToRender) {
-    console.error("Falha ao criar o elemento para renderização do HTML.");
-    document.body.removeChild(container);
-    return;
-  }
-
-  if (style.fontFamily) {
-    try {
-      await document.fonts.load(`${style.fontStyle || 'normal'} ${style.fontWeight || 'normal'} ${style.fontSize || 24}px ${style.fontFamily}`);
-    } catch (err) {
-      console.warn(`Não foi possível pré-carregar a fonte: ${style.fontFamily}.`, err);
-    }
-  }
-
-  try {
-    const canvasFromHtml = await html2canvas(elementToRender, {
-      backgroundColor: null,
-      useCORS: true,
-      scale: window.devicePixelRatio,
-    });
-    ctx.drawImage(canvasFromHtml, x, y);
-  } catch (error) {
-    console.error('Erro ao renderizar HTML para canvas com html2canvas:', error);
-  } finally {
-    document.body.removeChild(container);
-  }
+    img.src = url;
+  });
 };
 
-// ... (o resto do arquivo permanece o mesmo)
-
+// Manter outras funções exportadas se existirem e forem necessárias em outros locais
 export const parseHtmlToFormattedText = (html) => {
   return [{ text: html, format: {} }];
 };
