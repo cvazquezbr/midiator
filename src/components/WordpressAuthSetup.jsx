@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -24,7 +24,36 @@ const WordpressAuthSetup = () => {
   const [testResult, setTestResult] = useState(null);
   const [showInfobox, setShowInfobox] = useState(false);
 
-  const wordpressConfig = settings.wordpress || {};
+  const wordpressConfig = useMemo(() => settings.wordpress || {}, [settings.wordpress]);
+
+  useEffect(() => {
+    // This effect ensures that when a user first enters a WordPress URL,
+    // the default endpoint URLs are populated in the state if they are empty.
+    if (wordpressConfig.wordpressUrl) {
+      const defaults = {
+        tagsUrl: '/wp-json/wp/v2/tags',
+        mediaUrl: '/wp-json/wp/v2/media',
+        postsUrl: '/wp-json/wp/v2/posts',
+      };
+      const configToUpdate = { ...wordpressConfig };
+      let updated = false;
+      if (!configToUpdate.tagsUrl) {
+        configToUpdate.tagsUrl = defaults.tagsUrl;
+        updated = true;
+      }
+      if (!configToUpdate.mediaUrl) {
+        configToUpdate.mediaUrl = defaults.mediaUrl;
+        updated = true;
+      }
+      if (!configToUpdate.postsUrl) {
+        configToUpdate.postsUrl = defaults.postsUrl;
+        updated = true;
+      }
+      if (updated) {
+        updateSetting('wordpress', configToUpdate);
+      }
+    }
+  }, [wordpressConfig, updateSetting]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
