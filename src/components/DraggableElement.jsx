@@ -18,6 +18,7 @@ const DraggableElementInternal = ({
   rotation,
   setIsMoving,
   originalImageSize,
+  fontScale: fontScaleProp,
   enableHtmlRendering = false,
   darkMode,
   onDoubleClick,
@@ -500,8 +501,12 @@ const DraggableElementInternal = ({
     return lines;
   };
 
+  const fontScale = fontScaleProp || 1;
+
   const baseFontSize = style.fontSize || 24;
+  const scaledFontSize = baseFontSize * fontScale;
   const lineHeight = baseFontSize * (style.lineHeightMultiplier || 1.2);
+  const scaledLineHeight = lineHeight * fontScale;
 
   const originalBoxWidth = (position.width / 100) * (originalImageSize?.width || 1);
   const paddingInPixels = 8 * 2;
@@ -517,12 +522,12 @@ const DraggableElementInternal = ({
 
   const textContentStyle = {
     fontFamily: style.fontFamily || 'Arial',
-    fontSize: `${baseFontSize}px`,
+    fontSize: `${scaledFontSize}px`,
     fontWeight: style.fontWeight || 'normal',
     fontStyle: style.fontStyle || 'normal',
     color: style.color || '#000000',
     textDecoration: style.textDecoration || 'none',
-    lineHeight: `${lineHeight}px`,
+    lineHeight: `${scaledLineHeight}px`,
     textAlign: style.textAlign || 'left',
     textShadow: style.textShadow ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}` : 'none',
     WebkitTextStroke: style.textStroke ? `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}` : 'none',
@@ -608,11 +613,11 @@ const DraggableElementInternal = ({
                       pointerEvents: 'none',
                       // Apply all text styles directly here to override HTML content styles
                       fontFamily: style.fontFamily,
-                      fontSize: `${baseFontSize}px`,
+                      fontSize: `${scaledFontSize}px`,
                       fontWeight: style.fontWeight,
                       fontStyle: style.fontStyle,
                       color: style.color,
-                      lineHeight: `${lineHeight}px`,
+                      lineHeight: `${scaledLineHeight}px`,
                       textAlign: style.textAlign || 'left',
                     }}
                   />
