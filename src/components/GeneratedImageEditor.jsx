@@ -92,12 +92,6 @@ const GeneratedImageEditor = ({
   };
 
   useEffect(() => {
-    if (open) {
-        console.log('[GeneratedImageEditor opened] Received props:', { imageData, initialFieldPositions, initialFieldStyles, originalImageSize });
-    }
-  }, [open]);
-
-  useEffect(() => {
     if (imageData && initialFieldPositions && initialFieldStyles) {
       const positions = JSON.parse(JSON.stringify(initialFieldPositions));
       const brands = JSON.parse(JSON.stringify(brandElements || []));
@@ -161,7 +155,7 @@ const GeneratedImageEditor = ({
   }
 
   const handleSave = () => {
-    const saveData = {
+    onSave({
       ...imageData, // Keeps original data like index
       record: editedRecord, // Passes the updated record
       backgroundImage: currentBackgroundImageForEditor, // Explicitly pass back the background being used
@@ -169,9 +163,7 @@ const GeneratedImageEditor = ({
       fieldStyles: editedStyles,
       brandElements: editedBrandElements,
       fontScale: fontScale,
-    };
-    console.log('[GeneratedImageEditor saving] Data sent to onSave:', saveData);
-    onSave(saveData);
+    });
     onClose();
   };
 
