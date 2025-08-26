@@ -364,7 +364,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => a.zIndex - b.zIndex);
     return elements;
-  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
+  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex]);
 
   if (!backgroundImage) {
     return (
