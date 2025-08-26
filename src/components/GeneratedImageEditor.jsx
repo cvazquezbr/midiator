@@ -39,8 +39,12 @@ const COMPLETE_DEFAULT_STYLE = {
   shadowBlur: 4,
   shadowOffsetX: 2,
   shadowOffsetY: 2,
-  // Ensure all properties from FormattingPanel's controls and rendering logic are here.
-  // These are based on inspection of FormattingPanel.jsx and common text style properties.
+  // Box properties
+  backgroundColor: 'rgba(0,0,0,0)',
+  borderColor: '#000000',
+  borderWidth: 0,
+  borderRadius: 0,
+  padding: 5,
 };
 
 const GeneratedImageEditor = ({

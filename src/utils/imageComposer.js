@@ -70,6 +70,18 @@ export const applyTextEffects = (ctx, style) => {
     }
 };
 
+const drawRoundedRect = (ctx, x, y, width, height, radius) => {
+  if (width < 2 * radius) radius = width / 2;
+  if (height < 2 * radius) radius = height / 2;
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + width, y, x + width, y + height, radius);
+  ctx.arcTo(x + width, y + height, x, y + height, radius);
+  ctx.arcTo(x, y + height, x, y, radius);
+  ctx.arcTo(x, y, x + width, y, radius);
+  ctx.closePath();
+};
+
 export const drawTextWithEffects = async (ctx, text, x, y, style, maxWidth, maxHeight) => {
     if (containsHtml(text)) {
         await renderHtmlToCanvas(ctx, text, x, y, maxWidth, maxHeight, style);
@@ -206,12 +218,25 @@ export const composeSingleImage = async ({
         const finalFontSize = (style.fontSize || 24) * fontScale;
         const finalStyle = { ...style, fontSize: finalFontSize };
 
+        // Draw the textbox background and border
+        if (style.backgroundColor && style.backgroundColor !== 'rgba(0,0,0,0)') {
+            ctx.fillStyle = style.backgroundColor;
+            drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, style.borderRadius || 0);
+            ctx.fill();
+        }
+        if (style.borderWidth > 0) {
+            ctx.strokeStyle = style.borderColor || '#000000';
+            ctx.lineWidth = style.borderWidth;
+            drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, style.borderRadius || 0);
+            ctx.stroke();
+        }
+
         applyTextEffects(ctx, finalStyle);
-        const fixedPadding = 8;
-        const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
-        const effectiveTextHeight = Math.max(0, posPx.height - (2 * fixedPadding));
-        const textContentStartX = posPx.x + fixedPadding;
-        const textContentStartY = posPx.y + fixedPadding;
+        const padding = style.padding || 0;
+        const effectiveTextWidth = Math.max(0, posPx.width - (2 * padding));
+        const effectiveTextHeight = Math.max(0, posPx.height - (2 * padding));
+        const textContentStartX = posPx.x + padding;
+        const textContentStartY = posPx.y + padding;
 
         const lines = wrapTextInArea(ctx, text, finalStyle, effectiveTextWidth, effectiveTextHeight);
         const lineHeight = finalFontSize * (finalStyle.lineHeightMultiplier || 1.2);

@@ -103,7 +103,12 @@ const FormattingPanel = ({
       fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none',
       color: '#000000', textStroke: false, strokeColor: '#ffffff', strokeWidth: 2, textShadow: false,
       shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
-      textAlign: 'left', verticalAlign: 'top'
+      textAlign: 'left', verticalAlign: 'top',
+      backgroundColor: 'rgba(0,0,0,0)',
+      borderColor: '#000000',
+      borderWidth: 0,
+      borderRadius: 0,
+      padding: 5,
     };
     setFieldStyles(prev => ({ ...prev, [field]: defaultStyle }));
   };
@@ -413,6 +418,67 @@ const FormattingPanel = ({
                             <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.style.shadowOffsetY || 2}px</Typography><Slider value={currentElement.style.shadowOffsetY || 2} onChange={(e, value) => updateFieldStyle(selectedField, 'shadowOffsetY', value)} min={-20} max={20} size="small" /></Grid>
                           </Grid>
                         )}
+                      </Grid>
+                    </Grid>
+                  </AccordionDetails>
+                </Accordion>
+
+                {/* Estilo da Caixa */}
+                <Accordion expanded={expandedPanel === 'boxStyle'} onChange={handleAccordionChange('boxStyle')}>
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography variant="subtitle1">Estilo da Caixa</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <TextField
+                          label="Cor de Fundo"
+                          type="color"
+                          value={currentElement.style.backgroundColor || 'rgba(0,0,0,0)'}
+                          onChange={(e) => updateFieldStyle(selectedField, 'backgroundColor', e.target.value)}
+                          fullWidth
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={6}>
+                        <TextField
+                          label="Cor da Borda"
+                          type="color"
+                          value={currentElement.style.borderColor || '#000000'}
+                          onChange={(e) => updateFieldStyle(selectedField, 'borderColor', e.target.value)}
+                          fullWidth
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography gutterBottom>Largura da Borda: {currentElement.style.borderWidth || 0}px</Typography>
+                        <Slider
+                          value={currentElement.style.borderWidth || 0}
+                          onChange={(e, value) => updateFieldStyle(selectedField, 'borderWidth', value)}
+                          min={0}
+                          max={20}
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography gutterBottom>Raio da Borda: {currentElement.style.borderRadius || 0}px</Typography>
+                        <Slider
+                          value={currentElement.style.borderRadius || 0}
+                          onChange={(e, value) => updateFieldStyle(selectedField, 'borderRadius', value)}
+                          min={0}
+                          max={50}
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography gutterBottom>Padding: {currentElement.style.padding || 0}px</Typography>
+                        <Slider
+                          value={currentElement.style.padding || 0}
+                          onChange={(e, value) => updateFieldStyle(selectedField, 'padding', value)}
+                          min={0}
+                          max={50}
+                          size="small"
+                        />
                       </Grid>
                     </Grid>
                   </AccordionDetails>
