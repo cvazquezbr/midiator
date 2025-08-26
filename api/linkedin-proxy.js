@@ -8,12 +8,16 @@ async function fetchWithRetry(fetch, url, options, retries = 5, initialBackoff =
   let backoff = initialBackoff;
   for (let i = 0; i < retries; i++) {
     const response = await fetch(url, options);
-    if (response.status === 429) {
+    // Retry on rate limit or server errors
+    if (response.status === 429 || response.status >= 500) {
+      const isRateLimit = response.status === 429;
       const retryAfterHeader = response.headers.get('Retry-After');
-      const retryAfter = retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : backoff;
+      // Use Retry-After header if present (for 429), otherwise use exponential backoff
+      const retryAfter = isRateLimit && retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : backoff;
       const jitter = Math.random() * 1000;
 
-      console.warn(`Rate limit hit. Retrying after ${Math.round((retryAfter + jitter)/1000)}s... (Attempt ${i + 1}/${retries})`);
+      const reason = isRateLimit ? "Rate limit hit" : `Server error (${response.status})`;
+      console.warn(`${reason}. Retrying after ${Math.round((retryAfter + jitter)/1000)}s... (Attempt ${i + 1}/${retries})`);
       await delay(retryAfter + jitter);
 
       backoff *= 2;
@@ -21,7 +25,7 @@ async function fetchWithRetry(fetch, url, options, retries = 5, initialBackoff =
     }
     return response;
   }
-  throw new Error(`Failed to fetch from ${url} after ${retries} attempts due to rate limiting.`);
+  throw new Error(`Failed to fetch from ${url} after ${retries} attempts.`);
 }
 
 async function handleTokenExchange(fetch, request, response) {
@@ -62,7 +66,7 @@ async function handleGenericPost(fetch, request, response, url) {
     const { accessToken, payload } = request.body;
     if (!accessToken || !payload) return response.status(400).json({ error: 'Missing accessToken or payload.' });
     try {
-        const linkedinResponse = await fetch(url, {
+        const linkedinResponse = await fetchWithRetry(fetch, url, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': '202507' },
             body: JSON.stringify(payload),
