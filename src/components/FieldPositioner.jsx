@@ -113,6 +113,25 @@ const FieldPositioner = ({
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
   const [isComposing, setIsComposing] = useState(false); // Keep for loading indicators if needed elsewhere
+  const [internalImageSize, setInternalImageSize] = useState(originalImageSize);
+
+  useEffect(() => {
+    // When the backgroundImage changes, load it to get its actual dimensions.
+    if (backgroundImage) {
+      const img = new Image();
+      img.onload = () => {
+        const newSize = { width: img.width, height: img.height };
+        // Update the internal size state only if it's different, to avoid loops.
+        if (internalImageSize?.width !== newSize.width || internalImageSize?.height !== newSize.height) {
+            setInternalImageSize(newSize);
+        }
+      };
+      img.src = backgroundImage;
+    }
+  }, [backgroundImage]);
+
+  // Use the verified internal size for all calculations, falling back to the prop if not yet loaded.
+  const effectiveImageSize = internalImageSize || originalImageSize;
 
   // The backgroundImage prop is now assumed to be the final, composed background for the editor preview.
   // No further composition is needed here.
@@ -343,8 +362,8 @@ const FieldPositioner = ({
         visible: true,
       };
 
-      const titleBoxWidthPx = (titleWidth / 100) * (originalImageSize?.width || imageSize.width);
-      const titleBoxHeightPx = (titleHeight / 100) * (originalImageSize?.height || imageSize.height);
+      const titleBoxWidthPx = (titleWidth / 100) * (effectiveImageSize?.width || imageSize.width);
+      const titleBoxHeightPx = (titleHeight / 100) * (effectiveImageSize?.height || imageSize.height);
       const titleText = csvData[currentPreviewIndex]?.[titleField] || `[${titleField}]`;
 
       const bestFontSize = findBestFitFontSize(
@@ -396,7 +415,7 @@ const FieldPositioner = ({
       const fontSizePx = sideLabelStyle.fontSize || 24;
 
       // A altura da caixa (que se torna a largura do texto após rotação) é baseada na altura da fonte.
-      const labelHeight = (fontSizePx / (originalImageSize?.height || imageSize.height || 1)) * 100 * 1.5;
+      const labelHeight = (fontSizePx / (effectiveImageSize?.height || imageSize.height || 1)) * 100 * 1.5;
       // A largura da caixa (que se torna a altura do texto) é uma grande parte da altura da zona segura.
       const labelWidth = safeZone.height * 0.7;
 
@@ -477,15 +496,15 @@ const FieldPositioner = ({
     setCurrentPreviewIndex(csvData.length - 1);
   };
 
-  const aspectRatio = (originalImageSize?.width && originalImageSize?.height)
-    ? `${originalImageSize.width} / ${originalImageSize.height}`
+  const aspectRatio = (effectiveImageSize?.width && effectiveImageSize?.height)
+    ? `${effectiveImageSize.width} / ${effectiveImageSize.height}`
     : '16 / 9';
 
   // Effect to calculate font scale based on the actual rendered image size
   useEffect(() => {
-    if (renderedImageMetrics.width > 0 && originalImageSize?.width > 0) {
+    if (renderedImageMetrics.width > 0 && effectiveImageSize?.width > 0) {
       // The scale is uniform, so we can just use the width ratio.
-      const scale = renderedImageMetrics.width / originalImageSize.width;
+      const scale = renderedImageMetrics.width / effectiveImageSize.width;
       setFontScale(scale);
       if (onFontScaleChange) {
         onFontScaleChange(scale);
@@ -496,7 +515,7 @@ const FieldPositioner = ({
         onFontScaleChange(1);
       }
     }
-  }, [renderedImageMetrics, originalImageSize, onFontScaleChange]);
+  }, [renderedImageMetrics, effectiveImageSize, onFontScaleChange]);
 
   // Efeito para gerenciar scroll durante interações
   useEffect(() => {
@@ -556,7 +575,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => a.zIndex - b.zIndex);
     return elements;
-  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, imageSize, originalImageSize, isHtmlField, fontScale, renderedImageMetrics]);
+  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, imageSize, effectiveImageSize, isHtmlField, fontScale, renderedImageMetrics]);
 
   if (!backgroundImage) {
     return (
@@ -698,7 +717,7 @@ const FieldPositioner = ({
                       }
                     }}
                     rotation={element.rotation}
-                    originalImageSize={originalImageSize}
+                    originalImageSize={effectiveImageSize}
                     fontScale={element.fontScale}
                     enableHtmlRendering={element.enableHtmlRendering}
                     darkMode={darkMode}
