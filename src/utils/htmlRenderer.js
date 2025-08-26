@@ -83,11 +83,10 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
 
   try {
     const canvasFromHtml = await html2canvas(tempDiv, {
-      backgroundColor: null,
-      useCORS: true,
-      width: maxWidth,
-      height: maxHeight,
-      scale: window.devicePixelRatio,
+      backgroundColor: null, // Fundo transparente
+      useCORS: true, // Permitir imagens de outras origens se houver
+      scale: window.devicePixelRatio, // Melhorar a resolução em telas de alta DPI
+      // Omitir width e height para que o html2canvas use as dimensões do próprio elemento
     });
 
     // Desenhar o canvas gerado no canvas principal na posição X ajustada
