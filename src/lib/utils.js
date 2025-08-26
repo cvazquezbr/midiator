@@ -21,3 +21,13 @@ export function stripHtml(html) {
     return html.replace(/<[^>]*>?/gm, '');
   }
 }
+
+// Campos que devem usar renderização HTML
+const htmlFields = ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'];
+
+export const isHtmlField = (fieldName) => {
+  if (!fieldName) return false;
+  return htmlFields.some(field =>
+    fieldName.toLowerCase().includes(field.toLowerCase())
+  );
+};
