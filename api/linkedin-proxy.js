@@ -167,7 +167,7 @@ async function handleGetProfiles(fetch, request, response) {
     ]);
     if (!personalResponse.ok) throw new Error(`Failed to fetch personal profile: ${personalResponse.status}`);
     const personalData = await personalResponse.json();
-    const personal = { id: personalData.id, name: `${personalData.firstName.localized.pt_BR || personalData.firstName.localized.en_US} ${personalData.lastName.localized.pt_BR || personalData.lastName.localized.en_US}`, type: 'personal', profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier };
+    const personal = { id: personalData.id, urn: `urn:li:person:${personalData.id}`, name: `${personalData.firstName.localized.pt_BR || personalData.firstName.localized.en_US} ${personalData.lastName.localized.pt_BR || personalData.lastName.localized.en_US}`, type: 'personal', profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier };
     let organizations = [];
     if (orgAclsResponse.ok) {
       const orgAclsData = await orgAclsResponse.json();
@@ -212,6 +212,7 @@ async function handleGetProfiles(fetch, request, response) {
             const acl = approvedAcls.find(a => a.organization.endsWith(details.id));
             return {
                 id: details.id,
+                urn: `urn:li:organization:${details.id}`,
                 name: details.localizedName || 'Nome Indisponível',
                 role: acl?.role,
                 logo: details.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
