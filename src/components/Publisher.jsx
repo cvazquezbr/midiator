@@ -350,8 +350,8 @@ const Publisher = ({
     setPublishingStatusWp('Iniciando publicação...');
     setPublishedPostUrlWp(null);
     try {
-      if (!settings.wordpress) {
-        throw new Error('Configuração do WordPress não encontrada. Por favor, configure-a primeiro.');
+      if (!settings.wordpress || !settings.wordpress.wordpressUrl || !settings.wordpress.username || !settings.wordpress.password || !settings.wordpress.tagsUrl || !settings.wordpress.mediaUrl || !settings.wordpress.postsUrl) {
+        throw new Error('Configuração do WordPress não encontrada ou incompleta. Por favor, configure-a primeiro.');
       }
       if (!campaignContent || !campaignContent.conteudoFormatado || !generatedImagesData || generatedImagesData.length === 0) {
         throw new Error('Dados da campanha ou imagens não estão disponíveis.');

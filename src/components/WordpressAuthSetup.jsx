@@ -28,15 +28,7 @@ const WordpressAuthSetup = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    let newWordpressConfig = { ...wordpressConfig, [name]: value };
-
-    // When the main URL is entered, populate the endpoint URLs with defaults if they are empty.
-    if (name === 'wordpressUrl' && value) {
-        newWordpressConfig.tagsUrl = newWordpressConfig.tagsUrl || '/wp-json/wp/v2/tags';
-        newWordpressConfig.mediaUrl = newWordpressConfig.mediaUrl || '/wp-json/wp/v2/media';
-        newWordpressConfig.postsUrl = newWordpressConfig.postsUrl || '/wp-json/wp/v2/posts';
-    }
-
+    const newWordpressConfig = { ...wordpressConfig, [name]: value };
     updateSetting('wordpress', newWordpressConfig);
     setTestResult(null);
   };
@@ -50,10 +42,10 @@ const WordpressAuthSetup = () => {
     setIsTesting(true);
     setTestResult(null);
 
-    const { username, password, wordpressUrl } = wordpressConfig;
+    const { username, password, wordpressUrl, tagsUrl, mediaUrl, postsUrl } = wordpressConfig;
 
-    if (!username?.trim() || !password?.trim() || !wordpressUrl?.trim()) {
-      toast.error('Preencha os campos de URL, usuário e senha para testar.');
+    if (!username?.trim() || !password?.trim() || !wordpressUrl?.trim() || !tagsUrl?.trim() || !mediaUrl?.trim() || !postsUrl?.trim()) {
+      toast.error('Preencha todos os campos obrigatórios para testar.');
       setIsTesting(false);
       return;
     }
@@ -149,16 +141,17 @@ const WordpressAuthSetup = () => {
         </Grid>
 
         <Typography variant="h6" sx={{ mt: 3, mb: 1 }}>
-          Endpoints da API (Opcional)
+          Endpoints da API
         </Typography>
         <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
                 <TextField
                     name="tagsUrl"
                     label="URL para incluir tag"
-                    value={wordpressConfig.tagsUrl || '/wp-json/wp/v2/tags'}
+                    value={wordpressConfig.tagsUrl || ''}
                     onChange={handleChange}
                     fullWidth
+                    required
                     variant="outlined"
                 />
             </Grid>
@@ -166,9 +159,10 @@ const WordpressAuthSetup = () => {
                 <TextField
                     name="mediaUrl"
                     label="URL para subir mídia"
-                    value={wordpressConfig.mediaUrl || '/wp-json/wp/v2/media'}
+                    value={wordpressConfig.mediaUrl || ''}
                     onChange={handleChange}
                     fullWidth
+                    required
                     variant="outlined"
                 />
             </Grid>
@@ -176,9 +170,10 @@ const WordpressAuthSetup = () => {
                 <TextField
                     name="postsUrl"
                     label="URL para enviar post"
-                    value={wordpressConfig.postsUrl || '/wp-json/wp/v2/posts'}
+                    value={wordpressConfig.postsUrl || ''}
                     onChange={handleChange}
                     fullWidth
+                    required
                     variant="outlined"
                 />
             </Grid>
