@@ -170,54 +170,48 @@ async function handleGetProfiles(fetch, request, response) {
       const approvedAcls = orgAclsData.elements?.filter(acl => allowedRoles.has(acl.role)) || [];
 
       if (approvedAcls.length > 0) {
-        const orgUrns = approvedAcls.map(el => el.organization);
-        const uniqueOrgIds = [...new Set(orgUrns.map(urn => urn.split(':').pop()))];
-        const cacheKeys = uniqueOrgIds.map(id => `linkedin:org:${id}`);
+        const allOrgDetails = [];
+        for (const acl of approvedAcls) {
+            const orgId = acl.organization.split(':').pop();
+            const cacheKey = `linkedin:org:${orgId}`;
+            let orgData = null;
 
-        if (forceRefresh && cacheKeys.length > 0) {
-          await kv.del(cacheKeys);
-        }
-
-        const allOrgDetails = {};
-        const cachedResults = await kv.mget(cacheKeys);
-
-        const orgsToFetch = [];
-        cachedResults.forEach((result, index) => {
-          if (result) {
-            allOrgDetails[uniqueOrgIds[index]] = JSON.parse(result);
-          } else {
-            orgsToFetch.push(uniqueOrgIds[index]);
-          }
-        });
-
-        if (orgsToFetch.length > 0) {
-          try {
-            for (let i = 0; i < orgsToFetch.length; i += 50) {
-              const chunk = orgsToFetch.slice(i, i + 50);
-              const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=${encodeURIComponent(`List(${chunk.join(',')})`)}`;
-              const batchOrgResponse = await fetchWithRetry(fetch, batchOrgUrl, { headers });
-              if (batchOrgResponse.ok) {
-                const fetchedData = await batchOrgResponse.json();
-                const orgResults = fetchedData.results;
-                Object.assign(allOrgDetails, orgResults);
-
-                const pipeline = kv.pipeline();
-                for (const [orgId, orgData] of Object.entries(orgResults)) {
-                  pipeline.set(`linkedin:org:${orgId}`, JSON.stringify(orgData), 'EX', 3600); // Cache for 1 hour
+            if (!forceRefresh) {
+                const cached = await kv.get(cacheKey);
+                if (cached) {
+                    orgData = JSON.parse(cached);
                 }
-                await pipeline.exec();
-              }
             }
-          } catch (error) {
-            console.error("Failed to fetch organization details after retries:", error);
-          }
+
+            if (!orgData) {
+                const orgUrl = `https://api.linkedin.com/rest/organizations/${orgId}`;
+                try {
+                    const orgResponse = await fetchWithRetry(fetch, orgUrl, { headers });
+                    if (orgResponse.ok) {
+                        orgData = await orgResponse.json();
+                        await kv.set(cacheKey, JSON.stringify(orgData), 'EX', 3600);
+                    }
+                } catch (error) {
+                    console.error(`Failed to fetch details for org ${orgId}:`, error);
+                }
+            }
+
+            if (orgData) {
+                allOrgDetails.push({ id: orgId, ...orgData });
+            }
+            await delay(200); // 200ms delay between each request
         }
 
-        organizations = approvedAcls.map(acl => {
-          const orgId = acl.organization.split(':').pop();
-          const orgDetails = allOrgDetails[orgId];
-          return { id: orgId, name: orgDetails?.localizedName || 'Nome Indisponível', role: acl.role, logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier, type: 'organization' };
-        }).filter(org => allOrgDetails[org.id]);
+        organizations = allOrgDetails.map(details => {
+            const acl = approvedAcls.find(a => a.organization.endsWith(details.id));
+            return {
+                id: details.id,
+                name: details.localizedName || 'Nome Indisponível',
+                role: acl?.role,
+                logo: details.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
+                type: 'organization'
+            };
+        });
       }
     }
     return response.status(200).json({ personal, organizations, hasOrganizations: organizations.length > 0 });
