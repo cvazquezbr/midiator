@@ -138,6 +138,7 @@ const ImageGeneratorFrontendOnly = ({
             brandElements: elementsToUse,
             fieldPositions: positionsToUse,
             fieldStyles: stylesToUse,
+            fontScale: 1, // Always use 100% scale for regeneration
           }).catch(error => {
             console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${imgData.index}:`, error);
             return imgData; // On error, return the original data to not lose it
@@ -186,7 +187,7 @@ const ImageGeneratorFrontendOnly = ({
         brandElements,
         fieldPositions,
         fieldStyles,
-        fontScale,
+        fontScale: 1, // Always use 100% scale for generation
       })
       .then(imageData => {
         setProgress(p => p + 1);
@@ -313,7 +314,6 @@ const ImageGeneratorFrontendOnly = ({
       const positionsToUse = imageToRegenerate.customFieldPositions || fieldPositions;
       const stylesToUse = imageToRegenerate.customFieldStyles || fieldStyles;
       const elementsToUse = imageToRegenerate.customBrandElements !== undefined ? imageToRegenerate.customBrandElements : brandElements;
-      const scaleToUse = imageToRegenerate.fontScale !== undefined ? imageToRegenerate.fontScale : 1;
       const sizeToUse = imageToRegenerate.customOriginalImageSize || originalImageSize;
 
       regenerateSingleImage(
@@ -324,7 +324,7 @@ const ImageGeneratorFrontendOnly = ({
         stylesToUse,
         sizeToUse,
         elementsToUse,
-        scaleToUse
+        1 // Always use 100% scale for regeneration
       );
     }
     handleCloseGeneratedImageEditor();
