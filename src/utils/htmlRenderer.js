@@ -45,6 +45,11 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
     tempDiv.style.textShadow = `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}`;
   }
 
+  // Explicitly set wrapping properties
+  tempDiv.style.wordWrap = 'break-word';
+  tempDiv.style.whiteSpace = 'normal';
+  tempDiv.style.overflowWrap = 'break-word';
+
   tempDiv.innerHTML = htmlContent;
   document.body.appendChild(tempDiv);
 
