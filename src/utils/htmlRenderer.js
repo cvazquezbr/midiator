@@ -23,72 +23,63 @@ export const containsHtml = (text) => {
  *                         Deve incluir propriedades como fontFamily, fontSize, color, textAlign, etc.
  */
 export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHeight, style) => {
-  // 1. Create an off-screen container. This provides a stable context.
+  // Construir a string de estilo inline
+  const inlineStyle = `
+    width: ${maxWidth}px;
+    height: ${maxHeight}px;
+    box-sizing: border-box;
+    padding: ${style.padding || 0}px;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    font-family: '${style.fontFamily || 'Arial'}';
+    font-size: ${style.fontSize || 24}px;
+    font-weight: ${style.fontWeight || 'normal'};
+    font-style: ${style.fontStyle || 'normal'};
+    color: ${style.color || '#000000'};
+    text-align: ${style.textAlign || 'left'};
+    line-height: ${style.lineHeightMultiplier ? `${style.lineHeightMultiplier * (style.fontSize || 24)}px` : 'normal'};
+    ${style.textShadow ? `text-shadow: ${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'};` : ''}
+    ${style.textStroke ? `-webkit-text-stroke: ${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'};` : ''}
+    text-decoration: ${style.textDecoration || 'none'};
+  `;
+
+  // Envolver o conteúdo HTML em um div com os estilos inline
+  const styledHtml = `<div style="${inlineStyle.replace(/\n/g, ' ')}">${htmlContent}</div>`;
+
   const container = document.createElement('div');
   container.style.position = 'absolute';
   container.style.left = '-9999px';
   container.style.top = '-9999px';
+  container.innerHTML = styledHtml;
 
-  // 2. Create the target div inside the container.
-  const tempDiv = document.createElement('div');
-
-  // Apply all styles to this div. It now has a containing block.
-  tempDiv.style.width = `${maxWidth}px`;
-  tempDiv.style.height = `${maxHeight}px`; // Set explicit height for overflow control
-  tempDiv.style.boxSizing = 'border-box';
-  tempDiv.style.padding = `${style.padding || 0}px`;
-  tempDiv.style.overflowWrap = 'break-word';
-  tempDiv.style.wordWrap = 'break-word'; // Legacy fallback
-
-  // Apply text styles
-  tempDiv.style.fontFamily = style.fontFamily || 'Arial';
-  tempDiv.style.fontSize = `${style.fontSize || 24}px`;
-  tempDiv.style.fontWeight = style.fontWeight || 'normal';
-  tempDiv.style.fontStyle = style.fontStyle || 'normal';
-  tempDiv.style.color = style.color || '#000000';
-  tempDiv.style.textAlign = style.textAlign || 'left';
-  tempDiv.style.lineHeight = style.lineHeightMultiplier ? `${style.lineHeightMultiplier * (style.fontSize || 24)}px` : 'normal';
-
-  if (style.textShadow) {
-    tempDiv.style.textShadow = `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}`;
-  }
-  if (style.textStroke) {
-    tempDiv.style.webkitTextStroke = `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}`;
-  }
-  tempDiv.style.textDecoration = style.textDecoration || 'none';
-
-  tempDiv.innerHTML = htmlContent;
-
-  // 3. Append to the DOM
-  container.appendChild(tempDiv);
   document.body.appendChild(container);
 
-  // 4. Ensure fonts are loaded
+  const elementToRender = container.firstElementChild;
+
+  if (!elementToRender) {
+    console.error("Falha ao criar o elemento para renderização do HTML.");
+    document.body.removeChild(container);
+    return;
+  }
+
   if (style.fontFamily) {
     try {
       await document.fonts.load(`${style.fontStyle || 'normal'} ${style.fontWeight || 'normal'} ${style.fontSize || 24}px ${style.fontFamily}`);
     } catch (err) {
-      console.warn(`Could not preload font: ${style.fontFamily}.`, err);
+      console.warn(`Não foi possível pré-carregar a fonte: ${style.fontFamily}.`, err);
     }
   }
 
-  // 5. Render the inner div, which has the correct, constrained dimensions.
   try {
-    const canvasFromHtml = await html2canvas(tempDiv, {
+    const canvasFromHtml = await html2canvas(elementToRender, {
       backgroundColor: null,
       useCORS: true,
       scale: window.devicePixelRatio,
     });
-
-    // The alignment calculation should happen *after* rendering, based on the captured canvas size.
-    // However, html2canvas should capture the div with the text already aligned internally.
-    // The `x` passed in is already the starting point of the textbox.
     ctx.drawImage(canvasFromHtml, x, y);
-
   } catch (error) {
-    console.error('Error rendering HTML to canvas with html2canvas:', error);
+    console.error('Erro ao renderizar HTML para canvas com html2canvas:', error);
   } finally {
-    // 6. Clean up the container from the DOM
     document.body.removeChild(container);
   }
 };
