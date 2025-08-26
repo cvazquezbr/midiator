@@ -202,7 +202,7 @@ export const composeSingleImage = async ({
             ctx.translate(-centerX, -centerY);
         }
 
-        const finalFontSize = style.fontSize || 24;
+        const finalFontSize = (style.fontSize || 24) * fontScale;
         const finalStyle = { ...style, fontSize: finalFontSize };
 
         applyTextEffects(ctx, finalStyle);
