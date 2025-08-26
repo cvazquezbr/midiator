@@ -158,7 +158,7 @@ async function handleGetProfiles(fetch, request, response) {
   try {
     const [personalResponse, orgAclsResponse] = await Promise.all([
       fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
-      fetch('https://api.linkedin.com/rest/organizationAcls?q=roleAssignee', { headers })
+      fetch('https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED', { headers })
     ]);
     if (!personalResponse.ok) throw new Error(`Failed to fetch personal profile: ${personalResponse.status}`);
     const personalData = await personalResponse.json();
@@ -166,15 +166,19 @@ async function handleGetProfiles(fetch, request, response) {
     let organizations = [];
     if (orgAclsResponse.ok) {
       const orgAclsData = await orgAclsResponse.json();
-      const orgUrns = orgAclsData.elements?.map(el => el.organization) || [];
-      const uniqueOrgIds = [...new Set(orgUrns.map(urn => urn.split(':').pop()))];
-      const cacheKeys = uniqueOrgIds.map(id => `linkedin:org:${id}`);
 
-      if (forceRefresh && cacheKeys.length > 0) {
-        await kv.del(cacheKeys);
-      }
+      const allowedRoles = new Set(['ADMINISTRATOR', 'CONTENT_ADMINISTRATOR']);
+      const approvedAcls = orgAclsData.elements?.filter(acl => allowedRoles.has(acl.role)) || [];
 
-      if (uniqueOrgIds.length > 0) {
+      if (approvedAcls.length > 0) {
+        const orgUrns = approvedAcls.map(el => el.organization);
+        const uniqueOrgIds = [...new Set(orgUrns.map(urn => urn.split(':').pop()))];
+        const cacheKeys = uniqueOrgIds.map(id => `linkedin:org:${id}`);
+
+        if (forceRefresh && cacheKeys.length > 0) {
+          await kv.del(cacheKeys);
+        }
+
         const allOrgDetails = {};
         const cachedResults = await kv.mget(cacheKeys);
 
@@ -206,7 +210,7 @@ async function handleGetProfiles(fetch, request, response) {
           }
         }
 
-        organizations = orgAclsData.elements.map(acl => {
+        organizations = approvedAcls.map(acl => {
           const orgId = acl.organization.split(':').pop();
           const orgDetails = allOrgDetails[orgId];
           return { id: orgId, name: orgDetails?.localizedName || 'Nome Indisponível', role: acl.role, logo: orgDetails?.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier, type: 'organization' };
