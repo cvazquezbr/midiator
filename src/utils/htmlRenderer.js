@@ -12,6 +12,7 @@ export const containsHtml = (text) => {
 
 /**
  * Renders HTML content onto a canvas using html2canvas, with a robust method to ensure proper layout and wrapping.
+ * This version uses a table-cell display method for more reliable vertical alignment with html2canvas.
  * @param {CanvasRenderingContext2D} ctx The context of the main canvas.
  * @param {string} htmlContent The HTML content to render.
  * @param {number} x The X position on the main canvas.
@@ -29,18 +30,22 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
   container.style.width = 'auto';
   container.style.height = 'auto';
 
-  // Create the target element inside the container. This is what we'll render.
-  const tempDiv = document.createElement('div');
+  // Create a wrapper div that will act as a table.
+  const wrapperDiv = document.createElement('div');
+  wrapperDiv.style.display = 'table';
+  wrapperDiv.style.width = `${maxWidth}px`;
+  wrapperDiv.style.height = `${maxHeight}px`;
 
-  // Apply all necessary styles to the target element.
-  tempDiv.style.width = `${maxWidth}px`;
-  tempDiv.style.height = `${maxHeight}px`;
+  // Create the target element that will act as a table-cell.
+  const tempDiv = document.createElement('div');
+  tempDiv.style.display = 'table-cell';
+  tempDiv.style.verticalAlign = style.verticalAlign || 'top'; // 'top', 'middle', 'bottom'
+
+  // Apply layout and text styles to the cell.
   tempDiv.style.boxSizing = 'border-box';
   tempDiv.style.padding = `${style.padding || 0}px`;
   tempDiv.style.overflowWrap = 'break-word';
   tempDiv.style.wordWrap = 'break-word';
-
-  // Apply text and alignment styles
   tempDiv.style.fontFamily = style.fontFamily || 'Arial';
   tempDiv.style.fontSize = `${style.fontSize || 24}px`;
   tempDiv.style.fontWeight = style.fontWeight || 'normal';
@@ -48,10 +53,8 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
   tempDiv.style.color = style.color || '#000000';
   tempDiv.style.textAlign = style.textAlign || 'left';
   tempDiv.style.lineHeight = style.lineHeightMultiplier ? style.lineHeightMultiplier : 'normal';
-  tempDiv.style.display = 'flex';
-  tempDiv.style.flexDirection = 'column';
-  tempDiv.style.justifyContent = style.verticalAlign === 'middle' ? 'center' : (style.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start');
 
+  // Apply effects
   if (style.textShadow) {
     tempDiv.style.textShadow = `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}`;
   }
@@ -61,24 +64,9 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
 
   tempDiv.innerHTML = htmlContent;
 
-  // Force styles on all child elements to ensure consistent rendering
-  const allElements = tempDiv.getElementsByTagName('*');
-  for (const el of allElements) {
-      // Force wrapping and prevent default browser styles from interfering
-      el.style.overflowWrap = 'break-word';
-      el.style.wordWrap = 'break-word';
-      el.style.whiteSpace = 'normal';
-      // Force style inheritance from the parent container
-      el.style.color = 'inherit';
-      el.style.fontFamily = 'inherit';
-      el.style.fontWeight = 'inherit';
-      el.style.fontStyle = 'inherit';
-      el.style.textAlign = 'inherit';
-      el.style.lineHeight = 'inherit';
-  }
-
-  // Build the DOM structure and append to the body
-  container.appendChild(tempDiv);
+  // Build the DOM structure: container -> wrapperDiv -> tempDiv
+  wrapperDiv.appendChild(tempDiv);
+  container.appendChild(wrapperDiv);
   document.body.appendChild(container);
 
   // Ensure fonts are loaded before capturing
@@ -91,9 +79,8 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
   }
 
   try {
-    // Render the styled child div, not the container.
-    // Explicitly pass width and height to html2canvas as this was found to be necessary.
-    const canvasFromHtml = await html2canvas(tempDiv, {
+    // Render the WRAPPER div, which contains the cell, to ensure dimensions and alignment are respected.
+    const canvasFromHtml = await html2canvas(wrapperDiv, {
       backgroundColor: null,
       useCORS: true,
       scale: window.devicePixelRatio,
