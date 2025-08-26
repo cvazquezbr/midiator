@@ -547,6 +547,10 @@ const DraggableElementInternal = ({
           height: `${position.height}%`,
           transform: `rotate(${rotation || 0}deg)`,
           zIndex: position.zIndex || 'auto',
+          backgroundColor: style.backgroundColor || 'rgba(0,0,0,0)',
+          border: `${style.borderWidth || 0}px solid ${style.borderColor || '#000000'}`,
+          borderRadius: `${style.borderRadius || 0}px`,
+          padding: `${style.padding || 0}px`,
         }}
         onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
         onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}

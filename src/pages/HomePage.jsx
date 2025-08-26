@@ -575,7 +575,13 @@ function HomePage() {
       textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
       strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
       shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
-      textAlign: 'left', verticalAlign: 'top'
+      textAlign: 'left', verticalAlign: 'top',
+      // Box properties
+      backgroundColor: 'rgba(0,0,0,0)',
+      borderColor: '#000000',
+      borderWidth: 0,
+      borderRadius: 0,
+      padding: 5,
     };
     novasColunas.forEach((header, index) => {
       updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true };

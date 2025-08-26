@@ -47,6 +47,12 @@ const COMPLETE_DEFAULT_STYLE = {
   shadowBlur: 4,
   shadowOffsetX: 2,
   shadowOffsetY: 2,
+  // Box properties
+  backgroundColor: 'rgba(0,0,0,0)',
+  borderColor: '#000000',
+  borderWidth: 0,
+  borderRadius: 0,
+  padding: 5,
 };
 
 export const autoArrangeFields = ({
