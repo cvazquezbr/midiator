@@ -83,6 +83,8 @@ function HomePage() {
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
   const [generationStatus, setGenerationStatus] = useState('');
   const [campaignContent, setCampaignContent] = useState(null);
+  const [campaignGenerationFailed, setCampaignGenerationFailed] = useState(false);
+  const [generationError, setGenerationError] = useState('');
   const [editingField, setEditingField] = useState(null);
   const [persona, setPersona] = useState({});
   const [autor, setAutor] = useState({});
@@ -582,7 +584,7 @@ function HomePage() {
       borderWidth: 0,
       borderRadius: 0,
       padding: 5,
-      backgroundOpacity: 1,
+      backgroundOpacity: 0,
     };
     novasColunas.forEach((header, index) => {
       updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true };
@@ -898,7 +900,7 @@ function HomePage() {
               onCreateNew={handleCreateNewCampaign}
             />
           </div>
-          <div hidden={activeStep !== 1}><Container maxWidth="lg"><Campaign steps={steps} activeStep={activeStep} {...campaignData} setProblema={setProblema} setSolucao={setSolucao} isGeneratingCampaign={isGeneratingCampaign} handleGenerateCampaignContent={handleGenerateCampaignContent} handleResetCampaign={handleResetCampaign} handleExportHtml={() => exportHtml(campaignData)} editingField={editingField} setEditingField={setEditingField} isGeneratingSummaryMedio={isGeneratingSummaryMedio} handleGenerateSummary={handleGenerateSummary} isGeneratingSummaryPequeno={isGeneratingSummaryPequeno} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} setCampaignContent={setCampaignContent} onEditFollowup={handleEditFollowup} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} setAspectRatio={setAspectRatio} /></Container></div>
+          <div hidden={activeStep !== 1}><Container maxWidth="lg"><Campaign steps={steps} activeStep={activeStep} {...campaignData} setProblema={setProblema} setSolucao={setSolucao} isGeneratingCampaign={isGeneratingCampaign} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleGenerateCampaignContent={handleGenerateCampaignContent} handleResetCampaign={handleResetCampaign} handleExportHtml={() => exportHtml(campaignData)} editingField={editingField} setEditingField={setEditingField} isGeneratingSummaryMedio={isGeneratingSummaryMedio} handleGenerateSummary={handleGenerateSummary} isGeneratingSummaryPequeno={isGeneratingSummaryPequeno} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} setCampaignContent={setCampaignContent} onEditFollowup={handleEditFollowup} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} setAspectRatio={setAspectRatio} /></Container></div>
           <div hidden={activeStep !== 2}><PostsCurtosStep steps={steps} inputMethod={inputMethod} setInputMethod={setInputMethod} handleDrop={handleDrop} handleDragOver={handleDragOver} fileInputRef={fileInputRef} handleCSVUpload={handleCSVUpload} downloadExampleCsv={downloadExampleCsv} setShowSetupModal={setShowSetupModal} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} generateImagesAutomatically={generateImagesAutomatically} setGenerateImagesAutomatically={setGenerateImagesAutomatically} handleGenerateIAContent={handleGenerateIAContent} isGenerating={isGenerating} csvData={csvData} csvHeaders={csvHeaders} onDadosAlterados={handleDadosAlterados} darkMode={darkMode} exportCsv={exportCsv} /></div>
           <div hidden={activeStep !== 3}>
             <ImageStep
@@ -1005,13 +1007,13 @@ function HomePage() {
             if (editingFollowup) return editingFollowup.content;
             if (!editingField) return '';
 
-            // Step 0: Campaign content
-            if (activeStep === 0) {
+            // Step 1: Campaign content
+            if (activeStep === 1) {
               return campaignContent ? campaignContent[editingField] || '' : '';
             }
 
-            // Step 2: Image/Formatting step (from CSV)
-            if (activeStep === 2) {
+            // Step 3: Image/Formatting step (from CSV)
+            if (activeStep === 3) {
               const currentRecord = csvData[currentPreviewIndex];
               return currentRecord ? currentRecord[editingField] || '' : '';
             }
@@ -1024,9 +1026,9 @@ function HomePage() {
             if (editingFollowup) {
               handleSaveFollowup(newContent);
             } else if (editingField) {
-              if (activeStep === 0) {
+              if (activeStep === 1) {
                 setCampaignContent((prev) => ({ ...prev, [editingField]: newContent }));
-              } else if (activeStep === 2) {
+              } else if (activeStep === 3) {
                 const updatedCsvData = csvData.map((row, index) => {
                   if (index === currentPreviewIndex) {
                     return { ...row, [editingField]: newContent };
