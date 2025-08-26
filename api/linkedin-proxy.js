@@ -141,18 +141,20 @@ async function handleCreatePost(fetch, request, response) {
     const { accessToken, payload } = request.body;
     if (!accessToken || !payload) return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
 
-    console.error('[DEBUG] Received payload for createPost:', JSON.stringify(payload, null, 2));
-
-    const { author, content, images } = payload;
-    if (!author || !content) {
-        console.error(`[DEBUG] createPost validation failed. Author: ${author}, Content: ${content ? 'provided' : 'missing'}`);
-        return response.status(400).json({ error: 'Missing author or content for creating post.' });
+    const { targetId, targetType, content, images } = payload;
+    if (!targetId || !targetType || !content) {
+        return response.status(400).json({ error: 'Missing targetId, targetType, or content for creating post.' });
     }
+
+    const authorUrn = targetType === 'organization'
+        ? `urn:li:organization:${targetId}`
+        : `urn:li:person:${targetId}`;
+
     const shareContent = { shareCommentary: { text: content }, shareMediaCategory: (images && images.length > 0) ? 'IMAGE' : 'NONE' };
     if (images && images.length > 0) {
         shareContent.media = images.map(assetURN => ({ status: 'READY', media: assetURN }));
     }
-    const postData = { author, lifecycleState: 'PUBLISHED', specificContent: { 'com.linkedin.ugc.ShareContent': shareContent }, visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' } };
+    const postData = { author: authorUrn, lifecycleState: 'PUBLISHED', specificContent: { 'com.linkedin.ugc.ShareContent': shareContent }, visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' } };
     return handleGenericPost(fetch, { ...request, body: { accessToken, payload: postData } }, response, 'https://api.linkedin.com/rest/posts');
 }
 
@@ -167,7 +169,7 @@ async function handleGetProfiles(fetch, request, response) {
     ]);
     if (!personalResponse.ok) throw new Error(`Failed to fetch personal profile: ${personalResponse.status}`);
     const personalData = await personalResponse.json();
-    const personal = { id: personalData.id, urn: `urn:li:person:${personalData.id}`, name: `${personalData.firstName.localized.pt_BR || personalData.firstName.localized.en_US} ${personalData.lastName.localized.pt_BR || personalData.lastName.localized.en_US}`, type: 'personal', profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier };
+    const personal = { id: personalData.id, name: `${personalData.firstName.localized.pt_BR || personalData.firstName.localized.en_US} ${personalData.lastName.localized.pt_BR || personalData.lastName.localized.en_US}`, type: 'personal', profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier };
     let organizations = [];
     if (orgAclsResponse.ok) {
       const orgAclsData = await orgAclsResponse.json();
@@ -212,7 +214,6 @@ async function handleGetProfiles(fetch, request, response) {
             const acl = approvedAcls.find(a => a.organization.endsWith(details.id));
             return {
                 id: details.id,
-                urn: `urn:li:organization:${details.id}`,
                 name: details.localizedName || 'Nome Indisponível',
                 role: acl?.role,
                 logo: details.logoV2?.['original~']?.elements?.[0]?.identifiers?.[0]?.identifier,
