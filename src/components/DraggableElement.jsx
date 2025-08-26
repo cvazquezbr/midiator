@@ -3,6 +3,7 @@ import { Box } from '@mui/material';
 import RichTextEditor from './RichTextEditor';
 import styles from './DraggableElement.module.css';
 import TextEditorDialog from './TextEditorDialog';
+import { wrapTextInArea } from '../utils/imageComposer';
 
 const DraggableElementInternal = ({
   element, // Combined object for field/element data
@@ -478,29 +479,6 @@ const DraggableElementInternal = ({
     }
   }, [isDragging, isResizing, isRotating, dragStart, initialPosition, initialSize, initialRotation, handleMouseMove, handleMouseUp, handleTouchEnd, handleTouchMove]);
 
-  const wrapText = (text, maxWidth, fontSize) => {
-    if (!text) return [''];
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${fontSize}px ${style.fontFamily || 'Arial'}`;
-    const words = text.toString().split(' ');
-    const lines = [];
-    let currentLine = words[0] || '';
-    for (let i = 1; i < words.length; i++) {
-      const word = words[i];
-      const testLine = currentLine + ' ' + word;
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && currentLine !== '') {
-        lines.push(currentLine);
-        currentLine = word;
-      } else {
-        currentLine = testLine;
-      }
-    }
-    lines.push(currentLine);
-    return lines;
-  };
-
   const fontScale = fontScaleProp || 1;
 
   const baseFontSize = style.fontSize || 24;
@@ -511,13 +489,29 @@ const DraggableElementInternal = ({
   // For consistent wrapping between preview and final render, calculate wrapping
   // in the scaled-down coordinate space of the preview.
   const scaledPadding = 8 * fontScale;
-  const textLines = enableHtmlRendering
-    ? [content]
-    : wrapText(
-        editedContent,
-        pixelPosition.width - (2 * scaledPadding),
-        scaledFontSize
-      );
+
+  const textLines = React.useMemo(() => {
+    if (enableHtmlRendering) {
+      return [content];
+    }
+    // Create a temporary canvas context for text measurement
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // The style object for wrapTextInArea needs the font size in pixels
+    const styleForWrapping = {
+        ...style,
+        fontSize: scaledFontSize,
+    };
+
+    return wrapTextInArea(
+      ctx,
+      editedContent,
+      styleForWrapping,
+      pixelPosition.width - (2 * scaledPadding),
+      pixelPosition.height - (2 * scaledPadding)
+    );
+  }, [editedContent, style, scaledFontSize, pixelPosition.width, pixelPosition.height, scaledPadding, enableHtmlRendering, content]);
 
   const handleSize = isMobile ? 24 : 12;
 
