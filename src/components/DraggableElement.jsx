@@ -5,6 +5,19 @@ import styles from './DraggableElement.module.css';
 import TextEditorDialog from './TextEditorDialog';
 import { wrapTextInArea } from '../utils/imageComposer';
 
+const hexToRgba = (hex, alpha) => {
+  if (!hex || hex.length < 4) {
+    return `rgba(0, 0, 0, ${alpha})`;
+  }
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) {
+    return `rgba(0, 0, 0, ${alpha})`;
+  }
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 const DraggableElementInternal = ({
   element, // Combined object for field/element data
   position,
@@ -488,7 +501,7 @@ const DraggableElementInternal = ({
 
   // For consistent wrapping between preview and final render, calculate wrapping
   // in the scaled-down coordinate space of the preview.
-  const scaledPadding = 8 * fontScale;
+  const scaledPadding = (style.padding || 0) * fontScale;
 
   const textLines = React.useMemo(() => {
     if (enableHtmlRendering) {
@@ -547,7 +560,7 @@ const DraggableElementInternal = ({
           height: `${position.height}%`,
           transform: `rotate(${rotation || 0}deg)`,
           zIndex: position.zIndex || 'auto',
-          backgroundColor: style.backgroundColor || 'rgba(0,0,0,0)',
+          backgroundColor: hexToRgba(style.backgroundColor || '#000000', style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1),
           border: `${style.borderWidth || 0}px solid ${style.borderColor || '#000000'}`,
           borderRadius: `${style.borderRadius || 0}px`,
           padding: `${style.padding || 0}px`,

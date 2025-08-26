@@ -336,115 +336,29 @@ const ImageGeneratorFrontendOnly = ({
       return;
     }
     try {
-      // 1. Compose the background with filters and brand elements.
-      // This is the new, correct flow. The background URL is the original, clean one.
-      const backgroundCanvas = await composeImage(
-        currentBackgroundImage,
-        imageFilters, // Global filters from component props
-        elementsToUse   // Specific brand elements for this image
-      );
-
-      // 2. Create the final canvas and draw the composed background on it.
-      const finalCanvas = document.createElement('canvas');
-      const ctx = finalCanvas.getContext('2d');
-      finalCanvas.width = customSize ? customSize.width : backgroundCanvas.width;
-      finalCanvas.height = customSize ? customSize.height : backgroundCanvas.height;
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-
-      ctx.drawImage(backgroundCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
-
-      // 3. Draw text fields onto the final canvas.
-      for (const field of Object.keys(record)) {
-        const position = positionsToUse[field];
-        const style = stylesToUse[field];
-        if (!position || !position.visible || !style) continue;
-
-        const text = record[field] || "";
-        if (!text) continue;
-
-        ctx.save();
-
-        const posPx = {
-          x: Math.round((position.x / 100) * finalCanvas.width),
-          y: Math.round((position.y / 100) * finalCanvas.height),
-          width: Math.round((position.width / 100) * finalCanvas.width),
-          height: Math.round((position.height / 100) * finalCanvas.height)
-        };
-
-        if (position.rotation) {
-          const centerX = posPx.x + posPx.width / 2;
-          const centerY = posPx.y + posPx.height / 2;
-          ctx.translate(centerX, centerY);
-          ctx.rotate(position.rotation * Math.PI / 180);
-          ctx.translate(-centerX, -centerY);
-        }
-
-        const finalFontSize = (style.fontSize || 24) * (fontScale || 1);
-        const finalStyle = { ...style, fontSize: finalFontSize };
-
-        applyTextEffects(ctx, finalStyle);
-
-        const fixedPadding = 8;
-        const effectiveTextWidth = Math.max(0, posPx.width - (2 * fixedPadding));
-        const effectiveTextHeight = Math.max(0, posPx.height - (2 * fixedPadding));
-        const textContentStartX = posPx.x + fixedPadding;
-        const textContentStartY = posPx.y + fixedPadding;
-
-        const lines = wrapTextInArea(ctx, text, finalStyle, effectiveTextWidth, effectiveTextHeight);
-        const lineHeight = finalFontSize * (style.lineHeightMultiplier || 1.2);
-
-        let currentLineRenderY = textContentStartY;
-        if (style.verticalAlign === 'middle') {
-          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
-          currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
-        } else if (style.verticalAlign === 'bottom') {
-          const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
-          currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
-        }
-
-        if (containsHtml(text)) {
-          await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, finalStyle, effectiveTextWidth, effectiveTextHeight);
-        } else {
-          for (const line of lines) {
-            let currentLineRenderX;
-            if (style.textAlign === 'center') {
-              currentLineRenderX = textContentStartX + effectiveTextWidth / 2;
-            } else if (style.textAlign === 'right') {
-              currentLineRenderX = textContentStartX + effectiveTextWidth;
-            } else {
-              currentLineRenderX = textContentStartX;
-            }
-            const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
-            await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, finalStyle, effectiveTextWidth, effectiveTextHeight);
-          }
-        }
-        ctx.restore();
-      }
-
-      // 4. Generate final data and update state
-      const dataUrl = finalCanvas.toDataURL('image/png', 1.0);
-      const blob = dataURLtoBlob(dataUrl);
-
-      const newImageData = {
-        url: dataUrl,
-        dataUrl: dataUrl,
-        blob,
+      const newImageData = await composeSingleImage({
         record,
         index,
-        filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        backgroundImage: currentBackgroundImage, // Preserve the original background
-        customFieldPositions: positionsToUse,
-        customFieldStyles: stylesToUse,
-        customBrandElements: elementsToUse,
-        customOriginalImageSize: customSize,
-        fontScale: fontScale,
-      };
+        itemBackgroundImage: currentBackgroundImage,
+        imageFilters,
+        brandElements: elementsToUse,
+        fieldPositions: positionsToUse,
+        fieldStyles: stylesToUse,
+        fontScale,
+      });
 
       setGeneratedImages(prevImages => {
         const updatedImages = prevImages.map(img => {
           if (img.index === index) {
-            return newImageData;
+            // The new object from composeSingleImage doesn't have the custom* fields,
+            // so we need to add them back.
+            return {
+              ...newImageData,
+              customFieldPositions: positionsToUse,
+              customFieldStyles: stylesToUse,
+              customBrandElements: elementsToUse,
+              customOriginalImageSize: customSize,
+            };
           }
           return img;
         });

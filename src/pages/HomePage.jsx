@@ -582,6 +582,7 @@ function HomePage() {
       borderWidth: 0,
       borderRadius: 0,
       padding: 5,
+      backgroundOpacity: 1,
     };
     novasColunas.forEach((header, index) => {
       updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true };

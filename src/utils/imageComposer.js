@@ -82,6 +82,19 @@ const drawRoundedRect = (ctx, x, y, width, height, radius) => {
   ctx.closePath();
 };
 
+const hexToRgba = (hex, alpha) => {
+  if (!hex || hex.length < 4) {
+    return `rgba(0, 0, 0, ${alpha})`;
+  }
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) {
+    return `rgba(0, 0, 0, ${alpha})`;
+  }
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 export const drawTextWithEffects = async (ctx, text, x, y, style, maxWidth, maxHeight) => {
     if (containsHtml(text)) {
         await renderHtmlToCanvas(ctx, text, x, y, maxWidth, maxHeight, style);
@@ -219,8 +232,10 @@ export const composeSingleImage = async ({
         const finalStyle = { ...style, fontSize: finalFontSize };
 
         // Draw the textbox background and border
-        if (style.backgroundColor && style.backgroundColor !== 'rgba(0,0,0,0)') {
-            ctx.fillStyle = style.backgroundColor;
+        const backgroundOpacity = style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1;
+        const backgroundColorHex = style.backgroundColor || '#000000';
+        if (backgroundOpacity > 0) {
+            ctx.fillStyle = hexToRgba(backgroundColorHex, backgroundOpacity);
             drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, style.borderRadius || 0);
             ctx.fill();
         }
