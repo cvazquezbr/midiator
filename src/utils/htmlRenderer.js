@@ -25,8 +25,9 @@ export const containsHtml = (text) => {
 export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHeight, style) => {
   const tempDiv = document.createElement('div');
   tempDiv.style.position = 'absolute';
-  tempDiv.style.left = '-9999px'; // Move off-screen
-  tempDiv.style.top = '-9999px';
+  tempDiv.style.visibility = 'hidden'; // Render on-screen but hidden
+  tempDiv.style.top = '0';
+  tempDiv.style.left = '0';
   tempDiv.style.width = `${maxWidth}px`;
   tempDiv.style.height = 'auto'; // Altura automática para medir o conteúdo
   tempDiv.style.boxSizing = 'border-box';
