@@ -31,6 +31,7 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
   tempDiv.style.height = 'auto'; // Altura automática para medir o conteúdo
   tempDiv.style.boxSizing = 'border-box';
   tempDiv.style.padding = `${style.padding || 0}px`;
+  tempDiv.style.overflowWrap = 'break-word';
 
   // Aplicar estilos para medição
   tempDiv.style.fontFamily = style.fontFamily || 'Arial';
