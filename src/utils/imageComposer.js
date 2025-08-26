@@ -171,10 +171,6 @@ export const composeSingleImage = async ({
     // 1. Compose the background with filters and brand elements
     const backgroundCanvas = await composeImage(itemBackgroundImage, imageFilters, brandElements);
 
-    console.log(`[composeSingleImage] Canvas created with dimensions: ${backgroundCanvas.width}x${backgroundCanvas.height}`);
-    console.log(`[composeSingleImage] Received fontScale: ${fontScale}`);
-
-
     // 2. Create a new canvas to draw the final image with text
     const finalCanvas = document.createElement('canvas');
     const ctx = finalCanvas.getContext('2d');
@@ -208,10 +204,6 @@ export const composeSingleImage = async ({
 
         const finalFontSize = (style.fontSize || 24) * fontScale;
         const finalStyle = { ...style, fontSize: finalFontSize };
-
-        if (field === 'mensagem') { // Log only for a specific field to avoid excessive noise
-            console.log(`[composeSingleImage] Field: ${field} | Base Font Size: ${style.fontSize || 24} | Calculated finalFontSize: ${finalFontSize}`);
-        }
 
         applyTextEffects(ctx, finalStyle);
         const fixedPadding = 8;
