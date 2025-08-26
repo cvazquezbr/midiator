@@ -1,10 +1,9 @@
-import { containsHtml as originalContainsHtml } from './htmlRenderer';
+import html2canvas from 'html2canvas';
 
 /**
- * Verifica se uma string contém HTML.
- * A implementação original foi mantida, mas esta função pode ser estendida se necessário.
- * @param {string} text - Texto para verificar
- * @returns {boolean} True se contém HTML
+ * Checks if a string contains HTML tags.
+ * @param {string} text The text to check.
+ * @returns {boolean} True if the text contains HTML.
  */
 export const containsHtml = (text) => {
   if (!text) return false;
@@ -12,84 +11,92 @@ export const containsHtml = (text) => {
 };
 
 /**
- * Renderiza HTML em um canvas usando a técnica de SVG foreignObject.
- * Este método é mais fiável do que o html2canvas para renderizar HTML complexo e com estilos.
- * @param {CanvasRenderingContext2D} ctx - Contexto do canvas principal onde o HTML será desenhado.
- * @param {string} htmlContent - O conteúdo HTML a ser renderizado.
- * @param {number} x - Posição X no canvas principal.
- * @param {number} y - Posição Y no canvas principal.
- * @param {number} maxWidth - Largura máxima para o conteúdo HTML.
- * @param {number} maxHeight - Altura máxima para o conteúdo HTML.
- * @param {Object} style - Estilos CSS a serem aplicados ao elemento HTML.
+ * Renders HTML content onto a canvas using html2canvas, with a robust method to ensure proper layout and wrapping.
+ * @param {CanvasRenderingContext2D} ctx The context of the main canvas.
+ * @param {string} htmlContent The HTML content to render.
+ * @param {number} x The X position on the main canvas.
+ * @param {number} y The Y position on the main canvas.
+ * @param {number} maxWidth The maximum width for the HTML content.
+ * @param {number} maxHeight The maximum height for the HTML content.
+ * @param {Object} style The CSS styles to apply.
  */
-export const renderHtmlToCanvas = (ctx, htmlContent, x, y, maxWidth, maxHeight, style) => {
-  return new Promise((resolve, reject) => {
-    // Construir a string de estilo CSS a partir do objeto de estilo
-    const inlineStyle = `
-      div {
-        width: ${maxWidth}px;
-        height: ${maxHeight}px;
-        box-sizing: border-box;
-        padding: ${style.padding || 0}px;
-        overflow-wrap: break-word;
-        word-wrap: break-word;
-        font-family: '${style.fontFamily || 'Arial'}';
-        font-size: ${style.fontSize || 24}px;
-        font-weight: ${style.fontWeight || 'normal'};
-        font-style: ${style.fontStyle || 'normal'};
-        color: ${style.color || '#000000'};
-        text-align: ${style.textAlign || 'left'};
-        line-height: ${style.lineHeightMultiplier ? style.lineHeightMultiplier : 'normal'};
-        display: flex;
-        flex-direction: column;
-        justify-content: ${style.verticalAlign === 'middle' ? 'center' : (style.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start')};
-        margin: 0;
-        padding: ${style.padding || 0}px;
-      }
-      ${style.textShadow ? `
-      div {
-        text-shadow: ${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'};
-      }` : ''}
-      ${style.textStroke ? `
-      div {
-        -webkit-text-stroke: ${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'};
-      }` : ''}
-    `;
+export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHeight, style) => {
+  // Create an off-screen container to provide a stable layout context.
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.top = '-9999px';
+  container.style.width = 'auto';
+  container.style.height = 'auto';
 
-    // Construir o SVG com foreignObject
-    const data = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${maxWidth}" height="${maxHeight}">
-        <foreignObject width="100%" height="100%">
-          <div xmlns="http://www.w3.org/1999/xhtml">
-            <style>${inlineStyle.replace(/\n/g, ' ')}</style>
-            ${htmlContent}
-          </div>
-        </foreignObject>
-      </svg>
-    `;
+  // Create the target element inside the container. This is what we'll render.
+  const tempDiv = document.createElement('div');
 
-    const img = new Image();
-    // Codificar o SVG para uso em um data URL
-    const svgBlob = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
+  // Apply all necessary styles to the target element.
+  tempDiv.style.width = `${maxWidth}px`;
+  tempDiv.style.height = `${maxHeight}px`;
+  tempDiv.style.boxSizing = 'border-box';
+  tempDiv.style.padding = `${style.padding || 0}px`;
+  tempDiv.style.overflowWrap = 'break-word';
+  tempDiv.style.wordWrap = 'break-word';
 
-    img.onload = () => {
-      ctx.drawImage(img, x, y);
-      URL.revokeObjectURL(url);
-      resolve();
-    };
+  // Apply text and alignment styles
+  tempDiv.style.fontFamily = style.fontFamily || 'Arial';
+  tempDiv.style.fontSize = `${style.fontSize || 24}px`;
+  tempDiv.style.fontWeight = style.fontWeight || 'normal';
+  tempDiv.style.fontStyle = style.fontStyle || 'normal';
+  tempDiv.style.color = style.color || '#000000';
+  tempDiv.style.textAlign = style.textAlign || 'left';
+  tempDiv.style.lineHeight = style.lineHeightMultiplier ? style.lineHeightMultiplier : 'normal';
+  tempDiv.style.display = 'flex';
+  tempDiv.style.flexDirection = 'column';
+  tempDiv.style.justifyContent = style.verticalAlign === 'middle' ? 'center' : (style.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start');
 
-    img.onerror = (err) => {
-      URL.revokeObjectURL(url);
-      console.error("Erro ao carregar a imagem SVG para o canvas:", err);
-      reject(err);
-    };
+  if (style.textShadow) {
+    tempDiv.style.textShadow = `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}`;
+  }
+  if (style.textStroke) {
+    tempDiv.style.webkitTextStroke = `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}`;
+  }
 
-    img.src = url;
-  });
+  tempDiv.innerHTML = htmlContent;
+
+  // Build the DOM structure and append to the body
+  container.appendChild(tempDiv);
+  document.body.appendChild(container);
+
+  // Ensure fonts are loaded before capturing
+  if (style.fontFamily) {
+    try {
+      await document.fonts.load(`${style.fontStyle || 'normal'} ${style.fontWeight || 'normal'} ${style.fontSize || 24}px ${style.fontFamily}`);
+    } catch (err) {
+      console.warn(`Could not preload font: ${style.fontFamily}.`, err);
+    }
+  }
+
+  try {
+    // Render the styled child div, not the container.
+    // Explicitly pass width and height to html2canvas as this was found to be necessary.
+    const canvasFromHtml = await html2canvas(tempDiv, {
+      backgroundColor: null,
+      useCORS: true,
+      scale: window.devicePixelRatio,
+      width: maxWidth,
+      height: maxHeight,
+    });
+
+    // Draw the resulting canvas onto the main context at the specified coordinates.
+    ctx.drawImage(canvasFromHtml, x, y);
+
+  } catch (error) {
+    console.error('Error rendering HTML to canvas with html2canvas:', error);
+  } finally {
+    // Clean up by removing the container from the DOM.
+    document.body.removeChild(container);
+  }
 };
 
-// Manter outras funções exportadas se existirem e forem necessárias em outros locais
+// Keep other exported functions as they were.
 export const parseHtmlToFormattedText = (html) => {
   return [{ text: html, format: {} }];
 };
