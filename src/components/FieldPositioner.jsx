@@ -104,7 +104,6 @@ const FieldPositioner = ({
   onOpenHtmlEditor,
   currentPreviewIndex,
   setCurrentPreviewIndex,
-  onFontScaleChange,
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
@@ -180,32 +179,13 @@ const FieldPositioner = ({
     const observer = new ResizeObserver((entries) => {
       for (let entry of entries) {
         const { width, height } = entry.contentRect;
+        // Since the container has the correct aspect ratio and the image has object-fit: fill,
+        // the rendered metrics are simply the container's dimensions.
         setImageSize({ width, height });
+        setRenderedImageMetrics({ width, height, x: 0, y: 0 });
+
         if (onImageDisplayedSizeChange) {
           onImageDisplayedSizeChange({ width, height });
-        }
-
-        // Calculate the actual rendered size and position of the image due to 'object-fit: contain'
-        if (originalImageSize?.width && originalImageSize?.height && width > 0 && height > 0) {
-            const containerAspectRatio = width / height;
-            const imageAspectRatio = originalImageSize.width / originalImageSize.height;
-
-            let renderedWidth, renderedHeight, x, y;
-
-            if (containerAspectRatio > imageAspectRatio) {
-                // Container is wider than the image (letterboxed on sides)
-                renderedHeight = height;
-                renderedWidth = height * imageAspectRatio;
-                x = (width - renderedWidth) / 2;
-                y = 0;
-            } else {
-                // Container is taller or equal aspect ratio (letterboxed on top/bottom)
-                renderedWidth = width;
-                renderedHeight = width / imageAspectRatio;
-                x = 0;
-                y = (height - renderedHeight) / 2;
-            }
-            setRenderedImageMetrics({ width: renderedWidth, height: renderedHeight, x, y });
         }
       }
     });
@@ -213,7 +193,7 @@ const FieldPositioner = ({
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [onImageDisplayedSizeChange, backgroundImage, originalImageSize]);
+  }, [onImageDisplayedSizeChange, backgroundImage]);
 
   // Effect to initialize or update field positions and styles based on csvHeaders and props.
   // This ensures that every field in csvHeaders has a corresponding position and a complete style object.
@@ -665,7 +645,7 @@ const FieldPositioner = ({
                   width: '100%',
                   height: '100%',
                   display: 'block',
-                  objectFit: 'contain',
+                  objectFit: 'fill',
                   pointerEvents: 'none',
                   userSelect: 'none',
                   WebkitUserDrag: 'none',

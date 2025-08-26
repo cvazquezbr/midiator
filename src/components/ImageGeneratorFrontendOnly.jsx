@@ -54,8 +54,7 @@ const ImageGeneratorFrontendOnly = ({
   originalImageSize,
   imageFilters,
   brandElements,
-  onBrandElementsChange,
-  fontScale = 1
+  onBrandElementsChange
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -186,7 +185,6 @@ const ImageGeneratorFrontendOnly = ({
         brandElements,
         fieldPositions,
         fieldStyles,
-        fontScale,
       })
       .then(imageData => {
         setProgress(p => p + 1);
