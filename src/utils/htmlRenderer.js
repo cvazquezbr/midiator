@@ -22,7 +22,7 @@ export const containsHtml = (text) => {
  * @param {Object} style - Estilos CSS a serem aplicados ao elemento HTML temporário.
  *                         Deve incluir propriedades como fontFamily, fontSize, color, textAlign, etc.
  */
-export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHeight, style, fontScale = 1) => {
+export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHeight, style) => {
   const tempDiv = document.createElement('div');
   tempDiv.style.position = 'absolute';
   tempDiv.style.left = '-9999px'; // Move off-screen
@@ -67,7 +67,6 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
     const canvasFromHtml = await html2canvas(tempDiv, {
       backgroundColor: null,
       useCORS: true,
-      scale: fontScale,
     });
 
     // Desenhar o canvas gerado no canvas principal na posição X ajustada
