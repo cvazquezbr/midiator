@@ -557,6 +557,12 @@ function HomePage() {
         return csvData.length > 0;
       case 4: // -> Gerar Imagens
         return backgroundImage !== null;
+      case 5: // -> Gerar Áudio
+        if (generatedImagesData.length === 0 || !generatedImagesData.every(img => img.blob)) {
+            toast.error("Por favor, gere todas as imagens na etapa 4 antes de prosseguir.");
+            return false;
+        }
+        return true;
       default:
         return true;
     }

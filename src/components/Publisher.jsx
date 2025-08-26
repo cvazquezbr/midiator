@@ -54,6 +54,7 @@ import { toast } from 'sonner';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getTimezone } from '../utils/timezone';
 import { publishToWordPress } from '../utils/wordpressAPI';
+import { dataURLtoBlob } from '../utils/imageComposer';
 import { getLinkedInProfiles, publishToLinkedIn } from '../utils/linkedinAPI';
 import { useUserAuth } from '../context/UserAuthContext';
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
@@ -355,10 +356,18 @@ const Publisher = ({
       if (!campaignContent || !campaignContent.conteudoFormatado || !generatedImagesData || generatedImagesData.length === 0) {
         throw new Error('Dados da campanha ou imagens não estão disponíveis.');
       }
-      const firstImage = generatedImagesData[0];
+
+      const firstImage = { ...generatedImagesData[0] }; // Make a copy to avoid state mutation
+
+      // If blob is missing but URL (dataUrl) exists, regenerate the blob
+      if (!firstImage.blob && firstImage.url) {
+        firstImage.blob = dataURLtoBlob(firstImage.url);
+      }
+
       if (!firstImage || !firstImage.blob) {
         throw new Error('A primeira imagem gerada não contém um blob válido.');
       }
+
       const campaignData = {
         campaignContent,
         conteudoFormatado: campaignContent.conteudoFormatado,
@@ -773,7 +782,7 @@ const Publisher = ({
                 size="large"
                 color="secondary"
                 onClick={handlePublishWordPress}
-                disabled={isPublishingWp || isPublishingLi}
+                disabled={isPublishingWp || isPublishingLi || generatedImagesData.length === 0 || !generatedImagesData.every(img => img.blob)}
               >
                 {isPublishingWp ? 'Publicando...' : 'Publicar no WordPress'}
               </Button>
