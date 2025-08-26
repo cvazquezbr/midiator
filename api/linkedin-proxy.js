@@ -4,19 +4,18 @@ import { kv } from './kv.js';
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function fetchWithRetry(fetch, url, options, retries = 5, initialBackoff = 1000) {
+async function fetchWithRetry(fetch, url, options, retries = 5, initialBackoff = 3000) {
   let backoff = initialBackoff;
   for (let i = 0; i < retries; i++) {
     const response = await fetch(url, options);
     if (response.status === 429) {
-      // Use Retry-After header if available, otherwise use exponential backoff
       const retryAfterHeader = response.headers.get('Retry-After');
       const retryAfter = retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : backoff;
+      const jitter = Math.random() * 1000;
 
-      console.warn(`Rate limit hit. Retrying after ${retryAfter}ms... (Attempt ${i + 1}/${retries})`);
-      await delay(retryAfter);
+      console.warn(`Rate limit hit. Retrying after ${Math.round((retryAfter + jitter)/1000)}s... (Attempt ${i + 1}/${retries})`);
+      await delay(retryAfter + jitter);
 
-      // Increase backoff for next potential retry
       backoff *= 2;
       continue;
     }
@@ -192,21 +191,25 @@ async function handleGetProfiles(fetch, request, response) {
         });
 
         if (orgsToFetch.length > 0) {
-          for (let i = 0; i < orgsToFetch.length; i += 50) {
-            const chunk = orgsToFetch.slice(i, i + 50);
-            const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=${encodeURIComponent(`List(${chunk.join(',')})`)}`;
-            const batchOrgResponse = await fetchWithRetry(fetch, batchOrgUrl, { headers });
-            if (batchOrgResponse.ok) {
-              const fetchedData = await batchOrgResponse.json();
-              const orgResults = fetchedData.results;
-              Object.assign(allOrgDetails, orgResults);
+          try {
+            for (let i = 0; i < orgsToFetch.length; i += 50) {
+              const chunk = orgsToFetch.slice(i, i + 50);
+              const batchOrgUrl = `https://api.linkedin.com/rest/organizations?ids=${encodeURIComponent(`List(${chunk.join(',')})`)}`;
+              const batchOrgResponse = await fetchWithRetry(fetch, batchOrgUrl, { headers });
+              if (batchOrgResponse.ok) {
+                const fetchedData = await batchOrgResponse.json();
+                const orgResults = fetchedData.results;
+                Object.assign(allOrgDetails, orgResults);
 
-              const pipeline = kv.pipeline();
-              for (const [orgId, orgData] of Object.entries(orgResults)) {
-                pipeline.set(`linkedin:org:${orgId}`, JSON.stringify(orgData), 'EX', 3600); // Cache for 1 hour
+                const pipeline = kv.pipeline();
+                for (const [orgId, orgData] of Object.entries(orgResults)) {
+                  pipeline.set(`linkedin:org:${orgId}`, JSON.stringify(orgData), 'EX', 3600); // Cache for 1 hour
+                }
+                await pipeline.exec();
               }
-              await pipeline.exec();
             }
+          } catch (error) {
+            console.error("Failed to fetch organization details after retries:", error);
           }
         }
 
