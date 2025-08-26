@@ -30,6 +30,7 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
   tempDiv.style.width = `${maxWidth}px`;
   tempDiv.style.height = 'auto'; // Altura automática para medir o conteúdo
   tempDiv.style.boxSizing = 'border-box';
+  tempDiv.style.padding = `${style.padding || 0}px`;
 
   // Aplicar estilos para medição
   tempDiv.style.fontFamily = style.fontFamily || 'Arial';
@@ -53,6 +54,16 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
 
   tempDiv.innerHTML = htmlContent;
   document.body.appendChild(tempDiv);
+
+  // Garantir que a fonte específica esteja carregada antes de renderizar
+  if (style.fontFamily) {
+    try {
+      // Usa uma combinação de peso, tamanho e família para carregar a fonte exata.
+      await document.fonts.load(`${style.fontStyle || 'normal'} ${style.fontWeight || 'normal'} ${style.fontSize || 24}px ${style.fontFamily}`);
+    } catch (err) {
+      console.warn(`Não foi possível pré-carregar a fonte: ${style.fontFamily}. A renderização pode usar uma fonte de fallback.`, err);
+    }
+  }
 
   // Forçar o navegador a calcular o layout para obter a largura real do conteúdo
   const contentWidth = tempDiv.scrollWidth;
