@@ -23,18 +23,24 @@ export const containsHtml = (text) => {
  *                         Deve incluir propriedades como fontFamily, fontSize, color, textAlign, etc.
  */
 export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHeight, style) => {
+  // 1. Create an off-screen container. This provides a stable context.
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.left = '-9999px';
+  container.style.top = '-9999px';
+
+  // 2. Create the target div inside the container.
   const tempDiv = document.createElement('div');
-  tempDiv.style.position = 'absolute';
-  tempDiv.style.visibility = 'hidden'; // Render on-screen but hidden
-  tempDiv.style.top = '0';
-  tempDiv.style.left = '0';
+
+  // Apply all styles to this div. It now has a containing block.
   tempDiv.style.width = `${maxWidth}px`;
-  tempDiv.style.height = 'auto'; // Altura automática para medir o conteúdo
+  tempDiv.style.height = `${maxHeight}px`; // Set explicit height for overflow control
   tempDiv.style.boxSizing = 'border-box';
   tempDiv.style.padding = `${style.padding || 0}px`;
   tempDiv.style.overflowWrap = 'break-word';
+  tempDiv.style.wordWrap = 'break-word'; // Legacy fallback
 
-  // Aplicar estilos para medição
+  // Apply text styles
   tempDiv.style.fontFamily = style.fontFamily || 'Arial';
   tempDiv.style.fontSize = `${style.fontSize || 24}px`;
   tempDiv.style.fontWeight = style.fontWeight || 'normal';
@@ -43,59 +49,47 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
   tempDiv.style.textAlign = style.textAlign || 'left';
   tempDiv.style.lineHeight = style.lineHeightMultiplier ? `${style.lineHeightMultiplier * (style.fontSize || 24)}px` : 'normal';
 
-  // Sombra de texto
   if (style.textShadow) {
     tempDiv.style.textShadow = `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}`;
   }
-
-  // Decoração e contorno de texto
-  tempDiv.style.textDecoration = style.textDecoration || 'none';
   if (style.textStroke) {
     tempDiv.style.webkitTextStroke = `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}`;
   }
+  tempDiv.style.textDecoration = style.textDecoration || 'none';
 
   tempDiv.innerHTML = htmlContent;
-  document.body.appendChild(tempDiv);
 
-  // Garantir que a fonte específica esteja carregada antes de renderizar
+  // 3. Append to the DOM
+  container.appendChild(tempDiv);
+  document.body.appendChild(container);
+
+  // 4. Ensure fonts are loaded
   if (style.fontFamily) {
     try {
-      // Usa uma combinação de peso, tamanho e família para carregar a fonte exata.
       await document.fonts.load(`${style.fontStyle || 'normal'} ${style.fontWeight || 'normal'} ${style.fontSize || 24}px ${style.fontFamily}`);
     } catch (err) {
-      console.warn(`Não foi possível pré-carregar a fonte: ${style.fontFamily}. A renderização pode usar uma fonte de fallback.`, err);
+      console.warn(`Could not preload font: ${style.fontFamily}.`, err);
     }
   }
 
-  // Forçar o navegador a calcular o layout para obter a largura real do conteúdo
-  const contentWidth = tempDiv.scrollWidth;
-
-  // Ajustar a posição X com base no alinhamento
-  let adjustedX = x;
-  if (style.textAlign === 'center') {
-    adjustedX = x + (maxWidth - contentWidth) / 2;
-  } else if (style.textAlign === 'right') {
-    adjustedX = x + (maxWidth - contentWidth);
-  }
-
-  // Agora, ajuste a altura do div para a altura máxima para o html2canvas
-  tempDiv.style.height = `${maxHeight}px`;
-  tempDiv.style.width = `${maxWidth}px`;
-
+  // 5. Render the inner div, which has the correct, constrained dimensions.
   try {
     const canvasFromHtml = await html2canvas(tempDiv, {
-      backgroundColor: null, // Fundo transparente
-      useCORS: true, // Permitir imagens de outras origens se houver
-      scale: window.devicePixelRatio, // Melhorar a resolução em telas de alta DPI
-      // Omitir width e height para que o html2canvas use as dimensões do próprio elemento
+      backgroundColor: null,
+      useCORS: true,
+      scale: window.devicePixelRatio,
     });
 
-    // Desenhar o canvas gerado no canvas principal na posição X ajustada
-    ctx.drawImage(canvasFromHtml, adjustedX, y);
+    // The alignment calculation should happen *after* rendering, based on the captured canvas size.
+    // However, html2canvas should capture the div with the text already aligned internally.
+    // The `x` passed in is already the starting point of the textbox.
+    ctx.drawImage(canvasFromHtml, x, y);
+
   } catch (error) {
-    console.error('Erro ao renderizar HTML para canvas com html2canvas:', error);
+    console.error('Error rendering HTML to canvas with html2canvas:', error);
   } finally {
-    document.body.removeChild(tempDiv);
+    // 6. Clean up the container from the DOM
+    document.body.removeChild(container);
   }
 };
 
