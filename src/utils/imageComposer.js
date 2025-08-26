@@ -1,4 +1,5 @@
 import { containsHtml, renderHtmlToCanvas } from './htmlRenderer';
+import { isHtmlField } from '../lib/utils';
 
 // Helper functions moved from ImageGeneratorFrontendOnly.jsx and adapted for utility use
 
@@ -224,9 +225,11 @@ export const composeSingleImage = async ({
             currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
         }
 
-        if (containsHtml(text)) {
-            await drawTextWithEffects(ctx, text, textContentStartX, textContentStartY, finalStyle, effectiveTextWidth, effectiveTextHeight);
+        if (isHtmlField(field)) {
+            // For HTML fields, we delegate the entire rendering, including wrapping, to the HTML renderer.
+            await renderHtmlToCanvas(ctx, text, textContentStartX, textContentStartY, effectiveTextWidth, effectiveTextHeight, finalStyle);
         } else {
+            // For plain text fields, we use the manual wrapping and line-by-line drawing.
             for (const line of lines) {
                 let currentLineRenderX;
                 if (finalStyle.textAlign === 'center') {
@@ -237,7 +240,11 @@ export const composeSingleImage = async ({
                     currentLineRenderX = textContentStartX;
                 }
                 const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
-                await drawTextWithEffects(ctx, line, currentLineRenderX, finalLineY, finalStyle, effectiveTextWidth, effectiveTextHeight);
+                // For plain text, we call the simpler drawing function directly.
+                if (finalStyle.textStroke) {
+                    ctx.strokeText(line, currentLineRenderX, finalLineY);
+                }
+                ctx.fillText(line, currentLineRenderX, finalLineY);
             }
         }
         ctx.restore();

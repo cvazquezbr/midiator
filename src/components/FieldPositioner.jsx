@@ -45,6 +45,7 @@ const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
 };
 
 import { composeImage } from '../utils/imageComposer';
+import { isHtmlField } from '../lib/utils';
 
 // Helper function to find the best font size to fit text within a box
 const findBestFitFontSize = (text, fontFamily, fontWeight, boxWidth, boxHeight) => {
@@ -77,9 +78,6 @@ const findBestFitFontSize = (text, fontFamily, fontWeight, boxWidth, boxHeight) 
   return bestSize;
 };
 
-
-// Campos que devem usar renderização HTML
-const htmlFields = ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'];
 
 const FieldPositioner = ({
   backgroundImage,
@@ -132,13 +130,6 @@ const FieldPositioner = ({
 
   // The backgroundImage prop is now assumed to be the final, composed background for the editor preview.
   // No further composition is needed here.
-
-  const isHtmlField = useCallback((fieldName) => {
-    if (!fieldName) return false;
-    return htmlFields.some(field =>
-      fieldName.toLowerCase().includes(field.toLowerCase())
-    );
-  }, []);
 
   const handleFieldSelectInternal = useCallback((fieldToSelect) => {
     setSelectedField(fieldToSelect);
