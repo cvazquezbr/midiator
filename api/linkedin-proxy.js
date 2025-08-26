@@ -2,6 +2,7 @@ import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 import { kv } from './kv.js';
 
+const LINKEDIN_API_VERSION = '202411';
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function fetchWithRetry(fetch, url, options, retries = 5, initialBackoff = 3000) {
@@ -68,7 +69,7 @@ async function handleGenericPost(fetch, request, response, url) {
     try {
         const linkedinResponse = await fetchWithRetry(fetch, url, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': '202507' },
+            headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION },
             body: JSON.stringify(payload),
         });
 
@@ -121,7 +122,7 @@ async function handleCheckVideoStatus(fetch, request, response) {
     if (!videoUrn) return response.status(400).json({ error: 'Missing videoUrn' });
     const statusUrl = `https://api.linkedin.com/rest/videos/${encodeURIComponent(videoUrn)}`;
     try {
-        const linkedinResponse = await fetch(statusUrl, { headers: { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': '202507' } });
+        const linkedinResponse = await fetch(statusUrl, { headers: { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION } });
         const data = await linkedinResponse.json();
         return response.status(linkedinResponse.status).json(data);
     } catch (error) {
@@ -192,7 +193,7 @@ async function handleCreatePost(fetch, request, response) {
 async function handleGetProfiles(fetch, request, response) {
   const { accessToken, forceRefresh } = request.body;
   if (!accessToken) return response.status(400).json({ error: 'Missing accessToken for getProfiles.' });
-  const headers = { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': '202507' };
+  const headers = { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION };
   try {
     const [personalResponse, orgAclsResponse] = await Promise.all([
       fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
