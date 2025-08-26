@@ -43,7 +43,8 @@ import {
   ArrowUpward,
   ArrowDownward,
   AspectRatio,
-  Tune
+  Tune,
+  CheckBoxOutlineBlank
 } from '@mui/icons-material';
 import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
@@ -109,6 +110,7 @@ const FormattingPanel = ({
       borderWidth: 0,
       borderRadius: 0,
       padding: 5,
+      backgroundOpacity: 1,
     };
     setFieldStyles(prev => ({ ...prev, [field]: defaultStyle }));
   };
@@ -426,7 +428,9 @@ const FormattingPanel = ({
                 {/* Estilo da Caixa */}
                 <Accordion expanded={expandedPanel === 'boxStyle'} onChange={handleAccordionChange('boxStyle')}>
                   <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1">Estilo da Caixa</Typography>
+                    <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
+                      <CheckBoxOutlineBlank sx={{ mr: 1 }} /> Estilo da Caixa
+                    </Typography>
                   </AccordionSummary>
                   <AccordionDetails>
                     <Grid container spacing={2}>
@@ -434,7 +438,7 @@ const FormattingPanel = ({
                         <TextField
                           label="Cor de Fundo"
                           type="color"
-                          value={currentElement.style.backgroundColor || 'rgba(0,0,0,0)'}
+                          value={currentElement.style.backgroundColor || '#000000'}
                           onChange={(e) => updateFieldStyle(selectedField, 'backgroundColor', e.target.value)}
                           fullWidth
                           size="small"
@@ -447,6 +451,17 @@ const FormattingPanel = ({
                           value={currentElement.style.borderColor || '#000000'}
                           onChange={(e) => updateFieldStyle(selectedField, 'borderColor', e.target.value)}
                           fullWidth
+                          size="small"
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography gutterBottom>Opacidade do Fundo: {Math.round((currentElement.style.backgroundOpacity || 1) * 100)}%</Typography>
+                        <Slider
+                          value={currentElement.style.backgroundOpacity || 1}
+                          onChange={(e, value) => updateFieldStyle(selectedField, 'backgroundOpacity', value)}
+                          min={0}
+                          max={1}
+                          step={0.01}
                           size="small"
                         />
                       </Grid>

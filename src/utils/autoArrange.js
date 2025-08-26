@@ -53,6 +53,7 @@ const COMPLETE_DEFAULT_STYLE = {
   borderWidth: 0,
   borderRadius: 0,
   padding: 5,
+  backgroundOpacity: 1,
 };
 
 export const autoArrangeFields = ({
