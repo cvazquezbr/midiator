@@ -70,8 +70,8 @@ async function handleGenericPost(fetch, request, response, url) {
         const data = await linkedinResponse.json();
         return response.status(linkedinResponse.status).json(linkedinResponse.ok ? data.value || data : data);
     } catch (error) {
-        console.error(`Error during POST to ${url}:`, error);
-        return response.status(500).json({ error: 'Internal Server Error' });
+        console.error(`[FATAL] Error during POST to ${url}:`, error.message, error.stack);
+        return response.status(500).json({ error: `Internal Server Error during POST to ${url}` });
     }
 }
 
@@ -138,24 +138,35 @@ async function handleUploadImage(fetch, request, response) {
 }
 
 async function handleCreatePost(fetch, request, response) {
-    const { accessToken, payload } = request.body;
-    if (!accessToken || !payload) return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
+    try {
+        const { accessToken, payload } = request.body;
+        if (!accessToken || !payload) return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
 
-    const { targetId, targetType, content, images } = payload;
-    if (!targetId || !targetType || !content) {
-        return response.status(400).json({ error: 'Missing targetId, targetType, or content for creating post.' });
+        console.log('[DEBUG] Entering handleCreatePost with payload:', JSON.stringify(payload, null, 2));
+
+        const { targetId, targetType, content, images } = payload;
+        if (!targetId || !targetType || !content) {
+            console.error('[DEBUG] Validation failed in handleCreatePost:', { targetId, targetType, contentExists: !!content });
+            return response.status(400).json({ error: 'Missing targetId, targetType, or content for creating post.' });
+        }
+
+        const authorUrn = targetType === 'organization'
+            ? `urn:li:organization:${targetId}`
+            : `urn:li:person:${targetId}`;
+        console.log(`[DEBUG] Constructed author URN: ${authorUrn}`);
+
+        const shareContent = { shareCommentary: { text: content }, shareMediaCategory: (images && images.length > 0) ? 'IMAGE' : 'NONE' };
+        if (images && images.length > 0) {
+            shareContent.media = images.map(assetURN => ({ status: 'READY', media: assetURN }));
+        }
+        const postData = { author: authorUrn, lifecycleState: 'PUBLISHED', specificContent: { 'com.linkedin.ugc.ShareContent': shareContent }, visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' } };
+        console.log('[DEBUG] Calling handleGenericPost with postData:', JSON.stringify(postData, null, 2));
+
+        return handleGenericPost(fetch, { ...request, body: { accessToken, payload: postData } }, response, 'https://api.linkedin.com/rest/posts');
+    } catch (error) {
+        console.error('[FATAL] Unhandled exception in handleCreatePost:', error);
+        return response.status(500).json({ error: 'An unexpected error occurred in handleCreatePost.' });
     }
-
-    const authorUrn = targetType === 'organization'
-        ? `urn:li:organization:${targetId}`
-        : `urn:li:person:${targetId}`;
-
-    const shareContent = { shareCommentary: { text: content }, shareMediaCategory: (images && images.length > 0) ? 'IMAGE' : 'NONE' };
-    if (images && images.length > 0) {
-        shareContent.media = images.map(assetURN => ({ status: 'READY', media: assetURN }));
-    }
-    const postData = { author: authorUrn, lifecycleState: 'PUBLISHED', specificContent: { 'com.linkedin.ugc.ShareContent': shareContent }, visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' } };
-    return handleGenericPost(fetch, { ...request, body: { accessToken, payload: postData } }, response, 'https://api.linkedin.com/rest/posts');
 }
 
 async function handleGetProfiles(fetch, request, response) {
