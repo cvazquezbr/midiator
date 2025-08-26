@@ -67,8 +67,24 @@ async function handleGenericPost(fetch, request, response, url) {
             headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': '202507' },
             body: JSON.stringify(payload),
         });
-        const data = await linkedinResponse.json();
-        return response.status(linkedinResponse.status).json(linkedinResponse.ok ? data.value || data : data);
+
+        if (linkedinResponse.ok) {
+            const data = await linkedinResponse.json();
+            // The LinkedIn API sometimes returns the created object directly, and sometimes under a 'value' key.
+            return response.status(linkedinResponse.status).json(data.value || data);
+        } else {
+            // Handle error response
+            const errorBody = await linkedinResponse.text();
+            console.error(`[ERROR] LinkedIn API responded with status ${linkedinResponse.status}:`, errorBody);
+            try {
+                // Try to parse the error body as JSON, as LinkedIn often returns structured errors.
+                const errorJson = JSON.parse(errorBody);
+                return response.status(linkedinResponse.status).json(errorJson);
+            } catch (e) {
+                // If the error body is not JSON, return it as a plain text message.
+                return response.status(linkedinResponse.status).json({ message: errorBody });
+            }
+        }
     } catch (error) {
         console.error(`[FATAL] Error during POST to ${url}:`, error.message, error.stack);
         return response.status(500).json({ error: `Internal Server Error during POST to ${url}` });

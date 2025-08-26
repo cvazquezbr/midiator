@@ -479,13 +479,15 @@ const Publisher = ({
       }, ...prev]);
     } catch (error) {
       console.error('Erro na publicação:', error);
-      setPublishingStatusLi(`Erro ao publicar: ${error.message}`);
+      const errorMessage = error.message || 'Ocorreu um erro desconhecido.';
+      setPublishingStatusLi(`Erro ao publicar: ${errorMessage}`);
+      toast.error(`Erro ao publicar: ${errorMessage}`);
       setPublishResults(prev => [{
         id: Date.now(),
         target: selectedTarget.name,
         content: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
         success: false,
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toLocaleString('pt-BR')
       }, ...prev]);
     } finally {
@@ -556,8 +558,18 @@ const Publisher = ({
                     variant="outlined"
                     sx={{ my: 2 }}
                     placeholder="O que você gostaria de compartilhar?"
-                    maxLength={3000}
+                    inputProps={{ maxLength: 3000 }}
                 />
+                <Typography
+                    variant="caption"
+                    sx={{
+                        textAlign: 'right',
+                        display: 'block',
+                        color: content.length > 3000 ? 'error.main' : 'text.secondary'
+                    }}
+                >
+                    {content.length} / 3000
+                </Typography>
               <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
                 Selecionar Mídia
               </Typography>
@@ -710,7 +722,7 @@ const Publisher = ({
                 size="large"
                 color="primary"
                 onClick={handlePublishLinkedIn}
-                disabled={isPublishingLi || (isScheduled) || !selectedTarget || !content.trim()}
+                disabled={isPublishingLi || (isScheduled) || !selectedTarget || !content.trim() || content.length > 3000}
               >
                 {isPublishingLi ? 'Publicando...' : 'Publicar Agora no LinkedIn'}
               </Button>
