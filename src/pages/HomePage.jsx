@@ -56,6 +56,7 @@ import { parseCsv } from '../utils/csvParser.js';
 import { lightTheme, darkTheme } from '../theme.js';
 import ColorThief from 'colorthief';
 import { composeSingleImage } from '../utils/imageComposer.js';
+import { autoArrangeFields } from '../utils/autoArrange.js';
 
 import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
 
@@ -431,7 +432,31 @@ function HomePage() {
     setCurrentCampaign(campaign);
     setShowSaveModal(true);
   };
-  const parseCsvFile = async (file) => { if (!file) return; try { const { data: newCsvData, headers: newHeaders } = await parseCsv(file); if (newCsvData && newCsvData.length > 0) { setCsvData(newCsvData); setCsvHeaders(newHeaders); const updatedFieldPositions = {}; const updatedFieldStyles = {}; const defaultStylesBase = { fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none', color: '#000000', textStroke: false, strokeColor: '#ffffff', strokeWidth: 2, textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2, textAlign: 'left', verticalAlign: 'top' }; newHeaders.forEach((header, index) => { updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true }; if (fieldStyles[header]) { updatedFieldStyles[header] = fieldStyles[header]; } else { if (index === 0) { updatedFieldStyles[header] = { ...defaultStylesBase, fontFamily: 'Anton', fontSize: 72 }; } else { updatedFieldStyles[header] = { ...defaultStylesBase }; } } }); setFieldPositions(updatedFieldPositions); setFieldStyles(updatedFieldStyles); setInputMethod('manual'); } } catch (error) { toast.error(error.message || 'Ocorreu um erro desconhecido ao processar o arquivo CSV.'); } };
+  const parseCsvFile = async (file) => {
+    if (!file) return;
+    try {
+      const { data: newCsvData, headers: newHeaders } = await parseCsv(file);
+      if (newCsvData && newCsvData.length > 0) {
+        setCsvData(newCsvData);
+        setCsvHeaders(newHeaders);
+
+        const { newPositions, newStyles } = autoArrangeFields({
+          csvHeaders: newHeaders,
+          fieldPositions: {}, // Start from scratch
+          fieldStyles: {}, // Start from scratch
+          csvData: newCsvData,
+          effectiveImageSize: originalImageSize,
+          standardsColors,
+        });
+
+        setFieldPositions(newPositions);
+        setFieldStyles(newStyles);
+        setInputMethod('manual');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Ocorreu um erro desconhecido ao processar o arquivo CSV.');
+    }
+  };
   const handleCSVUpload = (event) => { const file = event.target.files[0]; parseCsvFile(file); };
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
@@ -748,18 +773,13 @@ function HomePage() {
       const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
 
       // Reset field positions and styles for the new content
-      const updatedFieldPositions = {};
-      const updatedFieldStyles = {};
-      const defaultStylesBase = {
-        fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
-        textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
-        strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
-        shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
-        textAlign: 'left', verticalAlign: 'top'
-      };
-      csvHeadersResult.forEach((header, index) => {
-        updatedFieldPositions[header] = { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true };
-        updatedFieldStyles[header] = { ...defaultStylesBase };
+      const { newPositions: updatedFieldPositions, newStyles: updatedFieldStyles } = autoArrangeFields({
+        csvHeaders: csvHeadersResult,
+        fieldPositions: {}, // Start from scratch
+        fieldStyles: {}, // Start from scratch
+        csvData: csvDataResult,
+        effectiveImageSize: originalImageSize,
+        standardsColors,
       });
 
       // Create the new image data array, preserving backgrounds from the previous state

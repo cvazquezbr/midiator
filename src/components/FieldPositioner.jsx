@@ -44,39 +44,8 @@ const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
   shadowOffsetY: 2,
 };
 
-import { composeImage } from '../utils/imageComposer';
 import { isHtmlField } from '../lib/utils';
-
-// Helper function to find the best font size to fit text within a box
-const findBestFitFontSize = (text, fontFamily, fontWeight, boxWidth, boxHeight) => {
-  if (!text || !boxWidth || !boxHeight) {
-    return 24; // Return a default size if inputs are invalid
-  }
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  let minFontSize = 8;
-  let maxFontSize = 300; // A reasonable max size
-  let bestSize = minFontSize;
-
-  // Use binary search to find the best font size efficiently
-  while (minFontSize <= maxFontSize) {
-    const currentSize = Math.floor((minFontSize + maxFontSize) / 2);
-    if (currentSize <= minFontSize) break; // Avoid infinite loop
-
-    ctx.font = `${fontWeight} ${currentSize}px ${fontFamily}`;
-    const metrics = ctx.measureText(text);
-
-    // A simple check: does it fit horizontally and vertically?
-    // Add a small buffer for vertical fit.
-    if (metrics.width < boxWidth && currentSize < boxHeight) {
-      bestSize = currentSize; // This size is valid, try for a larger one
-      minFontSize = currentSize + 1;
-    } else {
-      maxFontSize = currentSize - 1; // It's too big, try a smaller size
-    }
-  }
-  return bestSize;
-};
+import { autoArrangeFields as autoArrangeFieldsUtil } from '../utils/autoArrange';
 
 
 const FieldPositioner = ({
@@ -94,23 +63,18 @@ const FieldPositioner = ({
   onCsvDataUpdate, // New prop to notify App.jsx of changes
   originalImageSize,
   darkMode,
-  imageFilters,
   brandElements,
   setBrandElements,
-  setImageFilters,
-  onZIndexChange,
   onOpenHtmlEditor,
   currentPreviewIndex,
   setCurrentPreviewIndex,
   onFontScaleChange,
 }) => {
   const [selectedField, setSelectedField] = useState(null);
-  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
-  const [isComposing, setIsComposing] = useState(false); // Keep for loading indicators if needed elsewhere
   const [internalImageSize, setInternalImageSize] = useState(null);
 
   useEffect(() => {
@@ -157,29 +121,6 @@ const FieldPositioner = ({
     }
   }, [csvData, currentPreviewIndex, onCsvDataUpdate]);
 
-  const handleVisibilityChange = useCallback((fieldId, isVisible) => {
-    // Check if the selected element is a brand element
-    const isBrandElement = brandElements.some(el => el.id === fieldId);
-
-    if (isBrandElement) {
-        if (!isVisible) {
-            // It's a brand element and it's being hidden, so delete it.
-            setBrandElements(prev => prev.filter(el => el.id !== fieldId));
-            // Also deselect it
-            handleFieldSelectInternal(null);
-        }
-    } else {
-        // It's a text field from CSV. Just toggle its visibility.
-        setFieldPositions(prev => ({
-            ...prev,
-            [fieldId]: {
-                ...(prev[fieldId] || {}),
-                visible: isVisible
-            }
-        }));
-    }
-  }, [brandElements, setBrandElements, setFieldPositions, handleFieldSelectInternal]);
-
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -189,7 +130,6 @@ const FieldPositioner = ({
         const { width, height } = entry.contentRect;
         // Since the container has the correct aspect ratio and the image has object-fit: fill,
         // the rendered metrics are simply the container's dimensions.
-        setImageSize({ width, height });
         setRenderedImageMetrics({ width, height, x: 0, y: 0 });
 
         if (onImageDisplayedSizeChange) {
@@ -309,135 +249,15 @@ const FieldPositioner = ({
   };
 
   const autoArrangeFields = () => {
-    // 1. Define Safe Zone and Field Roles
-    const safeZoneMargins = {
-      top: 10, // 10%
-      bottom: 10, // 10%
-      left: 5, // 5%
-      right: 5, // 5%
-    };
-
-    const titleField = csvHeaders.length > 0 ? csvHeaders[0] : null;
-    const subtitleField = csvHeaders.length > 1 ? csvHeaders[1] : null;
-    const sideLabelField = csvHeaders.length > 2 ? csvHeaders[2] : null;
-
-    const newPositions = { ...fieldPositions };
-    const newStyles = { ...fieldStyles };
-
-    // 2. Calculate Safe Zone and Bands
-    const safeZone = {
-      x: safeZoneMargins.left,
-      y: safeZoneMargins.top,
-      width: 100 - safeZoneMargins.left - safeZoneMargins.right,
-      height: 100 - safeZoneMargins.top - safeZoneMargins.bottom,
-    };
-
-    const bandHeight = safeZone.height / 3;
-    const innerMargin = 2; // 2% margin inside bands/safezone
-
-    // Rule for Title Field (Top Band)
-    if (titleField) {
-      const titleHeight = bandHeight - (innerMargin * 2);
-      const titleWidth = safeZone.width - (innerMargin * 2);
-
-      newPositions[titleField] = {
-        ...(newPositions[titleField] || {}),
-        x: safeZone.x + innerMargin,
-        y: safeZone.y + innerMargin,
-        width: titleWidth,
-        height: titleHeight,
-        rotation: 0,
-        visible: true,
-      };
-
-      const titleBoxWidthPx = (titleWidth / 100) * (effectiveImageSize?.width || imageSize.width);
-      const titleBoxHeightPx = (titleHeight / 100) * (effectiveImageSize?.height || imageSize.height);
-      const titleText = csvData[currentPreviewIndex]?.[titleField] || `[${titleField}]`;
-
-      const bestFontSize = findBestFitFontSize(
-        titleText,
-        'Anton',
-        'normal',
-        titleBoxWidthPx,
-        titleBoxHeightPx
-      );
-
-      newStyles[titleField] = {
-        ...(newStyles[titleField] || {}),
-        fontFamily: 'Anton',
-        fontSize: bestFontSize,
-        textAlign: 'center',
-        verticalAlign: 'middle',
-        textShadow: true,
-        shadowColor: '#000000',
-        shadowBlur: 5,
-        shadowOffsetX: 2,
-        shadowOffsetY: 2,
-        color: standardsColors?.[0]?.hex || '#FFFFFF', // Usa a cor de acento
-      };
-    }
-
-    // Rule for Subtitle Field (Third Band)
-    if (subtitleField) {
-      const subtitleHeight = bandHeight - (innerMargin * 2);
-      const subtitleWidth = safeZone.width - (innerMargin * 2);
-      newPositions[subtitleField] = {
-        ...(newPositions[subtitleField] || {}),
-        x: safeZone.x + innerMargin,
-        y: safeZone.y + (bandHeight * 2) + innerMargin,
-        width: subtitleWidth,
-        height: subtitleHeight,
-        rotation: 0,
-        visible: true,
-      };
-      newStyles[subtitleField] = {
-        ...(newStyles[subtitleField] || {}),
-        textAlign: 'center',
-        verticalAlign: 'middle',
-      };
-    }
-
-    // Rule for Side Label Field (Right Side, Vertical)
-    if (sideLabelField) {
-      const sideLabelStyle = newStyles[sideLabelField] || COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER;
-      const fontSizePx = sideLabelStyle.fontSize || 24;
-
-      // A altura da caixa (que se torna a largura do texto após rotação) é baseada na altura da fonte.
-      const labelHeight = (fontSizePx / (effectiveImageSize?.height || imageSize.height || 1)) * 100 * 1.5;
-      // A largura da caixa (que se torna a altura do texto) é uma grande parte da altura da zona segura.
-      const labelWidth = safeZone.height * 0.7;
-
-      // Posicionar a caixa de texto no lado direito, centralizada verticalmente.
-      // O 'x' é calculado para que a borda direita da caixa de texto encoste na borda direita da safeZone.
-      const x = safeZone.x + safeZone.width - labelWidth - innerMargin;
-      // O 'y' é calculado para centralizar a caixa verticalmente.
-      const y = safeZone.y + (safeZone.height - labelHeight) / 2;
-
-      newPositions[sideLabelField] = {
-        ...(newPositions[sideLabelField] || {}),
-        x: x,
-        y: y,
-        width: labelWidth,
-        height: labelHeight,
-        rotation: 270,
-        visible: true,
-      };
-      newStyles[sideLabelField] = {
-        ...(newStyles[sideLabelField] || {}),
-        textAlign: 'center',
-        verticalAlign: 'middle',
-      };
-    }
-
-    // Hide other fields
-    csvHeaders.forEach((header, index) => {
-      if (index > 2) {
-        if (newPositions[header]) {
-          newPositions[header].visible = false;
-        }
-      }
+    const { newPositions, newStyles } = autoArrangeFieldsUtil({
+      csvHeaders,
+      fieldPositions,
+      fieldStyles,
+      csvData,
+      effectiveImageSize,
+      standardsColors,
+      currentPreviewIndex,
     });
-
     setFieldPositions(newPositions);
     setFieldStyles(newStyles);
   };
@@ -563,7 +383,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => a.zIndex - b.zIndex);
     return elements;
-  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, imageSize, effectiveImageSize, isHtmlField, fontScale, renderedImageMetrics]);
+  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
   if (!backgroundImage) {
     return (
@@ -641,11 +461,6 @@ const FieldPositioner = ({
               onTouchStart={handleContainerTouchStart}
               onTouchEnd={handleContainerTouchEnd}
             >
-              {isComposing && (
-                <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white', backgroundColor: 'rgba(0,0,0,0.5)', padding: '10px', borderRadius: '8px' }}>
-                  <Typography>Atualizando...</Typography>
-                </Box>
-              )}
               <img
                 src={backgroundImage}
                 alt="Background"
@@ -657,8 +472,6 @@ const FieldPositioner = ({
                   pointerEvents: 'none',
                   userSelect: 'none',
                   WebkitUserDrag: 'none',
-                  opacity: isComposing ? 0.5 : 1,
-                  transition: 'opacity 0.3s',
                 }}
                 draggable={false}
               />
