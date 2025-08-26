@@ -104,10 +104,12 @@ const FieldPositioner = ({
   onOpenHtmlEditor,
   currentPreviewIndex,
   setCurrentPreviewIndex,
+  onFontScaleChange,
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
+  const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
   const [isComposing, setIsComposing] = useState(false); // Keep for loading indicators if needed elsewhere
@@ -479,6 +481,23 @@ const FieldPositioner = ({
     ? `${originalImageSize.width} / ${originalImageSize.height}`
     : '16 / 9';
 
+  // Effect to calculate font scale based on the actual rendered image size
+  useEffect(() => {
+    if (renderedImageMetrics.width > 0 && originalImageSize?.width > 0) {
+      // The scale is uniform, so we can just use the width ratio.
+      const scale = renderedImageMetrics.width / originalImageSize.width;
+      setFontScale(scale);
+      if (onFontScaleChange) {
+        onFontScaleChange(scale);
+      }
+    } else {
+      setFontScale(1);
+      if (onFontScaleChange) {
+        onFontScaleChange(1);
+      }
+    }
+  }, [renderedImageMetrics, originalImageSize, onFontScaleChange]);
+
   // Efeito para gerenciar scroll durante interações
   useEffect(() => {
     if (isInteracting) {
@@ -512,6 +531,7 @@ const FieldPositioner = ({
             content: sampleData,
             zIndex: position.zIndex || 0,
             rotation: position.rotation,
+            fontScale: fontScale,
             enableHtmlRendering: isHtmlField(header),
           };
         })
@@ -527,6 +547,7 @@ const FieldPositioner = ({
             content: element.url,
             zIndex: element.zIndex || 0,
             rotation: element.rotation,
+            fontScale: 1,
             enableHtmlRendering: false,
           };
         })
@@ -535,7 +556,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => a.zIndex - b.zIndex);
     return elements;
-  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, imageSize, originalImageSize, isHtmlField, renderedImageMetrics]);
+  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, imageSize, originalImageSize, isHtmlField, fontScale, renderedImageMetrics]);
 
   if (!backgroundImage) {
     return (
@@ -678,6 +699,7 @@ const FieldPositioner = ({
                     }}
                     rotation={element.rotation}
                     originalImageSize={originalImageSize}
+                    fontScale={element.fontScale}
                     enableHtmlRendering={element.enableHtmlRendering}
                     darkMode={darkMode}
                   />
