@@ -25,7 +25,8 @@ const RecordModal = ({
     colunasExistentes,
     tituloModal,
     isPrimeiroRegistro,
-    darkMode = false
+    darkMode = false,
+    onStartEditField,
 }) => {
     if (!aberto) return null;
 
@@ -47,6 +48,7 @@ const RecordModal = ({
                     onCancelar={onFechar}
                     isPrimeiroRegistro={isPrimeiroRegistro}
                     darkMode={darkMode}
+                    onStartEditField={onStartEditField}
                 />
             </div>
         </div>
