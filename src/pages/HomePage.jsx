@@ -863,6 +863,7 @@ function HomePage() {
                 brandElements,
                 fieldPositions: updatedFieldPositions,
                 fieldStyles: updatedFieldStyles,
+                fontScale: fontScale,
               });
 
               // Also update the item in our local array with the new background
