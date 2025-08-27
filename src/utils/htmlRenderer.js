@@ -54,7 +54,6 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
     line-height: ${style.lineHeightMultiplier ? style.lineHeightMultiplier : 'normal'};
     overflow-wrap: break-word;
     word-wrap: break-word;
-    overflow: hidden;
     ${style.textShadow ? `text-shadow: ${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'};` : ''}
     ${style.textStroke ? `-webkit-text-stroke: ${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'};` : ''}
   `.replace(/\s*\n\s*/g, ' '); // Remove newlines and extra spaces.
