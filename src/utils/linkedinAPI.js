@@ -51,12 +51,13 @@ class LinkedInAPI {
     return personal;
   }
 
-  async publishPost(content, targetId, targetType = 'personal') {
+  async publishPost(content, targetId, targetType = 'personal', images = []) {
     return this._proxyFetch('createPost', {
       payload: {
         content,
         targetId,
         targetType,
+        images,
       }
     });
   }
@@ -110,9 +111,9 @@ export const publishToLinkedIn = async (campaignData, linkedinConfig) => {
         throw new Error('Campaign data, content, and targetId are required for publishing.');
     }
 
-    const { content, targetId, targetType } = campaignData;
+    const { content, targetId, targetType, images } = campaignData;
     const api = new LinkedInAPI(linkedinConfig.accessToken);
-    const result = await api.publishPost(content, targetId, targetType);
+    const result = await api.publishPost(content, targetId, targetType, images);
 
     console.log('Post created successfully on LinkedIn!', result);
     return result; // The proxy should return the final post object with an ID or link.
