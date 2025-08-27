@@ -185,20 +185,26 @@ const Monitor = ({ currentCampaign }) => {
                             }
                             variant="outlined"
                         />
-                        {pub.linkedin_post_url && (
-                            <Tooltip title="Ver no LinkedIn">
-                                <IconButton
-                                    component="a"
-                                    href={pub.linkedin_post_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    size="small"
-                                    onClick={(e) => e.stopPropagation()} // Prevent ListItem click event
-                                >
-                                    <LinkIcon fontSize="inherit" />
-                                </IconButton>
-                            </Tooltip>
-                        )}
+                        <Tooltip title={pub.linkedin_post_url ? "Ver no LinkedIn" : "Link indisponível"}>
+                          <span>
+                            <IconButton
+                                component="a"
+                                href={pub.linkedin_post_url || undefined}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                size="small"
+                                disabled={!pub.linkedin_post_url}
+                                onClick={(e) => {
+                                    if (!pub.linkedin_post_url) {
+                                        e.preventDefault();
+                                    }
+                                    e.stopPropagation();
+                                }}
+                            >
+                                <LinkIcon fontSize="inherit" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
                       </Box>
                     </ListItem>
                   ))}
