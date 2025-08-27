@@ -24,14 +24,21 @@ async function handler(req, res) {
     // The URN is the last part of the post URL.
     const publications = rows.map(row => {
         // Use a regex to robustly find the URN, which can be a share, ugcPost, or carousel for multi-image posts.
+        if (!row.linkedin_post_url) return null; // Skip rows with no post URL
         const match = row.linkedin_post_url.match(/(urn:li:(?:share|ugcPost|carousel):\d+)/);
         const urn = match ? match[0] : null;
+
+        const postContent = typeof row.post_content === 'string'
+            ? JSON.parse(row.post_content)
+            : row.post_content;
+
         return {
             ...row,
-            post_content: typeof row.post_content === 'string' ? JSON.parse(row.post_content) : row.post_content,
-            urn: urn
+            post_content: postContent,
+            urn: urn,
+            author_urn: postContent?.authorUrn // Extract authorUrn from the JSON content
         }
-    }).filter(p => p.urn !== null); // Filter out any publications where a URN couldn't be found.
+    }).filter(p => p && p.urn !== null); // Filter out nulls and publications where a URN couldn't be found.
 
     res.status(200).json(publications);
   } catch (error) {

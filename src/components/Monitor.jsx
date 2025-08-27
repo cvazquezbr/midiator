@@ -78,38 +78,47 @@ const Monitor = ({ currentCampaign }) => {
       return;
     }
 
-    // For now, we assume the first organization profile is the target.
-    // This could be improved by storing the organization URN with the schedule.
-    const orgUrn = settings.linkedin?.profiles?.organizations?.[0]?.urn;
-    if (!orgUrn) {
-        toast.error("Nenhum perfil de organização do LinkedIn encontrado nas configurações.");
+    // Group publications by their author_urn to make separate API calls if needed.
+    const pubsByAuthor = publications.reduce((acc, pub) => {
+      const authorUrn = pub.author_urn;
+      if (authorUrn && pub.urn) {
+        if (!acc[authorUrn]) {
+          acc[authorUrn] = [];
+        }
+        acc[authorUrn].push(pub.urn);
+      }
+      return acc;
+    }, {});
+
+    if (Object.keys(pubsByAuthor).length === 0) {
+        toast.info("Nenhuma publicação com autor válido encontrada para buscar estatísticas.");
         return;
     }
 
     setIsLoading(true);
     setError('');
     try {
-      const shareUrns = publications.map(p => p.urn).filter(Boolean);
-      if (shareUrns.length === 0) {
-        throw new Error("Nenhuma URN de compartilhamento válida encontrada nas publicações.");
-      }
+        let allStats = {};
+        const fetchPromises = Object.entries(pubsByAuthor).map(async ([authorUrn, urns]) => {
+            const results = await getLinkedInShareStatistics(settings.linkedin, authorUrn, urns);
+            (results.elements || []).forEach(stat => {
+                const urn = stat.share || stat.ugcPost || stat.carousel || stat.post;
+                if (urn && stat.totalShareStatistics) {
+                    allStats[urn] = stat.totalShareStatistics;
+                }
+            });
+        });
 
-      const results = await getLinkedInShareStatistics(settings.linkedin, orgUrn, shareUrns);
-      const newStats = {};
-      (results.elements || []).forEach(stat => {
-        const urn = stat.share || stat.ugcPost || stat.carousel || stat.post;
-        if (urn) {
-            newStats[urn] = stat.totalShareStatistics;
-        }
-      });
-      setStats(newStats);
-      toast.success("Estatísticas atualizadas com sucesso!");
+        await Promise.all(fetchPromises);
+
+        setStats(allStats);
+        toast.success("Estatísticas atualizadas com sucesso!");
 
     } catch (err) {
-      toast.error(`Falha ao buscar estatísticas: ${err.message}`);
-      setError(err.message);
+        toast.error(`Falha ao buscar estatísticas: ${err.message}`);
+        setError(err.message);
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   };
 
