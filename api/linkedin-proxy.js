@@ -92,7 +92,11 @@ async function handleGenericPost(fetch, request, response, url) {
         }
     } catch (error) {
         console.error(`[FATAL] Error during POST to ${url}:`, error.message, error.stack);
-        return response.status(500).json({ error: `Internal Server Error during POST to ${url}` });
+        return response.status(500).json({
+            error: `Internal Server Error during POST to ${url}`,
+            details: error.message,
+            stack: error.stack,
+        });
     }
 }
 
