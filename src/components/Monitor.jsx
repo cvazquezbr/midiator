@@ -17,7 +17,7 @@ import {
   Tooltip,
   IconButton
 } from '@mui/material';
-import { BarChart, Refresh, Info } from '@mui/icons-material';
+import { BarChart, Refresh, Info, Link as LinkIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import { getCampaignPublications } from '../utils/campaignState';
 import { getLinkedInShareStatistics } from '../utils/linkedinAPI';
@@ -174,16 +174,32 @@ const Monitor = ({ currentCampaign }) => {
                         primary={pub.post_content?.titulo || 'Publicação sem título'}
                         secondary={`Agendado para: ${new Date(pub.scheduled_at).toLocaleString('pt-BR')}`}
                       />
-                      <Chip
-                        label={pub.status}
-                        size="small"
-                        color={
-                            pub.status === 'published' ? 'success' :
-                            pub.status === 'failed' ? 'error' :
-                            'primary'
-                        }
-                        variant="outlined"
-                      />
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Chip
+                            label={pub.status}
+                            size="small"
+                            color={
+                                pub.status === 'published' ? 'success' :
+                                pub.status === 'failed' ? 'error' :
+                                'primary'
+                            }
+                            variant="outlined"
+                        />
+                        {pub.linkedin_post_url && (
+                            <Tooltip title="Ver no LinkedIn">
+                                <IconButton
+                                    component="a"
+                                    href={pub.linkedin_post_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    size="small"
+                                    onClick={(e) => e.stopPropagation()} // Prevent ListItem click event
+                                >
+                                    <LinkIcon fontSize="inherit" />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                      </Box>
                     </ListItem>
                   ))}
                 </List>
