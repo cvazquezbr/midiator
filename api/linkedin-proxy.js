@@ -332,7 +332,7 @@ const mainHandler = async (request, response) => {
     case 'refreshToken': return handleRefreshToken(fetch, request, response);
     case 'testConnection': return handleGetProfile(fetch, request, response);
     case 'getProfile': return handleGetProfile(fetch, request, response);
-    case 'registerUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/v2/assets?action=registerUpload');
+    case 'registerUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/rest/images?action=initializeUpload');
     case 'uploadImage': return handleUploadImage(fetch, request, response);
     case 'createPost': return handleCreatePost(fetch, request, response);
     case 'getProfiles': return handleGetProfiles(fetch, request, response);
