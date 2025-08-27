@@ -344,11 +344,10 @@ async function handleGetShareStatistics(fetch, request, response) {
     }
 
     // This is the final attempt to fix the statistics fetching.
-    // This implementation uses a single, known endpoint and passes the author's URN (person or org)
-    // to the `organizationalEntity` parameter. This tests the hypothesis that this endpoint
-    // might work for both entity types if the correct URN is provided.
-    const sharesQueryParam = `List(${shareUrns.join(',')})`;
-    const url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&shares=${encodeURIComponent(sharesQueryParam)}`;
+    // The error "Array parameter 'shares' value ... is invalid" indicates the format of the shares parameter is wrong.
+    // Instead of a single `shares=List(urn1,urn2)` parameter, we will send multiple `shares=urn` parameters.
+    const sharesParams = shareUrns.map(urn => `shares=${encodeURIComponent(urn)}`).join('&');
+    const url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&${sharesParams}`;
 
     try {
         const linkedinResponse = await fetchWithRetry(fetch, url, {
