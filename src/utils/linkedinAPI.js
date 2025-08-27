@@ -61,6 +61,40 @@ class LinkedInAPI {
       }
     });
   }
+
+  async registerUpload(authorUrn) {
+    return this._proxyFetch('registerUpload', {
+      payload: {
+        "registerUploadRequest": {
+          "recipes": [
+              "urn:li:digitalmediaRecipe:feedshare-image"
+          ],
+          "owner": authorUrn,
+          "serviceRelationships": [
+              {
+                  "relationshipType": "OWNER",
+                  "identifier": "urn:li:userGeneratedContent"
+              }
+          ]
+        }
+      }
+    });
+  }
+
+  async uploadImage(uploadUrl, imageBlob) {
+    const imageBase64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(imageBlob);
+    });
+
+    return this._proxyFetch('uploadImage', {
+      uploadUrl,
+      imageBase64,
+      imageType: imageBlob.type,
+    });
+  }
 }
 
 // Wrapper function to handle caching, as requested.
@@ -124,5 +158,34 @@ export const publishToLinkedIn = async (campaignData, linkedinConfig) => {
 // The new proxy is expected to handle this complexity if needed.
 // If media uploads are still a feature, the proxy and this client will need to be updated.
 // For now, focusing on the core task: fixing profile listing and text publishing.
+
+export const uploadImagesForLinkedIn = async (linkedinConfig, imageBlobs, authorUrn, setStatus) => {
+  if (!linkedinConfig || !linkedinConfig.accessToken) {
+    throw new Error('LinkedIn configuration or Access Token not found.');
+  }
+  if (!imageBlobs || imageBlobs.length === 0) {
+    return []; // No images to upload
+  }
+
+  const api = new LinkedInAPI(linkedinConfig.accessToken);
+  const assetUrns = [];
+
+  for (let i = 0; i < imageBlobs.length; i++) {
+    const blob = imageBlobs[i];
+    setStatus(`Registering image ${i + 1} of ${imageBlobs.length}...`);
+
+    const registerResponse = await api.registerUpload(authorUrn);
+    const uploadUrl = registerResponse.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
+    const assetUrn = registerResponse.value.asset;
+
+    setStatus(`Uploading image ${i + 1} of ${imageBlobs.length}...`);
+    await api.uploadImage(uploadUrl, blob);
+
+    assetUrns.push(assetUrn);
+  }
+
+  setStatus('Image uploads complete.');
+  return assetUrns;
+};
 
 export default LinkedInAPI;
