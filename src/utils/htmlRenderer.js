@@ -21,26 +21,27 @@ export const containsHtml = (text) => {
  * @param {Object} style The CSS styles to apply.
  */
 export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHeight, style) => {
-  // Create an off-screen container to provide a stable layout context.
-  const container = document.createElement('div');
-  container.style.position = 'absolute';
-  container.style.left = '-9999px';
-  container.style.top = '-9999px';
-  container.style.width = 'auto';
-  container.style.height = 'auto';
+  // Create an off-screen parent container that will act as a table.
+  const tableContainer = document.createElement('div');
+  tableContainer.style.position = 'absolute';
+  tableContainer.style.left = '-9999px';
+  tableContainer.style.top = '-9999px';
+  tableContainer.style.display = 'table';
+  tableContainer.style.width = `${maxWidth}px`;
+  tableContainer.style.height = `${maxHeight}px`;
 
-  // Create the target element inside the container. This is what we'll render.
+  // Create the target child element that will act as a table-cell.
   const tempDiv = document.createElement('div');
 
-  // Apply all necessary styles to the target element.
-  tempDiv.style.width = `${maxWidth}px`;
-  tempDiv.style.height = `${maxHeight}px`;
+  // Apply all necessary styles to the table-cell element.
+  tempDiv.style.display = 'table-cell';
+  tempDiv.style.verticalAlign = style.verticalAlign || 'top'; // 'top', 'middle', 'bottom'
   tempDiv.style.boxSizing = 'border-box';
   tempDiv.style.padding = `${style.padding || 0}px`;
   tempDiv.style.overflowWrap = 'break-word';
   tempDiv.style.wordWrap = 'break-word';
 
-  // Apply text and alignment styles
+  // Apply text styles
   tempDiv.style.fontFamily = style.fontFamily || 'Arial';
   tempDiv.style.fontSize = `${style.fontSize || 24}px`;
   tempDiv.style.fontWeight = style.fontWeight || 'normal';
@@ -48,8 +49,6 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
   tempDiv.style.color = style.color || '#000000';
   tempDiv.style.textAlign = style.textAlign || 'left';
   tempDiv.style.lineHeight = style.lineHeightMultiplier ? style.lineHeightMultiplier : 'normal';
-  tempDiv.style.display = 'table-cell';
-  tempDiv.style.verticalAlign = style.verticalAlign || 'top';
 
   if (style.textShadow) {
     tempDiv.style.textShadow = `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}`;
@@ -61,8 +60,8 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
   tempDiv.innerHTML = htmlContent;
 
   // Build the DOM structure and append to the body
-  container.appendChild(tempDiv);
-  document.body.appendChild(container);
+  tableContainer.appendChild(tempDiv);
+  document.body.appendChild(tableContainer);
 
   // Ensure fonts are loaded before capturing
   if (style.fontFamily) {
@@ -74,12 +73,11 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
   }
 
   try {
-    // Render the styled child div, not the container.
-    // Explicitly pass width and height to html2canvas as this was found to be necessary.
-    const canvasFromHtml = await html2canvas(tempDiv, {
-      backgroundColor: null,
+    // Render the container, which now controls the layout.
+    const canvasFromHtml = await html2canvas(tableContainer, {
+      backgroundColor: null, // Make background transparent
       useCORS: true,
-      scale: window.devicePixelRatio,
+      scale: window.devicePixelRatio, // Use device pixel ratio for better quality
       width: maxWidth,
       height: maxHeight,
     });
@@ -91,7 +89,7 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
     console.error('Error rendering HTML to canvas with html2canvas:', error);
   } finally {
     // Clean up by removing the container from the DOM.
-    document.body.removeChild(container);
+    document.body.removeChild(tableContainer);
   }
 };
 
