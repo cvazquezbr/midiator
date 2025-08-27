@@ -337,46 +337,57 @@ async function handleRefreshToken(fetch, request, response) {
 }
 
 async function getPostAnalytics(fetch, accessToken, urns) {
-  // This is a hypothetical endpoint based on common LinkedIn API patterns for new resources.
-  // It assumes that analytics for posts created via /rest/posts are available here.
-  const idsQueryParam = `List(${urns.join(',')})`;
-  const url = `https://api.linkedin.com/rest/posts?q=analytics&ids=${encodeURIComponent(idsQueryParam)}`;
+  // For personal posts, batch analytics are not straightforward.
+  // This function fetches analytics for each post individually.
+  // This is less efficient but more likely to succeed than a guessed batch endpoint.
+  const promises = urns.map(urn => {
+    const encodedUrn = encodeURIComponent(urn);
+    // This is a hypothetical endpoint for per-post analytics, following a standard REST pattern.
+    const url = `https://api.linkedin.com/rest/posts/${encodedUrn}/analytics`;
 
-  const response = await fetchWithRetry(fetch, url, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'X-Restli-Protocol-Version': '2.0.0',
-      'LinkedIn-Version': LINKEDIN_API_VERSION,
-    },
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    console.error(`[ERROR] LinkedIn Post Analytics API responded with status ${response.status}:`, data);
-    throw new Error(data.message || `Failed to fetch post analytics with status ${response.status}`);
-  }
-
-  // Transform the response to match the format of the legacy organizationalEntityShareStatistics endpoint.
-  // The frontend expects an array of elements, where each element has the URN as a key (e.g., "share" or "ugcPost").
-  // We will introduce a "carousel" key for carousel posts.
-  // Assuming `data.results` is a map of URN -> stats object.
-  // e.g., { "results": { "urn:li:carousel:123": { "impressionCount": 100, "likeCount": 5, ... } } }
-  return Object.entries(data.results || {}).map(([urn, stats]) => {
-    const key = urn.includes(':carousel:') ? 'carousel' : 'post'; // Use a specific key for carousels
-    return {
-      [key]: urn,
-      totalShareStatistics: {
-        impressionCount: stats.impressionCount || 0,
-        likeCount: stats.likeCount || 0,
-        commentCount: stats.commentCount || 0,
-        shareCount: stats.shareCount || 0,
-        clickCount: stats.clickCount || 0,
-        engagement: stats.engagement || 0,
+    return fetchWithRetry(fetch, url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': LINKEDIN_API_VERSION,
       },
-    };
+    })
+    .then(response => {
+      if (!response.ok) {
+        console.error(`[ERROR] Failed to fetch analytics for URN ${urn}. Status: ${response.status}`);
+        return null; // Return null for failed requests to not break Promise.all
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (!data) return null;
+
+      // Transform the single result to the format expected by the frontend.
+      // The response for a single post might not be nested under a "results" key.
+      const stats = data; // Assuming the response body is the stats object.
+      const key = urn.includes(':carousel:') ? 'carousel' : 'post';
+
+      return {
+        [key]: urn,
+        totalShareStatistics: {
+          impressionCount: stats.impressionCount || 0,
+          likeCount: stats.likeCount || 0,
+          commentCount: stats.commentCount || 0,
+          shareCount: stats.shareCount || 0,
+          clickCount: stats.clickCount || 0,
+          engagement: stats.engagement || 0,
+        },
+      };
+    })
+    .catch(error => {
+        console.error(`[FATAL] Unhandled error fetching analytics for URN ${urn}:`, error);
+        return null; // Ensure promise does not reject
+    });
   });
+
+  const results = await Promise.all(promises);
+  return results.filter(Boolean); // Filter out any nulls from failed calls
 }
 
 
