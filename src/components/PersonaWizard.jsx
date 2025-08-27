@@ -35,7 +35,7 @@ import {
     ExpandMore as ExpandMoreIcon,
     InfoOutlined as InfoOutlinedIcon,
 } from '@mui/icons-material';
-import RichTextEditor from './RichTextEditor';
+import TextEditor from './TextEditor';
 
 // Constants for Persona fields (copied from CampaignStandardsModal)
 const POSICOES_CARGOS = ['Liderança Executiva: CEO, Diretor Executivo, Sócio', 'Gestão de Tecnologia: CTO, Head de Engenharia, Gerente de TI', 'Gestão de Marketing: Gerente de Marketing, Coordenador de Marketing', 'Gestão de Vendas: Gerente de Vendas, Diretor Comercial', 'Gestão de Recursos Humanos: Head de RH, Analista de RH', 'Outro(s)'];
@@ -578,14 +578,16 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
         return (
           <Box>
             <Typography variant="h6" gutterBottom>Mentalidade e Valores</Typography>
-            <RichTextEditor
+            <TextEditor
                 value={personaData.mentalidadeValores || ''}
                 onChange={(value) => handleRichTextChange('mentalidadeValores', value)}
+                html={true}
             />
             <Typography variant="h6" gutterBottom sx={{mt: 3}}>Contexto Cultural</Typography>
-            <RichTextEditor
+            <TextEditor
                 value={personaData.contextoCultural || ''}
                 onChange={(value) => handleRichTextChange('contextoCultural', value)}
+                html={true}
             />
           </Box>
         );

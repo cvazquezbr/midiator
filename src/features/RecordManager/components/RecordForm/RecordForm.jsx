@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import RichTextEditor from '../../../../components/RichTextEditor';
+import TextEditor from '../../../../components/TextEditor';
 import styles from './RecordForm.module.css';
 
 /**
@@ -173,12 +173,13 @@ const RecordForm = ({
                         <div className={styles.formGroup}> {/* This will also be label on top of input */}
                             <label htmlFor={`novaColunaValor-${index}`}>Valor Coluna {index + 1}</label>
                             {isRichTextField(nc.nome) ? (
-                                <RichTextEditor
+                                <TextEditor
                                     value={nc.valor}
                                     onChange={(value) => handleNovaColunaRichTextChange(index, value)}
                                     placeholder="Valor inicial com formatação"
                                     maxHeight={150}
                                     darkMode={darkMode}
+                                    html={true}
                                 />
                             ) : (
                                 <input
@@ -220,12 +221,13 @@ const RecordForm = ({
                 <div key={col} className={styles.formGroup}>
                     <label htmlFor={`campo-${col.replace(/\s+/g, '-')}`}>{col}:</label>
                     {isRichTextField(col) ? (
-                        <RichTextEditor
+                        <TextEditor
                             value={formData[col] || ''}
                             onChange={(value) => handleRichTextChange(col, value)}
                             placeholder={`Digite o conteúdo para ${col}`}
                             maxHeight={200}
                             darkMode={darkMode}
+                            html={true}
                         />
                     ) : (
                         <input

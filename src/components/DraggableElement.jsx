@@ -1,8 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Box } from '@mui/material';
-import RichTextEditor from './RichTextEditor';
 import styles from './DraggableElement.module.css';
-import TextEditorDialog from './TextEditorDialog';
 import { wrapTextInArea } from '../utils/imageComposer';
 
 const hexToRgba = (hex, alpha) => {
