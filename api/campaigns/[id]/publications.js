@@ -23,14 +23,15 @@ async function handler(req, res) {
 
     // The URN is the last part of the post URL.
     const publications = rows.map(row => {
-        const urlParts = row.linkedin_post_url.split('/');
-        const urn = urlParts[urlParts.length - 2];
+        // Use a regex to robustly find the URN, which can be either a share or ugcPost.
+        const match = row.linkedin_post_url.match(/(urn:li:(?:share|ugcPost):\d+)/);
+        const urn = match ? match[0] : null;
         return {
             ...row,
             post_content: typeof row.post_content === 'string' ? JSON.parse(row.post_content) : row.post_content,
-            urn: `urn:li:share:${urn}`
+            urn: urn
         }
-    });
+    }).filter(p => p.urn !== null); // Filter out any publications where a URN couldn't be found.
 
     res.status(200).json(publications);
   } catch (error) {
