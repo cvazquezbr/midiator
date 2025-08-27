@@ -179,7 +179,7 @@ const ImageGeneratorFrontendOnly = ({
       const initialImageDataItem = initialGeneratedImagesData.find(img => img.index === i);
       const itemBackgroundImage = initialImageDataItem?.backgroundImage || backgroundImage;
 
-      const compositionParams = {
+      return composeSingleImage({
         record,
         index: i,
         itemBackgroundImage,
@@ -188,14 +188,7 @@ const ImageGeneratorFrontendOnly = ({
         fieldPositions,
         fieldStyles,
         fontScale,
-      };
-
-      console.log(`[IGFO] About to generate image #${i}. Params:`, {
-        styles: JSON.parse(JSON.stringify(fieldStyles)),
-        scale: fontScale
-      });
-
-      return composeSingleImage(compositionParams)
+      })
       .then(imageData => {
         setProgress(p => p + 1);
         return imageData;
