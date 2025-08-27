@@ -33,7 +33,7 @@ import {
   AccordionDetails,
   Stack,
 } from '@mui/material';
-import RichTextEditor from './RichTextEditor';
+import TextEditor from './TextEditor';
 import {
   Close as CloseIcon,
   TextFields as TextFieldsIcon,
@@ -985,9 +985,10 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                     <Typography variant="subtitle1">Mentalidade e Valores</Typography>
                     <InfoTooltip title="Descreve a forma de pensar, os valores e a atitude da persona em relação ao trabalho e às decisões. Esta informação é fundamental para adaptar a linguagem e o tom da comunicação." />
                   </Box>
-                  <RichTextEditor
+                  <TextEditor
                     value={persona?.mentalidadeValores || ''}
                     onChange={(value) => handlePersonaRichTextChange('mentalidadeValores', value)}
+                    html={true}
                   />
                 </Grid>
 
@@ -997,9 +998,10 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
                     <Typography variant="subtitle1">Contexto Cultural</Typography>
                     <InfoTooltip title="Aqui é detalhado o ambiente de trabalho e a cultura organizacional na qual a persona está inserida. Isso inclui o contexto interno, como a convivência com processos antigos, a pressão por inovação ou a colaboração entre equipes." />
                   </Box>
-                  <RichTextEditor
+                  <TextEditor
                     value={persona?.contextoCultural || ''}
                     onChange={(value) => handlePersonaRichTextChange('contextoCultural', value)}
+                    html={true}
                   />
                 </Grid>
               </Grid>
@@ -1215,6 +1217,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         content={getCurrentContent()}
         onSave={handleSaveEditor}
         onClose={handleCloseEditor}
+        html={true}
       />
 
       <PersonaGenerationModal

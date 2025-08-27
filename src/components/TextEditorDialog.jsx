@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
-import RichTextEditor from './RichTextEditor'; // Import the RichTextEditor
+import TextEditor from './TextEditor'; // Import the new TextEditor
 
-const TextEditorDialog = ({ open, title, content, onSave, onClose }) => {
+const TextEditorDialog = ({ open, title, content, onSave, onClose, html = false }) => {
   const [editedContent, setEditedContent] = useState(content);
 
   useEffect(() => {
@@ -24,9 +24,10 @@ const TextEditorDialog = ({ open, title, content, onSave, onClose }) => {
     }}>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', p: 1 }}>
-        <RichTextEditor
+        <TextEditor
           value={editedContent}
           onChange={setEditedContent}
+          html={html}
           maxHeight="100%" // Allow editor to fill the space
         />
       </DialogContent>
