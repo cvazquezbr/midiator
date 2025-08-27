@@ -560,10 +560,16 @@ const DraggableElementInternal = ({
           height: `${position.height}%`,
           transform: `rotate(${rotation || 0}deg)`,
           zIndex: position.zIndex || 'auto',
-          backgroundColor: hexToRgba(style.backgroundColor || '#000000', style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1),
-          border: `${style.borderWidth || 0}px solid ${style.borderColor || '#000000'}`,
+          // Conditional styling based on element type
+          backgroundColor: element.type === 'image'
+            ? 'transparent'
+            : hexToRgba(style.backgroundColor || '#000000', style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1),
+          border: element.type === 'image'
+            ? 'none'
+            : `${style.borderWidth || 0}px solid ${style.borderColor || '#000000'}`,
           borderRadius: `${style.borderRadius || 0}px`,
-          padding: `${style.padding || 0}px`,
+          // Padding should only apply to text boxes, not image containers
+          padding: element.type === 'image' ? 0 : `${style.padding || 0}px`,
         }}
         onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
         onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
