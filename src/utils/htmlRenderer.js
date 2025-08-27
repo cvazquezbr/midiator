@@ -22,6 +22,7 @@ export const containsHtml = (text) => {
  */
 export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHeight, style) => {
   console.log(`[renderHtmlToCanvas] Rendering with style:`, JSON.parse(JSON.stringify(style)));
+  console.log(`[renderHtmlToCanvas] HTML Content:`, htmlContent);
   // Create an off-screen parent container that will act as a table.
   const tableContainer = document.createElement('div');
   tableContainer.style.position = 'absolute';
