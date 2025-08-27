@@ -54,6 +54,7 @@ const ImageStep = ({
   setCurrentPreviewIndex,
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [fontScale, setFontScale] = useState(1);
 
   if (!backgroundImage) {
     return (
@@ -170,6 +171,7 @@ const ImageStep = ({
             onOpenHtmlEditor={onOpenHtmlEditor}
             currentPreviewIndex={currentPreviewIndex}
             setCurrentPreviewIndex={setCurrentPreviewIndex}
+            onFontScaleChange={setFontScale}
           />
         </Grid>
         {!isMobile ? (
@@ -189,6 +191,7 @@ const ImageStep = ({
               onDeselectField={onDeselectField}
               onOpenHtmlEditor={onOpenHtmlEditor}
               standardsColors={standardsColors}
+              fontScale={fontScale}
             />
           </Grid>
         ) : (
@@ -211,6 +214,7 @@ const ImageStep = ({
               onDeselectField={onDeselectField}
               onOpenHtmlEditor={onOpenHtmlEditor}
               standardsColors={standardsColors}
+              fontScale={fontScale}
             />
           </>
         )}
