@@ -231,6 +231,8 @@ export const composeSingleImage = async ({
         const finalFontSize = (style.fontSize || 24) * fontScale;
         const finalStyle = { ...style, fontSize: finalFontSize };
 
+        console.log(`[composeSingleImage] Rendering field '${field}' for record ${index}. Base font size: ${style.fontSize}, fontScale: ${fontScale}, finalFontSize: ${finalFontSize}`);
+
         // Draw the textbox background and border
         const backgroundOpacity = style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1;
         const backgroundColorHex = style.backgroundColor || '#000000';

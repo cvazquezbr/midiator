@@ -21,7 +21,6 @@ const FormattingDrawer = ({
   onOpenHtmlEditor,
   isHtmlField,
   standardsColors,
-  fontScale,
 }) => {
   return (
     <Drawer anchor="right" open={open} onClose={onClose} sx={{ zIndex: 1400 }}>
@@ -48,7 +47,6 @@ const FormattingDrawer = ({
           onOpenHtmlEditor={onOpenHtmlEditor}
           isHtmlField={isHtmlField}
           standardsColors={standardsColors}
-          fontScale={fontScale}
         />
       </Box>
     </Drawer>

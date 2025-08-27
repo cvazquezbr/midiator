@@ -313,6 +313,7 @@ const FieldPositioner = ({
     if (renderedImageMetrics.width > 0 && effectiveImageSize?.width > 0) {
       // The scale is uniform, so we can just use the width ratio.
       const scale = renderedImageMetrics.width / effectiveImageSize.width;
+      console.log(`[FieldPositioner] Calculated fontScale: ${scale} (Rendered: ${renderedImageMetrics.width}px, Original: ${effectiveImageSize.width}px)`);
       setFontScale(scale);
       if (onFontScaleChange) {
         onFontScaleChange(scale);
