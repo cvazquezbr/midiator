@@ -55,7 +55,7 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getTimezone } from '../utils/timezone';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { dataURLtoBlob } from '../utils/imageComposer';
-import { getLinkedInProfiles, publishToLinkedIn } from '../utils/linkedinAPI';
+import { getLinkedInProfiles, publishToLinkedIn, uploadImagesForLinkedIn } from '../utils/linkedinAPI';
 import { useUserAuth } from '../context/UserAuthContext';
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
 import { getCampaigns } from '../utils/campaignState.js';
@@ -457,23 +457,36 @@ const Publisher = ({
       toast.error('Conteúdo e alvo de publicação são obrigatórios');
       return;
     }
-    setIsPublishingLi(true);
-    setPublishingStatusLi('Publicando...');
-    try {
-      const selectedImageUrns = Object.keys(selectedImages)
-        .filter(index => selectedImages[index])
-        .map(index => generatedImagesData[parseInt(index)].id);
 
+    setIsPublishingLi(true);
+    setPublishingStatusLi('Iniciando publicação...');
+    setPublishedPostUrlLi(null);
+
+    try {
+      let imageUrns = [];
+      const selectedImageIndexes = Object.keys(selectedImages).filter(index => selectedImages[index]);
+
+      if (selectedImageIndexes.length > 0) {
+        const imageBlobsToUpload = selectedImageIndexes.map(index => unifiedMedia[parseInt(index)].blob);
+        const authorUrn = `urn:li:${selectedTarget.type === 'organization' ? 'organization' : 'person'}:${selectedTarget.id}`;
+
+        imageUrns = await uploadImagesForLinkedIn(settings?.linkedin, imageBlobsToUpload, authorUrn, setPublishingStatusLi);
+      }
+
+      setPublishingStatusLi('Criando a publicação...');
       const campaignData = {
         content: content.trim(),
         targetId: selectedTarget.id,
         targetType: selectedTarget.type,
-        images: selectedImageUrns,
+        images: imageUrns,
       };
+
       const result = await publishToLinkedIn(campaignData, settings?.linkedin);
-      const postLink = `https://www.linkedin.com/feed/update/${result.id}/`;
+      const postLink = result.id ? `https://www.linkedin.com/feed/update/${result.id}/` : null;
+
       setPublishingStatusLi('Publicado com sucesso!');
-      setPublishedPostUrlLi(postLink);
+      if(postLink) setPublishedPostUrlLi(postLink);
+
       setPublishResults(prev => [{
         id: Date.now(),
         target: selectedTarget.name,
@@ -482,6 +495,7 @@ const Publisher = ({
         timestamp: new Date().toLocaleString('pt-BR'),
         link: postLink
       }, ...prev]);
+
     } catch (error) {
       console.error('Erro na publicação:', error);
       const errorMessage = error.message || 'Ocorreu um erro desconhecido.';
