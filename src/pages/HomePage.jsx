@@ -87,6 +87,7 @@ function HomePage() {
   const [campaignGenerationFailed, setCampaignGenerationFailed] = useState(false);
   const [generationError, setGenerationError] = useState('');
   const [editingField, setEditingField] = useState(null);
+  const [isHtmlField, setIsHtmlField] = useState(false);
   const [persona, setPersona] = useState({});
   const [autor, setAutor] = useState({});
   const [instrucoes, setInstrucoes] = useState('');
@@ -929,7 +930,10 @@ function HomePage() {
               onCreateNew={handleCreateNewCampaign}
             />
           </div>
-          <div hidden={activeStep !== 1}><Container maxWidth="lg"><Campaign steps={steps} activeStep={activeStep} {...campaignData} setProblema={setProblema} setSolucao={setSolucao} isGeneratingCampaign={isGeneratingCampaign} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleGenerateCampaignContent={handleGenerateCampaignContent} handleResetCampaign={handleResetCampaign} handleExportHtml={() => exportHtml(campaignData)} editingField={editingField} setEditingField={setEditingField} isGeneratingSummaryMedio={isGeneratingSummaryMedio} handleGenerateSummary={handleGenerateSummary} isGeneratingSummaryPequeno={isGeneratingSummaryPequeno} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} setCampaignContent={setCampaignContent} onEditFollowup={handleEditFollowup} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} setAspectRatio={setAspectRatio} /></Container></div>
+          <div hidden={activeStep !== 1}><Container maxWidth="lg"><Campaign steps={steps} activeStep={activeStep} {...campaignData} setProblema={setProblema} setSolucao={setSolucao} isGeneratingCampaign={isGeneratingCampaign} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleGenerateCampaignContent={handleGenerateCampaignContent} handleResetCampaign={handleResetCampaign} handleExportHtml={() => exportHtml(campaignData)} editingField={editingField} setEditingField={(field) => {
+            setEditingField(field);
+            setIsHtmlField(field === 'conteudoFormatado');
+          }} isGeneratingSummaryMedio={isGeneratingSummaryMedio} handleGenerateSummary={handleGenerateSummary} isGeneratingSummaryPequeno={isGeneratingSummaryPequeno} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} setCampaignContent={setCampaignContent} onEditFollowup={handleEditFollowup} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} setAspectRatio={setAspectRatio} /></Container></div>
           <div hidden={activeStep !== 2}><PostsCurtosStep steps={steps} inputMethod={inputMethod} setInputMethod={setInputMethod} handleDrop={handleDrop} handleDragOver={handleDragOver} fileInputRef={fileInputRef} handleCSVUpload={handleCSVUpload} downloadExampleCsv={downloadExampleCsv} setShowSetupModal={setShowSetupModal} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} generateImagesAutomatically={generateImagesAutomatically} setGenerateImagesAutomatically={setGenerateImagesAutomatically} handleGenerateIAContent={handleGenerateIAContent} isGenerating={isGenerating} csvData={csvData} csvHeaders={csvHeaders} onDadosAlterados={handleDadosAlterados} darkMode={darkMode} exportCsv={exportCsv} /></div>
           <div hidden={activeStep !== 3}>
             <ImageStep
@@ -1019,6 +1023,7 @@ function HomePage() {
       />
       <TextEditorDialog
         open={editingField !== null || editingFollowup !== null}
+        html={isHtmlField}
         title={
           editingFollowup !== null
             ? `Editar Post de Follow-up ${editingFollowup.index + 1}`
@@ -1073,6 +1078,7 @@ function HomePage() {
         onClose={() => {
           setEditingField(null);
           setEditingFollowup(null);
+          setIsHtmlField(false);
         }}
       />
     </ThemeProvider>
