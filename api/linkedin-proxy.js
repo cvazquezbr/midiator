@@ -381,50 +381,44 @@ async function getPostAnalytics(fetch, accessToken, urns) {
 
 
 async function handleGetShareStatistics(fetch, request, response) {
-    const { accessToken, organizationUrn, shareUrns } = request.body;
+    const { accessToken, organizationUrn: authorUrn, shareUrns } = request.body;
 
-    if (!accessToken || !organizationUrn || !shareUrns || !Array.isArray(shareUrns)) {
-        return response.status(400).json({ error: 'Missing accessToken, organizationUrn, or shareUrns.' });
+    if (!accessToken || !authorUrn || !shareUrns || !Array.isArray(shareUrns)) {
+        return response.status(400).json({ error: 'Missing accessToken, authorUrn, or shareUrns.' });
     }
 
-    // Separate URNs by type to use the appropriate API endpoint for each.
-    const legacyUrns = shareUrns.filter(urn => urn.includes(':share:') || urn.includes(':ugcPost:'));
-    const modernUrns = shareUrns.filter(urn => urn.includes(':carousel:'));
-    let allElements = [];
-
     try {
-        // Fetch stats for legacy URNs (shares, ugcPosts) using the existing endpoint.
-        if (legacyUrns.length > 0) {
-            const sharesQueryParam = `List(${legacyUrns.join(',')})`;
-            const url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(organizationUrn)}&shares=${encodeURIComponent(sharesQueryParam)}`;
+        let allElements = [];
+
+        // Use the appropriate API endpoint based on the author's type (person or organization).
+        if (authorUrn.includes(':organization:')) {
+            // For organizations, use the organizationalEntityShareStatistics endpoint.
+            const sharesQueryParam = `List(${shareUrns.join(',')})`;
+            const url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&shares=${encodeURIComponent(sharesQueryParam)}`;
+
             const linkedinResponse = await fetchWithRetry(fetch, url, {
                 method: 'GET',
                 headers: { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION },
             });
+
             const data = await linkedinResponse.json();
             if (linkedinResponse.ok) {
-                allElements = allElements.concat(data.elements || []);
+                allElements = data.elements || [];
             } else {
-                 console.error(`[ERROR] LinkedIn Legacy Stats API responded with status ${linkedinResponse.status}:`, data);
-                 // Don't throw here, just log the error and continue, so one failing API doesn't kill the whole process.
+                 console.error(`[ERROR] LinkedIn Organizational Stats API responded with status ${linkedinResponse.status}:`, data);
+                 // Return empty array on failure for this author, so other authors can still be processed.
+                 allElements = [];
             }
-        }
-
-        // Fetch stats for modern URNs (carousels) using a different, newer endpoint.
-        if (modernUrns.length > 0) {
-            try {
-                const modernStats = await getPostAnalytics(fetch, accessToken, modernUrns);
-                allElements = allElements.concat(modernStats);
-            } catch (error) {
-                 console.error(`[ERROR] Failed to fetch modern post analytics:`, error);
-                 // Continue even if this part fails.
-            }
+        } else {
+            // For personal profiles, the organizational endpoint will not work.
+            // Use the more generic post analytics endpoint.
+            allElements = await getPostAnalytics(fetch, accessToken, shareUrns);
         }
 
         return response.status(200).json({ elements: allElements });
 
     } catch (error) {
-        console.error(`[FATAL] Error during handleGetShareStatistics:`, error.message, error.stack);
+        console.error(`[FATAL] Error during handleGetShareStatistics for author ${authorUrn}:`, error.message, error.stack);
         return response.status(500).json({
             error: `Internal Server Error during statistics fetch`,
             details: error.message,
