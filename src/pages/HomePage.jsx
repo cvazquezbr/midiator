@@ -618,7 +618,7 @@ function HomePage() {
     };
     novasColunas.forEach((header, index) => {
       updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true };
-      updatedFieldStyles[header] = fieldStyles[header] || { ...defaultStylesBase };
+      updatedFieldStyles[header] = { ...defaultStylesBase, ...(fieldStyles[header] || {}) };
     });
     setFieldPositions(updatedFieldPositions);
     setFieldStyles(updatedFieldStyles);
