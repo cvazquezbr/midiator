@@ -164,7 +164,7 @@ async function handleUploadImage(fetch, request, response) {
   const imageBuffer = Buffer.from(imageBase64, 'base64');
   try {
     const linkedinResponse = await fetch(uploadUrl, { method: 'PUT', headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': imageType }, body: imageBuffer });
-    return response.status(linkedinResponse.status).send();
+    return response.status(linkedinResponse.status).json({ success: true });
   } catch (error) {
     console.error('Error during image upload:', error);
     return response.status(500).json({ error: 'Internal Server Error' });
