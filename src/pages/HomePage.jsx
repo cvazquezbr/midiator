@@ -138,10 +138,6 @@ function HomePage() {
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [fontScale, setFontScale] = useState(1);
 
-  useEffect(() => {
-    console.log(`[HomePage] fontScale updated to: ${fontScale}`);
-  }, [fontScale]);
-
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
 

@@ -21,8 +21,6 @@ export const containsHtml = (text) => {
  * @param {Object} style The CSS styles to apply.
  */
 export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHeight, style) => {
-  console.log(`[renderHtmlToCanvas] Rendering with style:`, JSON.parse(JSON.stringify(style)));
-  console.log(`[renderHtmlToCanvas] HTML Content:`, htmlContent);
   // Create an off-screen parent container that will act as a table.
   const tableContainer = document.createElement('div');
   tableContainer.style.position = 'absolute';
@@ -35,31 +33,33 @@ export const renderHtmlToCanvas = async (ctx, htmlContent, x, y, maxWidth, maxHe
   // Create the target child element that will act as a table-cell.
   const tempDiv = document.createElement('div');
 
-  // Apply all necessary styles to the table-cell element.
+  // Apply layout styles to the table-cell container.
   tempDiv.style.display = 'table-cell';
-  tempDiv.style.verticalAlign = style.verticalAlign || 'top'; // 'top', 'middle', 'bottom'
-  tempDiv.style.boxSizing = 'border-box';
+  tempDiv.style.verticalAlign = style.verticalAlign || 'top';
   tempDiv.style.padding = `${style.padding || 0}px`;
-  tempDiv.style.overflowWrap = 'break-word';
-  tempDiv.style.wordWrap = 'break-word';
 
-  // Apply text styles
-  tempDiv.style.fontFamily = style.fontFamily || 'Arial';
-  tempDiv.style.fontSize = `${style.fontSize || 24}px`;
-  tempDiv.style.fontWeight = style.fontWeight || 'normal';
-  tempDiv.style.fontStyle = style.fontStyle || 'normal';
-  tempDiv.style.color = style.color || '#000000';
-  tempDiv.style.textAlign = style.textAlign || 'left';
-  tempDiv.style.lineHeight = style.lineHeightMultiplier ? style.lineHeightMultiplier : 'normal';
+  // Construct an inline style string to force styles onto the content.
+  // This is more robust for html2canvas, which can be fickle with style inheritance.
+  const inlineStyle = `
+    display: inline-block;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    font-family: ${style.fontFamily || 'Arial'};
+    font-size: ${style.fontSize || 24}px;
+    font-weight: ${style.fontWeight || 'normal'};
+    font-style: ${style.fontStyle || 'normal'};
+    color: ${style.color || '#000000'};
+    text-align: ${style.textAlign || 'left'};
+    line-height: ${style.lineHeightMultiplier ? style.lineHeightMultiplier : 'normal'};
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    ${style.textShadow ? `text-shadow: ${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'};` : ''}
+    ${style.textStroke ? `-webkit-text-stroke: ${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'};` : ''}
+  `.replace(/\s*\n\s*/g, ' '); // Remove newlines and extra spaces.
 
-  if (style.textShadow) {
-    tempDiv.style.textShadow = `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}`;
-  }
-  if (style.textStroke) {
-    tempDiv.style.webkitTextStroke = `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}`;
-  }
-
-  tempDiv.innerHTML = htmlContent;
+  // Wrap the content in a div with the forced inline styles.
+  tempDiv.innerHTML = `<div style="${inlineStyle}">${htmlContent}</div>`;
 
   // Build the DOM structure and append to the body
   tableContainer.appendChild(tempDiv);
