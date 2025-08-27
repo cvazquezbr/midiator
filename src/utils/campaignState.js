@@ -306,3 +306,15 @@ export const deleteCampaign = async (id) => {
   console.log(`[campaignState] Successfully deleted campaign ${id}.`);
   return res.json();
 };
+
+export const getCampaignPublications = async (campaignId) => {
+  if (!campaignId) {
+    throw new Error('A campaign ID is required to fetch publications.');
+  }
+  const res = await fetchWithAuth(`/api/campaigns/${campaignId}/publications`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to fetch campaign publications.');
+  }
+  return res.json();
+};

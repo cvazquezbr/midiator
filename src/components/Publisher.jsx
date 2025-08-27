@@ -94,7 +94,8 @@ const Publisher = ({
   selectedImages,
   setSelectedImages,
   selectedVideos,
-  setSelectedVideos
+  setSelectedVideos,
+  currentCampaign,
 }) => {
   const [tabValue, setTabValue] = React.useState(0);
   const [mySchedules, setMySchedules] = useState([]);
@@ -113,6 +114,12 @@ const Publisher = ({
   const [schedulePreview, setSchedulePreview] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
+
+  useEffect(() => {
+    if (currentCampaign) {
+      setSelectedCampaignId(currentCampaign.id);
+    }
+  }, [currentCampaign]);
 
   useEffect(() => {
     const fetchCampaigns = async () => {
@@ -485,7 +492,32 @@ const Publisher = ({
       const postLink = result.id ? `https://www.linkedin.com/feed/update/${result.id}/` : null;
 
       setPublishingStatusLi('Publicado com sucesso!');
-      if(postLink) setPublishedPostUrlLi(postLink);
+      if(postLink) {
+        setPublishedPostUrlLi(postLink);
+
+        // Save the successful publication to the schedule table for monitoring
+        try {
+            const publicationPayload = {
+                campaign_id: selectedCampaignId || null,
+                scheduled_at: new Date().toISOString(), // Immediate publication
+                authorUrn: `urn:li:${selectedTarget.type}:${selectedTarget.id}`,
+                content: {
+                    titulo: campaignContent?.titulo || 'Publicação Avulsa',
+                    conteudo: content, // Use the final content from the text field
+                    cta: campaignContent?.cta || '',
+                    hashtags: campaignContent?.hashtags || [],
+                },
+                linkedin_post_url: postLink,
+                status: 'published'
+            };
+            await createSchedule(publicationPayload);
+            toast.success("Publicação registrada para monitoramento.");
+            fetchSchedules(); // Refresh the schedules list
+        } catch (scheduleError) {
+            console.error("Failed to save publication to schedule:", scheduleError);
+            toast.error(`Falha ao registrar publicação para monitoramento: ${scheduleError.message}`);
+        }
+      }
 
       setPublishResults(prev => [{
         id: Date.now(),

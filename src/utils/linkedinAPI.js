@@ -181,4 +181,22 @@ export const uploadImagesForLinkedIn = async (linkedinConfig, imageBlobs, author
   return assetUrns;
 };
 
+export const getLinkedInShareStatistics = async (linkedinConfig, organizationUrn, shareUrns) => {
+  if (!linkedinConfig || !linkedinConfig.accessToken) {
+    throw new Error('LinkedIn configuration or Access Token not found.');
+  }
+  if (!organizationUrn || !shareUrns || shareUrns.length === 0) {
+    throw new Error('Organization URN and at least one Share URN are required.');
+  }
+
+  const api = new LinkedInAPI(linkedinConfig.accessToken);
+  const result = await api._proxyFetch('getShareStatistics', {
+    organizationUrn,
+    shareUrns,
+  });
+
+  return result;
+};
+
+
 export default LinkedInAPI;
