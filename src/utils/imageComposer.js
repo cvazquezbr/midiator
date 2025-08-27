@@ -303,6 +303,7 @@ export const composeSingleImage = async ({
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
         backgroundImage: itemBackgroundImage, // Always preserve the original background
+        fontScale, // Preserve the font scale used for generation
         // customFieldPositions and customFieldStyles are not handled here as this is for initial generation
     };
 };
