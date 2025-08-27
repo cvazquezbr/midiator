@@ -28,6 +28,7 @@ const TextEditorDialog = ({ open, title, content, onSave, onClose, html = false 
           value={editedContent}
           onChange={setEditedContent}
           html={html}
+          variant="full"
         />
       </DialogContent>
       <DialogActions sx={{ pb: 2, px: 3 }}>
