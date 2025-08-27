@@ -187,7 +187,7 @@ const ImageGeneratorFrontendOnly = ({
         brandElements,
         fieldPositions,
         fieldStyles,
-        fontScale: 1, // Always use 100% scale for generation
+        fontScale,
       })
       .then(imageData => {
         setProgress(p => p + 1);
@@ -324,7 +324,7 @@ const ImageGeneratorFrontendOnly = ({
         stylesToUse,
         sizeToUse,
         elementsToUse,
-        1 // Always use 100% scale for regeneration
+        modifiedImageData.fontScale || 1
       );
     }
     handleCloseGeneratedImageEditor();
@@ -388,11 +388,11 @@ const ImageGeneratorFrontendOnly = ({
           const img = new Image();
           img.onload = () => {
             const newSize = { width: img.width, height: img.height };
-            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, newSize, imageToUpdate.customBrandElements || brandElements, imageToUpdate.fontScale || 1);
+            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, newSize, imageToUpdate.customBrandElements || brandElements, fontScale);
           };
           img.onerror = () => {
             console.error('Failed to load the new background image to get its dimensions.');
-            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, null, imageToUpdate.customBrandElements || brandElements, imageToUpdate.fontScale || 1);
+            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, null, imageToUpdate.customBrandElements || brandElements, fontScale);
           };
           img.src = newBgUrl;
         }
