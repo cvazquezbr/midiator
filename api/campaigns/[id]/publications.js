@@ -1,5 +1,5 @@
-import { withAuth } from '../../../middleware/auth';
-import { query } from '../../../db';
+import { withAuth } from '../../middleware/auth.js';
+import { query } from '../../db.js';
 
 async function handler(req, res) {
   const { id: campaignId } = req.query;
