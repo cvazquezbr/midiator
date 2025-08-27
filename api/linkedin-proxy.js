@@ -161,9 +161,11 @@ async function handleUploadImage(fetch, request, response) {
 async function handleCreatePost(fetch, request, response) {
     try {
         const { accessToken, payload } = request.body;
-        if (!accessToken || !payload) return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
+        if (!accessToken || !payload) {
+            return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
+        }
 
-        console.log('[DEBUG] Entering handleCreatePost with payload:', JSON.stringify(payload, null, 2));
+        console.log('[DEBUG] Entering handleCreatePost with received payload:', JSON.stringify(payload, null, 2));
 
         const { targetId, targetType, content, images } = payload;
         if (!targetId || !targetType || !content) {
@@ -171,17 +173,42 @@ async function handleCreatePost(fetch, request, response) {
             return response.status(400).json({ error: 'Missing targetId, targetType, or content for creating post.' });
         }
 
-        const authorUrn = targetType === 'organization'
-            ? `urn:li:organization:${targetId}`
-            : `urn:li:person:${targetId}`;
-        console.log(`[DEBUG] Constructed author URN: ${authorUrn}`);
+        const authorUrn = `urn:li:${targetType === 'organization' ? 'organization' : 'person'}:${targetId}`;
 
-        const shareContent = { shareCommentary: { text: content }, shareMediaCategory: (images && images.length > 0) ? 'IMAGE' : 'NONE' };
+        // Base structure for the new Posts API
+        const postData = {
+            author: authorUrn,
+            commentary: content,
+            visibility: "PUBLIC",
+            distribution: {
+                feedDistribution: "MAIN_FEED",
+                targetEntities: [],
+                thirdPartyDistributionChannels: []
+            },
+            lifecycleState: "PUBLISHED",
+            isReshareDisabledByAuthor: false
+        };
+
+        // Handle images according to the new API structure
         if (images && images.length > 0) {
-            shareContent.media = images.map(assetURN => ({ status: 'READY', media: assetURN }));
+            if (images.length === 1) {
+                // Single image post
+                postData.content = {
+                    media: {
+                        id: images[0] // Assuming images is an array of URNs
+                    }
+                };
+            } else {
+                // Multi-image post
+                postData.content = {
+                    multiImage: {
+                        images: images.map(urn => ({ id: urn })) // Map string URNs to objects with an 'id' key
+                    }
+                };
+            }
         }
-        const postData = { author: authorUrn, lifecycleState: 'PUBLISHED', specificContent: { 'com.linkedin.ugc.ShareContent': shareContent }, visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' } };
-        console.log('[DEBUG] Calling handleGenericPost with postData:', JSON.stringify(postData, null, 2));
+
+        console.log('[DEBUG] Calling handleGenericPost with new Posts API payload:', JSON.stringify(postData, null, 2));
 
         return handleGenericPost(fetch, { ...request, body: { accessToken, payload: postData } }, response, 'https://api.linkedin.com/rest/posts');
     } catch (error) {
