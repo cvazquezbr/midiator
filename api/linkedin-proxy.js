@@ -336,61 +336,6 @@ async function handleRefreshToken(fetch, request, response) {
     }
 }
 
-async function getPostAnalytics(fetch, accessToken, urns) {
-  // For personal posts, batch analytics are not straightforward.
-  // This function fetches analytics for each post individually.
-  // This is less efficient but more likely to succeed than a guessed batch endpoint.
-  const promises = urns.map(urn => {
-    const encodedUrn = encodeURIComponent(urn);
-    // This is a hypothetical endpoint for per-post analytics, following a standard REST pattern.
-    const url = `https://api.linkedin.com/rest/posts/${encodedUrn}/analytics`;
-
-    return fetchWithRetry(fetch, url, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': LINKEDIN_API_VERSION,
-      },
-    })
-    .then(response => {
-      if (!response.ok) {
-        console.error(`[ERROR] Failed to fetch analytics for URN ${urn}. Status: ${response.status}`);
-        return null; // Return null for failed requests to not break Promise.all
-      }
-      return response.json();
-    })
-    .then(data => {
-      if (!data) return null;
-
-      // Transform the single result to the format expected by the frontend.
-      // The response for a single post might not be nested under a "results" key.
-      const stats = data; // Assuming the response body is the stats object.
-      const key = urn.includes(':carousel:') ? 'carousel' : 'post';
-
-      return {
-        [key]: urn,
-        totalShareStatistics: {
-          impressionCount: stats.impressionCount || 0,
-          likeCount: stats.likeCount || 0,
-          commentCount: stats.commentCount || 0,
-          shareCount: stats.shareCount || 0,
-          clickCount: stats.clickCount || 0,
-          engagement: stats.engagement || 0,
-        },
-      };
-    })
-    .catch(error => {
-        console.error(`[FATAL] Unhandled error fetching analytics for URN ${urn}:`, error);
-        return null; // Ensure promise does not reject
-    });
-  });
-
-  const results = await Promise.all(promises);
-  return results.filter(Boolean); // Filter out any nulls from failed calls
-}
-
-
 async function handleGetShareStatistics(fetch, request, response) {
     const { accessToken, organizationUrn: authorUrn, shareUrns } = request.body;
 
@@ -398,40 +343,35 @@ async function handleGetShareStatistics(fetch, request, response) {
         return response.status(400).json({ error: 'Missing accessToken, authorUrn, or shareUrns.' });
     }
 
+    // This is the final attempt to fix the statistics fetching.
+    // This implementation uses a single, known endpoint and passes the author's URN (person or org)
+    // to the `organizationalEntity` parameter. This tests the hypothesis that this endpoint
+    // might work for both entity types if the correct URN is provided.
+    const sharesQueryParam = `List(${shareUrns.join(',')})`;
+    const url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&shares=${encodeURIComponent(sharesQueryParam)}`;
+
     try {
-        let allElements = [];
+        const linkedinResponse = await fetchWithRetry(fetch, url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': LINKEDIN_API_VERSION
+            },
+        });
 
-        // Use the appropriate API endpoint based on the author's type (person or organization).
-        if (authorUrn.includes(':organization:')) {
-            // For organizations, use the organizationalEntityShareStatistics endpoint.
-            const sharesQueryParam = `List(${shareUrns.join(',')})`;
-            const url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&shares=${encodeURIComponent(sharesQueryParam)}`;
+        const data = await linkedinResponse.json();
 
-            const linkedinResponse = await fetchWithRetry(fetch, url, {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION },
-            });
-
-            const data = await linkedinResponse.json();
-            if (linkedinResponse.ok) {
-                allElements = data.elements || [];
-            } else {
-                 console.error(`[ERROR] LinkedIn Organizational Stats API responded with status ${linkedinResponse.status}:`, data);
-                 // Return empty array on failure for this author, so other authors can still be processed.
-                 allElements = [];
-            }
+        if (linkedinResponse.ok) {
+            return response.status(200).json(data);
         } else {
-            // For personal profiles, the organizational endpoint will not work.
-            // Use the more generic post analytics endpoint.
-            allElements = await getPostAnalytics(fetch, accessToken, shareUrns);
+            console.error(`[ERROR] LinkedIn Stats API responded with status ${linkedinResponse.status} for author ${authorUrn}:`, data);
+            return response.status(linkedinResponse.status).json(data);
         }
-
-        return response.status(200).json({ elements: allElements });
-
     } catch (error) {
-        console.error(`[FATAL] Error during handleGetShareStatistics for author ${authorUrn}:`, error.message, error.stack);
+        console.error(`[FATAL] Error during GET to ${url}:`, error.message, error.stack);
         return response.status(500).json({
-            error: `Internal Server Error during statistics fetch`,
+            error: `Internal Server Error during GET to ${url}`,
             details: error.message,
         });
     }
