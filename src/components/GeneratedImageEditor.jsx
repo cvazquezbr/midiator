@@ -246,6 +246,7 @@ const GeneratedImageEditor = ({
                   setBrandElements={setEditedBrandElements}
                   onDeselectField={handleDeselectField}
                   onOpenHtmlEditor={handleOpenHtmlEditor}
+                  fontScale={fontScale}
                 />
               </Grid>
             )}
@@ -283,6 +284,7 @@ const GeneratedImageEditor = ({
             setImageFilters={setEditedImageFilters}
             brandElements={editedBrandElements}
             setBrandElements={setEditedBrandElements}
+            fontScale={fontScale}
           />
         </>
       )}
