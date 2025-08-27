@@ -265,7 +265,7 @@ export const composeSingleImage = async ({
             currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
         }
 
-        if (isHtmlField(field)) {
+        if (containsHtml(text)) {
             // For HTML fields, we delegate the entire rendering, including wrapping, to the HTML renderer.
             await renderHtmlToCanvas(ctx, text, textContentStartX, textContentStartY, effectiveTextWidth, effectiveTextHeight, finalStyle);
         } else {
