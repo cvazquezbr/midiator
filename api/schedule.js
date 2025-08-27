@@ -5,17 +5,39 @@ import { markdownToLinkedinText } from './utils.js';
 // Helper function to create a schedule
 async function handleCreateSchedule(request, response) {
     try {
-        const { campaign_id, scheduled_at, content, authorUrn } = request.body.payload;
+        const {
+            campaign_id,
+            scheduled_at,
+            content,
+            authorUrn,
+            status = 'scheduled', // Default to 'scheduled'
+            linkedin_post_url = null
+        } = request.body.payload;
+
         if (!scheduled_at || !content || !authorUrn) {
             return response.status(400).json({ error: 'Missing required fields for scheduling.' });
         }
+
         const userId = request.user.sub;
         const executionDate = new Date(scheduled_at);
 
+        // Extract post ID from URL. The ID is the URN.
+        const match = linkedin_post_url ? linkedin_post_url.match(/(urn:li:(?:share|ugcPost):\d+)/) : null;
+        const linkedin_post_id = match ? match[0] : null;
+
         const { rows } = await query(
-            `INSERT INTO linkedin_schedules (user_id, campaign_id, scheduled_at, user_selected_time, post_content, status)
-             VALUES ($1, $2, $3, $4, $5, 'scheduled') RETURNING *`,
-            [userId, campaign_id || null, executionDate.toISOString(), scheduled_at, JSON.stringify({ ...content, authorUrn })]
+            `INSERT INTO linkedin_schedules (user_id, campaign_id, scheduled_at, user_selected_time, post_content, status, linkedin_post_url, linkedin_post_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [
+                userId,
+                campaign_id || null,
+                executionDate.toISOString(),
+                scheduled_at,
+                JSON.stringify({ ...content, authorUrn }),
+                status,
+                linkedin_post_url,
+                linkedin_post_id
+            ]
         );
 
         return response.status(201).json(rows[0]);
