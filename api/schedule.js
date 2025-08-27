@@ -242,10 +242,14 @@ async function handleRunScheduler(request, response) {
                     }
                 }
 
+                const videoUrn = post.post_content?.video;
+
                 const payload = {
                     author: authorUrn,
                     content: postText,
-                    images: imageUrns
+                    images: imageUrns,
+                    video: videoUrn,
+                    title: post.post_content?.titulo || 'Video Post'
                 };
 
                 const proxyUrl = `${process.env.VITE_API_BASE_URL || 'http://localhost:5173'}/api/linkedin-proxy`;

@@ -180,7 +180,7 @@ async function handleCreatePost(fetch, request, response) {
 
         console.log('[DEBUG] Entering handleCreatePost with received payload:', JSON.stringify(payload, null, 2));
 
-        const { targetId, targetType, content, images, video } = payload;
+        const { targetId, targetType, content, images, video, title } = payload;
         if (!targetId || !targetType || !content) {
             console.error('[DEBUG] Validation failed in handleCreatePost:', { targetId, targetType, contentExists: !!content });
             return response.status(400).json({ error: 'Missing targetId, targetType, or content for creating post.' });
@@ -205,7 +205,8 @@ async function handleCreatePost(fetch, request, response) {
         if (video) {
             postData.content = {
                 media: {
-                    id: video
+                    id: video,
+                    title: title || 'Video Post'
                 }
             };
         } else if (images && images.length > 0) {
