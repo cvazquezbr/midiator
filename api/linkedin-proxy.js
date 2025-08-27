@@ -330,6 +330,43 @@ async function handleRefreshToken(fetch, request, response) {
     }
 }
 
+async function handleGetShareStatistics(fetch, request, response) {
+    const { accessToken, organizationUrn, shareUrns } = request.body;
+
+    if (!accessToken || !organizationUrn || !shareUrns || !Array.isArray(shareUrns)) {
+        return response.status(400).json({ error: 'Missing accessToken, organizationUrn, or shareUrns.' });
+    }
+
+    const sharesQueryParam = `List(${shareUrns.join(',')})`;
+    const url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(organizationUrn)}&shares=${encodeURIComponent(sharesQueryParam)}`;
+
+    try {
+        const linkedinResponse = await fetchWithRetry(fetch, url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': LINKEDIN_API_VERSION
+            },
+        });
+
+        const data = await linkedinResponse.json();
+
+        if (linkedinResponse.ok) {
+            return response.status(200).json(data);
+        } else {
+            console.error(`[ERROR] LinkedIn API responded with status ${linkedinResponse.status}:`, data);
+            return response.status(linkedinResponse.status).json(data);
+        }
+    } catch (error) {
+        console.error(`[FATAL] Error during GET to ${url}:`, error.message, error.stack);
+        return response.status(500).json({
+            error: `Internal Server Error during GET to ${url}`,
+            details: error.message,
+        });
+    }
+}
+
 const mainHandler = async (request, response) => {
   const fetch = (await import('node-fetch')).default;
   const { action } = request.body;
@@ -342,6 +379,7 @@ const mainHandler = async (request, response) => {
     case 'uploadImage': return handleUploadImage(fetch, request, response);
     case 'createPost': return handleCreatePost(fetch, request, response);
     case 'getProfiles': return handleGetProfiles(fetch, request, response);
+    case 'getShareStatistics': return handleGetShareStatistics(fetch, request, response);
     case 'initializeVideoUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/rest/videos?action=initializeUpload');
     case 'uploadVideo': return handleUploadVideo(fetch, request, response);
     case 'finalizeVideoUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/rest/videos?action=finalizeUpload');
