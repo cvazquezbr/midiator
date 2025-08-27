@@ -23,12 +23,11 @@ const TextEditorDialog = ({ open, title, content, onSave, onClose, html = false 
       }
     }}>
       <DialogTitle>{title}</DialogTitle>
-      <DialogContent sx={{ display: 'flex', flexDirection: 'column', p: 1 }}>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', p: 2, height: '100%' }}>
         <TextEditor
           value={editedContent}
           onChange={setEditedContent}
           html={html}
-          maxHeight="100%" // Allow editor to fill the space
         />
       </DialogContent>
       <DialogActions sx={{ pb: 2, px: 3 }}>
