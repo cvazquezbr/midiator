@@ -180,6 +180,7 @@ const RecordForm = ({
                                     maxHeight={150}
                                     darkMode={darkMode}
                                     html={true}
+                                    variant="simple"
                                 />
                             ) : (
                                 <input
@@ -228,6 +229,7 @@ const RecordForm = ({
                             maxHeight={200}
                             darkMode={darkMode}
                             html={true}
+                            variant="simple"
                         />
                     ) : (
                         <input
