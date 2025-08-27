@@ -627,7 +627,6 @@ const DraggableElementInternal = ({
                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
                     style={{
                       width: '100%',
-                      height: '100%',
                       overflow: 'hidden',
                       wordWrap: 'break-word',
                       pointerEvents: 'none',

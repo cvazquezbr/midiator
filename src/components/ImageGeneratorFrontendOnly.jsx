@@ -187,7 +187,7 @@ const ImageGeneratorFrontendOnly = ({
         brandElements,
         fieldPositions,
         fieldStyles,
-        fontScale: 1, // Final render should always be at 100% scale.
+        fontScale,
       })
       .then(imageData => {
         setProgress(p => p + 1);
@@ -323,13 +323,14 @@ const ImageGeneratorFrontendOnly = ({
         positionsToUse,
         stylesToUse,
         sizeToUse,
-        elementsToUse
+        elementsToUse,
+        modifiedImageData.fontScale || 1
       );
     }
     handleCloseGeneratedImageEditor();
   };
 
-  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements) => {
+  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1) => {
     if (!currentBackgroundImage || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
       alert('Pré-requisitos para regeneração não atendidos. Fontes, dados ou configurações faltando.');
       return;
@@ -343,7 +344,7 @@ const ImageGeneratorFrontendOnly = ({
         brandElements: elementsToUse,
         fieldPositions: positionsToUse,
         fieldStyles: stylesToUse,
-        fontScale: 1, // Final render should always be at 100% scale.
+        fontScale,
       });
 
       setGeneratedImages(prevImages => {
