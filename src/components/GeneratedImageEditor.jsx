@@ -151,6 +151,7 @@ const GeneratedImageEditor = ({
       setStylesAreInitialized(true);
 
       setEditedImageFilters(imageFilters || defaultFilters);
+      setFontScale(imageData.fontScale || 1); // Initialize font scale from imageData
     } else {
       setStylesAreInitialized(false);
     }
