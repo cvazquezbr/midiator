@@ -104,6 +104,35 @@ const Toolbar = ({ editor }) => {
 
       <Divider orientation="vertical" flexItem />
 
+      {/* Block Styles */}
+      <FormControl size="small" sx={{ minWidth: 120 }}>
+        <Select
+          value={
+            editor.isActive('heading', { level: 1 }) ? 'h1' :
+            editor.isActive('heading', { level: 2 }) ? 'h2' :
+            editor.isActive('heading', { level: 3 }) ? 'h3' :
+            editor.isActive('codeBlock') ? 'code' : 'p'
+          }
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === 'p') editor.chain().focus().setParagraph().run();
+            if (value === 'h1') editor.chain().focus().toggleHeading({ level: 1 }).run();
+            if (value === 'h2') editor.chain().focus().toggleHeading({ level: 2 }).run();
+            if (value === 'h3') editor.chain().focus().toggleHeading({ level: 3 }).run();
+            if (value === 'code') editor.chain().focus().toggleCodeBlock().run();
+          }}
+          displayEmpty
+        >
+          <MenuItem value="p">Paragraph</MenuItem>
+          <MenuItem value="h1">Heading 1</MenuItem>
+          <MenuItem value="h2">Heading 2</MenuItem>
+          <MenuItem value="h3">Heading 3</MenuItem>
+          <MenuItem value="code">Code Block</MenuItem>
+        </Select>
+      </FormControl>
+
+      <Divider orientation="vertical" flexItem />
+
       {/* Basic Formatting */}
       <Tooltip title="Bold">
         <IconButton onClick={() => editor.chain().focus().toggleBold().run()} color={editor.isActive('bold') ? 'primary' : 'default'} size="small">

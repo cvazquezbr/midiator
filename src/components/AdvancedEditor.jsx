@@ -29,6 +29,12 @@ const AdvancedEditor = ({ value, onChange, html = false }) => {
     },
   });
 
+  React.useEffect(() => {
+    if (editor && value !== editor.getHTML()) {
+      editor.commands.setContent(value, false);
+    }
+  }, [value, editor]);
+
   if (!editor) {
     return null;
   }
