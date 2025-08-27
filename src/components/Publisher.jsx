@@ -464,12 +464,25 @@ const Publisher = ({
 
     try {
       let imageUrns = [];
+      let videoUrn = null;
+
       const selectedImageIndexes = Object.keys(selectedImages).filter(index => selectedImages[index]);
+      const selectedVideoIndexes = Object.keys(selectedVideos).filter(index => selectedVideos[index]);
+      const authorUrn = `urn:li:${selectedTarget.type === 'organization' ? 'organization' : 'person'}:${selectedTarget.id}`;
 
-      if (selectedImageIndexes.length > 0) {
+      if (selectedVideoIndexes.length > 0) {
+        // Handle video upload
+        const videoIndex = parseInt(selectedVideoIndexes[0]);
+        // The actual index in unifiedMedia is generatedImagesData.length + videoIndex
+        const videoMedia = unifiedMedia.find(m => m.type === 'video' && m.mediaId.endsWith(videoIndex));
+        if (videoMedia && videoMedia.blob) {
+            videoUrn = await uploadVideoForLinkedIn(settings?.linkedin, videoMedia.blob, authorUrn, setPublishingStatusLi);
+        } else {
+            throw new Error("Blob de vídeo selecionado não encontrado.");
+        }
+      } else if (selectedImageIndexes.length > 0) {
+        // Handle image uploads
         const imageBlobsToUpload = selectedImageIndexes.map(index => unifiedMedia[parseInt(index)].blob);
-        const authorUrn = `urn:li:${selectedTarget.type === 'organization' ? 'organization' : 'person'}:${selectedTarget.id}`;
-
         imageUrns = await uploadImagesForLinkedIn(settings?.linkedin, imageBlobsToUpload, authorUrn, setPublishingStatusLi);
       }
 
@@ -479,12 +492,20 @@ const Publisher = ({
         targetId: selectedTarget.id,
         targetType: selectedTarget.type,
         images: imageUrns,
+        video: videoUrn,
+        title: campaignContent?.titulo || 'Vídeo'
       };
 
       const result = await publishToLinkedIn(campaignData, settings?.linkedin);
-      const postLink = result.id ? `https://www.linkedin.com/feed/update/${result.id}/` : null;
+      const postLink = result.id ? `https://www.linkedin.com/feed/update/${result.id}/` : (result.value?.id ? `https://www.linkedin.com/feed/update/${result.value.id}/` : null);
 
-      setPublishingStatusLi('Publicado com sucesso!');
+      if (result.value?.warning) {
+          toast.warning(`Publicado com um aviso: ${result.value.warning}`);
+          setPublishingStatusLi(`Publicado com um aviso: ${result.value.warning}`);
+      } else {
+          setPublishingStatusLi('Publicado com sucesso!');
+      }
+
       if(postLink) setPublishedPostUrlLi(postLink);
 
       setPublishResults(prev => [{

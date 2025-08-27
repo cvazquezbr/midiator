@@ -51,13 +51,15 @@ class LinkedInAPI {
     return personal;
   }
 
-  async publishPost(content, targetId, targetType = 'personal', images = []) {
+  async publishPost(content, targetId, targetType = 'personal', images = [], video = null, title = '') {
     return this._proxyFetch('createPost', {
       payload: {
         content,
         targetId,
         targetType,
         images,
+        video,
+        title,
       }
     });
   }
@@ -85,6 +87,57 @@ class LinkedInAPI {
       imageBase64,
       imageType: imageBlob.type,
     });
+  }
+
+  // Video-specific methods
+  async initializeVideoUpload(authorUrn, videoFile) {
+    return this._proxyFetch('initializeVideoUpload', {
+      payload: {
+        initializeUploadRequest: {
+          owner: authorUrn,
+          fileSizeBytes: videoFile.size,
+          videoSetting: {
+            playerSetting: "EMBED",
+            format: "H_264"
+          }
+        }
+      }
+    });
+  }
+
+  async uploadVideo(uploadUrl, videoFile) {
+      const response = await fetch(uploadUrl, {
+          method: 'PUT',
+          body: videoFile,
+          headers: {
+              'Content-Type': videoFile.type,
+          }
+      });
+      if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Failed to upload video chunk: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+      // ETag is returned by the real PUT to S3, not our proxy.
+      // The proxy call in the old implementation for video was incorrect.
+      // The direct upload to S3 is what matters.
+      return response;
+  }
+
+  async finalizeVideoUpload(authorUrn, videoUrn, uploadSignatures) {
+    return this._proxyFetch('finalizeVideoUpload', {
+      payload: {
+        finalizeUploadRequest: {
+          video: videoUrn,
+          uploadToken: '', // Not needed for single-chunk upload
+          uploadedPartIds: uploadSignatures
+        }
+      }
+    });
+  }
+
+  async checkVideoStatus(videoUrn) {
+    // This is a simplified version. A real implementation should poll.
+    return this._proxyFetch('checkVideoStatus', { videoUrn });
   }
 }
 
@@ -136,9 +189,9 @@ export const publishToLinkedIn = async (campaignData, linkedinConfig) => {
         throw new Error('Campaign data, content, and targetId are required for publishing.');
     }
 
-    const { content, targetId, targetType, images } = campaignData;
+    const { content, targetId, targetType, images, video, title } = campaignData;
     const api = new LinkedInAPI(linkedinConfig.accessToken);
-    const result = await api.publishPost(content, targetId, targetType, images);
+    const result = await api.publishPost(content, targetId, targetType, images, video, title);
 
     console.log('Post created successfully on LinkedIn!', result);
     return result; // The proxy should return the final post object with an ID or link.
@@ -180,5 +233,66 @@ export const uploadImagesForLinkedIn = async (linkedinConfig, imageBlobs, author
   setStatus('Image uploads complete.');
   return assetUrns;
 };
+
+export const uploadVideoForLinkedIn = async (linkedinConfig, videoBlob, authorUrn, setStatus) => {
+  if (!linkedinConfig || !linkedinConfig.accessToken) {
+    throw new Error('LinkedIn configuration or Access Token not found.');
+  }
+  if (!videoBlob) {
+    throw new Error('Video blob is required.');
+  }
+
+  const api = new LinkedInAPI(linkedinConfig.accessToken);
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Step 1: Initialize Upload
+  setStatus('Iniciando upload do vídeo...');
+  const initResponse = await api.initializeVideoUpload(authorUrn, videoBlob);
+  const videoUrn = initResponse.video;
+  // For single-chunk uploads, there's one set of instructions.
+  const uploadUrl = initResponse.uploadInstructions[0].uploadUrl;
+
+  if (!videoUrn || !uploadUrl) {
+      throw new Error('Failed to initialize video upload with LinkedIn.');
+  }
+
+  // Step 2: Upload Video file directly to the provided URL
+  setStatus('Fazendo upload do arquivo de vídeo...');
+  const uploadResponse = await api.uploadVideo(uploadUrl, videoBlob);
+  const eTag = uploadResponse.headers.get('ETag');
+  if (!eTag) {
+      // This might happen with some cloud providers if ETag is not exposed.
+      // Let's check if the proxy can get it. For now, we warn.
+      console.warn('ETag not found in direct upload response header. This might be okay.');
+  }
+
+  // Step 3: Finalize Upload
+  setStatus('Finalizando upload do vídeo...');
+  // The finalize call for single-chunk uploads might not need an ETag,
+  // but we pass it if we have it. The API seems to be inconsistent here.
+  // The proxy will handle the actual finalization call.
+  await api.finalizeVideoUpload(authorUrn, videoUrn, eTag ? [eTag.replace(/"/g, '')] : []);
+
+  // Step 4: Poll for video status
+  setStatus('Processando o vídeo...');
+  let videoStatus = '';
+  let attempts = 0;
+  const maxAttempts = 20; // Poll for max 2 minutes (20 * 6s)
+  while (videoStatus !== 'AVAILABLE' && attempts < maxAttempts) {
+      await delay(6000); // wait 6 seconds
+      const statusResponse = await api.checkVideoStatus(videoUrn);
+      videoStatus = statusResponse.status;
+      attempts++;
+      setStatus(`Processando o vídeo... (Status: ${videoStatus}, Tentativa: ${attempts})`);
+  }
+
+  if (videoStatus !== 'AVAILABLE') {
+      throw new Error(`Video processing did not complete in time. Final status: ${videoStatus}`);
+  }
+
+  setStatus('Vídeo pronto para publicação!');
+  return videoUrn;
+};
+
 
 export default LinkedInAPI;
