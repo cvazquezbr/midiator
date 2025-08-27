@@ -66,6 +66,7 @@ const FormattingPanel = ({
   onDeselectField,
   onOpenHtmlEditor,
   standardsColors,
+  fontScale = 1,
 }) => {
   const fonts = [
     // Sans-serif
@@ -362,15 +363,17 @@ const FormattingPanel = ({
                       </Grid>
                       <Grid item xs={12}>
                         <Typography gutterBottom sx={{ mt: 1 }}>
-                          Tamanho: {currentElement.style.fontSize || 24}px
+                          Tamanho: {Math.round((currentElement.style.fontSize || 24) * fontScale)}px
                         </Typography>
                         <Slider
-                          value={currentElement.style.fontSize || 24}
-                          onChange={(e, value) => updateFieldStyle(selectedField, 'fontSize', value)}
-                          min={8}
-                          max={120}
+                          value={Math.round((currentElement.style.fontSize || 24) * fontScale)}
+                          onChange={(e, value) => {
+                            const baseFontSize = Math.round(value / fontScale);
+                            updateFieldStyle(selectedField, 'fontSize', baseFontSize);
+                          }}
+                          min={Math.round(8 * fontScale)}
+                          max={Math.round(120 * fontScale)}
                           valueLabelDisplay="auto"
-                          marks={[{ value: 12, label: '12' }, { value: 24, label: '24' }, { value: 48, label: '48' }, { value: 72, label: '72' }]}
                         />
                       </Grid>
                       <Grid item xs={12}>

@@ -187,7 +187,7 @@ const ImageGeneratorFrontendOnly = ({
         brandElements,
         fieldPositions,
         fieldStyles,
-        fontScale: fontScale, // Use the fontScale from the preview editor
+        fontScale: 1, // Always use 100% scale for generation
       })
       .then(imageData => {
         setProgress(p => p + 1);
@@ -324,7 +324,7 @@ const ImageGeneratorFrontendOnly = ({
         stylesToUse,
         sizeToUse,
         elementsToUse,
-        imageToRegenerate.fontScale || 1 // Use the saved fontScale from the editor
+        1 // Always use 100% scale for regeneration
       );
     }
     handleCloseGeneratedImageEditor();
