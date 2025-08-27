@@ -166,8 +166,10 @@ export const uploadImagesForLinkedIn = async (linkedinConfig, imageBlobs, author
     setStatus(`Registering image ${i + 1} of ${imageBlobs.length}...`);
 
     const registerResponse = await api.registerUpload(authorUrn);
-    const uploadUrl = registerResponse.value.uploadUrl;
-    const assetUrn = registerResponse.value.image;
+    if (!registerResponse || !registerResponse.uploadUrl || !registerResponse.image) {
+      throw new Error('Failed to register image upload with LinkedIn. The response from the server was invalid.');
+    }
+    const { uploadUrl, image: assetUrn } = registerResponse;
 
     setStatus(`Uploading image ${i + 1} of ${imageBlobs.length}...`);
     await api.uploadImage(uploadUrl, blob);
