@@ -19,7 +19,14 @@ class LinkedInAPI {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Proxy response was not valid JSON.' }));
-      const errorMessage = errorData.message || errorData.error || response.statusText;
+      let errorMessage = errorData.message || errorData.error || response.statusText;
+      if (errorData.details) {
+        errorMessage += ` | Details: ${errorData.details}`;
+      }
+      if (errorData.stack) {
+        // For debugging, we can log the stack to the console
+        console.error("LinkedIn Proxy Error Stack:", errorData.stack);
+      }
       throw new Error(`LinkedIn Proxy Error for action '${action}': ${errorMessage}`);
     }
 
