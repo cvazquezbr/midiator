@@ -65,17 +65,8 @@ class LinkedInAPI {
   async registerUpload(authorUrn) {
     return this._proxyFetch('registerUpload', {
       payload: {
-        "registerUploadRequest": {
-          "recipes": [
-              "urn:li:digitalmediaRecipe:feedshare-image"
-          ],
-          "owner": authorUrn,
-          "serviceRelationships": [
-              {
-                  "relationshipType": "OWNER",
-                  "identifier": "urn:li:userGeneratedContent"
-              }
-          ]
+        "initializeUploadRequest": {
+          "owner": authorUrn
         }
       }
     });
