@@ -336,6 +336,50 @@ async function handleRefreshToken(fetch, request, response) {
     }
 }
 
+async function getPostAnalytics(fetch, accessToken, urns) {
+  // This is a hypothetical endpoint based on common LinkedIn API patterns for new resources.
+  // It assumes that analytics for posts created via /rest/posts are available here.
+  const idsQueryParam = `List(${urns.join(',')})`;
+  const url = `https://api.linkedin.com/rest/posts?q=analytics&ids=${encodeURIComponent(idsQueryParam)}`;
+
+  const response = await fetchWithRetry(fetch, url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'X-Restli-Protocol-Version': '2.0.0',
+      'LinkedIn-Version': LINKEDIN_API_VERSION,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    console.error(`[ERROR] LinkedIn Post Analytics API responded with status ${response.status}:`, data);
+    throw new Error(data.message || `Failed to fetch post analytics with status ${response.status}`);
+  }
+
+  // Transform the response to match the format of the legacy organizationalEntityShareStatistics endpoint.
+  // The frontend expects an array of elements, where each element has the URN as a key (e.g., "share" or "ugcPost").
+  // We will introduce a "carousel" key for carousel posts.
+  // Assuming `data.results` is a map of URN -> stats object.
+  // e.g., { "results": { "urn:li:carousel:123": { "impressionCount": 100, "likeCount": 5, ... } } }
+  return Object.entries(data.results || {}).map(([urn, stats]) => {
+    const key = urn.includes(':carousel:') ? 'carousel' : 'post'; // Use a specific key for carousels
+    return {
+      [key]: urn,
+      totalShareStatistics: {
+        impressionCount: stats.impressionCount || 0,
+        likeCount: stats.likeCount || 0,
+        commentCount: stats.commentCount || 0,
+        shareCount: stats.shareCount || 0,
+        clickCount: stats.clickCount || 0,
+        engagement: stats.engagement || 0,
+      },
+    };
+  });
+}
+
+
 async function handleGetShareStatistics(fetch, request, response) {
     const { accessToken, organizationUrn, shareUrns } = request.body;
 
@@ -343,31 +387,46 @@ async function handleGetShareStatistics(fetch, request, response) {
         return response.status(400).json({ error: 'Missing accessToken, organizationUrn, or shareUrns.' });
     }
 
-    const sharesQueryParam = `List(${shareUrns.join(',')})`;
-    const url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(organizationUrn)}&shares=${encodeURIComponent(sharesQueryParam)}`;
+    // Separate URNs by type to use the appropriate API endpoint for each.
+    const legacyUrns = shareUrns.filter(urn => urn.includes(':share:') || urn.includes(':ugcPost:'));
+    const modernUrns = shareUrns.filter(urn => urn.includes(':carousel:'));
+    let allElements = [];
 
     try {
-        const linkedinResponse = await fetchWithRetry(fetch, url, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': LINKEDIN_API_VERSION
-            },
-        });
-
-        const data = await linkedinResponse.json();
-
-        if (linkedinResponse.ok) {
-            return response.status(200).json(data);
-        } else {
-            console.error(`[ERROR] LinkedIn API responded with status ${linkedinResponse.status}:`, data);
-            return response.status(linkedinResponse.status).json(data);
+        // Fetch stats for legacy URNs (shares, ugcPosts) using the existing endpoint.
+        if (legacyUrns.length > 0) {
+            const sharesQueryParam = `List(${legacyUrns.join(',')})`;
+            const url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(organizationUrn)}&shares=${encodeURIComponent(sharesQueryParam)}`;
+            const linkedinResponse = await fetchWithRetry(fetch, url, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION },
+            });
+            const data = await linkedinResponse.json();
+            if (linkedinResponse.ok) {
+                allElements = allElements.concat(data.elements || []);
+            } else {
+                 console.error(`[ERROR] LinkedIn Legacy Stats API responded with status ${linkedinResponse.status}:`, data);
+                 // Don't throw here, just log the error and continue, so one failing API doesn't kill the whole process.
+            }
         }
+
+        // Fetch stats for modern URNs (carousels) using a different, newer endpoint.
+        if (modernUrns.length > 0) {
+            try {
+                const modernStats = await getPostAnalytics(fetch, accessToken, modernUrns);
+                allElements = allElements.concat(modernStats);
+            } catch (error) {
+                 console.error(`[ERROR] Failed to fetch modern post analytics:`, error);
+                 // Continue even if this part fails.
+            }
+        }
+
+        return response.status(200).json({ elements: allElements });
+
     } catch (error) {
-        console.error(`[FATAL] Error during GET to ${url}:`, error.message, error.stack);
+        console.error(`[FATAL] Error during handleGetShareStatistics:`, error.message, error.stack);
         return response.status(500).json({
-            error: `Internal Server Error during GET to ${url}`,
+            error: `Internal Server Error during statistics fetch`,
             details: error.message,
         });
     }
