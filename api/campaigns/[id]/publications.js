@@ -11,7 +11,7 @@ async function handler(req, res) {
   try {
     const { rows } = await query(
       `SELECT id, campaign_id, scheduled_at, status, linkedin_post_url, post_content
-       FROM schedules
+       FROM linkedin_schedules
        WHERE campaign_id = $1 AND status = 'published' AND linkedin_post_url IS NOT NULL
        ORDER BY scheduled_at DESC`,
       [campaignId]
