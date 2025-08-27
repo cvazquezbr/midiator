@@ -1,7 +1,8 @@
 import React from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import BubbleMenu from '@tiptap/extension-bubble-menu';
+import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
+import CharacterCount from '@tiptap/extension-character-count';
 import {
   FormatBold,
   FormatItalic,
@@ -10,11 +11,14 @@ import {
   FormatListNumbered,
   FormatQuote,
 } from '@mui/icons-material';
-import { Box, IconButton, Paper, Tooltip, Divider } from '@mui/material';
+import { Box, IconButton, Paper, Tooltip, Divider, Typography } from '@mui/material';
 
 const InlineEditor = ({ value, onChange, html = false }) => {
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [
+      StarterKit,
+      CharacterCount,
+    ],
     content: value,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
@@ -26,14 +30,15 @@ const InlineEditor = ({ value, onChange, html = false }) => {
   }
 
   return (
-    <Box sx={{ position: 'relative' }}>
+    <Box sx={{ position: 'relative', display: 'flex', flexDirection: 'column', height: '100%' }}>
       <EditorContent
         editor={editor}
         style={{
           border: '1px solid #ccc',
           borderRadius: '4px',
           padding: '10px',
-          minHeight: '200px',
+          flexGrow: 1,
+          overflowY: 'auto',
           outline: 'none',
         }}
       />
@@ -108,6 +113,18 @@ const InlineEditor = ({ value, onChange, html = false }) => {
           )}
         </Paper>
       </BubbleMenu>
+      <Box sx={{
+        position: 'absolute',
+        bottom: 8,
+        right: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        padding: '2px 8px',
+        borderRadius: '4px',
+      }}>
+        <Typography variant="caption" color="textSecondary">
+          {editor.storage.characterCount.characters()} caracteres
+        </Typography>
+      </Box>
     </Box>
   );
 };
