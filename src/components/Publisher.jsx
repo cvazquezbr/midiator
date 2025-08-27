@@ -322,8 +322,8 @@ const Publisher = ({
   }
 
   useEffect(() => {
-    const images = (generatedImagesData || []).map((img, index) => ({ ...img, type: 'image', id: `image-${index}`, fileSize: img.blob ? formatBytes(img.blob.size) : 'N/A', fileType: img.blob ? img.blob.type : 'N/A' }));
-    const videos = (generatedVideosData || []).map((vid, index) => ({ ...vid, type: 'video', id: `video-${index}`, fileSize: vid.blob ? formatBytes(vid.blob.size) : 'N/A', fileType: vid.blob ? vid.blob.type : 'N/A' }));
+    const images = (generatedImagesData || []).map((img, index) => ({ ...img, type: 'image', mediaId: `image-${index}`, fileSize: img.blob ? formatBytes(img.blob.size) : 'N/A', fileType: img.blob ? img.blob.type : 'N/A' }));
+    const videos = (generatedVideosData || []).map((vid, index) => ({ ...vid, type: 'video', mediaId: `video-${index}`, fileSize: vid.blob ? formatBytes(vid.blob.size) : 'N/A', fileType: vid.blob ? vid.blob.type : 'N/A' }));
     const allMedia = [...images, ...videos];
     setUnifiedMedia(allMedia);
     if (allMedia.length > 0) {
@@ -460,10 +460,15 @@ const Publisher = ({
     setIsPublishingLi(true);
     setPublishingStatusLi('Publicando...');
     try {
+      const selectedImageUrns = Object.keys(selectedImages)
+        .filter(index => selectedImages[index])
+        .map(index => generatedImagesData[parseInt(index)].id);
+
       const campaignData = {
         content: content.trim(),
         targetId: selectedTarget.id,
-        targetType: selectedTarget.type
+        targetType: selectedTarget.type,
+        images: selectedImageUrns,
       };
       const result = await publishToLinkedIn(campaignData, settings?.linkedin);
       const postLink = `https://www.linkedin.com/feed/update/${result.id}/`;
@@ -582,10 +587,10 @@ const Publisher = ({
                     <List>
                       {Array.isArray(unifiedMedia) && unifiedMedia.map((media, index) => (
                         <ListItem
-                          key={media.id}
+                          key={media.mediaId}
                           button
                           onClick={() => setPreviewedMedia(media)}
-                          selected={previewedMedia && previewedMedia.id === media.id}
+                          selected={previewedMedia && previewedMedia.mediaId === media.mediaId}
                         >
                           <ListItemIcon>
                             <Checkbox
