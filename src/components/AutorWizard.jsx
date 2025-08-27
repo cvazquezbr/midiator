@@ -20,7 +20,7 @@ import {
   IconButton,
 } from '@mui/material';
 import { InfoOutlined as InfoOutlinedIcon } from '@mui/icons-material';
-import RichTextEditor from './RichTextEditor';
+import TextEditor from './TextEditor';
 
 const steps = [
   'Início Rápido com IA',
@@ -177,9 +177,10 @@ export const AutorWizardContent = ({ onClose, onSave, onGenerate, isGeneratingAu
               </Grid>
               <Grid item xs={12}>
                 <Typography variant="subtitle1" gutterBottom>Descrição da Empresa</Typography>
-                <RichTextEditor
+                <TextEditor
                     value={autorData.descricao || ''}
                     onChange={(value) => handleRichTextChange('descricao', value)}
+                    html={true}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -211,16 +212,18 @@ export const AutorWizardContent = ({ onClose, onSave, onGenerate, isGeneratingAu
               )}
               <Grid item xs={12}>
                 <Typography variant="subtitle1" gutterBottom>Objetivo Estratégico</Typography>
-                <RichTextEditor
+                <TextEditor
                     value={autorData.objetivoEstrategico || ''}
                     onChange={(value) => handleRichTextChange('objetivoEstrategico', value)}
+                    html={true}
                 />
               </Grid>
               <Grid item xs={12}>
                 <Typography variant="subtitle1" gutterBottom>Objetivo de Engajamento</Typography>
-                <RichTextEditor
+                <TextEditor
                     value={autorData.objetivoEngajamento || ''}
                     onChange={(value) => handleRichTextChange('objetivoEngajamento', value)}
+                    html={true}
                 />
               </Grid>
             </Grid>
