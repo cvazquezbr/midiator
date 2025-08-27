@@ -74,9 +74,18 @@ async function handleGenericPost(fetch, request, response, url) {
         });
 
         if (linkedinResponse.ok) {
-            const data = await linkedinResponse.json();
-            // The LinkedIn API sometimes returns the created object directly, and sometimes under a 'value' key.
-            return response.status(linkedinResponse.status).json(data.value || data);
+            const responseText = await linkedinResponse.text();
+            if (!responseText) {
+                console.warn('[WARN] LinkedIn API returned 200 OK with an empty response body.');
+                return response.status(200).json({ value: { warning: 'Empty response from LinkedIn API.' } });
+            }
+            try {
+                const data = JSON.parse(responseText);
+                return response.status(linkedinResponse.status).json(data.value || data);
+            } catch (e) {
+                console.warn(`[WARN] LinkedIn API returned 200 OK but with invalid JSON body: ${responseText}`);
+                return response.status(200).json({ value: { warning: 'Invalid JSON response from LinkedIn API.', body: responseText } });
+            }
         } else {
             // Handle error response
             const errorBody = await linkedinResponse.text();
