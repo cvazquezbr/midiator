@@ -247,7 +247,7 @@ export const composeSingleImage = async ({
         }
 
         applyTextEffects(ctx, finalStyle);
-        const padding = style.padding || 0;
+        const padding = (style.padding || 0) * fontScale; // Scale padding
         const effectiveTextWidth = Math.max(0, posPx.width - (2 * padding));
         const effectiveTextHeight = Math.max(0, posPx.height - (2 * padding));
         const textContentStartX = posPx.x + padding;
