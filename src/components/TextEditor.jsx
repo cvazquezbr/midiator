@@ -4,7 +4,7 @@ import { TextField } from '@mui/material';
 
 const TextEditor = ({ value, onChange, html = false, ...props }) => {
   if (html) {
-    return <InlineEditor value={value} onChange={onChange} html={true} {...props} />;
+    return <InlineEditor value={value} onChange={onChange} html={html} {...props} />;
   }
 
   return (
