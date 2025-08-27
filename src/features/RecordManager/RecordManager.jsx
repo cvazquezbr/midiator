@@ -4,7 +4,7 @@ import styles from './RecordManager.module.css';
 import RecordsTable from './components/RecordsTable/RecordsTable';
 import RecordModal from './components/RecordModal/RecordModal';
 import ConfirmationModal from '../../components/ui/ConfirmationModal/ConfirmationModal';
-// PapaParse não é mais usado diretamente aqui, apenas em App.jsx
+import TextEditorDialog from '../../components/TextEditorDialog';
 
 /**
  * @typedef {Object} Registro
@@ -61,6 +61,7 @@ const RecordManager = ({
     const [modalAberto, setModalAberto] = useState(null); // null, 'ADICIONAR', 'EDITAR', 'EXCLUIR'
     const [registroSelecionado, setRegistroSelecionado] = useState(null); // Para edição ou exclusão
     const [proximoId, setProximoId] = useState(1);
+    const [editingFieldInfo, setEditingFieldInfo] = useState(null); // { recordId, fieldName, content }
 
     // Renomeado para indicar que é para um único novo registro.
     const gerarIdParaNovoRegistroSingular = useCallback(() => {
@@ -212,13 +213,38 @@ const RecordManager = ({
     //     }
     // };
 
-  const containerClasses = `${styles.container} ${darkMode ? styles.darkMode : ''}`;
+    const handleStartEditField = (recordId, fieldName, content) => {
+        setEditingFieldInfo({ recordId, fieldName, content });
+    };
+
+    const handleCancelEditField = () => {
+        setEditingFieldInfo(null);
+    };
+
+    const handleSaveField = (newContent) => {
+        if (!editingFieldInfo) return;
+
+        const { recordId, fieldName } = editingFieldInfo;
+
+        const novosRegistros = registros.map(reg => {
+            if (String(reg.id) === String(recordId)) {
+                return { ...reg, [fieldName]: newContent };
+            }
+            return reg;
+        });
+
+        setRegistros(novosRegistros);
+        if (onDadosAlterados) {
+            onDadosAlterados(JSON.parse(JSON.stringify(novosRegistros)), [...colunas]);
+        }
+        setEditingFieldInfo(null);
+    };
+
+    const containerClasses = `${styles.container} ${darkMode ? styles.darkMode : ''}`;
 
     return (
         <div className={containerClasses}>
             <div className={styles.header}>
-                {/* O título agora é gerenciado pelo componente pai (PostsCurtosStep) */}
-                {/* <h1>Gerenciar Registros</h1> */}
                 <div className={styles.actionsContainer}>
                     <button onClick={handleAbrirModalAdicionar} className={`${styles.btn} ${styles.btnPrimary}`}>
                         &#43; Adicionar Novo Registro
@@ -241,10 +267,9 @@ const RecordManager = ({
                     onSalvar={handleSalvarRegistro}
                     colunasExistentes={colunas}
                     tituloModal="Adicionar Novo Registro"
-                    // Passa true se não houver colunas E não houver registros,
-                    // indicando que o formulário deve permitir definir colunas.
                     isPrimeiroRegistro={colunas.length === 0 && registros.length === 0}
                     darkMode={darkMode}
+                    onStartEditField={handleStartEditField}
                 />
             )}
 
@@ -258,6 +283,19 @@ const RecordManager = ({
                     tituloModal="Editar Registro"
                     isPrimeiroRegistro={false}
                     darkMode={darkMode}
+                    onStartEditField={handleStartEditField}
+                />
+            )}
+
+            {editingFieldInfo && (
+                <TextEditorDialog
+                    open={!!editingFieldInfo}
+                    onClose={handleCancelEditField}
+                    onSave={handleSaveField}
+                    title={`Editar ${editingFieldInfo.fieldName}`}
+                    content={editingFieldInfo.content}
+                    html={true}
+                    variant="simple"
                 />
             )}
 
@@ -271,13 +309,6 @@ const RecordManager = ({
                     darkMode={darkMode}
                 />
             )}
-
-      {/* Botão de concluir edição removido, pois a navegação é feita pelo App.jsx */}
-      {/* <div className={styles.actionsFooter}>
-        <button onClick={handleConcluir} className={`${styles.btn} ${styles.btnSuccess}`}>
-          Concluir Edição e Retornar Dados
-        </button>
-      </div> */}
         </div>
     );
 };

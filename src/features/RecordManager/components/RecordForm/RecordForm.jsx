@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import TextEditor from '../../../../components/TextEditor';
 import styles from './RecordForm.module.css';
 
 /**
@@ -21,7 +20,8 @@ const RecordForm = ({
     onSubmit,
     onCancelar,
     isPrimeiroRegistro = false,
-    darkMode = false
+    darkMode = false,
+    onStartEditField,
 }) => {
     const [formData, setFormData] = useState({});
     const [novasColunas, setNovasColunas] = useState(
@@ -43,27 +43,22 @@ const RecordForm = ({
             });
             setFormData(initialState);
         } else if (!isPrimeiroRegistro) {
-            // Limpa o formulário se não for edição e não for o primeiro registro
             const initialState = {};
             colunas.forEach(col => {
                 initialState[col] = '';
             });
             setFormData(initialState);
         } else {
-            // Reseta o estado de novasColunas se for o primeiro registro
-            setNovasColunas([{ nome: '', valor: '' }]);
-            // Reseta o estado de novasColunas se for o primeiro registro, preenchendo com os defaults
             setNovasColunas([
                 { nome: 'titulo', valor: '' },
                 { nome: 'mensagem', valor: '' },
                 { nome: 'descrição', valor: '' },
                 { nome: 'hashtags', valor: '' }
             ]);
-            setFormData({}); // Limpa formData, pois será preenchido por novasColunas
+            setFormData({});
         }
     }, [dadosIniciais, colunas, isPrimeiroRegistro]);
 
-    // Campos que devem usar o editor rich text
     const richTextFields = ['mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'];
 
     const isRichTextField = (fieldName) => {
@@ -77,19 +72,9 @@ const RecordForm = ({
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleRichTextChange = (fieldName, value) => {
-        setFormData(prev => ({ ...prev, [fieldName]: value }));
-    };
-
     const handleNovaColunaChange = (index, field, value) => {
         const updated = [...novasColunas];
         updated[index][field] = value;
-        setNovasColunas(updated);
-    };
-
-    const handleNovaColunaRichTextChange = (index, value) => {
-        const updated = [...novasColunas];
-        updated[index]['valor'] = value;
         setNovasColunas(updated);
     };
 
@@ -170,17 +155,13 @@ const RecordForm = ({
                             />
                         </div>
                         {/* Valor da Coluna Field */}
-                        <div className={styles.formGroup}> {/* This will also be label on top of input */}
+                        <div className={styles.formGroup}>
                             <label htmlFor={`novaColunaValor-${index}`}>Valor Coluna {index + 1}</label>
                             {isRichTextField(nc.nome) ? (
-                                <TextEditor
-                                    value={nc.valor}
-                                    onChange={(value) => handleNovaColunaRichTextChange(index, value)}
-                                    placeholder="Valor inicial com formatação"
-                                    maxHeight={150}
-                                    darkMode={darkMode}
-                                    html={true}
-                                    variant="simple"
+                                <div
+                                    className={styles.richTextPreview}
+                                    onClick={() => onStartEditField(dadosIniciais?.id || `new_${index}`, nc.nome, nc.valor)}
+                                    dangerouslySetInnerHTML={{ __html: nc.valor || '<p><em>Clique para editar...</em></p>' }}
                                 />
                             ) : (
                                 <input
@@ -222,14 +203,10 @@ const RecordForm = ({
                 <div key={col} className={styles.formGroup}>
                     <label htmlFor={`campo-${col.replace(/\s+/g, '-')}`}>{col}:</label>
                     {isRichTextField(col) ? (
-                        <TextEditor
-                            value={formData[col] || ''}
-                            onChange={(value) => handleRichTextChange(col, value)}
-                            placeholder={`Digite o conteúdo para ${col}`}
-                            maxHeight={200}
-                            darkMode={darkMode}
-                            html={true}
-                            variant="simple"
+                        <div
+                            className={styles.richTextPreview}
+                            onClick={() => onStartEditField(dadosIniciais.id, col, formData[col] || '')}
+                            dangerouslySetInnerHTML={{ __html: formData[col] || '<p><em>Clique para editar...</em></p>' }}
                         />
                     ) : (
                         <input
