@@ -197,7 +197,29 @@ function HomePage() {
     setPromptNumRecords(state.promptNumRecords ?? 10);
     setPromptText(state.promptText ?? '');
     setFieldPositions(state.fieldPositions ?? {});
-    setFieldStyles(state.fieldStyles ?? {});
+
+    // Ensure loaded fieldStyles are complete with all default values.
+    const loadedStyles = state.fieldStyles ?? {};
+    const completeStyles = {};
+    const defaultStylesBase = {
+      fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
+      textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
+      strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
+      shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
+      textAlign: 'left', verticalAlign: 'top',
+      backgroundColor: 'rgba(0,0,0,0)', borderColor: '#000000', borderWidth: 0,
+      borderRadius: 0, padding: 5, backgroundOpacity: 0,
+    };
+    if (state.csvHeaders && Array.isArray(state.csvHeaders)) {
+      state.csvHeaders.forEach(header => {
+        completeStyles[header] = {
+          ...defaultStylesBase,
+          ...(loadedStyles[header] || {}),
+        };
+      });
+    }
+    setFieldStyles(completeStyles);
+
     setDisplayedImageSize(state.displayedImageSize ?? { width: 0, height: 0 });
     setOriginalImageSize(state.originalImageSize ?? { width: 0, height: 0 });
     setImageFilters(state.imageFilters ?? { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 });
