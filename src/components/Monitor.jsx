@@ -169,7 +169,17 @@ const Monitor = ({ currentCampaign }) => {
                     >
                       <ListItemText
                         primary={pub.post_content?.titulo || 'Publicação sem título'}
-                        secondary={`Publicado em: ${new Date(pub.scheduled_at).toLocaleDateString('pt-BR')}`}
+                        secondary={`Agendado para: ${new Date(pub.scheduled_at).toLocaleString('pt-BR')}`}
+                      />
+                      <Chip
+                        label={pub.status}
+                        size="small"
+                        color={
+                            pub.status === 'published' ? 'success' :
+                            pub.status === 'failed' ? 'error' :
+                            'primary'
+                        }
+                        variant="outlined"
                       />
                     </ListItem>
                   ))}
