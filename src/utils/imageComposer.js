@@ -190,6 +190,10 @@ export const composeSingleImage = async ({
     fieldStyles,
     fontScale = 1
 }) => {
+    console.log(`[composeSingleImage] Received params:`, {
+        fieldStyles: JSON.parse(JSON.stringify(fieldStyles)),
+        fontScale,
+    });
     if (!itemBackgroundImage) {
         throw new Error(`Background image is missing for record index ${index}.`);
     }
