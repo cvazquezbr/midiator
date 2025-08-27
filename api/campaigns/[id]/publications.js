@@ -23,8 +23,8 @@ async function handler(req, res) {
 
     // The URN is the last part of the post URL.
     const publications = rows.map(row => {
-        // Use a regex to robustly find the URN, which can be either a share or ugcPost.
-        const match = row.linkedin_post_url.match(/(urn:li:(?:share|ugcPost):\d+)/);
+        // Use a regex to robustly find the URN, which can be a share, ugcPost, or carousel for multi-image posts.
+        const match = row.linkedin_post_url.match(/(urn:li:(?:share|ugcPost|carousel):\d+)/);
         const urn = match ? match[0] : null;
         return {
             ...row,
