@@ -19,9 +19,11 @@ export const dataURLtoBlob = (dataurl) => {
     return new Blob([u8arr], {type:mime});
 };
 
-export const wrapTextInArea = (ctx, text, style, maxWidth) => {
+export const wrapTextInArea = (ctx, text, style, maxWidth, maxHeight) => {
     if (!text) return [];
     const fontSize = style.fontSize || 24;
+    const lineHeight = fontSize * (style.lineHeightMultiplier || 1.2);
+    const maxLines = Math.floor(maxHeight / lineHeight);
     ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${fontSize}px ${style.fontFamily || 'Arial'}`;
     const words = text.toString().split(' ');
     const lines = [];
@@ -32,12 +34,13 @@ export const wrapTextInArea = (ctx, text, style, maxWidth) => {
         const metrics = ctx.measureText(testLine);
         if (metrics.width > maxWidth && currentLine !== '') {
             lines.push(currentLine);
+            if (lines.length >= maxLines) break;
             currentLine = word;
         } else {
             currentLine = testLine;
         }
     }
-    if (currentLine) {
+    if (lines.length < maxLines && currentLine) {
         lines.push(currentLine);
     }
     return lines;
@@ -228,40 +231,37 @@ export const composeSingleImage = async ({
         const finalFontSize = (style.fontSize || 24) * fontScale;
         const finalStyle = { ...style, fontSize: finalFontSize };
 
-        applyTextEffects(ctx, finalStyle);
-        const padding = style.padding || 0;
-        const effectiveTextWidth = Math.max(0, posPx.width - (2 * padding));
-
-        // Calculate lines and dynamic height first
-        const lines = wrapTextInArea(ctx, text, finalStyle, effectiveTextWidth);
-        const lineHeight = finalFontSize * (finalStyle.lineHeightMultiplier || 1.2);
-        const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
-        const adjustedHeight = totalTextBlockHeight + (2 * padding);
-
-        // Now, draw the textbox background and border using the adjusted height
+        // Draw the textbox background and border
         const backgroundOpacity = style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1;
         const backgroundColorHex = style.backgroundColor || '#000000';
         if (backgroundOpacity > 0) {
             ctx.fillStyle = hexToRgba(backgroundColorHex, backgroundOpacity);
-            drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, adjustedHeight, style.borderRadius || 0);
+            drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, style.borderRadius || 0);
             ctx.fill();
         }
         if (style.borderWidth > 0) {
             ctx.strokeStyle = style.borderColor || '#000000';
             ctx.lineWidth = style.borderWidth;
-            drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, adjustedHeight, style.borderRadius || 0);
+            drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, style.borderRadius || 0);
             ctx.stroke();
         }
 
-        // Continue with text rendering, using the adjusted height for alignment
-        const effectiveTextHeight = Math.max(0, adjustedHeight - (2 * padding));
+        applyTextEffects(ctx, finalStyle);
+        const padding = style.padding || 0;
+        const effectiveTextWidth = Math.max(0, posPx.width - (2 * padding));
+        const effectiveTextHeight = Math.max(0, posPx.height - (2 * padding));
         const textContentStartX = posPx.x + padding;
         const textContentStartY = posPx.y + padding;
 
+        const lines = wrapTextInArea(ctx, text, finalStyle, effectiveTextWidth, effectiveTextHeight);
+        const lineHeight = finalFontSize * (finalStyle.lineHeightMultiplier || 1.2);
+
         let currentLineRenderY = textContentStartY;
         if (finalStyle.verticalAlign === 'middle') {
+            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
             currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
         } else if (finalStyle.verticalAlign === 'bottom') {
+            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
             currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
         }
 
