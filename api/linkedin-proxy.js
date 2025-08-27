@@ -74,6 +74,12 @@ async function handleGenericPost(fetch, request, response, url) {
         });
 
         if (linkedinResponse.ok) {
+            // For post creation, the ID is in the x-restli-id header.
+            const postId = linkedinResponse.headers.get('x-restli-id');
+            if (postId) {
+                return response.status(linkedinResponse.status).json({ id: postId });
+            }
+
             const responseText = await linkedinResponse.text();
             if (!responseText) {
                 console.warn('[WARN] LinkedIn API returned 200 OK with an empty response body.');
