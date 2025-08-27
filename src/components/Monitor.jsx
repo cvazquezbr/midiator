@@ -96,8 +96,11 @@ const Monitor = ({ currentCampaign }) => {
 
       const results = await getLinkedInShareStatistics(settings.linkedin, orgUrn, shareUrns);
       const newStats = {};
-      results.elements.forEach(stat => {
-        newStats[stat.share || stat.ugcPost] = stat.totalShareStatistics;
+      (results.elements || []).forEach(stat => {
+        const urn = stat.share || stat.ugcPost || stat.carousel || stat.post;
+        if (urn) {
+            newStats[urn] = stat.totalShareStatistics;
+        }
       });
       setStats(newStats);
       toast.success("Estatísticas atualizadas com sucesso!");
