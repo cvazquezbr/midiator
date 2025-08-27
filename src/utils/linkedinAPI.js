@@ -166,8 +166,8 @@ export const uploadImagesForLinkedIn = async (linkedinConfig, imageBlobs, author
     setStatus(`Registering image ${i + 1} of ${imageBlobs.length}...`);
 
     const registerResponse = await api.registerUpload(authorUrn);
-    const uploadUrl = registerResponse.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
-    const assetUrn = registerResponse.value.asset;
+    const uploadUrl = registerResponse.value.uploadUrl;
+    const assetUrn = registerResponse.value.image;
 
     setStatus(`Uploading image ${i + 1} of ${imageBlobs.length}...`);
     await api.uploadImage(uploadUrl, blob);
