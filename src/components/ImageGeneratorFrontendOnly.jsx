@@ -57,7 +57,6 @@ const ImageGeneratorFrontendOnly = ({
   onBrandElementsChange,
   fontScale = 1
 }) => {
-  console.log(`[ImageGeneratorFrontendOnly] Received fontScale prop: ${fontScale}`);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -179,7 +178,7 @@ const ImageGeneratorFrontendOnly = ({
 
       const initialImageDataItem = initialGeneratedImagesData.find(img => img.index === i);
       const itemBackgroundImage = initialImageDataItem?.backgroundImage || backgroundImage;
-      console.log(`[ImageGeneratorFrontendOnly - generateImages] Calling composeSingleImage for index ${i} with fontScale: ${fontScale}`);
+
       return composeSingleImage({
         record,
         index: i,
@@ -188,7 +187,7 @@ const ImageGeneratorFrontendOnly = ({
         brandElements,
         fieldPositions,
         fieldStyles,
-        fontScale: 1, // Always use 100% scale for generation
+        fontScale: fontScale, // Use the fontScale from the preview editor
       })
       .then(imageData => {
         setProgress(p => p + 1);
@@ -317,7 +316,6 @@ const ImageGeneratorFrontendOnly = ({
       const elementsToUse = imageToRegenerate.customBrandElements !== undefined ? imageToRegenerate.customBrandElements : brandElements;
       const sizeToUse = imageToRegenerate.customOriginalImageSize || originalImageSize;
 
-      console.log(`[ImageGeneratorFrontendOnly - handleSave] Calling regenerateSingleImage for index ${imageIndex} with fontScale: ${imageToRegenerate.fontScale || 1}`);
       regenerateSingleImage(
         imageIndex,
         imageToRegenerate.record,
@@ -326,7 +324,7 @@ const ImageGeneratorFrontendOnly = ({
         stylesToUse,
         sizeToUse,
         elementsToUse,
-        1 // Always use 100% scale for regeneration
+        imageToRegenerate.fontScale || 1 // Use the saved fontScale from the editor
       );
     }
     handleCloseGeneratedImageEditor();
