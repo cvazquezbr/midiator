@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -205,13 +205,19 @@ const Campaign = ({
         },
     };
 
+    const prevCampaignContentRef = useRef();
     useEffect(() => {
-        // Quando o conteúdo da campanha é gerado com sucesso e o processo de geração termina,
-        // muda para a segunda aba.
-        if (campaignContent && !isGeneratingCampaign) {
+        prevCampaignContentRef.current = campaignContent;
+    });
+    const prevCampaignContent = prevCampaignContentRef.current;
+
+    useEffect(() => {
+        // Only switch to tab 1 if campaignContent just became available (was null or undefined before)
+        // and the campaign is not currently being generated.
+        if (campaignContent && !prevCampaignContent && !isGeneratingCampaign) {
             setActiveTab(1);
         }
-    }, [campaignContent, isGeneratingCampaign]);
+    }, [campaignContent, prevCampaignContent, isGeneratingCampaign]);
 
     const handleTabChange = (event, newValue) => {
       setActiveTab(newValue);
