@@ -180,7 +180,7 @@ async function handleCreatePost(fetch, request, response) {
 
         console.log('[DEBUG] Entering handleCreatePost with received payload:', JSON.stringify(payload, null, 2));
 
-        const { targetId, targetType, content, images } = payload;
+        const { targetId, targetType, content, images, video } = payload;
         if (!targetId || !targetType || !content) {
             console.error('[DEBUG] Validation failed in handleCreatePost:', { targetId, targetType, contentExists: !!content });
             return response.status(400).json({ error: 'Missing targetId, targetType, or content for creating post.' });
@@ -202,20 +202,25 @@ async function handleCreatePost(fetch, request, response) {
             isReshareDisabledByAuthor: false
         };
 
-        // Handle images according to the new API structure
-        if (images && images.length > 0) {
+        if (video) {
+            postData.content = {
+                media: {
+                    id: video
+                }
+            };
+        } else if (images && images.length > 0) {
             if (images.length === 1) {
                 // Single image post
                 postData.content = {
                     media: {
-                        id: images[0] // Assuming images is an array of URNs
+                        id: images[0]
                     }
                 };
             } else {
                 // Multi-image post
                 postData.content = {
                     multiImage: {
-                        images: images.map(urn => ({ id: urn })) // Map string URNs to objects with an 'id' key
+                        images: images.map(urn => ({ id: urn }))
                     }
                 };
             }
