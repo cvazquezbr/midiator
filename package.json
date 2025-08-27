@@ -24,6 +24,8 @@
     "@react-oauth/google": "^0.12.2",
     "@tiptap/extension-bubble-menu": "^3.3.0",
     "@tiptap/extension-character-count": "^3.3.0",
+    "@tiptap/extension-font-family": "^3.3.0",
+    "@tiptap/extension-text-style": "^3.3.0",
     "@tiptap/react": "^3.3.0",
     "@tiptap/starter-kit": "^3.3.0",
     "@uppy/core": "^4.4.7",

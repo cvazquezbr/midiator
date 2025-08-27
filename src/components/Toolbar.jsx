@@ -1,0 +1,155 @@
+import React from 'react';
+import {
+  Box,
+  IconButton,
+  Tooltip,
+  Divider,
+  Select,
+  MenuItem,
+  FormControl,
+} from '@mui/material';
+import {
+  FormatBold,
+  FormatItalic,
+  StrikethroughS,
+  FormatListBulleted,
+  FormatListNumbered,
+  FormatQuote,
+  FormatClear,
+  FontDownload,
+  FormatSize,
+  LineWeight,
+} from '@mui/icons-material';
+
+const FONT_FAMILIES = [
+  { label: 'Inter', value: 'Inter, sans-serif' },
+  { label: 'Arial', value: 'Arial, sans-serif' },
+  { label: 'Georgia', value: 'Georgia, serif' },
+  { label: 'Times New Roman', value: 'Times New Roman, serif' },
+  { label: 'Verdana', value: 'Verdana, sans-serif' },
+];
+
+const FONT_SIZES = ['12px', '14px', '16px', '18px', '24px', '30px', '36px'];
+const LINE_HEIGHTS = ['1', '1.2', '1.5', '1.8', '2'];
+
+const Toolbar = ({ editor }) => {
+  if (!editor) {
+    return null;
+  }
+
+  const handleFontFamilyChange = (e) => {
+    editor.chain().focus().setFontFamily(e.target.value).run();
+  };
+
+  const handleFontSizeChange = (e) => {
+    editor.chain().focus().setFontSize(`${e.target.value}px`).run();
+  };
+
+  const handleLineHeightChange = (e) => {
+    editor.chain().focus().setLineHeight(e.target.value).run();
+  };
+
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        borderBottom: '1px solid #ccc',
+        p: 1,
+        gap: 1,
+      }}
+    >
+      {/* Font Family */}
+      <FormControl size="small" sx={{ minWidth: 120 }}>
+        <Select
+          value={editor.getAttributes('textStyle').fontFamily || ''}
+          onChange={handleFontFamilyChange}
+          displayEmpty
+        >
+          <MenuItem value=""><em>Font</em></MenuItem>
+          {FONT_FAMILIES.map(font => (
+            <MenuItem key={font.value} value={font.value}>{font.label}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      {/* Font Size */}
+      <FormControl size="small" sx={{ minWidth: 80 }}>
+        <Select
+          value={editor.getAttributes('textStyle').fontSize?.replace('px', '') || ''}
+          onChange={handleFontSizeChange}
+          displayEmpty
+        >
+          <MenuItem value=""><em>Size</em></MenuItem>
+          {FONT_SIZES.map(size => (
+            <MenuItem key={size} value={size.replace('px', '')}>{size}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      {/* Line Height */}
+      <FormControl size="small" sx={{ minWidth: 80 }}>
+        <Select
+          value={editor.getAttributes('textStyle').lineHeight || ''}
+          onChange={handleLineHeightChange}
+          displayEmpty
+        >
+          <MenuItem value=""><em>Line Height</em></MenuItem>
+          {LINE_HEIGHTS.map(height => (
+            <MenuItem key={height} value={height}>{height}</MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <Divider orientation="vertical" flexItem />
+
+      {/* Basic Formatting */}
+      <Tooltip title="Bold">
+        <IconButton onClick={() => editor.chain().focus().toggleBold().run()} color={editor.isActive('bold') ? 'primary' : 'default'} size="small">
+          <FormatBold />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Italic">
+        <IconButton onClick={() => editor.chain().focus().toggleItalic().run()} color={editor.isActive('italic') ? 'primary' : 'default'} size="small">
+          <FormatItalic />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Strike">
+        <IconButton onClick={() => editor.chain().focus().toggleStrike().run()} color={editor.isActive('strike') ? 'primary' : 'default'} size="small">
+          <StrikethroughS />
+        </IconButton>
+      </Tooltip>
+
+      <Divider orientation="vertical" flexItem />
+
+      {/* List Formatting */}
+      <Tooltip title="Bullet List">
+        <IconButton onClick={() => editor.chain().focus().toggleBulletList().run()} color={editor.isActive('bulletList') ? 'primary' : 'default'} size="small">
+          <FormatListBulleted />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Numbered List">
+        <IconButton onClick={() => editor.chain().focus().toggleOrderedList().run()} color={editor.isActive('orderedList') ? 'primary' : 'default'} size="small">
+          <FormatListNumbered />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Blockquote">
+        <IconButton onClick={() => editor.chain().focus().toggleBlockquote().run()} color={editor.isActive('blockquote') ? 'primary' : 'default'} size="small">
+          <FormatQuote />
+        </IconButton>
+      </Tooltip>
+
+      <Divider orientation="vertical" flexItem />
+
+      {/* Clear Formatting */}
+      <Tooltip title="Clear Formats">
+        <IconButton onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()} size="small">
+          <FormatClear />
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
+};
+
+export default Toolbar;
