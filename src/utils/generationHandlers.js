@@ -93,7 +93,7 @@ export const generateCampaignContent = async ({ problema, solucao }) => {
 /**
  * Generates a prompt for the campaign image using an AI API.
  */
-export const generateCampaignImagePrompt = async ({ content }) => {
+export const generateCampaignImagePrompt = async ({ content, aspectRatio }) => {
     if (!content) {
         throw new Error("O conteúdo da campanha deve ser gerado primeiro.");
     }
@@ -121,10 +121,11 @@ export const generateCampaignImagePrompt = async ({ content }) => {
       1.  O prompt deve ser em inglês, para máxima compatibilidade com os modelos de imagem.
       2.  A imagem a ser gerada NÃO DEVE CONTER NENHUM TEXTO, LETRAS OU NÚMEROS. O prompt deve reforçar isso.
       3.  O prompt deve ser puramente descritivo, focando em elementos visuais, estilo, cores e composição.
-      4.  O prompt deve resultar em uma imagem que tenha áreas mais limpas ou abstratas, adequadas para a sobreposição de texto.
-      5.  O prompt deve ser uma única string de texto.
+      4.  A composição do prompt deve considerar a razão de aspecto final da imagem, que será de ${aspectRatio}. Por exemplo, um prompt para uma imagem 16:9 (paisagem) pode descrever uma cena mais ampla, enquanto um 4:5 (retrato) pode focar em um elemento mais central e vertical.
+      5.  O prompt deve resultar em uma imagem que tenha áreas mais limpas ou abstratas, adequadas para a sobreposição de texto.
+      6.  O prompt deve ser uma única string de texto.
 
-      Exemplo de um bom prompt:
+      Exemplo de um bom prompt para uma imagem 1:1 (quadrada):
       "A vibrant, abstract background with swirling gradients of blue and gold, representing the flow of data and innovation, with a soft, clean area for text overlay. The style should be elegant and professional. NO TEXT, NO LETTERS, NO NUMBERS."
 
       Gere apenas o texto do prompt, sem nenhuma outra explicação ou formatação.
