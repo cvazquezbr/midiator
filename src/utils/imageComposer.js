@@ -228,40 +228,53 @@ export const composeSingleImage = async ({
             ctx.translate(-centerX, -centerY);
         }
 
-        const finalFontSize = (style.fontSize || 24) * fontScale;
-        const finalStyle = { ...style, fontSize: finalFontSize };
+        // Create a render-specific style object where all pixel values are scaled up for the full-resolution canvas.
+        // fontScale is (e.g. 0.45 for a small preview), so we divide by it to scale up.
+        const finalStyle = {
+            ...style,
+            fontSize: (style.fontSize || 24) / fontScale,
+            strokeWidth: (style.strokeWidth || 2) / fontScale,
+            shadowBlur: (style.shadowBlur || 4) / fontScale,
+            shadowOffsetX: (style.shadowOffsetX || 2) / fontScale,
+            shadowOffsetY: (style.shadowOffsetY || 2) / fontScale,
+        };
 
-        // Draw the textbox background and border
+        const padding = (style.padding || 0) / fontScale;
+        const borderRadius = (style.borderRadius || 0) / fontScale;
+        const borderWidth = (style.borderWidth || 0) / fontScale;
+
+        // Draw the textbox background and border using scaled values
         const backgroundOpacity = style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1;
         const backgroundColorHex = style.backgroundColor || '#000000';
         if (backgroundOpacity > 0) {
             ctx.fillStyle = hexToRgba(backgroundColorHex, backgroundOpacity);
-            drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, style.borderRadius || 0);
+            drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, borderRadius);
             ctx.fill();
         }
-        if (style.borderWidth > 0) {
+        if (borderWidth > 0) {
             ctx.strokeStyle = style.borderColor || '#000000';
-            ctx.lineWidth = style.borderWidth;
-            drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, style.borderRadius || 0);
+            ctx.lineWidth = borderWidth;
+            drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, borderRadius);
             ctx.stroke();
         }
 
+        // Apply final text effects with the scaled font size
         applyTextEffects(ctx, finalStyle);
-        const padding = (style.padding || 0) * fontScale; // Scale padding
+
         const effectiveTextWidth = Math.max(0, posPx.width - (2 * padding));
         const effectiveTextHeight = Math.max(0, posPx.height - (2 * padding));
         const textContentStartX = posPx.x + padding;
         const textContentStartY = posPx.y + padding;
 
         const lines = wrapTextInArea(ctx, text, finalStyle, effectiveTextWidth, effectiveTextHeight);
-        const lineHeight = finalFontSize * (finalStyle.lineHeightMultiplier || 1.2);
+        const lineHeight = finalStyle.fontSize * (finalStyle.lineHeightMultiplier || 1.2);
 
         let currentLineRenderY = textContentStartY;
         if (finalStyle.verticalAlign === 'middle') {
-            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
+            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalStyle.fontSize) : 0);
             currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
         } else if (finalStyle.verticalAlign === 'bottom') {
-            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalFontSize) : 0);
+            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalStyle.fontSize) : 0);
             currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
         }
 
