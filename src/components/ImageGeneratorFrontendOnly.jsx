@@ -195,6 +195,7 @@ const ImageGeneratorFrontendOnly = ({
         return {
           ...imageData,
           customFieldStyles: fieldStyles,
+          customFieldPositions: fieldPositions,
         };
       })
       .catch(error => {

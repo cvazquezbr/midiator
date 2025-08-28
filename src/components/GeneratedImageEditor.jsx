@@ -98,8 +98,19 @@ const GeneratedImageEditor = ({
 
   useEffect(() => {
     if (open && imageData && initialFieldPositions && initialFieldStyles) {
-      const positions = JSON.parse(JSON.stringify(imageData.customFieldPositions || initialFieldPositions));
       const brands = JSON.parse(JSON.stringify(imageData.customBrandElements || brandElements || []));
+
+      // Deep merge positions
+      const basePositions = JSON.parse(JSON.stringify(initialFieldPositions));
+      const customPositions = imageData.customFieldPositions || {};
+      Object.keys(customPositions).forEach(field => {
+        basePositions[field] = {
+          ...(basePositions[field] || {}),
+          ...customPositions[field],
+        };
+      });
+      const positions = basePositions;
+
       // Defensively add filters to brand elements
       brands.forEach(el => {
         if (!el.filters) {
