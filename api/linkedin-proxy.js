@@ -344,14 +344,27 @@ async function handleGetShareStatistics(fetch, request, response) {
         return response.status(400).json({ error: 'Missing accessToken, authorUrn, or shareUrns in payload.' });
     }
 
-    // The 'shares' parameter has a different format for single vs. multiple items.
-    let sharesParam;
-    if (shareUrns.length === 1) {
-        sharesParam = `shares=${encodeURIComponent(shareUrns[0])}`;
-    } else {
-        sharesParam = `shares=List(${shareUrns.map(urn => encodeURIComponent(urn)).join(',')})`;
+    // Per documentation, this endpoint is for organizations and has different parameter formats
+    // for 'share' URNs vs 'ugcPost' URNs.
+    const shareUrnsForApi = shareUrns.filter(u => u.includes(':share:'));
+    // Treat carousels as ugcPosts for this endpoint.
+    const ugcPostUrnsForApi = shareUrns.filter(u => u.includes(':ugcPost:') || u.includes(':carousel:'));
+
+    const queryParams = [];
+    if (shareUrnsForApi.length > 0) {
+        queryParams.push(`shares=List(${shareUrnsForApi.map(urn => encodeURIComponent(urn)).join(',')})`);
     }
-    const url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&${sharesParam}`;
+    if (ugcPostUrnsForApi.length > 0) {
+        ugcPostUrnsForApi.forEach((urn, index) => {
+            queryParams.push(`ugcPosts[${index}]=${encodeURIComponent(urn)}`);
+        });
+    }
+
+    if (queryParams.length === 0) {
+        return response.status(200).json({ elements: [] }); // Nothing to fetch
+    }
+
+    const url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&${queryParams.join('&')}`;
 
     try {
         const linkedinResponse = await fetchWithRetry(fetch, url, {
@@ -388,8 +401,9 @@ async function handleGetMemberPostStatistics(fetch, request, response) {
         return response.status(400).json({ error: 'Missing required parameters for member post statistics.' });
     }
 
-    // Docs: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/members/post-statistics?view=li-lms-2025-07
-    const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=(ugc:${encodeURIComponent(ugcPostUrn)})&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
+    // This is the final attempt to fix the 404 error for this endpoint.
+    // Instead of the complex `entity=(ugc:...)` format, we try a simpler `entity=urn` format.
+    const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=${encodeURIComponent(ugcPostUrn)}&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
 
     try {
         const linkedinResponse = await fetchWithRetry(fetch, url, {
