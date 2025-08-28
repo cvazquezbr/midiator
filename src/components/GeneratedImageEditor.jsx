@@ -60,7 +60,8 @@ const GeneratedImageEditor = ({
   globalBackgroundImage, // Imagem de fundo global, como fallback
   originalImageSize,
   imageFilters, // Adicionado
-  brandElements
+  brandElements,
+  fontScale: propFontScale = 1
 }) => {
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
@@ -151,11 +152,11 @@ const GeneratedImageEditor = ({
       setStylesAreInitialized(true);
 
       setEditedImageFilters(imageFilters || defaultFilters);
-      setFontScale(imageData.fontScale || 1); // Initialize font scale from imageData
+      setFontScale(propFontScale); // Initialize font scale from the prop
     } else {
       setStylesAreInitialized(false);
     }
-  }, [open, imageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, imageFilters, brandElements]);
+  }, [open, imageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, imageFilters, brandElements, propFontScale]);
 
   if (!imageData) {
     return null;
