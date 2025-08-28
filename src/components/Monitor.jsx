@@ -20,7 +20,7 @@ import {
 import { BarChart, Refresh, Info, Link as LinkIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import { getCampaignPublications } from '../utils/campaignState';
-import { getLinkedInShareStatistics } from '../utils/linkedinAPI';
+import { getLinkedInShareStatistics, getLinkedInMemberPostStatistics } from '../utils/linkedinAPI';
 import { useSettings } from '../context/SettingsContext';
 
 const StatCard = ({ title, value, icon }) => (
@@ -78,7 +78,6 @@ const Monitor = ({ currentCampaign }) => {
       return;
     }
 
-    // Group publications by their author_urn to make separate API calls if needed.
     const pubsByAuthor = publications.reduce((acc, pub) => {
       const authorUrn = pub.author_urn;
       if (authorUrn && pub.urn) {
@@ -91,34 +90,60 @@ const Monitor = ({ currentCampaign }) => {
     }, {});
 
     if (Object.keys(pubsByAuthor).length === 0) {
-        toast.info("Nenhuma publicação com autor válido encontrada para buscar estatísticas.");
-        return;
+      toast.info("Nenhuma publicação com autor válido encontrada para buscar estatísticas.");
+      return;
     }
 
     setIsLoading(true);
     setError('');
     try {
-        let allStats = {};
-        const fetchPromises = Object.entries(pubsByAuthor).map(async ([authorUrn, urns]) => {
-            const results = await getLinkedInShareStatistics(settings.linkedin, authorUrn, urns);
-            (results.elements || []).forEach(stat => {
-                const urn = stat.share || stat.ugcPost || stat.carousel || stat.post;
-                if (urn && stat.totalShareStatistics) {
-                    allStats[urn] = stat.totalShareStatistics;
-                }
-            });
-        });
+      let allStats = {};
+      const fetchPromises = Object.entries(pubsByAuthor).map(async ([authorUrn, urns]) => {
+        if (authorUrn.includes(':organization:')) {
+          const results = await getLinkedInShareStatistics(settings.linkedin, authorUrn, urns);
+          (results.elements || []).forEach(stat => {
+            const urn = stat.share || stat.ugcPost || stat.carousel || stat.post;
+            if (urn && stat.totalShareStatistics) {
+              allStats[urn] = stat.totalShareStatistics;
+            }
+          });
+        } else {
+          // For personal authors, call the new endpoint for each post.
+          const personalPostPromises = urns.map(async (urn) => {
+            try {
+              const result = await getLinkedInMemberPostStatistics(settings.linkedin, urn);
+              // The response structure for member stats is different. We need to transform it.
+              // This transformation is a best guess based on the API docs.
+              if (result && result.elements && result.elements.length > 0) {
+                const statsData = result.elements[0];
+                allStats[result.urn] = {
+                  impressionCount: statsData.totalImpressions?.count || 0,
+                  likeCount: statsData.reactionSummaries?.LIKE || 0,
+                  commentCount: statsData.totalComments?.count || 0,
+                  shareCount: statsData.totalReshares?.count || 0,
+                  clickCount: statsData.totalClicks?.count || 0,
+                  engagement: statsData.engagementRate?.rate || 0,
+                };
+              }
+            } catch (postError) {
+                console.error(`Failed to fetch stats for personal post ${urn}:`, postError);
+                toast.error(`Falha ao buscar estatísticas para o post ${urn.split(':').pop()}`);
+            }
+          });
+          await Promise.all(personalPostPromises);
+        }
+      });
 
-        await Promise.all(fetchPromises);
+      await Promise.all(fetchPromises);
 
-        setStats(allStats);
-        toast.success("Estatísticas atualizadas com sucesso!");
+      setStats(allStats);
+      toast.success("Estatísticas atualizadas com sucesso!");
 
     } catch (err) {
-        toast.error(`Falha ao buscar estatísticas: ${err.message}`);
-        setError(err.message);
+      toast.error(`Falha ao buscar estatísticas: ${err.message}`);
+      setError(err.message);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 

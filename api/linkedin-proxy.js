@@ -337,10 +337,10 @@ async function handleRefreshToken(fetch, request, response) {
 }
 
 async function handleGetShareStatistics(fetch, request, response) {
-    const { accessToken, organizationUrn: authorUrn, shareUrns } = request.body;
+    const { accessToken, authorUrn, shareUrns } = request.body.payload;
 
     if (!accessToken || !authorUrn || !shareUrns || !Array.isArray(shareUrns)) {
-        return response.status(400).json({ error: 'Missing accessToken, authorUrn, or shareUrns.' });
+        return response.status(400).json({ error: 'Missing accessToken, authorUrn, or shareUrns in payload.' });
     }
 
     // The 'shares' parameter has a different format for single vs. multiple items.
@@ -379,6 +379,43 @@ async function handleGetShareStatistics(fetch, request, response) {
     }
 }
 
+async function handleGetMemberPostStatistics(fetch, request, response) {
+    const { accessToken, ugcPostUrn, queryType, aggregation, dateRange } = request.body.payload;
+
+    if (!accessToken || !ugcPostUrn || !queryType || !aggregation || !dateRange) {
+        return response.status(400).json({ error: 'Missing required parameters for member post statistics.' });
+    }
+
+    // Docs: https://learn.microsoft.com/en-us/linkedin/marketing/community-management/members/post-statistics?view=li-lms-2025-07
+    const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=(ugc:${encodeURIComponent(ugcPostUrn)})&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
+
+    try {
+        const linkedinResponse = await fetchWithRetry(fetch, url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': LINKEDIN_API_VERSION
+            },
+        });
+
+        const data = await linkedinResponse.json();
+
+        if (linkedinResponse.ok) {
+            return response.status(200).json(data);
+        } else {
+            console.error(`[ERROR] LinkedIn Member Post Stats API responded with status ${linkedinResponse.status} for post ${ugcPostUrn}:`, data);
+            return response.status(linkedinResponse.status).json(data);
+        }
+    } catch (error) {
+        console.error(`[FATAL] Error during GET to ${url}:`, error.message, error.stack);
+        return response.status(500).json({
+            error: `Internal Server Error during GET to ${url}`,
+            details: error.message,
+        });
+    }
+}
+
 const mainHandler = async (request, response) => {
   const fetch = (await import('node-fetch')).default;
   const { action } = request.body;
@@ -392,6 +429,7 @@ const mainHandler = async (request, response) => {
     case 'createPost': return handleCreatePost(fetch, request, response);
     case 'getProfiles': return handleGetProfiles(fetch, request, response);
     case 'getShareStatistics': return handleGetShareStatistics(fetch, request, response);
+    case 'getMemberPostStatistics': return handleGetMemberPostStatistics(fetch, request, response);
     case 'initializeVideoUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/rest/videos?action=initializeUpload');
     case 'uploadVideo': return handleUploadVideo(fetch, request, response);
     case 'finalizeVideoUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/rest/videos?action=finalizeUpload');

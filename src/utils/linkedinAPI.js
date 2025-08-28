@@ -181,21 +181,51 @@ export const uploadImagesForLinkedIn = async (linkedinConfig, imageBlobs, author
   return assetUrns;
 };
 
-export const getLinkedInShareStatistics = async (linkedinConfig, organizationUrn, shareUrns) => {
+export const getLinkedInShareStatistics = async (linkedinConfig, authorUrn, shareUrns) => {
   if (!linkedinConfig || !linkedinConfig.accessToken) {
     throw new Error('LinkedIn configuration or Access Token not found.');
   }
-  if (!organizationUrn || !shareUrns || shareUrns.length === 0) {
-    throw new Error('Organization URN and at least one Share URN are required.');
+  if (!authorUrn || !shareUrns || shareUrns.length === 0) {
+    throw new Error('Author URN and at least one Share URN are required.');
   }
 
   const api = new LinkedInAPI(linkedinConfig.accessToken);
   const result = await api._proxyFetch('getShareStatistics', {
-    organizationUrn,
-    shareUrns,
+    payload: {
+        authorUrn,
+        shareUrns,
+    }
   });
 
   return result;
+};
+
+export const getLinkedInMemberPostStatistics = async (linkedinConfig, ugcPostUrn) => {
+    if (!linkedinConfig || !linkedinConfig.accessToken) {
+        throw new Error('LinkedIn configuration or Access Token not found.');
+    }
+    if (!ugcPostUrn) {
+        throw new Error('Post URN is required.');
+    }
+
+    const api = new LinkedInAPI(linkedinConfig.accessToken);
+
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 90);
+
+    const payload = {
+        ugcPostUrn,
+        queryType: 'TOTAL',
+        aggregation: 'TOTAL',
+        dateRange: {
+            start: { day: startDate.getUTCDate(), month: startDate.getUTCMonth() + 1, year: startDate.getUTCFullYear() },
+            end: { day: endDate.getUTCDate(), month: endDate.getUTCMonth() + 1, year: endDate.getUTCFullYear() }
+        }
+    };
+
+    const result = await api._proxyFetch('getMemberPostStatistics', { payload });
+    return { ...result, urn: ugcPostUrn }; // Add urn to result for easy mapping
 };
 
 
