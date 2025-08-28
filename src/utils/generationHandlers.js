@@ -91,11 +91,55 @@ export const generateCampaignContent = async ({ problema, solucao }) => {
 };
 
 /**
+ * Generates a prompt for the campaign image using an AI API.
+ */
+export const generateCampaignImagePrompt = async ({ content }) => {
+    if (!content) {
+        throw new Error("O conteúdo da campanha deve ser gerado primeiro.");
+    }
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+        throw new Error('Chave de API Gemini não configurada.');
+    }
+    geminiAPI.initialize(apiKey);
+
+    const { autor } = getCampaignPrompt();
+    const autorString = formatObjectForPrompt(autor);
+
+    const prompt = `
+      Você é um diretor de arte. Sua tarefa é criar um prompt de texto detalhado para um modelo de geração de imagem (como DALL-E ou Midjourney).
+      O prompt deve descrever uma imagem de fundo visualmente atraente e conceitual para um post de rede social, sobre a qual os campos de texto serão sobrepostos.
+
+      CONTEÚDO DO POST:
+      Título: "${stripHtml(content.titulo)}"
+      Conteúdo: "${stripHtml(content.conteudo)}"
+
+      INFORMAÇÕES DA MARCA:
+      ${autorString}
+
+      REGRAS PARA O PROMPT GERADO:
+      1.  O prompt deve ser em inglês, para máxima compatibilidade com os modelos de imagem.
+      2.  A imagem a ser gerada NÃO DEVE CONTER NENHUM TEXTO, LETRAS OU NÚMEROS. O prompt deve reforçar isso.
+      3.  O prompt deve ser puramente descritivo, focando em elementos visuais, estilo, cores e composição.
+      4.  O prompt deve resultar em uma imagem que tenha áreas mais limpas ou abstratas, adequadas para a sobreposição de texto.
+      5.  O prompt deve ser uma única string de texto.
+
+      Exemplo de um bom prompt:
+      "A vibrant, abstract background with swirling gradients of blue and gold, representing the flow of data and innovation, with a soft, clean area for text overlay. The style should be elegant and professional. NO TEXT, NO LETTERS, NO NUMBERS."
+
+      Gere apenas o texto do prompt, sem nenhuma outra explicação ou formatação.
+    `;
+
+    const imagePrompt = await geminiAPI.generateContent(prompt, 'Geração de Prompt de Imagem de Campanha');
+    return imagePrompt.trim();
+};
+
+/**
  * Generates an image for the campaign using an AI API.
  */
-export const generateCampaignImage = async ({ content, aspectRatio }) => {
-  if (!content) {
-    throw new Error("Conteúdo do texto deve ser gerado primeiro.");
+export const generateCampaignImage = async ({ prompt, aspectRatio }) => {
+  if (!prompt) {
+    throw new Error("O prompt da imagem deve ser gerado primeiro.");
   }
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
@@ -103,24 +147,21 @@ export const generateCampaignImage = async ({ content, aspectRatio }) => {
   }
   geminiAPI.initialize(apiKey);
 
-  const { autor, colors } = getCampaignPrompt();
-  const autorString = formatObjectForPrompt(autor);
+  const { colors } = getCampaignPrompt();
 
   const colorPalettePrompt = colors && colors.length > 0
-    ? `A imagem deve usar predominantemente a seguinte paleta de cores: ${colors.map(c => c.hex).join(', ')}.`
+    ? `The image should predominantly use the following color palette: ${colors.map(c => c.hex).join(', ')}.`
     : '';
 
-  // Simplified prompt to be more direct and less prone to errors.
-  const imagePrompt = `
-    Crie uma imagem de fundo para um post de rede social.
-    O tema é: "${stripHtml(content.titulo)}".
-    O estilo deve ser consistente com a marca: ${autorString}.
+  // The main prompt comes from the dedicated generation step.
+  // We just add the color and aspect ratio constraints.
+  const finalImagePrompt = `
+    ${prompt}
     ${colorPalettePrompt}
-    A IMAGEM DEVE SER PURAMENTE VISUAL, CONCEITUAL OU ABSTRATA, E NÃO DEVE CONTER NENHUM TEXTO, LETRAS OU NÚMEROS.
-    A razão de aspecto da imagem deve ser ${aspectRatio}.
+    The aspect ratio of the image must be ${aspectRatio}.
   `;
 
-  const base64Image = await geminiAPI.generateImage(imagePrompt, 'Geração de Imagem de Campanha');
+  const base64Image = await geminiAPI.generateImage(finalImagePrompt, 'Geração de Imagem de Campanha');
   return `data:image/png;base64,${base64Image}`;
 };
 
