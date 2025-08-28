@@ -351,14 +351,17 @@ const ImageGeneratorFrontendOnly = ({
       setGeneratedImages(prevImages => {
         const updatedImages = prevImages.map(img => {
           if (img.index === index) {
-            // The new object from composeSingleImage doesn't have the custom* fields,
-            // so we need to add them back.
+            // The new object from composeSingleImage contains the new url, blob, etc.
+            // We merge it with the existing `img` data to preserve all fields,
+            // especially the `backgroundImage` which might be lost otherwise.
             return {
+              ...img,
               ...newImageData,
               customFieldPositions: positionsToUse,
               customFieldStyles: stylesToUse,
               customBrandElements: elementsToUse,
               customOriginalImageSize: customSize,
+              backgroundImage: currentBackgroundImage, // Explicitly preserve the background used for regeneration
             };
           }
           return img;
