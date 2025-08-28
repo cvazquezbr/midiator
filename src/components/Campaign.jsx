@@ -580,7 +580,7 @@ const Campaign = ({
                                             </Button>
                                         </Box>
                                     </Box>
-                                    <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px', marginTop: 2 }} />
+                                    <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: '8px', marginTop: 2 }} />
                                 </Box>
                             )}
                             {isGeneratingImage && (
