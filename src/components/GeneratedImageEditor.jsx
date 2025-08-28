@@ -193,7 +193,7 @@ const GeneratedImageEditor = ({
   // }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="body">
+    <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="paper">
       <DialogTitle>
         Editar Imagem Gerada #{imageData.index + 1}
         <IconButton
@@ -203,7 +203,7 @@ const GeneratedImageEditor = ({
           <Close />
         </IconButton>
       </DialogTitle>
-      <DialogContent dividers>
+      <DialogContent dividers sx={{ overflowY: 'auto' }}>
         {!stylesAreInitialized ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
             <Typography>Carregando estilos...</Typography>
@@ -248,6 +248,7 @@ const GeneratedImageEditor = ({
                   onDeselectField={handleDeselectField}
                   onOpenHtmlEditor={handleOpenHtmlEditor}
                   fontScale={fontScale}
+                  standardsColors={colorPalette}
                 />
               </Grid>
             )}
@@ -286,6 +287,7 @@ const GeneratedImageEditor = ({
             brandElements={editedBrandElements}
             setBrandElements={setEditedBrandElements}
             fontScale={fontScale}
+            standardsColors={colorPalette}
           />
         </>
       )}

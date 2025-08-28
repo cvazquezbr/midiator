@@ -425,37 +425,29 @@ const FormattingPanel = ({
                   </AccordionDetails>
                 </Accordion>
 
-                {/* Estilo da Caixa */}
+                {/* Caixa de Texto */}
                 <Accordion expanded={expandedPanel === 'boxStyle'} onChange={handleAccordionChange('boxStyle')}>
                   <AccordionSummary expandIcon={<ExpandMore />}>
                     <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
-                      <CheckBoxOutlineBlank sx={{ mr: 1 }} /> Estilo da Caixa
+                      <CheckBoxOutlineBlank sx={{ mr: 1 }} /> Caixa de Texto
                     </Typography>
                   </AccordionSummary>
                   <AccordionDetails>
-                    <Grid container spacing={2}>
-                      <Grid item xs={6}>
+                    <Grid container spacing={2} alignItems="center">
+                      {/* Opacidade e Cor de Fundo */}
+                      <Grid item xs={4}>
+                        <Typography variant="body2">Opacidade</Typography>
+                      </Grid>
+                      <Grid item xs={2}>
                         <TextField
-                          label="Cor de Fundo"
                           type="color"
                           value={currentElement.style.backgroundColor || '#000000'}
                           onChange={(e) => updateFieldStyle(selectedField, 'backgroundColor', e.target.value)}
-                          fullWidth
                           size="small"
+                          sx={{ minWidth: '40px' }}
                         />
                       </Grid>
-                      <Grid item xs={6}>
-                        <TextField
-                          label="Cor da Borda"
-                          type="color"
-                          value={currentElement.style.borderColor || '#000000'}
-                          onChange={(e) => updateFieldStyle(selectedField, 'borderColor', e.target.value)}
-                          fullWidth
-                          size="small"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Typography gutterBottom>Opacidade do Fundo: {Math.round((currentElement.style.backgroundOpacity || 1) * 100)}%</Typography>
+                      <Grid item xs={4}>
                         <Slider
                           value={currentElement.style.backgroundOpacity || 1}
                           onChange={(e, value) => updateFieldStyle(selectedField, 'backgroundOpacity', value)}
@@ -465,8 +457,38 @@ const FormattingPanel = ({
                           size="small"
                         />
                       </Grid>
-                      <Grid item xs={12}>
-                        <Typography gutterBottom>Largura da Borda: {currentElement.style.borderWidth || 0}px</Typography>
+                      <Grid item xs={2}>
+                        <TextField
+                          type="number"
+                          value={Math.round((currentElement.style.backgroundOpacity || 1) * 100)}
+                          onChange={(e) => {
+                            const value = Math.max(0, Math.min(100, Number(e.target.value)));
+                            updateFieldStyle(selectedField, 'backgroundOpacity', value / 100);
+                          }}
+                          size="small"
+                          inputProps={{
+                            step: 1,
+                            min: 0,
+                            max: 100,
+                            'aria-labelledby': 'input-slider',
+                          }}
+                          />
+                      </Grid>
+
+                      {/* Largura e Cor da Borda */}
+                      <Grid item xs={4}>
+                        <Typography variant="body2">Largura da Borda</Typography>
+                      </Grid>
+                      <Grid item xs={2}>
+                        <TextField
+                          type="color"
+                          value={currentElement.style.borderColor || '#000000'}
+                          onChange={(e) => updateFieldStyle(selectedField, 'borderColor', e.target.value)}
+                          size="small"
+                          sx={{ minWidth: '40px' }}
+                        />
+                      </Grid>
+                      <Grid item xs={4}>
                         <Slider
                           value={currentElement.style.borderWidth || 0}
                           onChange={(e, value) => updateFieldStyle(selectedField, 'borderWidth', value)}
@@ -475,7 +497,26 @@ const FormattingPanel = ({
                           size="small"
                         />
                       </Grid>
-                      <Grid item xs={12}>
+                      <Grid item xs={2}>
+                        <TextField
+                            type="number"
+                            value={currentElement.style.borderWidth || 0}
+                            onChange={(e) => {
+                                const value = Math.max(0, Math.min(20, Number(e.target.value)));
+                                updateFieldStyle(selectedField, 'borderWidth', value);
+                            }}
+                            size="small"
+                            inputProps={{
+                                step: 1,
+                                min: 0,
+                                max: 20,
+                                'aria-labelledby': 'input-slider',
+                            }}
+                        />
+                      </Grid>
+
+                      {/* Raio da Borda e Padding */}
+                      <Grid item xs={6}>
                         <Typography gutterBottom>Raio da Borda: {currentElement.style.borderRadius || 0}px</Typography>
                         <Slider
                           value={currentElement.style.borderRadius || 0}
@@ -485,7 +526,7 @@ const FormattingPanel = ({
                           size="small"
                         />
                       </Grid>
-                      <Grid item xs={12}>
+                      <Grid item xs={6}>
                         <Typography gutterBottom>Padding: {currentElement.style.padding || 0}px</Typography>
                         <Slider
                           value={currentElement.style.padding || 0}
