@@ -21,17 +21,31 @@ const MemoizedGeneratedImageEditor = ({
   }, [generatedImages, editingGeneratedImageIndex]);
 
   const memoizedPositions = useMemo(() => {
-    const positionsSource = imageToEdit?.customFieldPositions !== undefined
-      ? imageToEdit.customFieldPositions
-      : fieldPositions;
-    return JSON.parse(JSON.stringify(positionsSource || {}));
+    const basePositions = JSON.parse(JSON.stringify(fieldPositions || {}));
+    const customPositions = imageToEdit?.customFieldPositions || {};
+
+    Object.keys(customPositions).forEach(field => {
+      basePositions[field] = {
+        ...(basePositions[field] || {}),
+        ...customPositions[field],
+      };
+    });
+
+    return basePositions;
   }, [imageToEdit, fieldPositions]);
 
   const memoizedStyles = useMemo(() => {
-    const stylesSource = imageToEdit?.customFieldStyles !== undefined
-      ? imageToEdit.customFieldStyles
-      : fieldStyles;
-    return JSON.parse(JSON.stringify(stylesSource || {}));
+    const baseStyles = JSON.parse(JSON.stringify(fieldStyles || {}));
+    const customStyles = imageToEdit?.customFieldStyles || {};
+
+    Object.keys(customStyles).forEach(field => {
+      baseStyles[field] = {
+        ...(baseStyles[field] || {}),
+        ...customStyles[field],
+      };
+    });
+
+    return baseStyles;
   }, [imageToEdit, fieldStyles]);
 
   const memoizedBrandElements = useMemo(() => {
