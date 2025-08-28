@@ -191,7 +191,11 @@ const ImageGeneratorFrontendOnly = ({
       })
       .then(imageData => {
         setProgress(p => p + 1);
-        return imageData;
+        // Persist the styles used for generation with the image data
+        return {
+          ...imageData,
+          customFieldStyles: fieldStyles,
+        };
       })
       .catch(error => {
         console.error(`Erro ao gerar imagem para o registro ${i}:`, error);
@@ -358,7 +362,7 @@ const ImageGeneratorFrontendOnly = ({
               ...img,
               ...newImageData,
               customFieldPositions: positionsToUse,
-              customFieldStyles: stylesToUse,
+              customFieldStyles: stylesToUse, // Persist the styles used for regeneration
               customBrandElements: elementsToUse,
               customOriginalImageSize: customSize,
               backgroundImage: currentBackgroundImage, // Explicitly preserve the background used for regeneration
