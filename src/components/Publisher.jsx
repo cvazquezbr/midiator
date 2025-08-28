@@ -688,6 +688,24 @@ const Publisher = ({
                   </Paper>
                 </Grid>
               </Grid>
+              <FormControl fullWidth sx={{ my: 2 }}>
+                  <InputLabel id="campaign-select-label">Associar Campanha (Opcional)</InputLabel>
+                  <Select
+                      labelId="campaign-select-label"
+                      value={selectedCampaignId}
+                      label="Associar Campanha (Opcional)"
+                      onChange={(e) => setSelectedCampaignId(e.target.value)}
+                  >
+                      <MenuItem value="">
+                          <em>Nenhuma</em>
+                      </MenuItem>
+                      {campaigns.map((campaign) => (
+                          <MenuItem key={campaign.id} value={campaign.id}>
+                              {campaign.name}
+                          </MenuItem>
+                      ))}
+                  </Select>
+              </FormControl>
               <FormControlLabel
                 control={<Switch checked={isScheduled} onChange={(e) => setIsScheduled(e.target.checked)} />}
                 label="Agendar publicação"
@@ -696,26 +714,6 @@ const Publisher = ({
               {isScheduled && (
                 <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
                   <Grid container spacing={3} sx={{ mt: 1 }}>
-                    <Grid item xs={12}>
-                        <FormControl fullWidth>
-                            <InputLabel id="campaign-select-label">Associar Campanha (Opcional)</InputLabel>
-                            <Select
-                                labelId="campaign-select-label"
-                                value={selectedCampaignId}
-                                label="Associar Campanha (Opcional)"
-                                onChange={(e) => setSelectedCampaignId(e.target.value)}
-                            >
-                                <MenuItem value="">
-                                    <em>Nenhuma</em>
-                                </MenuItem>
-                                {campaigns.map((campaign) => (
-                                    <MenuItem key={campaign.id} value={campaign.id}>
-                                        {campaign.name}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    </Grid>
                     <Grid item xs={12} md={5}>
                       <Grid container direction="column" spacing={3}>
                         <Grid item>
