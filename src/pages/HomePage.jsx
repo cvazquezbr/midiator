@@ -742,7 +742,7 @@ function HomePage() {
     }
     setIsGeneratingImage(true);
     try {
-      const imagePrompt = await generateCampaignImagePrompt({ content: finalContent });
+      const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio });
       const imageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
       console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Setting generatedImageUrl. Value starts with:', String(imageUrl).substring(0, 100));
       setGeneratedImageUrl(imageUrl);
