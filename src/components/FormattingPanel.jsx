@@ -466,11 +466,11 @@ const FormattingPanel = ({
                     <Grid container spacing={2}>
                       {/* Opacidade e Cor de Fundo */}
                       <Grid item xs={12}>
-                        <Grid container spacing={2} alignItems="center">
-                          <Grid item>
-                            <Typography variant="body2" sx={{ minWidth: '80px' }}>Opacidade</Typography>
+                        <Grid container spacing={1} alignItems="center">
+                          <Grid item xs={9}>
+                            <Typography variant="body2">Opacidade</Typography>
                           </Grid>
-                          <Grid item>
+                          <Grid item xs={3}>
                             <TextField
                               type="color"
                               value={currentElement.style.backgroundColor || '#000000'}
@@ -479,7 +479,7 @@ const FormattingPanel = ({
                               sx={{ minWidth: '40px' }}
                             />
                           </Grid>
-                          <Grid item xs>
+                          <Grid item xs={9}>
                             <Slider
                               value={currentElement.style.backgroundOpacity || 1}
                               onChange={(e, value) => updateFieldStyle(selectedField, 'backgroundOpacity', value)}
@@ -489,7 +489,7 @@ const FormattingPanel = ({
                               size="small"
                             />
                           </Grid>
-                          <Grid item>
+                          <Grid item xs={3}>
                             <TextField
                               type="number"
                               value={Math.round((currentElement.style.backgroundOpacity || 1) * 100)}
@@ -512,11 +512,11 @@ const FormattingPanel = ({
 
                       {/* Espessura e Cor da Borda */}
                       <Grid item xs={12}>
-                        <Grid container spacing={2} alignItems="center">
-                          <Grid item>
-                            <Typography variant="body2" sx={{ minWidth: '80px' }}>Espessura</Typography>
+                        <Grid container spacing={1} alignItems="center">
+                          <Grid item xs={9}>
+                            <Typography variant="body2">Espessura</Typography>
                           </Grid>
-                          <Grid item>
+                          <Grid item xs={3}>
                             <TextField
                               type="color"
                               value={currentElement.style.borderColor || '#000000'}
@@ -525,7 +525,7 @@ const FormattingPanel = ({
                               sx={{ minWidth: '40px' }}
                             />
                           </Grid>
-                          <Grid item xs>
+                          <Grid item xs={9}>
                             <Slider
                               value={currentElement.style.borderWidth || 0}
                               onChange={(e, value) => updateFieldStyle(selectedField, 'borderWidth', value)}
@@ -534,7 +534,7 @@ const FormattingPanel = ({
                               size="small"
                             />
                           </Grid>
-                          <Grid item>
+                          <Grid item xs={3}>
                             <TextField
                               type="number"
                               value={currentElement.style.borderWidth || 0}
