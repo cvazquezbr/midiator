@@ -145,11 +145,20 @@ const ImageGeneratorFrontendOnly = ({
           });
         });
 
-        const newImages = await Promise.all(imagePromises);
+        const regeneratedImages = await Promise.all(imagePromises.map(async (promise, index) => {
+          const newImageData = await promise;
+          const originalImageData = initialGeneratedImagesData[index];
+          // If regeneration failed, newImageData might be the original data already.
+          if (newImageData === originalImageData) {
+            return originalImageData;
+          }
+          // Merge new data (url, blob) with old data (custom styles/positions)
+          return { ...originalImageData, ...newImageData };
+        }));
 
         // Update state only if there are actual changes
-        if (JSON.stringify(newImages) !== JSON.stringify(generatedImages)) {
-          setGeneratedImages(newImages);
+        if (JSON.stringify(regeneratedImages) !== JSON.stringify(generatedImages)) {
+          setGeneratedImages(regeneratedImages);
           console.log('[Thumbnail-Regen] Successfully regenerated thumbnails and updated state.');
         }
       };
