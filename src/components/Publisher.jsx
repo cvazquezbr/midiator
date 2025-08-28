@@ -938,7 +938,7 @@ const Publisher = ({
                                                 </IconButton>
                                             </Tooltip>
                                             <Tooltip title="Delete Schedule">
-                                                <IconButton onClick={() => handleDeleteSchedule(row.id)} size="small" disabled={row.status === 'published'}>
+                                                <IconButton onClick={() => handleDeleteSchedule(row.id)} size="small">
                                                     <Delete />
                                                 </IconButton>
                                             </Tooltip>
