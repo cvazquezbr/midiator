@@ -540,8 +540,8 @@ const DraggableElementInternal = ({
     textDecoration: style.textDecoration || 'none',
     lineHeight: `${scaledLineHeight}px`,
     textAlign: style.textAlign || 'left',
-    textShadow: style.textShadow ? `${style.shadowOffsetX || 2}px ${style.shadowOffsetY || 2}px ${style.shadowBlur || 4}px ${style.shadowColor || '#000000'}` : 'none',
-    WebkitTextStroke: style.textStroke ? `${style.strokeWidth || 2}px ${style.strokeColor || '#ffffff'}` : 'none',
+    textShadow: style.textShadow ? `${(style.shadowOffsetX || 2) * fontScale}px ${(style.shadowOffsetY || 2) * fontScale}px ${(style.shadowBlur || 4) * fontScale}px ${style.shadowColor || '#000000'}` : 'none',
+    WebkitTextStroke: style.textStroke ? `${(style.strokeWidth || 2) * fontScale}px ${style.strokeColor || '#ffffff'}` : 'none',
     pointerEvents: 'none',
   };
 
@@ -563,10 +563,10 @@ const DraggableElementInternal = ({
             : hexToRgba(style.backgroundColor || '#000000', style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1),
           border: element.type === 'image'
             ? 'none'
-            : `${style.borderWidth || 0}px solid ${style.borderColor || '#000000'}`,
-          borderRadius: `${style.borderRadius || 0}px`,
+            : `${(style.borderWidth || 0) * fontScale}px solid ${style.borderColor || '#000000'}`,
+          borderRadius: `${(style.borderRadius || 0) * fontScale}px`,
           // Padding should only apply to text boxes, not image containers
-          padding: element.type === 'image' ? 0 : `${style.padding || 0}px`,
+          padding: element.type === 'image' ? 0 : `${(style.padding || 0) * fontScale}px`,
         }}
         onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
         onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
