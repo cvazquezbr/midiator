@@ -100,8 +100,6 @@ const GeneratedImageEditor = ({
     if (open && imageData && initialFieldPositions && initialFieldStyles) {
       const positions = JSON.parse(JSON.stringify(imageData.customFieldPositions || initialFieldPositions));
       const brands = JSON.parse(JSON.stringify(imageData.customBrandElements || brandElements || []));
-      const stylesToUse = imageData.customFieldStyles || initialFieldStyles;
-
       // Defensively add filters to brand elements
       brands.forEach(el => {
         if (!el.filters) {
@@ -140,11 +138,15 @@ const GeneratedImageEditor = ({
       setEditedBrandElements(brands);
       setEditedRecord(JSON.parse(JSON.stringify(imageData.record)));
 
+      // Reworked style initialization to correctly layer styles
       const newEditedStyles = {};
       globalCsvHeaders.forEach(field => {
+        const templateStyle = initialFieldStyles?.[field] || {};
+        const customStyle = imageData.customFieldStyles?.[field] || {};
         newEditedStyles[field] = {
           ...COMPLETE_DEFAULT_STYLE,
-          ...(stylesToUse?.[field] || {}),
+          ...templateStyle,
+          ...customStyle,
         };
       });
       setEditedStyles(newEditedStyles);
