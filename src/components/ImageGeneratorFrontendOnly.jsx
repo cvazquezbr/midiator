@@ -134,11 +134,11 @@ const ImageGeneratorFrontendOnly = ({
             record: imgData.record,
             index: imgData.index,
             itemBackgroundImage: imgData.backgroundImage,
-            imageFilters,
+            imageFilters: imgData.customImageFilters || imageFilters, // Use custom filters if available
             brandElements: elementsToUse,
             fieldPositions: positionsToUse,
             fieldStyles: stylesToUse,
-            fontScale: 1, // Always use 100% scale for regeneration
+            fontScale: imgData.fontScale || 1, // Use custom font scale if available
           }).catch(error => {
             console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${imgData.index}:`, error);
             return imgData; // On error, return the original data to not lose it
@@ -324,13 +324,14 @@ const ImageGeneratorFrontendOnly = ({
         stylesToUse,
         sizeToUse,
         elementsToUse,
-        modifiedImageData.fontScale || 1
+        modifiedImageData.fontScale || 1,
+        modifiedImageData.imageFilters || imageFilters
       );
     }
     handleCloseGeneratedImageEditor();
   };
 
-  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1) => {
+  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1, customImageFilters = imageFilters) => {
     if (!currentBackgroundImage || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
       alert('Pré-requisitos para regeneração não atendidos. Fontes, dados ou configurações faltando.');
       return;
@@ -340,7 +341,7 @@ const ImageGeneratorFrontendOnly = ({
         record,
         index,
         itemBackgroundImage: currentBackgroundImage,
-        imageFilters,
+        imageFilters: customImageFilters,
         brandElements: elementsToUse,
         fieldPositions: positionsToUse,
         fieldStyles: stylesToUse,
