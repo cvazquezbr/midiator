@@ -568,7 +568,7 @@ const Campaign = ({
                             </Grid>
                             {imageTabError && <Grid item xs={12}><Alert severity="error">{imageTabError}</Alert></Grid>}
                             {generatedImageUrl && !isGeneratingImage && (
-                                <Box>
+                                <Box sx={{ maxWidth: '600px', margin: 'auto' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, flexWrap: 'wrap', gap: 1 }}>
                                         <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
                                         <Box>
