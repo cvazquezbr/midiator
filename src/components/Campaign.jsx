@@ -25,7 +25,6 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import { toast } from 'sonner';
 import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
 import { useSettings } from '../context/SettingsContext';
@@ -183,7 +182,7 @@ const Campaign = ({
     setCampaignContent,
     onEditFollowup,
 }) => {
-    const { settings } = useSettings();
+    useSettings();
     const [activeTab, setActiveTab] = useState(0);
     const [isHintModalOpen, setHintModalOpen] = React.useState(false);
     const [isSolucaoHintModalOpen, setSolucaoHintModalOpen] = React.useState(false);
@@ -352,7 +351,7 @@ const Campaign = ({
                 </Typography>
 
                 <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                    <Tabs value={activeTab} onChange={handleTabChange} aria-label="abas da campanha">
+                    <Tabs value={activeTab} onChange={handleTabChange} aria-label="abas da campanha" variant="scrollable" scrollButtons="auto">
                         <Tab label="Problema e Solução" />
                         <Tab label="Conteúdo Principal" disabled={!campaignContent} />
                         <Tab label="Imagem" disabled={!campaignContent} />
@@ -581,7 +580,7 @@ const Campaign = ({
                                             </Button>
                                         </Box>
                                     </Box>
-                                    <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', borderRadius: '8px', mt: 2 }} />
+                                    <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px', marginTop: 2 }} />
                                 </Box>
                             )}
                             {isGeneratingImage && (
