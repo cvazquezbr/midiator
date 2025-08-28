@@ -337,7 +337,8 @@ async function handleRefreshToken(fetch, request, response) {
 }
 
 async function handleGetShareStatistics(fetch, request, response) {
-    const { accessToken, authorUrn, shareUrns } = request.body.payload;
+    const { accessToken, payload } = request.body;
+    const { authorUrn, shareUrns } = payload;
 
     if (!accessToken || !authorUrn || !shareUrns || !Array.isArray(shareUrns)) {
         return response.status(400).json({ error: 'Missing accessToken, authorUrn, or shareUrns in payload.' });
@@ -380,7 +381,8 @@ async function handleGetShareStatistics(fetch, request, response) {
 }
 
 async function handleGetMemberPostStatistics(fetch, request, response) {
-    const { accessToken, ugcPostUrn, queryType, aggregation, dateRange } = request.body.payload;
+    const { accessToken, payload } = request.body;
+    const { ugcPostUrn, queryType, aggregation, dateRange } = payload;
 
     if (!accessToken || !ugcPostUrn || !queryType || !aggregation || !dateRange) {
         return response.status(400).json({ error: 'Missing required parameters for member post statistics.' });
