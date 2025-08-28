@@ -10,7 +10,8 @@ import {
   IconButton,
   Tooltip,
   Fab,
-  Stack
+  Stack,
+  CircularProgress
 } from '@mui/material';
 import {
   Add,
@@ -78,16 +79,29 @@ const FieldPositioner = ({
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
   const [internalImageSize, setInternalImageSize] = useState(null);
+  const [isImageLoading, setIsImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     if (backgroundImage) {
+      setIsImageLoading(true);
+      setImageError(false);
       const img = new Image();
       img.onload = () => {
         setInternalImageSize({ width: img.width, height: img.height });
+        setIsImageLoading(false);
+      };
+      img.onerror = () => {
+        console.error("Error loading background image.");
+        setImageError(true);
+        setIsImageLoading(false);
+        setInternalImageSize(null); // Reset size on error
       };
       img.src = backgroundImage;
     } else {
       setInternalImageSize(null);
+      setIsImageLoading(false);
+      setImageError(false);
     }
   }, [backgroundImage]);
 
@@ -463,70 +477,78 @@ const FieldPositioner = ({
               onTouchStart={handleContainerTouchStart}
               onTouchEnd={handleContainerTouchEnd}
             >
-              <img
-                src={backgroundImage}
-                alt="Background"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'block',
-                  objectFit: 'fill',
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                  WebkitUserDrag: 'none',
-                }}
-                draggable={false}
-              />
-
-              {/* Wrapper for draggable elements, positioned over the actual image */}
-              <Box
-                className="elements-wrapper"
-                sx={{
-                  position: 'absolute',
-                  left: `${renderedImageMetrics.x}px`,
-                  top: `${renderedImageMetrics.y}px`,
-                  width: `${renderedImageMetrics.width}px`,
-                  height: `${renderedImageMetrics.height}px`,
-                }}
-                onClick={(e) => {
-                  // If the click is on the wrapper itself, deselect the field
-                  if (e.target === e.currentTarget) {
-                    handleFieldSelectInternal(null);
-                  }
-                }}
-                onTouchStart={(e) => {
-                  // Handle touch for deselection on mobile
-                  if (e.target === e.currentTarget) {
-                    handleFieldSelectInternal(null);
-                  }
-                }}
-              >
-                {renderedImageMetrics.width > 0 && renderableElements.map(element => (
-                  <DraggableElement
-                    key={element.id}
-                    element={element.type === 'image' ? { ...element.position, type: 'image' } : { id: element.id, type: 'text' }}
-                    position={element.position}
-                    style={element.style}
-                    content={element.content}
-                    isSelected={selectedField === element.id}
-                    onSelect={handleFieldSelectInternal}
-                    onPositionChange={handlePositionChange}
-                    onSizeChange={handleSizeChange}
-                    containerSize={renderedImageMetrics} // Use the actual rendered image size
-                    onContentChange={element.type === 'text' ? handleContentChange : undefined}
-                    onDoubleClick={() => {
-                      if (element.type === 'text' && isHtmlField(element.id)) {
-                        onOpenHtmlEditor(element.id);
+              {isImageLoading ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
+                  <CircularProgress />
+                </Box>
+              ) : imageError ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
+                  <Alert severity="error">Falha ao carregar a imagem.</Alert>
+                </Box>
+              ) : (
+                <>
+                  <img
+                    src={backgroundImage}
+                    alt="Background"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'block',
+                      objectFit: 'fill',
+                      pointerEvents: 'none',
+                      userSelect: 'none',
+                      WebkitUserDrag: 'none',
+                    }}
+                    draggable={false}
+                  />
+                  <Box
+                    className="elements-wrapper"
+                    sx={{
+                      position: 'absolute',
+                      left: `${renderedImageMetrics.x}px`,
+                      top: `${renderedImageMetrics.y}px`,
+                      width: `${renderedImageMetrics.width}px`,
+                      height: `${renderedImageMetrics.height}px`,
+                    }}
+                    onClick={(e) => {
+                      if (e.target === e.currentTarget) {
+                        handleFieldSelectInternal(null);
                       }
                     }}
-                    rotation={element.rotation}
-                    originalImageSize={effectiveImageSize}
-                    fontScale={element.fontScale}
-                    enableHtmlRendering={element.enableHtmlRendering}
-                    darkMode={darkMode}
-                  />
-                ))}
-              </Box>
+                    onTouchStart={(e) => {
+                      if (e.target === e.currentTarget) {
+                        handleFieldSelectInternal(null);
+                      }
+                    }}
+                  >
+                    {renderedImageMetrics.width > 0 && renderableElements.map(element => (
+                      <DraggableElement
+                        key={element.id}
+                        element={element.type === 'image' ? { ...element.position, type: 'image' } : { id: element.id, type: 'text' }}
+                        position={element.position}
+                        style={element.style}
+                        content={element.content}
+                        isSelected={selectedField === element.id}
+                        onSelect={handleFieldSelectInternal}
+                        onPositionChange={handlePositionChange}
+                        onSizeChange={handleSizeChange}
+                        containerSize={renderedImageMetrics}
+                        onContentChange={element.type === 'text' ? handleContentChange : undefined}
+                        onDoubleClick={() => {
+                          if (element.type === 'text' && isHtmlField(element.id)) {
+                            onOpenHtmlEditor(element.id);
+                          }
+                        }}
+                        rotation={element.rotation}
+                        originalImageSize={effectiveImageSize}
+                        fontScale={element.fontScale}
+                        enableHtmlRendering={element.enableHtmlRendering}
+                        darkMode={darkMode}
+                      />
+                    ))}
+                  </Box>
+                </>
+              )}
             </Box>
 
             {csvData && csvData.length > 1 && (
