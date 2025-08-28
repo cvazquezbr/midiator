@@ -66,8 +66,6 @@ const ImageGeneratorFrontendOnly = ({
   const [selectedPreview, setSelectedPreview] = useState(null);
   const [editingGeneratedImageIndex, setEditingGeneratedImageIndex] = useState(null);
   const [showGeneratedImageEditor, setShowGeneratedImageEditor] = useState(false);
-  const editingImage = generatedImages.find(img => img.index === editingGeneratedImageIndex);
-  const fontScaleForEditor = editingImage?.fontScale || fontScale;
   const { googleAccessToken } = useUserAuth();
   const isGoogleDriveConnected = !!googleAccessToken;
   const [projectName, setProjectName] = useState('');
@@ -745,7 +743,6 @@ const ImageGeneratorFrontendOnly = ({
         backgroundImage={backgroundImage}
         originalImageSize={originalImageSize}
         imageFilters={imageFilters}
-        fontScale={fontScaleForEditor}
       />
 
       <input

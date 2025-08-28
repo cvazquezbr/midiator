@@ -232,16 +232,16 @@ export const composeSingleImage = async ({
         // The fontSize is treated as pre-scaled, but other pixel values must be scaled up for the full-res canvas.
         const finalStyle = {
             ...style,
-            fontSize: (style.fontSize || 24), // Use font size directly
-            strokeWidth: (style.strokeWidth || 2) / fontScale,
-            shadowBlur: (style.shadowBlur || 4) / fontScale,
-            shadowOffsetX: (style.shadowOffsetX || 2) / fontScale,
-            shadowOffsetY: (style.shadowOffsetY || 2) / fontScale,
+            fontSize: (style.fontSize || 24),
+            strokeWidth: (style.strokeWidth || 2),
+            shadowBlur: (style.shadowBlur || 4),
+            shadowOffsetX: (style.shadowOffsetX || 2),
+            shadowOffsetY: (style.shadowOffsetY || 2),
         };
 
-        const padding = (style.padding || 0) / fontScale;
-        const borderRadius = (style.borderRadius || 0) / fontScale;
-        const borderWidth = (style.borderWidth || 0) / fontScale;
+        const padding = (style.padding || 0);
+        const borderRadius = (style.borderRadius || 0);
+        const borderWidth = (style.borderWidth || 0);
 
         // Draw the textbox background and border using scaled values
         const backgroundOpacity = style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1;
