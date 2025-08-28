@@ -343,9 +343,13 @@ async function handleGetShareStatistics(fetch, request, response) {
         return response.status(400).json({ error: 'Missing accessToken, authorUrn, or shareUrns.' });
     }
 
-    // Based on LinkedIn API documentation, the 'shares' parameter must be a single string
-    // formatted as "List(urn1,urn2,...)", with each URN individually encoded.
-    const sharesParam = `shares=List(${shareUrns.map(urn => encodeURIComponent(urn)).join(',')})`;
+    // The 'shares' parameter has a different format for single vs. multiple items.
+    let sharesParam;
+    if (shareUrns.length === 1) {
+        sharesParam = `shares=${encodeURIComponent(shareUrns[0])}`;
+    } else {
+        sharesParam = `shares=List(${shareUrns.map(urn => encodeURIComponent(urn)).join(',')})`;
+    }
     const url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&${sharesParam}`;
 
     try {
