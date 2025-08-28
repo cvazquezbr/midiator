@@ -42,6 +42,8 @@ const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
   shadowBlur: 4,
   shadowOffsetX: 2,
   shadowOffsetY: 2,
+  backgroundColor: '#000000',
+  backgroundOpacity: 0,
 };
 
 import { isHtmlField } from '../lib/utils';
