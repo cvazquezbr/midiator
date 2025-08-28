@@ -100,17 +100,7 @@ const GeneratedImageEditor = ({
     if (open && imageData && initialFieldPositions && initialFieldStyles) {
       const brands = JSON.parse(JSON.stringify(imageData.customBrandElements || brandElements || []));
 
-      // Deep merge positions
-      const basePositions = JSON.parse(JSON.stringify(initialFieldPositions));
-      const customPositions = imageData.customFieldPositions || {};
-      Object.keys(customPositions).forEach(field => {
-        basePositions[field] = {
-          ...(basePositions[field] || {}),
-          ...customPositions[field],
-        };
-      });
-      const positions = basePositions;
-
+      const positions = JSON.parse(JSON.stringify(initialFieldPositions));
       // Defensively add filters to brand elements
       brands.forEach(el => {
         if (!el.filters) {
@@ -149,15 +139,12 @@ const GeneratedImageEditor = ({
       setEditedBrandElements(brands);
       setEditedRecord(JSON.parse(JSON.stringify(imageData.record)));
 
-      // Reworked style initialization to correctly layer styles
+      // Simplified style initialization, as props are now pre-merged
       const newEditedStyles = {};
       globalCsvHeaders.forEach(field => {
-        const templateStyle = initialFieldStyles?.[field] || {};
-        const customStyle = imageData.customFieldStyles?.[field] || {};
         newEditedStyles[field] = {
           ...COMPLETE_DEFAULT_STYLE,
-          ...templateStyle,
-          ...customStyle,
+          ...(initialFieldStyles?.[field] || {}),
         };
       });
       setEditedStyles(newEditedStyles);
