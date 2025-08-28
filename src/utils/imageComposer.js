@@ -214,10 +214,10 @@ export const composeSingleImage = async ({
 
         ctx.save();
         const posPx = {
-            x: Math.round((position.x / 100) * finalCanvas.width),
-            y: Math.round((position.y / 100) * finalCanvas.height),
-            width: Math.round((position.width / 100) * finalCanvas.width),
-            height: Math.round((position.height / 100) * finalCanvas.height)
+            x: (position.x / 100) * finalCanvas.width,
+            y: (position.y / 100) * finalCanvas.height,
+            width: (position.width / 100) * finalCanvas.width,
+            height: (position.height / 100) * finalCanvas.height
         };
 
         if (position.rotation) {
