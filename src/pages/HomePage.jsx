@@ -48,7 +48,7 @@ import Campaign from '../components/Campaign';
 import ImageStep from '../components/ImageStep';
 import MemorialDescritivoModal from '../components/MemorialDescritivoModal';
 import {
-  generateCampaignContent, generateCampaignImage, generateFormattedContent, generateFollowupPlan, generateFollowupPosts, generateIAContent, generateColorPalette,
+  generateCampaignContent, generateCampaignImage, generateFormattedContent, generateFollowupPlan, generateFollowupPosts, generateIAContent, generateColorPalette, generateCampaignImagePrompt,
 } from '../utils/generationHandlers.js';
 import { exportCsv, exportHtml } from '../utils/exportUtils.js';
 import { downloadExampleCsv } from '../utils/fileUtils.js';
@@ -742,7 +742,8 @@ function HomePage() {
     }
     setIsGeneratingImage(true);
     try {
-      const imageUrl = await generateCampaignImage({ content: finalContent, aspectRatio });
+      const imagePrompt = await generateCampaignImagePrompt({ content: finalContent });
+      const imageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
       console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Setting generatedImageUrl. Value starts with:', String(imageUrl).substring(0, 100));
       setGeneratedImageUrl(imageUrl);
       updateImageAndPalette(imageUrl);
