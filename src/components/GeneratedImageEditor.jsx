@@ -97,16 +97,10 @@ const GeneratedImageEditor = ({
   };
 
   useEffect(() => {
-    console.log('[Editor] useEffect triggered. Open:', open);
     if (open && imageData && initialFieldPositions && initialFieldStyles) {
-      console.log('[Editor] Props received:', { initialFieldPositions, initialFieldStyles });
-
       const brands = JSON.parse(JSON.stringify(imageData.customBrandElements || brandElements || []));
 
       const positions = JSON.parse(JSON.stringify(initialFieldPositions));
-
-      console.log('[Editor] Positions to be used:', positions);
-
       // Defensively add filters to brand elements
       brands.forEach(el => {
         if (!el.filters) {
@@ -153,8 +147,6 @@ const GeneratedImageEditor = ({
           ...(initialFieldStyles?.[field] || {}),
         };
       });
-      console.log('[Editor] Styles to be used (after merging with default):', newEditedStyles);
-
       setEditedStyles(newEditedStyles);
       setStylesAreInitialized(true);
 

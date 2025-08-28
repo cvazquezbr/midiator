@@ -20,16 +20,9 @@ const MemoizedGeneratedImageEditor = ({
     return generatedImages.find(img => img.index === editingGeneratedImageIndex);
   }, [generatedImages, editingGeneratedImageIndex]);
 
-  console.log('--- DEBUGGING START ---');
-  console.log('[Memoized] Image to Edit:', imageToEdit);
-
   const memoizedPositions = useMemo(() => {
-    console.log('[Memoized] Preparing POSITIONS...');
     const basePositions = JSON.parse(JSON.stringify(fieldPositions || {}));
     const customPositions = imageToEdit?.customFieldPositions || {};
-
-    console.log('[Memoized] Base Positions (Template):', basePositions);
-    console.log('[Memoized] Custom Positions (from Image):', customPositions);
 
     Object.keys(customPositions).forEach(field => {
       basePositions[field] = {
@@ -38,17 +31,12 @@ const MemoizedGeneratedImageEditor = ({
       };
     });
 
-    console.log('[Memoized] FINAL Merged Positions:', basePositions);
     return basePositions;
   }, [imageToEdit, fieldPositions]);
 
   const memoizedStyles = useMemo(() => {
-    console.log('[Memoized] Preparing STYLES...');
     const baseStyles = JSON.parse(JSON.stringify(fieldStyles || {}));
     const customStyles = imageToEdit?.customFieldStyles || {};
-
-    console.log('[Memoized] Base Styles (Template):', baseStyles);
-    console.log('[Memoized] Custom Styles (from Image):', customStyles);
 
     Object.keys(customStyles).forEach(field => {
       baseStyles[field] = {
@@ -57,7 +45,6 @@ const MemoizedGeneratedImageEditor = ({
       };
     });
 
-    console.log('[Memoized] FINAL Merged Styles:', baseStyles);
     return baseStyles;
   }, [imageToEdit, fieldStyles]);
 
