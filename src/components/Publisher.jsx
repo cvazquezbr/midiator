@@ -59,6 +59,7 @@ import { getLinkedInProfiles, publishToLinkedIn, uploadImagesForLinkedIn } from 
 import { useUserAuth } from '../context/UserAuthContext';
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
 import { getCampaigns } from '../utils/campaignState.js';
+import ConfirmationModal from './ui/ConfirmationModal/ConfirmationModal';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -100,6 +101,7 @@ const Publisher = ({
   const [tabValue, setTabValue] = React.useState(0);
   const [mySchedules, setMySchedules] = useState([]);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
+  const [scheduleToDelete, setScheduleToDelete] = useState(null);
   const [viewingSchedule, setViewingSchedule] = useState(null);
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -187,14 +189,21 @@ const Publisher = ({
     }
   };
 
-  const handleDeleteSchedule = async (scheduleId) => {
+  const handleDeleteSchedule = (scheduleId) => {
+    setScheduleToDelete(scheduleId);
+  };
+
+  const confirmDeleteSchedule = async () => {
+    if (!scheduleToDelete) return;
     try {
-        await deleteSchedule(scheduleId);
-        setMySchedules(prevSchedules => prevSchedules.filter(s => s.id !== scheduleId));
-        toast.success("Agendamento excluído com sucesso!");
+      await deleteSchedule(scheduleToDelete);
+      setMySchedules(prevSchedules => prevSchedules.filter(s => s.id !== scheduleToDelete));
+      toast.success("Agendamento excluído com sucesso!");
     } catch (error) {
-        console.error("Failed to delete schedule:", error);
-        toast.error(`Falha ao excluir agendamento: ${error.message}`);
+      console.error("Failed to delete schedule:", error);
+      toast.error(`Falha ao excluir agendamento: ${error.message}`);
+    } finally {
+      setScheduleToDelete(null);
     }
   };
 
@@ -990,6 +999,13 @@ const Publisher = ({
           </Button>
         </DialogActions>
       </Dialog>
+      <ConfirmationModal
+        aberto={!!scheduleToDelete}
+        onFechar={() => setScheduleToDelete(null)}
+        onConfirmar={confirmDeleteSchedule}
+        titulo="Confirmar Exclusão de Agendamento"
+        mensagem="Tem certeza de que deseja excluir este agendamento? Esta ação não pode ser desfeita e não removerá a publicação da rede social, caso já tenha sido publicada."
+      />
     </Card>
   );
 };
