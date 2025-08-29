@@ -55,6 +55,7 @@ import BrandElementManager from './BrandElementManager';
 const FormattingPanel = ({
   selectedField,
   fieldStyles,
+  initialFieldStyles,
   setFieldStyles,
   fieldPositions,
   setFieldPositions,
@@ -101,19 +102,30 @@ const FormattingPanel = ({
   };
 
   const resetFieldStyle = (field) => {
-    const defaultStyle = {
-      fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none',
-      color: '#000000', textStroke: false, strokeColor: '#ffffff', strokeWidth: 2, textShadow: false,
-      shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
-      textAlign: 'left', verticalAlign: 'top',
-      backgroundColor: 'rgba(0,0,0,0)',
-      borderColor: '#000000',
-      borderWidth: 0,
-      borderRadius: 0,
-      padding: 5,
-      backgroundOpacity: 1,
-    };
-    setFieldStyles(prev => ({ ...prev, [field]: defaultStyle }));
+    // Busca o estilo inicial para este campo específico
+    const initialStyle = initialFieldStyles?.[field];
+
+    if (initialStyle) {
+      // Se encontrou, aplica o estilo inicial
+      setFieldStyles(prev => ({ ...prev, [field]: initialStyle }));
+    } else {
+      // Fallback para o caso de não encontrar o estilo inicial (não deve acontecer)
+      console.warn(`[FormattingPanel] Estilo inicial para o campo "${field}" não encontrado. O reset pode não funcionar como esperado.`);
+      // Opcionalmente, pode-se manter o reset para um default genérico aqui
+      const defaultStyle = {
+        fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none',
+        color: '#000000', textStroke: false, strokeColor: '#ffffff', strokeWidth: 2, textShadow: false,
+        shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
+        textAlign: 'left', verticalAlign: 'top',
+        backgroundColor: 'rgba(0,0,0,0)',
+        borderColor: '#000000',
+        borderWidth: 0,
+        borderRadius: 0,
+        padding: 5,
+        backgroundOpacity: 1,
+      };
+      setFieldStyles(prev => ({ ...prev, [field]: defaultStyle }));
+    }
   };
 
   const updateBrandElementFilter = (elementId, filterProperty, value) => {

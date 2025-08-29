@@ -120,6 +120,7 @@ function HomePage() {
   const [isFetchingCampaigns, setIsFetchingCampaigns] = useState(true);
   const [fieldPositions, setFieldPositions] = useState({});
   const [fieldStyles, setFieldStyles] = useState({});
+  const [initialFieldStyles, setInitialFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
   const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 });
   const [generatedImagesData, setGeneratedImagesData] = useState([]);
@@ -220,6 +221,7 @@ function HomePage() {
       });
     }
     setFieldStyles(completeStyles);
+    setInitialFieldStyles(completeStyles); // Salvar o estado inicial
 
     setDisplayedImageSize(state.displayedImageSize ?? { width: 0, height: 0 });
     setOriginalImageSize(state.originalImageSize ?? { width: 0, height: 0 });
@@ -477,6 +479,7 @@ function HomePage() {
 
         setFieldPositions(newPositions);
         setFieldStyles(newStyles);
+        setInitialFieldStyles(newStyles); // Salvar o estado inicial
         setInputMethod('manual');
       }
     } catch (error) {
@@ -622,6 +625,7 @@ function HomePage() {
     });
     setFieldPositions(updatedFieldPositions);
     setFieldStyles(updatedFieldStyles);
+    setInitialFieldStyles(updatedFieldStyles);
 
     // When rebuilding the generatedImagesData array due to a change in the number of records,
     // we must check if a specific background image already exists for that index in the *previous*
@@ -847,6 +851,7 @@ function HomePage() {
       setCsvHeaders(csvHeadersResult);
       setFieldPositions(updatedFieldPositions);
       setFieldStyles(updatedFieldStyles);
+      setInitialFieldStyles(updatedFieldStyles); // Salvar o estado inicial
       setGeneratedImagesData(newGeneratedImagesData);
       setInputMethod('manual');
 
@@ -952,6 +957,7 @@ function HomePage() {
               fieldPositions={fieldPositions}
               setFieldPositions={setFieldPositions}
               fieldStyles={fieldStyles}
+              initialFieldStyles={initialFieldStyles}
               setFieldStyles={setFieldStyles}
               csvData={csvData}
               onImageDisplayedSizeChange={setDisplayedImageSize}
