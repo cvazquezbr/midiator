@@ -6,27 +6,47 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemButton,
   IconButton,
   CircularProgress,
   Alert,
   Box,
-  Grid,
-  Paper,
-  Divider,
-  Stack
+  Dialog,
+  DialogTitle,
+  DialogContent,
 } from '@mui/material';
-import { Delete, Add } from '@mui/icons-material';
-import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils/personaState';
-import PersonaForm, { emptyPersonaData } from '../components/PersonaForm';
+import { Edit, Delete, Add } from '@mui/icons-material';
 import { toast } from 'sonner';
+
+import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils/personaState';
+import PersonaWizard from '../components/PersonaWizard';
+import geminiAPI from '../utils/geminiAPI';
+import { getGeminiApiKey } from '../utils/geminiCredentials';
+
+// The PersonaForm component was deleted, so I'm redefining the empty persona structure here.
+const newEmptyPersonaData = {
+    nome: '',
+    posicaoCargo: [],
+    segmentoEmpresa: [],
+    responsabilidadesChave: [],
+    doresEstrategicos: [],
+    doresOperacionais: [],
+    doresPessoas: [],
+    doresRegulatorios: [],
+    gatilhosCompra: [],
+    barreirasAdocao: [],
+    mentalidadeValores: '',
+    contextoCultural: '',
+    description: '', // For the initial AI prompt
+};
+
 
 const PersonasPage = () => {
   const [personas, setPersonas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedPersona, setSelectedPersona] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPersona, setCurrentPersona] = useState(null);
+  const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
 
   useEffect(() => {
     fetchPersonas();
@@ -45,144 +65,168 @@ const PersonasPage = () => {
     }
   };
 
-  const handleSelectPersona = (persona) => {
-    setSelectedPersona(persona);
+  const handleOpenModal = (persona = null) => {
+    if (persona) {
+        // If we are editing, the full persona object is set.
+        // The wizard will receive persona.persona_data.
+        setCurrentPersona({ ...persona });
+    } else {
+        // For a new persona, we set the structure the DB expects.
+        setCurrentPersona({ name: '', persona_data: { ...newEmptyPersonaData } });
+    }
+    setIsModalOpen(true);
   };
 
-  const handleNewPersona = () => {
-    setSelectedPersona({ name: '', persona_data: { ...emptyPersonaData } });
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setCurrentPersona(null);
   };
 
-  const handleFormChange = (newPersonaData) => {
-    setSelectedPersona(prev => ({
-      ...prev,
-      name: newPersonaData.nome,
-      persona_data: newPersonaData,
-    }));
-  };
+  const handleSave = async (personaData) => {
+    // The wizard returns the complete persona_data object.
+    const personaToSave = {
+        ...currentPersona,
+        name: personaData.nome,
+        persona_data: personaData,
+    };
 
-  const handleSave = async () => {
-    if (!selectedPersona?.name) {
+    if (!personaToSave.name) {
       toast.error('O nome da persona é obrigatório.');
       return;
     }
-    setIsSaving(true);
+
+    // The wizard has its own save button, so we don't need a separate isSaving state here.
     try {
-      let savedPersona;
-      if (selectedPersona.id) {
-        savedPersona = await updatePersona(selectedPersona.id, selectedPersona.name, selectedPersona.persona_data);
+      if (personaToSave.id) {
+        await updatePersona(personaToSave.id, personaToSave.name, personaToSave.persona_data);
       } else {
-        savedPersona = await savePersona(selectedPersona.name, selectedPersona.persona_data);
+        await savePersona(personaToSave.name, personaToSave.persona_data);
       }
       await fetchPersonas();
-      // After saving, update the selected persona to the one returned from the API
-      // This ensures we have the correct ID for new personas and any other server-side updates
-      setSelectedPersona(savedPersona);
+      handleCloseModal();
+      toast.success("Persona salva com sucesso!");
     } catch (err) {
       setError(err.message);
-    } finally {
-      setIsSaving(false);
+      toast.error(`Falha ao salvar persona: ${err.message}`);
     }
   };
 
-  const handleDelete = async () => {
-    if (!selectedPersona || !selectedPersona.id) {
-        toast.warning("Nenhuma persona selecionada para deletar.");
-        return;
-    }
-    if (window.confirm(`Tem certeza que deseja deletar a persona "${selectedPersona.name}"?`)) {
+  const handleDelete = async (id) => {
+    if (window.confirm('Tem certeza que deseja deletar esta persona?')) {
       try {
-        await deletePersona(selectedPersona.id);
+        await deletePersona(id);
         await fetchPersonas();
-        setSelectedPersona(null); // Clear the form
       } catch (err) {
         setError(err.message);
       }
     }
   };
 
+  const handleGeneratePersonaWithAI = async (description, callback) => {
+    if (!geminiAPI.isInitialized) {
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        toast.error('Chave de API do Gemini não configurada.');
+        setIsGeneratingPersona(false);
+        return;
+      }
+      geminiAPI.initialize(apiKey);
+    }
+
+    setIsGeneratingPersona(true);
+    const prompt = `
+Descriver uma persona para uma campanha de marketing para ${description}.
+Preencha os campos do objeto JSON abaixo. Use exatamente os nomes de chave em camelCase fornecidos.
+- nome: (string)
+- posicaoCargo: (array de strings)
+- segmentoEmpresa: (array de strings)
+- responsabilidadesChave: (array de strings)
+- doresEstrategicos: (array de strings)
+- doresOperacionais: (array de strings)
+- doresPessoas: (array de strings)
+- doresRegulatorios: (array de strings)
+- gatilhosCompra: (array de strings)
+- barreirasAdocao: (array de strings)
+- mentalidadeValores: (string)
+- contextoCultural: (string)
+Para o caso de não conseguir gerar conteúdo para algum campo, use um array vazio [] ou uma string vazia "".
+Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, markdown, ou qualquer outra formatação.`;
+
+    try {
+      const response = await geminiAPI.generateContent(prompt);
+      const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
+      const generatedPersona = JSON.parse(cleanedResponse);
+      if (callback) {
+        callback(generatedPersona);
+      }
+    } catch (error) {
+      console.error("Erro ao gerar ou processar persona com IA:", error);
+      toast.error('Ocorreu um erro ao processar a resposta da IA.');
+    } finally {
+      setIsGeneratingPersona(false);
+    }
+  };
+
   const getSecondaryText = (persona) => {
     if (!persona.persona_data) return '...';
     const { posicaoCargo, segmentoEmpresa } = persona.persona_data;
-    const text = [
-        ...(posicaoCargo && posicaoCargo.length > 0 ? [posicaoCargo.join(', ')] : []),
-        ...(segmentoEmpresa && segmentoEmpresa.length > 0 ? [segmentoEmpresa.join(', ')] : [])
-    ];
+    let text = [];
+    if (posicaoCargo && posicaoCargo.length > 0) text.push(posicaoCargo.join(', '));
+    if (segmentoEmpresa && segmentoEmpresa.length > 0) text.push(segmentoEmpresa.join(', '));
     if (text.length === 0) return 'Sem detalhes adicionais.';
     const fullText = text.join(' | ');
-    return fullText.length > 80 ? fullText.substring(0, 80) + '...' : fullText;
+    return fullText.length > 100 ? fullText.substring(0, 100) + '...' : fullText;
   };
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 4 }}>
-      <Grid container spacing={3}>
-        {/* Left Column: Persona List */}
-        <Grid item xs={12} md={4}>
-          <Paper elevation={2} sx={{ p: 2, height: '100%' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" component="h2">
-                Personas
-              </Typography>
-              <Button variant="contained" size="small" startIcon={<Add />} onClick={handleNewPersona}>
-                Nova
-              </Button>
-            </Box>
-            <Divider />
-            {loading && <CircularProgress />}
-            {error && <Alert severity="error">{error}</Alert>}
-            {!loading && !error && (
-              <List>
-                {personas.map((persona) => (
-                  <ListItemButton
-                    key={persona.id}
-                    selected={selectedPersona?.id === persona.id}
-                    onClick={() => handleSelectPersona(persona)}
-                  >
-                    <ListItemText
-                      primary={persona.name}
-                      secondary={getSecondaryText(persona)}
-                    />
-                  </ListItemButton>
-                ))}
-              </List>
-            )}
-          </Paper>
-        </Grid>
+    <Container maxWidth="md" sx={{ mt: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4" component="h1">
+          Personas
+        </Typography>
+        <Button variant="contained" startIcon={<Add />} onClick={() => handleOpenModal()}>
+          Nova Persona
+        </Button>
+      </Box>
 
-        {/* Right Column: Persona Form */}
-        <Grid item xs={12} md={8}>
-          <Paper elevation={2} sx={{ p: 3, height: '100%' }}>
-            {selectedPersona ? (
-              <>
-                <Typography variant="h6" component="h2" gutterBottom>
-                  {selectedPersona.id ? 'Editar Persona' : 'Nova Persona'}
-                </Typography>
-                <PersonaForm
-                  persona={selectedPersona.persona_data}
-                  onChange={handleFormChange}
-                  isSaving={isSaving}
-                />
-                <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
-                    <Button onClick={handleSave} variant="contained" disabled={isSaving}>
-                        {isSaving ? <CircularProgress size={24} /> : 'Salvar Persona'}
-                    </Button>
-                    {selectedPersona.id && (
-                        <Button onClick={handleDelete} variant="outlined" color="error" startIcon={<Delete />}>
-                            Deletar
-                        </Button>
-                    )}
-                </Stack>
-              </>
-            ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                <Typography variant="h6" color="text.secondary">
-                  Selecione uma persona para editar ou crie uma nova.
-                </Typography>
-              </Box>
-            )}
-          </Paper>
-        </Grid>
-      </Grid>
+      {loading && <CircularProgress />}
+      {error && <Alert severity="error">{error}</Alert>}
+
+      {!loading && !error && (
+        <List>
+          {personas.map((persona) => (
+            <ListItem
+              key={persona.id}
+              secondaryAction={
+                <>
+                  <IconButton edge="end" aria-label="edit" onClick={() => handleOpenModal(persona)}>
+                    <Edit />
+                  </IconButton>
+                  <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(persona.id)}>
+                    <Delete />
+                  </IconButton>
+                </>
+              }
+            >
+              <ListItemText
+                primary={persona.name}
+                secondary={getSecondaryText(persona)}
+              />
+            </ListItem>
+          ))}
+        </List>
+      )}
+
+      {isModalOpen && (
+        <PersonaWizard
+            open={isModalOpen}
+            onClose={handleCloseModal}
+            onSave={handleSave}
+            persona={currentPersona?.persona_data}
+            onGenerate={handleGeneratePersonaWithAI}
+            isGeneratingPersona={isGeneratingPersona}
+        />
+      )}
     </Container>
   );
 };
