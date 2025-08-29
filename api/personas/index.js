@@ -19,7 +19,7 @@ const handler = async (req, res) => {
   if (req.method === 'GET') {
     try {
       const { rows } = await query(
-        'SELECT id, name, updated_at FROM personas WHERE user_id = $1 ORDER BY updated_at DESC',
+        'SELECT id, name, persona_data, updated_at FROM personas WHERE user_id = $1 ORDER BY updated_at DESC',
         [userId]
       );
       return res.status(200).json(rows);
@@ -34,7 +34,7 @@ const handler = async (req, res) => {
         return res.status(400).json({ error: 'Persona name and data are required.' });
       }
       const { rows } = await query(
-        'INSERT INTO personas (user_id, name, persona_data) VALUES ($1, $2, $3) RETURNING id, name, updated_at',
+        'INSERT INTO personas (user_id, name, persona_data) VALUES ($1, $2, $3) RETURNING id, name, persona_data, updated_at',
         [userId, name, persona_data]
       );
       return res.status(201).json(rows[0]);
