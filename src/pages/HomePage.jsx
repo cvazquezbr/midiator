@@ -835,25 +835,15 @@ function HomePage() {
         standardsColors,
       });
 
-      // Create the new image data array, preserving backgrounds from the previous state
-      const newGeneratedImagesData = csvDataResult.map((record, index) => {
-        const existingImage = generatedImagesData.find(img => img.index === index);
-        if (existingImage) {
-          return {
-            ...existingImage,
-            record: record, // Update the record with new text
-          };
-        }
-        // For new records, fall back to the global background
-        return {
-          index,
-          record,
-          blob: null,
-          url: null,
-          filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-          backgroundImage: backgroundImage,
-        };
-      });
+      // Create a fresh image data array, discarding any previous state.
+      const newGeneratedImagesData = csvDataResult.map((record, index) => ({
+        index,
+        record,
+        blob: null,
+        url: null,
+        filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+        backgroundImage: backgroundImage, // Always use the global background for new items
+      }));
 
       // Set all states together
       setCsvData(csvDataResult);
