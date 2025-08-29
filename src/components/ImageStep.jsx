@@ -32,6 +32,7 @@ const ImageStep = ({
   fieldPositions,
   setFieldPositions,
   fieldStyles,
+  initialFieldStyles,
   setFieldStyles,
   csvData,
   onImageDisplayedSizeChange,
@@ -179,6 +180,7 @@ const ImageStep = ({
             <FormattingPanel
               selectedField={selectedField}
               fieldStyles={fieldStyles}
+              initialFieldStyles={initialFieldStyles}
               setFieldStyles={setFieldStyles}
               fieldPositions={fieldPositions}
               setFieldPositions={setFieldPositions}
@@ -202,6 +204,7 @@ const ImageStep = ({
               onClose={() => setIsDrawerOpen(false)}
               selectedField={selectedField}
               fieldStyles={fieldStyles}
+              initialFieldStyles={initialFieldStyles}
               setFieldStyles={setFieldStyles}
               fieldPositions={fieldPositions}
               setFieldPositions={setFieldPositions}

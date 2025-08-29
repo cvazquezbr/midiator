@@ -8,6 +8,7 @@ const FormattingDrawer = ({
   onClose,
   selectedField,
   fieldStyles,
+  initialFieldStyles,
   setFieldStyles,
   fieldPositions,
   setFieldPositions,
@@ -34,6 +35,7 @@ const FormattingDrawer = ({
         <FormattingPanel
           selectedField={selectedField}
           fieldStyles={fieldStyles}
+          initialFieldStyles={initialFieldStyles}
           setFieldStyles={setFieldStyles}
           fieldPositions={fieldPositions}
           setFieldPositions={setFieldPositions}
