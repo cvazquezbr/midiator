@@ -19,7 +19,6 @@ import { toast } from 'sonner';
 
 import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils/personaState';
 import PersonaWizard from '../components/PersonaWizard';
-import { emptyPersonaData } from '../components/PersonaForm'; // This file is deleted, so I need to define emptyPersonaData here.
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 
