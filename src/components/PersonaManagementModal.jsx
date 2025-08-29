@@ -114,6 +114,12 @@ const PersonaManagementModal = ({ open, onClose }) => {
 
   const handleCloseWizard = () => setSelectedPersona(null);
 
+  const handleWizardReset = () => {
+    // This function is called from the wizard's "Recomeçar" button
+    // It re-uses the new persona logic to completely reset the state
+    handleNewPersona();
+  };
+
   const drawerContent = (
     <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -183,6 +189,7 @@ const PersonaManagementModal = ({ open, onClose }) => {
               onGenerate={handleGeneratePersonaWithAI}
               isGeneratingPersona={isGeneratingPersona}
               initialStep={initialWizardStep}
+              onReset={handleWizardReset}
             />
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>

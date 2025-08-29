@@ -48,12 +48,13 @@ export const emptyPersonaWizardData = { description: '', nome: '', posicaoCargo:
 
 const steps = ['Início Rápido com IA', 'Revisão Básica', 'Responsabilidades', 'Dores e Desafios', 'Gatilhos e Barreiras', 'Mentalidade e Cultura'];
 
-export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGeneratingPersona, persona, initialStep = 0 }) => {
+export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGeneratingPersona, persona, initialStep = 0, onReset }) => {
   const [activeStep, setActiveStep] = useState(initialStep);
   const [personaData, setPersonaData] = useState(persona || emptyPersonaWizardData);
   const [otherItemInputs, setOtherItemInputs] = useState({});
   const [editingChip, setEditingChip] = useState(null);
 
+  // This effect synchronizes the internal state with the props passed from the parent
   useEffect(() => {
     setPersonaData(persona || emptyPersonaWizardData);
     setActiveStep(initialStep || 0);
@@ -85,10 +86,11 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
   const handleUpdateChipValue = () => { if (!editingChip) return; const { key, value, newValue } = editingChip; const trimmedNewValue = newValue.trim(); if (!trimmedNewValue) { toast.error("O valor não pode ser vazio."); setEditingChip(null); return; } if (value.toLowerCase() === trimmedNewValue.toLowerCase()) { setEditingChip(null); return; } if ((personaData[key] || []).map(item => item.toLowerCase()).includes(trimmedNewValue.toLowerCase())) { toast.warning('Este item já foi adicionado.'); setEditingChip(null); return; } setPersonaData(prev => ({ ...prev, [key]: (prev[key] || []).map(item => (item === value ? trimmedNewValue : item)) })); setEditingChip(null); };
 
   const handleReset = () => {
-    if (window.confirm("Tem certeza que deseja recomeçar? Todos os dados não salvos nesta persona serão perdidos.")) {
-        setPersonaData(emptyPersonaWizardData);
-        setActiveStep(0);
-        toast.info("Formulário resetado. Você pode começar a gerar uma nova persona com a IA.");
+    if (window.confirm("Tem certeza que deseja recomeçar? Todos os dados não salvos nesta persona serão perdidos e o processo de criação iniciará do zero.")) {
+      if (onReset) {
+        onReset();
+      }
+      toast.info("Formulário resetado. Você pode começar a gerar uma nova persona com a IA.");
     }
   };
 
@@ -107,7 +109,7 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
         <Box>
           <Button onClick={onClose}>Cancelar</Button>
           <Button onClick={handleSave} color="secondary">Salvar</Button>
-          {initialStep > 0 && activeStep > 0 && <Button onClick={handleReset} color="error" startIcon={<ReplayIcon />}>Recomeçar</Button>}
+          {initialStep > 0 && <Button onClick={handleReset} color="error" startIcon={<ReplayIcon />}>Recomeçar</Button>}
         </Box>
         <Box sx={{ display: 'flex', mt: { xs: 2, sm: 0 } }}>
           <Button onClick={handleBack} disabled={activeStep === 0}>Voltar</Button>
