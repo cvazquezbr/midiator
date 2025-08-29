@@ -282,17 +282,17 @@ const FormattingPanel = ({
                           <Typography variant="caption">Cores da Campanha</Typography>
                           <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
                             {standardsColors.map((color, index) => (
-                              <Tooltip title={color.name} key={index}>
+                              <Tooltip title={color} key={index}>
                                 <Box
                                   sx={{
                                     width: 24,
                                     height: 24,
                                     borderRadius: '50%',
-                                    backgroundColor: color.hex,
+                                    backgroundColor: color,
                                     cursor: 'pointer',
                                     border: '1px solid #ccc',
                                   }}
-                                  onClick={() => updateFieldStyle(selectedField, 'color', color.hex)}
+                                  onClick={() => updateFieldStyle(selectedField, 'color', color)}
                                 />
                               </Tooltip>
                             ))}
