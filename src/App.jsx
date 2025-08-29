@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import PersonasPage from './pages/PersonasPage';
 
 // Route Protection
 import ProtectedRoute from './components/ProtectedRoute';
@@ -21,6 +22,7 @@ function App() {
       {/* Protected Routes for standard users */}
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/personas" element={<PersonasPage />} />
       </Route>
 
       {/* Protected Routes for admin users */}

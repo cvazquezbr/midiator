@@ -19,27 +19,27 @@ const handler = async (req, res) => {
   if (req.method === 'GET') {
     try {
       const { rows } = await query(
-        'SELECT id, name, updated_at FROM campaigns WHERE user_id = $1 ORDER BY updated_at DESC',
+        'SELECT id, name, updated_at FROM personas WHERE user_id = $1 ORDER BY updated_at DESC',
         [userId]
       );
       return res.status(200).json(rows);
     } catch (error) {
-      console.error(`[GET /api/campaigns] Error for user ${userId}:`, error);
+      console.error(`[GET /api/personas] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
   } else if (req.method === 'POST') {
     try {
-      const { name, campaign_data, persona_id } = await parseBody(req);
-      if (!name || !campaign_data) {
-        return res.status(400).json({ error: 'Campaign name and data are required.' });
+      const { name, persona_data } = await parseBody(req);
+      if (!name || !persona_data) {
+        return res.status(400).json({ error: 'Persona name and data are required.' });
       }
       const { rows } = await query(
-        'INSERT INTO campaigns (user_id, name, campaign_data, persona_id) VALUES ($1, $2, $3, $4) RETURNING id, name, updated_at',
-        [userId, name, campaign_data, persona_id]
+        'INSERT INTO personas (user_id, name, persona_data) VALUES ($1, $2, $3) RETURNING id, name, updated_at',
+        [userId, name, persona_data]
       );
       return res.status(201).json(rows[0]);
     } catch (error) {
-      console.error(`[POST /api/campaigns] Error for user ${userId}:`, error);
+      console.error(`[POST /api/personas] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
   } else {

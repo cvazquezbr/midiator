@@ -230,7 +230,7 @@ export const loadCampaign = async (id) => {
   return campaign;
 };
 
-export const saveCampaign = async (name, campaignData, setProgress, userId) => {
+export const saveCampaign = async (name, campaignData, setProgress, userId, personaId) => {
   console.log('[campaignState] Starting saveCampaign process...');
   try {
     console.log('[campaignState] Step 1: Serializing and uploading assets...');
@@ -238,7 +238,7 @@ export const saveCampaign = async (name, campaignData, setProgress, userId) => {
     console.log('[campaignState] Step 1 COMPLETE.');
 
     console.log('[campaignState] Step 2: Sending campaign data to server...');
-    const requestBody = JSON.stringify({ name, campaign_data: stateToSave });
+    const requestBody = JSON.stringify({ name, campaign_data: stateToSave, persona_id: personaId });
 
     const createRes = await fetchWithAuth('/api/campaigns', {
       method: 'POST',
@@ -263,7 +263,7 @@ export const saveCampaign = async (name, campaignData, setProgress, userId) => {
   }
 };
 
-export const updateCampaign = async (id, name, campaignData, setProgress, userId) => {
+export const updateCampaign = async (id, name, campaignData, setProgress, userId, personaId) => {
     console.log(`[campaignState] Starting updateCampaign process for ID: ${id}...`);
     try {
         console.log('[campaignState] Step 1: Serializing and uploading assets...');
@@ -271,7 +271,7 @@ export const updateCampaign = async (id, name, campaignData, setProgress, userId
         console.log('[campaignState] Step 1 COMPLETE.');
 
         console.log('[campaignState] Step 2: Sending updated campaign data to server...');
-        const requestBody = JSON.stringify({ name, campaign_data: stateToSave });
+        const requestBody = JSON.stringify({ name, campaign_data: stateToSave, persona_id: personaId });
 
         const res = await fetchWithAuth(`/api/campaigns/${id}`, {
             method: 'PUT',
