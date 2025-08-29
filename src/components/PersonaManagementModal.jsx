@@ -162,7 +162,13 @@ const PersonaManagementModal = ({ open, onClose }) => {
           sx={{
             width: drawerWidth,
             flexShrink: 0,
-            '& .MuiDrawer-paper': { width: drawerWidth, boxSizing: 'border-box', ...(isMobile ? {} : { position: 'relative' }) },
+            '& .MuiDrawer-paper': {
+                width: drawerWidth,
+                boxSizing: 'border-box',
+                ...(isMobile ? {} : { position: 'relative' })
+            },
+            // Ensure temporary drawer appears above the dialog
+            ...(isMobile && { zIndex: theme.zIndex.modal + 1 })
           }}
         >
           {drawerContent}
