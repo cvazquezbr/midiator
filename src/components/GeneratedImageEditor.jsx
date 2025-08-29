@@ -8,11 +8,10 @@ import {
   Box,
   Grid,
   Typography,
-  IconButton,
-  useMediaQuery
+  IconButton
 } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
 import { Close } from '@mui/icons-material';
+import { useIsMobile } from '../hooks/use-mobile';
 import FieldPositioner from './FieldPositioner'; // Reutilizar o FieldPositioner
 import FormattingPanel from './FormattingPanel'; // Reutilizar o FormattingPanel
 import FormattingDrawer from './FormattingDrawer'; // Importar o FormattingDrawer
@@ -71,8 +70,7 @@ const GeneratedImageEditor = ({
   const [stylesAreInitialized, setStylesAreInitialized] = useState(false); // New state for initialization tracking
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
-  const theme = useTheme();
-  const isLargeScreen = useMediaQuery(theme.breakpoints.up('md'));
+  const isMobile = useIsMobile();
 
   const handleOpenHtmlEditor = (fieldId) => {
     setEditingField(fieldId);
@@ -193,7 +191,7 @@ const GeneratedImageEditor = ({
   // }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="paper">
+    <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="paper" fullScreen={isMobile}>
       <DialogTitle>
         Editar Imagem Gerada #{imageData.index + 1}
         <IconButton
@@ -212,7 +210,7 @@ const GeneratedImageEditor = ({
           <Typography>Imagem de fundo não disponível para edição.</Typography>
         ) : (
           <Grid container spacing={2}>
-            <Grid item xs={12} md={isLargeScreen ? 8 : 12}>
+            <Grid item xs={12} md={isMobile ? 12 : 8}>
               <FieldPositioner
                 backgroundImage={currentBackgroundImageForEditor}
                 csvHeaders={editorCsvHeaders} // Headers relevantes para esta imagem
@@ -232,7 +230,7 @@ const GeneratedImageEditor = ({
                 currentPreviewIndex={0}
               />
             </Grid>
-            {isLargeScreen && (
+            {!isMobile && (
               <Grid item xs={12} md={4}>
                 <FormattingPanel
                   selectedField={selectedFieldInternal} // Usar o estado interno
@@ -261,7 +259,7 @@ const GeneratedImageEditor = ({
           Salvar Alterações na Imagem
         </Button>
       </DialogActions>
-      {!isLargeScreen && (
+      {isMobile && (
         <>
           <Fab
             color="primary"
