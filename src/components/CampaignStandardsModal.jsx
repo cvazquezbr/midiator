@@ -246,13 +246,20 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         geminiAPI.initialize(apiKey);
       }
 
-      const { persona, autor, instrucoes, formato, colors } = getCampaignPrompt();
+      const { persona, autor, instrucoes, formato, colors: loadedColors } = getCampaignPrompt();
       setPersona(persona);
       setAutor(autor);
       setInstrucoes(instrucoes);
       setFormato(formato);
-      setColors(colors || []);
-      setInitialState({ persona, autor, instrucoes, formato, colors: colors || [] });
+      // Converte o array de strings hex para o formato de objeto que o estado do modal usa
+      const colorsAsObjects = (loadedColors || []).map(hex => ({
+        hex: hex,
+        name: `Cor (${hex})`, // Nome genérico
+        role: 'Salva',
+        justification: ''
+      }));
+      setColors(colorsAsObjects);
+      setInitialState({ persona, autor, instrucoes, formato, colors: colorsAsObjects });
 
       // Se a persona não existir ou não tiver um nome, mostre o assistente por padrão
       if (!persona || !persona.nome) {
@@ -275,7 +282,9 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
   };
 
   const handleSave = () => {
-    saveCampaignPrompt({ persona, autor, instrucoes, formato, colors });
+    // Extrai apenas os valores hexadecimais para salvar, garantindo que sejam válidos
+    const colorsToSave = colors.map(color => color.hex).filter(Boolean);
+    saveCampaignPrompt({ persona, autor, instrucoes, formato, colors: colorsToSave });
     toast.success('Padrões de campanha salvos com sucesso!');
     onClose();
   };
