@@ -10,35 +10,14 @@ import {
   CircularProgress,
   Alert,
   Box,
-  Dialog,
-  DialogTitle,
-  DialogContent,
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
 import { toast } from 'sonner';
 
 import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils/personaState';
-import PersonaWizard from '../components/PersonaWizard';
+import PersonaWizard, { emptyPersonaWizardData } from '../components/PersonaWizard';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
-
-// The PersonaForm component was deleted, so I'm redefining the empty persona structure here.
-const newEmptyPersonaData = {
-    nome: '',
-    posicaoCargo: [],
-    segmentoEmpresa: [],
-    responsabilidadesChave: [],
-    doresEstrategicos: [],
-    doresOperacionais: [],
-    doresPessoas: [],
-    doresRegulatorios: [],
-    gatilhosCompra: [],
-    barreirasAdocao: [],
-    mentalidadeValores: '',
-    contextoCultural: '',
-    description: '', // For the initial AI prompt
-};
-
 
 const PersonasPage = () => {
   const [personas, setPersonas] = useState([]);
@@ -47,6 +26,7 @@ const PersonasPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPersona, setCurrentPersona] = useState(null);
   const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
+  const [initialWizardStep, setInitialWizardStep] = useState(0);
 
   useEffect(() => {
     fetchPersonas();
@@ -67,12 +47,11 @@ const PersonasPage = () => {
 
   const handleOpenModal = (persona = null) => {
     if (persona) {
-        // If we are editing, the full persona object is set.
-        // The wizard will receive persona.persona_data.
-        setCurrentPersona({ ...persona });
+      setCurrentPersona({ ...persona });
+      setInitialWizardStep(1); // Start at step 2 (index 1) for editing
     } else {
-        // For a new persona, we set the structure the DB expects.
-        setCurrentPersona({ name: '', persona_data: { ...newEmptyPersonaData } });
+      setCurrentPersona({ name: '', persona_data: { ...emptyPersonaWizardData } });
+      setInitialWizardStep(0); // Start at step 1 (index 0) for new
     }
     setIsModalOpen(true);
   };
@@ -83,11 +62,10 @@ const PersonasPage = () => {
   };
 
   const handleSave = async (personaData) => {
-    // The wizard returns the complete persona_data object.
     const personaToSave = {
-        ...currentPersona,
-        name: personaData.nome,
-        persona_data: personaData,
+      ...currentPersona,
+      name: personaData.nome,
+      persona_data: personaData,
     };
 
     if (!personaToSave.name) {
@@ -95,7 +73,6 @@ const PersonasPage = () => {
       return;
     }
 
-    // The wizard has its own save button, so we don't need a separate isSaving state here.
     try {
       if (personaToSave.id) {
         await updatePersona(personaToSave.id, personaToSave.name, personaToSave.persona_data);
@@ -135,8 +112,7 @@ const PersonasPage = () => {
 
     setIsGeneratingPersona(true);
     const prompt = `
-Descriver uma persona para uma campanha de marketing para ${description}.
-Preencha os campos do objeto JSON abaixo. Use exatamente os nomes de chave em camelCase fornecidos.
+Descriver uma persona para uma campanha de marketing para ${description}. Preencha os campos do objeto JSON abaixo. Use exatamente os nomes de chave em camelCase fornecidos.
 - nome: (string)
 - posicaoCargo: (array de strings)
 - segmentoEmpresa: (array de strings)
@@ -149,8 +125,7 @@ Preencha os campos do objeto JSON abaixo. Use exatamente os nomes de chave em ca
 - barreirasAdocao: (array de strings)
 - mentalidadeValores: (string)
 - contextoCultural: (string)
-Para o caso de não conseguir gerar conteúdo para algum campo, use um array vazio [] ou uma string vazia "".
-Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, markdown, ou qualquer outra formatação.`;
+Retorne apenas um único objeto JSON.`;
 
     try {
       const response = await geminiAPI.generateContent(prompt);
@@ -225,6 +200,7 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
             persona={currentPersona?.persona_data}
             onGenerate={handleGeneratePersonaWithAI}
             isGeneratingPersona={isGeneratingPersona}
+            initialStep={initialWizardStep}
         />
       )}
     </Container>
