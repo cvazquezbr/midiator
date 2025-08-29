@@ -38,7 +38,7 @@ const handler = async (req, res) => {
         return res.status(400).json({ error: 'Persona name and data are required.' });
       }
       const { rows } = await query(
-        'UPDATE personas SET name = $1, persona_data = $2, updated_at = NOW() WHERE id = $3 AND user_id = $4 RETURNING id, name, updated_at',
+        'UPDATE personas SET name = $1, persona_data = $2, updated_at = NOW() WHERE id = $3 AND user_id = $4 RETURNING id, name, persona_data, updated_at',
         [name, persona_data, id, userId]
       );
       if (rows.length === 0) {
