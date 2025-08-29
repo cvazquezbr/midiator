@@ -22,6 +22,7 @@ import {
   Folder as FolderIcon,
   Save as SaveIcon,
   FolderOpen as FolderOpenIcon,
+  People as PeopleIcon,
 } from '@mui/icons-material';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -129,6 +130,10 @@ const MainAppBar = ({
             <MenuItem onClick={() => { setDarkMode(!darkMode); handleUserMenuClose(); }}>
               {darkMode ? <Brightness7 sx={{ mr: 1 }} /> : <Brightness4 sx={{ mr: 1 }} />}
               {darkMode ? 'Modo Claro' : 'Modo Escuro'}
+            </MenuItem>
+            <MenuItem onClick={() => { navigate('/personas'); handleUserMenuClose(); }}>
+              <PeopleIcon sx={{ mr: 1 }} />
+              Personas
             </MenuItem>
             <MenuItem onClick={() => { setShowCampaignStandardsModal(true); handleUserMenuClose(); }}>
               <Edit sx={{ mr: 1 }} />

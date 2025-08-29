@@ -22,22 +22,26 @@ const formatObjectForPrompt = (obj, excludeKeys = []) => {
 /**
  * Generates the main campaign content using an AI API.
  */
-export const generateCampaignContent = async ({ problema, solucao }) => {
+export const generateCampaignContent = async ({ problema, solucao, persona = null }) => {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error('Chave de API Gemini não configurada.');
   }
   geminiAPI.initialize(apiKey);
 
-  const { persona, autor, instrucoes, formato } = getCampaignPrompt();
+  const { autor, instrucoes, formato } = getCampaignPrompt();
 
-  const personaString = formatObjectForPrompt(persona, ['description']);
+  const personaString = persona ? formatObjectForPrompt(persona, ['description']) : '';
   const autorString = formatObjectForPrompt(autor);
 
+  const personaPromptSection = personaString
+    ? `Destinatário (Persona): ${personaString}`
+    : 'O destinatário é um público geral interessado no problema e solução apresentados.';
+
   const promptCompleto = `
-  Você deve gerar conteúdo para posts no LinkeIn, considerando como destinatário a Persona a seguir qualificada e como emissor o Autor a seguir também qualificado.
-    Persona: ${personaString}
-    Autor: ${autorString}
+  Você deve gerar conteúdo para posts no LinkedIn.
+    ${personaPromptSection}
+    Emissor (Autor): ${autorString}
     Formato: ${stripHtml(formato)}
     Problema: ${stripHtml(problema)}
     Solução: ${stripHtml(solucao)}
@@ -202,7 +206,7 @@ export const generateFormattedContent = async ({ content }) => {
 /**
  * Generates a plan for follow-up posts for the campaign.
  */
-export const generateFollowupPlan = async ({ content, neededQuantity, existingPosts = [] }) => {
+export const generateFollowupPlan = async ({ content, neededQuantity, existingPosts = [], persona = null }) => {
   if (!content?.conteudo) {
     throw new Error("Conteúdo principal deve ser gerado primeiro.");
   }
@@ -212,8 +216,7 @@ export const generateFollowupPlan = async ({ content, neededQuantity, existingPo
   }
   geminiAPI.initialize(apiKey);
 
-  const { persona } = getCampaignPrompt();
-  const personaString = formatObjectForPrompt(persona, ['description']);
+  const personaString = persona ? formatObjectForPrompt(persona, ['description']) : '';
 
   const existingPostsString = existingPosts.length > 0
     ? `
@@ -285,7 +288,7 @@ Retorne um array JSON com a seguinte estrutura. Não inclua markdown ou qualquer
 /**
  * Generates follow-up posts for the campaign based on a plan.
  */
-export const generateFollowupPosts = async ({ content, plan }) => {
+export const generateFollowupPosts = async ({ content, plan, persona = null }) => {
   if (!content?.conteudo) {
     throw new Error("Conteúdo principal deve ser gerado primeiro.");
   }
@@ -299,8 +302,8 @@ export const generateFollowupPosts = async ({ content, plan }) => {
   }
   geminiAPI.initialize(apiKey);
 
-  const { persona, autor } = getCampaignPrompt();
-  const personaString = formatObjectForPrompt(persona, ['description']);
+  const { autor } = getCampaignPrompt();
+  const personaString = persona ? formatObjectForPrompt(persona, ['description']) : '';
   const autorString = formatObjectForPrompt(autor);
 
   const generatedPosts = [];

@@ -20,47 +20,47 @@ const handler = async (req, res) => {
   if (req.method === 'GET') {
     try {
       const { rows } = await query(
-        'SELECT id, name, campaign_data, persona_id, updated_at FROM campaigns WHERE id = $1 AND user_id = $2',
+        'SELECT id, name, persona_data, updated_at FROM personas WHERE id = $1 AND user_id = $2',
         [id, userId]
       );
       if (rows.length === 0) {
-        return res.status(404).json({ error: 'Campaign not found or access denied.' });
+        return res.status(404).json({ error: 'Persona not found or access denied.' });
       }
       return res.status(200).json(rows[0]);
     } catch (error) {
-      console.error(`[GET /api/campaigns/${id}] Error for user ${userId}:`, error);
+      console.error(`[GET /api/personas/${id}] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
   } else if (req.method === 'PUT') {
     try {
-      const { name, campaign_data, persona_id } = await parseBody(req);
-      if (!name || !campaign_data) {
-        return res.status(400).json({ error: 'Campaign name and data are required.' });
+      const { name, persona_data } = await parseBody(req);
+      if (!name || !persona_data) {
+        return res.status(400).json({ error: 'Persona name and data are required.' });
       }
       const { rows } = await query(
-        'UPDATE campaigns SET name = $1, campaign_data = $2, persona_id = $3, updated_at = NOW() WHERE id = $4 AND user_id = $5 RETURNING id, name, updated_at',
-        [name, campaign_data, persona_id, id, userId]
+        'UPDATE personas SET name = $1, persona_data = $2, updated_at = NOW() WHERE id = $3 AND user_id = $4 RETURNING id, name, updated_at',
+        [name, persona_data, id, userId]
       );
       if (rows.length === 0) {
-        return res.status(404).json({ error: 'Campaign not found or access denied.' });
+        return res.status(404).json({ error: 'Persona not found or access denied.' });
       }
       return res.status(200).json(rows[0]);
     } catch (error) {
-      console.error(`[PUT /api/campaigns/${id}] Error for user ${userId}:`, error);
+      console.error(`[PUT /api/personas/${id}] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
   } else if (req.method === 'DELETE') {
     try {
       const { rowCount } = await query(
-        'DELETE FROM campaigns WHERE id = $1 AND user_id = $2',
+        'DELETE FROM personas WHERE id = $1 AND user_id = $2',
         [id, userId]
       );
       if (rowCount === 0) {
-        return res.status(404).json({ error: 'Campaign not found or access denied.' });
+        return res.status(404).json({ error: 'Persona not found or access denied.' });
       }
-      return res.status(200).json({ message: 'Campaign deleted successfully.' });
+      return res.status(200).json({ message: 'Persona deleted successfully.' });
     } catch (error) {
-      console.error(`[DELETE /api/campaigns/${id}] Error for user ${userId}:`, error);
+      console.error(`[DELETE /api/personas/${id}] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
   } else {

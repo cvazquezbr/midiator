@@ -12,10 +12,12 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Toaster, toast } from 'sonner';
 
+import { useNavigate } from 'react-router-dom';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { loadSettingsFromDb } from '../utils/credentialsManager';
 import { getCampaigns, saveCampaign, loadCampaign, updateCampaign } from '../utils/campaignState';
+import { getPersonas, loadPersona } from '../utils/personaState';
 import { checkAuthStatus } from '../utils/auth';
 
 import MyCampaignsStep from '../components/MyCampaignsStep';
@@ -88,7 +90,9 @@ function HomePage() {
   const [generationError, setGenerationError] = useState('');
   const [editingField, setEditingField] = useState(null);
   const [isHtmlField, setIsHtmlField] = useState(false);
-  const [persona, setPersona] = useState({});
+  const [persona, setPersona] = useState(null);
+  const [personas, setPersonas] = useState([]);
+  const [selectedPersonaId, setSelectedPersonaId] = useState('');
   const [autor, setAutor] = useState({});
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
@@ -142,6 +146,7 @@ function HomePage() {
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [fontScale, setFontScale] = useState(1);
 
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
 
@@ -181,7 +186,7 @@ function HomePage() {
     setProblema(state.problema ?? '');
     setSolucao(state.solucao ?? '');
     setCampaignContent(state.campaignContent ?? null);
-    setPersona(state.persona ?? {});
+    // Persona is handled by handleLoadCampaign
     setAutor(state.autor ?? {});
     setInstrucoes(state.instrucoes ?? '');
     setFormato(state.formato ?? '');
@@ -250,7 +255,6 @@ function HomePage() {
       problema,
       solucao,
       campaignContent,
-      persona,
       autor,
       instrucoes,
       formato,
@@ -279,12 +283,12 @@ function HomePage() {
     try {
       if (currentCampaign) {
         console.log(`[HomePage] Updating existing campaign, ID: ${currentCampaign.id}`);
-        const updated = await updateCampaign(currentCampaign.id, name, campaignDataToSave, setUploadProgress, user.uuid);
+        const updated = await updateCampaign(currentCampaign.id, name, campaignDataToSave, setUploadProgress, user.uuid, selectedPersonaId);
         toast.success(`Campaign "${name}" updated.`);
         setCurrentCampaign(updated);
       } else {
         console.log(`[HomePage] Saving new campaign.`);
-        const newCampaign = await saveCampaign(name, campaignDataToSave, setUploadProgress, user.uuid);
+        const newCampaign = await saveCampaign(name, campaignDataToSave, setUploadProgress, user.uuid, selectedPersonaId);
         toast.success(`Campaign "${name}" saved.`);
         setCurrentCampaign(newCampaign);
       }
@@ -310,6 +314,16 @@ function HomePage() {
       const loadedCampaign = await loadCampaign(id);
       console.log("Loaded campaign data from DB:", loadedCampaign); // Diagnostic log
       applyAppState(loadedCampaign.campaign_data);
+
+      if (loadedCampaign.persona_id) {
+        setSelectedPersonaId(loadedCampaign.persona_id);
+        const personaData = await loadPersona(loadedCampaign.persona_id);
+        setPersona(personaData.persona_data);
+      } else {
+        setSelectedPersonaId('');
+        setPersona(null);
+      }
+
       setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
       toast.success(`Campaign "${loadedCampaign.name}" loaded successfully!`);
     } catch (err) {
@@ -320,8 +334,8 @@ function HomePage() {
   };
 
   const loadCampaignStandards = useCallback(() => {
-    const { persona: personaData, autor: autorData, instrucoes: instrucoesData, formato: formatoData, colors: colorsData } = getCampaignPrompt();
-    setPersona(personaData || {});
+    const { autor: autorData, instrucoes: instrucoesData, formato: formatoData, colors: colorsData } = getCampaignPrompt();
+    // Persona is now loaded separately
     setAutor(autorData || {});
     setInstrucoes(instrucoesData || '');
     setFormato(formatoData || '');
@@ -333,6 +347,20 @@ function HomePage() {
     const apiKey = getGeminiApiKey();
     if (apiKey) geminiAPI.initialize(apiKey);
   }, [loadCampaignStandards]);
+
+  useEffect(() => {
+    const fetchPersonas = async () => {
+      try {
+        const data = await getPersonas();
+        setPersonas(data);
+      } catch (error) {
+        toast.error(`Failed to load personas: ${error.message}`);
+      }
+    };
+    if (user) {
+      fetchPersonas();
+    }
+  }, [user]);
 
   useEffect(() => {
     const checkCampaignsAndSetInitialStep = async () => {
@@ -684,7 +712,7 @@ function HomePage() {
     try {
       // Etapa 1: Gerar conteúdo principal
       setGenerationStatus('Criando o conteúdo geral da campanha...');
-      const normalizedContent = await generateCampaignContent({ problema, solucao });
+      const normalizedContent = await generateCampaignContent({ problema, solucao, persona });
       if (!normalizedContent) {
         throw new Error("A geração do conteúdo principal falhou e não retornou dados.");
       }
@@ -725,6 +753,7 @@ function HomePage() {
           content: normalizedContent,
           neededQuantity: followupPostsQuantity,
           existingPosts: [], // Sempre começa do zero para uma nova campanha
+          persona,
         });
 
         const newPosts = [];
@@ -732,7 +761,7 @@ function HomePage() {
           const postPlan = plan[i];
           setGenerationStatus(`Gerando post de follow-up ${i + 1}/${plan.length}...`);
           // A lógica de generateFollowupPosts foi movida para cá para podermos ter o status
-          const generatedPost = await generateFollowupPosts({ content: normalizedContent, plan: [postPlan] });
+          const generatedPost = await generateFollowupPosts({ content: normalizedContent, plan: [postPlan], persona });
           if (generatedPost && generatedPost.length > 0) {
             newPosts.push(...generatedPost);
             // Atualiza o estado a cada post gerado para o usuário ver o progresso
@@ -797,8 +826,9 @@ function HomePage() {
         content,
         neededQuantity,
         existingPosts: followupPosts,
+        persona,
       });
-      const newPosts = await generateFollowupPosts({ content, plan });
+      const newPosts = await generateFollowupPosts({ content, plan, persona });
       setFollowupPosts(prevPosts => [...prevPosts, ...newPosts]);
     } catch (error) {
       toast.error(`Ocorreu um erro ao gerar os posts de follow-up: ${error.message}`);
@@ -948,10 +978,57 @@ function HomePage() {
               onCreateNew={handleCreateNewCampaign}
             />
           </div>
-          <div hidden={activeStep !== 1}><Container maxWidth="lg"><Campaign steps={steps} activeStep={activeStep} {...campaignData} setProblema={setProblema} setSolucao={setSolucao} isGeneratingCampaign={isGeneratingCampaign} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleGenerateCampaignContent={handleGenerateCampaignContent} handleResetCampaign={handleResetCampaign} handleExportHtml={() => exportHtml(campaignData)} editingField={editingField} setEditingField={(field) => {
-            setEditingField(field);
-            setIsHtmlField(field === 'conteudoFormatado');
-          }} isGeneratingSummaryMedio={isGeneratingSummaryMedio} handleGenerateSummary={handleGenerateSummary} isGeneratingSummaryPequeno={isGeneratingSummaryPequeno} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} setCampaignContent={setCampaignContent} onEditFollowup={handleEditFollowup} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} setAspectRatio={setAspectRatio} /></Container></div>
+          <div hidden={activeStep !== 1}>
+            <Container maxWidth="lg">
+              <Box sx={{ mb: 4 }}>
+                <Typography variant="h6" gutterBottom>
+                  Seleção de Persona
+                </Typography>
+                {!selectedPersonaId && (
+                  <Alert severity="warning" sx={{ mb: 2 }}>
+                    A qualidade da campanha depende de quão bem o destinatário de suas mensagens é definido. Selecione uma persona ou crie uma nova para continuar.
+                  </Alert>
+                )}
+                <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+                  <InputLabel id="persona-select-label">Persona</InputLabel>
+                  <Select
+                    labelId="persona-select-label"
+                    value={selectedPersonaId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setSelectedPersonaId(id);
+                      if (id) {
+                        const selected = personas.find(p => p.id === id);
+                        setPersona(selected.persona_data);
+                      } else {
+                        setPersona(null);
+                      }
+                    }}
+                    label="Persona"
+                  >
+                    <MenuItem value="">
+                      <em>Nenhuma</em>
+                    </MenuItem>
+                    {personas.map((p) => (
+                      <MenuItem key={p.id} value={p.id}>
+                        {p.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate('/personas')}
+                >
+                  Gerenciar Personas
+                </Button>
+              </Box>
+              <Campaign steps={steps} activeStep={activeStep} {...campaignData} setProblema={setProblema} setSolucao={setSolucao} isGeneratingCampaign={isGeneratingCampaign} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleGenerateCampaignContent={handleGenerateCampaignContent} handleResetCampaign={handleResetCampaign} handleExportHtml={() => exportHtml(campaignData)} editingField={editingField} setEditingField={(field) => {
+                setEditingField(field);
+                setIsHtmlField(field === 'conteudoFormatado');
+              }} isGeneratingSummaryMedio={isGeneratingSummaryMedio} handleGenerateSummary={handleGenerateSummary} isGeneratingSummaryPequeno={isGeneratingSummaryPequeno} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} setCampaignContent={setCampaignContent} onEditFollowup={handleEditFollowup} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} setAspectRatio={setAspectRatio} />
+            </Container>
+          </div>
           <div hidden={activeStep !== 2}><PostsCurtosStep steps={steps} inputMethod={inputMethod} setInputMethod={setInputMethod} handleDrop={handleDrop} handleDragOver={handleDragOver} fileInputRef={fileInputRef} handleCSVUpload={handleCSVUpload} downloadExampleCsv={downloadExampleCsv} setShowSetupModal={setShowSetupModal} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} generateImagesAutomatically={generateImagesAutomatically} setGenerateImagesAutomatically={setGenerateImagesAutomatically} handleGenerateIAContent={handleGenerateIAContent} isGenerating={isGenerating} csvData={csvData} csvHeaders={csvHeaders} onDadosAlterados={handleDadosAlterados} darkMode={darkMode} exportCsv={exportCsv} /></div>
           <div hidden={activeStep !== 3}>
             <ImageStep

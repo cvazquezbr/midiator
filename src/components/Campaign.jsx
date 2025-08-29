@@ -181,6 +181,7 @@ const Campaign = ({
     handleGenerateImage,
     setCampaignContent,
     onEditFollowup,
+    persona,
 }) => {
     useSettings();
     const [activeTab, setActiveTab] = useState(0);
@@ -228,9 +229,8 @@ const Campaign = ({
         setProblemsError(null);
         setCommonProblems([]);
         try {
-            const { persona } = getCampaignPrompt();
             if (!persona || Object.keys(persona).length === 0) {
-                throw new Error("Defina uma persona primeiro na aba 'Setup'.");
+                throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
             const problems = await generateCommonProblems({ persona });
             setCommonProblems(problems);
@@ -239,16 +239,15 @@ const Campaign = ({
         } finally {
             setIsLoadingProblems(false);
         }
-    }, [commonProblems.length]);
+    }, [commonProblems.length, persona]);
 
     const handleRegenerateProblems = useCallback(async () => {
         setIsLoadingProblems(true);
         setProblemsError(null);
         setCommonProblems([]);
         try {
-            const { persona } = getCampaignPrompt();
             if (!persona || Object.keys(persona).length === 0) {
-                throw new Error("Defina uma persona primeiro na aba 'Setup'.");
+                throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
             const problems = await generateCommonProblems({ persona });
             setCommonProblems(problems);
@@ -257,7 +256,7 @@ const Campaign = ({
         } finally {
             setIsLoadingProblems(false);
         }
-    }, []);
+    }, [persona]);
 
     useEffect(() => {
         if (isHintModalOpen) {
@@ -271,7 +270,6 @@ const Campaign = ({
         setSolutionsError(null);
         setCommonSolutions([]);
         try {
-            const { persona } = getCampaignPrompt();
             if (!problema.trim()) {
                 throw new Error("Descreva o problema primeiro.");
             }
@@ -282,14 +280,13 @@ const Campaign = ({
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [commonSolutions.length, problema]);
+    }, [commonSolutions.length, problema, persona]);
 
     const handleRegenerateSolutions = useCallback(async () => {
         setIsLoadingSolutions(true);
         setSolutionsError(null);
         setCommonSolutions([]);
         try {
-            const { persona } = getCampaignPrompt();
             if (!problema.trim()) {
                 throw new Error("Descreva o problema primeiro.");
             }
@@ -300,7 +297,7 @@ const Campaign = ({
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [problema]);
+    }, [problema, persona]);
 
     useEffect(() => {
         if (isSolucaoHintModalOpen) {
