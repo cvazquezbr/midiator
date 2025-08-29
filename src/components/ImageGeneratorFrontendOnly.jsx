@@ -55,7 +55,8 @@ const ImageGeneratorFrontendOnly = ({
   imageFilters,
   brandElements,
   onBrandElementsChange,
-  fontScale = 1
+  fontScale = 1,
+  standardsColors
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -743,6 +744,7 @@ const ImageGeneratorFrontendOnly = ({
         backgroundImage={backgroundImage}
         originalImageSize={originalImageSize}
         imageFilters={imageFilters}
+        standardsColors={standardsColors}
       />
 
       <input

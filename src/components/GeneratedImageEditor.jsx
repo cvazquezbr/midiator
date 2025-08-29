@@ -59,7 +59,8 @@ const GeneratedImageEditor = ({
   globalBackgroundImage, // Imagem de fundo global, como fallback
   originalImageSize,
   imageFilters, // Adicionado
-  brandElements
+  brandElements,
+  standardsColors
 }) => {
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
@@ -246,7 +247,7 @@ const GeneratedImageEditor = ({
                   onDeselectField={handleDeselectField}
                   onOpenHtmlEditor={handleOpenHtmlEditor}
                   fontScale={fontScale}
-                  standardsColors={colorPalette}
+                  standardsColors={standardsColors || colorPalette}
                 />
               </Grid>
             )}
@@ -285,7 +286,7 @@ const GeneratedImageEditor = ({
             brandElements={editedBrandElements}
             setBrandElements={setEditedBrandElements}
             fontScale={fontScale}
-            standardsColors={colorPalette}
+            standardsColors={standardsColors || colorPalette}
           />
         </>
       )}
