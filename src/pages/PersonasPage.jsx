@@ -13,14 +13,13 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  TextField,
   DialogActions,
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
 import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils/personaState';
-import { useAuth } from '../context/UserAuthContext';
+import PersonaForm, { emptyPersonaData } from '../components/PersonaForm';
 
-const PersonaManager = () => {
+const PersonasPage = () => {
   const [personas, setPersonas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -46,7 +45,13 @@ const PersonaManager = () => {
   };
 
   const handleOpenModal = (persona = null) => {
-    setCurrentPersona(persona ? { ...persona } : { name: '', persona_data: { description: '' } });
+    if (persona) {
+      setCurrentPersona({ ...persona });
+    } else {
+      // For a new persona, we create the structure the DB expects,
+      // with the actual detailed data inside `persona_data`.
+      setCurrentPersona({ name: '', persona_data: { ...emptyPersonaData } });
+    }
     setIsModalOpen(true);
   };
 
@@ -55,7 +60,20 @@ const PersonaManager = () => {
     setCurrentPersona(null);
   };
 
+  const handlePersonaFormChange = (newPersonaData) => {
+    setCurrentPersona(prev => ({
+        ...prev,
+        // The name of the persona record is synced with the 'nome' field in the data
+        name: newPersonaData.nome,
+        persona_data: newPersonaData,
+    }));
+  };
+
   const handleSave = async () => {
+    if (!currentPersona?.name) {
+      alert('O nome da persona é obrigatório.');
+      return;
+    }
     setIsSaving(true);
     try {
       if (currentPersona.id) {
@@ -73,7 +91,7 @@ const PersonaManager = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this persona?')) {
+    if (window.confirm('Tem certeza que deseja deletar esta persona?')) {
       try {
         await deletePersona(id);
         await fetchPersonas();
@@ -83,17 +101,21 @@ const PersonaManager = () => {
     }
   };
 
-  const handleFieldChange = (e) => {
-    const { name, value } = e.target;
-    if (name === 'name') {
-      setCurrentPersona((prev) => ({ ...prev, name: value }));
-    } else {
-        setCurrentPersona((prev) => ({
-            ...prev,
-            persona_data: { ...prev.persona_data, [name]: value },
-        }));
+  const getSecondaryText = (persona) => {
+    if (!persona.persona_data) return '...';
+    const { posicaoCargo, segmentoEmpresa } = persona.persona_data;
+    let text = [];
+    if (posicaoCargo && posicaoCargo.length > 0) {
+      text.push(posicaoCargo.join(', '));
     }
-  };
+    if (segmentoEmpresa && segmentoEmpresa.length > 0) {
+      text.push(segmentoEmpresa.join(', '));
+    }
+    if (text.length === 0) return 'Sem detalhes adicionais.';
+
+    const fullText = text.join(' | ');
+    return fullText.length > 100 ? fullText.substring(0, 100) + '...' : fullText;
+  }
 
   return (
     <Container maxWidth="md" sx={{ mt: 4 }}>
@@ -125,39 +147,23 @@ const PersonaManager = () => {
                 </>
               }
             >
-              <ListItemText primary={persona.name} secondary={persona.persona_data?.description?.substring(0, 100) + '...'} />
+              <ListItemText
+                primary={persona.name}
+                secondary={getSecondaryText(persona)}
+              />
             </ListItem>
           ))}
         </List>
       )}
 
       {isModalOpen && (
-        <Dialog open={isModalOpen} onClose={handleCloseModal} fullWidth maxWidth="sm">
+        <Dialog open={isModalOpen} onClose={handleCloseModal} fullWidth maxWidth="md">
           <DialogTitle>{currentPersona?.id ? 'Editar Persona' : 'Nova Persona'}</DialogTitle>
           <DialogContent>
-            <TextField
-              autoFocus
-              margin="dense"
-              name="name"
-              label="Nome da Persona"
-              type="text"
-              fullWidth
-              variant="outlined"
-              value={currentPersona?.name || ''}
-              onChange={handleFieldChange}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              margin="dense"
-              name="description"
-              label="Descrição da Persona"
-              type="text"
-              fullWidth
-              multiline
-              rows={4}
-              variant="outlined"
-              value={currentPersona?.persona_data?.description || ''}
-              onChange={handleFieldChange}
+            <PersonaForm
+              persona={currentPersona?.persona_data}
+              onChange={handlePersonaFormChange}
+              isSaving={isSaving}
             />
           </DialogContent>
           <DialogActions>
@@ -172,4 +178,4 @@ const PersonaManager = () => {
   );
 };
 
-export default PersonaManager;
+export default PersonasPage;

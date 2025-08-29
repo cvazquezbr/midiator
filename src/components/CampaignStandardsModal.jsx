@@ -24,14 +24,8 @@ import {
   Card,
   CardContent,
   Divider,
-  ListItemText,
-  Checkbox,
-  FormGroup,
-  FormControlLabel,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Stack,
+  Alert,
 } from '@mui/material';
 import TextEditor from './TextEditor';
 import {
@@ -39,7 +33,6 @@ import {
   TextFields as TextFieldsIcon,
   Palette as PaletteIcon,
   InfoOutlined as InfoOutlinedIcon,
-  ExpandMore as ExpandMoreIcon,
   UploadFile as UploadFileIcon,
   Link as LinkIcon,
   AutoAwesome as AutoAwesomeIcon,
@@ -52,12 +45,11 @@ import ColorThief from 'colorthief';
 
 import TextEditorDialog from './TextEditorDialog';
 import HtmlDisplayField from './HtmlDisplayField';
-import PersonaGenerationModal from './PersonaGenerationModal';
-import PersonaWizard, { PersonaWizardContent } from './PersonaWizard';
 import AutorWizard, { AutorWizardContent, TIPO_ORGANIZACAO_OPTIONS } from './AutorWizard';
 import PaletteWizard from './PaletteWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
+import { getPersonas, loadPersona } from '../utils/personaState';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 import isEqual from 'lodash.isequal';
@@ -83,12 +75,54 @@ function TabPanel(props) {
   );
 }
 
+const PersonaDetails = ({ persona }) => {
+    if (!persona) {
+      return (
+        <Card variant="outlined" sx={{ mt: 2 }}>
+          <CardContent>
+            <Typography color="text.secondary">Nenhuma persona selecionada</Typography>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    const { nome, posicaoCargo, segmentoEmpresa, responsabilidadesChave, mentalidadeValores } = persona.persona_data || {};
+
+    return (
+      <Card variant="outlined" sx={{ mt: 2 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>{nome || persona.name}</Typography>
+          {posicaoCargo && posicaoCargo.length > 0 && (
+            <Typography variant="body2" color="text.secondary"><strong>Cargo:</strong> {posicaoCargo.join(', ')}</Typography>
+          )}
+          {segmentoEmpresa && segmentoEmpresa.length > 0 && (
+            <Typography variant="body2" color="text.secondary"><strong>Segmento:</strong> {segmentoEmpresa.join(', ')}</Typography>
+          )}
+          {responsabilidadesChave && responsabilidadesChave.length > 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}><strong>Responsabilidades:</strong> {responsabilidadesChave.join(', ')}</Typography>
+          )}
+           {mentalidadeValores && (
+            <Box mt={2}>
+                <Typography variant="subtitle2"><strong>Mentalidade e Valores:</strong></Typography>
+                <Box sx={{ maxHeight: 100, overflow: 'auto', border: '1px solid #eee', p: 1, borderRadius: 1 }} dangerouslySetInnerHTML={{ __html: mentalidadeValores }} />
+            </Box>
+           )}
+        </CardContent>
+      </Card>
+    );
+  };
+
 const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemorial }) => {
   const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
-  const [persona, setPersona] = useState({});
-  const [otherItemInputs, setOtherItemInputs] = useState({});
-  const [editingChip, setEditingChip] = useState(null); // { key, value, newValue }
+
+  // Persona state
+  const [allPersonas, setAllPersonas] = useState([]);
+  const [selectedPersonaId, setSelectedPersonaId] = useState('');
+  const [persona, setPersona] = useState(null); // The full selected persona object
+  const [loadingPersonas, setLoadingPersonas] = useState(false);
+
+  // Other states
   const [autor, setAutor] = useState({});
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
@@ -97,91 +131,11 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemori
   const imageInputRef = useRef(null);
   const [initialState, setInitialState] = useState(null);
   const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false);
-
-  // State for AI Palette Generation
   const [isGenerating, setIsGenerating] = useState(false);
-
-  // State for AI Persona Generation
-  const [personaDescription, setPersonaDescription] = useState('');
-  const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
-  const [showPersonaGenModal, setShowPersonaGenModal] = useState(false);
-  const [isPersonaWizardVisible, setIsPersonaWizardVisible] = useState(false);
-
-  // State for AI Autor Generation
   const [isGeneratingAutor, setIsGeneratingAutor] = useState(false);
-  const [showAutorWizard, setShowAutorWizard] = useState(false);
   const [isAutorWizardVisible, setIsAutorWizardVisible] = useState(false);
   const [initialAutorStep, setInitialAutorStep] = useState(0);
-
-  // State for AI Palette Wizard
   const [showPaletteWizard, setShowPaletteWizard] = useState(false);
-
-  const handleGeneratePersonaWithAI = async (description, callback) => {
-    if (!geminiAPI.isInitialized) {
-      const apiKey = getGeminiApiKey();
-      if (!apiKey) {
-        toast.error('Chave de API do Gemini não configurada.');
-        return;
-      }
-      geminiAPI.initialize(apiKey);
-    }
-
-    setIsGeneratingPersona(true);
-    const prompt = `
-Descriver uma persona para uma campanha de marketing para ${description}.
-Preencha os campos do objeto JSON abaixo. 
-Use exatamente os nomes de chave em camelCase fornecidos. 
-Campos para preencher (use exatamente estes nomes de chave):
-- nome: (string)
-- posicaoCargo: (array de strings)
-- segmentoEmpresa: (array de strings)
-- responsabilidadesChave: (array de strings)
-- doresEstrategicos: (array de strings)
-- doresOperacionais: (array de strings)
-- doresPessoas: (array de strings)
-- doresRegulatorios: (array de strings)
-- gatilhosCompra: (array de strings)
-- barreirasAdocao: (array de strings)
-- mentalidadeValores: (string)
-- contextoCultural: (string)
-Para o caso de não conseguir gerar conteúdo para algum cmapo, use um array vazio [] ou uma string vazia "".
-
-Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, markdown, ou qualquer outra formatação.
-    `;
-
-    try {
-      const response = await geminiAPI.generateContent(prompt);
-      const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
-
-      if (!cleanedResponse) {
-        toast.error('A IA retornou uma resposta vazia.');
-        return;
-      }
-
-      const generatedPersona = JSON.parse(cleanedResponse);
-
-      // First, stop the loading state to allow the child component to stabilize.
-      setIsGeneratingPersona(false);
-
-      // Now, perform the actions after the state has had a chance to update.
-      // Using a microtask to ensure state update has been processed.
-      Promise.resolve().then(() => {
-        if (callback) {
-          callback(generatedPersona);
-        } else {
-          setPersona(prev => ({ ...prev, ...generatedPersona }));
-          toast.success('Persona gerada com sucesso! Revise os campos preenchidos.');
-          setShowPersonaGenModal(false);
-        }
-      });
-
-    } catch (error) {
-      console.error("Erro ao gerar ou processar persona com IA:", error);
-      toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console do navegador para detalhes.');
-      // Also ensure loading is stopped on error.
-      setIsGeneratingPersona(false);
-    }
-  };
 
   const handleGenerateAutorWithAI = async (descricaoGeral, dominioReferencia, siteExclusao, callback) => {
     if (!geminiAPI.isInitialized) {
@@ -196,43 +150,26 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
     setIsGeneratingAutor(true);
     const prompt = `
 Com base na descrição do autor, preencha os campos do objeto JSON abaixo.
-
-**Descrição do Autor:**
-${descricaoGeral}
-
+**Descrição do Autor:** ${descricaoGeral}
 **Instruções Adicionais:**
-${dominioReferencia ? `- Use o site \`${dominioReferencia}\` como principal fonte de referência para entender o tom, a linguagem e a área de atuação.` : ''}
+${dominioReferencia ? `- Use o site \`${dominioReferencia}\` como principal fonte de referência.` : ''}
 ${siteExclusao ? `- NÃO use o site \`${siteExclusao}\` como referência.` : ''}
-- As respostas devem ser concisas e diretas.
-
 **Campos para preencher (use exatamente estes nomes de chave):**
-- identidade: (string) O nome da empresa ou marca.
-- descricao: (string em HTML) Uma breve descrição da empresa, detalhando sua área de atuação, especializações e foco.
-- tipo: (string) Uma classificação da natureza da empresa (ex: "Braço de tecnologia", "Agência de marketing", "Consultoria").
-- objetivoEstrategico: (string em HTML) A meta de longo prazo da mensagem (posicionamento da marca, construção de autoridade, etc.).
-- objetivoEngajamento: (string em HTML) O tipo de interação que a mensagem deve estimular (gerar comentários, compartilhamentos, etc.).
-
-Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, markdown, ou qualquer outra formatação.
-`;
+- identidade: (string)
+- descricao: (string em HTML)
+- tipo: (string)
+- objetivoEstrategico: (string em HTML)
+- objetivoEngajamento: (string em HTML)
+Retorne apenas um único objeto JSON.`;
 
     try {
       const response = await geminiAPI.generateContent(prompt);
       const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
-
-      if (!cleanedResponse) {
-        toast.error('A IA retornou uma resposta vazia.');
-        return;
-      }
-
       const generatedAutor = JSON.parse(cleanedResponse);
-
-      if (callback) {
-        callback(generatedAutor);
-      }
-
+      if (callback) callback(generatedAutor);
     } catch (error) {
-      console.error("Erro ao gerar ou processar autor com IA:", error);
-      toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console do navegador para detalhes.');
+      console.error("Erro ao gerar autor com IA:", error);
+      toast.error('Ocorreu um erro ao processar a resposta da IA.');
     } finally {
       setIsGeneratingAutor(false);
     }
@@ -240,100 +177,75 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
   useEffect(() => {
     if (open) {
-      // Initialize Gemini API when the modal opens
       const apiKey = getGeminiApiKey();
-      if (apiKey && !geminiAPI.isInitialized) {
-        geminiAPI.initialize(apiKey);
-      }
+      if (apiKey && !geminiAPI.isInitialized) geminiAPI.initialize(apiKey);
 
-      const { persona, autor, instrucoes, formato, colors: loadedColors } = getCampaignPrompt();
-      setPersona(persona);
+      setLoadingPersonas(true);
+      getPersonas()
+        .then(data => setAllPersonas(data))
+        .catch(err => toast.error("Falha ao carregar personas."))
+        .finally(() => setLoadingPersonas(false));
+
+      const { persona_id, autor, instrucoes, formato, colors: loadedColors } = getCampaignPrompt();
+
+      setSelectedPersonaId(persona_id || '');
       setAutor(autor);
       setInstrucoes(instrucoes);
       setFormato(formato);
-      // Converte o array de strings hex para o formato de objeto que o estado do modal usa
-      const colorsAsObjects = (loadedColors || []).map(hex => ({
-        hex: hex,
-        name: `Cor (${hex})`, // Nome genérico
-        role: 'Salva',
-        justification: ''
-      }));
+      const colorsAsObjects = (loadedColors || []).map(hex => ({ hex, name: `Cor (${hex})`, role: 'Salva', justification: '' }));
       setColors(colorsAsObjects);
-      setInitialState({ persona, autor, instrucoes, formato, colors: colorsAsObjects });
 
-      // Se a persona não existir ou não tiver um nome, mostre o assistente por padrão
-      if (!persona || !persona.nome) {
-        setIsPersonaWizardVisible(true);
-      } else {
-        setIsPersonaWizardVisible(false);
-      }
+      setInitialState({ persona_id, autor, instrucoes, formato, colors: colorsAsObjects });
 
-      // Se o autor não existir ou não tiver identidade, mostra o assistente do autor
-      if (!autor || !autor.identidade) {
-        setIsAutorWizardVisible(true);
-      } else {
-        setIsAutorWizardVisible(false);
-      }
+      if (!autor || !autor.identidade) setIsAutorWizardVisible(true);
+      else setIsAutorWizardVisible(false);
     }
   }, [open]);
 
-  const handleChange = (event, newValue) => {
-    setValue(newValue);
-  };
+  useEffect(() => {
+    if (selectedPersonaId && allPersonas.length > 0) {
+      const foundPersona = allPersonas.find(p => p.id === selectedPersonaId);
+      setPersona(foundPersona || null);
+    } else {
+      setPersona(null);
+    }
+  }, [selectedPersonaId, allPersonas]);
+
+  const handleChange = (event, newValue) => setValue(newValue);
 
   const handleSave = () => {
-    // Extrai apenas os valores hexadecimais para salvar, garantindo que sejam válidos
     const colorsToSave = colors.map(color => color.hex).filter(Boolean);
-    saveCampaignPrompt({ persona, autor, instrucoes, formato, colors: colorsToSave });
+    saveCampaignPrompt({ persona_id: selectedPersonaId, autor, instrucoes, formato, colors: colorsToSave });
     toast.success('Padrões de campanha salvos com sucesso!');
     onClose();
   };
 
   const handleClose = () => {
-    if (hasUnsavedChanges()) {
-      setIsConfirmCloseOpen(true);
-    } else {
-      onClose();
-    }
+    if (hasUnsavedChanges()) setIsConfirmCloseOpen(true);
+    else onClose();
   };
 
-  const handleOpenEditor = (field) => {
-    setEditingField(field);
-  };
-
-  const handleCloseEditor = () => {
-    setEditingField(null);
-  };
+  const handleOpenEditor = (field) => setEditingField(field);
+  const handleCloseEditor = () => setEditingField(null);
 
   const handleSaveEditor = (newContent) => {
-    if (editingField === 'persona') {
-      setPersona(newContent);
-    } else if (editingField.startsWith('autor.')) {
+    if (editingField.startsWith('autor.')) {
       const fieldName = editingField.split('.')[1];
       setAutor(prev => ({ ...prev, [fieldName]: newContent }));
-    }
-    else if (editingField === 'instrucoes') {
-      setInstrucoes(newContent);
-    } else if (editingField === 'formato') {
-      setFormato(newContent);
-    }
+    } else if (editingField === 'instrucoes') setInstrucoes(newContent);
+    else if (editingField === 'formato') setFormato(newContent);
     setEditingField(null);
   };
 
   const getCurrentContent = () => {
     if (!editingField) return '';
-    if (editingField === 'persona') return persona;
-    if (editingField.startsWith('autor.')) {
-      const fieldName = editingField.split('.')[1];
-      return autor[fieldName] || '';
-    }
+    if (editingField.startsWith('autor.')) return autor[editingField.split('.')[1]] || '';
     if (editingField === 'instrucoes') return instrucoes;
     if (editingField === 'formato') return formato;
     return '';
   };
 
   const getEditorTitle = () => {
-    if (editingField === 'persona') return 'Editar Persona';
     if (editingField === 'autor.descricao') return 'Editar Descrição da Empresa';
     if (editingField === 'autor.tipo') return 'Editar Tipo de Organização';
     if (editingField === 'autor.tipoOrganizacaoOutro') return 'Editar Tipo de Organização (Outro)';
@@ -346,33 +258,15 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
 
   const handleColorChange = (index, newColor) => {
     const newColors = [...colors];
-    // When changing the color manually, we only update the hex and rgb value.
-    // We keep the name and role if they exist.
-    newColors[index] = {
-      ...newColors[index],
-      hex: newColor,
-      rgb: `RGB(${parseInt(newColor.substr(1, 2), 16)}, ${parseInt(newColor.substr(3, 2), 16)}, ${parseInt(newColor.substr(5, 2), 16)})`
-    };
+    newColors[index] = { ...newColors[index], hex: newColor, rgb: `RGB(${parseInt(newColor.substr(1, 2), 16)}, ${parseInt(newColor.substr(3, 2), 16)}, ${parseInt(newColor.substr(5, 2), 16)})` };
     setColors(newColors);
   };
 
   const addColor = () => {
-    if (colors.length < 5) {
-      const newColor = {
-        hex: '#000000',
-        rgb: 'RGB(0, 0, 0)',
-        name: 'Nova Cor',
-        role: 'Manual',
-        justification: 'Adicionada manualmente pelo usuário.'
-      };
-      setColors([...colors, newColor]);
-    }
+    if (colors.length < 5) setColors([...colors, { hex: '#000000', rgb: 'RGB(0, 0, 0)', name: 'Nova Cor', role: 'Manual', justification: 'Adicionada manualmente' }]);
   };
 
-  const removeColor = (index) => {
-    const newColors = colors.filter((_, i) => i !== index);
-    setColors(newColors);
-  };
+  const removeColor = (index) => setColors(colors.filter((_, i) => i !== index));
 
   const handleImageUpload = (event) => {
     const file = event.target.files[0];
@@ -383,26 +277,14 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
         img.onload = () => {
           try {
             const colorThief = new ColorThief();
-            const palette = colorThief.getPalette(img, 5); // Returns array of [R, G, B]
-            const newColors = palette.map((rgb, index) => {
-              const hex = `#${rgb.map(c => c.toString(16).padStart(2, '0')).join('')}`;
-              return {
-                hex: hex,
-                rgb: `RGB(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`,
-                name: `Cor Extraída ${index + 1}`,
-                role: 'Extraída de Imagem',
-                justification: 'Cor extraída automaticamente da imagem de referência.'
-              };
-            });
+            const palette = colorThief.getPalette(img, 5);
+            const newColors = palette.map((rgb, index) => ({ hex: `#${rgb.map(c => c.toString(16).padStart(2, '0')).join('')}`, rgb: `RGB(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`, name: `Cor Extraída ${index + 1}`, role: 'Extraída', justification: 'Extraída da imagem de referência.' }));
             setColors(newColors);
-            toast.success('Paleta de cores extraída da imagem com sucesso!');
+            toast.success('Paleta de cores extraída com sucesso!');
           } catch (error) {
-            console.error("Erro ao extrair paleta de cores da imagem:", error);
-            toast.error('Não foi possível extrair as cores desta imagem. Tente uma imagem diferente.');
+            console.error("Erro ao extrair paleta:", error);
+            toast.error('Não foi possível extrair as cores. Tente outra imagem.');
           }
-        };
-        img.onerror = () => {
-          toast.error('Ocorreu um erro ao carregar a imagem.');
         };
         img.src = e.target.result;
       };
@@ -410,270 +292,52 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
     }
   };
 
-  const handlePersonaChange = (event) => {
-    const { name, value } = event.target;
-    setPersona(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handlePersonaMultiSelectChange = (event) => {
-    const { name, value } = event.target;
-    setPersona(prev => ({
-      ...prev,
-      [name]: typeof value === 'string' ? value.split(',') : value,
-    }));
-  };
-
-  const handlePersonaRichTextChange = (name, value) => {
-    setPersona(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handlePersonaCheckboxChange = (category, field) => (event) => {
-    const { checked } = event.target;
-    setPersona(prev => {
-      const currentValues = prev[category] || [];
-      let newValues;
-      if (checked) {
-        newValues = [...currentValues, field];
-      } else {
-        newValues = currentValues.filter(item => item !== field);
-      }
-      return { ...prev, [category]: newValues };
-    });
-  };
-
-  const handlePersonaChipDelete = (fieldName, valueToDelete) => {
-    setPersona(prev => {
-      const currentValues = prev[fieldName] || [];
-      const newValues = currentValues.filter(item => item !== valueToDelete);
-      return { ...prev, [fieldName]: newValues };
-    });
-  };
-
   const handleAutorChange = (event) => {
     const { name, value } = event.target;
     setAutor(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleOtherInputChange = (key, value) => {
-    setOtherItemInputs(prev => ({ ...prev, [key]: value }));
-  };
-
-  const handleAddNewItem = (key) => {
-    const newItem = otherItemInputs[key]?.trim();
-    if (!newItem) return;
-
-    const existingItems = (persona[key] || []).map(item => item.toLowerCase());
-    if (existingItems.includes(newItem.toLowerCase())) {
-        toast.warning('Este item já foi adicionado.');
-        return;
-    }
-
-    setPersona(prev => ({
-      ...prev,
-      [key]: [...(prev[key] || []), newItem]
-    }));
-    handleOtherInputChange(key, ''); // Clear input
-  };
-
-  const handleEditChip = (key, value) => {
-    setEditingChip({ key, value, newValue: value });
-  };
-
-  const handleUpdateChipValue = () => {
-    if (!editingChip) return;
-    const { key, value, newValue } = editingChip;
-    const trimmedNewValue = newValue.trim();
-
-    if (!trimmedNewValue) {
-        toast.error("O valor não pode ser vazio.");
-        setEditingChip(null);
-        return;
-    }
-
-    if (value.toLowerCase() === trimmedNewValue.toLowerCase()) {
-        setEditingChip(null); // No change
-        return;
-    }
-
-    const existingItems = (persona[key] || []).map(item => item.toLowerCase());
-    if (existingItems.includes(trimmedNewValue.toLowerCase())) {
-        toast.warning('Este item já foi adicionado.');
-        setEditingChip(null);
-        return;
-    }
-
-    setPersona(prev => {
-      const currentValues = prev[key] || [];
-      const newValues = currentValues.map(item => (item === value ? trimmedNewValue : item));
-      return { ...prev, [key]: newValues };
-    });
-
-    setEditingChip(null);
-  };
-
-  const handleClearPersona = () => {
-    if (window.confirm('Tem certeza que deseja começar de novo? Todos os dados da persona serão apagados.')) {
-      setPersona({});
-      setIsPersonaWizardVisible(true);
-      toast.success('Dados da persona removidos. Você pode começar a criar uma nova.');
-    }
-  };
-
   const handleClearAutor = () => {
-    if (window.confirm('Tem certeza que deseja começar de novo? Todos os dados do autor serão apagados.')) {
+    if (window.confirm('Tem certeza? Os dados do autor serão apagados.')) {
       setAutor({});
       setIsAutorWizardVisible(true);
-      toast.success('Dados do autor removidos. Você pode começar a criar um novo.');
+      toast.success('Dados do autor removidos.');
     }
-  };
-
-  const handleEditAutorField = () => {
-    setInitialAutorStep(1);
-    setShowAutorWizard(true);
   };
 
   const hasUnsavedChanges = () => {
     if (!initialState) return false;
-    const currentState = { persona, autor, instrucoes, formato, colors };
-    return !isEqual(initialState, currentState);
+    const currentState = { persona_id: selectedPersonaId, autor, instrucoes, formato, colors };
+    // Custom comparison for colors as it's an array of objects
+    const initialColorsHex = initialState.colors.map(c => c.hex);
+    const currentColorsHex = currentState.colors.map(c => c.hex);
+    if (!isEqual(initialColorsHex, currentColorsHex)) return true;
+
+    const stateWithoutColors = { ...currentState };
+    const initialWithoutColors = { ...initialState };
+    delete stateWithoutColors.colors;
+    delete initialWithoutColors.colors;
+
+    return !isEqual(initialWithoutColors, stateWithoutColors);
   };
 
-
-  // Constants for Persona fields
-  const POSICOES_CARGOS = ['Liderança Executiva: CEO, Diretor Executivo, Sócio', 'Gestão de Tecnologia: CTO, Head de Engenharia, Gerente de TI', 'Gestão de Marketing: Gerente de Marketing, Coordenador de Marketing', 'Gestão de Vendas: Gerente de Vendas, Diretor Comercial', 'Gestão de Recursos Humanos: Head de RH, Analista de RH', 'Outro(s)'];
-  const SEGMENTOS_EMPRESA = ['Tecnologia (Software, SaaS, Hardware)', 'Serviços Financeiros (Fintech)', 'E-commerce e Varejo', 'Saúde (Healthtech, Farmacêutica)', 'Manufatura', 'Consultoria e Serviços', 'Outro(s)'];
-  const RESPONSABILIDADES_CHAVE = ['Gerenciamento de Orçamento', 'Tomada de Decisão Estratégica', 'Gestão de Equipes', 'Inovação de Produtos', 'Garantir a Operação e Estabilidade', 'Compliance e Governança', 'Outro(s)'];
-  const DORES_DESAFIOS = {
-    "doresEstrategicos": {
-      "label": "Estratégicos",
-      "items": [
-        {
-          "nome": "Dificuldade em Crescer",
-          "descricao": "A persona se sente estagnada, com pouco ou nenhum avanço em seus objetivos. O desafio é encontrar um caminho claro para a expansão e o sucesso."
-        },
-        {
-          "nome": "Posicionamento de Mercado Fraco",
-          "descricao": "A persona não consegue se diferenciar da concorrência. Sua marca não é reconhecida, e a proposta de valor não é clara para o público."
-        },
-        {
-          "nome": "Falta de Direção Clara",
-          "descricao": "A persona não tem um plano de longo prazo definido. Ela age por impulso, o que resulta em esforços dispersos e resultados inconsistentes."
-        }
-      ]
-    },
-    "doresOperacionais": {
-      "label": "Operacionais",
-      "items": [
-        {
-          "nome": "Processos Ineficientes",
-          "descricao": "A rotina de trabalho é desorganizada, com falhas na comunicação e falta de automação. A persona perde tempo em tarefas manuais que poderiam ser otimizadas."
-        },
-        {
-          "nome": "Falta de Ferramentas Adequadas",
-          "descricao": "A persona utiliza tecnologias e softwares desatualizados que a impedem de ser produtiva, criando gargalos no fluxo de trabalho."
-        },
-        {
-          "nome": "Orçamento Limitado",
-          "descricao": "A necessidade de maximizar os resultados com poucos recursos financeiros, exigindo um alto retorno sobre o investimento (ROI) para justificar os gastos."
-        }
-      ]
-    },
-    "doresPessoas": {
-      "label": "Pessoas e Cultura",
-      "items": [
-        {
-          "nome": "Clima Organizacional Tóxico",
-          "descricao": "O ambiente de trabalho é negativo, com baixa motivação e conflitos interpessoais. O desafio é construir um espaço de trabalho saudável e colaborativo."
-        },
-        {
-          "nome": "Dificuldade em Atrair e Reter Talentos",
-          "descricao": "A persona tem problemas para encontrar profissionais qualificados e, quando os encontra, não consegue mantê-los. Isso gera um ciclo constante de recrutamento."
-        },
-        {
-          "nome": "Falta de Alinhamento e Engajamento",
-          "descricao": "A equipe não está alinhada aos valores e à visão da empresa, o que pode levar a um desempenho abaixo do esperado."
-        }
-      ]
-    },
-    "doresRegulatorios": {
-      "label": "Regulatórios e Métricas",
-      "items": [
-        {
-          "nome": "Falta de Conformidade Legal",
-          "descricao": "A persona não está atualizada sobre as leis e regulamentos do seu setor, o que pode levar a multas, penalidades e problemas legais. O desafio é garantir que todas as operações estejam de acordo com a legislação."
-        },
-        {
-          "nome": "Análise de Dados Complexa",
-          "descricao": "A persona coleta muitos dados, mas não sabe como interpretá-los para extrair insights valiosos. Ela tem dificuldade em identificar o que está funcionando e o que precisa ser melhorado."
-        },
-        {
-          "nome": "Definição de KPIs Inadequados",
-          "descricao": "Os indicadores de desempenho (KPIs) usados não refletem os objetivos estratégicos da persona. Os números não contam a história completa, o que resulta em decisões equivocadas."
-        }
-      ]
-    }
-  }; const GATILHOS_BARREIRAS = {
-    'gatilhosCompra': { label: 'Gatilhos de Compra', items: ['Problema técnico urgente', 'Pressão do board', 'Necessidade de redução de custos', 'Vantagem competitiva'] },
-    'barreirasAdocao': { label: 'Barreiras de Adoção', items: ['Orçamento limitado', 'Resistência à mudança da equipe', 'Preocupação com segurança e compliance', 'Dificuldade de integração'] },
-  };
-
-  const InfoTooltip = ({ title, url }) => (
-    <Tooltip title={<Typography variant="body2" sx={{ p: 1 }}>{title} {url && <MuiLink href={url} target="_blank" rel="noopener noreferrer" sx={{ color: 'cyan', display: 'block', mt: 1 }}>Saiba mais</MuiLink>}</Typography>}>
-      <IconButton>
-        <InfoOutlinedIcon sx={{ color: 'text.secondary', fontSize: '1rem' }} />
-      </IconButton>
-    </Tooltip>
-  );
-
-  const a11yProps = (index) => {
-    return {
-      id: `vertical-tab-${index}`,
-      'aria-controls': `vertical-tabpanel-${index}`,
-    };
-  };
-
-  const colorPalettes = [
-    { name: 'Coolors', url: 'https://coolors.co/' },
-    { name: 'Adobe Color', url: 'https://color.adobe.com/' },
-    { name: 'Color Hunt', url: 'https://colorhunt.co/' },
-    { name: 'Paletton', url: 'https://paletton.com/' },
-  ];
+  const a11yProps = (index) => ({ id: `vertical-tab-${index}`, 'aria-controls': `vertical-tabpanel-${index}` });
 
   return (
     <>
-      <Dialog
-        open={open}
-        onClose={handleClose}
-        fullWidth
-        maxWidth="lg"
-        fullScreen={isMobile}
-      >
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="lg" fullScreen={isMobile}>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box>
             Padrões de Campanha
-            <Button
-              size="small"
-              variant="outlined"
-              startIcon={<DescriptionIcon />}
-              onClick={onShowMemorial}
-              sx={{ ml: 2 }}
-            >
+            <Button size="small" variant="outlined" startIcon={<DescriptionIcon />} onClick={onShowMemorial} sx={{ ml: 2 }}>
               Ver Memorial Descritivo
             </Button>
           </Box>
-          <IconButton onClick={handleClose} aria-label="Fechar">
-            <CloseIcon />
-          </IconButton>
+          <IconButton onClick={handleClose}><CloseIcon /></IconButton>
         </DialogTitle>
         <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs
-              orientation="horizontal"
-              variant="scrollable"
-              value={value}
-              onChange={handleChange}
-              aria-label="Padrões de Campanha"
-            >
+            <Tabs orientation="horizontal" variant="scrollable" value={value} onChange={handleChange}>
               <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Persona" {...a11yProps(0)} />
               <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Autor" {...a11yProps(1)} />
               <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Formato" {...a11yProps(2)} />
@@ -683,533 +347,73 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
           </Box>
           <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
             <TabPanel value={value} index={0}>
-              {isPersonaWizardVisible ? (
-                <PersonaWizardContent
-                  persona={persona}
-                  onGenerate={handleGeneratePersonaWithAI}
-                  isGeneratingPersona={isGeneratingPersona}
-                  onClose={() => setIsPersonaWizardVisible(false)}
-                  onSave={(newPersona) => {
-                    setPersona(newPersona);
-                    setIsPersonaWizardVisible(false);
-                    toast.success('Persona salva com o assistente!');
-                  }}
-                />
-              ) : (
-                <>
-                  <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<AutoAwesomeIcon />}
-                      onClick={() => setShowPersonaGenModal(true)}
-                    >
-                      Gerar
-                    </Button>
-                    <Button
-                      variant="contained"
-                      startIcon={<Add />}
-                      onClick={() => setIsPersonaWizardVisible(true)}
-                    >
-                      Assistente
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      startIcon={<DeleteForeverIcon />}
-                      onClick={handleClearPersona}
-                      disabled={!persona || Object.keys(persona).length === 0}
-                    >
-                      Recomeçar
-                    </Button>
-                  </Stack>
-                  <Grid container spacing={3}>
-                {/* Nome da Persona */}
-                <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <TextField
-                    label="Nome da Persona"
-                    name="nome"
-                    value={persona?.nome || ''}
-                    onChange={handlePersonaChange}
-                    fullWidth
-                    required
-                    variant="outlined"
-                  />
-                  <InfoTooltip title="É a identificação clara e concisa do perfil de cliente ideal que você está descrevendo. Ajuda a humanizar o perfil, tornando-o mais fácil de ser compreendido por toda a equipe." />
-                </Grid>
-
-                {/* Posição/Cargo */}
-                <Grid item xs={12} md={(persona?.posicaoCargo || []).includes('Outro(s)') ? 6 : 12} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel>Posição/Cargo</InputLabel>
-                    <Select
-                      multiple
-                      name="posicaoCargo"
-                      value={persona?.posicaoCargo || []}
-                      onChange={handlePersonaMultiSelectChange}
-                      renderValue={(selected) => (
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {selected.map((value) => (
-                            <Chip
-                              key={value}
-                              label={value}
-                              onDelete={() => handlePersonaChipDelete('posicaoCargo', value)}
-                              onMouseDown={(event) => event.stopPropagation()}
-                            />
-                          ))}
-                        </Box>
-                      )}
-                      label="Posição/Cargo"
-                    >
-                      {POSICOES_CARGOS.map((pos) => (
-                        <MenuItem key={pos} value={pos}>
-                          <Checkbox checked={(persona?.posicaoCargo || []).indexOf(pos) > -1} />
-                          <ListItemText primary={pos} />
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <InfoTooltip title="Este campo identifica a função formal da persona dentro da empresa. A posição define a autoridade de decisão, as responsabilidades e as métricas de sucesso que a persona utiliza." url="https://www.google.com/search?q=https://www.linkedin.com/business/talent/blog/talent-acquisition/types-of-job-titles" />
-                </Grid>
-                {(persona?.posicaoCargo || []).includes('Outro(s)') && (
-                  <Grid item xs={12} md={6}>
-                    <TextField label="Especifique Outro Cargo" name="posicaoCargoOutro" value={persona?.posicaoCargoOutro || ''} onChange={handlePersonaChange} fullWidth required variant="outlined" />
-                  </Grid>
-                )}
-
-                {/* Segmento da Empresa */}
-                <Grid item xs={12} md={(persona?.segmentoEmpresa || []).includes('Outro(s)') ? 6 : 12} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel>Segmento da Empresa</InputLabel>
-                    <Select
-                      multiple
-                      name="segmentoEmpresa"
-                      value={persona?.segmentoEmpresa || []}
-                      onChange={handlePersonaMultiSelectChange}
-                      renderValue={(selected) => (
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {selected.map((value) => (
-                            <Chip
-                              key={value}
-                              label={value}
-                              onDelete={() => handlePersonaChipDelete('segmentoEmpresa', value)}
-                              onMouseDown={(event) => event.stopPropagation()}
-                            />
-                          ))}
-                        </Box>
-                      )}
-                      label="Segmento da Empresa"
-                    >
-                      {SEGMENTOS_EMPRESA.map((seg) => (<MenuItem key={seg} value={seg}><Checkbox checked={(persona?.segmentoEmpresa || []).indexOf(seg) > -1} /><ListItemText primary={seg} /></MenuItem>))}
-                    </Select>
-                  </FormControl>
-                  <InfoTooltip title="Este campo classifica a indústria ou setor de atuação da empresa. O segmento de mercado influencia diretamente os desafios, a cultura e as regulamentações que a persona enfrenta." url="https://www.google.com/search?q=https://blog.hubspot.com/marketing/market-segmentation-guide" />
-                </Grid>
-                {(persona?.segmentoEmpresa || []).includes('Outro(s)') && (
-                  <Grid item xs={12} md={6}>
-                    <TextField label="Especifique Outro Segmento" name="segmentoEmpresaOutro" value={persona?.segmentoEmpresaOutro || ''} onChange={handlePersonaChange} fullWidth required variant="outlined" />
-                  </Grid>
-                )}
-
-                {/* Responsabilidades-Chave */}
-                <Grid item xs={12} md={(persona?.responsabilidadesChave || []).includes('Outro(s)') ? 6 : 12} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel>Responsabilidades-Chave</InputLabel>
-                    <Select
-                      multiple
-                      name="responsabilidadesChave"
-                      value={persona?.responsabilidadesChave || []}
-                      onChange={handlePersonaMultiSelectChange}
-                      renderValue={(selected) => (
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {selected.map((value) => (
-                            <Chip
-                              key={value}
-                              label={value}
-                              onDelete={() => handlePersonaChipDelete('responsabilidadesChave', value)}
-                              onMouseDown={(event) => event.stopPropagation()}
-                            />
-                          ))}
-                        </Box>
-                      )}
-                      label="Responsabilidades-Chave"
-                    >
-                      {RESPONSABILIDADES_CHAVE.map((resp) => (<MenuItem key={resp} value={resp}><Checkbox checked={(persona?.responsabilidadesChave || []).indexOf(resp) > -1} /><ListItemText primary={resp} /></MenuItem>))}
-                    </Select>
-                  </FormControl>
-                  <InfoTooltip title="Detalha as principais tarefas e áreas de atuação da persona. Entender suas responsabilidades ajuda a identificar como sua solução pode facilitar o trabalho dela ou ajudá-la a atingir metas específicas." />
-                </Grid>
-                {(persona?.responsabilidadesChave || []).includes('Outro(s)') && (
-                  <Grid item xs={12} md={6}>
-                    <TextField label="Especifique Outra Responsabilidade" name="responsabilidadesChaveOutro" value={persona?.responsabilidadesChaveOutro || ''} onChange={handlePersonaChange} fullWidth required variant="outlined" />
-                  </Grid>
-                )}
-
-                {/* Dores e Desafios */}
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="subtitle1">Dores e Desafios</Typography>
-                    <InfoTooltip title="Esta seção descreve os problemas e obstáculos que a persona enfrenta. Compreender suas dores permite que você posicione sua solução como uma resposta direta a um problema real." url="https://www.google.com/search?q=https://blog.hotmart.com/pt-br/dor-do-cliente/" />
-                  </Box>
-                  {Object.entries(DORES_DESAFIOS).map(([key, { label, items }]) => {
-                    const customItems = (persona?.[key] || []).filter(
-                      (pItem) => !items.some((i) => i.nome === pItem)
-                    );
-
-                    return (
-                      <Accordion key={key}>
-                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
-                        <AccordionDetails>
-                          <FormGroup>
-                            {items.map((item) => (
-                              <Box key={item.nome} sx={{ display: 'flex', alignItems: 'center' }}>
-                                <FormControlLabel
-                                  control={<Checkbox checked={(persona?.[key] || []).includes(item.nome)} onChange={handlePersonaCheckboxChange(key, item.nome)} />}
-                                  label={item.nome}
-                                />
-                                <InfoTooltip title={item.descricao} />
-                              </Box>
+                <Typography variant="h6">Seleção de Persona</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Selecione uma persona previamente cadastrada para usar como padrão em suas campanhas. Você pode gerenciar as personas na página de <MuiLink component="a" href="/personas" target="_blank">Personas</MuiLink>.
+                </Typography>
+                {loadingPersonas ? <CircularProgress /> : (
+                    <FormControl fullWidth variant="outlined">
+                        <InputLabel id="persona-select-label">Persona</InputLabel>
+                        <Select
+                            labelId="persona-select-label"
+                            value={selectedPersonaId}
+                            onChange={(e) => setSelectedPersonaId(e.target.value)}
+                            label="Persona"
+                        >
+                            <MenuItem value=""><em>Nenhuma</em></MenuItem>
+                            {allPersonas.map((p) => (
+                                <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
                             ))}
-                          </FormGroup>
-
-                          {/* Custom items as chips */}
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
-                            {customItems.map((item) => (
-                              editingChip && editingChip.key === key && editingChip.value === item ? (
-                                <TextField
-                                  key={item}
-                                  value={editingChip.newValue}
-                                  onChange={(e) => setEditingChip({ ...editingChip, newValue: e.target.value })}
-                                  onBlur={handleUpdateChipValue}
-                                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleUpdateChipValue(); } if (e.key === 'Escape') { setEditingChip(null); } }}
-                                  autoFocus
-                                  size="small"
-                                  sx={{ width: 'auto', minWidth: '100px' }}
-                                />
-                              ) : (
-                                <Chip
-                                  key={item}
-                                  label={item}
-                                  onClick={() => handleEditChip(key, item)}
-                                  onDelete={() => handlePersonaChipDelete(key, item)}
-                                />
-                              )
-                            ))}
-                          </Box>
-
-                          {/* Add new item input */}
-                          <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, gap: 1 }}>
-                            <TextField
-                              label={`Adicionar Outra Dor (${label})`}
-                              value={otherItemInputs[key] || ''}
-                              onChange={(e) => handleOtherInputChange(key, e.target.value)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddNewItem(key); } }}
-                              fullWidth
-                              variant="outlined"
-                              size="small"
-                            />
-                            <Button onClick={() => handleAddNewItem(key)} variant="outlined">
-                              Adicionar
-                            </Button>
-                          </Box>
-
-                        </AccordionDetails>
-                      </Accordion>
-                    );
-                  })}
-                </Grid>
-
-                {/* Gatilhos de Compra e Barreiras de Adoção */}
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="subtitle1">Gatilhos de Compra e Barreira de Adoção</Typography>
-                    <InfoTooltip title="Detalha os fatores que levam a persona a buscar uma solução (gatilhos) e os obstáculos que podem atrasar ou impedir a decisão de compra (barreiras)." />
-                  </Box>
-                  {Object.entries(GATILHOS_BARREIRAS).map(([key, { label, items }]) => {
-                    const customItems = (persona?.[key] || []).filter(pItem => !items.includes(pItem));
-
-                    return (
-                        <Accordion key={key}>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary>
-                            <AccordionDetails>
-                                <FormGroup>
-                                    {items.map((item) => (
-                                        <FormControlLabel
-                                            key={item}
-                                            control={<Checkbox checked={(persona?.[key] || []).includes(item)} onChange={handlePersonaCheckboxChange(key, item)} />}
-                                            label={item}
-                                        />
-                                    ))}
-                                </FormGroup>
-
-                                {/* Custom items as chips */}
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
-                                    {customItems.map((item) => (
-                                        editingChip && editingChip.key === key && editingChip.value === item ? (
-                                          <TextField
-                                            key={item}
-                                            value={editingChip.newValue}
-                                            onChange={(e) => setEditingChip({ ...editingChip, newValue: e.target.value })}
-                                            onBlur={handleUpdateChipValue}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleUpdateChipValue(); } if (e.key === 'Escape') { setEditingChip(null); } }}
-                                            autoFocus
-                                            size="small"
-                                            sx={{ width: 'auto', minWidth: '100px' }}
-                                          />
-                                        ) : (
-                                          <Chip
-                                            key={item}
-                                            label={item}
-                                            onClick={() => handleEditChip(key, item)}
-                                            onDelete={() => handlePersonaChipDelete(key, item)}
-                                          />
-                                        )
-                                    ))}
-                                </Box>
-
-                                {/* Add new item input */}
-                                <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, gap: 1 }}>
-                                    <TextField
-                                        label={`Adicionar Outro(a) (${label})`}
-                                        value={otherItemInputs[key] || ''}
-                                        onChange={(e) => handleOtherInputChange(key, e.target.value)}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddNewItem(key); } }}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                    />
-                                    <Button onClick={() => handleAddNewItem(key)} variant="outlined">
-                                        Adicionar
-                                    </Button>
-                                </Box>
-
-                            </AccordionDetails>
-                        </Accordion>
-                    );
-                  })}
-                </Grid>
-
-                {/* Mentalidade e Valores */}
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="subtitle1">Mentalidade e Valores</Typography>
-                    <InfoTooltip title="Descreve a forma de pensar, os valores e a atitude da persona em relação ao trabalho e às decisões. Esta informação é fundamental para adaptar a linguagem e o tom da comunicação." />
-                  </Box>
-                  <TextEditor
-                    value={persona?.mentalidadeValores || ''}
-                    onChange={(value) => handlePersonaRichTextChange('mentalidadeValores', value)}
-                    html={true}
-                  />
-                </Grid>
-
-                {/* Contexto Cultural */}
-                <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Typography variant="subtitle1">Contexto Cultural</Typography>
-                    <InfoTooltip title="Aqui é detalhado o ambiente de trabalho e a cultura organizacional na qual a persona está inserida. Isso inclui o contexto interno, como a convivência com processos antigos, a pressão por inovação ou a colaboração entre equipes." />
-                  </Box>
-                  <TextEditor
-                    value={persona?.contextoCultural || ''}
-                    onChange={(value) => handlePersonaRichTextChange('contextoCultural', value)}
-                    html={true}
-                  />
-                </Grid>
-              </Grid>
-            </>
-          )}
-        </TabPanel>
+                        </Select>
+                    </FormControl>
+                )}
+                <PersonaDetails persona={persona} />
+            </TabPanel>
             <TabPanel value={value} index={1}>
               {isAutorWizardVisible ? (
-                <AutorWizardContent
-                  autor={autor}
-                  onGenerate={handleGenerateAutorWithAI}
-                  isGeneratingAutor={isGeneratingAutor}
-                  onClose={() => setIsAutorWizardVisible(false)}
-                  onSave={(newAutor) => {
-                    setAutor(newAutor);
-                    setIsAutorWizardVisible(false);
-                    toast.success('Autor salvo com o assistente!');
-                  }}
-                />
+                <AutorWizardContent autor={autor} onGenerate={handleGenerateAutorWithAI} isGeneratingAutor={isGeneratingAutor} onClose={() => setIsAutorWizardVisible(false)} onSave={(newAutor) => { setAutor(newAutor); setIsAutorWizardVisible(false); toast.success('Autor salvo com assistente!'); }} />
               ) : (
                 <Stack spacing={2}>
                   <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<AutoAwesomeIcon />}
-                      onClick={() => {
-                        setInitialAutorStep(0);
-                        setShowAutorWizard(true);
-                      }}
-                    >
-                      Gerar
-                    </Button>
-                    <Button
-                      variant="contained"
-                      startIcon={<Add />}
-                      onClick={() => {
-                        setInitialAutorStep(1);
-                        setShowAutorWizard(true);
-                      }}
-                    >
-                      Assistente
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      startIcon={<DeleteForeverIcon />}
-                      onClick={handleClearAutor}
-                      disabled={!autor || Object.keys(autor).length === 0}
-                    >
-                      Recomeçar
-                    </Button>
+                    <Button variant="outlined" startIcon={<AutoAwesomeIcon />} onClick={() => { setInitialAutorStep(0); setIsAutorWizardVisible(true); }}>Gerar</Button>
+                    <Button variant="contained" startIcon={<Add />} onClick={() => { setInitialAutorStep(1); setIsAutorWizardVisible(true); }}>Assistente</Button>
+                    <Button variant="outlined" color="error" startIcon={<DeleteForeverIcon />} onClick={handleClearAutor} disabled={!autor || Object.keys(autor).length === 0}>Recomeçar</Button>
                   </Stack>
-
-                  <TextField
-                    fullWidth
-                    label="Nome"
-                    name="identidade"
-                    value={autor?.identidade || ''}
-                    onChange={handleAutorChange}
-                    inputProps={{ maxLength: 120 }}
-                    helperText={`${(autor?.identidade || '').length}/120 O nome da empresa ou marca que está publicando o conteúdo. Ex: ACME Corporation.`}
-                  />
-                  <HtmlDisplayField
-                    title="Descrição da Empresa"
-                    tooltip="Uma breve descrição que detalha a área de atuação, as especializações e o foco do negócio."
-                    htmlContent={autor?.descricao}
-                    onClick={() => handleOpenEditor('autor.descricao')}
-                    placeholder="Clique para editar a descrição..."
-                  />
-                  <FormControl fullWidth variant="outlined">
-                    <InputLabel>Tipo de Organização</InputLabel>
-                    <Select
-                      name="tipo"
-                      value={autor?.tipo || ''}
-                      onChange={handleAutorChange}
-                      label="Tipo de Organização"
-                    >
-                      {TIPO_ORGANIZACAO_OPTIONS.map((option) => (
-                        <MenuItem key={option} value={option}>
-                          {option}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  {autor?.tipo === 'Outro' && (
-                    <TextField
-                      fullWidth
-                      label="Especifique o Tipo de Organização"
-                      name="tipoOrganizacaoOutro"
-                      value={autor?.tipoOrganizacaoOutro || ''}
-                      onChange={handleAutorChange}
-                      variant="outlined"
-                    />
-                  )}
-                  <HtmlDisplayField
-                    title="Objetivo Estratégico"
-                    tooltip="A meta de longo prazo da mensagem (posicionamento da marca, construção de autoridade, etc.)."
-                    htmlContent={autor?.objetivoEstrategico}
-                    onClick={() => handleOpenEditor('autor.objetivoEstrategico')}
-                    placeholder="Clique para editar o objetivo estratégico..."
-                  />
-                  <HtmlDisplayField
-                    title="Objetivo de Engajamento"
-                    tooltip="O tipo de interação que a mensagem deve estimular no público."
-                    htmlContent={autor?.objetivoEngajamento}
-                    onClick={() => handleOpenEditor('autor.objetivoEngajamento')}
-                    placeholder="Clique para editar o objetivo de engajamento..."
-                  />
+                  <TextField fullWidth label="Nome" name="identidade" value={autor?.identidade || ''} onChange={handleAutorChange} />
+                  <HtmlDisplayField title="Descrição da Empresa" htmlContent={autor?.descricao} onClick={() => handleOpenEditor('autor.descricao')} />
+                  <FormControl fullWidth><InputLabel>Tipo de Organização</InputLabel><Select name="tipo" value={autor?.tipo || ''} onChange={handleAutorChange} label="Tipo de Organização">{TIPO_ORGANIZACAO_OPTIONS.map((o) => (<MenuItem key={o} value={o}>{o}</MenuItem>))}</Select></FormControl>
+                  {autor?.tipo === 'Outro' && <TextField fullWidth label="Especifique o Tipo" name="tipoOrganizacaoOutro" value={autor?.tipoOrganizacaoOutro || ''} onChange={handleAutorChange} />}
+                  <HtmlDisplayField title="Objetivo Estratégico" htmlContent={autor?.objetivoEstrategico} onClick={() => handleOpenEditor('autor.objetivoEstrategico')} />
+                  <HtmlDisplayField title="Objetivo de Engajamento" htmlContent={autor?.objetivoEngajamento} onClick={() => handleOpenEditor('autor.objetivoEngajamento')} />
                 </Stack>
               )}
             </TabPanel>
             <TabPanel value={value} index={2}>
-              <HtmlDisplayField
-                title="Formato"
-                tooltip="Descreva a estrutura do conteúdo. É uma lista? Um passo-a-passo? Uma história? Dê exemplos se possível."
-                htmlContent={formato}
-                onClick={() => handleOpenEditor('formato')}
-                placeholder="Clique para editar o formato..."
-              />
+              <HtmlDisplayField title="Formato" htmlContent={formato} onClick={() => handleOpenEditor('formato')} />
             </TabPanel>
             <TabPanel value={value} index={3}>
-              <HtmlDisplayField
-                title="Instruções"
-                tooltip="Forneça instruções detalhadas para a IA. Inclua o que fazer e o que não fazer, palavras-chave, e o objetivo do conteúdo."
-                htmlContent={instrucoes}
-                onClick={() => handleOpenEditor('instrucoes')}
-                placeholder="Clique para editar as instruções..."
-              />
+              <HtmlDisplayField title="Instruções" htmlContent={instrucoes} onClick={() => handleOpenEditor('instruções')} />
             </TabPanel>
-
             <TabPanel value={value} index={4}>
               <Stack spacing={2} sx={{ mb: 3 }}>
-                <Button
-                  variant="contained"
-                  startIcon={<AutoAwesomeIcon />}
-                  onClick={() => setShowPaletteWizard(true)}
-                  disabled={!onGeneratePalette}
-                  sx={{ alignSelf: 'flex-start' }}
-                >
-                  Assistente de Geração de Paleta
-                </Button>
+                <Button variant="contained" startIcon={<AutoAwesomeIcon />} onClick={() => setShowPaletteWizard(true)} disabled={!onGeneratePalette} sx={{ alignSelf: 'flex-start' }}>Assistente de Paleta</Button>
               </Stack>
-
               <Divider />
-
               <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Cores da Campanha</Typography>
-              <Typography variant="body2" gutterBottom>
-                Defina até 5 cores de referência para a campanha. As cores podem ser geradas pelo assistente, extraídas de uma imagem ou adicionadas manualmente.
-              </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, alignItems: 'center' }}>
                 {colors.map((color, index) => (
                   <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <input
-                      type="color"
-                      value={color.hex}
-                      onChange={(e) => handleColorChange(index, e.target.value)}
-                      style={{ width: '50px', height: '50px', border: 'none', background: 'none', cursor: 'pointer' }}
-                    />
+                    <input type="color" value={color.hex} onChange={(e) => handleColorChange(index, e.target.value)} style={{ width: '50px', height: '50px', border: 'none', cursor: 'pointer' }} />
                     <Typography variant="caption">{color.name || color.hex}</Typography>
                     <Button size="small" onClick={() => removeColor(index)}>Remover</Button>
                   </Box>
                 ))}
-                {colors.length < 5 && (
-                  <Button variant="outlined" onClick={addColor}>Adicionar Cor</Button>
-                )}
+                {colors.length < 5 && <Button variant="outlined" onClick={addColor}>Adicionar Cor</Button>}
               </Box>
-
               <Box sx={{ mt: 4 }}>
-                <Typography variant="h6" gutterBottom>Extrair Cores de Imagem</Typography>
-                <Button
-                  variant="outlined"
-                  startIcon={<UploadFileIcon />}
-                  onClick={() => imageInputRef.current.click()}
-                >
-                  Upload de Imagem
-                </Button>
-                <input
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  ref={imageInputRef}
-                  onChange={handleImageUpload}
-                />
-              </Box>
-
-              <Box sx={{ mt: 4 }}>
-                <Typography variant="h6" gutterBottom>Inspiração de Paletas de Cores</Typography>
-                {colorPalettes.map((palette) => (
-                  <Chip
-                    key={palette.name}
-                    icon={<LinkIcon />}
-                    label={palette.name}
-                    component="a"
-                    href={palette.url}
-                    target="_blank"
-                    clickable
-                    sx={{ mr: 1, mb: 1 }}
-                  />
-                ))}
+                <Typography variant="h6">Extrair Cores de Imagem</Typography>
+                <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => imageInputRef.current.click()}>Upload</Button>
+                <input type="file" hidden accept="image/*" ref={imageInputRef} onChange={handleImageUpload} />
               </Box>
             </TabPanel>
           </Box>
@@ -1219,93 +423,16 @@ Retorne apenas um único objeto JSON com estas chaves, sem texto adicional, mark
           <Button onClick={handleSave} variant="contained">Salvar Padrões</Button>
         </DialogActions>
       </Dialog>
-
-      <TextEditorDialog
-        open={editingField !== null}
-        title={getEditorTitle()}
-        content={getCurrentContent()}
-        onSave={handleSaveEditor}
-        onClose={handleCloseEditor}
-        html={true}
-      />
-
-      <PersonaGenerationModal
-        open={showPersonaGenModal}
-        onClose={() => setShowPersonaGenModal(false)}
-        onGenerate={() => handleGeneratePersonaWithAI(personaDescription)}
-        description={personaDescription}
-        setDescription={setPersonaDescription}
-        isLoading={isGeneratingPersona}
-      />
-
-      <AutorWizard
-        open={showAutorWizard}
-        onClose={() => {
-          setShowAutorWizard(false);
-          setInitialAutorStep(0); // Reset for next time
-        }}
-        autor={autor}
-        initialStep={initialAutorStep}
-        onSave={(newAutor) => {
-          setAutor(newAutor);
-          setShowAutorWizard(false);
-          setInitialAutorStep(0); // Reset for next time
-          toast.success('Autor salvo com sucesso!');
-        }}
-        onGenerate={handleGenerateAutorWithAI}
-        isGeneratingAutor={isGeneratingAutor}
-      />
-
-      <PaletteWizard
-        open={showPaletteWizard}
-        onClose={() => setShowPaletteWizard(false)}
-        onSave={(newPalette) => {
-          setColors(newPalette);
-          toast.success('Paleta de cores aplicada!');
-        }}
-        onGenerate={async (briefing, callback) => {
-          setIsGenerating(true);
-          try {
-            const result = await onGeneratePalette(briefing);
-            callback(result);
-          } catch (error) {
-            toast.error('Erro ao gerar paleta de cores. Tente novamente.');
-            console.error("Error generating color palette:", error);
-          } finally {
-            setIsGenerating(false);
-          }
-        }}
-        isGenerating={isGenerating}
-      />
-
+      <TextEditorDialog open={editingField !== null} title={getEditorTitle()} content={getCurrentContent()} onSave={handleSaveEditor} onClose={handleCloseEditor} html={true} />
+      <AutorWizard open={isAutorWizardVisible} onClose={() => { setIsAutorWizardVisible(false); setInitialAutorStep(0); }} autor={autor} initialStep={initialAutorStep} onSave={(newAutor) => { setAutor(newAutor); setIsAutorWizardVisible(false); setInitialAutorStep(0); toast.success('Autor salvo!'); }} onGenerate={handleGenerateAutorWithAI} isGeneratingAutor={isGeneratingAutor} />
+      <PaletteWizard open={showPaletteWizard} onClose={() => setShowPaletteWizard(false)} onSave={(newPalette) => { setColors(newPalette); toast.success('Paleta de cores aplicada!'); }} onGenerate={async (briefing, callback) => { setIsGenerating(true); try { const result = await onGeneratePalette(briefing); callback(result); } catch (error) { toast.error('Erro ao gerar paleta.'); } finally { setIsGenerating(false); } }} isGenerating={isGenerating} />
       <Dialog open={isConfirmCloseOpen} onClose={() => setIsConfirmCloseOpen(false)}>
         <DialogTitle>Descartar Alterações?</DialogTitle>
-        <DialogContent>
-          <Typography>Você tem alterações não salvas. O que você gostaria de fazer?</Typography>
-        </DialogContent>
+        <DialogContent><Typography>Você tem alterações não salvas.</Typography></DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsConfirmCloseOpen(false)} color="primary">
-            Cancelar
-          </Button>
-          <Button
-            onClick={() => {
-              setIsConfirmCloseOpen(false);
-              onClose();
-            }}
-            color="secondary"
-          >
-            Descartar
-          </Button>
-          <Button
-            onClick={() => {
-              handleSave();
-              setIsConfirmCloseOpen(false);
-            }}
-            variant="contained"
-            color="primary"
-          >
-            Salvar e Sair
-          </Button>
+          <Button onClick={() => setIsConfirmCloseOpen(false)}>Cancelar</Button>
+          <Button onClick={() => { setIsConfirmCloseOpen(false); onClose(); }}>Descartar</Button>
+          <Button onClick={() => { handleSave(); setIsConfirmCloseOpen(false); }} variant="contained">Salvar e Sair</Button>
         </DialogActions>
       </Dialog>
     </>
