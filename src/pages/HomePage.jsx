@@ -653,7 +653,8 @@ function HomePage() {
             }
 
             // If no image exists for this index (e.g., a new row was added),
-            // create a new image data object using the global background.
+            // create a new, complete image data object using the global background
+            // and default values to prevent state instability and flickering.
             return {
                 index,
                 record,
@@ -661,6 +662,12 @@ function HomePage() {
                 url: null,
                 filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
                 backgroundImage: backgroundImage, // Use global background for new rows
+                // Initialize all custom properties to null to ensure a consistent object shape
+                customFieldPositions: null,
+                customFieldStyles: null,
+                customBrandElements: null,
+                customImageFilters: null,
+                fontScale: 1,
             };
         });
         return newGeneratedImages;
@@ -805,7 +812,6 @@ function HomePage() {
     setGeneratedImageUrl(null);
     setConteudoMedio('');
     setConteudoPequeno('');
-    setConteudoFormatado('');
     setFollowupPosts([]);
     setFollowupPostsQuantity(5);
   };
@@ -836,6 +842,7 @@ function HomePage() {
       });
 
       // Create a fresh image data array, discarding any previous state.
+      // Initialize with a complete, stable object shape to prevent flickering.
       const newGeneratedImagesData = csvDataResult.map((record, index) => ({
         index,
         record,
@@ -843,6 +850,12 @@ function HomePage() {
         url: null,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
         backgroundImage: backgroundImage, // Always use the global background for new items
+        // Initialize all custom properties to null to ensure a consistent object shape
+        customFieldPositions: null,
+        customFieldStyles: null,
+        customBrandElements: null,
+        customImageFilters: null,
+        fontScale: 1,
       }));
 
       // Set all states together

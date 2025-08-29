@@ -161,15 +161,26 @@ const GeneratedImageEditor = ({
   }
 
   const handleSave = () => {
-    onSave({
-      ...imageData, // Keeps original data like index
-      record: editedRecord, // Passes the updated record
-      backgroundImage: currentBackgroundImageForEditor, // Explicitly pass back the background being used
+    // Construct a new object explicitly to avoid propagating stale props from imageData
+    const savedData = {
+      // Core identifiers from the original imageData that should not change
+      index: imageData.index,
+      blob: imageData.blob,
+      url: imageData.url,
+      filename: imageData.filename,
+
+      // The state that was actually edited in this component
+      record: editedRecord,
       fieldPositions: editedPositions,
       fieldStyles: editedStyles,
       brandElements: editedBrandElements,
+      imageFilters: editedImageFilters, // Pass back the edited filters
       fontScale: fontScale,
-    });
+
+      // Explicitly set the background image that was used for editing
+      backgroundImage: currentBackgroundImageForEditor,
+    };
+    onSave(savedData);
     onClose();
   };
 
