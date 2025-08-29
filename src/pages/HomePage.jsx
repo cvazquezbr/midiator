@@ -121,6 +121,7 @@ function HomePage() {
   const [fieldPositions, setFieldPositions] = useState({});
   const [fieldStyles, setFieldStyles] = useState({});
   const [initialFieldStyles, setInitialFieldStyles] = useState({});
+  const [templateFieldStyles, setTemplateFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
   const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 });
   const [generatedImagesData, setGeneratedImagesData] = useState([]);
@@ -199,6 +200,7 @@ function HomePage() {
     setPromptNumRecords(state.promptNumRecords ?? 10);
     setPromptText(state.promptText ?? '');
     setFieldPositions(state.fieldPositions ?? {});
+    setTemplateFieldStyles(state.templateFieldStyles ?? {});
 
     // Ensure loaded fieldStyles are complete with all default values.
     const loadedStyles = state.fieldStyles ?? {};
@@ -257,6 +259,7 @@ function HomePage() {
       followupPostsQuantity,
       fieldPositions,
       fieldStyles,
+      templateFieldStyles,
       imageFilters,
       brandElements,
       backgroundImage,
@@ -572,7 +575,13 @@ function HomePage() {
   const handleImageDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
   const handleImageDragEnter = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(true); };
   const handleImageDragLeave = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(false); };
-  const handleNext = () => { setActiveStep((prevActiveStep) => prevActiveStep + 1); };
+  const handleNext = () => {
+    if (activeStep === 3) {
+      console.log("[HomePage] Snapshotting styles from step 3 to templateFieldStyles");
+      setTemplateFieldStyles(fieldStyles);
+    }
+    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+  };
   const handleBack = () => { setActiveStep((prevActiveStep) => prevActiveStep - 1); };
   const canProceedToStep = (step) => {
     switch (step) {
@@ -982,6 +991,8 @@ function HomePage() {
               currentPreviewIndex={currentPreviewIndex}
               setCurrentPreviewIndex={setCurrentPreviewIndex}
               onFontScaleChange={setFontScale}
+              templateFieldStyles={templateFieldStyles}
+              activeStep={activeStep}
             />
           </div>
           <div hidden={activeStep !== 4}><ImageGeneratorFrontendOnly csvData={csvData} backgroundImage={backgroundImage} fieldPositions={fieldPositions} fieldStyles={fieldStyles} displayedImageSize={displayedImageSize} csvHeaders={csvHeaders} colorPalette={colorPalette} standardsColors={standardsColors} setGeneratedImagesData={setGeneratedImagesData} initialGeneratedImagesData={generatedImagesData} onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} originalImageSize={originalImageSize} imageFilters={imageFilters} brandElements={brandElements} onBrandElementsChange={setBrandElements} fontScale={fontScale} /></div>

@@ -68,6 +68,8 @@ const FormattingPanel = ({
   onDeselectField,
   onOpenHtmlEditor,
   standardsColors,
+  templateFieldStyles,
+  activeStep,
 }) => {
   const fonts = [
     // Sans-serif
@@ -102,29 +104,27 @@ const FormattingPanel = ({
   };
 
   const resetFieldStyle = (field) => {
-    // Busca o estilo inicial para este campo específico
-    const initialStyle = initialFieldStyles?.[field];
+    let styleToApply = null;
 
-    if (initialStyle) {
-      // Se encontrou, aplica o estilo inicial
-      setFieldStyles(prev => ({ ...prev, [field]: initialStyle }));
+    // Se estamos em um passo posterior à formatação (step 3), usamos o template salvo.
+    if (activeStep > 3 && templateFieldStyles && Object.keys(templateFieldStyles).length > 0) {
+      styleToApply = templateFieldStyles[field];
+      if (!styleToApply) {
+        console.warn(`[FormattingPanel] Estilo de template para o campo "${field}" não encontrado. Usando fallback para estilo inicial.`);
+      }
+    }
+
+    // Se não aplicamos o estilo do template (ou se falhou), usamos o estilo inicial.
+    // Isso cobre o caso de estarmos no passo 3, ou o fallback do passo > 3.
+    if (!styleToApply) {
+      styleToApply = initialFieldStyles?.[field];
+    }
+
+    if (styleToApply) {
+      setFieldStyles(prev => ({ ...prev, [field]: styleToApply }));
     } else {
-      // Fallback para o caso de não encontrar o estilo inicial (não deve acontecer)
-      console.warn(`[FormattingPanel] Estilo inicial para o campo "${field}" não encontrado. O reset pode não funcionar como esperado.`);
-      // Opcionalmente, pode-se manter o reset para um default genérico aqui
-      const defaultStyle = {
-        fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal', textDecoration: 'none',
-        color: '#000000', textStroke: false, strokeColor: '#ffffff', strokeWidth: 2, textShadow: false,
-        shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
-        textAlign: 'left', verticalAlign: 'top',
-        backgroundColor: 'rgba(0,0,0,0)',
-        borderColor: '#000000',
-        borderWidth: 0,
-        borderRadius: 0,
-        padding: 5,
-        backgroundOpacity: 1,
-      };
-      setFieldStyles(prev => ({ ...prev, [field]: defaultStyle }));
+      // Se nenhum estilo foi encontrado, loga um erro.
+      console.error(`[FormattingPanel] Nenhum estilo (inicial ou de template) encontrado para o campo "${field}". O reset não pode ser executado.`);
     }
   };
 

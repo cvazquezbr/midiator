@@ -53,6 +53,8 @@ const ImageStep = ({
   isHtmlField,
   currentPreviewIndex,
   setCurrentPreviewIndex,
+  templateFieldStyles,
+  activeStep,
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [fontScale, setFontScale] = useState(1);
@@ -194,6 +196,8 @@ const ImageStep = ({
               onOpenHtmlEditor={onOpenHtmlEditor}
               standardsColors={standardsColors}
               fontScale={fontScale}
+              templateFieldStyles={templateFieldStyles}
+              activeStep={activeStep}
             />
           </Grid>
         ) : (
@@ -218,6 +222,8 @@ const ImageStep = ({
               onOpenHtmlEditor={onOpenHtmlEditor}
               standardsColors={standardsColors}
               fontScale={fontScale}
+              templateFieldStyles={templateFieldStyles}
+              activeStep={activeStep}
             />
           </>
         )}
