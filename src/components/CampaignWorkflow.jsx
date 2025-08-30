@@ -25,18 +25,18 @@ import TextEditorDialog from './TextEditorDialog';
 import MyCampaignsStep from './MyCampaignsStep';
 
 // Other imports
-import { lightTheme, darkTheme } from '../../theme.js';
-import { useUserAuth } from '../../context/UserAuthContext';
-import { useSettings } from '../../context/SettingsContext';
-import geminiAPI from '../../utils/geminiAPI';
-import { getGeminiApiKey, saveGeminiApiKey } from '../../utils/geminiCredentials';
-import { getGoogleCloudTTSCredentials, saveGoogleCloudTTSCredentials } from '../../utils/googleCloudTTSCredentials';
-import { getWordpressConfig, saveWordpressConfig } from '../../utils/wordpressCredentials';
-import { loadSettingsFromDb } from '../../utils/credentialsManager';
-import { saveCampaignPrompt } from '../../utils/campaignPrompt.js';
-import { saveCampaign, loadCampaign, getCampaigns } from '../../utils/campaignState.js';
-import { parseCsv, handleDownloadExampleCSV } from '../../lib/helpers';
-import { generateIAContent, generateCampaignContent, generateImagePrompt, generateSummary, generateFormattedContent, generateFollowupPosts, exportHtml, generateColorPalette } from '../../utils/generationHandlers';
+import { lightTheme, darkTheme } from '../theme.js';
+import { useUserAuth } from '../context/UserAuthContext';
+import { useSettings } from '../context/SettingsContext';
+import geminiAPI from '../utils/geminiAPI';
+import { getGeminiApiKey, saveGeminiApiKey } from '../utils/geminiCredentials';
+import { getGoogleCloudTTSCredentials, saveGoogleCloudTTSCredentials } from '../utils/googleCloudTTSCredentials';
+import { getWordpressConfig, saveWordpressConfig } from '../utils/wordpressCredentials';
+import { loadSettingsFromDb } from '../utils/credentialsManager';
+import { saveCampaignPrompt } from '../utils/campaignPrompt.js';
+import { saveCampaign, loadCampaign, getCampaigns } from '../utils/campaignState.js';
+import { parseCsv, handleDownloadExampleCSV } from '../lib/helpers';
+import { generateIAContent, generateCampaignContent, generateImagePrompt, generateSummary, generateFormattedContent, generateFollowupPosts, exportHtml, generateColorPalette } from '../utils/generationHandlers';
 
 function CampaignWorkflow() {
     const { user } = useUserAuth();
