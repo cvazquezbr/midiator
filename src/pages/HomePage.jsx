@@ -164,7 +164,9 @@ function HomePage() {
                     setDarkMode={setDarkMode}
                     onShowPersonas={() => setCurrentView('personas')}
                     onShowCampaigns={() => setCurrentView('campaign')}
-                    // Pass other necessary props...
+                    isMobile={isMobile}
+                    currentView={currentView}
+                    onTogglePersonaDrawer={() => setPersonaDrawerOpen(!personaDrawerOpen)}
                 />
 
                 {currentView === 'campaign' && (

@@ -22,7 +22,6 @@ import PaletteWizard from './PaletteWizard';
 import LoadCampaignModal from './LoadCampaignModal';
 import SaveCampaignModal from './SaveCampaignModal';
 import TextEditorDialog from './TextEditorDialog';
-import MyCampaignsStep from './MyCampaignsStep';
 
 // Other imports
 import { lightTheme, darkTheme } from '../theme.js';
@@ -51,7 +50,7 @@ function CampaignWorkflow() {
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
     // Campaign state
-    const [activeStep, setActiveStep] = useState(0);
+    const [activeStep, setActiveStep] = useState(1);
     const [problema, setProblema] = useState('');
     const [solucao, setSolucao] = useState('');
     const [campaignContent, setCampaignContent] = useState(null);
@@ -117,7 +116,7 @@ function CampaignWorkflow() {
     const handleNext = () => setActiveStep((prevActiveStep) => prevActiveStep + 1);
     const handleBack = () => setActiveStep((prevActiveStep) => prevActiveStep - 1);
     const handleReset = () => {
-        setActiveStep(0);
+        setActiveStep(1);
         setProblema('');
         setSolucao('');
         setCampaignContent(null);
@@ -244,24 +243,22 @@ function CampaignWorkflow() {
     return (
         <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
             <Toolbar />
-            {activeStep === 0 ? <MyCampaignsStep onLoadCampaign={() => {}} onEditCampaign={() => {}} onCreateNew={() => setActiveStep(1)} /> : (
-                <>
-                    <Stepper activeStep={activeStep - 1} alternativeLabel sx={{ mb: 4 }}>
-                        {steps.map((step) => (
-                            <Step key={step.label}>
-                                <StepLabel>{step.label}</StepLabel>
-                            </Step>
-                        ))}
-                    </Stepper>
-                    {steps[activeStep - 1].component}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-                        <Button disabled={activeStep === 1} onClick={handleBack}>Voltar</Button>
-                        <Button variant="contained" onClick={handleNext} disabled={activeStep === steps.length}>
-                            {activeStep === steps.length ? 'Finalizado' : 'Próximo'}
-                        </Button>
-                    </Box>
-                </>
-            )}
+            <>
+                <Stepper activeStep={activeStep - 1} alternativeLabel sx={{ mb: 4 }}>
+                    {steps.map((step) => (
+                        <Step key={step.label}>
+                            <StepLabel>{step.label}</StepLabel>
+                        </Step>
+                    ))}
+                </Stepper>
+                {steps[activeStep - 1].component}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+                    <Button disabled={activeStep === 1} onClick={handleBack}>Voltar</Button>
+                    <Button variant="contained" onClick={handleNext} disabled={activeStep === steps.length}>
+                        {activeStep === steps.length ? 'Finalizado' : 'Próximo'}
+                    </Button>
+                </Box>
+            </>
         </Box>
     );
 }
