@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { Box, Toolbar, Button, Stepper, Step, StepLabel, Paper } from '@mui/material';
+import { Box, Button, Stepper, Step, StepLabel, Drawer, Typography, StepConnector, Paper, IconButton } from '@mui/material';
+import { Check, ArrowBack } from '@mui/icons-material';
 import { toast } from 'sonner';
 
 // Child Step Components
@@ -11,21 +12,28 @@ import ImageStep from './ImageStep';
 import AudioGenerator from './AudioGenerator';
 import VideoGenerator from './VideoGenerator2';
 import Publisher from './Publisher';
-import MyCampaignsStep from './MyCampaignsStep'; // Re-adding this
 
 // Other imports
 import { useUserAuth } from '../context/UserAuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { generateCampaignContent, generateCampaignImagePrompt, generateCampaignImage, generateFormattedContent, generateFollowupPosts, generateFollowupPlan } from '../utils/generationHandlers';
 
-function CampaignWorkflow() {
+const drawerWidth = 280;
+
+function CampaignWorkflow({ campaignToEdit, onExitWorkflow }) {
     const { user } = useUserAuth();
     const { settings } = useSettings();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-    // Campaign state
-    const [activeStep, setActiveStep] = useState(0); // Start at step 0 for My Campaigns
+    const [drawerOpen, setDrawerOpen] = useState(!isMobile);
+
+    useEffect(() => {
+        setDrawerOpen(!isMobile);
+    }, [isMobile]);
+
+    // Campaign state and other states...
+    const [activeStep, setActiveStep] = useState(1);
     const [problema, setProblema] = useState('');
     const [solucao, setSolucao] = useState('');
     const [campaignContent, setCampaignContent] = useState(null);
@@ -39,8 +47,6 @@ function CampaignWorkflow() {
     const [isGeneratingConteudoFormatado, setIsGeneratingConteudoFormatado] = useState(false);
     const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-
-    // Other states...
     const [csvData, setCsvData] = useState([]);
     const [csvHeaders, setCsvHeaders] = useState([]);
     const [inputMethod, setInputMethod] = useState('ia');
@@ -67,23 +73,24 @@ function CampaignWorkflow() {
     const [currentCampaign, setCurrentCampaign] = useState(null);
     const [editingFieldInfo, setEditingFieldInfo] = useState({ fieldId: null, content: '' });
 
+    useEffect(() => {
+        if (campaignToEdit) {
+            setProblema(campaignToEdit.problema || '');
+            setSolucao(campaignToEdit.solucao || '');
+            setCampaignContent(campaignToEdit.campaign_content || null);
+            setCurrentCampaign(campaignToEdit);
+            setActiveStep(1);
+        }
+    }, [campaignToEdit]);
+
     // Handlers
-    const handleNext = () => setActiveStep((prevActiveStep) => prevActiveStep + 1);
-    const handleBack = () => setActiveStep((prevActiveStep) => prevActiveStep - 1);
+    const handleNext = () => setActiveStep((prev) => (prev < steps.length ? prev + 1 : prev));
+    const handleBack = () => setActiveStep((prev) => (prev > 1 ? prev - 1 : prev));
+    const handleStepClick = (stepIndex) => setActiveStep(stepIndex + 1);
 
     const handleReset = () => {
-        setActiveStep(0); // Reset to My Campaigns view
-        setProblema('');
-        setSolucao('');
-        setCampaignContent(null);
-        setFollowupPosts([]);
-        setGeneratedImageUrl(null);
-        setCsvData([]);
-        setBackgroundImage(null);
-        setGeneratedImagesData([]);
-        setGeneratedAudioData([]);
-        setGeneratedVideosData([]);
-        toast.info("Campanha resetada.");
+        // Reset state and exit
+        if (onExitWorkflow) onExitWorkflow();
     };
 
     const handleGenerateCampaignContent = async () => {
@@ -146,6 +153,7 @@ function CampaignWorkflow() {
         }
     };
 
+
     const steps = [
         { label: 'Campanha', component: <Campaign problema={problema} setProblema={setProblema} solucao={solucao} setSolucao={setSolucao} campaignContent={campaignContent} isGeneratingCampaign={isGeneratingCampaign} handleGenerateCampaignContent={handleGenerateCampaignContent} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleResetCampaign={() => setCampaignContent(null)} setEditingField={(field) => setEditingFieldInfo({ fieldId: 'campaign', content: campaignContent[field], fieldName: field })} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} followupPosts={followupPosts} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} setCampaignContent={setCampaignContent} onEditFollowup={(index, content) => setEditingFieldInfo({ fieldId: `followup_${index}`, content, fieldName: 'conteudo' })} /> },
         { label: 'Posts Curtos', component: <PostsCurtosStep csvData={csvData} setCsvData={setCsvData} csvHeaders={csvHeaders} setCsvHeaders={setCsvHeaders} inputMethod={inputMethod} setInputMethod={setInputMethod} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} isGenerating={isGenerating} setIsGenerating={setIsGenerating} /> },
@@ -155,29 +163,66 @@ function CampaignWorkflow() {
         { label: 'Publicar', component: <Publisher settings={settings} campaignContent={campaignContent} generatedImagesData={generatedImagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedImages={selectedImages} setSelectedImages={setSelectedVideos} currentCampaign={currentCampaign} /> },
     ];
 
+    const drawerContent = (
+        <div>
+            <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6">Etapas</Typography>
+                <IconButton onClick={onExitWorkflow}>
+                    <ArrowBack />
+                </IconButton>
+            </Box>
+            <Stepper activeStep={activeStep - 1} orientation="vertical" connector={<StepConnector sx={{ ml: 1.5 }} />}>
+                {steps.map((step, index) => (
+                    <Step key={step.label} completed={activeStep > index + 1}>
+                        <StepLabel onClick={() => handleStepClick(index)} sx={{ cursor: 'pointer', p: 1 }}>
+                            {step.label}
+                        </StepLabel>
+                    </Step>
+                ))}
+            </Stepper>
+        </div>
+    );
+
     return (
-        <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-            <Toolbar />
-            {activeStep === 0 ? (
-                <MyCampaignsStep onCreateNew={() => setActiveStep(1)} />
-            ) : (
-                <Paper sx={{p:3}}>
-                    <Stepper activeStep={activeStep - 1} alternativeLabel sx={{ mb: 4 }}>
-                        {steps.map((step) => (
-                            <Step key={step.label}>
-                                <StepLabel>{step.label}</StepLabel>
-                            </Step>
-                        ))}
-                    </Stepper>
+        <Box sx={{ display: 'flex', width: '100%' }}>
+            <Drawer
+                variant={isMobile ? 'temporary' : 'persistent'}
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)} // This will be handled by a prop from HomePage later
+                sx={{
+                    width: drawerWidth,
+                    flexShrink: 0,
+                    [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+                }}
+            >
+                {drawerContent}
+            </Drawer>
+            <Box component="main" sx={{
+                flexGrow: 1,
+                p: { xs: 1, sm: 2, md: 3 },
+                transition: theme.transitions.create('margin', {
+                    easing: theme.transitions.easing.sharp,
+                    duration: theme.transitions.duration.leavingScreen,
+                }),
+                marginLeft: `-${drawerWidth}px`,
+                ...(!isMobile && drawerOpen && {
+                    transition: theme.transitions.create('margin', {
+                        easing: theme.transitions.easing.easeOut,
+                        duration: theme.transitions.duration.enteringScreen,
+                    }),
+                    marginLeft: 0,
+                }),
+            }}>
+                <Paper sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
                     {steps[activeStep - 1].component}
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
                         <Button disabled={activeStep === 1} onClick={handleBack}>Voltar</Button>
-                        <Button variant="contained" onClick={handleNext} disabled={activeStep - 1 >= steps.length - 1}>
-                            {activeStep - 1 >= steps.length - 1 ? 'Finalizado' : 'Próximo'}
+                        <Button variant="contained" onClick={handleNext} disabled={activeStep >= steps.length}>
+                            {activeStep >= steps.length ? 'Finalizado' : 'Próximo'}
                         </Button>
                     </Box>
                 </Paper>
-            )}
+            </Box>
         </Box>
     );
 }
