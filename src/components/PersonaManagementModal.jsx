@@ -225,7 +225,12 @@ const PersonaManagementModal = ({ open, onClose }) => {
               sx={{
                 width: drawerWidth,
                 flexShrink: 0,
-                '& .MuiDrawer-paper': { width: drawerWidth, boxSizing: 'border-box', position: 'relative', height: '100%' },
+                '& .MuiDrawer-paper': {
+                  width: drawerWidth,
+                  boxSizing: 'border-box',
+                  position: isMobile ? 'fixed' : 'relative',
+                  height: '100%'
+                },
               }}
             >
               {drawerContent}
