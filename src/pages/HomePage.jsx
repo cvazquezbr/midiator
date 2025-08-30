@@ -3,7 +3,8 @@ import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Box, Toolbar, Paper, Typography, Button, List, ListItemButton, ListItemText, Drawer, CircularProgress, Alert, IconButton, Divider } from '@mui/material';
+import { Box, Toolbar, Paper, Typography, Button, List, ListItemButton, ListItemText, Drawer, CircularProgress, Alert, IconButton } from '@mui/material';
+import Divider from '@mui/material/Divider';
 import { Add, ChevronLeft } from '@mui/icons-material';
 import { toast } from 'sonner';
 
