@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { Box, Button, Drawer, Typography, Paper, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Divider } from '@mui/material';
-import { ArrowBack, Description, Edit, Image, FormatShapes, Movie, Publish, CheckCircleOutline, RadioButtonUnchecked, ImageSearch } from '@mui/icons-material';
+import { ArrowBack, Description, Edit, Image, Audiotrack as AudioIcon, Movie, Publish, ImageSearch as GerarImagensIcon, FormatShapes as PosicionarIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 
 // Child Step Components
@@ -73,7 +73,13 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow, drawerOpen, onToggle
             setProblema(data.problema || '');
             setSolucao(data.solucao || '');
             setCampaignContent(data.campaignContent || null);
-            // ... and so on for all other states
+            setFollowupPosts(data.followupPosts || []);
+            setGeneratedImageUrl(data.generatedImageUrl || null);
+            setCsvData(data.csvData || []);
+            setBackgroundImage(data.backgroundImage || null);
+            setGeneratedImagesData(data.generatedImagesData || []);
+            setGeneratedAudioData(data.generatedAudioData || []);
+            setGeneratedVideosData(data.generatedVideosData || []);
             setCurrentCampaign(campaignToEdit);
             setActiveStep(1);
         }
@@ -145,19 +151,27 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow, drawerOpen, onToggle
     };
 
     const steps = [
-        { label: 'Dados', description: 'Carregue CSV ou criar manualmente', icon: <Description />, component: <Campaign problema={problema} setProblema={setProblema} solucao={solucao} setSolucao={setSolucao} campaignContent={campaignContent} isGeneratingCampaign={isGeneratingCampaign} handleGenerateCampaignContent={handleGenerateCampaignContent} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleResetCampaign={() => setCampaignContent(null)} setEditingField={(field) => setEditingFieldInfo({ fieldId: 'campaign', content: campaignContent[field], fieldName: field })} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} followupPosts={followupPosts} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} setCampaignContent={setCampaignContent} onEditFollowup={(index, content) => setEditingFieldInfo({ fieldId: `followup_${index}`, content, fieldName: 'conteudo' })} /> },
-        { label: 'Editar Dados', description: 'Adicione, edite ou remova registros', icon: <Edit />, component: <PostsCurtosStep csvData={csvData} setCsvData={setCsvData} csvHeaders={csvHeaders} setCsvHeaders={setCsvHeaders} inputMethod={inputMethod} setInputMethod={setInputMethod} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} isGenerating={isGenerating} setIsGenerating={setIsGenerating} /> },
-        { label: 'Upload da Imagem', description: 'Carregue a imagem de fundo PNG/JPG', icon: <Image />, component: <ImageStep backgroundImage={backgroundImage} setBackgroundImage={setBackgroundImage} csvHeaders={csvHeaders} fieldPositions={fieldPositions} setFieldPositions={setFieldPositions} fieldStyles={fieldStyles} setFieldStyles={setFieldStyles} initialFieldStyles={initialFieldStyles} setInitialFieldStyles={setInitialFieldStyles} selectedField={selectedField} setSelectedField={setSelectedField} csvData={csvData} onImageDisplayedSizeChange={setImageDisplayedSize} originalImageSize={originalImageSize} setOriginalImageSize={setOriginalImageSize} imageFilters={imageFilters} setImageFilters={setImageFilters} brandElements={brandElements} setBrandElements={setBrandElements} onOpenHtmlEditor={(fieldId) => setEditingFieldInfo({ fieldId, content: csvData[0]?.[fieldId] || '', fieldName: fieldId })} /> },
-        { label: 'Posicionar e Formatar', description: 'Posicione os campos e configure a formatação', icon: <FormatShapes />, component: <AudioGenerator csvData={csvData} fieldPositions={fieldPositions} onAudiosGenerated={setGeneratedAudioData} initialAudioData={generatedAudioData} /> },
-        { label: 'Gerar Imagens', description: 'Gere as imagens finais', icon: <ImageSearch />, component: <VideoGenerator generatedImagesData={generatedImagesData} generatedAudioData={generatedAudioData} onVideoGenerated={setGeneratedVideosData} /> },
-        { label: 'Publicar', description: 'Agende ou publique o conteúdo', icon: <Publish />, component: <Publisher settings={settings} campaignContent={campaignContent} generatedImagesData={generatedImagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedImages={selectedImages} setSelectedImages={setSelectedVideos} currentCampaign={currentCampaign} /> },
+        { label: 'Campanha', description: 'Defina o problema e a solução.', icon: <Description />, component: <Campaign problema={problema} setProblema={setProblema} solucao={solucao} setSolucao={setSolucao} campaignContent={campaignContent} isGeneratingCampaign={isGeneratingCampaign} handleGenerateCampaignContent={handleGenerateCampaignContent} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleResetCampaign={() => setCampaignContent(null)} setEditingField={(field) => setEditingFieldInfo({ fieldId: 'campaign', content: campaignContent[field], fieldName: field })} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} followupPosts={followupPosts} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} setCampaignContent={setCampaignContent} onEditFollowup={(index, content) => setEditingFieldInfo({ fieldId: `followup_${index}`, content, fieldName: 'conteudo' })} /> },
+        { label: 'Editar Dados', description: 'Adicione, edite ou remova registros.', icon: <Edit />, component: <PostsCurtosStep csvData={csvData} setCsvData={setCsvData} csvHeaders={csvHeaders} setCsvHeaders={setCsvHeaders} inputMethod={inputMethod} setInputMethod={setInputMethod} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} isGenerating={isGenerating} setIsGenerating={setIsGenerating} /> },
+        { label: 'Upload da Imagem', description: 'Carregue a imagem de fundo.', icon: <Image />, component: <ImageStep backgroundImage={backgroundImage} setBackgroundImage={setBackgroundImage} csvHeaders={csvHeaders} fieldPositions={fieldPositions} setFieldPositions={setFieldPositions} fieldStyles={fieldStyles} setFieldStyles={setFieldStyles} initialFieldStyles={initialFieldStyles} setInitialFieldStyles={setInitialFieldStyles} selectedField={selectedField} setSelectedField={setSelectedField} csvData={csvData} onImageDisplayedSizeChange={setImageDisplayedSize} originalImageSize={originalImageSize} setOriginalImageSize={setOriginalImageSize} imageFilters={imageFilters} setImageFilters={setImageFilters} brandElements={brandElements} setBrandElements={setBrandElements} onOpenHtmlEditor={(fieldId) => setEditingFieldInfo({ fieldId, content: csvData[0]?.[fieldId] || '', fieldName: fieldId })} /> },
+        { label: 'Posicionar e Formatar', description: 'Ajuste os campos na imagem.', icon: <FormatShapes />, component: <div /> /* Placeholder */ },
+        { label: 'Gerar Imagens', description: 'Crie as imagens para os posts.', icon: <GerarImagensIcon />, component: <div /> /* Placeholder */ },
+        { label: 'Gerar Áudio', description: 'Gere a narração para os vídeos.', icon: <AudioIcon />, component: <AudioGenerator csvData={csvData} fieldPositions={fieldPositions} onAudiosGenerated={setGeneratedAudioData} initialAudioData={generatedAudioData} /> },
+        { label: 'Gerar Vídeo', description: 'Compile as imagens e áudios.', icon: <Movie />, component: <VideoGenerator generatedImagesData={generatedImagesData} generatedAudioData={generatedAudioData} onVideoGenerated={setGeneratedVideosData} /> },
+        { label: 'Publicar', description: 'Agende ou publique o conteúdo.', icon: <Publish />, component: <Publisher settings={settings} campaignContent={campaignContent} generatedImagesData={generatedImagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedImages={selectedImages} setSelectedImages={setSelectedVideos} currentCampaign={currentCampaign} /> },
     ];
 
     const drawerContent = (
-      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <Box sx={{ p: 2 }}>
-          <Typography variant="h5" sx={{ mb: 2, color: 'white' }}>Etapas do Processo</Typography>
-          <List>
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#1e1e2f', color: 'white' }}>
+        <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
+            <IconButton onClick={onExitWorkflow} sx={{color: 'white', mr: 1}}>
+                <ArrowBack />
+            </IconButton>
+            <Typography variant="h6">Etapas do Processo</Typography>
+        </Box>
+        <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)' }} />
+        <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
+          <List sx={{p: 1}}>
             {steps.map((step, index) => {
               const isActive = activeStep === index + 1;
               return (
@@ -168,13 +182,13 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow, drawerOpen, onToggle
                   sx={{
                     mb: 1,
                     borderRadius: 2,
-                    background: isActive ? 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)' : 'rgba(255, 255, 255, 0.05)',
+                    background: isActive ? 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)' : 'transparent',
                     '&.Mui-selected': {
                       background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
                       boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)',
                     },
                     '&:hover': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
                     }
                   }}
                 >
@@ -183,32 +197,18 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow, drawerOpen, onToggle
                     primary={step.label}
                     secondary={step.description}
                     primaryTypographyProps={{ fontWeight: 'bold', color: 'white' }}
-                    secondaryTypographyProps={{ color: 'grey.400' }}
+                    secondaryTypographyProps={{ color: 'grey.400', fontSize: '0.75rem' }}
                   />
                 </ListItemButton>
               );
             })}
           </List>
         </Box>
-        <Box sx={{ mt: 'auto', p: 2, color: 'grey.400' }}>
+        <Box sx={{ p: 2, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
             <Typography variant="subtitle2" sx={{ mb: 1 }}>Status do Projeto</Typography>
-            <Divider sx={{ mb: 1, bgcolor: 'grey.700' }} />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                <Typography variant="body2">0 registros</Typography>
-                <CheckCircleOutline fontSize="small" />
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                <Typography variant="body2">Imagem de fundo</Typography>
-                {backgroundImage ? <CheckCircleOutline fontSize="small" color="success" /> : <RadioButtonUnchecked fontSize="small" />}
-            </Box>
-             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                <Typography variant="body2">0/0 campos</Typography>
-                 <RadioButtonUnchecked fontSize="small" />
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="body2">0 estilos</Typography>
-                <RadioButtonUnchecked fontSize="small" />
-            </Box>
+            {/* Placeholder for status. This needs real data binding. */}
+            <Typography variant="caption" display="block">Registros: {csvData.length}</Typography>
+            <Typography variant="caption" display="block">Imagem de Fundo: {backgroundImage ? 'Sim' : 'Não'}</Typography>
         </Box>
       </Box>
     );
@@ -225,7 +225,6 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow, drawerOpen, onToggle
                     [`& .MuiDrawer-paper`]: {
                         width: drawerWidth,
                         boxSizing: 'border-box',
-                        backgroundColor: '#1e1e2f', // Dark blue/purple background
                         borderRight: 'none'
                     },
                 }}
@@ -235,23 +234,13 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow, drawerOpen, onToggle
             <Box component="main" sx={{
                 flexGrow: 1,
                 p: { xs: 1, sm: 2, md: 3 },
-                transition: theme.transitions.create('margin', {
-                    easing: theme.transitions.easing.sharp,
-                    duration: theme.transitions.duration.leavingScreen,
-                }),
-                marginLeft: !isMobile ? `-${drawerWidth}px` : 0,
-                ...(!isMobile && drawerOpen && {
-                    transition: theme.transitions.create('margin', {
-                        easing: theme.transitions.easing.easeOut,
-                        duration: theme.transitions.duration.enteringScreen,
-                    }),
-                    marginLeft: 0,
-                }),
+                backgroundColor: '#28283e', // Main content background
+                minHeight: '100vh'
             }}>
-                <Paper sx={{ p: { xs: 1, sm: 2, md: 3 }, backgroundColor: '#28283e' /* Slightly lighter than drawer */, color: 'white' }}>
+                <Paper sx={{ p: { xs: 1, sm: 2, md: 3 }, backgroundColor: '#1e1e2f', color: 'white' }}>
                     {steps[activeStep - 1].component}
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
-                        <Button onClick={handleBack} sx={{ mr: 2 }}>Anterior</Button>
+                        <Button onClick={handleBack} sx={{ mr: 2, color: 'white', borderColor: 'white' }} variant="outlined">Anterior</Button>
                         <Button variant="contained" onClick={handleNext} disabled={activeStep >= steps.length}>
                             {activeStep >= steps.length ? 'Finalizado' : 'Próximo'}
                         </Button>
