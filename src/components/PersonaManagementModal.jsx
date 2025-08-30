@@ -156,7 +156,15 @@ const PersonaManagementModal = ({ open, onClose }) => {
               sx={{
                 width: drawerWidth,
                 flexShrink: 0,
-                '& .MuiDrawer-paper': { width: drawerWidth, boxSizing: 'border-box', ...(isMobile ? {} : { position: 'relative', height: '100%' }) },
+                // When temporary on mobile, it needs a higher z-index to appear over the modal
+                zIndex: isMobile ? theme.zIndex.modal + 1 : 'auto',
+                '& .MuiDrawer-paper': {
+                  width: drawerWidth,
+                  boxSizing: 'border-box',
+                  // When permanent on desktop, it needs to be part of the layout
+                  position: isMobile ? 'fixed' : 'relative',
+                  height: '100%'
+                },
               }}
             >
               {drawerContent}
