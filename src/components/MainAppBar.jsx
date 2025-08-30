@@ -30,9 +30,11 @@ import { useNavigate } from 'react-router-dom';
 const MainAppBar = ({
   darkMode,
   setDarkMode,
-  onShowPersonas, // New prop
-  onShowCampaigns, // New prop
-  // ... other props
+  onShowPersonas,
+  onShowCampaigns,
+  isMobile,
+  currentView,
+  onTogglePersonaDrawer,
 }) => {
   const { user, logout } = useUserAuth();
   const navigate = useNavigate();
@@ -62,6 +64,17 @@ const MainAppBar = ({
       }}
     >
       <Toolbar>
+        {isMobile && currentView === 'personas' && (
+            <IconButton
+                color="inherit"
+                aria-label="open drawer"
+                edge="start"
+                onClick={onTogglePersonaDrawer}
+                sx={{ mr: 2 }}
+            >
+                <MenuIcon />
+            </IconButton>
+        )}
         <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Midiator
         </Typography>
