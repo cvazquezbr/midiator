@@ -62,13 +62,18 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
 
   const handleNext = () => {
     if (activeStep === steps.length - 1) {
+      console.log("DEBUG: [Wizard] Final step. Calling handleSave.");
       handleSave();
     } else if (activeStep === 0) {
+      console.log("DEBUG: [Wizard] Step 0. Calling onGenerate prop.");
+      console.log("DEBUG: [Wizard] Description being passed:", personaData.description);
       onGenerate(personaData.description, (generatedPersona) => {
+        console.log("DEBUG: [Wizard] onGenerate callback executed.");
         setPersonaData(prev => ({ ...prev, ...generatedPersona }));
         setActiveStep(1);
       });
     } else {
+      console.log(`DEBUG: [Wizard] Moving to next step from ${activeStep}.`);
       setActiveStep((prevActiveStep) => prevActiveStep + 1);
     }
   };
@@ -86,8 +91,10 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
   const handleUpdateChipValue = () => { if (!editingChip) return; const { key, value, newValue } = editingChip; const trimmedNewValue = newValue.trim(); if (!trimmedNewValue) { toast.error("O valor não pode ser vazio."); setEditingChip(null); return; } if (value.toLowerCase() === trimmedNewValue.toLowerCase()) { setEditingChip(null); return; } if ((personaData[key] || []).map(item => item.toLowerCase()).includes(trimmedNewValue.toLowerCase())) { toast.warning('Este item já foi adicionado.'); setEditingChip(null); return; } setPersonaData(prev => ({ ...prev, [key]: (prev[key] || []).map(item => (item === value ? trimmedNewValue : item)) })); setEditingChip(null); };
 
   const handleReset = () => {
+    console.log("DEBUG: [Wizard] handleReset called.");
     if (window.confirm("Tem certeza que deseja recomeçar? Todos os dados não salvos nesta persona serão perdidos e o processo de criação iniciará do zero.")) {
       if (onReset) {
+        console.log("DEBUG: [Wizard] Calling onReset prop.");
         onReset();
       }
       toast.info("Formulário resetado. Você pode começar a gerar uma nova persona com a IA.");

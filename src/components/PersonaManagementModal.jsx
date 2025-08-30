@@ -70,6 +70,7 @@ const PersonaManagementModal = ({ open, onClose }) => {
   };
 
   const handleNewPersona = () => {
+    console.log("DEBUG: [Modal] handleNewPersona called.");
     setSelectedPersona({ name: '', persona_data: { ...emptyPersonaWizardData } });
     setInitialWizardStep(0);
     if (isMobile) setMobileDrawerOpen(false);
@@ -109,12 +110,36 @@ const PersonaManagementModal = ({ open, onClose }) => {
   };
 
   const handleGeneratePersonaWithAI = async (description, callback) => {
-    /* ... (implementation remains the same) ... */
+    console.log('DEBUG: [Modal] handleGeneratePersonaWithAI called with description:', description);
+    if (!geminiAPI.isInitialized) {
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        toast.error('Chave de API do Gemini não configurada.');
+        setIsGeneratingPersona(false);
+        return;
+      }
+      geminiAPI.initialize(apiKey);
+    }
+    setIsGeneratingPersona(true);
+    const prompt = `Descriver uma persona para uma campanha de marketing para ${description}. Preencha os campos do objeto JSON...`;
+    try {
+      const response = await geminiAPI.generateContent(prompt);
+      const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
+      const generatedPersona = JSON.parse(cleanedResponse);
+      console.log('DEBUG: [Modal] AI generation successful. Calling callback.');
+      if (callback) callback(generatedPersona);
+    } catch (error) {
+      console.error("DEBUG: [Modal] Error during AI generation:", error);
+      toast.error('Ocorreu um erro ao processar a resposta da IA.');
+    } finally {
+      setIsGeneratingPersona(false);
+    }
   };
 
   const handleCloseWizard = () => setSelectedPersona(null);
 
   const handleWizardReset = () => {
+    console.log("DEBUG: [Modal] handleWizardReset called.");
     // This function is called from the wizard's "Recomeçar" button
     // It re-uses the new persona logic to completely reset the state
     handleNewPersona();
