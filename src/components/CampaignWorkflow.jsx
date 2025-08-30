@@ -36,7 +36,7 @@ import { loadSettingsFromDb } from '../utils/credentialsManager';
 import { saveCampaignPrompt } from '../utils/campaignPrompt.js';
 import { saveCampaign, loadCampaign, getCampaigns } from '../utils/campaignState.js';
 import { parseCsv, handleDownloadExampleCSV } from '../lib/helpers';
-import { generateIAContent, generateCampaignContent, generateCampaignImagePrompt, generateCampaignImage, generateSummary, generateFormattedContent, generateFollowupPosts, exportHtml, generateColorPalette } from '../utils/generationHandlers';
+import { generateIAContent, generateCampaignContent, generateCampaignImagePrompt, generateCampaignImage, generateFormattedContent, generateFollowupPosts, exportHtml, generateColorPalette } from '../utils/generationHandlers';
 
 function CampaignWorkflow() {
     const { user } = useUserAuth();
@@ -62,8 +62,6 @@ function CampaignWorkflow() {
     const [followupPosts, setFollowupPosts] = useState([]);
     const [followupPostsQuantity, setFollowupPostsQuantity] = useState(3);
     const [isGeneratingFollowup, setIsGeneratingFollowup] = useState(false);
-    const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
-    const [isGeneratingSummaryPequeno, setIsGeneratingSummaryPequeno] = useState(false);
     const [isGeneratingConteudoFormatado, setIsGeneratingConteudoFormatado] = useState(false);
     const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -178,28 +176,6 @@ function CampaignWorkflow() {
         }
     };
 
-    const handleGenerateSummary = async (targetLength) => {
-        const apiKey = getGeminiApiKey();
-        if (!apiKey) {
-            toast.error("Por favor, configure sua chave da API Gemini.");
-            return;
-        }
-
-        const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno;
-        setLoading(true);
-        try {
-            const summary = await generateSummary(apiKey, campaignContent, targetLength, (prompt) => geminiAPI.generateContent(prompt, `Resumo para ${targetLength} caracteres`));
-            setCampaignContent(prev => ({
-                ...prev,
-                [targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno']: summary
-            }));
-            toast.success(`Resumo de ${targetLength} caracteres gerado.`);
-        } catch (error) {
-            toast.error(`Falha ao gerar resumo: ${error.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleGenerateFormattedContent = async () => {
         const apiKey = getGeminiApiKey();
@@ -258,7 +234,7 @@ function CampaignWorkflow() {
     }, [user]); // Depend on user, so it runs after login
 
     const steps = [
-        { label: 'Campanha', description: 'Defina o problema e a solução.', component: <Campaign problema={problema} setProblema={setProblema} solucao={solucao} setSolucao={setSolucao} campaignContent={campaignContent} isGeneratingCampaign={isGeneratingCampaign} handleGenerateCampaignContent={handleGenerateCampaignContent} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleResetCampaign={() => setCampaignContent(null)} setEditingField={(field) => setEditingFieldInfo({ fieldId: 'campaign', content: campaignContent[field], fieldName: field })} isGeneratingSummaryMedio={isGeneratingSummaryMedio} isGeneratingSummaryPequeno={isGeneratingSummaryPequeno} handleGenerateSummary={handleGenerateSummary} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} followupPosts={followupPosts} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} setCampaignContent={setCampaignContent} onEditFollowup={(index, content) => setEditingFieldInfo({ fieldId: `followup_${index}`, content, fieldName: 'conteudo' })} /> },
+        { label: 'Campanha', description: 'Defina o problema e a solução.', component: <Campaign problema={problema} setProblema={setProblema} solucao={solucao} setSolucao={setSolucao} campaignContent={campaignContent} isGeneratingCampaign={isGeneratingCampaign} handleGenerateCampaignContent={handleGenerateCampaignContent} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleResetCampaign={() => setCampaignContent(null)} setEditingField={(field) => setEditingFieldInfo({ fieldId: 'campaign', content: campaignContent[field], fieldName: field })} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} followupPosts={followupPosts} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} setCampaignContent={setCampaignContent} onEditFollowup={(index, content) => setEditingFieldInfo({ fieldId: `followup_${index}`, content, fieldName: 'conteudo' })} /> },
         { label: 'Posts Curtos', description: 'Gere ou carregue o conteúdo dos posts.', component: <PostsCurtosStep csvData={csvData} setCsvData={setCsvData} csvHeaders={csvHeaders} setCsvHeaders={setCsvHeaders} inputMethod={inputMethod} setInputMethod={setInputMethod} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} isGenerating={isGenerating} setIsGenerating={setIsGenerating} fileInputRef={fileInputRef} /> },
         { label: 'Imagem e Formatação', description: 'Posicione os campos na imagem.', component: <ImageStep backgroundImage={backgroundImage} setBackgroundImage={setBackgroundImage} csvHeaders={csvHeaders} fieldPositions={fieldPositions} setFieldPositions={setFieldPositions} fieldStyles={fieldStyles} setFieldStyles={setFieldStyles} initialFieldStyles={initialFieldStyles} setInitialFieldStyles={setInitialFieldStyles} selectedField={selectedField} setSelectedField={setSelectedField} csvData={csvData} onImageDisplayedSizeChange={setImageDisplayedSize} originalImageSize={originalImageSize} setOriginalImageSize={setOriginalImageSize} imageFilters={imageFilters} setImageFilters={setImageFilters} brandElements={brandElements} setBrandElements={setBrandElements} onOpenHtmlEditor={(fieldId) => setEditingFieldInfo({ fieldId, content: csvData[0]?.[fieldId] || '', fieldName: fieldId })} /> },
         { label: 'Áudio', description: 'Gere a narração para os posts.', component: <AudioGenerator csvData={csvData} fieldPositions={fieldPositions} onAudiosGenerated={setGeneratedAudioData} initialAudioData={generatedAudioData} /> },
