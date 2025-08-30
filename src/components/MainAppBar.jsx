@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -19,10 +19,9 @@ import {
   Logout,
   AdminPanelSettings,
   AccountCircle,
-  Folder as FolderIcon,
   Save as SaveIcon,
-  FolderOpen as FolderOpenIcon,
   People as PeopleIcon,
+  Home as HomeIcon,
 } from '@mui/icons-material';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -30,17 +29,13 @@ import { useNavigate } from 'react-router-dom';
 const MainAppBar = ({
   darkMode,
   setDarkMode,
-  setShowSetupModal,
-  onMenuClick,
-  isMobile,
-  setShowCampaignStandardsModal,
-  setShowMemorialDescritivoModal,
-  onSaveCampaign,
-  onLoadCampaign,
+  onShowPersonas, // New prop
+  onShowCampaigns, // New prop
+  // ... other props
 }) => {
   const { user, logout } = useUserAuth();
   const navigate = useNavigate();
-  const [userMenuAnchorEl, setUserMenuAnchorEl] = React.useState(null);
+  const [userMenuAnchorEl, setUserMenuAnchorEl] = useState(null);
 
   const handleUserMenu = (event) => {
     setUserMenuAnchorEl(event.currentTarget);
@@ -66,32 +61,11 @@ const MainAppBar = ({
       }}
     >
       <Toolbar>
-        <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-          {isMobile && (
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              onClick={onMenuClick}
-              sx={{ mr: 2 }}
-            >
-              <MenuIcon />
-            </IconButton>
-          )}
-        </Box>
+        <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+            Midiator
+        </Typography>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 1 } }}>
-          <Tooltip title="Salvar Campanha">
-            <IconButton onClick={onSaveCampaign} sx={{ color: 'white' }} aria-label="Salvar Campanha">
-              <SaveIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Configurações">
-            <IconButton onClick={() => setShowSetupModal(true)} sx={{ color: 'white' }} aria-label="Configurações">
-              <Settings />
-            </IconButton>
-          </Tooltip>
-
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Tooltip title="Opções do Usuário">
             <IconButton onClick={handleUserMenu} sx={{ color: 'white' }}>
               <AccountCircle />
@@ -109,21 +83,18 @@ const MainAppBar = ({
             <MenuItem disabled>
               <Typography variant="body2" noWrap>{user?.email}</Typography>
             </MenuItem>
-            <MenuItem onClick={() => { setDarkMode(!darkMode); handleUserMenuClose(); }}>
-              {darkMode ? <Brightness7 sx={{ mr: 1 }} /> : <Brightness4 sx={{ mr: 1 }} />}
-              {darkMode ? 'Modo Claro' : 'Modo Escuro'}
+            <Divider />
+            <MenuItem onClick={() => { onShowCampaigns(); handleUserMenuClose(); }}>
+              <HomeIcon sx={{ mr: 1 }} />
+              Campanhas
             </MenuItem>
-            <MenuItem onClick={() => { navigate('/personas'); handleUserMenuClose(); }}>
+            <MenuItem onClick={() => { onShowPersonas(); handleUserMenuClose(); }}>
               <PeopleIcon sx={{ mr: 1 }} />
               Personas
             </MenuItem>
-            <MenuItem onClick={() => { setShowCampaignStandardsModal(true); handleUserMenuClose(); }}>
-              <Edit sx={{ mr: 1 }} />
-              Padrões de Campanha
-            </MenuItem>
-            <MenuItem onClick={() => { setShowMemorialDescritivoModal(true); handleUserMenuClose(); }}>
-              <ArticleIcon sx={{ mr: 1 }} />
-              Memorial Descritivo
+            <MenuItem onClick={() => { setDarkMode(!darkMode); handleUserMenuClose(); }}>
+              {darkMode ? <Brightness7 sx={{ mr: 1 }} /> : <Brightness4 sx={{ mr: 1 }} />}
+              {darkMode ? 'Modo Claro' : 'Modo Escuro'}
             </MenuItem>
             {user?.role === 'admin' && (
               <MenuItem onClick={() => { navigate('/admin/users'); handleUserMenuClose(); }}>
@@ -131,6 +102,7 @@ const MainAppBar = ({
                 Admin Dashboard
               </MenuItem>
             )}
+            <Divider />
             <MenuItem onClick={handleLogout}>
               <Logout sx={{ mr: 1 }} />
               Logout
