@@ -36,7 +36,7 @@ import { loadSettingsFromDb } from '../utils/credentialsManager';
 import { saveCampaignPrompt } from '../utils/campaignPrompt.js';
 import { saveCampaign, loadCampaign, getCampaigns } from '../utils/campaignState.js';
 import { parseCsv, handleDownloadExampleCSV } from '../lib/helpers';
-import { generateIAContent, generateCampaignContent, generateImagePrompt, generateSummary, generateFormattedContent, generateFollowupPosts, exportHtml, generateColorPalette } from '../utils/generationHandlers';
+import { generateIAContent, generateCampaignContent, generateCampaignImagePrompt, generateCampaignImage, generateSummary, generateFormattedContent, generateFollowupPosts, exportHtml, generateColorPalette } from '../utils/generationHandlers';
 
 function CampaignWorkflow() {
     const { user } = useUserAuth();
@@ -164,9 +164,12 @@ function CampaignWorkflow() {
     const handleGenerateImage = async (content) => {
         setIsGeneratingImage(true);
         try {
-            const prompt = await generateImagePrompt(content, aspectRatio);
-            const imageUrl = await geminiAPI.generateImage(prompt, "Geração de Imagem de Campanha");
+            // Step 1: Generate the prompt for the image
+            const prompt = await generateCampaignImagePrompt({ content, aspectRatio });
+            // Step 2: Generate the image itself using the prompt
+            const imageUrl = await generateCampaignImage({ prompt, aspectRatio });
             setGeneratedImageUrl(imageUrl);
+            toast.success("Imagem gerada com sucesso!");
         } catch (error) {
             console.error("Erro ao gerar imagem:", error);
             toast.error(`Falha ao gerar imagem: ${error.message}`);
