@@ -3,7 +3,7 @@ import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Box, Toolbar, Paper, Typography, Button, List, ListItem, Stepper, Step, StepLabel, MobileStepper } from '@mui/gmaterial';
+import { Box, Toolbar, Paper, Typography, Button, List, ListItem, Stepper, Step, StepLabel, MobileStepper } from '@mui/material';
 import { Settings, Brightness4, Brightness7, Edit, Menu as MenuIcon, Article as ArticleIcon, Logout, AdminPanelSettings, KeyboardArrowLeft, KeyboardArrowRight, Save as SaveIcon, FolderOpen as FolderOpenIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon, PlayArrow, Pause, Replay, GraphicEq, Audiotrack as AudioIcon, Movie as MovieIcon, Share as ShareIcon, Image as ImageIcon, TextFields, Palette as PaletteIcon, Check, ChevronRight, Add, CenterFocusStrong, SkipPrevious, ArrowLeft, ArrowRight, SkipNext } from '@mui/icons-material';
 import { toast, Toaster } from 'sonner';
 
