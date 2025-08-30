@@ -3,9 +3,9 @@ import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Box, Toolbar, Paper, Typography, Button, List, ListItemButton, ListItemText, Drawer, CircularProgress, Alert, IconButton } from '@mui/material';
+import { Box, Toolbar, Paper, Typography, Button, List, ListItem, ListItemText, Drawer, CircularProgress, Alert, IconButton } from '@mui/material';
 import Divider from '@mui/material/Divider';
-import { Add, ChevronLeft } from '@mui/icons-material';
+import { Add, ChevronLeft, Edit } from '@mui/icons-material';
 import { toast } from 'sonner';
 
 // Main App Components
@@ -13,6 +13,7 @@ import MainAppBar from '../components/MainAppBar';
 import CampaignWorkflow from '../components/CampaignWorkflow'; // Abstracted the campaign steps
 import { PersonaWizardContent, emptyPersonaWizardData } from '../components/PersonaWizard';
 import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils/personaState';
+import { getCampaigns, deleteCampaign } from '../utils/campaignState';
 
 // Other imports
 import { lightTheme, darkTheme } from '../theme.js';
@@ -47,6 +48,14 @@ function HomePage() {
     const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
     const [initialWizardStep, setInitialWizardStep] = useState(0);
 
+    // State for Campaign View
+    const [campaigns, setCampaigns] = useState([]);
+    const [campaignsLoading, setCampaignsLoading] = useState(true);
+    const [campaignsError, setCampaignsError] = useState(null);
+    const [campaignToEdit, setCampaignToEdit] = useState(null);
+    const [showWorkflow, setShowWorkflow] = useState(false);
+    const [campaignDrawerOpen, setCampaignDrawerOpen] = useState(!isMobile);
+
     // Effect for Dark Mode
     useEffect(() => {
         localStorage.setItem('darkMode', JSON.stringify(darkMode));
@@ -55,6 +64,11 @@ function HomePage() {
     // Effect for Persona Drawer visibility on resize
     useEffect(() => {
         setPersonaDrawerOpen(!isMobile);
+    }, [isMobile]);
+
+    // Effect for Campaign Drawer visibility on resize
+    useEffect(() => {
+        setCampaignDrawerOpen(!isMobile);
     }, [isMobile]);
 
     // Effect to load personas when the view is opened
@@ -74,6 +88,34 @@ function HomePage() {
         } finally {
             setPersonasLoading(false);
         }
+    };
+
+    const fetchCampaigns = async () => {
+        setCampaignsLoading(true);
+        try {
+            const data = await getCampaigns();
+            setCampaigns(data);
+        } catch (err) {
+            setCampaignsError(err.message);
+        } finally {
+            setCampaignsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (currentView === 'campaign') {
+            fetchCampaigns();
+        }
+    }, [currentView]);
+
+    const handleNewCampaign = () => {
+        setCampaignToEdit(null);
+        setShowWorkflow(true);
+    };
+
+    const handleEditCampaign = (campaign) => {
+        setCampaignToEdit(campaign);
+        setShowWorkflow(true);
     };
 
     const handleSelectPersona = (p) => {
@@ -167,10 +209,54 @@ function HomePage() {
                     isMobile={isMobile}
                     currentView={currentView}
                     onTogglePersonaDrawer={() => setPersonaDrawerOpen(!personaDrawerOpen)}
+                    onToggleCampaignDrawer={() => setCampaignDrawerOpen(!campaignDrawerOpen)}
                 />
 
                 {currentView === 'campaign' && (
-                    <CampaignWorkflow />
+                    <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+                        <Toolbar />
+                        {showWorkflow ? (
+                            <CampaignWorkflow
+                                campaignToEdit={campaignToEdit}
+                                onExitWorkflow={() => {
+                                    setShowWorkflow(false);
+                                    fetchCampaigns(); // Refresh list on exit
+                                }}
+                                drawerOpen={campaignDrawerOpen}
+                                onToggleDrawer={() => setCampaignDrawerOpen(!campaignDrawerOpen)}
+                            />
+                        ) : (
+                            <Paper sx={{ p: 3 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                    <Typography variant="h5">Minhas Campanhas</Typography>
+                                    <Button variant="contained" startIcon={<Add />} onClick={handleNewCampaign}>
+                                        Criar Nova Campanha
+                                    </Button>
+                                </Box>
+                                {campaignsLoading && <CircularProgress />}
+                                {campaignsError && <Alert severity="error">{campaignsError}</Alert>}
+                                {!campaignsLoading && !campaignsError && (
+                                    <List>
+                                        {campaigns.map((campaign) => (
+                                            <ListItem
+                                                key={campaign.id}
+                                                secondaryAction={
+                                                    <IconButton edge="end" aria-label="edit" onClick={() => handleEditCampaign(campaign)}>
+                                                        <Edit />
+                                                    </IconButton>
+                                                }
+                                            >
+                                                <ListItemText
+                                                    primary={campaign.name || 'Campanha Sem Nome'}
+                                                    secondary={`Criada em: ${new Date(campaign.created_at).toLocaleDateString()}`}
+                                                />
+                                            </ListItem>
+                                        ))}
+                                    </List>
+                                )}
+                            </Paper>
+                        )}
+                    </Box>
                 )}
 
                 {currentView === 'personas' && (
@@ -225,8 +311,8 @@ function HomePage() {
                                         initialStep={initialWizardStep}
                                     />
                                 ) : (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}>
-                                        <Typography variant="h6" color="text.secondary">
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', p: 2 }}>
+                                        <Typography variant="h6" color="text.secondary" sx={{ textAlign: 'center' }}>
                                             Selecione uma persona para editar ou crie uma nova.
                                         </Typography>
                                     </Box>

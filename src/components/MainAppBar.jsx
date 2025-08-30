@@ -35,6 +35,7 @@ const MainAppBar = ({
   isMobile,
   currentView,
   onTogglePersonaDrawer,
+  onToggleCampaignDrawer,
 }) => {
   const { user, logout } = useUserAuth();
   const navigate = useNavigate();
@@ -67,9 +68,20 @@ const MainAppBar = ({
         {isMobile && currentView === 'personas' && (
             <IconButton
                 color="inherit"
-                aria-label="open drawer"
+                aria-label="open persona drawer"
                 edge="start"
                 onClick={onTogglePersonaDrawer}
+                sx={{ mr: 2 }}
+            >
+                <MenuIcon />
+            </IconButton>
+        )}
+        {isMobile && currentView === 'campaign' && (
+            <IconButton
+                color="inherit"
+                aria-label="open campaign drawer"
+                edge="start"
+                onClick={onToggleCampaignDrawer}
                 sx={{ mr: 2 }}
             >
                 <MenuIcon />
