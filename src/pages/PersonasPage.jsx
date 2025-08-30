@@ -46,10 +46,13 @@ const PersonasPage = () => {
   };
 
   const handleOpenModal = (persona = null) => {
+    console.log("DEBUG: [PersonasPage] handleOpenModal called.");
     if (persona) {
+      console.log("DEBUG: [PersonasPage] Editing existing persona. Data:", persona);
       setCurrentPersona({ ...persona });
       setInitialWizardStep(1);
     } else {
+      console.log("DEBUG: [PersonasPage] Creating new persona.");
       setCurrentPersona({ name: '', persona_data: { ...emptyPersonaWizardData } });
       setInitialWizardStep(0);
     }
@@ -153,22 +156,28 @@ const PersonasPage = () => {
         </List>
       )}
 
-      {isModalOpen && (
-        <PersonaWizard
-            open={isModalOpen}
-            onClose={handleCloseModal}
-            onSave={handleSave}
-            persona={currentPersona?.persona_data}
-            onGenerate={handleGeneratePersonaWithAI}
-            isGeneratingPersona={isGeneratingPersona}
-            initialStep={initialWizardStep}
-            onReset={() => {
-                // This resets the wizard to a new persona state within the existing modal
-                setCurrentPersona({ name: '', persona_data: { ...emptyPersonaWizardData } });
-                setInitialWizardStep(0);
-            }}
-        />
-      )}
+      {isModalOpen && (() => {
+        console.log("DEBUG: [PersonasPage] Rendering PersonaWizard with props:", {
+            persona: currentPersona?.persona_data,
+            initialStep: initialWizardStep,
+        });
+        return (
+            <PersonaWizard
+                open={isModalOpen}
+                onClose={handleCloseModal}
+                onSave={handleSave}
+                persona={currentPersona?.persona_data}
+                onGenerate={handleGeneratePersonaWithAI}
+                isGeneratingPersona={isGeneratingPersona}
+                initialStep={initialWizardStep}
+                onReset={() => {
+                    console.log("DEBUG: [PersonasPage] onReset called.");
+                    setCurrentPersona({ name: '', persona_data: { ...emptyPersonaWizardData } });
+                    setInitialWizardStep(0);
+                }}
+            />
+        );
+      })()}
     </Container>
   );
 };

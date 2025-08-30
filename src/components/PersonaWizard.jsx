@@ -54,8 +54,13 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
 
   // This effect synchronizes the internal state with the props passed from the parent
   useEffect(() => {
-    setPersonaData(persona || emptyPersonaWizardData);
+    console.log("DEBUG: [Wizard] useEffect triggered.");
+    console.log("DEBUG: [Wizard] Received persona prop:", persona);
+    console.log("DEBUG: [Wizard] Received initialStep prop:", initialStep);
+    const newPersonaData = persona || emptyPersonaWizardData;
+    setPersonaData(newPersonaData);
     setActiveStep(initialStep || 0);
+    console.log("DEBUG: [Wizard] State updated. personaData:", newPersonaData, "activeStep:", initialStep || 0);
   }, [persona, initialStep]);
 
   const handleNext = () => {
