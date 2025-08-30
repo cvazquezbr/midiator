@@ -23,7 +23,6 @@ import { Close, Add, Delete, Menu as MenuIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils/personaState';
 import { PersonaWizardContent, emptyPersonaWizardData } from './PersonaWizard';
-import ConfirmationDialog from './ConfirmationDialog';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 
@@ -37,9 +36,6 @@ const PersonaManagementModal = ({ open, onClose }) => {
   const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
   const [initialWizardStep, setInitialWizardStep] = useState(0);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [onConfirmAction, setOnConfirmAction] = useState(null);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -49,7 +45,6 @@ const PersonaManagementModal = ({ open, onClose }) => {
       fetchPersonas();
     } else {
       setSelectedPersona(null);
-      setIsDirty(false);
     }
   }, [open]);
 
@@ -66,6 +61,18 @@ const PersonaManagementModal = ({ open, onClose }) => {
     }
   };
 
+  const handleSelectPersona = (persona) => {
+    setSelectedPersona(persona);
+    setInitialWizardStep(1);
+    if (isMobile) setMobileDrawerOpen(false);
+  };
+
+  const handleNewPersona = () => {
+    setSelectedPersona({ name: '', persona_data: { ...emptyPersonaWizardData } });
+    setInitialWizardStep(0);
+    if (isMobile) setMobileDrawerOpen(false);
+  };
+
   const handleSave = async (personaData) => {
     const personaToSave = { ...selectedPersona, name: personaData.nome, persona_data: personaData };
     if (!personaToSave.name) {
@@ -79,10 +86,7 @@ const PersonaManagementModal = ({ open, onClose }) => {
 
       toast.success("Persona salva com sucesso!");
       await fetchPersonas();
-      // After saving, update the selected persona to the one returned from the API
-      // This ensures we have the correct ID for new personas and any other server-side updates
       setSelectedPersona(savedPersona);
-      setIsDirty(false);
     } catch (err) {
       setError(err.message);
       toast.error(`Falha ao salvar persona: ${err.message}`);
@@ -127,45 +131,6 @@ const PersonaManagementModal = ({ open, onClose }) => {
     }
   };
 
-  const attemptAction = (action) => {
-    if (isDirty) {
-      setOnConfirmAction(() => () => {
-        action();
-        setIsDirty(false);
-      });
-      setConfirmDialogOpen(true);
-    } else {
-      action();
-    }
-  };
-
-  const handleSelectPersona = (persona) => {
-    attemptAction(() => {
-      setSelectedPersona(persona);
-      setInitialWizardStep(1);
-      if (isMobile) setMobileDrawerOpen(false);
-    });
-  };
-
-  const handleNewPersona = () => {
-    attemptAction(() => {
-      setSelectedPersona({ name: '', persona_data: { ...emptyPersonaWizardData } });
-      setInitialWizardStep(0);
-      if (isMobile) setMobileDrawerOpen(false);
-    });
-  };
-
-  const handleMainClose = () => attemptAction(onClose);
-  const handleConfirm = () => {
-    if (onConfirmAction) onConfirmAction();
-    setConfirmDialogOpen(false);
-    setOnConfirmAction(null);
-  };
-  const handleCloseConfirmDialog = () => {
-    setConfirmDialogOpen(false);
-    setOnConfirmAction(null);
-  };
-
   const drawerContent = (
     <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexShrink: 0 }}>
@@ -193,14 +158,8 @@ const PersonaManagementModal = ({ open, onClose }) => {
 
   return (
     <>
-      <Modal open={open} onClose={handleMainClose} closeAfterTransition>
-        <Paper sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100vh',
-          width: '100vw',
-          bgcolor: 'background.paper'
-        }}>
+      <Modal open={open} onClose={onClose} closeAfterTransition>
+        <Paper sx={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', bgcolor: 'background.paper' }}>
           <AppBar position="static" color="default" elevation={1}>
             <Toolbar>
               {isMobile && (
@@ -211,7 +170,7 @@ const PersonaManagementModal = ({ open, onClose }) => {
               <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
                 Gerenciador de Personas
               </Typography>
-              <IconButton color="inherit" onClick={handleMainClose}>
+              <IconButton color="inherit" onClick={onClose}>
                 <Close />
               </IconButton>
             </Toolbar>
@@ -225,12 +184,7 @@ const PersonaManagementModal = ({ open, onClose }) => {
               sx={{
                 width: drawerWidth,
                 flexShrink: 0,
-                '& .MuiDrawer-paper': {
-                  width: drawerWidth,
-                  boxSizing: 'border-box',
-                  position: isMobile ? 'fixed' : 'relative',
-                  height: '100%'
-                },
+                '& .MuiDrawer-paper': { width: drawerWidth, boxSizing: 'border-box', position: 'relative', height: '100%' },
               }}
             >
               {drawerContent}
@@ -239,10 +193,9 @@ const PersonaManagementModal = ({ open, onClose }) => {
               {selectedPersona ? (
                 <PersonaWizardContent
                   key={selectedPersona.id || 'new'}
-                  onClose={() => attemptAction(() => setSelectedPersona(null))}
+                  onClose={() => setSelectedPersona(null)}
                   onSave={handleSave}
-                  onReset={() => attemptAction(handleNewPersona)}
-                  onDirtyChange={setIsDirty}
+                  onReset={handleNewPersona}
                   persona={selectedPersona.persona_data}
                   onGenerate={handleGeneratePersonaWithAI}
                   isGeneratingPersona={isGeneratingPersona}
@@ -257,13 +210,6 @@ const PersonaManagementModal = ({ open, onClose }) => {
           </Box>
         </Paper>
       </Modal>
-      <ConfirmationDialog
-        open={confirmDialogOpen}
-        onClose={handleCloseConfirmDialog}
-        onConfirm={handleConfirm}
-        title="Descartar Alterações?"
-        message="Você tem alterações não salvas. Tem certeza de que deseja descartá-las?"
-      />
     </>
   );
 };
