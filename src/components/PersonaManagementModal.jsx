@@ -53,10 +53,79 @@ const PersonaManagementModal = ({ open, onClose }) => {
     }
   }, [open]);
 
-  const fetchPersonas = async () => { /* ... */ };
-  const handleSave = async (personaData) => { /* ... */ };
-  const handleDelete = async (personaId, personaName) => { /* ... */ };
-  const handleGeneratePersonaWithAI = async (description, callback) => { /* ... */ };
+  const fetchPersonas = async () => {
+    setLoading(true);
+    try {
+      const data = await getPersonas();
+      setPersonas(data);
+    } catch (err) {
+      setError(err.message);
+      toast.error("Falha ao carregar personas.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async (personaData) => {
+    const personaToSave = { ...selectedPersona, name: personaData.nome, persona_data: personaData };
+    if (!personaToSave.name) {
+      toast.error('O nome da persona é obrigatório.');
+      return;
+    }
+    try {
+      const savedPersona = personaToSave.id
+        ? await updatePersona(personaToSave.id, personaToSave.name, personaToSave.persona_data)
+        : await savePersona(personaToSave.name, personaToSave.persona_data);
+
+      toast.success("Persona salva com sucesso!");
+      await fetchPersonas();
+      // After saving, update the selected persona to the one returned from the API
+      // This ensures we have the correct ID for new personas and any other server-side updates
+      setSelectedPersona(savedPersona);
+      setIsDirty(false);
+    } catch (err) {
+      setError(err.message);
+      toast.error(`Falha ao salvar persona: ${err.message}`);
+    }
+  };
+
+  const handleDelete = async (personaId, personaName) => {
+    if (window.confirm(`Tem certeza que deseja deletar a persona "${personaName}"?`)) {
+      try {
+        await deletePersona(personaId);
+        await fetchPersonas();
+        if (selectedPersona?.id === personaId) setSelectedPersona(null);
+        toast.success(`Persona "${personaName}" deletada.`);
+      } catch (err) {
+        setError(err.message);
+        toast.error(`Falha ao deletar persona: ${err.message}`);
+      }
+    }
+  };
+
+  const handleGeneratePersonaWithAI = async (description, callback) => {
+    if (!geminiAPI.isInitialized) {
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        toast.error('Chave de API do Gemini não configurada.');
+        return;
+      }
+      geminiAPI.initialize(apiKey);
+    }
+    setIsGeneratingPersona(true);
+    const prompt = `Descriver uma persona para uma campanha de marketing para ${description}. Preencha os campos do objeto JSON...`;
+    try {
+      const response = await geminiAPI.generateContent(prompt);
+      const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
+      const generatedPersona = JSON.parse(cleanedResponse);
+      if (callback) callback(generatedPersona);
+    } catch (error) {
+      console.error("Erro ao gerar persona com IA:", error);
+      toast.error('Ocorreu um erro ao processar a resposta da IA.');
+    } finally {
+      setIsGeneratingPersona(false);
+    }
+  };
 
   const attemptAction = (action) => {
     if (isDirty) {
@@ -124,7 +193,7 @@ const PersonaManagementModal = ({ open, onClose }) => {
 
   return (
     <>
-      <Modal open={open} onClose={handleMainClose}>
+      <Modal open={open} onClose={handleMainClose} closeAfterTransition>
         <Paper sx={{
           display: 'flex',
           flexDirection: 'column',
@@ -156,15 +225,7 @@ const PersonaManagementModal = ({ open, onClose }) => {
               sx={{
                 width: drawerWidth,
                 flexShrink: 0,
-                // When temporary on mobile, it needs a higher z-index to appear over the modal
-                zIndex: isMobile ? theme.zIndex.modal + 1 : 'auto',
-                '& .MuiDrawer-paper': {
-                  width: drawerWidth,
-                  boxSizing: 'border-box',
-                  // When permanent on desktop, it needs to be part of the layout
-                  position: isMobile ? 'fixed' : 'relative',
-                  height: '100%'
-                },
+                '& .MuiDrawer-paper': { width: drawerWidth, boxSizing: 'border-box', position: 'relative', height: '100%' },
               }}
             >
               {drawerContent}
