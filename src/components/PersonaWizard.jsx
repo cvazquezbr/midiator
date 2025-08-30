@@ -6,9 +6,7 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  Stepper,
-  Step,
-  StepLabel,
+  LinearProgress,
   Box,
   TextField,
   Typography,
@@ -110,12 +108,21 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
 
   return (
     <Box>
-      <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>{steps.map((label) => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}</Stepper>
-      {getStepContent(activeStep)}
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="caption" color="text.secondary">
+            Etapa {activeStep + 1} de {steps.length}: {steps[activeStep]}
+        </Typography>
+        <LinearProgress variant="determinate" value={((activeStep + 1) / steps.length) * 100} sx={{ mt: 1 }} />
+      </Box>
+
+      <Box sx={{ mt: 4, mb: 4, minHeight: '30vh' }}>
+        {getStepContent(activeStep)}
+      </Box>
+
       <DialogActions sx={{ p: 3, justifyContent: 'space-between', mt: 2, flexWrap: 'wrap' }}>
         <Box>
           <Button onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave} color="secondary">Salvar</Button>
+          <Button onClick={handleSave} color="secondary">Salvar e Fechar</Button>
           {initialStep > 0 && <Button onClick={handleReset} color="error" startIcon={<ReplayIcon />}>Recomeçar</Button>}
         </Box>
         <Box sx={{ display: 'flex', mt: { xs: 2, sm: 0 } }}>
