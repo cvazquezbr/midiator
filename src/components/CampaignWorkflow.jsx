@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { Box, Button, Stepper, Step, StepLabel, Drawer, Typography, StepConnector, Paper, IconButton } from '@mui/material';
-import { Check, ArrowBack } from '@mui/icons-material';
+import { Box, Button, Drawer, Typography, Paper, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Divider } from '@mui/material';
+import { ArrowBack, Description, Edit, Image, FormatShapes, Movie, Publish, CheckCircleOutline, RadioButtonUnchecked, ImageSearch } from '@mui/icons-material';
 import { toast } from 'sonner';
 
 // Child Step Components
@@ -18,7 +18,7 @@ import { useUserAuth } from '../context/UserAuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { generateCampaignContent, generateCampaignImagePrompt, generateCampaignImage, generateFormattedContent, generateFollowupPosts, generateFollowupPlan } from '../utils/generationHandlers';
 
-const drawerWidth = 280;
+const drawerWidth = 300;
 
 function CampaignWorkflow({ campaignToEdit, onExitWorkflow, drawerOpen, onToggleDrawer }) {
     const { user } = useUserAuth();
@@ -26,7 +26,7 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow, drawerOpen, onToggle
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-    // Campaign state and other states...
+    // All state variables...
     const [activeStep, setActiveStep] = useState(1);
     const [problema, setProblema] = useState('');
     const [solucao, setSolucao] = useState('');
@@ -68,23 +68,21 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow, drawerOpen, onToggle
     const [editingFieldInfo, setEditingFieldInfo] = useState({ fieldId: null, content: '' });
 
     useEffect(() => {
-        if (campaignToEdit) {
-            setProblema(campaignToEdit.problema || '');
-            setSolucao(campaignToEdit.solucao || '');
-            setCampaignContent(campaignToEdit.campaign_content || null);
+        if (campaignToEdit && campaignToEdit.campaign_data) {
+            const data = campaignToEdit.campaign_data;
+            setProblema(data.problema || '');
+            setSolucao(data.solucao || '');
+            setCampaignContent(data.campaignContent || null);
+            // ... and so on for all other states
             setCurrentCampaign(campaignToEdit);
             setActiveStep(1);
         }
     }, [campaignToEdit]);
 
-    // Handlers
     const handleNext = () => setActiveStep((prev) => (prev < steps.length ? prev + 1 : prev));
     const handleBack = () => setActiveStep((prev) => (prev > 1 ? prev - 1 : prev));
     const handleStepClick = (stepIndex) => setActiveStep(stepIndex + 1);
-
-    const handleReset = () => {
-        if (onExitWorkflow) onExitWorkflow();
-    };
+    const handleReset = () => { if (onExitWorkflow) onExitWorkflow(); };
 
     const handleGenerateCampaignContent = async () => {
         setIsGeneratingCampaign(true);
@@ -147,48 +145,72 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow, drawerOpen, onToggle
     };
 
     const steps = [
-        { label: 'Campanha', component: <Campaign problema={problema} setProblema={setProblema} solucao={solucao} setSolucao={setSolucao} campaignContent={campaignContent} isGeneratingCampaign={isGeneratingCampaign} handleGenerateCampaignContent={handleGenerateCampaignContent} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleResetCampaign={() => setCampaignContent(null)} setEditingField={(field) => setEditingFieldInfo({ fieldId: 'campaign', content: campaignContent[field], fieldName: field })} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} followupPosts={followupPosts} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} setCampaignContent={setCampaignContent} onEditFollowup={(index, content) => setEditingFieldInfo({ fieldId: `followup_${index}`, content, fieldName: 'conteudo' })} /> },
-        { label: 'Posts Curtos', component: <PostsCurtosStep csvData={csvData} setCsvData={setCsvData} csvHeaders={csvHeaders} setCsvHeaders={setCsvHeaders} inputMethod={inputMethod} setInputMethod={setInputMethod} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} isGenerating={isGenerating} setIsGenerating={setIsGenerating} /> },
-        { label: 'Imagem e Formatação', component: <ImageStep backgroundImage={backgroundImage} setBackgroundImage={setBackgroundImage} csvHeaders={csvHeaders} fieldPositions={fieldPositions} setFieldPositions={setFieldPositions} fieldStyles={fieldStyles} setFieldStyles={setFieldStyles} initialFieldStyles={initialFieldStyles} setInitialFieldStyles={setInitialFieldStyles} selectedField={selectedField} setSelectedField={setSelectedField} csvData={csvData} onImageDisplayedSizeChange={setImageDisplayedSize} originalImageSize={originalImageSize} setOriginalImageSize={setOriginalImageSize} imageFilters={imageFilters} setImageFilters={setImageFilters} brandElements={brandElements} setBrandElements={setBrandElements} onOpenHtmlEditor={(fieldId) => setEditingFieldInfo({ fieldId, content: csvData[0]?.[fieldId] || '', fieldName: fieldId })} /> },
-        { label: 'Áudio', component: <AudioGenerator csvData={csvData} fieldPositions={fieldPositions} onAudiosGenerated={setGeneratedAudioData} initialAudioData={generatedAudioData} /> },
-        { label: 'Vídeo', component: <VideoGenerator generatedImagesData={generatedImagesData} generatedAudioData={generatedAudioData} onVideoGenerated={setGeneratedVideosData} /> },
-        { label: 'Publicar', component: <Publisher settings={settings} campaignContent={campaignContent} generatedImagesData={generatedImagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedImages={selectedImages} setSelectedImages={setSelectedVideos} currentCampaign={currentCampaign} /> },
+        { label: 'Dados', description: 'Carregue CSV ou criar manualmente', icon: <Description />, component: <Campaign problema={problema} setProblema={setProblema} solucao={solucao} setSolucao={setSolucao} campaignContent={campaignContent} isGeneratingCampaign={isGeneratingCampaign} handleGenerateCampaignContent={handleGenerateCampaignContent} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleResetCampaign={() => setCampaignContent(null)} setEditingField={(field) => setEditingFieldInfo({ fieldId: 'campaign', content: campaignContent[field], fieldName: field })} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} followupPosts={followupPosts} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} setCampaignContent={setCampaignContent} onEditFollowup={(index, content) => setEditingFieldInfo({ fieldId: `followup_${index}`, content, fieldName: 'conteudo' })} /> },
+        { label: 'Editar Dados', description: 'Adicione, edite ou remova registros', icon: <Edit />, component: <PostsCurtosStep csvData={csvData} setCsvData={setCsvData} csvHeaders={csvHeaders} setCsvHeaders={setCsvHeaders} inputMethod={inputMethod} setInputMethod={setInputMethod} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} isGenerating={isGenerating} setIsGenerating={setIsGenerating} /> },
+        { label: 'Upload da Imagem', description: 'Carregue a imagem de fundo PNG/JPG', icon: <Image />, component: <ImageStep backgroundImage={backgroundImage} setBackgroundImage={setBackgroundImage} csvHeaders={csvHeaders} fieldPositions={fieldPositions} setFieldPositions={setFieldPositions} fieldStyles={fieldStyles} setFieldStyles={setFieldStyles} initialFieldStyles={initialFieldStyles} setInitialFieldStyles={setInitialFieldStyles} selectedField={selectedField} setSelectedField={setSelectedField} csvData={csvData} onImageDisplayedSizeChange={setImageDisplayedSize} originalImageSize={originalImageSize} setOriginalImageSize={setOriginalImageSize} imageFilters={imageFilters} setImageFilters={setImageFilters} brandElements={brandElements} setBrandElements={setBrandElements} onOpenHtmlEditor={(fieldId) => setEditingFieldInfo({ fieldId, content: csvData[0]?.[fieldId] || '', fieldName: fieldId })} /> },
+        { label: 'Posicionar e Formatar', description: 'Posicione os campos e configure a formatação', icon: <FormatShapes />, component: <AudioGenerator csvData={csvData} fieldPositions={fieldPositions} onAudiosGenerated={setGeneratedAudioData} initialAudioData={generatedAudioData} /> },
+        { label: 'Gerar Imagens', description: 'Gere as imagens finais', icon: <ImageSearch />, component: <VideoGenerator generatedImagesData={generatedImagesData} generatedAudioData={generatedAudioData} onVideoGenerated={setGeneratedVideosData} /> },
+        { label: 'Publicar', description: 'Agende ou publique o conteúdo', icon: <Publish />, component: <Publisher settings={settings} campaignContent={campaignContent} generatedImagesData={generatedImagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedImages={selectedImages} setSelectedImages={setSelectedVideos} currentCampaign={currentCampaign} /> },
     ];
 
     const drawerContent = (
-        <div>
-            <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="h6">Etapas</Typography>
-                <IconButton onClick={onExitWorkflow}>
-                    <ArrowBack />
-                </IconButton>
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Box sx={{ p: 2 }}>
+          <Typography variant="h5" sx={{ mb: 2, color: 'white' }}>Etapas do Processo</Typography>
+          <List>
+            {steps.map((step, index) => {
+              const isActive = activeStep === index + 1;
+              return (
+                <ListItemButton
+                  key={step.label}
+                  selected={isActive}
+                  onClick={() => handleStepClick(index)}
+                  sx={{
+                    mb: 1,
+                    borderRadius: 2,
+                    background: isActive ? 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)' : 'rgba(255, 255, 255, 0.05)',
+                    '&.Mui-selected': {
+                      background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+                      boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)',
+                    },
+                    '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    }
+                  }}
+                >
+                  <ListItemIcon sx={{ color: isActive ? 'white' : 'grey.400', minWidth: 40 }}>{step.icon}</ListItemIcon>
+                  <ListItemText
+                    primary={step.label}
+                    secondary={step.description}
+                    primaryTypographyProps={{ fontWeight: 'bold', color: 'white' }}
+                    secondaryTypographyProps={{ color: 'grey.400' }}
+                  />
+                </ListItemButton>
+              );
+            })}
+          </List>
+        </Box>
+        <Box sx={{ mt: 'auto', p: 2, color: 'grey.400' }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>Status do Projeto</Typography>
+            <Divider sx={{ mb: 1, bgcolor: 'grey.700' }} />
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                <Typography variant="body2">0 registros</Typography>
+                <CheckCircleOutline fontSize="small" />
             </Box>
-            <Stepper activeStep={activeStep - 1} orientation="vertical" connector={<StepConnector sx={{ ml: 1.5 }} />}>
-                {steps.map((step, index) => (
-                    <Step key={step.label} completed={activeStep > index + 1}>
-                        <StepLabel
-                            onClick={() => handleStepClick(index)}
-                            sx={{ cursor: 'pointer', p: 1 }}
-                            StepIconComponent={(props) => {
-                                const { active, completed, icon } = props;
-                                return (
-                                    <Box sx={{
-                                        width: 32, height: 32, borderRadius: '50%',
-                                        backgroundColor: active ? 'primary.main' : (completed ? 'success.main' : 'grey.400'),
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
-                                        mr: 1
-                                    }}>
-                                        {completed ? <Check /> : icon}
-                                    </Box>
-                                );
-                            }}
-                        >
-                            {step.label}
-                        </StepLabel>
-                    </Step>
-                ))}
-            </Stepper>
-        </div>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                <Typography variant="body2">Imagem de fundo</Typography>
+                {backgroundImage ? <CheckCircleOutline fontSize="small" color="success" /> : <RadioButtonUnchecked fontSize="small" />}
+            </Box>
+             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                <Typography variant="body2">0/0 campos</Typography>
+                 <RadioButtonUnchecked fontSize="small" />
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="body2">0 estilos</Typography>
+                <RadioButtonUnchecked fontSize="small" />
+            </Box>
+        </Box>
+      </Box>
     );
 
     return (
@@ -200,7 +222,12 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow, drawerOpen, onToggle
                 sx={{
                     width: drawerWidth,
                     flexShrink: 0,
-                    [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+                    [`& .MuiDrawer-paper`]: {
+                        width: drawerWidth,
+                        boxSizing: 'border-box',
+                        backgroundColor: '#1e1e2f', // Dark blue/purple background
+                        borderRight: 'none'
+                    },
                 }}
             >
                 {drawerContent}
@@ -221,10 +248,10 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow, drawerOpen, onToggle
                     marginLeft: 0,
                 }),
             }}>
-                <Paper sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+                <Paper sx={{ p: { xs: 1, sm: 2, md: 3 }, backgroundColor: '#28283e' /* Slightly lighter than drawer */, color: 'white' }}>
                     {steps[activeStep - 1].component}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
-                        <Button disabled={activeStep === 1} onClick={handleBack}>Voltar</Button>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
+                        <Button onClick={handleBack} sx={{ mr: 2 }}>Anterior</Button>
                         <Button variant="contained" onClick={handleNext} disabled={activeStep >= steps.length}>
                             {activeStep >= steps.length ? 'Finalizado' : 'Próximo'}
                         </Button>
