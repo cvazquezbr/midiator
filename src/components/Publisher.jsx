@@ -83,9 +83,9 @@ function TabPanel(props) {
 const Publisher = ({
   settings,
   campaignContent,
-  generatedImagesData,
-  generatedVideosData,
-  followupPosts,
+  generatedImagesData = [],
+  generatedVideosData = [],
+  followupPosts = [],
   isScheduled,
   setIsScheduled,
   scheduleDate,
@@ -657,7 +657,7 @@ const Publisher = ({
                                   if (isChecked) setSelectedVideos({});
                                   setSelectedImages(prev => ({ ...prev, [index]: isChecked }));
                                 } else {
-                                  const videoIndex = index - (generatedImagesData?.length || 0);
+                                  const videoIndex = index - generatedImagesData.length;
                                   if (isChecked) {
                                     setSelectedImages({});
                                     setSelectedVideos({ [videoIndex]: true });
@@ -668,7 +668,7 @@ const Publisher = ({
                               }}
                             />
                           </ListItemIcon>
-                          <ListItemText primary={`${media.type === 'image' ? 'Imagem' : 'Vídeo'} ${media.type === 'image' ? index + 1 : index - (generatedImagesData?.length || 0) + 1}`} />
+                          <ListItemText primary={`${media.type === 'image' ? 'Imagem' : 'Vídeo'} ${media.type === 'image' ? index + 1 : index - generatedImagesData.length + 1}`} />
                           {media.type === 'image' ? (
                             <Box component="img" src={media.url} sx={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 1 }} />
                           ) : (
@@ -852,7 +852,7 @@ const Publisher = ({
                 size="large"
                 color="secondary"
                 onClick={handlePublishWordPress}
-                disabled={isPublishingWp || isPublishingLi || !generatedImagesData || generatedImagesData.length === 0 || !generatedImagesData.every(img => img.blob)}
+                disabled={isPublishingWp || isPublishingLi || generatedImagesData.length === 0 || !generatedImagesData.every(img => img.blob)}
               >
                 {isPublishingWp ? 'Publicando...' : 'Publicar no WordPress'}
               </Button>

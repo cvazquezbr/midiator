@@ -8,7 +8,6 @@ import {
   Menu,
   MenuItem,
   Typography,
-  Divider,
 } from '@mui/material';
 import {
   Settings,
@@ -30,12 +29,9 @@ import { useNavigate } from 'react-router-dom';
 const MainAppBar = ({
   darkMode,
   setDarkMode,
-  onShowPersonas,
-  onShowCampaigns,
-  isMobile,
-  currentView,
-  onTogglePersonaDrawer,
-  onToggleCampaignDrawer,
+  onShowPersonas, // New prop
+  onShowCampaigns, // New prop
+  // ... other props
 }) => {
   const { user, logout } = useUserAuth();
   const navigate = useNavigate();
@@ -65,28 +61,6 @@ const MainAppBar = ({
       }}
     >
       <Toolbar>
-        {isMobile && currentView === 'personas' && (
-            <IconButton
-                color="inherit"
-                aria-label="open persona drawer"
-                edge="start"
-                onClick={onTogglePersonaDrawer}
-                sx={{ mr: 2 }}
-            >
-                <MenuIcon />
-            </IconButton>
-        )}
-        {isMobile && currentView === 'campaign' && (
-            <IconButton
-                color="inherit"
-                aria-label="open campaign drawer"
-                edge="start"
-                onClick={onToggleCampaignDrawer}
-                sx={{ mr: 2 }}
-            >
-                <MenuIcon />
-            </IconButton>
-        )}
         <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Midiator
         </Typography>
