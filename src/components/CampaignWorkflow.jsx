@@ -20,17 +20,11 @@ import { generateCampaignContent, generateCampaignImagePrompt, generateCampaignI
 
 const drawerWidth = 280;
 
-function CampaignWorkflow({ campaignToEdit, onExitWorkflow }) {
+function CampaignWorkflow({ campaignToEdit, onExitWorkflow, drawerOpen, onToggleDrawer }) {
     const { user } = useUserAuth();
     const { settings } = useSettings();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-
-    const [drawerOpen, setDrawerOpen] = useState(!isMobile);
-
-    useEffect(() => {
-        setDrawerOpen(!isMobile);
-    }, [isMobile]);
 
     // Campaign state and other states...
     const [activeStep, setActiveStep] = useState(1);
@@ -89,7 +83,6 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow }) {
     const handleStepClick = (stepIndex) => setActiveStep(stepIndex + 1);
 
     const handleReset = () => {
-        // Reset state and exit
         if (onExitWorkflow) onExitWorkflow();
     };
 
@@ -153,7 +146,6 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow }) {
         }
     };
 
-
     const steps = [
         { label: 'Campanha', component: <Campaign problema={problema} setProblema={setProblema} solucao={solucao} setSolucao={setSolucao} campaignContent={campaignContent} isGeneratingCampaign={isGeneratingCampaign} handleGenerateCampaignContent={handleGenerateCampaignContent} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleResetCampaign={() => setCampaignContent(null)} setEditingField={(field) => setEditingFieldInfo({ fieldId: 'campaign', content: campaignContent[field], fieldName: field })} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} followupPosts={followupPosts} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} setCampaignContent={setCampaignContent} onEditFollowup={(index, content) => setEditingFieldInfo({ fieldId: `followup_${index}`, content, fieldName: 'conteudo' })} /> },
         { label: 'Posts Curtos', component: <PostsCurtosStep csvData={csvData} setCsvData={setCsvData} csvHeaders={csvHeaders} setCsvHeaders={setCsvHeaders} inputMethod={inputMethod} setInputMethod={setInputMethod} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} isGenerating={isGenerating} setIsGenerating={setIsGenerating} /> },
@@ -174,7 +166,23 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow }) {
             <Stepper activeStep={activeStep - 1} orientation="vertical" connector={<StepConnector sx={{ ml: 1.5 }} />}>
                 {steps.map((step, index) => (
                     <Step key={step.label} completed={activeStep > index + 1}>
-                        <StepLabel onClick={() => handleStepClick(index)} sx={{ cursor: 'pointer', p: 1 }}>
+                        <StepLabel
+                            onClick={() => handleStepClick(index)}
+                            sx={{ cursor: 'pointer', p: 1 }}
+                            StepIconComponent={(props) => {
+                                const { active, completed, icon } = props;
+                                return (
+                                    <Box sx={{
+                                        width: 32, height: 32, borderRadius: '50%',
+                                        backgroundColor: active ? 'primary.main' : (completed ? 'success.main' : 'grey.400'),
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
+                                        mr: 1
+                                    }}>
+                                        {completed ? <Check /> : icon}
+                                    </Box>
+                                );
+                            }}
+                        >
                             {step.label}
                         </StepLabel>
                     </Step>
@@ -188,7 +196,7 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow }) {
             <Drawer
                 variant={isMobile ? 'temporary' : 'persistent'}
                 open={drawerOpen}
-                onClose={() => setDrawerOpen(false)} // This will be handled by a prop from HomePage later
+                onClose={onToggleDrawer}
                 sx={{
                     width: drawerWidth,
                     flexShrink: 0,
@@ -204,7 +212,7 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow }) {
                     easing: theme.transitions.easing.sharp,
                     duration: theme.transitions.duration.leavingScreen,
                 }),
-                marginLeft: `-${drawerWidth}px`,
+                marginLeft: !isMobile ? `-${drawerWidth}px` : 0,
                 ...(!isMobile && drawerOpen && {
                     transition: theme.transitions.create('margin', {
                         easing: theme.transitions.easing.easeOut,
