@@ -18,16 +18,11 @@ import { getCampaigns } from '../utils/campaignState';
 // Other imports
 import { lightTheme, darkTheme } from '../theme.js';
 import { useUserAuth } from '../context/UserAuthContext';
-import { useSettings } from '../context/SettingsContext';
-import geminiAPI from '../utils/geminiAPI';
-import { getGeminiApiKey } from '../utils/geminiCredentials';
-import { loadSettingsFromDb } from '../utils/credentialsManager';
 
 const drawerWidth = 320;
 
 function HomePage() {
     const { user } = useUserAuth();
-    const { settings } = useSettings();
 
     // Global UI State
     const [darkMode, setDarkMode] = useState(() => {
@@ -44,9 +39,6 @@ function HomePage() {
     const [personaDrawerOpen, setPersonaDrawerOpen] = useState(!isMobile);
     const [personasLoading, setPersonasLoading] = useState(true);
     const [personasError, setPersonasError] = useState(null);
-    const [isSavingPersona, setIsSavingPersona] = useState(false);
-    const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
-    const [initialWizardStep, setInitialWizardStep] = useState(0);
 
     // State for Campaign View
     const [campaigns, setCampaigns] = useState([]);
@@ -110,20 +102,14 @@ function HomePage() {
 
     const handleSelectPersona = (p) => {
         setSelectedPersona(p);
-        setInitialWizardStep(1);
         if (isMobile) setPersonaDrawerOpen(false);
     };
 
     const handleNewPersona = () => {
         setSelectedPersona({ name: '', persona_data: { ...emptyPersonaWizardData } });
-        setInitialWizardStep(0);
         if (isMobile) setPersonaDrawerOpen(false);
     };
 
-    const handleSavePersona = async (personaData) => { /* ... implementation ... */ };
-    const handleGeneratePersonaWithAI = async (description, callback) => { /* ... implementation ... */ };
-
-    // Render logic
     const personaDrawerContent = (
         <Box sx={{p: 2, width: drawerWidth}}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -247,12 +233,8 @@ function HomePage() {
                                     <PersonaWizardContent
                                         key={selectedPersona.id || 'new'}
                                         onClose={() => setSelectedPersona(null)}
-                                        onSave={handleSavePersona}
-                                        onReset={handleNewPersona}
+                                        onSave={savePersona}
                                         persona={selectedPersona.persona_data}
-                                        onGenerate={handleGeneratePersonaWithAI}
-                                        isGeneratingPersona={isGeneratingPersona}
-                                        initialStep={initialWizardStep}
                                     />
                                 ) : (
                                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', p: 2 }}>
