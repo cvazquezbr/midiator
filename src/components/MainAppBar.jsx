@@ -8,6 +8,7 @@ import {
   Menu,
   MenuItem,
   Typography,
+  Divider,
 } from '@mui/material';
 import {
   Settings,
