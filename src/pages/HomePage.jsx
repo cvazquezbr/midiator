@@ -1,4 +1,4 @@
-// Trivial change to force a new commit
+// Re-submitting the fix for the persona saving bug.
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -1179,7 +1179,7 @@ function HomePage() {
             {currentView === 'personas' && (
               <Box sx={{ display: 'flex', width: '100%' }}>
                   <Drawer
-                      variant={isMobile ? 'temporary' : 'persistent'}
+                      variant="temporary"
                       anchor="left"
                       open={personaDrawerOpen}
                       onClose={() => setPersonaDrawerOpen(false)}
