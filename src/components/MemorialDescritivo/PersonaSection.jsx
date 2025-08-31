@@ -35,7 +35,7 @@ const DetailItem = ({ title, value, isHtml = false }) => {
         </List>
       );
     }
-    return <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{value}</Typography>;
+    return <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{value}</Typography>;
   };
 
   return (

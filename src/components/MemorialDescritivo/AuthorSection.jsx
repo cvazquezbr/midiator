@@ -16,7 +16,7 @@ const DetailItem = ({ title, value, isHtml = false }) => {
         '& p, & li': { mb: 1.5 },
         '& ul, & ol': { pl: 2.5 },
       }}>
-        {isHtml && typeof value === 'string' ? <Typography component="div" variant="body1">{parse(value)}</Typography> : <Typography variant="body1">{value}</Typography>}
+        {isHtml && typeof value === 'string' ? <Typography component="div" variant="body1">{parse(value)}</Typography> : <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{value}</Typography>}
       </Box>
     </Box>
   );

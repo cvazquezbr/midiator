@@ -8,17 +8,20 @@ import {
   Menu,
   MenuItem,
   Typography,
-  Divider,
 } from '@mui/material';
 import {
-  Menu as MenuIcon,
-  AccountCircle,
-  Home as HomeIcon,
-  People as PeopleIcon,
+  Settings,
   Brightness4,
   Brightness7,
-  AdminPanelSettings,
+  Edit,
+  Menu as MenuIcon,
+  Article as ArticleIcon,
   Logout,
+  AdminPanelSettings,
+  AccountCircle,
+  Save as SaveIcon,
+  People as PeopleIcon,
+  Home as HomeIcon,
 } from '@mui/icons-material';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -26,12 +29,9 @@ import { useNavigate } from 'react-router-dom';
 const MainAppBar = ({
   darkMode,
   setDarkMode,
-  onShowPersonas,
-  onShowCampaigns,
-  isMobile,
-  currentView,
-  onTogglePersonaDrawer,
-  onToggleCampaignDrawer,
+  onShowPersonas, // New prop
+  onShowCampaigns, // New prop
+  // ... other props
 }) => {
   const { user, logout } = useUserAuth();
   const navigate = useNavigate();
@@ -51,36 +51,16 @@ const MainAppBar = ({
     navigate('/login');
   };
 
-  const showToggleButton = isMobile && (currentView === 'personas' || currentView === 'campaign');
-  const handleToggle = () => {
-    if (currentView === 'personas') {
-      onTogglePersonaDrawer();
-    } else if (currentView === 'campaign') {
-      onToggleCampaignDrawer();
-    }
-  };
-
   return (
     <AppBar
       position="fixed"
       sx={{
-        zIndex: (theme) => theme.zIndex.drawer + 2, // Ensure it's above drawers
+        zIndex: (theme) => theme.zIndex.drawer + 1,
         background: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
         boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
       }}
     >
       <Toolbar>
-        {showToggleButton && (
-            <IconButton
-                color="inherit"
-                aria-label="open drawer"
-                edge="start"
-                onClick={handleToggle}
-                sx={{ mr: 2 }}
-            >
-                <MenuIcon />
-            </IconButton>
-        )}
         <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Midiator
         </Typography>
