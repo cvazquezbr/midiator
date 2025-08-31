@@ -182,6 +182,9 @@ const Campaign = ({
     setCampaignContent,
     onEditFollowup,
     persona,
+    personaList,
+    selectedPersonaForCampaign,
+    setSelectedPersonaForCampaign,
 }) => {
     useSettings();
     const [activeTab, setActiveTab] = useState(0);
@@ -360,6 +363,26 @@ const Campaign = ({
                 {/* Painel 0: Problema e Solução */}
                 <TabPanel value={activeTab} index={0}>
                     <Grid container spacing={3} sx={{ mt: 2 }}>
+                        <Grid item xs={12}>
+                            <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+                                <InputLabel id="persona-select-label">Selecionar Persona</InputLabel>
+                                <Select
+                                    labelId="persona-select-label"
+                                    value={selectedPersonaForCampaign}
+                                    onChange={(e) => setSelectedPersonaForCampaign(e.target.value)}
+                                    label="Selecionar Persona"
+                                >
+                                    <MenuItem value="">
+                                        <em>Nenhuma (Usará Padrões)</em>
+                                    </MenuItem>
+                                    {personaList.map((p) => (
+                                        <MenuItem key={p.id} value={p.id}>
+                                            {p.name}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
                         <Grid item xs={12}>
                             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                                 <TextField
