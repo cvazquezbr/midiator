@@ -151,7 +151,7 @@ const TabPanel = (props) => {
 };
 
 const Campaign = ({
-    steps = [],
+    steps,
     activeStep,
     problema,
     setProblema,
@@ -162,7 +162,7 @@ const Campaign = ({
     aspectRatio,
     setAspectRatio,
     isGeneratingCampaign,
-    campaignContent = { hashtags: [] },
+    campaignContent,
     campaignGenerationFailed,
     generationError,
     handleGenerateCampaignContent,
@@ -173,7 +173,7 @@ const Campaign = ({
     isGeneratingSummaryPequeno,
     isGeneratingConteudoFormatado,
     handleGenerateFormattedContent,
-    followupPosts = [],
+    followupPosts,
     isGeneratingFollowup,
     handleGenerateFollowupPosts,
     generatedImageUrl,

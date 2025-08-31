@@ -17,7 +17,7 @@ import NarrationSettings from './VideoGenerator/NarrationSettings';
 import Preview from './VideoGenerator/Preview';
 import SlidesSettings from './VideoGenerator/SlidesSettings';
 
-const VideoGenerator2 = ({ generatedImages = [], generatedAudioData = [], onVideoGenerated }) => {
+const VideoGenerator2 = ({ generatedImages, generatedAudioData, onVideoGenerated }) => {
   const [video, setVideo] = useState(null);
   const [videos, setVideos] = useState([]);
   const [error, setError] = useState(null);
