@@ -1,8 +1,9 @@
+// Trivial change to force a new commit
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {
-  Container, Paper, Typography, Box, Button, Grid, Card, CardContent, Alert, Stepper, Step, StepLabel, StepContent, Chip, IconButton, Tooltip, ToggleButton, ToggleButtonGroup, TextField, Link as MuiLink, Fab, FormControl, InputLabel, Select, Accordion, AccordionSummary, AccordionDetails, Toolbar, Divider,
+  Container, Paper, Typography, Box, Button, Grid, Card, CardContent, Alert, Stepper, Step, StepLabel, StepContent, Chip, IconButton, Tooltip, ToggleButton, ToggleButtonGroup, TextField, Link as MuiLink, Fab, FormControl, InputLabel, Select, Accordion, AccordionSummary, AccordionDetails, Toolbar, Divider, Drawer, List, ListItemButton, ListItemText, CircularProgress,
 } from '@mui/material';
 import {
   CloudUpload, ExpandMore as ExpandMoreIcon, FileUpload, Settings, Image as ImageIcon, Movie, Audiotrack, Palette, ArrowBackIosNew, ArrowForwardIos, MoreVert, Brightness4, Brightness7, Edit, Download as DownloadIcon, CloudQueue, ChevronRight, ChevronLeft, Check, Add, InsertDriveFileOutlined, FormatBold, Visibility, Grid3x3, Campaign as CampaignIcon, AspectRatio, Language, Publish, SaveAlt as SaveAltIcon, FileUpload as FileUploadIcon, FolderOpen as FolderOpenIcon, BarChart
@@ -17,8 +18,10 @@ import { useSettings } from '../context/SettingsContext';
 import { loadSettingsFromDb } from '../utils/credentialsManager';
 import { getCampaigns, saveCampaign, loadCampaign, updateCampaign } from '../utils/campaignState';
 import { checkAuthStatus } from '../utils/auth';
+import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils/personaState';
 
 import MyCampaignsStep from '../components/MyCampaignsStep';
+import { PersonaWizardContent, emptyPersonaWizardData } from '../components/PersonaWizard';
 import MainAppBar from '../components/MainAppBar';
 import Sidebar from '../components/Sidebar';
 import FieldPositioner from '../components/FieldPositioner';
@@ -66,6 +69,7 @@ function HomePage() {
   const { settings, updateSetting, saveSettings } = useSettings();
 
   // Component State
+  const [currentView, setCurrentView] = useState('campaigns');
   const [activeStep, setActiveStep] = useState(null);
   const [darkMode, setDarkMode] = useState(() => {
     const savedMode = localStorage.getItem('darkMode');
@@ -142,12 +146,105 @@ function HomePage() {
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [fontScale, setFontScale] = useState(1);
 
+  // State for Persona View
+  const [personaList, setPersonaList] = useState([]);
+  const [selectedPersona, setSelectedPersona] = useState(null);
+  const [personaDrawerOpen, setPersonaDrawerOpen] = useState(!isMobile);
+  const [personasLoading, setPersonasLoading] = useState(true);
+  const [personasError, setPersonasError] = useState(null);
+  const [isSavingPersona, setIsSavingPersona] = useState(false);
+  const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
+  const [initialWizardStep, setInitialWizardStep] = useState(0);
+  const [selectedPersonaForCampaign, setSelectedPersonaForCampaign] = useState('');
+
+
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
 
   // Use a ref to hold the latest campaignContent to avoid stale state in callbacks.
   const campaignContentRef = useRef(campaignContent);
   campaignContentRef.current = campaignContent;
+
+  // Effect for Persona Drawer visibility on resize
+  useEffect(() => {
+      if (currentView === 'personas') {
+        setPersonaDrawerOpen(!isMobile);
+      }
+  }, [isMobile, currentView]);
+
+  // Effect to load personas when the view is opened
+  useEffect(() => {
+      if (currentView === 'personas') {
+          fetchPersonas();
+      }
+  }, [currentView]);
+
+  const fetchPersonas = async () => {
+      setPersonasLoading(true);
+      try {
+          const data = await getPersonas();
+          setPersonaList(data);
+      } catch (err) {
+          setPersonasError(err.message);
+      } finally {
+          setPersonasLoading(false);
+      }
+  };
+
+  const handleSelectPersona = (p) => {
+      setSelectedPersona(p);
+      setInitialWizardStep(1);
+      if (isMobile) setPersonaDrawerOpen(false);
+  };
+
+  const handleNewPersona = () => {
+      setSelectedPersona({ name: '', persona_data: { ...emptyPersonaWizardData } });
+      setInitialWizardStep(0);
+      if (isMobile) setPersonaDrawerOpen(false);
+  };
+
+  const handleSavePersona = async (personaData) => {
+      const personaToSave = { ...selectedPersona, name: personaData.nome, persona_data: personaData };
+      if (!personaToSave.name) {
+          toast.error('O nome da persona é obrigatório.');
+          return;
+      }
+      setIsSavingPersona(true);
+      try {
+          const saved = personaToSave.id
+              ? await updateCampaign(personaToSave.id, personaToSave.name, personaToSave.persona_data)
+              : await savePersona(personaToSave.name, personaToSave.persona_data);
+          toast.success("Persona salva com sucesso!");
+          await fetchPersonas();
+          setSelectedPersona(saved);
+      } catch (err) {
+          toast.error(`Falha ao salvar persona: ${err.message}`);
+      } finally {
+          setIsSavingPersona(false);
+      }
+  };
+
+    const handleGeneratePersonaWithAI = async (description, callback) => {
+        if (!geminiAPI.isInitialized) {
+            const apiKey = getGeminiApiKey();
+            if (!apiKey) {
+                toast.error('Chave de API do Gemini não configurada.');
+                return;
+            }
+            geminiAPI.initialize(apiKey);
+        }
+        setIsGeneratingPersona(true);
+        const prompt = `Descreva uma persona para uma campanha de marketing para ${description}. ...`;
+        try {
+            const response = await geminiAPI.generateContent(prompt);
+            const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
+            if (callback) callback(JSON.parse(cleanedResponse));
+        } catch (error) {
+            toast.error('Ocorreu um erro ao processar a resposta da IA.');
+        } finally {
+            setIsGeneratingPersona(false);
+        }
+    };
 
   const applyAppState = (state) => {
     if (!state) return;
@@ -682,9 +779,12 @@ function HomePage() {
     setGenerationStatus('Iniciando geração de campanha...');
 
     try {
+      // Find the selected persona from the list
+      const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
+
       // Etapa 1: Gerar conteúdo principal
       setGenerationStatus('Criando o conteúdo geral da campanha...');
-      const normalizedContent = await generateCampaignContent({ problema, solucao });
+      const normalizedContent = await generateCampaignContent({ problema, solucao, persona: finalPersona });
       if (!normalizedContent) {
         throw new Error("A geração do conteúdo principal falhou e não retornou dados.");
       }
@@ -932,11 +1032,45 @@ function HomePage() {
   const currentTheme = darkMode ? darkTheme : lightTheme;
   const campaignData = { problema, solucao, campaignContent, persona, autor, formato, instrucoes, aspectRatio, followupPosts, colors: standardsColors, };
 
+  const personaDrawerContent = (
+    <Box sx={{p: 2, width: 320}}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">Personas</Typography>
+            {!isMobile && <IconButton onClick={() => setPersonaDrawerOpen(false)}><ChevronLeft /></IconButton>}
+        </Box>
+        <Button variant="contained" startIcon={<Add />} onClick={handleNewPersona} fullWidth>Nova Persona</Button>
+        <Divider sx={{my: 2}} />
+        {personasLoading && <CircularProgress />}
+        {personasError && <Alert severity="error">{personasError}</Alert>}
+        {!personasLoading && !personasError && (
+            <List>
+                {personaList.map((p) => (
+                    <ListItemButton key={p.id} selected={selectedPersona?.id === p.id} onClick={() => handleSelectPersona(p)}>
+                        <ListItemText primary={p.name} />
+                    </ListItemButton>
+                ))}
+            </List>
+        )}
+    </Box>
+  );
+
   return (
     <ThemeProvider theme={currentTheme}>
       <CssBaseline />
       <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-        <MainAppBar darkMode={darkMode} setDarkMode={setDarkMode} setShowSetupModal={setShowSetupModal} setShowCampaignStandardsModal={setShowCampaignStandardsModal} setShowMemorialDescritivoModal={setShowMemorialDescritivoModal} onMenuClick={() => setSidebarOpen(!sidebarOpen)} isMobile={isMobile} onSaveCampaign={() => setShowSaveModal(true)} onLoadCampaign={() => setShowLoadModal(true)} />
+        <MainAppBar
+            darkMode={darkMode}
+            setDarkMode={setDarkMode}
+            setShowSetupModal={setShowSetupModal}
+            setShowCampaignStandardsModal={setShowCampaignStandardsModal}
+            setShowMemorialDescritivoModal={setShowMemorialDescritivoModal}
+            onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+            isMobile={isMobile}
+            onSaveCampaign={() => setShowSaveModal(true)}
+            onLoadCampaign={() => setShowLoadModal(true)}
+            onShowPersonas={() => setCurrentView('personas')}
+            onShowCampaigns={() => setCurrentView('campaigns')}
+        />
         <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImage={backgroundImage} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
         {!isMobile && <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out', backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', '&:hover': { backgroundColor: 'background.default' } }} >{sidebarOpen ? <ChevronLeft /> : <ChevronRight />}</Fab>}
         <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, transition: theme.transitions.create('margin', { easing: theme.transitions.easing.sharp, duration: theme.transitions.duration.leavingScreen }) }} >
@@ -948,10 +1082,42 @@ function HomePage() {
               onCreateNew={handleCreateNewCampaign}
             />
           </div>
-          <div hidden={activeStep !== 1}><Container maxWidth="lg"><Campaign steps={steps} activeStep={activeStep} {...campaignData} setProblema={setProblema} setSolucao={setSolucao} isGeneratingCampaign={isGeneratingCampaign} campaignGenerationFailed={campaignGenerationFailed} generationError={generationError} handleGenerateCampaignContent={handleGenerateCampaignContent} handleResetCampaign={handleResetCampaign} handleExportHtml={() => exportHtml(campaignData)} editingField={editingField} setEditingField={(field) => {
-            setEditingField(field);
-            setIsHtmlField(field === 'conteudoFormatado');
-          }} isGeneratingSummaryMedio={isGeneratingSummaryMedio} handleGenerateSummary={handleGenerateSummary} isGeneratingSummaryPequeno={isGeneratingSummaryPequeno} isGeneratingConteudoFormatado={isGeneratingConteudoFormatado} handleGenerateFormattedContent={handleGenerateFormattedContent} isGeneratingFollowup={isGeneratingFollowup} handleGenerateFollowupPosts={handleGenerateFollowupPosts} generatedImageUrl={generatedImageUrl} isGeneratingImage={isGeneratingImage} handleGenerateImage={handleGenerateImage} setCampaignContent={setCampaignContent} onEditFollowup={handleEditFollowup} followupPostsQuantity={followupPostsQuantity} setFollowupPostsQuantity={setFollowupPostsQuantity} setAspectRatio={setAspectRatio} /></Container></div>
+              <div hidden={activeStep !== 1}><Container maxWidth="lg"><Campaign
+                steps={steps}
+                activeStep={activeStep}
+                {...campaignData}
+                setProblema={setProblema}
+                setSolucao={setSolucao}
+                isGeneratingCampaign={isGeneratingCampaign}
+                campaignGenerationFailed={campaignGenerationFailed}
+                generationError={generationError}
+                handleGenerateCampaignContent={handleGenerateCampaignContent}
+                handleResetCampaign={handleResetCampaign}
+                handleExportHtml={() => exportHtml(campaignData)}
+                editingField={editingField}
+                setEditingField={(field) => {
+                  setEditingField(field);
+                  setIsHtmlField(field === 'conteudoFormatado');
+                }}
+                isGeneratingSummaryMedio={isGeneratingSummaryMedio}
+                handleGenerateSummary={handleGenerateSummary}
+                isGeneratingSummaryPequeno={isGeneratingSummaryPequeno}
+                isGeneratingConteudoFormatado={isGeneratingConteudoFormatado}
+                handleGenerateFormattedContent={handleGenerateFormattedContent}
+                isGeneratingFollowup={isGeneratingFollowup}
+                handleGenerateFollowupPosts={handleGenerateFollowupPosts}
+                generatedImageUrl={generatedImageUrl}
+                isGeneratingImage={isGeneratingImage}
+                handleGenerateImage={handleGenerateImage}
+                setCampaignContent={setCampaignContent}
+                onEditFollowup={handleEditFollowup}
+                followupPostsQuantity={followupPostsQuantity}
+                setFollowupPostsQuantity={setFollowupPostsQuantity}
+                setAspectRatio={setAspectRatio}
+                personaList={personaList}
+                selectedPersonaForCampaign={selectedPersonaForCampaign}
+                setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
+              /></Container></div>
           <div hidden={activeStep !== 2}><PostsCurtosStep steps={steps} inputMethod={inputMethod} setInputMethod={setInputMethod} handleDrop={handleDrop} handleDragOver={handleDragOver} fileInputRef={fileInputRef} handleCSVUpload={handleCSVUpload} downloadExampleCsv={downloadExampleCsv} setShowSetupModal={setShowSetupModal} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} generateImagesAutomatically={generateImagesAutomatically} setGenerateImagesAutomatically={setGenerateImagesAutomatically} handleGenerateIAContent={handleGenerateIAContent} isGenerating={isGenerating} csvData={csvData} csvHeaders={csvHeaders} onDadosAlterados={handleDadosAlterados} darkMode={darkMode} exportCsv={exportCsv} /></div>
           <div hidden={activeStep !== 3}>
             <ImageStep
