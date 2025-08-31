@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import MainAppBar from '../components/MainAppBar';
 import CampaignWorkflow from '../components/CampaignWorkflow';
 import { PersonaWizardContent, emptyPersonaWizardData } from '../components/PersonaWizard';
-import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils/personaState';
+import { getPersonas, savePersona, updatePersona } from '../utils/personaState';
 import { getCampaigns } from '../utils/campaignState';
 
 // Other imports
@@ -46,6 +46,7 @@ function HomePage() {
     const [campaignsError, setCampaignsError] = useState(null);
     const [campaignToEdit, setCampaignToEdit] = useState(null);
     const [showWorkflow, setShowWorkflow] = useState(false);
+    const [campaignDrawerOpen, setCampaignDrawerOpen] = useState(!isMobile);
 
     // Effects
     useEffect(() => {
@@ -54,6 +55,7 @@ function HomePage() {
 
     useEffect(() => {
         setPersonaDrawerOpen(!isMobile);
+        setCampaignDrawerOpen(!isMobile);
     }, [isMobile]);
 
     useEffect(() => {
@@ -110,6 +112,24 @@ function HomePage() {
         if (isMobile) setPersonaDrawerOpen(false);
     };
 
+    const handleSavePersona = async (personaData) => {
+        const personaToSave = { ...selectedPersona, name: personaData.nome, persona_data: personaData };
+        if (!personaToSave.name) {
+            toast.error('O nome da persona é obrigatório.');
+            return;
+        }
+        try {
+            const saved = personaToSave.id
+                ? await updatePersona(personaToSave.id, personaToSave.name, personaToSave.persona_data)
+                : await savePersona(personaToSave.name, personaToSave.persona_data);
+            toast.success("Persona salva com sucesso!");
+            await fetchPersonas();
+            setSelectedPersona(saved);
+        } catch (err) {
+            toast.error(`Falha ao salvar persona: ${err.message}`);
+        }
+    };
+
     const personaDrawerContent = (
         <Box sx={{p: 2, width: drawerWidth}}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -146,20 +166,23 @@ function HomePage() {
                     isMobile={isMobile}
                     currentView={currentView}
                     onTogglePersonaDrawer={() => setPersonaDrawerOpen(!personaDrawerOpen)}
+                    onToggleCampaignDrawer={() => setCampaignDrawerOpen(!campaignDrawerOpen)}
                 />
 
                 {currentView === 'campaign' && (
-                    <Box component="main" sx={{ flexGrow: 1, p: 3, width: '100%' }}>
-                        <Toolbar />
-                        {showWorkflow ? (
-                            <CampaignWorkflow
-                                campaignToEdit={campaignToEdit}
-                                onExitWorkflow={() => {
-                                    setShowWorkflow(false);
-                                    fetchCampaigns();
-                                }}
-                            />
-                        ) : (
+                    showWorkflow ? (
+                        <CampaignWorkflow
+                            campaignToEdit={campaignToEdit}
+                            onExitWorkflow={() => {
+                                setShowWorkflow(false);
+                                fetchCampaigns();
+                            }}
+                            drawerOpen={campaignDrawerOpen}
+                            onToggleDrawer={() => setCampaignDrawerOpen(!campaignDrawerOpen)}
+                        />
+                    ) : (
+                        <Box component="main" sx={{ flexGrow: 1, p: 3, width: '100%' }}>
+                            <Toolbar />
                             <Paper sx={{ p: 3 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                     <Typography variant="h5">Minhas Campanhas</Typography>
@@ -172,25 +195,15 @@ function HomePage() {
                                 {!campaignsLoading && !campaignsError && (
                                     <List>
                                         {campaigns.map((campaign) => (
-                                            <ListItem
-                                                key={campaign.id}
-                                                secondaryAction={
-                                                    <IconButton edge="end" aria-label="edit" onClick={() => handleEditCampaign(campaign)}>
-                                                        <Edit />
-                                                    </IconButton>
-                                                }
-                                            >
-                                                <ListItemText
-                                                    primary={campaign.name || 'Campanha Sem Nome'}
-                                                    secondary={`Criada em: ${new Date(campaign.created_at).toLocaleDateString()}`}
-                                                />
+                                            <ListItem key={campaign.id} secondaryAction={ <IconButton edge="end" onClick={() => handleEditCampaign(campaign)}><Edit /></IconButton> }>
+                                                <ListItemText primary={campaign.name || 'Campanha Sem Nome'} secondary={`Criada em: ${new Date(campaign.created_at).toLocaleDateString()}`} />
                                             </ListItem>
                                         ))}
                                     </List>
                                 )}
                             </Paper>
-                        )}
-                    </Box>
+                        </Box>
+                    )
                 )}
 
                 {currentView === 'personas' && (
@@ -233,7 +246,7 @@ function HomePage() {
                                     <PersonaWizardContent
                                         key={selectedPersona.id || 'new'}
                                         onClose={() => setSelectedPersona(null)}
-                                        onSave={savePersona}
+                                        onSave={handleSavePersona}
                                         persona={selectedPersona.persona_data}
                                     />
                                 ) : (
