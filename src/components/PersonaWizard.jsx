@@ -110,7 +110,19 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
         <LinearProgress variant="determinate" value={((activeStep + 1) / steps.length) * 100} sx={{ mt: 1 }} />
       </Box>
       <Box sx={{ mt: 4, mb: 4, minHeight: '30vh' }}>{getStepContent(activeStep)}</Box>
-      <DialogActions sx={{ p: 3, justifyContent: 'space-between', mt: 2 }}>
+      <DialogActions sx={{
+        p: 3,
+        mt: 2,
+        flexDirection: { xs: 'column', md: 'row' },
+        justifyContent: 'space-between',
+        '& .MuiBox-root': { // Target the Box containers
+          mb: { xs: 2, md: 0 },
+          display: 'flex',
+          gap: 1,
+          width: { xs: '100%', md: 'auto' },
+          justifyContent: { xs: 'space-between', md: 'flex-start' },
+        }
+      }}>
         <Box><Button onClick={onClose}>Cancelar</Button>{initialStep > 0 && <Button onClick={handleReset} color="error" startIcon={<ReplayIcon />}>Recomeçar</Button>}</Box>
         <Box><Button onClick={() => onSave(personaData)} variant="contained" color="primary">Salvar</Button></Box>
         <Box>
