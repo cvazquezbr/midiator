@@ -1032,6 +1032,8 @@ function HomePage() {
   const currentTheme = darkMode ? darkTheme : lightTheme;
   const campaignData = { problema, solucao, campaignContent, persona, autor, formato, instrucoes, aspectRatio, followupPosts, colors: standardsColors, };
 
+  console.log('Current View:', currentView);
+
   const personaDrawerContent = (
     <Box sx={{p: 2, width: 320}}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
