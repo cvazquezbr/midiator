@@ -21,18 +21,18 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow }) {
     const [activeStep, setActiveStep] = useState(1);
     const [problema, setProblema] = useState('');
     const [solucao, setSolucao] = useState('');
-    const [campaignContent, setCampaignContent] = useState(null);
+    const [campaignContent, setCampaignContent] = useState({});
     const [generatedImagesData, setGeneratedImagesData] = useState([]);
     const [generatedAudioData, setGeneratedAudioData] = useState([]);
     const [generatedVideosData, setGeneratedVideosData] = useState([]);
-    const [currentCampaign, setCurrentCampaign] = useState(null);
+    const [currentCampaign, setCurrentCampaign] = useState({});
 
     useEffect(() => {
         if (campaignToEdit && campaignToEdit.campaign_data) {
             const data = campaignToEdit.campaign_data;
             setProblema(data.problema || '');
             setSolucao(data.solucao || '');
-            setCampaignContent(data.campaignContent || null);
+            setCampaignContent(data.campaignContent || {});
             setGeneratedImagesData(data.generatedImagesData || []);
             setGeneratedAudioData(data.generatedAudioData || []);
             setGeneratedVideosData(data.generatedVideosData || []);
@@ -42,11 +42,11 @@ function CampaignWorkflow({ campaignToEdit, onExitWorkflow }) {
             // Reset state if creating a new campaign
             setProblema('');
             setSolucao('');
-            setCampaignContent(null);
+            setCampaignContent({});
             setGeneratedImagesData([]);
             setGeneratedAudioData([]);
             setGeneratedVideosData([]);
-            setCurrentCampaign(null);
+            setCurrentCampaign({});
             setActiveStep(1);
         }
     }, [campaignToEdit]);
