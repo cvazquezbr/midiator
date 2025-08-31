@@ -23,6 +23,7 @@ import {
   Save as SaveIcon,
   People as PeopleIcon,
   Home as HomeIcon,
+  FolderOpen as FolderOpenIcon,
 } from '@mui/icons-material';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useNavigate } from 'react-router-dom';
