@@ -3,7 +3,7 @@ import { useIsMobile } from '../hooks/use-mobile';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, LinearProgress, Box, TextField, Typography, Grid, FormControl, InputLabel, Select, MenuItem, Chip, Checkbox, ListItemText, Accordion, AccordionSummary, AccordionDetails, FormGroup, FormControlLabel, CircularProgress, Tooltip, IconButton, Link as MuiLink,
 } from '@mui/material';
-import { ExpandMore as ExpandMoreIcon, InfoOutlined as InfoOutlinedIcon, Replay as ReplayIcon, ArrowBack, ArrowForward } from '@mui/icons-material';
+import { ExpandMore as ExpandMoreIcon, InfoOutlined as InfoOutlinedIcon, Replay as ReplayIcon, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon } from '@mui/icons-material';
 import TextEditor from './TextEditor';
 import { toast } from 'sonner';
 import isEqual from 'lodash.isequal';
@@ -32,17 +32,7 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
     return <CircularProgress />;
   }
 
-  const handleNext = () => {
-    if (activeStep === 0) {
-      onGenerate(personaData.description, (generatedPersona) => {
-        onPersonaDataChange(prev => ({ ...prev, ...generatedPersona }));
-        setActiveStep(1);
-      });
-    } else {
-      setActiveStep((prevActiveStep) => prevActiveStep + 1);
-    }
-  };
-
+  const handleNext = () => setActiveStep((prevActiveStep) => prevActiveStep + 1);
   const handleBack = () => setActiveStep((prevActiveStep) => prevActiveStep - 1);
   const handleChange = (event) => onPersonaDataChange(prev => ({ ...prev, [event.target.name]: event.target.value }));
   const handleMultiSelectChange = (event) => onPersonaDataChange(prev => ({ ...prev, [event.target.name]: typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value }));
@@ -54,6 +44,13 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
   const handleEditChip = (key, value) => setEditingChip({ key, value, newValue: value });
   const handleUpdateChipValue = () => { if (!editingChip) return; const { key, value, newValue } = editingChip; const trimmedNewValue = newValue.trim(); if (!trimmedNewValue) { toast.error("O valor não pode ser vazio."); setEditingChip(null); return; } if (value.toLowerCase() === trimmedNewValue.toLowerCase()) { setEditingChip(null); return; } if ((personaData[key] || []).map(item => item.toLowerCase()).includes(trimmedNewValue.toLowerCase())) { toast.warning('Este item já foi adicionado.'); setEditingChip(null); return; } onPersonaDataChange(prev => ({ ...prev, [key]: (prev[key] || []).map(item => (item === value ? trimmedNewValue : item)) })); setEditingChip(null); };
 
+  const handleGenerateClick = () => {
+    onGenerate(personaData.description, (generatedPersona) => {
+      onPersonaDataChange(prev => ({ ...prev, ...generatedPersona }));
+      setActiveStep(1); // Move to the next step to show the results
+    });
+  };
+
   const handleReset = () => {
     if (window.confirm("Tem certeza que deseja recomeçar? Todos os dados não salvos nesta persona serão perdidos e o processo de criação iniciará do zero.")) {
       if (onReset) onReset();
@@ -64,7 +61,17 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
 
   const getStepContent = (step) => {
     switch (step) {
-      case 0: return <Box sx={{ display: 'flex', alignItems: 'center' }}><TextField name="description" label="Descrição da Persona" multiline rows={6} fullWidth value={personaData.description || ''} onChange={handleChange} placeholder="Ex: 'CTO de uma startup...'" disabled={isGeneratingPersona} /><InfoTooltip title="Forneça uma breve descrição do perfil. A IA irá usar essa informação para preencher os primeiros campos automaticamente." /></Box>;
+      case 0: return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TextField name="description" label="Descrição da Persona" multiline rows={6} fullWidth value={personaData.description || ''} onChange={handleChange} placeholder="Ex: 'CTO de uma startup...'" disabled={isGeneratingPersona} />
+            <Tooltip title="Gerar persona com IA">
+                <IconButton onClick={handleGenerateClick} disabled={isGeneratingPersona || !personaData.description?.trim()} color="primary">
+                    {isGeneratingPersona ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
+                </IconButton>
+            </Tooltip>
+            <InfoTooltip title="Forneça uma breve descrição do perfil. A IA irá usar essa informação para preencher os primeiros campos automaticamente." />
+        </Box>
+      );
       case 1: return <Box><Typography variant="h6" gutterBottom>Revisão e Detalhamento Básico</Typography><Grid container spacing={3}><Grid item xs={12}><TextField label="Nome da Persona" name="nome" value={personaData.nome || ''} onChange={handleChange} fullWidth required /></Grid><Grid item xs={12} md={(personaData.posicaoCargo || []).includes('Outro(s)') ? 6 : 12}><FormControl fullWidth><InputLabel>Posição/Cargo</InputLabel><Select multiple name="posicaoCargo" value={personaData.posicaoCargo || []} onChange={handleMultiSelectChange} renderValue={(s) => <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>{s.map((v) => <Chip key={v} label={v} onDelete={() => handleChipDelete('posicaoCargo', v)} onMouseDown={(e) => e.stopPropagation()} />)}</Box>} label="Posição/Cargo">{POSICOES_CARGOS.map((p) => <MenuItem key={p} value={p}><Checkbox checked={(personaData.posicaoCargo || []).indexOf(p) > -1} /><ListItemText primary={p} /></MenuItem>)}</Select></FormControl></Grid>{(personaData.posicaoCargo || []).includes('Outro(s)') && <Grid item xs={12} md={6}><TextField label="Especifique Outro Cargo" name="posicaoCargoOutro" value={personaData.posicaoCargoOutro || ''} onChange={handleChange} fullWidth required /></Grid>}<Grid item xs={12} md={(personaData.segmentoEmpresa || []).includes('Outro(s)') ? 6 : 12}><FormControl fullWidth><InputLabel>Segmento da Empresa</InputLabel><Select multiple name="segmentoEmpresa" value={personaData.segmentoEmpresa || []} onChange={handleMultiSelectChange} renderValue={(s) => <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>{s.map((v) => <Chip key={v} label={v} onDelete={() => handleChipDelete('segmentoEmpresa', v)} onMouseDown={(e) => e.stopPropagation()} />)}</Box>} label="Segmento da Empresa">{SEGMENTOS_EMPRESA.map((s) => <MenuItem key={s} value={s}><Checkbox checked={(personaData.segmentoEmpresa || []).indexOf(s) > -1} /><ListItemText primary={s} /></MenuItem>)}</Select></FormControl></Grid>{(personaData.segmentoEmpresa || []).includes('Outro(s)') && <Grid item xs={12} md={6}><TextField label="Especifique Outro Segmento" name="segmentoEmpresaOutro" value={personaData.segmentoEmpresaOutro || ''} onChange={handleChange} fullWidth required /></Grid>}</Grid></Box>;
       case 2: return <Box><Typography variant="h6" gutterBottom>Responsabilidades-Chave</Typography><FormControl fullWidth><InputLabel>Responsabilidades-Chave</InputLabel><Select multiple name="responsabilidadesChave" value={personaData.responsabilidadesChave || []} onChange={handleMultiSelectChange} renderValue={(s) => <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>{s.map((v) => <Chip key={v} label={v} onDelete={() => handleChipDelete('responsabilidadesChave', v)} onMouseDown={(e) => e.stopPropagation()} />)}</Box>} label="Responsabilidades-Chave">{RESPONSABILIDADES_CHAVE.map((r) => <MenuItem key={r} value={r}><Checkbox checked={(personaData.responsabilidadesChave || []).indexOf(r) > -1} /><ListItemText primary={r} /></MenuItem>)}</Select></FormControl>{(personaData.responsabilidadesChave || []).includes('Outro(s)') && <TextField label="Especifique Outra Responsabilidade" name="responsabilidadesChaveOutro" value={personaData.responsabilidadesChaveOutro || ''} onChange={handleChange} fullWidth required sx={{ mt: 2 }} />}</Box>;
       case 3: return <Box><Typography variant="h6" gutterBottom>Dores e Desafios</Typography>{Object.entries(DORES_DESAFIOS).map(([key, { label, items }]) => <Accordion key={key} defaultExpanded><AccordionSummary expandIcon={<ExpandMoreIcon />}>{label}</AccordionSummary><AccordionDetails><FormGroup>{items.map((item) => <Box key={item.nome}><FormControlLabel control={<Checkbox checked={(personaData[key] || []).includes(item.nome)} onChange={handleCheckboxChange(key, item.nome)} />} label={item.nome} /><InfoTooltip title={item.descricao} /></Box>)}</FormGroup></AccordionDetails></Accordion>)}</Box>;
@@ -74,7 +81,7 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
     }
   };
 
-  const isNextDisabled = () => (activeStep === 0 && !(personaData.description || '').trim()) || (activeStep === 1 && !(personaData.nome || '').trim());
+  const isNextDisabled = () => (activeStep === 1 && !(personaData.nome || '').trim());
 
   return (
     <Box>
@@ -100,8 +107,7 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
         <Box><Button onClick={onSave} variant="contained" color="primary">Salvar</Button></Box>
         <Box>
             <Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" startIcon={<ArrowBack />}>Anterior</Button>
-            {activeStep === 0 && (<Button onClick={handleNext} variant="outlined" endIcon={<ArrowForward />} disabled={isNextDisabled() || isGeneratingPersona} sx={{ ml: 1 }}>{isGeneratingPersona ? <CircularProgress size={24} /> : 'Gerar com IA'}</Button>)}
-            {activeStep > 0 && activeStep < steps.length - 1 && (<Button onClick={handleNext} variant="outlined" endIcon={<ArrowForward />} sx={{ ml: 1 }}>Próximo</Button>)}
+            <Button onClick={handleNext} variant="outlined" endIcon={<ArrowForward />} disabled={isNextDisabled() || activeStep === steps.length - 1} sx={{ ml: 1 }}>Próximo</Button>
         </Box>
       </DialogActions>
     </Box>
