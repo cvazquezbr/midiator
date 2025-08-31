@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import MainAppBar from '../components/MainAppBar';
 import CampaignWorkflow from '../components/CampaignWorkflow';
 import { PersonaWizardContent, emptyPersonaWizardData } from '../components/PersonaWizard';
-import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils/personaState';
+import { getPersonas, savePersona, updatePersona } from '../utils/personaState';
 import { getCampaigns } from '../utils/campaignState';
 
 // Other imports
@@ -20,7 +20,6 @@ import { lightTheme, darkTheme } from '../theme.js';
 import { useUserAuth } from '../context/UserAuthContext';
 
 const drawerWidth = 320;
-const campaignDrawerWidth = 300;
 
 function HomePage() {
     const { user } = useUserAuth();
@@ -68,8 +67,29 @@ function HomePage() {
     }, [currentView]);
 
     // Fetching Functions
-    const fetchPersonas = async () => { /* ... */ };
-    const fetchCampaigns = async () => { /* ... */ };
+    const fetchPersonas = async () => {
+        setPersonasLoading(true);
+        try {
+            const data = await getPersonas();
+            setPersonaList(data);
+        } catch (err) {
+            setPersonasError(err.message);
+        } finally {
+            setPersonasLoading(false);
+        }
+    };
+
+    const fetchCampaigns = async () => {
+        setCampaignsLoading(true);
+        try {
+            const data = await getCampaigns();
+            setCampaigns(data);
+        } catch (err) {
+            setCampaignsError(err.message);
+        } finally {
+            setCampaignsLoading(false);
+        }
+    };
 
     // Handlers
     const handleNewCampaign = () => {
@@ -82,10 +102,55 @@ function HomePage() {
         setShowWorkflow(true);
     };
 
-    const handleSelectPersona = (p) => { /* ... */ };
-    const handleNewPersona = () => { /* ... */ };
+    const handleSelectPersona = (p) => {
+        setSelectedPersona(p);
+        if (isMobile) setPersonaDrawerOpen(false);
+    };
 
-    const personaDrawerContent = ( /* ... */ );
+    const handleNewPersona = () => {
+        setSelectedPersona({ name: '', persona_data: { ...emptyPersonaWizardData } });
+        if (isMobile) setPersonaDrawerOpen(false);
+    };
+
+    const handleSavePersona = async (personaData) => {
+        const personaToSave = { ...selectedPersona, name: personaData.nome, persona_data: personaData };
+        if (!personaToSave.name) {
+            toast.error('O nome da persona é obrigatório.');
+            return;
+        }
+        try {
+            const saved = personaToSave.id
+                ? await updatePersona(personaToSave.id, personaToSave.name, personaToSave.persona_data)
+                : await savePersona(personaToSave.name, personaToSave.persona_data);
+            toast.success("Persona salva com sucesso!");
+            await fetchPersonas();
+            setSelectedPersona(saved);
+        } catch (err) {
+            toast.error(`Falha ao salvar persona: ${err.message}`);
+        }
+    };
+
+    const personaDrawerContent = (
+        <Box sx={{p: 2, width: drawerWidth}}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">Personas</Typography>
+                {!isMobile && <IconButton onClick={() => setPersonaDrawerOpen(false)}><ChevronLeft /></IconButton>}
+            </Box>
+            <Button variant="contained" startIcon={<Add />} onClick={handleNewPersona} fullWidth>Nova Persona</Button>
+            <Divider sx={{my: 2}} />
+            {personasLoading && <CircularProgress />}
+            {personasError && <Alert severity="error">{personasError}</Alert>}
+            {!personasLoading && !personasError && (
+                <List>
+                    {personaList.map((p) => (
+                        <ListItemButton key={p.id} selected={selectedPersona?.id === p.id} onClick={() => handleSelectPersona(p)}>
+                            <ListItemText primary={p.name} />
+                        </ListItemButton>
+                    ))}
+                </List>
+            )}
+        </Box>
+    );
 
     const currentTheme = darkMode ? darkTheme : lightTheme;
 
@@ -142,7 +207,58 @@ function HomePage() {
                 )}
 
                 {currentView === 'personas' && (
-                    /* ... persona view JSX ... */
+                    <Box sx={{ display: 'flex', width: '100%' }}>
+                        <Drawer
+                            variant={isMobile ? 'temporary' : 'persistent'}
+                            anchor="left"
+                            open={personaDrawerOpen}
+                            onClose={() => setPersonaDrawerOpen(false)}
+                            sx={{
+                                width: drawerWidth,
+                                flexShrink: 0,
+                                '& .MuiDrawer-paper': { width: drawerWidth, boxSizing: 'border-box' },
+                            }}
+                        >
+                            <Toolbar />
+                            {personaDrawerContent}
+                        </Drawer>
+                        <Box
+                            component="main"
+                            sx={{
+                                flexGrow: 1, p: 3,
+                                transition: theme.transitions.create('margin', {
+                                    easing: theme.transitions.easing.sharp,
+                                    duration: theme.transitions.duration.leavingScreen,
+                                }),
+                                marginLeft: `-${drawerWidth}px`,
+                                ...(!isMobile && personaDrawerOpen && {
+                                    transition: theme.transitions.create('margin', {
+                                        easing: theme.transitions.easing.easeOut,
+                                        duration: theme.transitions.duration.enteringScreen,
+                                    }),
+                                    marginLeft: 0,
+                                }),
+                            }}
+                        >
+                            <Toolbar />
+                            <Paper elevation={2} sx={{ p: 3 }}>
+                                {selectedPersona ? (
+                                    <PersonaWizardContent
+                                        key={selectedPersona.id || 'new'}
+                                        onClose={() => setSelectedPersona(null)}
+                                        onSave={handleSavePersona}
+                                        persona={selectedPersona.persona_data}
+                                    />
+                                ) : (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh', p: 2 }}>
+                                        <Typography variant="h6" color="text.secondary" sx={{ textAlign: 'center' }}>
+                                            Selecione uma persona para editar ou crie uma nova.
+                                        </Typography>
+                                    </Box>
+                                )}
+                            </Paper>
+                        </Box>
+                    </Box>
                 )}
             </Box>
         </ThemeProvider>
