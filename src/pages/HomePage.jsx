@@ -1070,6 +1070,8 @@ function HomePage() {
             onLoadCampaign={() => setShowLoadModal(true)}
             onShowPersonas={() => setCurrentView('personas')}
             onShowCampaigns={() => setCurrentView('campaigns')}
+            currentView={currentView}
+            onPersonaMenuClick={() => setPersonaDrawerOpen(!personaDrawerOpen)}
         />
         <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImage={backgroundImage} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
         {!isMobile && <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out', backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', '&:hover': { backgroundColor: 'background.default' } }} >{sidebarOpen ? <ChevronLeft /> : <ChevronRight />}</Fab>}
@@ -1198,18 +1200,6 @@ function HomePage() {
                       sx={{
                           flexGrow: 1,
                           p: 3,
-                          transition: theme.transitions.create('margin', {
-                              easing: theme.transitions.easing.sharp,
-                              duration: theme.transitions.duration.leavingScreen,
-                          }),
-                          marginLeft: `-${320}px`,
-                          ...((personaDrawerOpen && !isMobile) && {
-                              transition: theme.transitions.create('margin', {
-                                  easing: theme.transitions.easing.easeOut,
-                                  duration: theme.transitions.duration.enteringScreen,
-                              }),
-                              marginLeft: 0,
-                          }),
                       }}
                   >
                       <Toolbar /> {/* Spacer for AppBar */}

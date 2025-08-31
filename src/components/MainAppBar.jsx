@@ -40,6 +40,8 @@ const MainAppBar = ({
   isMobile,
   onSaveCampaign,
   onLoadCampaign,
+  currentView,
+  onPersonaMenuClick,
 }) => {
   const { user, logout } = useUserAuth();
   const navigate = useNavigate();
@@ -72,8 +74,8 @@ const MainAppBar = ({
             color="inherit"
             aria-label="open drawer"
             edge="start"
-            onClick={onMenuClick}
-            sx={{ mr: 2 }}
+            onClick={currentView === 'personas' && isMobile ? onPersonaMenuClick : onMenuClick}
+            sx={{ mr: 2, display: { md: 'none' } }} // Only show on mobile
           >
             <MenuIcon />
           </IconButton>
