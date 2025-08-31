@@ -1,42 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useIsMobile } from '../hooks/use-mobile';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  LinearProgress,
-  Box,
-  TextField,
-  Typography,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-  Checkbox,
-  ListItemText,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  FormGroup,
-  FormControlLabel,
-  CircularProgress,
-  Tooltip,
-  IconButton,
-  Link as MuiLink,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, LinearProgress, Box, TextField, Typography, Grid, FormControl, InputLabel, Select, MenuItem, Chip, Checkbox, ListItemText, Accordion, AccordionSummary, AccordionDetails, FormGroup, FormControlLabel, CircularProgress, Tooltip, IconButton, Link as MuiLink,
 } from '@mui/material';
-import {
-    ExpandMore as ExpandMoreIcon,
-    InfoOutlined as InfoOutlinedIcon,
-    Replay as ReplayIcon,
-    ArrowBack,
-    ArrowForward,
-} from '@mui/icons-material';
+import { ExpandMore as ExpandMoreIcon, InfoOutlined as InfoOutlinedIcon, Replay as ReplayIcon, ArrowBack, ArrowForward } from '@mui/icons-material';
 import TextEditor from './TextEditor';
 import { toast } from 'sonner';
+import isEqual from 'lodash.isequal';
+
 
 // Constants
 const POSICOES_CARGOS = ['Liderança Executiva: CEO, Diretor Executivo, Sócio', 'Gestão de Tecnologia: CTO, Head de Engenharia, Gerente de TI', 'Gestão de Marketing: Gerente de Marketing, Coordenador de Marketing', 'Gestão de Vendas: Gerente de Vendas, Diretor Comercial', 'Gestão de Recursos Humanos: Head de RH, Analista de RH', 'Outro(s)'];
@@ -48,21 +19,23 @@ export const emptyPersonaWizardData = { description: '', nome: '', posicaoCargo:
 
 const steps = ['Início Rápido com IA', 'Revisão Básica', 'Responsabilidades', 'Dores e Desafios', 'Gatilhos e Barreiras', 'Mentalidade e Cultura'];
 
-export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGeneratingPersona, persona, initialStep = 0, onReset }) => {
+export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGeneratingPersona, personaData, onPersonaDataChange, initialStep = 0, onReset }) => {
   const [activeStep, setActiveStep] = useState(initialStep);
-  const [personaData, setPersonaData] = useState(persona || emptyPersonaWizardData);
   const [otherItemInputs, setOtherItemInputs] = useState({});
   const [editingChip, setEditingChip] = useState(null);
 
   useEffect(() => {
-    setPersonaData(persona || emptyPersonaWizardData);
     setActiveStep(initialStep || 0);
-  }, [persona, initialStep]);
+  }, [initialStep]);
+
+  if (!personaData) {
+    return <CircularProgress />;
+  }
 
   const handleNext = () => {
     if (activeStep === 0) {
       onGenerate(personaData.description, (generatedPersona) => {
-        setPersonaData(prev => ({ ...prev, ...generatedPersona }));
+        onPersonaDataChange(prev => ({ ...prev, ...generatedPersona }));
         setActiveStep(1);
       });
     } else {
@@ -71,15 +44,15 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
   };
 
   const handleBack = () => setActiveStep((prevActiveStep) => prevActiveStep - 1);
-  const handleChange = (event) => setPersonaData(prev => ({ ...prev, [event.target.name]: event.target.value }));
-  const handleMultiSelectChange = (event) => setPersonaData(prev => ({ ...prev, [event.target.name]: typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value }));
-  const handleCheckboxChange = (category, field) => (event) => { const { checked } = event.target; setPersonaData(prev => { const currentValues = prev[category] || []; const newValues = checked ? [...currentValues, field] : currentValues.filter(item => item !== field); return { ...prev, [category]: newValues }; }); };
-  const handleRichTextChange = (name, value) => setPersonaData(prev => ({ ...prev, [name]: value }));
-  const handleChipDelete = (fieldName, valueToDelete) => setPersonaData(prev => ({ ...prev, [fieldName]: (prev[fieldName] || []).filter(item => item !== valueToDelete) }));
+  const handleChange = (event) => onPersonaDataChange(prev => ({ ...prev, [event.target.name]: event.target.value }));
+  const handleMultiSelectChange = (event) => onPersonaDataChange(prev => ({ ...prev, [event.target.name]: typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value }));
+  const handleCheckboxChange = (category, field) => (event) => { const { checked } = event.target; onPersonaDataChange(prev => { const currentValues = prev[category] || []; const newValues = checked ? [...currentValues, field] : currentValues.filter(item => item !== field); return { ...prev, [category]: newValues }; }); };
+  const handleRichTextChange = (name, value) => onPersonaDataChange(prev => ({ ...prev, [name]: value }));
+  const handleChipDelete = (fieldName, valueToDelete) => onPersonaDataChange(prev => ({ ...prev, [fieldName]: (prev[fieldName] || []).filter(item => item !== valueToDelete) }));
   const handleOtherInputChange = (key, value) => setOtherItemInputs(prev => ({ ...prev, [key]: value }));
-  const handleAddNewItem = (key) => { const newItem = otherItemInputs[key]?.trim(); if (!newItem) return; if ((personaData[key] || []).map(item => item.toLowerCase()).includes(newItem.toLowerCase())) { toast.warning('Este item já foi adicionado.'); return; } setPersonaData(prev => ({ ...prev, [key]: [...(prev[key] || []), newItem] })); handleOtherInputChange(key, ''); };
+  const handleAddNewItem = (key) => { const newItem = otherItemInputs[key]?.trim(); if (!newItem) return; if ((personaData[key] || []).map(item => item.toLowerCase()).includes(newItem.toLowerCase())) { toast.warning('Este item já foi adicionado.'); return; } onPersonaDataChange(prev => ({ ...prev, [key]: [...(prev[key] || []), newItem] })); handleOtherInputChange(key, ''); };
   const handleEditChip = (key, value) => setEditingChip({ key, value, newValue: value });
-  const handleUpdateChipValue = () => { if (!editingChip) return; const { key, value, newValue } = editingChip; const trimmedNewValue = newValue.trim(); if (!trimmedNewValue) { toast.error("O valor não pode ser vazio."); setEditingChip(null); return; } if (value.toLowerCase() === trimmedNewValue.toLowerCase()) { setEditingChip(null); return; } if ((personaData[key] || []).map(item => item.toLowerCase()).includes(trimmedNewValue.toLowerCase())) { toast.warning('Este item já foi adicionado.'); setEditingChip(null); return; } setPersonaData(prev => ({ ...prev, [key]: (prev[key] || []).map(item => (item === value ? trimmedNewValue : item)) })); setEditingChip(null); };
+  const handleUpdateChipValue = () => { if (!editingChip) return; const { key, value, newValue } = editingChip; const trimmedNewValue = newValue.trim(); if (!trimmedNewValue) { toast.error("O valor não pode ser vazio."); setEditingChip(null); return; } if (value.toLowerCase() === trimmedNewValue.toLowerCase()) { setEditingChip(null); return; } if ((personaData[key] || []).map(item => item.toLowerCase()).includes(trimmedNewValue.toLowerCase())) { toast.warning('Este item já foi adicionado.'); setEditingChip(null); return; } onPersonaDataChange(prev => ({ ...prev, [key]: (prev[key] || []).map(item => (item === value ? trimmedNewValue : item)) })); setEditingChip(null); };
 
   const handleReset = () => {
     if (window.confirm("Tem certeza que deseja recomeçar? Todos os dados não salvos nesta persona serão perdidos e o processo de criação iniciará do zero.")) {
@@ -115,7 +88,7 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
         mt: 2,
         flexDirection: { xs: 'column', md: 'row' },
         justifyContent: 'space-between',
-        '& .MuiBox-root': { // Target the Box containers
+        '& .MuiBox-root': {
           mb: { xs: 2, md: 0 },
           display: 'flex',
           gap: 1,
@@ -124,7 +97,7 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
         }
       }}>
         <Box><Button onClick={onClose}>Cancelar</Button>{initialStep > 0 && <Button onClick={handleReset} color="error" startIcon={<ReplayIcon />}>Recomeçar</Button>}</Box>
-        <Box><Button onClick={() => onSave(personaData)} variant="contained" color="primary">Salvar</Button></Box>
+        <Box><Button onClick={onSave} variant="contained" color="primary">Salvar</Button></Box>
         <Box>
             <Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" startIcon={<ArrowBack />}>Anterior</Button>
             {activeStep === 0 && (<Button onClick={handleNext} variant="outlined" endIcon={<ArrowForward />} disabled={isNextDisabled() || isGeneratingPersona} sx={{ ml: 1 }}>{isGeneratingPersona ? <CircularProgress size={24} /> : 'Gerar com IA'}</Button>)}
