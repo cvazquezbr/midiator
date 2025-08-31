@@ -12,6 +12,8 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Toaster, toast } from 'sonner';
+import isEqual from 'lodash.isequal';
+
 
 import { useUserAuth } from '../context/UserAuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -39,6 +41,8 @@ import CampaignStandardsModal from '../components/CampaignStandardsModal';
 import SaveCampaignModal from '../components/SaveCampaignModal';
 import LoadCampaignModal from '../components/LoadCampaignModal';
 import BackgroundImageSelector from '../components/BackgroundImageSelector';
+import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
+
 
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
@@ -157,6 +161,12 @@ function HomePage() {
   const [initialWizardStep, setInitialWizardStep] = useState(0);
   const [selectedPersonaForCampaign, setSelectedPersonaForCampaign] = useState('');
 
+  // State for unsaved changes guard
+  const [personaFormData, setPersonaFormData] = useState(null);
+  const [isPersonaDirty, setIsPersonaDirty] = useState(false);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [navigationTarget, setNavigationTarget] = useState(null);
+
 
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -164,6 +174,17 @@ function HomePage() {
   // Use a ref to hold the latest campaignContent to avoid stale state in callbacks.
   const campaignContentRef = useRef(campaignContent);
   campaignContentRef.current = campaignContent;
+
+  // Effect for unsaved changes in Persona form
+  useEffect(() => {
+    if (selectedPersona && personaFormData) {
+        const isDirty = !isEqual(selectedPersona.persona_data, personaFormData);
+        setIsPersonaDirty(isDirty);
+    } else {
+        setIsPersonaDirty(false);
+    }
+  }, [personaFormData, selectedPersona]);
+
 
   // Effect for Persona Drawer visibility on resize
   useEffect(() => {
@@ -193,35 +214,48 @@ function HomePage() {
 
   const handleSelectPersona = (p) => {
       setSelectedPersona(p);
+      setPersonaFormData(p.persona_data);
+      setIsPersonaDirty(false);
       setInitialWizardStep(1);
       if (isMobile) setPersonaDrawerOpen(false);
   };
 
   const handleNewPersona = () => {
-      setSelectedPersona({ name: '', persona_data: { ...emptyPersonaWizardData } });
+      const newEmptyPersona = { name: '', persona_data: { ...emptyPersonaWizardData } };
+      setSelectedPersona(newEmptyPersona);
+      setPersonaFormData(newEmptyPersona.persona_data);
+      setIsPersonaDirty(false);
       setInitialWizardStep(0);
       if (isMobile) setPersonaDrawerOpen(false);
   };
 
-  const handleSavePersona = async (personaData) => {
-      const personaToSave = { ...selectedPersona, name: personaData.nome, persona_data: personaData };
-      if (!personaToSave.name) {
-          toast.error('O nome da persona é obrigatório.');
-          return;
-      }
-      setIsSavingPersona(true);
-      try {
-          const saved = personaToSave.id
-              ? await updateCampaign(personaToSave.id, personaToSave.name, personaToSave.persona_data)
-              : await savePersona(personaToSave.name, personaToSave.persona_data);
-          toast.success("Persona salva com sucesso!");
-          await fetchPersonas();
-          setSelectedPersona(saved);
-      } catch (err) {
-          toast.error(`Falha ao salvar persona: ${err.message}`);
-      } finally {
-          setIsSavingPersona(false);
-      }
+  const handleSavePersona = async () => {
+    if (!personaFormData) {
+        toast.error('Não há dados de persona para salvar.');
+        return;
+    }
+    const personaToSave = { ...selectedPersona, name: personaFormData.nome, persona_data: personaFormData };
+    if (!personaToSave.name) {
+        toast.error('O nome da persona é obrigatório.');
+        return;
+    }
+    setIsSavingPersona(true);
+    try {
+        const saved = personaToSave.id
+            ? await updatePersona(personaToSave.id, personaToSave.name, personaToSave.persona_data)
+            : await savePersona(personaToSave.name, personaToSave.persona_data);
+        toast.success("Persona salva com sucesso!");
+        await fetchPersonas();
+        setSelectedPersona(saved);
+        setPersonaFormData(saved.persona_data);
+        setIsPersonaDirty(false);
+        return true; // Indicate success
+    } catch (err) {
+        toast.error(`Falha ao salvar persona: ${err.message}`);
+        return false; // Indicate failure
+    } finally {
+        setIsSavingPersona(false);
+    }
   };
 
     const handleGeneratePersonaWithAI = async (description, callback) => {
@@ -245,6 +279,40 @@ function HomePage() {
             setIsGeneratingPersona(false);
         }
     };
+
+    // --- Navigation Guard Logic ---
+    const handleNavigation = (targetAction) => {
+        if (isPersonaDirty) {
+            setNavigationTarget(() => targetAction);
+            setShowUnsavedDialog(true);
+        } else {
+            targetAction();
+        }
+    };
+
+    const handleDialogClose = () => {
+        setShowUnsavedDialog(false);
+        setNavigationTarget(null);
+    };
+
+    const handleDialogDiscard = () => {
+        setShowUnsavedDialog(false);
+        setIsPersonaDirty(false);
+        if (navigationTarget) {
+            navigationTarget();
+        }
+        setNavigationTarget(null);
+    };
+
+    const handleDialogSaveAndNavigate = async () => {
+        const success = await handleSavePersona();
+        setShowUnsavedDialog(false);
+        if (success && navigationTarget) {
+            navigationTarget();
+        }
+        setNavigationTarget(null);
+    };
+
 
   const applyAppState = (state) => {
     if (!state) return;
@@ -299,7 +367,6 @@ function HomePage() {
     setFieldPositions(state.fieldPositions ?? {});
     setTemplateFieldStyles(state.templateFieldStyles ?? {});
 
-    // Ensure loaded fieldStyles are complete with all default values.
     const loadedStyles = state.fieldStyles ?? {};
     const completeStyles = {};
     const defaultStylesBase = {
@@ -320,7 +387,7 @@ function HomePage() {
       });
     }
     setFieldStyles(completeStyles);
-    setInitialFieldStyles(completeStyles); // Salvar o estado inicial
+    setInitialFieldStyles(completeStyles);
 
     setDisplayedImageSize(state.displayedImageSize ?? { width: 0, height: 0 });
     setOriginalImageSize(state.originalImageSize ?? { width: 0, height: 0 });
@@ -405,7 +472,7 @@ function HomePage() {
     setIsLoading(true);
     try {
       const loadedCampaign = await loadCampaign(id);
-      console.log("Loaded campaign data from DB:", loadedCampaign); // Diagnostic log
+      console.log("Loaded campaign data from DB:", loadedCampaign);
       applyAppState(loadedCampaign.campaign_data);
       setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
       toast.success(`Campaign "${loadedCampaign.name}" loaded successfully!`);
@@ -443,25 +510,21 @@ function HomePage() {
       } catch (error) {
         toast.error("Could not check for existing campaigns. Starting fresh.");
         console.error("Failed to fetch initial campaigns:", error);
-        setActiveStep(1); // Default to campaign creation on error
+        setActiveStep(1);
       } finally {
         setIsFetchingCampaigns(false);
       }
     };
 
-    if (user) { // Only run if user is logged in
+    if (user) {
       checkCampaignsAndSetInitialStep();
     } else {
-      // If there's no user, we can't fetch campaigns, so go to the first public step.
-      // This might need adjustment depending on which steps are public.
-      // For now, let's assume the flow starts after login.
-      setActiveStep(null); // Or some other default state for logged-out users
+      setActiveStep(null);
       setIsFetchingCampaigns(false);
     }
   }, [user]);
 
 
-  // Configure googleApi module with the token and setter from context
   useEffect(() => {
     if (googleAccessToken) {
       console.log("[HomePage] googleAccessToken updated, configuring googleApi module.");
@@ -533,7 +596,7 @@ function HomePage() {
               expiry: Date.now() + data.expires_in * 1000,
             };
             updateSetting('linkedin', newConfig);
-            await saveSettings(); // Save immediately after getting the token
+            await saveSettings();
             toast.success('Conexão com o LinkedIn estabelecida com sucesso!');
             setShowSetupModal(true);
           } else {
@@ -547,14 +610,13 @@ function HomePage() {
     };
 
     handleLinkedInRedirect();
-  }, []); // Should only run once on page load
+  }, []);
 
   const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Imagem e Formatação', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Gerar Imagens', description: 'Gere as imagens finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish }, { label: 'Monitorar', description: 'Acompanhe as estatísticas de suas publicações.', icon: BarChart } ];
   const handleCreateNewCampaign = () => {
-    // Reset all campaign-specific state to their defaults
-    applyAppState({}); // Clears most of the state
-    setCurrentCampaign(null); // Ensure we're not editing an existing campaign
-    setActiveStep(1); // Move to the 'Campanha' step
+    applyAppState({});
+    setCurrentCampaign(null);
+    setActiveStep(1);
   };
   const handleEditCampaign = (campaign) => {
     setCurrentCampaign(campaign);
@@ -570,8 +632,8 @@ function HomePage() {
 
         const { newPositions, newStyles } = autoArrangeFields({
           csvHeaders: newHeaders,
-          fieldPositions: {}, // Start from scratch
-          fieldStyles: {}, // Start from scratch
+          fieldPositions: {},
+          fieldStyles: {},
           csvData: newCsvData,
           effectiveImageSize: originalImageSize,
           standardsColors,
@@ -579,7 +641,7 @@ function HomePage() {
 
         setFieldPositions(newPositions);
         setFieldStyles(newStyles);
-        setInitialFieldStyles(newStyles); // Salvar o estado inicial
+        setInitialFieldStyles(newStyles);
         setInputMethod('manual');
       }
     } catch (error) {
@@ -611,7 +673,7 @@ function HomePage() {
       setColorPalette([]);
     };
     img.src = imageUrl;
-  }, []); // State setters are stable.
+  }, []);
   const parseImageFile = async (file) => {
     if (!file) return;
     console.log(`[HomePage] Parsing image file: ${file.name}`);
@@ -673,42 +735,42 @@ function HomePage() {
   const handleImageDragEnter = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(true); };
   const handleImageDragLeave = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(false); };
   const handleNext = () => {
-    if (activeStep === 3) {
-      console.log("[HomePage] Snapshotting styles from step 3 to templateFieldStyles");
-      setTemplateFieldStyles(fieldStyles);
-    }
-    setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    handleNavigation(() => {
+      if (activeStep === 3) {
+        console.log("[HomePage] Snapshotting styles from step 3 to templateFieldStyles");
+        setTemplateFieldStyles(fieldStyles);
+      }
+      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+    });
   };
-  const handleBack = () => { setActiveStep((prevActiveStep) => prevActiveStep - 1); };
+  const handleBack = () => {
+    handleNavigation(() => setActiveStep((prevActiveStep) => prevActiveStep - 1));
+  };
   const canProceedToStep = (step) => {
     switch (step) {
-      case 1: // -> Campanha
-        return true; // Always allowed to go from My Campaigns to new Campaign
-      case 2: // -> Posts Curtos
-        return campaignContent !== null;
-      case 3: // -> Imagem e Formatação
-        return csvData.length > 0;
-      case 4: // -> Gerar Imagens
-        return backgroundImage !== null;
-      case 5: // -> Gerar Áudio
-        if (generatedImagesData.length === 0 || !generatedImagesData.every(img => img.blob)) {
-            toast.error("Por favor, gere todas as imagens na etapa 4 antes de prosseguir.");
-            return false;
-        }
-        return true;
-      default:
-        return true;
+      case 1: return true;
+      case 2: return campaignContent !== null;
+      case 3: return csvData.length > 0;
+      case 4: return backgroundImage !== null;
+      case 5: if (generatedImagesData.length === 0 || !generatedImagesData.every(img => img.blob)) { toast.error("Por favor, gere todas as imagens na etapa 4 antes de prosseguir."); return false; } return true;
+      default: return true;
     }
   };
   const getFieldStats = () => { const visibleFields = Object.values(fieldPositions).filter(pos => pos.visible).length; const totalFields = csvHeaders.length; const styledFields = Object.keys(fieldStyles).length; return { visibleFields, totalFields, styledFields }; };
   const { visibleFields, totalFields, styledFields } = getFieldStats();
   const handleZIndexChange = (elementId, action) => { if (!elementId) return; let allElements = [ ...Object.entries(fieldPositions).map(([id, pos]) => ({ id, zIndex: pos.zIndex, isBrand: false })), ...brandElements.map(el => ({ id: el.id, zIndex: el.zIndex, isBrand: true })), ]; allElements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0)); const currentIndex = allElements.findIndex(el => el.id === elementId); if (currentIndex === -1) return; const [currentElement] = allElements.splice(currentIndex, 1); switch (action) { case 'front': allElements.push(currentElement); break; case 'back': allElements.unshift(currentElement); break; case 'forward': allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement); break; case 'backward': allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement); break; default: allElements.splice(currentIndex, 0, currentElement); return; } const newPositions = { ...fieldPositions }; const newBrandElements = [...brandElements]; allElements.forEach((el, index) => { el.zIndex = index; if (el.isBrand) { const brandEl = newBrandElements.find(b => b.id === el.id); if (brandEl) brandEl.zIndex = index; } else { if (newPositions[el.id]) { newPositions[el.id].zIndex = index; } } }); setFieldPositions(newPositions); setBrandElements(newBrandElements); };
-  const handleSidebarStepClick = (index) => { setActiveStep(index); if (isMobile) { setSidebarOpen(false); } };
+  const handleSidebarStepClick = (index) => {
+    handleNavigation(() => {
+      setActiveStep(index);
+      if (isMobile) {
+        setSidebarOpen(false);
+      }
+    });
+  };
   const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
     setCsvData(novosRegistros);
     setCsvHeaders(novasColunas);
 
-    // This logic doesn't need to be inside the setGeneratedImagesData callback
     const updatedFieldPositions = {};
     const updatedFieldStyles = {};
     const defaultStylesBase = {
@@ -717,7 +779,6 @@ function HomePage() {
       strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
       shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
       textAlign: 'left', verticalAlign: 'top',
-      // Box properties
       backgroundColor: 'rgba(0,0,0,0)',
       borderColor: '#000000',
       borderWidth: 0,
@@ -733,33 +794,24 @@ function HomePage() {
     setFieldStyles(updatedFieldStyles);
     setInitialFieldStyles(updatedFieldStyles);
 
-    // When rebuilding the generatedImagesData array due to a change in the number of records,
-    // we must check if a specific background image already exists for that index in the *previous*
-    // state. If it does, we preserve it. Otherwise, we fall back to the global background.
     setGeneratedImagesData(prevGeneratedImages => {
         const newGeneratedImages = novosRegistros.map((record, index) => {
             const existingImage = prevGeneratedImages.find(img => img.index === index);
 
-            // If an image with the same index exists, preserve its properties,
-            // especially the unique 'backgroundImage', and just update the record.
             if (existingImage) {
                 return {
                     ...existingImage,
-                    record: record, // Update the data record
+                    record: record,
                 };
             }
 
-            // If no image exists for this index (e.g., a new row was added),
-            // create a new, complete image data object using the global background
-            // and default values to prevent state instability and flickering.
             return {
                 index,
                 record,
                 blob: null,
                 url: null,
                 filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-                backgroundImage: backgroundImage, // Use global background for new rows
-                // Initialize all custom properties to null to ensure a consistent object shape
+                backgroundImage: backgroundImage,
                 customFieldPositions: null,
                 customFieldStyles: null,
                 customBrandElements: null,
@@ -779,10 +831,8 @@ function HomePage() {
     setGenerationStatus('Iniciando geração de campanha...');
 
     try {
-      // Find the selected persona from the list
       const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
 
-      // Etapa 1: Gerar conteúdo principal
       setGenerationStatus('Criando o conteúdo geral da campanha...');
       const normalizedContent = await generateCampaignContent({ problema, solucao, persona: finalPersona });
       if (!normalizedContent) {
@@ -791,26 +841,20 @@ function HomePage() {
       setCampaignContent(normalizedContent);
 
       if (regenerate) {
-        // Se for apenas regeneração, para por aqui.
         toast.success("Conteúdo principal da campanha foi regenerado.");
         return;
       }
 
-      // Resetar estados dependentes para uma nova geração completa
       setFollowupPosts([]);
 
-      // Etapa 2: Gerar imagem principal
       setGenerationStatus('Gerando a imagem de referência da campanha...');
       const imageSuccess = await handleGenerateImage(normalizedContent);
       if (!imageSuccess) {
-        // A geração de imagem falhou, mas o conteúdo de texto foi criado.
-        // O usuário pode tentar gerar a imagem novamente.
         setCampaignGenerationFailed(true);
         setGenerationError("A geração de texto foi bem-sucedida, mas a criação da imagem falhou. Você pode tentar gerar a imagem novamente.");
         toast.warning("Geração de imagem falhou, mas o texto está pronto.");
       }
 
-      // Etapa 3: Gerar resumos e conteúdo formatado (pode ser em paralelo se quisermos)
       setGenerationStatus('Gerando resumos e conteúdo formatado...');
       await Promise.all([
         handleGenerateSummary(1800, normalizedContent),
@@ -818,24 +862,21 @@ function HomePage() {
         handleGenerateFormattedContent(normalizedContent),
       ]);
 
-      // Etapa 4: Gerar posts de follow-up (sequencialmente com status)
       if (followupPostsQuantity > 0) {
         setGenerationStatus('Planejando os posts de follow-up...');
         const plan = await generateFollowupPlan({
           content: normalizedContent,
           neededQuantity: followupPostsQuantity,
-          existingPosts: [], // Sempre começa do zero para uma nova campanha
+          existingPosts: [],
         });
 
         const newPosts = [];
         for (let i = 0; i < plan.length; i++) {
           const postPlan = plan[i];
           setGenerationStatus(`Gerando post de follow-up ${i + 1}/${plan.length}...`);
-          // A lógica de generateFollowupPosts foi movida para cá para podermos ter o status
           const generatedPost = await generateFollowupPosts({ content: normalizedContent, plan: [postPlan] });
           if (generatedPost && generatedPost.length > 0) {
             newPosts.push(...generatedPost);
-            // Atualiza o estado a cada post gerado para o usuário ver o progresso
             setFollowupPosts([...newPosts]);
           }
         }
@@ -846,7 +887,7 @@ function HomePage() {
     } catch (error) {
       const errorMessage = error.message || 'Ocorreu um erro desconhecido.';
       toast.error(`Ocorreu um erro ao gerar o conteúdo da campanha: ${errorMessage}`);
-      setCampaignContent(null); // Limpa o conteúdo se qualquer parte crítica falhar
+      setCampaignContent(null);
       setCampaignGenerationFailed(true);
       setGenerationError(errorMessage);
     } finally {
@@ -931,26 +972,22 @@ function HomePage() {
 
       const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
 
-      // Reset field positions and styles for the new content
       const { newPositions: updatedFieldPositions, newStyles: updatedFieldStyles } = autoArrangeFields({
         csvHeaders: csvHeadersResult,
-        fieldPositions: {}, // Start from scratch
-        fieldStyles: {}, // Start from scratch
+        fieldPositions: {},
+        fieldStyles: {},
         csvData: csvDataResult,
         effectiveImageSize: originalImageSize,
         standardsColors,
       });
 
-      // Create a fresh image data array, discarding any previous state.
-      // Initialize with a complete, stable object shape to prevent flickering.
       const newGeneratedImagesData = csvDataResult.map((record, index) => ({
         index,
         record,
         blob: null,
         url: null,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        backgroundImage: backgroundImage, // Always use the global background for new items
-        // Initialize all custom properties to null to ensure a consistent object shape
+        backgroundImage: backgroundImage,
         customFieldPositions: null,
         customFieldStyles: null,
         customBrandElements: null,
@@ -958,19 +995,17 @@ function HomePage() {
         fontScale: 1,
       }));
 
-      // Set all states together
       setCsvData(csvDataResult);
       setCsvHeaders(csvHeadersResult);
       setFieldPositions(updatedFieldPositions);
       setFieldStyles(updatedFieldStyles);
-      setInitialFieldStyles(updatedFieldStyles); // Salvar o estado inicial
+      setInitialFieldStyles(updatedFieldStyles);
       setGeneratedImagesData(newGeneratedImagesData);
       setInputMethod('manual');
 
       if (generateImagesAutomatically) {
         toast.info('Geração de posts concluída. Iniciando geração automática de imagens...');
         let firstImageSet = false;
-        // Use the newly created array, not a stale copy of the old state
         let currentImagesData = [...newGeneratedImagesData];
 
         for (let i = 0; i < currentImagesData.length; i++) {
@@ -995,8 +1030,6 @@ function HomePage() {
                 firstImageSet = true;
               }
 
-              // The final image must be composed with the unique background (stableDataUrl),
-              // not the potentially stale one in the currentImagesData array item.
               const finalImageData = await composeSingleImage({
                 record: record,
                 index: i,
@@ -1007,7 +1040,6 @@ function HomePage() {
                 fieldStyles: updatedFieldStyles,
               });
 
-              // Also update the item in our local array with the new background
               finalImageData.backgroundImage = stableDataUrl;
 
               currentImagesData[i] = finalImageData;
@@ -1045,7 +1077,7 @@ function HomePage() {
         {!personasLoading && !personasError && (
             <List>
                 {personaList.map((p) => (
-                    <ListItemButton key={p.id} selected={selectedPersona?.id === p.id} onClick={() => handleSelectPersona(p)}>
+                    <ListItemButton key={p.id} selected={selectedPersona?.id === p.id} onClick={() => handleNavigation(() => handleSelectPersona(p))}>
                         <ListItemText primary={p.name} />
                     </ListItemButton>
                 ))}
@@ -1068,8 +1100,8 @@ function HomePage() {
             isMobile={isMobile}
             onSaveCampaign={() => setShowSaveModal(true)}
             onLoadCampaign={() => setShowLoadModal(true)}
-            onShowPersonas={() => setCurrentView('personas')}
-            onShowCampaigns={() => setCurrentView('campaigns')}
+            onShowPersonas={() => handleNavigation(() => setCurrentView('personas'))}
+            onShowCampaigns={() => handleNavigation(() => setCurrentView('campaigns'))}
             currentView={currentView}
             onPersonaMenuClick={() => setPersonaDrawerOpen(!personaDrawerOpen)}
         />
@@ -1158,8 +1190,6 @@ function HomePage() {
                     onDeselectField={() => setSelectedField(null)}
                     onOpenHtmlEditor={(fieldId) => {
                       setEditingField(fieldId);
-                      // This is a guess, I might need to create a new state for this
-                      // setIsHtmlEditorOpen(true);
                     }}
                     currentPreviewIndex={currentPreviewIndex}
                     setCurrentPreviewIndex={setCurrentPreviewIndex}
@@ -1182,7 +1212,7 @@ function HomePage() {
                       variant="temporary"
                       anchor="left"
                       open={personaDrawerOpen}
-                      onClose={() => setPersonaDrawerOpen(false)}
+                      onClose={() => handleNavigation(() => setPersonaDrawerOpen(false))}
                       sx={{
                           width: 320,
                           flexShrink: 0,
@@ -1192,7 +1222,7 @@ function HomePage() {
                           },
                       }}
                   >
-                      <Toolbar /> {/* Spacer for AppBar */}
+                      <Toolbar />
                       {personaDrawerContent}
                   </Drawer>
                   <Box
@@ -1202,15 +1232,16 @@ function HomePage() {
                           p: 3,
                       }}
                   >
-                      <Toolbar /> {/* Spacer for AppBar */}
+                      <Toolbar />
                       <Paper elevation={2} sx={{ p: 3 }}>
                           {selectedPersona ? (
                               <PersonaWizardContent
                                   key={selectedPersona.id || 'new'}
-                                  onClose={() => setSelectedPersona(null)}
+                                  onClose={() => handleNavigation(() => setSelectedPersona(null))}
                                   onSave={handleSavePersona}
                                   onReset={handleNewPersona}
-                                  persona={selectedPersona.persona_data}
+                                  personaData={personaFormData}
+                                  onPersonaDataChange={setPersonaFormData}
                                   onGenerate={handleGeneratePersonaWithAI}
                                   isGeneratingPersona={isGeneratingPersona}
                                   initialStep={initialWizardStep}
@@ -1228,6 +1259,12 @@ function HomePage() {
             )}
         </Box>
       </Box>
+      <UnsavedChangesDialog
+        open={showUnsavedDialog}
+        onClose={handleDialogClose}
+        onConfirmDiscard={handleDialogDiscard}
+        onConfirmSave={handleDialogSaveAndNavigate}
+      />
       <SetupModal open={showSetupModal} onClose={() => setShowSetupModal(false)} />
       <SaveCampaignModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={handleSaveCampaign} campaignToEdit={currentCampaign} isSaving={isSaving} />
       <LoadCampaignModal open={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadCampaign} onEdit={(campaign) => { setCurrentCampaign(campaign); setShowSaveModal(true); }} />
@@ -1285,12 +1322,10 @@ function HomePage() {
             if (editingFollowup) return editingFollowup.content;
             if (!editingField) return '';
 
-            // Step 1: Campaign content
             if (activeStep === 1) {
               return campaignContent ? campaignContent[editingField] || '' : '';
             }
 
-            // Step 3: Image/Formatting step (from CSV)
             if (activeStep === 3) {
               const currentRecord = csvData[currentPreviewIndex];
               return currentRecord ? currentRecord[editingField] || '' : '';
