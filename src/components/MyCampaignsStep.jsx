@@ -18,15 +18,18 @@ import {
   CardActions,
   Fab,
 } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon, Article as ArticleIcon } from '@mui/icons-material';
 import { useIsMobile } from '../hooks/use-mobile';
-import { getCampaigns, deleteCampaign } from '../utils/campaignState';
+import { getCampaigns, deleteCampaign, loadCampaign } from '../utils/campaignState';
 import { toast } from 'sonner';
+import MemorialDescritivoModal from './MemorialDescritivoModal';
 
 const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew }) => {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showMemorialModal, setShowMemorialModal] = useState(false);
+  const [selectedCampaignData, setSelectedCampaignData] = useState(null);
   const isMobile = useIsMobile();
 
   const fetchCampaigns = () => {
@@ -57,6 +60,16 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew }) => {
       } catch (err) {
         toast.error(err.message);
       }
+    }
+  };
+
+  const handleShowMemorial = async (campaignId) => {
+    try {
+      const campaignData = await loadCampaign(campaignId);
+      setSelectedCampaignData(campaignData.campaign_data);
+      setShowMemorialModal(true);
+    } catch (err) {
+      toast.error(`Failed to load campaign data: ${err.message}`);
     }
   };
 
@@ -93,20 +106,25 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew }) => {
               </Typography>
             ) : (
               campaigns.map((campaign) => (
-                <Card key={campaign.id} sx={{ mb: 2, cursor: 'pointer' }} onClick={() => onLoadCampaign(campaign.id)}>
-                  <CardContent>
-                    <Typography variant="h6" component="div">
-                      {campaign.name}
-                    </Typography>
-                    <Typography sx={{ mb: 1.5 }} color="text.secondary">
-                      Atualizada em: {new Date(campaign.updated_at).toLocaleString()}
-                    </Typography>
-                  </CardContent>
+                <Card key={campaign.id} sx={{ mb: 2 }}>
+                  <ListItemButton onClick={() => onLoadCampaign(campaign.id)} sx={{ p: 0 }}>
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Typography variant="h6" component="div">
+                        {campaign.name}
+                      </Typography>
+                      <Typography sx={{ mb: 1.5 }} color="text.secondary">
+                        Atualizada em: {new Date(campaign.updated_at).toLocaleString()}
+                      </Typography>
+                    </CardContent>
+                  </ListItemButton>
                   <CardActions sx={{ justifyContent: 'flex-end' }}>
-                    <IconButton aria-label="edit" onClick={(e) => { e.stopPropagation(); onEditCampaign(campaign); }}>
+                    <IconButton aria-label="view memorial" onClick={() => handleShowMemorial(campaign.id)}>
+                      <ArticleIcon />
+                    </IconButton>
+                    <IconButton aria-label="edit" onClick={() => onEditCampaign(campaign)}>
                       <EditIcon />
                     </IconButton>
-                    <IconButton aria-label="delete" onClick={(e) => { e.stopPropagation(); handleDelete(campaign.id, campaign.name); }}>
+                    <IconButton aria-label="delete" onClick={() => handleDelete(campaign.id, campaign.name)}>
                       <DeleteIcon />
                     </IconButton>
                   </CardActions>
@@ -130,6 +148,13 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew }) => {
           </Fab>
         )}
       </Paper>
+      {selectedCampaignData && (
+        <MemorialDescritivoModal
+          open={showMemorialModal}
+          onClose={() => setShowMemorialModal(false)}
+          campaignData={selectedCampaignData}
+        />
+      )}
     </Container>
   );
 };
