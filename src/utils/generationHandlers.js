@@ -22,17 +22,18 @@ const formatObjectForPrompt = (obj, excludeKeys = []) => {
 /**
  * Generates the main campaign content using an AI API.
  */
-export const generateCampaignContent = async ({ problema, solucao, persona = null }) => {
+export const generateCampaignContent = async ({ problema, solucao, persona = null, autor = null }) => {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error('Chave de API Gemini não configurada.');
   }
   geminiAPI.initialize(apiKey);
 
-  const { autor, instrucoes, formato } = getCampaignPrompt();
+  const { autor: defaultAutor, instrucoes, formato } = getCampaignPrompt();
+  const finalAutor = autor || defaultAutor;
 
   const personaString = persona ? formatObjectForPrompt(persona, ['description']) : '';
-  const autorString = formatObjectForPrompt(autor);
+  const autorString = formatObjectForPrompt(finalAutor);
 
   const personaPromptSection = personaString
     ? `Destinatário (Persona): ${personaString}`
@@ -406,7 +407,7 @@ Retorne um objeto JSON com as chaves "titulo_post" e "conteudo_post".
 /**
  * Generates a list of common solutions for a given problem and persona.
  */
-export const generateCommonSolutions = async ({ problema, persona }) => {
+export const generateCommonSolutions = async ({ problema, persona, autor }) => {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error('Chave de API Gemini não configurada.');
@@ -418,12 +419,16 @@ export const generateCommonSolutions = async ({ problema, persona }) => {
   }
 
   const personaString = formatObjectForPrompt(persona, ['description']);
+  const autorString = autor ? formatObjectForPrompt(autor) : '';
 
   const prompt = `
-    Com base na seguinte descrição de Persona e no Problema apresentado, gere uma lista de 3 a 4 ideias de soluções ou propostas de campanha.
+    Com base na seguinte descrição de Persona, Autor e no Problema apresentado, gere uma lista de 3 a 4 ideias de soluções ou propostas de campanha que o Autor poderia oferecer.
 
     PERSONA:
     ${personaString}
+
+    AUTOR:
+    ${autorString}
 
     PROBLEMA:
     "${problema}"
@@ -466,7 +471,7 @@ export const generateCommonSolutions = async ({ problema, persona }) => {
 /**
  * Generates a list of common problems for a given persona.
  */
-export const generateCommonProblems = async ({ persona }) => {
+export const generateCommonProblems = async ({ persona, autor }) => {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error('Chave de API Gemini não configurada.');
@@ -478,12 +483,16 @@ export const generateCommonProblems = async ({ persona }) => {
   }
 
   const personaString = formatObjectForPrompt(persona, ['description']);
+  const autorString = autor ? formatObjectForPrompt(autor) : '';
 
   const prompt = `
-    Com base na seguinte descrição de Persona, gere uma lista de 3 a 4 problemas ou necessidades comuns que essa persona provavelmente enfrenta.
+    Com base na seguinte descrição de Persona e Autor, gere uma lista de 3 a 4 problemas ou necessidades comuns que essa persona provavelmente enfrenta em relação ao que o autor oferece.
 
     PERSONA:
     ${personaString}
+
+    AUTOR:
+    ${autorString}
 
     REGRAS:
     1.  Cada item da lista deve ser uma string única contendo um texto completo sobre o problema.

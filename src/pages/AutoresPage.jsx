@@ -115,7 +115,7 @@ const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected })
         }
         setIsGeneratingAutor(true);
         const prompt = `
-Com base na descrição do autor, preencha os campos do objeto JSON abaixo.
+Atue como um especialista em branding. Sua tarefa é extrair e estruturar a identidade de uma marca (o autor) para garantir uma comunicação de marketing consistente. Com base na descrição fornecida, preencha o objeto JSON abaixo.
 **Descrição do Autor:** ${descricaoGeral}
 **Instruções Adicionais:**
 ${dominioReferencia ? `- Use o site \`${dominioReferencia}\` como principal fonte de referência.` : ''}
@@ -124,18 +124,19 @@ ${siteExclusao ? `- NÃO use o site \`${siteExclusao}\` como referência.` : ''}
 - identidade: (string)
 - descricao: (string em HTML)
 - tipo: (string)
+- tipoOrganizacaoOutro: (string)
 - objetivoEstrategico: (string em HTML)
 - objetivoEngajamento: (string em HTML)
 Retorne apenas um único objeto JSON.`;
         let cleanedResponse = '';
         try {
             const response = await geminiAPI.generateContent(prompt);
-            cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
-            if (callback) callback(JSON.parse(cleanedResponse));
+            const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
+            const generatedAutor = JSON.parse(cleanedResponse);
+            if (callback) callback(generatedAutor);
         } catch (error) {
-            console.error("Error generating or parsing autor from AI:", error);
-            console.error("AI Response Text:", cleanedResponse); // Log the raw text
-            toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console para detalhes.');
+            console.error("Erro ao gerar autor com IA:", error);
+            toast.error('Ocorreu um erro ao processar a resposta da IA.');
         } finally {
             setIsGeneratingAutor(false);
         }
