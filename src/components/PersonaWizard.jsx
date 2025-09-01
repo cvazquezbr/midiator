@@ -96,24 +96,24 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
         <LinearProgress variant="determinate" value={((activeStep + 1) / steps.length) * 100} sx={{ mt: 1 }} />
       </Box>
       <Box sx={{ mt: 4, mb: 4, minHeight: '30vh' }}>{getStepContent(activeStep)}</Box>
-      <DialogActions sx={{
-        p: 3,
-        mt: 2,
-        flexDirection: { xs: 'column', md: 'row' },
-        justifyContent: 'space-between',
-        '& .MuiBox-root': {
-          mb: { xs: 2, md: 0 },
-          display: 'flex',
-          gap: 1,
-          width: { xs: '100%', md: 'auto' },
-          justifyContent: { xs: 'space-between', md: 'flex-start' },
-        }
-      }}>
-        <Box><Button onClick={onClose}>Cancelar</Button></Box>
-        <Box><Button onClick={onSave} variant="contained" color="primary">Salvar</Button></Box>
+      <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
+        <Button onClick={onClose} color="secondary">Cancelar</Button>
         <Box>
-            <Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" startIcon={<ArrowBack />}>Anterior</Button>
-            <Button onClick={handleNext} variant="outlined" endIcon={<ArrowForward />} disabled={isNextDisabled() || activeStep === steps.length - 1} sx={{ ml: 1 }}>Próximo</Button>
+            <Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" startIcon={<ArrowBack />}>
+                Anterior
+            </Button>
+            <Button
+                onClick={handleNext}
+                variant="outlined"
+                endIcon={<ArrowForward />}
+                disabled={isNextDisabled() || activeStep === steps.length - 1}
+                sx={{ ml: 1 }}
+            >
+                Próximo
+            </Button>
+            <Button onClick={onSave} variant="contained" color="primary" sx={{ ml: 2 }}>
+                Salvar
+            </Button>
         </Box>
       </DialogActions>
     </Box>
