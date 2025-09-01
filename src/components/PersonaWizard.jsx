@@ -45,17 +45,23 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
   const handleUpdateChipValue = () => { if (!editingChip) return; const { key, value, newValue } = editingChip; const trimmedNewValue = newValue.trim(); if (!trimmedNewValue) { toast.error("O valor não pode ser vazio."); setEditingChip(null); return; } if (value.toLowerCase() === trimmedNewValue.toLowerCase()) { setEditingChip(null); return; } if ((personaData[key] || []).map(item => item.toLowerCase()).includes(trimmedNewValue.toLowerCase())) { toast.warning('Este item já foi adicionado.'); setEditingChip(null); return; } onPersonaDataChange(prev => ({ ...prev, [key]: (prev[key] || []).map(item => (item === value ? trimmedNewValue : item)) })); setEditingChip(null); };
 
   const handleGenerateClick = () => {
-    onGenerate(personaData.description, (generatedPersona) => {
-      onPersonaDataChange(prev => ({ ...prev, ...generatedPersona }));
-      setActiveStep(1); // Move to the next step to show the results
-    });
-  };
+    const hasExistingData = personaData && personaData.nome; // Check if a name already exists
+    const proceed = () => {
+        onGenerate(personaData.description, (generatedPersona) => {
+            onPersonaDataChange(prev => ({ ...prev, ...generatedPersona }));
+            setActiveStep(1); // Move to the next step to show the results
+        });
+    };
 
-  const handleReset = () => {
-    if (window.confirm("Tem certeza que deseja recomeçar? Todos os dados não salvos nesta persona serão perdidos e o processo de criação iniciará do zero.")) {
-      if (onReset) onReset();
+    if (hasExistingData) {
+        if (window.confirm("Gerar uma nova persona com IA irá sobrescrever os dados atuais. Deseja continuar?")) {
+            proceed();
+        }
+    } else {
+        proceed();
     }
   };
+
 
   const InfoTooltip = ({ title, url }) => (<Tooltip title={<Typography variant="body2" sx={{ p: 1 }}>{title} {url && <MuiLink href={url} target="_blank" rel="noopener noreferrer" sx={{ color: 'cyan', display: 'block', mt: 1 }}>Saiba mais</MuiLink>}</Typography>}><IconButton><InfoOutlinedIcon sx={{ color: 'text.secondary', fontSize: '1rem' }} /></IconButton></Tooltip>);
 
@@ -103,7 +109,7 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
           justifyContent: { xs: 'space-between', md: 'flex-start' },
         }
       }}>
-        <Box><Button onClick={onClose}>Cancelar</Button>{initialStep > 0 && <Button onClick={handleReset} color="error" startIcon={<ReplayIcon />}>Recomeçar</Button>}</Box>
+        <Box><Button onClick={onClose}>Cancelar</Button></Box>
         <Box><Button onClick={onSave} variant="contained" color="primary">Salvar</Button></Box>
         <Box>
             <Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" startIcon={<ArrowBack />}>Anterior</Button>

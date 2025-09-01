@@ -268,13 +268,16 @@ function HomePage() {
             geminiAPI.initialize(apiKey);
         }
         setIsGeneratingPersona(true);
-        const prompt = `Descreva uma persona para uma campanha de marketing para ${description}. ...`;
+        const prompt = `Crie um objeto JSON para uma persona de marketing detalhada com base na seguinte descrição: '${description}'. O JSON deve ter as seguintes chaves: 'nome' (string), 'posicaoCargo' (array de strings), 'segmentoEmpresa' (array de strings), 'responsabilidadesChave' (array de strings), 'doresEstrategicos' (array de strings), 'doresOperacionais' (array de strings), 'doresPessoas' (array de strings), 'doresRegulatorios' (array de strings), 'gatilhosCompra' (array de strings), 'barreirasAdocao' (array de strings), 'mentalidadeValores' (string), e 'contextoCultural' (string).`;
+        let cleanedResponse = '';
         try {
             const response = await geminiAPI.generateContent(prompt);
-            const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
+            cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
             if (callback) callback(JSON.parse(cleanedResponse));
         } catch (error) {
-            toast.error('Ocorreu um erro ao processar a resposta da IA.');
+            console.error("Error generating or parsing persona from AI:", error);
+            console.error("AI Response Text:", cleanedResponse); // Log the raw text
+            toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console para detalhes.');
         } finally {
             setIsGeneratingPersona(false);
         }
