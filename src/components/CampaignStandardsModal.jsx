@@ -73,7 +73,7 @@ function TabPanel(props) {
   );
 }
 
-const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemorial }) => {
+const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
 
