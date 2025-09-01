@@ -979,7 +979,6 @@ function HomePage() {
             setDarkMode={setDarkMode}
             setShowSetupModal={setShowSetupModal}
             setShowCampaignStandardsModal={setShowCampaignStandardsModal}
-            setShowMemorialDescritivoModal={setShowMemorialDescritivoModal}
             onMenuClick={() => setSidebarOpen(!sidebarOpen)}
             isMobile={isMobile}
             onSaveCampaign={() => setShowSaveModal(true)}
