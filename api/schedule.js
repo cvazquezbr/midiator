@@ -317,17 +317,9 @@ async function handleRunScheduler(request, response) {
     }
 }
 
-// Main API handler
-const mainHandler = async (request, response) => {
-    if (request.method === 'GET') {
-        return handleRunScheduler(request, response);
-    }
-    if (request.method !== 'POST') {
-        response.setHeader('Allow', ['POST', 'GET']);
-        return response.status(405).end('Method Not Allowed');
-    }
-
-    const { action, payload } = request.body;
+// Handler for user-facing actions, protected by withAuth
+const userActionsHandler = async (request, response) => {
+    const { action } = request.body;
 
     // Pass the entire request object to handlers that need it (for user, etc.)
     switch (action) {
@@ -346,4 +338,39 @@ const mainHandler = async (request, response) => {
     }
 };
 
-export default withAuth(mainHandler);
+// Main API handler that routes requests based on method
+const mainHandler = async (request, response) => {
+    // Cron job endpoint (GET) - uses Vercel's built-in cron secret
+    if (request.method === 'GET') {
+        const vercelCronSecret = process.env.VERCEL_CRON_SECRET;
+        const secretFromHeader = request.headers.get('x-vercel-cron-secret');
+
+        // It's critical that the VERCEL_CRON_SECRET is available.
+        // Vercel automatically injects this for projects with cron jobs.
+        if (!vercelCronSecret) {
+            console.error('CRITICAL: VERCEL_CRON_SECRET environment variable not found.');
+            // This might indicate a misconfiguration or local testing without the secret.
+            return response.status(500).json({ error: 'Server configuration error for cron jobs.' });
+        }
+
+        // The request must have the x-vercel-cron-secret header and it must match.
+        if (secretFromHeader !== vercelCronSecret) {
+            console.warn('Unauthorized attempt to run scheduler: Invalid or missing x-vercel-cron-secret header.');
+            return response.status(401).json({ error: 'Unauthorized' });
+        }
+
+        return handleRunScheduler(request, response);
+    }
+
+    // User actions endpoint (POST) - uses JWT cookie auth
+    if (request.method === 'POST') {
+        // We wrap the user actions handler with withAuth to protect it
+        return withAuth(userActionsHandler)(request, response);
+    }
+
+    // If the method is not GET or POST, it's not allowed.
+    response.setHeader('Allow', ['GET', 'POST']);
+    return response.status(405).end('Method Not Allowed');
+};
+
+export default mainHandler;
