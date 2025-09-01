@@ -144,12 +144,25 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
 
 const PersonaWizard = ({ open, onClose, onSave, ...props }) => {
   const isMobile = useIsMobile();
-  return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
-      <DialogTitle>Assistente de Criação de Persona</DialogTitle>
-      <DialogContent sx={{ minHeight: '50vh', p: { xs: 1, sm: 2 } }}><PersonaWizardContent onClose={onClose} onSave={onSave} {...props} /></DialogContent>
-    </Dialog>
-  );
+
+  if (!open) {
+    return null;
+  }
+
+  if (isMobile) {
+    return (
+      <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen>
+        <DialogTitle>Assistente de Criação de Persona</DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          <Box sx={{ p: 1, height: '100%' }}>
+            <PersonaWizardContent onClose={onClose} onSave={onSave} {...props} />
+          </Box>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return <PersonaWizardContent onClose={onClose} onSave={onSave} {...props} />;
 };
 
 export default PersonaWizard;
