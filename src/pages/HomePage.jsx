@@ -20,9 +20,11 @@ import { loadSettingsFromDb } from '../utils/credentialsManager';
 import { getCampaigns, saveCampaign, loadCampaign, updateCampaign } from '../utils/campaignState';
 import { checkAuthStatus } from '../utils/auth';
 import { getPersonas, savePersona, updatePersona } from '../utils/personaState';
+import { getAutores } from '../utils/autorState';
 
 import MyCampaignsStep from '../components/MyCampaignsStep';
 import PersonasPage from './PersonasPage';
+import AutoresPage from './AutoresPage';
 import MainAppBar from '../components/MainAppBar';
 import Sidebar from '../components/Sidebar';
 import FieldPositioner from '../components/FieldPositioner';
@@ -73,6 +75,7 @@ function HomePage() {
 
   // Component State
   const [personaList, setPersonaList] = useState([]);
+  const [autorList, setAutorList] = useState([]);
   const [currentView, setCurrentView] = useState('campaigns');
   const [activeStep, setActiveStep] = useState(null);
   const [darkMode, setDarkMode] = useState(() => {
@@ -83,6 +86,7 @@ function HomePage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const [personaDrawerOpen, setPersonaDrawerOpen] = useState(!isMobile);
+  const [autorDrawerOpen, setAutorDrawerOpen] = useState(!isMobile);
   const [csvData, setCsvData] = useState([]);
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [backgroundImage, setBackgroundImage] = useState(null);
@@ -150,6 +154,7 @@ function HomePage() {
   const [fontScale, setFontScale] = useState(1);
 
   const [selectedPersonaForCampaign, setSelectedPersonaForCampaign] = useState('');
+  const [selectedAutorForCampaign, setSelectedAutorForCampaign] = useState('');
 
   // State for unsaved changes guard
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -385,6 +390,12 @@ function HomePage() {
         .catch(err => {
           console.error("Failed to fetch personas for campaign step:", err);
           toast.error('Could not load personas for campaign dropdown.');
+        });
+      getAutores()
+        .then(setAutorList)
+        .catch(err => {
+          console.error("Failed to fetch autores for campaign step:", err);
+          toast.error('Could not load autores for campaign dropdown.');
         });
     }
   }, [user]);
@@ -968,10 +979,12 @@ function HomePage() {
             onSaveCampaign={() => setShowSaveModal(true)}
             onLoadCampaign={() => setShowLoadModal(true)}
             onShowPersonas={() => handleNavigation(() => setCurrentView('personas'))}
+            onShowAutores={() => handleNavigation(() => setCurrentView('autores'))}
             onShowCampaigns={() => handleNavigation(() => setCurrentView('campaigns'))}
             currentView={currentView}
             onPersonaMenuClick={() => setPersonaDrawerOpen(!personaDrawerOpen)}
-            isDrawerOpen={currentView === 'personas' ? personaDrawerOpen : sidebarOpen}
+            onAutorMenuClick={() => setAutorDrawerOpen(!autorDrawerOpen)}
+            isDrawerOpen={currentView === 'personas' ? personaDrawerOpen : currentView === 'autores' ? autorDrawerOpen : sidebarOpen}
         />
         {currentView === 'campaigns' && (
           <>
@@ -1022,9 +1035,9 @@ function HomePage() {
                   followupPostsQuantity={followupPostsQuantity}
                   setFollowupPostsQuantity={setFollowupPostsQuantity}
                   setAspectRatio={setAspectRatio}
-                  personaList={personaList}
-                  selectedPersonaForCampaign={selectedPersonaForCampaign}
-                  setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
+                  autorList={autorList}
+                  selectedAutorForCampaign={selectedAutorForCampaign}
+                  setSelectedAutorForCampaign={setSelectedAutorForCampaign}
                 /></Container></div>
                 <div hidden={activeStep !== 2}><PostsCurtosStep steps={steps} inputMethod={inputMethod} setInputMethod={setInputMethod} handleDrop={handleDrop} handleDragOver={handleDragOver} fileInputRef={fileInputRef} handleCSVUpload={handleCSVUpload} downloadExampleCsv={downloadExampleCsv} setShowSetupModal={setShowSetupModal} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} generateImagesAutomatically={generateImagesAutomatically} setGenerateImagesAutomatically={setGenerateImagesAutomatically} handleGenerateIAContent={handleGenerateIAContent} isGenerating={isGenerating} csvData={csvData} csvHeaders={csvHeaders} onDadosAlterados={handleDadosAlterados} darkMode={darkMode} exportCsv={exportCsv} /></div>
                 <div hidden={activeStep !== 3}>
@@ -1079,6 +1092,7 @@ function HomePage() {
               </>
             )}
             {currentView === 'personas' && <PersonasPage personaDrawerOpen={personaDrawerOpen} setPersonaDrawerOpen={setPersonaDrawerOpen} onNoPersonaSelected={() => setPersonaDrawerOpen(true)} />}
+            {currentView === 'autores' && <AutoresPage autorDrawerOpen={autorDrawerOpen} setAutorDrawerOpen={setAutorDrawerOpen} onNoAutorSelected={() => setAutorDrawerOpen(true)} />}
         </Box>
       </Box>
       <UnsavedChangesDialog

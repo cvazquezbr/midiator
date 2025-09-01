@@ -181,10 +181,10 @@ const Campaign = ({
     handleGenerateImage,
     setCampaignContent,
     onEditFollowup,
-    persona,
-    personaList,
-    selectedPersonaForCampaign,
-    setSelectedPersonaForCampaign,
+    autor,
+    autorList,
+    selectedAutorForCampaign,
+    setSelectedAutorForCampaign,
 }) => {
     useSettings();
     const [activeTab, setActiveTab] = useState(0);
@@ -232,34 +232,34 @@ const Campaign = ({
         setProblemsError(null);
         setCommonProblems([]);
         try {
-            if (!persona || Object.keys(persona).length === 0) {
-                throw new Error("Por favor, selecione uma persona para obter sugestões.");
+            if (!autor || Object.keys(autor).length === 0) {
+                throw new Error("Por favor, selecione uma autor para obter sugestões.");
             }
-            const problems = await generateCommonProblems({ persona });
+            const problems = await generateCommonProblems({ autor });
             setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
             setIsLoadingProblems(false);
         }
-    }, [commonProblems.length, persona]);
+    }, [commonProblems.length, autor]);
 
     const handleRegenerateProblems = useCallback(async () => {
         setIsLoadingProblems(true);
         setProblemsError(null);
         setCommonProblems([]);
         try {
-            if (!persona || Object.keys(persona).length === 0) {
-                throw new Error("Por favor, selecione uma persona para obter sugestões.");
+            if (!autor || Object.keys(autor).length === 0) {
+                throw new Error("Por favor, selecione uma autor para obter sugestões.");
             }
-            const problems = await generateCommonProblems({ persona });
+            const problems = await generateCommonProblems({ autor });
             setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
             setIsLoadingProblems(false);
         }
-    }, [persona]);
+    }, [autor]);
 
     useEffect(() => {
         if (isHintModalOpen) {
@@ -276,14 +276,14 @@ const Campaign = ({
             if (!problema.trim()) {
                 throw new Error("Descreva o problema primeiro.");
             }
-            const solutions = await generateCommonSolutions({ problema, persona });
+            const solutions = await generateCommonSolutions({ problema, autor });
             setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [commonSolutions.length, problema, persona]);
+    }, [commonSolutions.length, problema, autor]);
 
     const handleRegenerateSolutions = useCallback(async () => {
         setIsLoadingSolutions(true);
@@ -293,14 +293,14 @@ const Campaign = ({
             if (!problema.trim()) {
                 throw new Error("Descreva o problema primeiro.");
             }
-            const solutions = await generateCommonSolutions({ problema, persona });
+            const solutions = await generateCommonSolutions({ problema, autor });
             setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [problema, persona]);
+    }, [problema, autor]);
 
     useEffect(() => {
         if (isSolucaoHintModalOpen) {
@@ -365,17 +365,17 @@ const Campaign = ({
                     <Grid container spacing={3} sx={{ mt: 2 }}>
                         <Grid item xs={12}>
                             <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
-                                <InputLabel id="persona-select-label">Selecionar Persona</InputLabel>
+                                <InputLabel id="autor-select-label">Selecionar Autor</InputLabel>
                                 <Select
-                                    labelId="persona-select-label"
-                                    value={selectedPersonaForCampaign}
-                                    onChange={(e) => setSelectedPersonaForCampaign(e.target.value)}
-                                    label="Selecionar Persona"
+                                    labelId="autor-select-label"
+                                    value={selectedAutorForCampaign}
+                                    onChange={(e) => setSelectedAutorForCampaign(e.target.value)}
+                                    label="Selecionar Autor"
                                 >
                                     <MenuItem value="">
-                                        <em>Nenhuma (Usará Padrões)</em>
+                                        <em>Nenhum (Usará Padrões)</em>
                                     </MenuItem>
-                                    {personaList.map((p) => (
+                                    {autorList.map((p) => (
                                         <MenuItem key={p.id} value={p.id}>
                                             {p.name}
                                         </MenuItem>

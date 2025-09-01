@@ -33,6 +33,7 @@ const MainAppBar = ({
   darkMode,
   setDarkMode,
   onShowPersonas,
+  onShowAutores,
   onShowCampaigns,
   setShowSetupModal,
   setShowCampaignStandardsModal,
@@ -43,6 +44,7 @@ const MainAppBar = ({
   onLoadCampaign,
   currentView,
   onPersonaMenuClick,
+  onAutorMenuClick,
   isDrawerOpen,
 }) => {
   const { user, logout } = useUserAuth();
@@ -63,6 +65,27 @@ const MainAppBar = ({
     navigate('/login');
   };
 
+  const handleMenuIconClick = () => {
+    if (currentView === 'personas') {
+      onPersonaMenuClick();
+    } else if (currentView === 'autores') {
+      onAutorMenuClick();
+    } else {
+      onMenuClick();
+    }
+  };
+
+  const getTitle = () => {
+    switch (currentView) {
+      case 'personas':
+        return 'Personas';
+      case 'autores':
+        return 'Autores';
+      default:
+        return 'Midiator';
+    }
+  };
+
   return (
     <AppBar
       position="fixed"
@@ -71,19 +94,19 @@ const MainAppBar = ({
       }}
     >
       <Toolbar>
-        {(currentView === 'personas' || (currentView === 'campaigns' && isMobile)) && (
+        {(currentView !== 'campaigns' || isMobile) && (
           <IconButton
             color="inherit"
             aria-label="open drawer"
             edge="start"
-            onClick={currentView === 'personas' ? onPersonaMenuClick : onMenuClick}
+            onClick={handleMenuIconClick}
             sx={{ mr: 2 }}
           >
             {isDrawerOpen ? <CloseIcon /> : <MenuIcon />}
           </IconButton>
         )}
         <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-          {currentView === 'personas' ? 'Personas' : 'Midiator'}
+          {getTitle()}
         </Typography>
 
         <Tooltip title="Salvar Campanha">
@@ -139,6 +162,10 @@ const MainAppBar = ({
           <MenuItem onClick={() => { handleUserMenuClose(); onShowPersonas(); }}>
             <PeopleIcon sx={{ mr: 1 }} />
             Personas
+          </MenuItem>
+          <MenuItem onClick={() => { handleUserMenuClose(); onShowAutores(); }}>
+            <AccountCircle sx={{ mr: 1 }} />
+            Autores
           </MenuItem>
           <Divider />
           <MenuItem onClick={() => { handleUserMenuClose(); setShowSetupModal(true); }}>
