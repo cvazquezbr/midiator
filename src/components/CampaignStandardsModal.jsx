@@ -45,7 +45,6 @@ import ColorThief from 'colorthief';
 
 import TextEditorDialog from './TextEditorDialog';
 import HtmlDisplayField from './HtmlDisplayField';
-import AutorWizard, { AutorWizardContent, TIPO_ORGANIZACAO_OPTIONS } from './AutorWizard';
 import PaletteWizard from './PaletteWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
@@ -79,7 +78,6 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemori
   const [value, setValue] = useState(0);
 
   // Other states
-  const [autor, setAutor] = useState({});
   const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
   const [colors, setColors] = useState([]);
@@ -88,66 +86,21 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemori
   const [initialState, setInitialState] = useState(null);
   const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingAutor, setIsGeneratingAutor] = useState(false);
-  const [isAutorWizardVisible, setIsAutorWizardVisible] = useState(false);
-  const [initialAutorStep, setInitialAutorStep] = useState(0);
   const [showPaletteWizard, setShowPaletteWizard] = useState(false);
-
-  const handleGenerateAutorWithAI = async (descricaoGeral, dominioReferencia, siteExclusao, callback) => {
-    if (!geminiAPI.isInitialized) {
-      const apiKey = getGeminiApiKey();
-      if (!apiKey) {
-        toast.error('Chave de API do Gemini não configurada.');
-        return;
-      }
-      geminiAPI.initialize(apiKey);
-    }
-
-    setIsGeneratingAutor(true);
-    const prompt = `
-Com base na descrição do autor, preencha os campos do objeto JSON abaixo.
-**Descrição do Autor:** ${descricaoGeral}
-**Instruções Adicionais:**
-${dominioReferencia ? `- Use o site \`${dominioReferencia}\` como principal fonte de referência.` : ''}
-${siteExclusao ? `- NÃO use o site \`${siteExclusao}\` como referência.` : ''}
-**Campos para preencher (use exatamente estes nomes de chave):**
-- identidade: (string)
-- descricao: (string em HTML)
-- tipo: (string)
-- objetivoEstrategico: (string em HTML)
-- objetivoEngajamento: (string em HTML)
-Retorne apenas um único objeto JSON.`;
-
-    try {
-      const response = await geminiAPI.generateContent(prompt);
-      const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
-      const generatedAutor = JSON.parse(cleanedResponse);
-      if (callback) callback(generatedAutor);
-    } catch (error) {
-      console.error("Erro ao gerar autor com IA:", error);
-      toast.error('Ocorreu um erro ao processar a resposta da IA.');
-    } finally {
-      setIsGeneratingAutor(false);
-    }
-  };
 
   useEffect(() => {
     if (open) {
       const apiKey = getGeminiApiKey();
       if (apiKey && !geminiAPI.isInitialized) geminiAPI.initialize(apiKey);
 
-      const { autor, instrucoes, formato, colors: loadedColors } = getCampaignPrompt();
+      const { instrucoes, formato, colors: loadedColors } = getCampaignPrompt();
 
-      setAutor(autor);
       setInstrucoes(instrucoes);
       setFormato(formato);
       const colorsAsObjects = (loadedColors || []).map(hex => ({ hex, name: `Cor (${hex})`, role: 'Salva', justification: '' }));
       setColors(colorsAsObjects);
 
-      setInitialState({ autor, instrucoes, formato, colors: colorsAsObjects });
-
-      if (!autor || !autor.identidade) setIsAutorWizardVisible(true);
-      else setIsAutorWizardVisible(false);
+      setInitialState({ instrucoes, formato, colors: colorsAsObjects });
     }
   }, [open]);
 
@@ -155,7 +108,7 @@ Retorne apenas um único objeto JSON.`;
 
   const handleSave = () => {
     const colorsToSave = colors.map(color => color.hex).filter(Boolean);
-    saveCampaignPrompt({ autor, instrucoes, formato, colors: colorsToSave });
+    saveCampaignPrompt({ instrucoes, formato, colors: colorsToSave });
     toast.success('Padrões de campanha salvos com sucesso!');
     onClose();
   };
@@ -169,28 +122,19 @@ Retorne apenas um único objeto JSON.`;
   const handleCloseEditor = () => setEditingField(null);
 
   const handleSaveEditor = (newContent) => {
-    if (editingField.startsWith('autor.')) {
-      const fieldName = editingField.split('.')[1];
-      setAutor(prev => ({ ...prev, [fieldName]: newContent }));
-    } else if (editingField === 'instrucoes') setInstrucoes(newContent);
+    if (editingField === 'instrucoes') setInstrucoes(newContent);
     else if (editingField === 'formato') setFormato(newContent);
     setEditingField(null);
   };
 
   const getCurrentContent = () => {
     if (!editingField) return '';
-    if (editingField.startsWith('autor.')) return autor[editingField.split('.')[1]] || '';
     if (editingField === 'instrucoes') return instrucoes;
     if (editingField === 'formato') return formato;
     return '';
   };
 
   const getEditorTitle = () => {
-    if (editingField === 'autor.descricao') return 'Editar Descrição da Empresa';
-    if (editingField === 'autor.tipo') return 'Editar Tipo de Organização';
-    if (editingField === 'autor.tipoOrganizacaoOutro') return 'Editar Tipo de Organização (Outro)';
-    if (editingField === 'autor.objetivoEstrategico') return 'Editar Objetivo Estratégico';
-    if (editingField === 'autor.objetivoEngajamento') return 'Editar Objetivo de Engajamento';
     if (editingField === 'instrucoes') return 'Editar Instruções';
     if (editingField === 'formato') return 'Editar Formato';
     return 'Editar';
@@ -232,22 +176,9 @@ Retorne apenas um único objeto JSON.`;
     }
   };
 
-  const handleAutorChange = (event) => {
-    const { name, value } = event.target;
-    setAutor(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleClearAutor = () => {
-    if (window.confirm('Tem certeza? Os dados do autor serão apagados.')) {
-      setAutor({});
-      setIsAutorWizardVisible(true);
-      toast.success('Dados do autor removidos.');
-    }
-  };
-
   const hasUnsavedChanges = () => {
     if (!initialState) return false;
-    const currentState = { autor, instrucoes, formato, colors };
+    const currentState = { instrucoes, formato, colors };
     // Custom comparison for colors as it's an array of objects
     const initialColorsHex = initialState.colors.map(c => c.hex);
     const currentColorsHex = currentState.colors.map(c => c.hex);
@@ -278,39 +209,19 @@ Retorne apenas um único objeto JSON.`;
         <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs orientation="horizontal" variant="scrollable" value={value} onChange={handleChange}>
-              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Autor" {...a11yProps(0)} />
-              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Formato" {...a11yProps(1)} />
-              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Instruções" {...a11yProps(2)} />
-              <Tab icon={<PaletteIcon />} iconPosition="start" label="Cores" {...a11yProps(3)} />
+              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Formato" {...a11yProps(0)} />
+              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Instruções" {...a11yProps(1)} />
+              <Tab icon={<PaletteIcon />} iconPosition="start" label="Cores" {...a11yProps(2)} />
             </Tabs>
           </Box>
           <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
             <TabPanel value={value} index={0}>
-              {isAutorWizardVisible ? (
-                <AutorWizardContent autor={autor} onGenerate={handleGenerateAutorWithAI} isGeneratingAutor={isGeneratingAutor} onClose={() => setIsAutorWizardVisible(false)} onSave={(newAutor) => { setAutor(newAutor); setIsAutorWizardVisible(false); toast.success('Autor salvo com assistente!'); }} />
-              ) : (
-                <Stack spacing={2}>
-                  <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-                    <Button variant="outlined" startIcon={<AutoAwesomeIcon />} onClick={() => { setInitialAutorStep(0); setIsAutorWizardVisible(true); }}>Gerar</Button>
-                    <Button variant="contained" startIcon={<Add />} onClick={() => { setInitialAutorStep(1); setIsAutorWizardVisible(true); }}>Assistente</Button>
-                    <Button variant="outlined" color="error" startIcon={<DeleteForeverIcon />} onClick={handleClearAutor} disabled={!autor || Object.keys(autor).length === 0}>Recomeçar</Button>
-                  </Stack>
-                  <TextField fullWidth label="Nome" name="identidade" value={autor?.identidade || ''} onChange={handleAutorChange} />
-                  <HtmlDisplayField title="Descrição da Empresa" htmlContent={autor?.descricao} onClick={() => handleOpenEditor('autor.descricao')} />
-                  <FormControl fullWidth><InputLabel>Tipo de Organização</InputLabel><Select name="tipo" value={autor?.tipo || ''} onChange={handleAutorChange} label="Tipo de Organização">{TIPO_ORGANIZACAO_OPTIONS.map((o) => (<MenuItem key={o} value={o}>{o}</MenuItem>))}</Select></FormControl>
-                  {autor?.tipo === 'Outro' && <TextField fullWidth label="Especifique o Tipo" name="tipoOrganizacaoOutro" value={autor?.tipoOrganizacaoOutro || ''} onChange={handleAutorChange} />}
-                  <HtmlDisplayField title="Objetivo Estratégico" htmlContent={autor?.objetivoEstrategico} onClick={() => handleOpenEditor('autor.objetivoEstrategico')} />
-                  <HtmlDisplayField title="Objetivo de Engajamento" htmlContent={autor?.objetivoEngajamento} onClick={() => handleOpenEditor('autor.objetivoEngajamento')} />
-                </Stack>
-              )}
-            </TabPanel>
-            <TabPanel value={value} index={1}>
               <HtmlDisplayField title="Formato" htmlContent={formato} onClick={() => handleOpenEditor('formato')} />
             </TabPanel>
-            <TabPanel value={value} index={2}>
+            <TabPanel value={value} index={1}>
               <HtmlDisplayField title="Instruções" htmlContent={instrucoes} onClick={() => handleOpenEditor('instruções')} />
             </TabPanel>
-            <TabPanel value={value} index={3}>
+            <TabPanel value={value} index={2}>
               <Stack spacing={2} sx={{ mb: 3 }}>
                 <Button variant="contained" startIcon={<AutoAwesomeIcon />} onClick={() => setShowPaletteWizard(true)} disabled={!onGeneratePalette} sx={{ alignSelf: 'flex-start' }}>Assistente de Paleta</Button>
               </Stack>
@@ -340,7 +251,6 @@ Retorne apenas um único objeto JSON.`;
         </DialogActions>
       </Dialog>
       <TextEditorDialog open={editingField !== null} title={getEditorTitle()} content={getCurrentContent()} onSave={handleSaveEditor} onClose={handleCloseEditor} html={true} />
-      <AutorWizard open={isAutorWizardVisible} onClose={() => { setIsAutorWizardVisible(false); setInitialAutorStep(0); }} autor={autor} initialStep={initialAutorStep} onSave={(newAutor) => { setAutor(newAutor); setIsAutorWizardVisible(false); setInitialAutorStep(0); toast.success('Autor salvo!'); }} onGenerate={handleGenerateAutorWithAI} isGeneratingAutor={isGeneratingAutor} />
       <PaletteWizard open={showPaletteWizard} onClose={() => setShowPaletteWizard(false)} onSave={(newPalette) => { setColors(newPalette); toast.success('Paleta de cores aplicada!'); }} onGenerate={async (briefing, callback) => { setIsGenerating(true); try { const result = await onGeneratePalette(briefing); callback(result); } catch (error) { toast.error('Erro ao gerar paleta.'); } finally { setIsGenerating(false); } }} isGenerating={isGenerating} />
       <Dialog open={isConfirmCloseOpen} onClose={() => setIsConfirmCloseOpen(false)}>
         <DialogTitle>Descartar Alterações?</DialogTitle>
