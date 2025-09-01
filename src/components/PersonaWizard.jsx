@@ -90,17 +90,20 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
   const isNextDisabled = () => (activeStep === 1 && !(personaData.nome || '').trim());
 
   return (
-    <Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Box sx={{ mb: 2 }}>
         <Typography variant="caption" color="text.secondary">Etapa {activeStep + 1} de {steps.length}: {steps[activeStep]}</Typography>
         <LinearProgress variant="determinate" value={((activeStep + 1) / steps.length) * 100} sx={{ mt: 1 }} />
       </Box>
-      <Box sx={{ mt: 4, mb: 4, minHeight: '30vh' }}>{getStepContent(activeStep)}</Box>
+      <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 1 }}>
+        {getStepContent(activeStep)}
+      </Box>
       <DialogActions
         sx={{
           p: 2,
           flexDirection: { xs: 'column', sm: 'row' },
           justifyContent: 'space-between',
+          borderTop: (theme) => `1px solid ${theme.palette.divider}`,
         }}
       >
         <Button
