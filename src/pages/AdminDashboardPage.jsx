@@ -64,7 +64,7 @@ const AdminDashboardPage = () => {
     setIsSchedulerRunning(true);
     toast.info('Scheduler run initiated...');
     try {
-      const res = await fetch('/api/schedule');
+      const res = await fetch('/api/schedule/run', { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
         toast.success(data.message || 'Scheduler run completed successfully.');

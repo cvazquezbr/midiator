@@ -50,3 +50,25 @@ export const withAuth = (handler) => {
     }
   };
 };
+
+/**
+ * A higher-order function to protect API routes that require admin privileges.
+ * It verifies the JWT and checks if the user has the 'admin' role.
+ *
+ * @param {Function} handler The original API route handler.
+ * @returns {Function} The wrapped handler with admin authentication check.
+ */
+export const withAdminAuth = (handler) => {
+  // We can reuse the withAuth middleware and chain the admin check.
+  const authenticatedHandler = withAuth(async (req, res) => {
+    // By the time we get here, withAuth has already run successfully.
+    // req.user is guaranteed to be populated.
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden: Administrator access required.' });
+    }
+    // If the user is an admin, proceed to the original handler.
+    return handler(req, res);
+  });
+
+  return authenticatedHandler;
+};
