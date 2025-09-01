@@ -186,12 +186,22 @@ function HomePage() {
   }, [personaFormData, selectedPersona]);
 
 
-  // Effect to automatically open persona drawer when no persona is selected
+  // Effect to manage persona drawer visibility
   useEffect(() => {
-    if (currentView === 'personas' && !selectedPersona && !personaDrawerOpen) {
-      setPersonaDrawerOpen(true);
+    if (currentView === 'personas') {
+      if (!selectedPersona) {
+        // If no persona is selected, the drawer MUST be open.
+        if (!personaDrawerOpen) {
+          setPersonaDrawerOpen(true);
+        }
+      } else {
+        // A persona is selected. On mobile, we want it closed for more space.
+        if (isMobile && personaDrawerOpen) {
+          setPersonaDrawerOpen(false);
+        }
+      }
     }
-  }, [currentView, selectedPersona, personaDrawerOpen]);
+  }, [currentView, selectedPersona, personaDrawerOpen, isMobile]);
 
   // Effect to load personas when the view is opened
   useEffect(() => {
@@ -217,7 +227,6 @@ function HomePage() {
       setPersonaFormData(p.persona_data);
       setIsPersonaDirty(false);
       setInitialWizardStep(1);
-      if (isMobile) setPersonaDrawerOpen(false);
   };
 
   const handleNewPersona = () => {
@@ -226,7 +235,6 @@ function HomePage() {
       setPersonaFormData(newEmptyPersona.persona_data);
       setIsPersonaDirty(false);
       setInitialWizardStep(0);
-      if (isMobile) setPersonaDrawerOpen(false);
   };
 
   const handleSavePersona = async () => {
