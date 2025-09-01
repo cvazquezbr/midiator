@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {
-  Paper, Typography, Box, Button, Alert, IconButton, Toolbar, Divider, Drawer, List, ListItemButton, ListItemText, CircularProgress,
+  Paper, Typography, Box, Button, Alert, IconButton, Toolbar, Divider, Drawer, List, ListItem, ListItemButton, ListItemText, CircularProgress,
 } from '@mui/material';
-import { ChevronLeft, Add } from '@mui/icons-material';
+import { ChevronLeft, Add, Delete as DeleteIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import isEqual from 'lodash.isequal';
 
-import { getPersonas, savePersona, updatePersona } from '../utils/personaState';
+import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils/personaState';
 import PersonaWizard, { emptyPersonaWizardData } from '../components/PersonaWizard';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
@@ -193,6 +193,26 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen }) => {
         setNavigationTarget(null);
     };
 
+  const handleConfirmDelete = async (personaId) => {
+    try {
+      await deletePersona(personaId);
+      toast.success('Persona excluída com sucesso!');
+      fetchPersonas(); // Refresh list
+      setSelectedPersona(null); // Deselect if the deleted one was selected
+    } catch (error) {
+      // Error toast is handled inside deletePersona, but you could add more here if needed
+      console.error(error);
+    }
+  };
+
+  const handleDeleteClick = (persona) => {
+    // Stop propagation to prevent the ListItemButton's onClick from firing
+    // event.stopPropagation();
+    if (window.confirm(`Tem certeza que deseja excluir a persona "${persona.name}"? Esta ação não pode ser desfeita.`)) {
+      handleConfirmDelete(persona.id);
+    }
+  };
+
   const personaDrawerContent = (
     <Box sx={{p: 2, width: 320}}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -205,9 +225,19 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen }) => {
         {!personasLoading && !personasError && (
             <List>
                 {personaList.map((p) => (
-                    <ListItemButton key={p.id} selected={selectedPersona?.id === p.id} onClick={() => handleNavigation(() => handleSelectPersona(p))}>
+                  <ListItem
+                    key={p.id}
+                    disablePadding
+                    secondaryAction={
+                      <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteClick(p)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    }
+                  >
+                    <ListItemButton selected={selectedPersona?.id === p.id} onClick={() => handleNavigation(() => handleSelectPersona(p))}>
                         <ListItemText primary={p.name} />
                     </ListItemButton>
+                  </ListItem>
                 ))}
             </List>
         )}
