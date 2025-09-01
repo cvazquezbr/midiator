@@ -13,10 +13,20 @@ const parseBody = async (req) => {
   }
 };
 
+/**
+ * API handler for individual persona operations (GET, PUT, DELETE).
+ * All routes in this handler are protected and require authentication.
+ * The user can only operate on personas they own.
+ *
+ * @param {object} req - The incoming request object.
+ * @param {object} res - The outgoing response object.
+ */
 const handler = async (req, res) => {
   const userId = req.user.sub;
-  const { id } = req.query;
+  const { id } = req.query; // Persona ID from the URL path
 
+  // Handles GET /api/personas/:id
+  // Fetches a single persona by its ID.
   if (req.method === 'GET') {
     try {
       const { rows } = await query(
@@ -31,6 +41,8 @@ const handler = async (req, res) => {
       console.error(`[GET /api/personas/${id}] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
+    // Handles PUT /api/personas/:id
+    // Updates an existing persona.
   } else if (req.method === 'PUT') {
     try {
       const { name, persona_data } = await parseBody(req);
@@ -49,6 +61,8 @@ const handler = async (req, res) => {
       console.error(`[PUT /api/personas/${id}] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
+    // Handles DELETE /api/personas/:id
+    // Deletes a persona.
   } else if (req.method === 'DELETE') {
     try {
       const { rowCount } = await query(
