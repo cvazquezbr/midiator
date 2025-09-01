@@ -69,13 +69,13 @@ const MainAppBar = ({
       }}
     >
       <Toolbar>
-        {isMobile && (
+        {(currentView === 'personas' || (currentView === 'campaigns' && isMobile)) && (
           <IconButton
             color="inherit"
             aria-label="open drawer"
             edge="start"
-            onClick={currentView === 'personas' && isMobile ? onPersonaMenuClick : onMenuClick}
-            sx={{ mr: 2, display: { md: 'none' } }} // Only show on mobile
+            onClick={currentView === 'personas' ? onPersonaMenuClick : onMenuClick}
+            sx={{ mr: 2 }}
           >
             <MenuIcon />
           </IconButton>
