@@ -19,6 +19,7 @@ const steps = ['Início Rápido com IA', 'Revisão Básica', 'Responsabilidades'
 
 export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGeneratingPersona, personaData, onPersonaDataChange, initialStep = 0 }) => {
   const [activeStep, setActiveStep] = useState(initialStep);
+  const isMobile = useIsMobile();
 
   const handleNext = () => setActiveStep((prevActiveStep) => prevActiveStep < steps.length - 1 ? prevActiveStep + 1 : prevActiveStep);
   const handleBack = () => setActiveStep((prevActiveStep) => prevActiveStep > 0 ? prevActiveStep - 1 : prevActiveStep);
@@ -28,7 +29,7 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
     onSwipedLeft: () => !isNextDisabled() && handleNext(),
     onSwipedRight: handleBack,
     preventDefaultTouchmoveEvent: true,
-    trackMouse: true,
+    trackMouse: isMobile,
   });
 
   useEffect(() => {

@@ -35,7 +35,6 @@ export const savePersona = async (name, personaData) => {
     }
 
     const result = await createRes.json();
-    toast.success('Persona saved successfully!');
     return result;
   } catch (error) {
     toast.error(`Save failed: ${error.message}`);
@@ -59,7 +58,6 @@ export const updatePersona = async (id, name, personaData) => {
         }
 
         const result = await res.json();
-        toast.success('Persona updated successfully!');
         return result;
     } catch (error) {
         toast.error(`Update failed: ${error.message}`);
