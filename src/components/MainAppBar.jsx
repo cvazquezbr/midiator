@@ -16,6 +16,7 @@ import {
   Brightness7,
   Edit,
   Menu as MenuIcon,
+  Close as CloseIcon,
   Article as ArticleIcon,
   Logout,
   AdminPanelSettings,
@@ -42,6 +43,7 @@ const MainAppBar = ({
   onLoadCampaign,
   currentView,
   onPersonaMenuClick,
+  isDrawerOpen,
 }) => {
   const { user, logout } = useUserAuth();
   const navigate = useNavigate();
@@ -77,7 +79,7 @@ const MainAppBar = ({
             onClick={currentView === 'personas' ? onPersonaMenuClick : onMenuClick}
             sx={{ mr: 2 }}
           >
-            <MenuIcon />
+            {isDrawerOpen ? <CloseIcon /> : <MenuIcon />}
           </IconButton>
         )}
         <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
