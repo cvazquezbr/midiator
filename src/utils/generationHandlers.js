@@ -98,7 +98,7 @@ export const generateCampaignContent = async ({ problema, solucao, persona = nul
 /**
  * Generates a prompt for the campaign image using an AI API.
  */
-export const generateCampaignImagePrompt = async ({ content, aspectRatio }) => {
+export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor = null }) => {
     if (!content) {
         throw new Error("O conteúdo da campanha deve ser gerado primeiro.");
     }
@@ -108,8 +108,9 @@ export const generateCampaignImagePrompt = async ({ content, aspectRatio }) => {
     }
     geminiAPI.initialize(apiKey);
 
-    const { autor } = getCampaignPrompt();
-    const autorString = formatObjectForPrompt(autor);
+    const { autor: defaultAutor } = getCampaignPrompt();
+    const finalAutor = autor || defaultAutor;
+    const autorString = formatObjectForPrompt(finalAutor);
 
     const prompt = `
       Você é um diretor de arte. Sua tarefa é criar um prompt de texto detalhado para um modelo de geração de imagem (como DALL-E ou Midjourney).
@@ -207,7 +208,7 @@ export const generateFormattedContent = async ({ content }) => {
 /**
  * Generates a plan for follow-up posts for the campaign.
  */
-export const generateFollowupPlan = async ({ content, neededQuantity, existingPosts = [], persona = null }) => {
+export const generateFollowupPlan = async ({ content, neededQuantity, existingPosts = [], persona = null, autor = null }) => {
   if (!content?.conteudo) {
     throw new Error("Conteúdo principal deve ser gerado primeiro.");
   }
@@ -217,7 +218,11 @@ export const generateFollowupPlan = async ({ content, neededQuantity, existingPo
   }
   geminiAPI.initialize(apiKey);
 
+  const { autor: defaultAutor } = getCampaignPrompt();
+  const finalAutor = autor || defaultAutor;
+
   const personaString = persona ? formatObjectForPrompt(persona, ['description']) : '';
+  const autorString = formatObjectForPrompt(finalAutor);
 
   const existingPostsString = existingPosts.length > 0
     ? `
@@ -235,6 +240,9 @@ Detalhes: "${stripHtml(content.conteudo)}"
 
 PERSONA-ALVO:
 ${personaString}
+
+AUTOR:
+${autorString}
 ${existingPostsString}
 ESTRUTURA DA SEQUÊNCIA (AIDA):
 1.  **Atenção:** Gancho impactante (dado, insight contraintuitivo).
@@ -289,7 +297,7 @@ Retorne um array JSON com a seguinte estrutura. Não inclua markdown ou qualquer
 /**
  * Generates follow-up posts for the campaign based on a plan.
  */
-export const generateFollowupPosts = async ({ content, plan, persona = null }) => {
+export const generateFollowupPosts = async ({ content, plan, persona = null, autor = null }) => {
   if (!content?.conteudo) {
     throw new Error("Conteúdo principal deve ser gerado primeiro.");
   }
@@ -303,9 +311,10 @@ export const generateFollowupPosts = async ({ content, plan, persona = null }) =
   }
   geminiAPI.initialize(apiKey);
 
-  const { autor } = getCampaignPrompt();
+  const { autor: defaultAutor } = getCampaignPrompt();
+  const finalAutor = autor || defaultAutor;
   const personaString = persona ? formatObjectForPrompt(persona, ['description']) : '';
-  const autorString = formatObjectForPrompt(autor);
+  const autorString = formatObjectForPrompt(finalAutor);
 
   const generatedPosts = [];
   const MAX_RETRIES = 3;

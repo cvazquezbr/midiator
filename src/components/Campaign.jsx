@@ -236,34 +236,36 @@ const Campaign = ({
         setProblemsError(null);
         setCommonProblems([]);
         try {
-            if (!persona || Object.keys(persona).length === 0) {
+            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
+            if (!finalPersona || Object.keys(finalPersona).length === 0) {
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
-            const problems = await generateCommonProblems({ persona, autor });
+            const problems = await generateCommonProblems({ persona: finalPersona, autor });
             setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
             setIsLoadingProblems(false);
         }
-    }, [commonProblems.length, persona, autor]);
+    }, [commonProblems.length, persona, autor, selectedPersonaForCampaign, personaList]);
 
     const handleRegenerateProblems = useCallback(async () => {
         setIsLoadingProblems(true);
         setProblemsError(null);
         setCommonProblems([]);
         try {
-            if (!persona || Object.keys(persona).length === 0) {
+            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
+            if (!finalPersona || Object.keys(finalPersona).length === 0) {
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
-            const problems = await generateCommonProblems({ persona, autor });
+            const problems = await generateCommonProblems({ persona: finalPersona, autor });
             setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
             setIsLoadingProblems(false);
         }
-    }, [persona, autor]);
+    }, [persona, autor, selectedPersonaForCampaign, personaList]);
 
     useEffect(() => {
         if (isHintModalOpen) {
@@ -280,14 +282,15 @@ const Campaign = ({
             if (!problema.trim()) {
                 throw new Error("Descreva o problema primeiro.");
             }
-            const solutions = await generateCommonSolutions({ problema, persona, autor });
+            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
+            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor });
             setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [commonSolutions.length, problema, persona, autor]);
+    }, [commonSolutions.length, problema, persona, autor, selectedPersonaForCampaign, personaList]);
 
     const handleRegenerateSolutions = useCallback(async () => {
         setIsLoadingSolutions(true);
@@ -297,14 +300,15 @@ const Campaign = ({
             if (!problema.trim()) {
                 throw new Error("Descreva o problema primeiro.");
             }
-            const solutions = await generateCommonSolutions({ problema, persona, autor });
+            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
+            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor });
             setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [problema, persona, autor]);
+    }, [problema, persona, autor, selectedPersonaForCampaign, personaList]);
 
     useEffect(() => {
         if (isSolucaoHintModalOpen) {

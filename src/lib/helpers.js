@@ -223,12 +223,14 @@ A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação mark
     URL.revokeObjectURL(url);
   };
 
-  export const generateCampaignContent = async (apiKey, problema, solucao, callGeminiApi) => {
-    const { persona, autor, instrucoes, formato } = getCampaignPrompt();
+  export const generateCampaignContent = async (apiKey, { problema, solucao, persona = null, autor = null }, callGeminiApi) => {
+    const { persona: defaultPersona, autor: defaultAutor, instrucoes, formato } = getCampaignPrompt();
+    const finalPersona = persona || defaultPersona;
+    const finalAutor = autor || defaultAutor;
 
     const promptCompleto = `
-      Persona: ${stripHtml(persona)}
-      Autor: ${stripHtml(autor)}
+      Persona: ${stripHtml(finalPersona)}
+      Autor: ${stripHtml(finalAutor)}
       Formato: ${stripHtml(formato)}
       Problema: ${stripHtml(problema)}
       Solução: ${stripHtml(solucao)}
@@ -263,15 +265,15 @@ A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação mark
     };
 }
 
-export const generateImagePrompt = (content, aspectRatio) => {
-    const { persona, autor, colors } = getCampaignPrompt();
+export const generateImagePrompt = (content, aspectRatio, autor = null) => {
+    const { autor: defaultAutor, colors } = getCampaignPrompt();
+    const finalAutor = autor || defaultAutor;
     const colorPalettePrompt = colors && colors.length > 0
         ? `A imagem deve usar predominantemente a seguinte paleta de cores: ${colors.join(', ')}.`
         : '';
 
     return `
-        Persona: ${stripHtml(persona)}
-        Autor: ${stripHtml(autor)}
+        Autor: ${stripHtml(finalAutor)}
         Resumo do Conteúdo: ${stripHtml(content.titulo)}. ${stripHtml(content.conteudo)}
         Razão de Aspecto: ${aspectRatio}
         ${colorPalettePrompt}
@@ -315,12 +317,13 @@ export const generateFormattedContent = async (apiKey, content, callGeminiApi) =
     return finalContent;
 }
 
-export const generateFollowupPosts = async (apiKey, content, followupPostsQuantity, callGeminiApi) => {
+export const generateFollowupPosts = async (apiKey, { content, followupPostsQuantity, persona = null }, callGeminiApi) => {
     if (!content?.conteudo) {
         throw new Error("Por favor, gere o conteúdo principal primeiro.");
     }
 
-    const { persona } = getCampaignPrompt();
+    const { persona: defaultPersona } = getCampaignPrompt();
+    const finalPersona = persona || defaultPersona;
 
     const prompt = `
         Você é um especialista em marketing de conteúdo e copywriting para líderes técnicos. Sua tarefa é criar ${followupPostsQuantity} posts "isca" baseados no conteúdo principal fornecido.
@@ -329,7 +332,7 @@ export const generateFollowupPosts = async (apiKey, content, followupPostsQuanti
         O conteúdo principal aborda: [${stripHtml(content.titulo)} - ${stripHtml(content.conteudo)}]
 
         PERSONAS-ALVO:
-        - ${stripHtml(persona)}
+        - ${stripHtml(finalPersona)}
 
         DIRETRIZES PARA OS POSTS:
 
