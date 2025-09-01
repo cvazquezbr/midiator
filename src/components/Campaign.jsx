@@ -181,6 +181,10 @@ const Campaign = ({
     handleGenerateImage,
     setCampaignContent,
     onEditFollowup,
+    autor,
+    autorList,
+    selectedAutorForCampaign,
+    setSelectedAutorForCampaign,
     persona,
     personaList,
     selectedPersonaForCampaign,
@@ -232,34 +236,36 @@ const Campaign = ({
         setProblemsError(null);
         setCommonProblems([]);
         try {
-            if (!persona || Object.keys(persona).length === 0) {
+            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
+            if (!finalPersona || Object.keys(finalPersona).length === 0) {
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
-            const problems = await generateCommonProblems({ persona });
+            const problems = await generateCommonProblems({ persona: finalPersona, autor });
             setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
             setIsLoadingProblems(false);
         }
-    }, [commonProblems.length, persona]);
+    }, [commonProblems.length, persona, autor, selectedPersonaForCampaign, personaList]);
 
     const handleRegenerateProblems = useCallback(async () => {
         setIsLoadingProblems(true);
         setProblemsError(null);
         setCommonProblems([]);
         try {
-            if (!persona || Object.keys(persona).length === 0) {
+            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
+            if (!finalPersona || Object.keys(finalPersona).length === 0) {
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
-            const problems = await generateCommonProblems({ persona });
+            const problems = await generateCommonProblems({ persona: finalPersona, autor });
             setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
             setIsLoadingProblems(false);
         }
-    }, [persona]);
+    }, [persona, autor, selectedPersonaForCampaign, personaList]);
 
     useEffect(() => {
         if (isHintModalOpen) {
@@ -276,14 +282,15 @@ const Campaign = ({
             if (!problema.trim()) {
                 throw new Error("Descreva o problema primeiro.");
             }
-            const solutions = await generateCommonSolutions({ problema, persona });
+            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
+            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor });
             setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [commonSolutions.length, problema, persona]);
+    }, [commonSolutions.length, problema, persona, autor, selectedPersonaForCampaign, personaList]);
 
     const handleRegenerateSolutions = useCallback(async () => {
         setIsLoadingSolutions(true);
@@ -293,14 +300,15 @@ const Campaign = ({
             if (!problema.trim()) {
                 throw new Error("Descreva o problema primeiro.");
             }
-            const solutions = await generateCommonSolutions({ problema, persona });
+            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
+            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor });
             setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [problema, persona]);
+    }, [problema, persona, autor, selectedPersonaForCampaign, personaList]);
 
     useEffect(() => {
         if (isSolucaoHintModalOpen) {
@@ -363,7 +371,27 @@ const Campaign = ({
                 {/* Painel 0: Problema e Solução */}
                 <TabPanel value={activeTab} index={0}>
                     <Grid container spacing={3} sx={{ mt: 2 }}>
-                        <Grid item xs={12}>
+                        <Grid item xs={12} md={6}>
+                            <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+                                <InputLabel id="autor-select-label">Selecionar Autor</InputLabel>
+                                <Select
+                                    labelId="autor-select-label"
+                                    value={selectedAutorForCampaign}
+                                    onChange={(e) => setSelectedAutorForCampaign(e.target.value)}
+                                    label="Selecionar Autor"
+                                >
+                                    <MenuItem value="">
+                                        <em>Nenhum (Usará Padrões)</em>
+                                    </MenuItem>
+                                    {autorList.map((p) => (
+                                        <MenuItem key={p.id} value={p.id}>
+                                            {p.name}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
                             <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
                                 <InputLabel id="persona-select-label">Selecionar Persona</InputLabel>
                                 <Select

@@ -17,6 +17,21 @@ export const emptyPersonaWizardData = { description: '', nome: '', posicaoCargo:
 
 const steps = ['Início Rápido com IA', 'Revisão Básica', 'Responsabilidades', 'Dores e Desafios', 'Gatilhos e Barreiras', 'Mentalidade e Cultura'];
 
+/**
+ * @component PersonaWizardContent
+ * @description The core UI of the persona creation/editing wizard. It is a stateful component
+ * that manages the current step of the wizard, but it is a "controlled" component in that
+ * it receives the actual persona data and the save/generate handlers from its parent.
+ *
+ * @param {object} props - The component props.
+ * @param {function} props.onSave - Callback function to be executed when the user clicks "Save".
+ * @param {function} props.onClose - Callback function to be executed when the user clicks "Cancel".
+ * @param {function} props.onGenerate - Callback to trigger the AI persona generation.
+ * @param {boolean} props.isGeneratingPersona - Flag indicating if the AI generation is in progress.
+ * @param {object} props.personaData - The object containing all the data for the persona being edited.
+ * @param {function} props.onPersonaDataChange - Callback to update the personaData object in the parent component.
+ * @param {number} [props.initialStep=0] - The step the wizard should start on.
+ */
 export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGeneratingPersona, personaData, onPersonaDataChange, initialStep = 0 }) => {
   const [activeStep, setActiveStep] = useState(initialStep);
   const isMobile = useIsMobile();
@@ -40,12 +55,17 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
     return <CircularProgress />;
   }
 
+  // Generic change handlers that propagate updates to the parent component.
   const handleChange = (event) => onPersonaDataChange(prev => ({ ...prev, [event.target.name]: event.target.value }));
   const handleMultiSelectChange = (event) => onPersonaDataChange(prev => ({ ...prev, [event.target.name]: typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value }));
   const handleCheckboxChange = (category, field) => (event) => { const { checked } = event.target; onPersonaDataChange(prev => { const currentValues = prev[category] || []; const newValues = checked ? [...currentValues, field] : currentValues.filter(item => item !== field); return { ...prev, [category]: newValues }; }); };
   const handleRichTextChange = (name, value) => onPersonaDataChange(prev => ({ ...prev, [name]: value }));
   const handleChipDelete = (fieldName, valueToDelete) => onPersonaDataChange(prev => ({ ...prev, [fieldName]: (prev[fieldName] || []).filter(item => item !== valueToDelete) }));
 
+  /**
+   * Handles the AI generation click.
+   * It shows a confirmation dialog if data already exists, then calls the onGenerate prop.
+   */
   const handleGenerateClick = () => {
     const hasExistingData = personaData && personaData.nome; // Check if a name already exists
     const proceed = () => {
@@ -153,6 +173,17 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
   );
 };
 
+/**
+ * @component PersonaWizard
+ * @description A wrapper component for the PersonaWizardContent. It is responsible for
+ * rendering the wizard inside a Dialog on mobile or directly in the layout on desktop.
+ *
+ * @param {object} props - The component props.
+ * @param {boolean} props.open - Controls the visibility of the wizard.
+ * @param {function} props.onClose - Callback to close the wizard.
+ * @param {function} props.onSave - Callback to save the persona data.
+ * @param {object} ...props - Any other props are passed down to PersonaWizardContent.
+ */
 const PersonaWizard = ({ open, onClose, onSave, ...props }) => {
   const isMobile = useIsMobile();
 
