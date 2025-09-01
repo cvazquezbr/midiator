@@ -81,7 +81,7 @@ const MainAppBar = ({
           </IconButton>
         )}
         <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-          {currentView === 'personas' ? 'Personas' : 'Midiator'}
+          Midiator
         </Typography>
 
         <Tooltip title="Salvar Campanha">
