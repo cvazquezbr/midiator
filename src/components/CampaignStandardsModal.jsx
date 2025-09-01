@@ -49,7 +49,6 @@ import AutorWizard, { AutorWizardContent, TIPO_ORGANIZACAO_OPTIONS } from './Aut
 import PaletteWizard from './PaletteWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
-import { getPersonas, loadPersona } from '../utils/personaState';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 import isEqual from 'lodash.isequal';
@@ -75,52 +74,9 @@ function TabPanel(props) {
   );
 }
 
-const PersonaDetails = ({ persona }) => {
-    if (!persona) {
-      return (
-        <Card variant="outlined" sx={{ mt: 2 }}>
-          <CardContent>
-            <Typography color="text.secondary">Nenhuma persona selecionada</Typography>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    const { nome, posicaoCargo, segmentoEmpresa, responsabilidadesChave, mentalidadeValores } = persona.persona_data || {};
-
-    return (
-      <Card variant="outlined" sx={{ mt: 2 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>{nome || persona.name}</Typography>
-          {posicaoCargo && posicaoCargo.length > 0 && (
-            <Typography variant="body2" color="text.secondary"><strong>Cargo:</strong> {posicaoCargo.join(', ')}</Typography>
-          )}
-          {segmentoEmpresa && segmentoEmpresa.length > 0 && (
-            <Typography variant="body2" color="text.secondary"><strong>Segmento:</strong> {segmentoEmpresa.join(', ')}</Typography>
-          )}
-          {responsabilidadesChave && responsabilidadesChave.length > 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}><strong>Responsabilidades:</strong> {responsabilidadesChave.join(', ')}</Typography>
-          )}
-           {mentalidadeValores && (
-            <Box mt={2}>
-                <Typography variant="subtitle2"><strong>Mentalidade e Valores:</strong></Typography>
-                <Box sx={{ maxHeight: 100, overflow: 'auto', border: '1px solid #eee', p: 1, borderRadius: 1 }} dangerouslySetInnerHTML={{ __html: mentalidadeValores }} />
-            </Box>
-           )}
-        </CardContent>
-      </Card>
-    );
-  };
-
 const CampaignStandardsModal = ({ open, onClose, onGeneratePalette, onShowMemorial }) => {
   const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
-
-  // Persona state
-  const [allPersonas, setAllPersonas] = useState([]);
-  const [selectedPersonaId, setSelectedPersonaId] = useState('');
-  const [persona, setPersona] = useState(null); // The full selected persona object
-  const [loadingPersonas, setLoadingPersonas] = useState(false);
 
   // Other states
   const [autor, setAutor] = useState({});
@@ -180,42 +136,26 @@ Retorne apenas um único objeto JSON.`;
       const apiKey = getGeminiApiKey();
       if (apiKey && !geminiAPI.isInitialized) geminiAPI.initialize(apiKey);
 
-      setLoadingPersonas(true);
-      getPersonas()
-        .then(data => setAllPersonas(data))
-        .catch(err => toast.error("Falha ao carregar personas."))
-        .finally(() => setLoadingPersonas(false));
+      const { autor, instrucoes, formato, colors: loadedColors } = getCampaignPrompt();
 
-      const { persona_id, autor, instrucoes, formato, colors: loadedColors } = getCampaignPrompt();
-
-      setSelectedPersonaId(persona_id || '');
       setAutor(autor);
       setInstrucoes(instrucoes);
       setFormato(formato);
       const colorsAsObjects = (loadedColors || []).map(hex => ({ hex, name: `Cor (${hex})`, role: 'Salva', justification: '' }));
       setColors(colorsAsObjects);
 
-      setInitialState({ persona_id, autor, instrucoes, formato, colors: colorsAsObjects });
+      setInitialState({ autor, instrucoes, formato, colors: colorsAsObjects });
 
       if (!autor || !autor.identidade) setIsAutorWizardVisible(true);
       else setIsAutorWizardVisible(false);
     }
   }, [open]);
 
-  useEffect(() => {
-    if (selectedPersonaId && allPersonas.length > 0) {
-      const foundPersona = allPersonas.find(p => p.id === selectedPersonaId);
-      setPersona(foundPersona || null);
-    } else {
-      setPersona(null);
-    }
-  }, [selectedPersonaId, allPersonas]);
-
   const handleChange = (event, newValue) => setValue(newValue);
 
   const handleSave = () => {
     const colorsToSave = colors.map(color => color.hex).filter(Boolean);
-    saveCampaignPrompt({ persona_id: selectedPersonaId, autor, instrucoes, formato, colors: colorsToSave });
+    saveCampaignPrompt({ autor, instrucoes, formato, colors: colorsToSave });
     toast.success('Padrões de campanha salvos com sucesso!');
     onClose();
   };
@@ -307,7 +247,7 @@ Retorne apenas um único objeto JSON.`;
 
   const hasUnsavedChanges = () => {
     if (!initialState) return false;
-    const currentState = { persona_id: selectedPersonaId, autor, instrucoes, formato, colors };
+    const currentState = { autor, instrucoes, formato, colors };
     // Custom comparison for colors as it's an array of objects
     const initialColorsHex = initialState.colors.map(c => c.hex);
     const currentColorsHex = currentState.colors.map(c => c.hex);
@@ -338,38 +278,14 @@ Retorne apenas um único objeto JSON.`;
         <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs orientation="horizontal" variant="scrollable" value={value} onChange={handleChange}>
-              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Persona" {...a11yProps(0)} />
-              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Autor" {...a11yProps(1)} />
-              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Formato" {...a11yProps(2)} />
-              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Instruções" {...a11yProps(3)} />
-              <Tab icon={<PaletteIcon />} iconPosition="start" label="Cores" {...a11yProps(4)} />
+              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Autor" {...a11yProps(0)} />
+              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Formato" {...a11yProps(1)} />
+              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Instruções" {...a11yProps(2)} />
+              <Tab icon={<PaletteIcon />} iconPosition="start" label="Cores" {...a11yProps(3)} />
             </Tabs>
           </Box>
           <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
             <TabPanel value={value} index={0}>
-                <Typography variant="h6">Seleção de Persona</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Selecione uma persona previamente cadastrada para usar como padrão em suas campanhas. Você pode gerenciar as personas na página de <MuiLink component="a" href="/personas" target="_blank">Personas</MuiLink>.
-                </Typography>
-                {loadingPersonas ? <CircularProgress /> : (
-                    <FormControl fullWidth variant="outlined">
-                        <InputLabel id="persona-select-label">Persona</InputLabel>
-                        <Select
-                            labelId="persona-select-label"
-                            value={selectedPersonaId}
-                            onChange={(e) => setSelectedPersonaId(e.target.value)}
-                            label="Persona"
-                        >
-                            <MenuItem value=""><em>Nenhuma</em></MenuItem>
-                            {allPersonas.map((p) => (
-                                <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                )}
-                <PersonaDetails persona={persona} />
-            </TabPanel>
-            <TabPanel value={value} index={1}>
               {isAutorWizardVisible ? (
                 <AutorWizardContent autor={autor} onGenerate={handleGenerateAutorWithAI} isGeneratingAutor={isGeneratingAutor} onClose={() => setIsAutorWizardVisible(false)} onSave={(newAutor) => { setAutor(newAutor); setIsAutorWizardVisible(false); toast.success('Autor salvo com assistente!'); }} />
               ) : (
@@ -388,13 +304,13 @@ Retorne apenas um único objeto JSON.`;
                 </Stack>
               )}
             </TabPanel>
-            <TabPanel value={value} index={2}>
+            <TabPanel value={value} index={1}>
               <HtmlDisplayField title="Formato" htmlContent={formato} onClick={() => handleOpenEditor('formato')} />
             </TabPanel>
-            <TabPanel value={value} index={3}>
+            <TabPanel value={value} index={2}>
               <HtmlDisplayField title="Instruções" htmlContent={instrucoes} onClick={() => handleOpenEditor('instruções')} />
             </TabPanel>
-            <TabPanel value={value} index={4}>
+            <TabPanel value={value} index={3}>
               <Stack spacing={2} sx={{ mb: 3 }}>
                 <Button variant="contained" startIcon={<AutoAwesomeIcon />} onClick={() => setShowPaletteWizard(true)} disabled={!onGeneratePalette} sx={{ alignSelf: 'flex-start' }}>Assistente de Paleta</Button>
               </Stack>

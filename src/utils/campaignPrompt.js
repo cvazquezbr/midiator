@@ -2,15 +2,18 @@ const CAMPAIGN_PROMPT_STORAGE_KEY = 'campaignPrompt';
 
 /**
  * Salva o objeto do prompt de campanha no localStorage.
- * @param {object} promptData - O objeto com os dados do prompt ({ autor, instrucoes, formato, colors, persona_id }).
+ * @param {object} promptData - O objeto com os dados do prompt ({ autor, instrucoes, formato, colors }).
  */
 export function saveCampaignPrompt(promptData) {
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
-      // Create a shallow copy and remove the full persona object before saving, keeping persona_id
+      // Create a shallow copy and remove persona-related attributes before saving
       const dataToStore = { ...promptData };
       if (dataToStore.persona) {
         delete dataToStore.persona;
+      }
+      if (dataToStore.persona_id) {
+        delete dataToStore.persona_id;
       }
       window.localStorage.setItem(CAMPAIGN_PROMPT_STORAGE_KEY, JSON.stringify(dataToStore));
     } catch (error) {
@@ -22,7 +25,7 @@ export function saveCampaignPrompt(promptData) {
 /**
  * Recupera o objeto do prompt de campanha do localStorage.
  * Lida com a migração de formatos de dados antigos.
- * @returns {{autor: object, instrucoes: string, formato: string, colors: string[], persona_id: number|null}} O objeto do prompt ou um objeto com campos vazios.
+ * @returns {{autor: object, instrucoes: string, formato: string, colors: string[]}} O objeto do prompt ou um objeto com campos vazios.
  */
 export function getCampaignPrompt() {
   const defaultPrompt = {
@@ -39,7 +42,6 @@ export function getCampaignPrompt() {
     instrucoes: '',
     formato: '',
     colors: [],
-    persona_id: null,
   };
 
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -72,16 +74,6 @@ export function getCampaignPrompt() {
         };
       } else if (typeof parsedData.autor !== 'object' || parsedData.autor === null) {
         parsedData.autor = { ...defaultPrompt.autor };
-      }
-
-
-      // Ensure full persona object is not carried over from old localStorage data
-      if (parsedData.persona) {
-        // if persona_id is not set, try to get it from the old persona object
-        if (!parsedData.persona_id && parsedData.persona.id) {
-            parsedData.persona_id = parsedData.persona.id;
-        }
-        delete parsedData.persona;
       }
 
       // Migração para remover o campo aspectRatio
