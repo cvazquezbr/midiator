@@ -22,7 +22,7 @@ import geminiAPI from '../utils/geminiAPI';
  * where the `PersonaWizard` is displayed. The component is self-contained and handles
  * all its state and API interactions.
  */
-const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen }) => {
+const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -54,6 +54,13 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen }) => {
   useEffect(() => {
       fetchPersonas();
   }, []);
+
+  // Effect to automatically open the drawer if no persona is selected
+  useEffect(() => {
+    if (!selectedPersona && onNoPersonaSelected) {
+      onNoPersonaSelected();
+    }
+  }, [selectedPersona, onNoPersonaSelected]);
 
   /**
    * Fetches the list of personas from the API and updates the state.
