@@ -56,7 +56,6 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
   if (!personaData) {
     return <CircularProgress />;
   }
-
   const handleChange = (event) => onPersonaDataChange(prev => ({ ...prev, [event.target.name]: event.target.value }));
   const handleMultiSelectChange = (event) => onPersonaDataChange(prev => ({ ...prev, [event.target.name]: typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value }));
   const handleCheckboxChange = (category, field) => (event) => { const { checked } = event.target; onPersonaDataChange(prev => { const currentValues = prev[category] || []; const newValues = checked ? [...currentValues, field] : currentValues.filter(item => item !== field); return { ...prev, [category]: newValues }; }); };
