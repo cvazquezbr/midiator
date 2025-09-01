@@ -104,7 +104,7 @@ const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected })
     }
   };
 
-    const handleGenerateAutorWithAI = async (description, callback) => {
+    const handleGenerateAutorWithAI = async (descricaoGeral, dominioReferencia, siteExclusao, callback) => {
         if (!geminiAPI.isInitialized) {
             const apiKey = getGeminiApiKey();
             if (!apiKey) {
@@ -114,7 +114,19 @@ const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected })
             geminiAPI.initialize(apiKey);
         }
         setIsGeneratingAutor(true);
-        const prompt = `Crie um objeto JSON para um autor de marketing detalhado com base na seguinte descrição: '${description}'. O JSON deve ter as seguintes chaves: 'identidade' (string), 'descricao' (string), 'tipo' (string), 'tipoOrganizacaoOutro' (string), 'objetivoEstrategico' (string), e 'objetivoEngajamento' (string).`;
+        const prompt = `
+Com base na descrição do autor, preencha os campos do objeto JSON abaixo.
+**Descrição do Autor:** ${descricaoGeral}
+**Instruções Adicionais:**
+${dominioReferencia ? `- Use o site \`${dominioReferencia}\` como principal fonte de referência.` : ''}
+${siteExclusao ? `- NÃO use o site \`${siteExclusao}\` como referência.` : ''}
+**Campos para preencher (use exatamente estes nomes de chave):**
+- identidade: (string)
+- descricao: (string em HTML)
+- tipo: (string)
+- objetivoEstrategico: (string em HTML)
+- objetivoEngajamento: (string em HTML)
+Retorne apenas um único objeto JSON.`;
         let cleanedResponse = '';
         try {
             const response = await geminiAPI.generateContent(prompt);
