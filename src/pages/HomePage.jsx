@@ -20,7 +20,7 @@ import { useSettings } from '../context/SettingsContext';
 import { loadSettingsFromDb } from '../utils/credentialsManager';
 import { getCampaigns, saveCampaign, loadCampaign, updateCampaign } from '../utils/campaignState';
 import { checkAuthStatus } from '../utils/auth';
-import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils/personaState';
+import { getPersonas, savePersona, updatePersona } from '../utils/personaState';
 
 import MyCampaignsStep from '../components/MyCampaignsStep';
 import PersonaWizard, { emptyPersonaWizardData } from '../components/PersonaWizard';
@@ -102,8 +102,6 @@ function HomePage() {
   const [formato, setFormato] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
-  const [conteudoMedio, setConteudoMedio] = useState('');
-  const [conteudoPequeno, setConteudoPequeno] = useState('');
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
   const [isGeneratingSummaryPequeno, setIsGeneratingSummaryPequeno] = useState(false);
@@ -156,7 +154,6 @@ function HomePage() {
   const [personaDrawerOpen, setPersonaDrawerOpen] = useState(!isMobile);
   const [personasLoading, setPersonasLoading] = useState(true);
   const [personasError, setPersonasError] = useState(null);
-  const [isSavingPersona, setIsSavingPersona] = useState(false);
   const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
   const [initialWizardStep, setInitialWizardStep] = useState(0);
   const [selectedPersonaForCampaign, setSelectedPersonaForCampaign] = useState('');
@@ -186,12 +183,12 @@ function HomePage() {
   }, [personaFormData, selectedPersona]);
 
 
-  // Effect for Persona Drawer visibility on resize
+  // Effect to ensure persona drawer opens when no persona is selected
   useEffect(() => {
-      if (currentView === 'personas') {
-        setPersonaDrawerOpen(!isMobile);
+      if (currentView === 'personas' && !selectedPersona) {
+          setPersonaDrawerOpen(true);
       }
-  }, [isMobile, currentView]);
+  }, [currentView, selectedPersona]);
 
   // Effect to load personas when the view is opened
   useEffect(() => {
@@ -239,7 +236,6 @@ function HomePage() {
         toast.error('O nome da persona é obrigatório.');
         return;
     }
-    setIsSavingPersona(true);
     try {
         const saved = personaToSave.id
             ? await updatePersona(personaToSave.id, personaToSave.name, personaToSave.persona_data)
@@ -253,8 +249,6 @@ function HomePage() {
     } catch (err) {
         toast.error(`Falha ao salvar persona: ${err.message}`);
         return false; // Indicate failure
-    } finally {
-        setIsSavingPersona(false);
     }
   };
 
@@ -355,8 +349,6 @@ function HomePage() {
     setFormato(state.formato ?? '');
     setAspectRatio(state.aspectRatio ?? '1:1');
     setGeneratedImageUrl(state.generatedImageUrl ?? null);
-    setConteudoMedio(state.conteudoMedio ?? '');
-    setConteudoPequeno(state.conteudoPequeno ?? '');
     setFollowupPostsQuantity(state.followupPostsQuantity ?? 5);
     setIsScheduled(state.isScheduled ?? false);
     setScheduleDate(state.scheduleDate ? new Date(state.scheduleDate) : new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
@@ -613,7 +605,7 @@ function HomePage() {
     };
 
     handleLinkedInRedirect();
-  }, []);
+  }, [settings.linkedin, updateSetting, saveSettings]);
 
   const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Imagem e Formatação', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Gerar Imagens', description: 'Gere as imagens finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish }, { label: 'Monitorar', description: 'Acompanhe as estatísticas de suas publicações.', icon: BarChart } ];
   const handleCreateNewCampaign = () => {
@@ -954,8 +946,6 @@ function HomePage() {
     console.log('[HomePage] DIAGNOSTIC: handleResetCampaign called. Setting generatedImageUrl to null.');
     setCampaignContent(null);
     setGeneratedImageUrl(null);
-    setConteudoMedio('');
-    setConteudoPequeno('');
     setFollowupPosts([]);
     setFollowupPostsQuantity(5);
   };
@@ -1216,7 +1206,7 @@ function HomePage() {
             {currentView === 'personas' && (
               <Box sx={{ display: 'flex', width: '100%' }}>
                   <Drawer
-                      variant="temporary"
+                      variant={isMobile ? 'temporary' : 'persistent'}
                       anchor="left"
                       open={personaDrawerOpen}
                       onClose={() => handleNavigation(() => setPersonaDrawerOpen(false))}
@@ -1237,6 +1227,18 @@ function HomePage() {
                       sx={{
                           flexGrow: 1,
                           p: 3,
+                          transition: theme.transitions.create('margin', {
+                            easing: theme.transitions.easing.sharp,
+                            duration: theme.transitions.duration.leavingScreen,
+                          }),
+                          marginLeft: !isMobile ? `-${320}px` : 0,
+                          ...(!isMobile && personaDrawerOpen && {
+                            transition: theme.transitions.create('margin', {
+                                easing: theme.transitions.easing.easeOut,
+                                duration: theme.transitions.duration.enteringScreen,
+                            }),
+                            marginLeft: 0,
+                          }),
                       }}
                   >
                       <Toolbar />
@@ -1246,7 +1248,7 @@ function HomePage() {
                             <PersonaWizard
                               key={selectedPersona.id || 'new'}
                               open={Boolean(selectedPersona)}
-                              onClose={() => handleNavigation(() => { setCurrentView('personas'); setSelectedPersona(null); })}
+                              onClose={() => handleNavigation(() => setSelectedPersona(null))}
                               onSave={handleSavePersona}
                               onReset={handleNewPersona}
                               personaData={personaFormData}
@@ -1260,7 +1262,7 @@ function HomePage() {
                               <PersonaWizard
                                 key={selectedPersona.id || 'new'}
                                 open={Boolean(selectedPersona)}
-                                onClose={() => handleNavigation(() => { setCurrentView('personas'); setSelectedPersona(null); })}
+                                onClose={() => handleNavigation(() => setSelectedPersona(null))}
                                 onSave={handleSavePersona}
                                 onReset={handleNewPersona}
                                 personaData={personaFormData}
