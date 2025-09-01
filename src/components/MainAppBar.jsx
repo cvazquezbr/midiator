@@ -37,7 +37,6 @@ const MainAppBar = ({
   onShowCampaigns,
   setShowSetupModal,
   setShowCampaignStandardsModal,
-  setShowMemorialDescritivoModal,
   onMenuClick,
   isMobile,
   onSaveCampaign,
@@ -175,10 +174,6 @@ const MainAppBar = ({
           <MenuItem onClick={() => { handleUserMenuClose(); setShowCampaignStandardsModal(true); }}>
             <Edit sx={{ mr: 1 }} />
             Padrões de Campanha
-          </MenuItem>
-          <MenuItem onClick={() => { handleUserMenuClose(); setShowMemorialDescritivoModal(true); }}>
-            <ArticleIcon sx={{ mr: 1 }} />
-            Memorial Descritivo
           </MenuItem>
           {user?.role === 'admin' && (
             <MenuItem onClick={() => { navigate('/admin/users'); handleUserMenuClose(); }}>
