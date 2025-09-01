@@ -13,9 +13,19 @@ const parseBody = async (req) => {
   }
 };
 
+/**
+ * API handler for persona collection operations.
+ * All routes in this handler are protected and require authentication.
+ *
+ * @param {object} req - The incoming request object.
+ * @param {object} res - The outgoing response object.
+ */
 const handler = async (req, res) => {
+  // The user ID is extracted from the authenticated request.
   const userId = req.user.sub;
 
+  // Handles GET requests to /api/personas
+  // Fetches all personas belonging to the authenticated user.
   if (req.method === 'GET') {
     try {
       const { rows } = await query(
@@ -27,6 +37,8 @@ const handler = async (req, res) => {
       console.error(`[GET /api/personas] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
+  // Handles POST requests to /api/personas
+  // Creates a new persona for the authenticated user.
   } else if (req.method === 'POST') {
     try {
       const { name, persona_data } = await parseBody(req);

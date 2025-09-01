@@ -1,6 +1,16 @@
 import fetchWithAuth from './fetchWithAuth';
 import { toast } from 'sonner';
 
+/**
+ * This module provides functions for interacting with the persona API endpoints.
+ * It abstracts the fetch calls and handles authentication and basic error reporting.
+ */
+
+/**
+ * Fetches all personas for the currently authenticated user.
+ * @returns {Promise<Array>} A promise that resolves to an array of persona objects.
+ * @throws {Error} If the fetch request fails.
+ */
 export const getPersonas = async () => {
   const res = await fetchWithAuth('/api/personas');
   if (!res.ok) {
@@ -10,6 +20,12 @@ export const getPersonas = async () => {
   return res.json();
 };
 
+/**
+ * Loads a single persona by its ID.
+ * @param {string|number} id - The ID of the persona to fetch.
+ * @returns {Promise<object>} A promise that resolves to the persona object.
+ * @throws {Error} If the fetch request fails.
+ */
 export const loadPersona = async (id) => {
   const res = await fetchWithAuth(`/api/personas/${id}`);
   if (!res.ok) {
@@ -19,6 +35,13 @@ export const loadPersona = async (id) => {
   return res.json();
 };
 
+/**
+ * Creates a new persona.
+ * @param {string} name - The name of the new persona.
+ * @param {object} personaData - The detailed data object for the persona.
+ * @returns {Promise<object>} A promise that resolves to the newly created persona object.
+ * @throws {Error} If the creation fails.
+ */
 export const savePersona = async (name, personaData) => {
   try {
     const requestBody = JSON.stringify({ name, persona_data: personaData });
@@ -42,6 +65,14 @@ export const savePersona = async (name, personaData) => {
   }
 };
 
+/**
+ * Updates an existing persona.
+ * @param {string|number} id - The ID of the persona to update.
+ * @param {string} name - The updated name of the persona.
+ * @param {object} personaData - The updated detailed data object for the persona.
+ * @returns {Promise<object>} A promise that resolves to the updated persona object.
+ * @throws {Error} If the update fails.
+ */
 export const updatePersona = async (id, name, personaData) => {
     try {
         const requestBody = JSON.stringify({ name, persona_data: personaData });
@@ -65,6 +96,12 @@ export const updatePersona = async (id, name, personaData) => {
     }
 };
 
+/**
+ * Deletes a persona by its ID.
+ * @param {string|number} id - The ID of the persona to delete.
+ * @returns {Promise<object>} A promise that resolves to the confirmation message from the API.
+ * @throws {Error} If the deletion fails.
+ */
 export const deletePersona = async (id) => {
   try {
     const res = await fetchWithAuth(`/api/personas/${id}`, { method: 'DELETE' });
