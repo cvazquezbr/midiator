@@ -343,7 +343,9 @@ const mainHandler = async (request, response) => {
     // Cron job endpoint (GET) - uses Vercel's built-in cron secret
     if (request.method === 'GET') {
         const vercelCronSecret = process.env.VERCEL_CRON_SECRET;
-        const secretFromHeader = request.headers.get('x-vercel-cron-secret');
+        const secretFromHeader = typeof request.headers.get === 'function'
+            ? request.headers.get('x-vercel-cron-secret')
+            : request.headers['x-vercel-cron-secret'];
 
         // It's critical that the VERCEL_CRON_SECRET is available.
         // Vercel automatically injects this for projects with cron jobs.
