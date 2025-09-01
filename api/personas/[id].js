@@ -62,16 +62,32 @@ const handler = async (req, res) => {
       return res.status(500).json({ error: 'Internal Server Error' });
     }
     // Handles DELETE /api/personas/:id
-    // Deletes a persona.
+    // Deletes a persona, but only if it's not associated with any campaigns.
   } else if (req.method === 'DELETE') {
     try {
+      // First, check if the persona is used in any campaigns for this user.
+      const campaignCheck = await query(
+        "SELECT COUNT(*) FROM campaigns WHERE user_id = $1 AND campaign_data->'persona'->>'id' = $2",
+        [userId, id]
+      );
+
+      if (parseInt(campaignCheck.rows[0].count, 10) > 0) {
+        return res.status(409).json({
+          error: 'This persona cannot be deleted because it is associated with one or more campaigns.',
+        });
+      }
+
+      // If not used, proceed with deletion.
       const { rowCount } = await query(
         'DELETE FROM personas WHERE id = $1 AND user_id = $2',
         [id, userId]
       );
+
       if (rowCount === 0) {
+        // This case would be rare if the campaign check passes, but it's good practice.
         return res.status(404).json({ error: 'Persona not found or access denied.' });
       }
+
       return res.status(200).json({ message: 'Persona deleted successfully.' });
     } catch (error) {
       console.error(`[DELETE /api/personas/${id}] Error for user ${userId}:`, error);

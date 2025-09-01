@@ -107,12 +107,20 @@ export const deletePersona = async (id) => {
     const res = await fetchWithAuth(`/api/personas/${id}`, { method: 'DELETE' });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
+      // Handle the specific 409 conflict error
+      if (res.status === 409) {
+        toast.error(err.error || 'This persona is in use and cannot be deleted.');
+      } else {
+        toast.error(err.error || 'Failed to delete persona.');
+      }
       throw new Error(err.error || 'Failed to delete persona.');
     }
-    toast.success('Persona deleted successfully!');
+    // The success toast is now handled in the component to avoid duplication
+    // toast.success('Persona deleted successfully!');
     return res.json();
   } catch (error) {
-    toast.error(`Delete failed: ${error.message}`);
+    // The toast is already shown for !res.ok cases, so we just re-throw
+    // for the component to catch and handle loading states etc.
     throw error;
   }
 };
