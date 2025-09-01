@@ -149,7 +149,7 @@ async function handleUpdateSchedule(request, response) {
 }
 
 // The main scheduler logic
-async function handleRunScheduler(request, response) {
+export async function handleRunScheduler(request, response) {
     const fetch = (await import('node-fetch')).default;
     console.log('Scheduler run initiated...');
     let publishedCount = 0;
