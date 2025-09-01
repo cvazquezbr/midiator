@@ -60,7 +60,7 @@ export const AutorWizardContent = ({ onSave, onClose, onGenerate, isGeneratingAu
   const handleGenerateClick = () => {
     const hasExistingData = autorData && autorData.identidade;
     const proceed = () => {
-        onGenerate(autorData.descricaoGeral, (generatedAutor) => {
+        onGenerate(autorData.descricaoGeral, autorData.dominioReferencia, autorData.siteExclusao, (generatedAutor) => {
             onAutorDataChange(prev => ({ ...prev, ...generatedAutor }));
             setActiveStep(1);
         });
@@ -78,13 +78,41 @@ export const AutorWizardContent = ({ onSave, onClose, onGenerate, isGeneratingAu
   const getStepContent = (step) => {
     switch (step) {
       case 0: return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <TextField name="descricaoGeral" label="Descrição do Autor" multiline rows={6} fullWidth value={autorData.descricaoGeral || ''} onChange={handleChange} placeholder="Ex: 'Uma empresa de consultoria...'" disabled={isGeneratingAutor} />
-            <Tooltip title="Gerar autor com IA">
-                <IconButton onClick={handleGenerateClick} disabled={isGeneratingAutor || !autorData.descricaoGeral?.trim()} color="primary">
-                    {isGeneratingAutor ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
-                </IconButton>
-            </Tooltip>
+        <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <TextField name="descricaoGeral" label="Descrição do Autor" multiline rows={6} fullWidth value={autorData.descricaoGeral || ''} onChange={handleChange} placeholder="Ex: 'Uma empresa de consultoria...'" disabled={isGeneratingAutor} />
+                <Tooltip title="Gerar autor com IA">
+                    <IconButton onClick={handleGenerateClick} disabled={isGeneratingAutor || !autorData.descricaoGeral?.trim()} color="primary">
+                        {isGeneratingAutor ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
+                    </IconButton>
+                </Tooltip>
+            </Box>
+            <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                    <TextField
+                      name="dominioReferencia"
+                      label="Domínio de Referência (Opcional)"
+                      fullWidth
+                      value={autorData.dominioReferencia || ''}
+                      onChange={handleChange}
+                      placeholder="Ex: 'empresa.com.br'"
+                      helperText="A IA usará este site como fonte de informação."
+                      disabled={isGeneratingAutor}
+                    />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                    <TextField
+                      name="siteExclusao"
+                      label="Site para Excluir da Busca (Opcional)"
+                      fullWidth
+                      value={autorData.siteExclusao || ''}
+                      onChange={handleChange}
+                      placeholder="Ex: 'concorrente.com.br'"
+                      helperText="A IA evitará este site em sua busca."
+                      disabled={isGeneratingAutor}
+                    />
+                </Grid>
+            </Grid>
         </Box>
       );
       case 1: return <Box><Typography variant="h6" gutterBottom>Revisão e Detalhamento</Typography><Grid container spacing={3}><Grid item xs={12}><TextField label="Nome do Autor" name="identidade" value={autorData.identidade || ''} onChange={handleChange} fullWidth required /></Grid><Grid item xs={12}><Typography variant="subtitle1" gutterBottom>Descrição da Empresa</Typography><TextEditor value={autorData.descricao || ''} onChange={(v) => handleRichTextChange('descricao', v)} html={true} /></Grid><Grid item xs={12}><FormControl fullWidth><InputLabel>Tipo de Organização</InputLabel><Select name="tipo" value={autorData.tipo || ''} onChange={handleChange} label="Tipo de Organização">{TIPO_ORGANIZACAO_OPTIONS.map((o) => (<MenuItem key={o} value={o}>{o}</MenuItem>))}</Select></FormControl></Grid>{autorData.tipo === 'Outro' && <Grid item xs={12}><TextField label="Especifique o Tipo" name="tipoOrganizacaoOutro" value={autorData.tipoOrganizacaoOutro || ''} onChange={handleChange} fullWidth /></Grid>}<Grid item xs={12}><Typography variant="subtitle1" gutterBottom>Objetivo Estratégico</Typography><TextEditor value={autorData.objetivoEstrategico || ''} onChange={(v) => handleRichTextChange('objetivoEstrategico', v)} html={true} /></Grid><Grid item xs={12}><Typography variant="subtitle1" gutterBottom>Objetivo de Engajamento</Typography><TextEditor value={autorData.objetivoEngajamento || ''} onChange={(v) => handleRichTextChange('objetivoEngajamento', v)} html={true} /></Grid></Grid></Box>;
