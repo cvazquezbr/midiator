@@ -1108,8 +1108,12 @@ function HomePage() {
             currentView={currentView}
             onPersonaMenuClick={() => setPersonaDrawerOpen(!personaDrawerOpen)}
         />
-        <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImage={backgroundImage} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
-        {currentView === 'campaigns' && !isMobile && <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out', backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', '&:hover': { backgroundColor: 'background.default' } }} >{sidebarOpen ? <ChevronLeft /> : <ChevronRight />}</Fab>}
+        {currentView === 'campaigns' && (
+          <>
+            <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImage={backgroundImage} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
+            {!isMobile && <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out', backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', '&:hover': { backgroundColor: 'background.default' } }} >{sidebarOpen ? <ChevronLeft /> : <ChevronRight />}</Fab>}
+          </>
+        )}
         <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, transition: theme.transitions.create('margin', { easing: theme.transitions.easing.sharp, duration: theme.transitions.duration.leavingScreen }) }} >
           <Toolbar />
             {currentView === 'campaigns' && (
@@ -1237,26 +1241,43 @@ function HomePage() {
                   >
                       <Toolbar />
                       <Box>
-                          {selectedPersona ? (
-                              <PersonaWizard
-                                  key={selectedPersona.id || 'new'}
-                                  open={Boolean(selectedPersona)}
-                                  onClose={() => handleNavigation(() => setSelectedPersona(null))}
-                                  onSave={handleSavePersona}
-                                  onReset={handleNewPersona}
-                                  personaData={personaFormData}
-                                  onPersonaDataChange={setPersonaFormData}
-                                  onGenerate={handleGeneratePersonaWithAI}
-                                  isGeneratingPersona={isGeneratingPersona}
-                                  initialStep={initialWizardStep}
-                              />
+                        {selectedPersona ? (
+                          isMobile ? (
+                            <PersonaWizard
+                              key={selectedPersona.id || 'new'}
+                              open={Boolean(selectedPersona)}
+                              onClose={() => handleNavigation(() => { setCurrentView('personas'); setSelectedPersona(null); })}
+                              onSave={handleSavePersona}
+                              onReset={handleNewPersona}
+                              personaData={personaFormData}
+                              onPersonaDataChange={setPersonaFormData}
+                              onGenerate={handleGeneratePersonaWithAI}
+                              isGeneratingPersona={isGeneratingPersona}
+                              initialStep={initialWizardStep}
+                            />
                           ) : (
-                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}>
-                                  <Typography variant="h6" color="text.secondary">
-                                      Selecione uma persona para editar ou crie uma nova.
-                                  </Typography>
-                              </Box>
-                          )}
+                            <Paper elevation={2} sx={{ p: 3 }}>
+                              <PersonaWizard
+                                key={selectedPersona.id || 'new'}
+                                open={Boolean(selectedPersona)}
+                                onClose={() => handleNavigation(() => { setCurrentView('personas'); setSelectedPersona(null); })}
+                                onSave={handleSavePersona}
+                                onReset={handleNewPersona}
+                                personaData={personaFormData}
+                                onPersonaDataChange={setPersonaFormData}
+                                onGenerate={handleGeneratePersonaWithAI}
+                                isGeneratingPersona={isGeneratingPersona}
+                                initialStep={initialWizardStep}
+                              />
+                            </Paper>
+                          )
+                        ) : (
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}>
+                            <Typography variant="h6" color="text.secondary">
+                              Selecione uma persona para editar ou crie uma nova.
+                            </Typography>
+                          </Box>
+                        )}
                       </Box>
                   </Box>
               </Box>
