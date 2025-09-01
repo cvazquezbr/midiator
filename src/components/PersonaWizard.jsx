@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useSwipeable } from 'react-swipeable';
 import { useIsMobile } from '../hooks/use-mobile';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, LinearProgress, Box, TextField, Typography, Grid, FormControl, InputLabel, Select, MenuItem, Chip, Checkbox, ListItemText, Accordion, AccordionSummary, AccordionDetails, FormGroup, FormControlLabel, CircularProgress, Tooltip, IconButton, Link as MuiLink,
@@ -29,33 +28,12 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
     setActiveStep(initialStep || 0);
   }, [initialStep]);
 
-  const isNextDisabled = () => {
-    if (!personaData) return true;
-    return (activeStep === 1 && !(personaData.nome || '').trim());
-  };
-
-  const handleNext = () => {
-    if (activeStep < steps.length - 1 && !isNextDisabled()) {
-      setActiveStep(activeStep + 1);
-    }
-  };
-
-  const handleBack = () => {
-    if (activeStep > 0) {
-      setActiveStep(activeStep - 1);
-    }
-  };
-
-  const swipeHandlers = useSwipeable({
-    onSwipedLeft: () => handleNext(),
-    onSwipedRight: () => handleBack(),
-    preventScrollOnSwipe: true,
-    trackMouse: true,
-  });
-
   if (!personaData) {
     return <CircularProgress />;
   }
+
+  const handleNext = () => setActiveStep((prevActiveStep) => prevActiveStep + 1);
+  const handleBack = () => setActiveStep((prevActiveStep) => prevActiveStep - 1);
   const handleChange = (event) => onPersonaDataChange(prev => ({ ...prev, [event.target.name]: event.target.value }));
   const handleMultiSelectChange = (event) => onPersonaDataChange(prev => ({ ...prev, [event.target.name]: typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value }));
   const handleCheckboxChange = (category, field) => (event) => { const { checked } = event.target; onPersonaDataChange(prev => { const currentValues = prev[category] || []; const newValues = checked ? [...currentValues, field] : currentValues.filter(item => item !== field); return { ...prev, [category]: newValues }; }); };
@@ -109,31 +87,55 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
     }
   };
 
+  const isNextDisabled = () => (activeStep === 1 && !(personaData.nome || '').trim());
+
   return (
     <Box>
       <Box sx={{ mb: 2 }}>
         <Typography variant="caption" color="text.secondary">Etapa {activeStep + 1} de {steps.length}: {steps[activeStep]}</Typography>
         <LinearProgress variant="determinate" value={((activeStep + 1) / steps.length) * 100} sx={{ mt: 1 }} />
       </Box>
-      <Box {...swipeHandlers} sx={{ mt: 4, mb: 4, minHeight: '30vh', cursor: 'grab' }}>{getStepContent(activeStep)}</Box>
-      <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
-        <Button onClick={onClose} color="secondary">Cancelar</Button>
-        <Box>
-            <Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" startIcon={<ArrowBack />}>
-                Anterior
-            </Button>
-            <Button
-                onClick={handleNext}
-                variant="outlined"
-                endIcon={<ArrowForward />}
-                disabled={isNextDisabled() || activeStep === steps.length - 1}
-                sx={{ ml: 1 }}
-            >
-                Próximo
-            </Button>
-            <Button onClick={onSave} variant="contained" color="primary" sx={{ ml: 2 }}>
-                Salvar
-            </Button>
+      <Box sx={{ mt: 4, mb: 4, minHeight: '30vh' }}>{getStepContent(activeStep)}</Box>
+      <DialogActions
+        sx={{
+          p: 2,
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between',
+        }}
+      >
+        <Button
+          onClick={onClose}
+          color="secondary"
+          sx={{ width: { xs: '100%', sm: 'auto' }, mb: { xs: 1, sm: 0 } }}
+        >
+          Cancelar
+        </Button>
+        <Box sx={{ display: 'flex', width: { xs: '100%', sm: 'auto' }, justifyContent: 'flex-end' }}>
+          <Button
+            onClick={handleBack}
+            disabled={activeStep === 0}
+            variant="outlined"
+            startIcon={<ArrowBack />}
+          >
+            Anterior
+          </Button>
+          <Button
+            onClick={handleNext}
+            variant="outlined"
+            endIcon={<ArrowForward />}
+            disabled={isNextDisabled() || activeStep === steps.length - 1}
+            sx={{ ml: 1 }}
+          >
+            Próximo
+          </Button>
+          <Button
+            onClick={onSave}
+            variant="contained"
+            color="primary"
+            sx={{ ml: 2 }}
+          >
+            Salvar
+          </Button>
         </Box>
       </DialogActions>
     </Box>
@@ -145,7 +147,7 @@ const PersonaWizard = ({ open, onClose, onSave, ...props }) => {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
       <DialogTitle>Assistente de Criação de Persona</DialogTitle>
-      <DialogContent sx={{ minHeight: '50vh' }}><PersonaWizardContent onClose={onClose} onSave={onSave} {...props} /></DialogContent>
+      <DialogContent sx={{ minHeight: '50vh', p: { xs: 1, sm: 2 } }}><PersonaWizardContent onClose={onClose} onSave={onSave} {...props} /></DialogContent>
     </Dialog>
   );
 };
