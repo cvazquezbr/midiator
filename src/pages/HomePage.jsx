@@ -186,12 +186,12 @@ function HomePage() {
   }, [personaFormData, selectedPersona]);
 
 
-  // Effect to automatically open persona drawer when no persona is selected
+  // Effect for Persona Drawer visibility on resize
   useEffect(() => {
-    if (currentView === 'personas' && !selectedPersona && !personaDrawerOpen) {
-      setPersonaDrawerOpen(true);
-    }
-  }, [currentView, selectedPersona, personaDrawerOpen]);
+      if (currentView === 'personas') {
+        setPersonaDrawerOpen(!isMobile);
+      }
+  }, [isMobile, currentView]);
 
   // Effect to load personas when the view is opened
   useEffect(() => {
