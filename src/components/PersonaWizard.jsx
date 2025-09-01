@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useIsMobile } from '../hooks/use-mobile';
+import { useSwipeable } from 'react-swipeable';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, LinearProgress, Box, TextField, Typography, Grid, FormControl, InputLabel, Select, MenuItem, Chip, Checkbox, ListItemText, Accordion, AccordionSummary, AccordionDetails, FormGroup, FormControlLabel, CircularProgress, Tooltip, IconButton, Link as MuiLink,
+  Dialog, DialogTitle, DialogContent, Button, LinearProgress, Box, TextField, Typography, Grid, FormControl, InputLabel, Select, MenuItem, Chip, Checkbox, ListItemText, Accordion, AccordionSummary, AccordionDetails, FormGroup, FormControlLabel, CircularProgress, Tooltip, IconButton, Link as MuiLink,
 } from '@mui/material';
 import { ExpandMore as ExpandMoreIcon, InfoOutlined as InfoOutlinedIcon, Replay as ReplayIcon, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon } from '@mui/icons-material';
 import TextEditor from './TextEditor';
-import { toast } from 'sonner';
-import isEqual from 'lodash.isequal';
-
 
 // Constants
 const POSICOES_CARGOS = ['Liderança Executiva: CEO, Diretor Executivo, Sócio', 'Gestão de Tecnologia: CTO, Head de Engenharia, Gerente de TI', 'Gestão de Marketing: Gerente de Marketing, Coordenador de Marketing', 'Gestão de Vendas: Gerente de Vendas, Diretor Comercial', 'Gestão de Recursos Humanos: Head de RH, Analista de RH', 'Outro(s)'];
@@ -19,10 +17,19 @@ export const emptyPersonaWizardData = { description: '', nome: '', posicaoCargo:
 
 const steps = ['Início Rápido com IA', 'Revisão Básica', 'Responsabilidades', 'Dores e Desafios', 'Gatilhos e Barreiras', 'Mentalidade e Cultura'];
 
-export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGeneratingPersona, personaData, onPersonaDataChange, initialStep = 0, onReset }) => {
+export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGeneratingPersona, personaData, onPersonaDataChange, initialStep = 0 }) => {
   const [activeStep, setActiveStep] = useState(initialStep);
-  const [otherItemInputs, setOtherItemInputs] = useState({});
-  const [editingChip, setEditingChip] = useState(null);
+
+  const handleNext = () => setActiveStep((prevActiveStep) => prevActiveStep < steps.length - 1 ? prevActiveStep + 1 : prevActiveStep);
+  const handleBack = () => setActiveStep((prevActiveStep) => prevActiveStep > 0 ? prevActiveStep - 1 : prevActiveStep);
+  const isNextDisabled = () => (activeStep === 1 && !(personaData.nome || '').trim());
+
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => !isNextDisabled() && handleNext(),
+    onSwipedRight: handleBack,
+    preventDefaultTouchmoveEvent: true,
+    trackMouse: true,
+  });
 
   useEffect(() => {
     setActiveStep(initialStep || 0);
@@ -32,17 +39,11 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
     return <CircularProgress />;
   }
 
-  const handleNext = () => setActiveStep((prevActiveStep) => prevActiveStep + 1);
-  const handleBack = () => setActiveStep((prevActiveStep) => prevActiveStep - 1);
   const handleChange = (event) => onPersonaDataChange(prev => ({ ...prev, [event.target.name]: event.target.value }));
   const handleMultiSelectChange = (event) => onPersonaDataChange(prev => ({ ...prev, [event.target.name]: typeof event.target.value === 'string' ? event.target.value.split(',') : event.target.value }));
   const handleCheckboxChange = (category, field) => (event) => { const { checked } = event.target; onPersonaDataChange(prev => { const currentValues = prev[category] || []; const newValues = checked ? [...currentValues, field] : currentValues.filter(item => item !== field); return { ...prev, [category]: newValues }; }); };
   const handleRichTextChange = (name, value) => onPersonaDataChange(prev => ({ ...prev, [name]: value }));
   const handleChipDelete = (fieldName, valueToDelete) => onPersonaDataChange(prev => ({ ...prev, [fieldName]: (prev[fieldName] || []).filter(item => item !== valueToDelete) }));
-  const handleOtherInputChange = (key, value) => setOtherItemInputs(prev => ({ ...prev, [key]: value }));
-  const handleAddNewItem = (key) => { const newItem = otherItemInputs[key]?.trim(); if (!newItem) return; if ((personaData[key] || []).map(item => item.toLowerCase()).includes(newItem.toLowerCase())) { toast.warning('Este item já foi adicionado.'); return; } onPersonaDataChange(prev => ({ ...prev, [key]: [...(prev[key] || []), newItem] })); handleOtherInputChange(key, ''); };
-  const handleEditChip = (key, value) => setEditingChip({ key, value, newValue: value });
-  const handleUpdateChipValue = () => { if (!editingChip) return; const { key, value, newValue } = editingChip; const trimmedNewValue = newValue.trim(); if (!trimmedNewValue) { toast.error("O valor não pode ser vazio."); setEditingChip(null); return; } if (value.toLowerCase() === trimmedNewValue.toLowerCase()) { setEditingChip(null); return; } if ((personaData[key] || []).map(item => item.toLowerCase()).includes(trimmedNewValue.toLowerCase())) { toast.warning('Este item já foi adicionado.'); setEditingChip(null); return; } onPersonaDataChange(prev => ({ ...prev, [key]: (prev[key] || []).map(item => (item === value ? trimmedNewValue : item)) })); setEditingChip(null); };
 
   const handleGenerateClick = () => {
     const hasExistingData = personaData && personaData.nome; // Check if a name already exists
@@ -87,10 +88,8 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
     }
   };
 
-  const isNextDisabled = () => (activeStep === 1 && !(personaData.nome || '').trim());
-
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Box {...swipeHandlers} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Box sx={{ mb: 2 }}>
         <Typography variant="caption" color="text.secondary">Etapa {activeStep + 1} de {steps.length}: {steps[activeStep]}</Typography>
         <LinearProgress variant="determinate" value={((activeStep + 1) / steps.length) * 100} sx={{ mt: 1 }} />
@@ -98,12 +97,20 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
       <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 1 }}>
         {getStepContent(activeStep)}
       </Box>
-      <DialogActions
+      <Box
         sx={{
+          position: 'sticky',
+          bottom: 0,
+          left: 0,
+          right: 0,
           p: 2,
+          bgcolor: 'background.paper',
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          zIndex: 1,
+          display: 'flex',
           flexDirection: { xs: 'column', sm: 'row' },
           justifyContent: 'space-between',
-          borderTop: (theme) => `1px solid ${theme.palette.divider}`,
         }}
       >
         <Button
@@ -140,7 +147,7 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
             Salvar
           </Button>
         </Box>
-      </DialogActions>
+      </Box>
     </Box>
   );
 };
@@ -165,7 +172,14 @@ const PersonaWizard = ({ open, onClose, onSave, ...props }) => {
     );
   }
 
-  return <PersonaWizardContent onClose={onClose} onSave={onSave} {...props} />;
+  return (
+    <>
+      <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
+        Assistente de Criação de Persona
+      </Typography>
+      <PersonaWizardContent onClose={onClose} onSave={onSave} {...props} />
+    </>
+  );
 };
 
 export default PersonaWizard;
