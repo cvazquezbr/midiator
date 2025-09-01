@@ -1362,6 +1362,7 @@ function HomePage() {
           setIsHtmlField(false);
         }}
       />
+      <Toaster richColors theme={darkMode ? 'dark' : 'light'} />
     </ThemeProvider>
   );
 }
