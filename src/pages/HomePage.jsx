@@ -734,9 +734,10 @@ function HomePage() {
 
     try {
       const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
+      const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || autor;
 
       setGenerationStatus('Criando o conteúdo geral da campanha...');
-      const normalizedContent = await generateCampaignContent({ problema, solucao, persona: finalPersona });
+      const normalizedContent = await generateCampaignContent({ problema, solucao, persona: finalPersona, autor: finalAutor });
       if (!normalizedContent) {
         throw new Error("A geração do conteúdo principal falhou e não retornou dados.");
       }
@@ -1038,6 +1039,9 @@ function HomePage() {
                   autorList={autorList}
                   selectedAutorForCampaign={selectedAutorForCampaign}
                   setSelectedAutorForCampaign={setSelectedAutorForCampaign}
+                  personaList={personaList}
+                  selectedPersonaForCampaign={selectedPersonaForCampaign}
+                  setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
                 /></Container></div>
                 <div hidden={activeStep !== 2}><PostsCurtosStep steps={steps} inputMethod={inputMethod} setInputMethod={setInputMethod} handleDrop={handleDrop} handleDragOver={handleDragOver} fileInputRef={fileInputRef} handleCSVUpload={handleCSVUpload} downloadExampleCsv={downloadExampleCsv} setShowSetupModal={setShowSetupModal} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} generateImagesAutomatically={generateImagesAutomatically} setGenerateImagesAutomatically={setGenerateImagesAutomatically} handleGenerateIAContent={handleGenerateIAContent} isGenerating={isGenerating} csvData={csvData} csvHeaders={csvHeaders} onDadosAlterados={handleDadosAlterados} darkMode={darkMode} exportCsv={exportCsv} /></div>
                 <div hidden={activeStep !== 3}>
