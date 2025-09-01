@@ -23,7 +23,7 @@ import { checkAuthStatus } from '../utils/auth';
 import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils/personaState';
 
 import MyCampaignsStep from '../components/MyCampaignsStep';
-import { PersonaWizardContent, emptyPersonaWizardData } from '../components/PersonaWizard';
+import PersonaWizard, { emptyPersonaWizardData } from '../components/PersonaWizard';
 import MainAppBar from '../components/MainAppBar';
 import Sidebar from '../components/Sidebar';
 import FieldPositioner from '../components/FieldPositioner';
@@ -186,22 +186,12 @@ function HomePage() {
   }, [personaFormData, selectedPersona]);
 
 
-  // Effect to manage persona drawer visibility
+  // Effect for Persona Drawer visibility on resize
   useEffect(() => {
-    if (currentView === 'personas') {
-      if (!selectedPersona) {
-        // If no persona is selected, the drawer MUST be open.
-        if (!personaDrawerOpen) {
-          setPersonaDrawerOpen(true);
-        }
-      } else {
-        // A persona is selected. On mobile, we want it closed for more space.
-        if (isMobile && personaDrawerOpen) {
-          setPersonaDrawerOpen(false);
-        }
+      if (currentView === 'personas') {
+        setPersonaDrawerOpen(!isMobile);
       }
-    }
-  }, [currentView, selectedPersona, personaDrawerOpen, isMobile]);
+  }, [isMobile, currentView]);
 
   // Effect to load personas when the view is opened
   useEffect(() => {
@@ -227,6 +217,7 @@ function HomePage() {
       setPersonaFormData(p.persona_data);
       setIsPersonaDirty(false);
       setInitialWizardStep(1);
+      if (isMobile) setPersonaDrawerOpen(false);
   };
 
   const handleNewPersona = () => {
@@ -235,6 +226,7 @@ function HomePage() {
       setPersonaFormData(newEmptyPersona.persona_data);
       setIsPersonaDirty(false);
       setInitialWizardStep(0);
+      if (isMobile) setPersonaDrawerOpen(false);
   };
 
   const handleSavePersona = async () => {
@@ -1116,7 +1108,7 @@ function HomePage() {
             currentView={currentView}
             onPersonaMenuClick={() => setPersonaDrawerOpen(!personaDrawerOpen)}
         />
-        {currentView === 'campaigns' && <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImage={backgroundImage} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />}
+        <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImage={backgroundImage} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
         {currentView === 'campaigns' && !isMobile && <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out', backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', '&:hover': { backgroundColor: 'background.default' } }} >{sidebarOpen ? <ChevronLeft /> : <ChevronRight />}</Fab>}
         <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, transition: theme.transitions.create('margin', { easing: theme.transitions.easing.sharp, duration: theme.transitions.duration.leavingScreen }) }} >
           <Toolbar />
@@ -1244,10 +1236,11 @@ function HomePage() {
                       }}
                   >
                       <Toolbar />
-                      <Paper elevation={2} sx={{ p: 3 }}>
+                      <Box>
                           {selectedPersona ? (
-                              <PersonaWizardContent
+                              <PersonaWizard
                                   key={selectedPersona.id || 'new'}
+                                  open={Boolean(selectedPersona)}
                                   onClose={() => handleNavigation(() => setSelectedPersona(null))}
                                   onSave={handleSavePersona}
                                   onReset={handleNewPersona}
@@ -1264,7 +1257,7 @@ function HomePage() {
                                   </Typography>
                               </Box>
                           )}
-                      </Paper>
+                      </Box>
                   </Box>
               </Box>
             )}
