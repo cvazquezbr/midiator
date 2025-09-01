@@ -186,12 +186,12 @@ function HomePage() {
   }, [personaFormData, selectedPersona]);
 
 
-  // Effect for Persona Drawer visibility on resize
+  // Effect to automatically open persona drawer when no persona is selected
   useEffect(() => {
-      if (currentView === 'personas') {
-        setPersonaDrawerOpen(!isMobile);
-      }
-  }, [isMobile, currentView]);
+    if (currentView === 'personas' && !selectedPersona && !personaDrawerOpen) {
+      setPersonaDrawerOpen(true);
+    }
+  }, [currentView, selectedPersona, personaDrawerOpen]);
 
   // Effect to load personas when the view is opened
   useEffect(() => {
@@ -1108,7 +1108,7 @@ function HomePage() {
             currentView={currentView}
             onPersonaMenuClick={() => setPersonaDrawerOpen(!personaDrawerOpen)}
         />
-        <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImage={backgroundImage} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
+        {currentView === 'campaigns' && <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImage={backgroundImage} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />}
         {currentView === 'campaigns' && !isMobile && <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out', backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', '&:hover': { backgroundColor: 'background.default' } }} >{sidebarOpen ? <ChevronLeft /> : <ChevronRight />}</Fab>}
         <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, transition: theme.transitions.create('margin', { easing: theme.transitions.easing.sharp, duration: theme.transitions.duration.leavingScreen }) }} >
           <Toolbar />
