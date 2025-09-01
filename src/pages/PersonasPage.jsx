@@ -22,14 +22,13 @@ import geminiAPI from '../utils/geminiAPI';
  * where the `PersonaWizard` is displayed. The component is self-contained and handles
  * all its state and API interactions.
  */
-const PersonasPage = () => {
+const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // State for Persona View
   const [personaList, setPersonaList] = useState([]);
   const [selectedPersona, setSelectedPersona] = useState(null);
-  const [personaDrawerOpen, setPersonaDrawerOpen] = useState(!isMobile);
   const [personasLoading, setPersonasLoading] = useState(true);
   const [personasError, setPersonasError] = useState(null);
   const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
@@ -50,13 +49,6 @@ const PersonasPage = () => {
         setIsPersonaDirty(false);
     }
   }, [personaFormData, selectedPersona]);
-
-  // Effect to ensure persona drawer opens when no persona is selected
-  useEffect(() => {
-      if (!selectedPersona) {
-          setPersonaDrawerOpen(true);
-      }
-  }, [selectedPersona]);
 
   // Effect to load personas when the component mounts
   useEffect(() => {
@@ -205,7 +197,6 @@ const PersonasPage = () => {
     <Box sx={{p: 2, width: 320}}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Personas</Typography>
-            {!isMobile && <IconButton onClick={() => setPersonaDrawerOpen(false)}><ChevronLeft /></IconButton>}
         </Box>
         <Button variant="contained" startIcon={<Add />} onClick={handleNewPersona} fullWidth>Nova Persona</Button>
         <Divider sx={{my: 2}} />
