@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import {
   Dialog,
@@ -14,28 +14,32 @@ import { toast } from 'sonner';
 import fetchWithAuth from '../utils/fetchWithAuth';
 
 const PromptEditModal = ({ open, onClose, onSave, prompt }) => {
-  const [formData, setFormData] = useState({ name: '', description: '', prompt_text: '' });
+  // State for controlled components
+  const [formData, setFormData] = useState({ name: '', description: '' });
+  // Ref for the uncontrolled prompt_text field
+  const promptTextRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    if (prompt) {
-      setFormData({
-        name: prompt.name || '',
-        description: prompt.description || '',
-        prompt_text: prompt.prompt_text || '',
-      });
-    } else {
-      setFormData({ name: '', description: '', prompt_text: '' });
+    if (open) {
+      if (prompt) {
+        setFormData({
+          name: prompt.name || '',
+          description: prompt.description || '',
+        });
+        // The defaultValue prop will handle setting the initial text for the ref'd component
+      } else {
+        setFormData({ name: '', description: '' });
+      }
+      // Clear errors when modal opens or prompt changes
+      setErrors({});
     }
-    // Clear errors when modal opens or prompt changes
-    setErrors({});
   }, [prompt, open]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error for the field being edited
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: null }));
     }
@@ -46,7 +50,8 @@ const PromptEditModal = ({ open, onClose, onSave, prompt }) => {
     if (!formData.name.trim()) {
       newErrors.name = 'Name is required.';
     }
-    if (!formData.prompt_text.trim()) {
+    // Get the value from the ref for validation
+    if (!promptTextRef.current || !promptTextRef.current.value.trim()) {
       newErrors.prompt_text = 'Prompt text is required.';
     }
     setErrors(newErrors);
@@ -64,15 +69,21 @@ const PromptEditModal = ({ open, onClose, onSave, prompt }) => {
     const url = isEditing ? `/api/prompts/${prompt.id}` : '/api/prompts';
     const method = isEditing ? 'PUT' : 'POST';
 
+    // Combine data from state (controlled fields) and ref (uncontrolled field)
+    const finalFormData = {
+      ...formData,
+      prompt_text: promptTextRef.current.value,
+    };
+
     try {
       await fetchWithAuth(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(finalFormData),
       });
       toast.success(`Prompt ${isEditing ? 'updated' : 'created'} successfully!`);
-      onSave(); // This will trigger a refresh in the parent
-      onClose(); // Close the modal
+      onSave();
+      onClose();
     } catch (error) {
       toast.error(`Failed to save prompt: ${error.message}`);
     } finally {
@@ -124,8 +135,11 @@ const PromptEditModal = ({ open, onClose, onSave, prompt }) => {
             multiline
             rows={15}
             variant="outlined"
-            value={formData.prompt_text}
-            onChange={handleChange}
+            // Use defaultValue to make it uncontrolled after initial render
+            // The key forces a re-mount when a different prompt is opened
+            key={prompt ? prompt.id : 'new'}
+            defaultValue={prompt ? prompt.prompt_text : ''}
+            inputRef={promptTextRef}
             error={!!errors.prompt_text}
             helperText={errors.prompt_text}
             disabled={loading}
