@@ -185,7 +185,6 @@ const Campaign = ({
     handleGenerateImage,
     setCampaignContent,
     onEditFollowup,
-    autor,
     autorList,
     selectedAutorForCampaign,
     setSelectedAutorForCampaign,
@@ -244,14 +243,15 @@ const Campaign = ({
             if (!finalPersona || Object.keys(finalPersona).length === 0) {
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
-            const problems = await generateCommonProblems({ persona: finalPersona, autor });
+            const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
+            const problems = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
             setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
             setIsLoadingProblems(false);
         }
-    }, [commonProblems.length, persona, autor, selectedPersonaForCampaign, personaList]);
+    }, [commonProblems.length, persona, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
 
     const handleRegenerateProblems = useCallback(async () => {
         setIsLoadingProblems(true);
@@ -262,14 +262,15 @@ const Campaign = ({
             if (!finalPersona || Object.keys(finalPersona).length === 0) {
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
-            const problems = await generateCommonProblems({ persona: finalPersona, autor });
+            const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
+            const problems = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
             setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
             setIsLoadingProblems(false);
         }
-    }, [persona, autor, selectedPersonaForCampaign, personaList]);
+    }, [persona, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
 
     useEffect(() => {
         if (isHintModalOpen) {
@@ -287,7 +288,7 @@ const Campaign = ({
                 throw new Error("Descreva o problema primeiro.");
             }
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
-            const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || autor;
+            const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
             const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
             setCommonSolutions(solutions);
         } catch (error) {
@@ -295,7 +296,7 @@ const Campaign = ({
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [commonSolutions.length, problema, persona, autor, selectedPersonaForCampaign, personaList, autorList]);
+    }, [commonSolutions.length, problema, persona, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
 
     const handleRegenerateSolutions = useCallback(async () => {
         setIsLoadingSolutions(true);
@@ -306,7 +307,7 @@ const Campaign = ({
                 throw new Error("Descreva o problema primeiro.");
             }
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
-            const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || autor;
+            const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
             const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
             setCommonSolutions(solutions);
         } catch (error) {
@@ -314,7 +315,7 @@ const Campaign = ({
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [problema, persona, autor, selectedPersonaForCampaign, personaList, autorList]);
+    }, [problema, persona, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
 
     useEffect(() => {
         if (isSolucaoHintModalOpen) {

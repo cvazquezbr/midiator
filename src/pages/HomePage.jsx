@@ -104,7 +104,6 @@ function HomePage() {
   const [editingField, setEditingField] = useState(null);
   const [isHtmlField, setIsHtmlField] = useState(false);
   const [persona, setPersona] = useState({});
-  const [autor, setAutor] = useState({});
   const [formato, setFormato] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
@@ -236,7 +235,6 @@ function HomePage() {
     setTomDeVoz(state.tomDeVoz ?? '');
     setCampaignContent(state.campaignContent ?? null);
     setPersona(state.persona ?? {});
-    setAutor(state.autor ?? {});
     setFormato(state.formato ?? '');
     setAspectRatio(state.aspectRatio ?? '1:1');
     setGeneratedImageUrl(state.generatedImageUrl ?? null);
@@ -303,7 +301,6 @@ function HomePage() {
       tomDeVoz,
       campaignContent,
       persona,
-      autor,
       formato,
       aspectRatio,
       followupPosts,
@@ -371,9 +368,8 @@ function HomePage() {
   };
 
   const loadCampaignStandards = useCallback(() => {
-    const { persona: personaData, autor: autorData, formato: formatoData, colors: colorsData } = getCampaignPrompt();
+    const { persona: personaData, formato: formatoData, colors: colorsData } = getCampaignPrompt();
     setPersona(personaData || {});
-    setAutor(autorData || {});
     setFormato(formatoData || '');
     setStandardsColors(colorsData || []);
   }, []);
@@ -744,7 +740,7 @@ function HomePage() {
 
     try {
       const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
-      const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || autor;
+      const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
 
       setGenerationStatus('Criando o conteúdo geral da campanha...');
       const normalizedContent = await generateCampaignContent({ problema, solucao, objetivo, tomDeVoz, persona: finalPersona, autor: finalAutor });
@@ -950,7 +946,7 @@ function HomePage() {
     }
   };
   const currentTheme = darkMode ? darkTheme : lightTheme;
-  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, persona, autor, formato, aspectRatio, followupPosts, colors: standardsColors, };
+  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, persona, formato, aspectRatio, followupPosts, colors: standardsColors, };
 
   return (
     <ThemeProvider theme={currentTheme}>
