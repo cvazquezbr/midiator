@@ -1,12 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
-import { Box, Button, Container, Typography, Paper, CircularProgress, Alert, IconButton } from '@mui/material';
+import {
+  Box,
+  Button,
+  Container,
+  Typography,
+  Paper,
+  CircularProgress,
+  Alert,
+  IconButton,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
 import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import fetchWithAuth from '../utils/fetchWithAuth';
 import PromptEditModal from '../components/PromptEditModal';
+import PromptCard from '../components/PromptCard';
 
 const PromptsPage = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [prompts, setPrompts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -123,14 +137,29 @@ const PromptsPage = () => {
         ) : error ? (
           <Alert severity="error">{error}</Alert>
         ) : (
-          <Box sx={{ height: '70vh', width: '100%' }}>
-            <DataGrid
-              rows={prompts}
-              columns={columns}
-              pageSize={10}
-              rowsPerPageOptions={[10, 25, 50]}
-              disableSelectionOnClick
-            />
+          <Box sx={{ width: '100%', mt: 3 }}>
+            {isMobile ? (
+              <Box>
+                {prompts.map((prompt) => (
+                  <PromptCard
+                    key={prompt.id}
+                    prompt={prompt}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </Box>
+            ) : (
+              <Box sx={{ height: '70vh', width: '100%' }}>
+                <DataGrid
+                  rows={prompts}
+                  columns={columns}
+                  pageSize={10}
+                  rowsPerPageOptions={[10, 25, 50]}
+                  disableSelectionOnClick
+                />
+              </Box>
+            )}
           </Box>
         )}
       </Paper>
