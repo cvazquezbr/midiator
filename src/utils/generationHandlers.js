@@ -41,19 +41,34 @@ function fillPrompt(template, data) {
 }
 // ------------------------------------
 
-const formatObjectForPrompt = (obj, excludeKeys = []) => {
-  if (!obj || typeof obj !== 'object') return '';
-  return Object.entries(obj)
-    .filter(([key]) => !excludeKeys.includes(key))
-    .map(([key, value]) => {
-      if (!value) return null;
-      const formattedValue = Array.isArray(value) ? value.join(', ') : value;
-      if (!formattedValue) return null;
-      const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
-      return `${formattedKey}: ${stripHtml(formattedValue)}`;
-    })
-    .filter(Boolean)
-    .join('\n');
+const formatObjectForPrompt = (obj, excludeKeys = [], indentation = '') => {
+    if (!obj || typeof obj !== 'object') return '';
+
+    return Object.entries(obj)
+        .filter(([key]) => !excludeKeys.includes(key))
+        .map(([key, value]) => {
+            if (value === null || value === undefined || value === '') return null;
+
+            // Clean up the key for display
+            const formattedKey = key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase()).trim();
+            const fullKey = `${indentation}${formattedKey}`;
+
+            // If the value is a nested object, recurse
+            if (typeof value === 'object' && !Array.isArray(value)) {
+                const nestedString = formatObjectForPrompt(value, excludeKeys, indentation + '  ');
+                // Don't print the key if the nested object is empty
+                if (!nestedString) return null;
+                return `${fullKey}:\n${nestedString}`;
+            }
+
+            // Otherwise, it's a primitive value or an array
+            const formattedValue = Array.isArray(value) ? value.join(', ') : String(value);
+            if (formattedValue === '') return null;
+
+            return `${fullKey}: ${stripHtml(formattedValue)}`;
+        })
+        .filter(Boolean) // Filter out any null or empty entries
+        .join('\n');
 };
 
 
