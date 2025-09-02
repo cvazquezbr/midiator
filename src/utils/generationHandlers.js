@@ -75,7 +75,7 @@ const formatObjectForPrompt = (obj, excludeKeys = [], indentation = '') => {
 /**
  * Generates the main campaign content using an AI API.
  */
-export const generateCampaignContent = async ({ problema, solucao, persona = null, autor = null }) => {
+export const generateCampaignContent = async ({ problema, solucao, objetivo, tomDeVoz, persona = null, autor = null }) => {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error('Chave de API Gemini não configurada.');
@@ -99,6 +99,8 @@ export const generateCampaignContent = async ({ problema, solucao, persona = nul
     formato: stripHtml(formato),
     problema: stripHtml(problema),
     solucao: stripHtml(solucao),
+    objetivo: stripHtml(objetivo),
+    tomDeVoz: stripHtml(tomDeVoz),
     instrucoes: stripHtml(instrucoes)
   });
 

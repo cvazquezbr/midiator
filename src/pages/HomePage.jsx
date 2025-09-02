@@ -94,6 +94,8 @@ function HomePage() {
   const [standardsColors, setStandardsColors] = useState([]);
   const [problema, setProblema] = useState('');
   const [solucao, setSolucao] = useState('');
+  const [objetivo, setObjetivo] = useState('');
+  const [tomDeVoz, setTomDeVoz] = useState('');
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
   const [generationStatus, setGenerationStatus] = useState('');
   const [campaignContent, setCampaignContent] = useState(null);
@@ -231,6 +233,8 @@ function HomePage() {
     }
     setProblema(state.problema ?? '');
     setSolucao(state.solucao ?? '');
+    setObjetivo(state.objetivo ?? '');
+    setTomDeVoz(state.tomDeVoz ?? '');
     setCampaignContent(state.campaignContent ?? null);
     setPersona(state.persona ?? {});
     setAutor(state.autor ?? {});
@@ -297,6 +301,8 @@ function HomePage() {
       activeStep,
       problema,
       solucao,
+      objetivo,
+      tomDeVoz,
       campaignContent,
       persona,
       autor,
@@ -737,7 +743,7 @@ function HomePage() {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || autor;
 
       setGenerationStatus('Criando o conteúdo geral da campanha...');
-      const normalizedContent = await generateCampaignContent({ problema, solucao, persona: finalPersona, autor: finalAutor });
+      const normalizedContent = await generateCampaignContent({ problema, solucao, objetivo, tomDeVoz, persona: finalPersona, autor: finalAutor });
       if (!normalizedContent) {
         throw new Error("A geração do conteúdo principal falhou e não retornou dados.");
       }
@@ -1014,6 +1020,10 @@ function HomePage() {
                   {...campaignData}
                   setProblema={setProblema}
                   setSolucao={setSolucao}
+                  objetivo={objetivo}
+                  setObjetivo={setObjetivo}
+                  tomDeVoz={tomDeVoz}
+                  setTomDeVoz={setTomDeVoz}
                   isGeneratingCampaign={isGeneratingCampaign}
                   campaignGenerationFailed={campaignGenerationFailed}
                   generationError={generationError}

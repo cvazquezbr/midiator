@@ -157,6 +157,10 @@ const Campaign = ({
     setProblema,
     solucao,
     setSolucao,
+    objetivo,
+    setObjetivo,
+    tomDeVoz,
+    setTomDeVoz,
     followupPostsQuantity,
     setFollowupPostsQuantity,
     aspectRatio,
@@ -450,6 +454,43 @@ const Campaign = ({
                                     </IconButton>
                                 </Box>
                             </Grid>
+                        )}
+                        {solucao.trim() !== '' && (
+                            <>
+                                <Grid item xs={12} md={6}>
+                                    <FormControl fullWidth variant="outlined" disabled={campaignContent !== null}>
+                                        <InputLabel id="objetivo-select-label">Objetivo Principal do Post</InputLabel>
+                                        <Select
+                                            labelId="objetivo-select-label"
+                                            value={objetivo}
+                                            onChange={(e) => setObjetivo(e.target.value)}
+                                            label="Objetivo Principal do Post"
+                                        >
+                                            <MenuItem value="Gerar leads">Gerar leads</MenuItem>
+                                            <MenuItem value="Construir autoridade">Construir autoridade</MenuItem>
+                                            <MenuItem value="Educar o mercado">Educar o mercado</MenuItem>
+                                            <MenuItem value="Iniciar uma conversa">Iniciar uma conversa</MenuItem>
+                                            <MenuItem value="Promover um serviço/produto">Promover um serviço/produto</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12} md={6}>
+                                    <FormControl fullWidth variant="outlined" disabled={campaignContent !== null}>
+                                        <InputLabel id="tom-de-voz-select-label">Tom de Voz</InputLabel>
+                                        <Select
+                                            labelId="tom-de-voz-select-label"
+                                            value={tomDeVoz}
+                                            onChange={(e) => setTomDeVoz(e.target.value)}
+                                            label="Tom de Voz"
+                                        >
+                                            <MenuItem value="Profissional e direto">Profissional e direto</MenuItem>
+                                            <MenuItem value="Inspirador e motivacional">Inspirador e motivacional</MenuItem>
+                                            <MenuItem value="Técnico e educativo">Técnico e educativo</MenuItem>
+                                            <MenuItem value="Conversacional e amigável">Conversacional e amigável</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                            </>
                         )}
                     </Grid>
                     <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 2 }}>
