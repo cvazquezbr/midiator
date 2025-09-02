@@ -175,12 +175,16 @@ const MainAppBar = ({
             <Edit sx={{ mr: 1 }} />
             Padrões de Campanha
           </MenuItem>
-          {user?.role === 'admin' && (
-            <MenuItem onClick={() => { navigate('/admin/users'); handleUserMenuClose(); }}>
+          {user?.role === 'admin' && ([
+            <MenuItem key="admin-users" onClick={() => { navigate('/admin/users'); handleUserMenuClose(); }}>
               <AdminPanelSettings sx={{ mr: 1 }} />
-              Admin Dashboard
+              User Management
+            </MenuItem>,
+            <MenuItem key="admin-prompts" onClick={() => { navigate('/admin/prompts'); handleUserMenuClose(); }}>
+              <ArticleIcon sx={{ mr: 1 }} />
+              Prompt Management
             </MenuItem>
-          )}
+          ])}
           <Divider />
           <MenuItem onClick={handleLogout}>
             <Logout sx={{ mr: 1 }} />
