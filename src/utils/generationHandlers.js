@@ -84,7 +84,7 @@ export const generateCampaignContent = async ({ problema, solucao, objetivo, tom
 
   const { formato } = getCampaignPrompt();
 
-  const personaString = persona ? formatObjectForPrompt(persona, ['description']) : '';
+  const personaString = typeof persona === 'string' ? persona : (persona ? formatObjectForPrompt(persona, ['description']) : 'indisponível');
 
   let autorString;
   if (typeof autor === 'string') {
@@ -93,7 +93,7 @@ export const generateCampaignContent = async ({ problema, solucao, objetivo, tom
     autorString = autor ? formatObjectForPrompt(autor) : 'indisponível';
   }
 
-  const personaPromptSection = personaString
+  const personaPromptSection = personaString && personaString !== 'indisponível'
     ? `Destinatário (Persona): ${personaString}`
     : 'O destinatário é um público geral interessado no problema e solução apresentados.';
 
@@ -251,7 +251,7 @@ export const generateFollowupPlan = async ({ content, neededQuantity, existingPo
   }
   geminiAPI.initialize(apiKey);
 
-  const personaString = persona ? formatObjectForPrompt(persona, ['description']) : '';
+  const personaString = typeof persona === 'string' ? persona : (persona ? formatObjectForPrompt(persona, ['description']) : 'indisponível');
 
   let autorString;
   if (typeof autor === 'string') {
@@ -313,7 +313,7 @@ export const generateFollowupPosts = async ({ content, plan, persona = null, aut
   }
   geminiAPI.initialize(apiKey);
 
-  const personaString = persona ? formatObjectForPrompt(persona, ['description']) : '';
+  const personaString = typeof persona === 'string' ? persona : (persona ? formatObjectForPrompt(persona, ['description']) : 'indisponível');
 
   let autorString;
   if (typeof autor === 'string') {
@@ -405,7 +405,7 @@ export const generateCommonSolutions = async ({ problema, persona, autor }) => {
     throw new Error('Problema não definido. Por favor, descreva o problema primeiro.');
   }
 
-  const personaString = formatObjectForPrompt(persona, ['description']);
+  const personaString = typeof persona === 'string' ? persona : (persona ? formatObjectForPrompt(persona, ['description']) : 'indisponível');
 
   let autorString;
   if (typeof autor === 'string') {
@@ -450,11 +450,11 @@ export const generateCommonProblems = async ({ persona, autor }) => {
   }
   geminiAPI.initialize(apiKey);
 
-  if (!persona || Object.keys(persona).length === 0) {
+  if (!persona) {
     throw new Error('Persona não definida. Por favor, configure a persona primeiro.');
   }
 
-  const personaString = formatObjectForPrompt(persona, ['description']);
+  const personaString = typeof persona === 'string' ? persona : (persona ? formatObjectForPrompt(persona, ['description']) : 'indisponível');
 
   let autorString;
   if (typeof autor === 'string') {

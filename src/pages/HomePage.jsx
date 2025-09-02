@@ -103,7 +103,6 @@ function HomePage() {
   const [generationError, setGenerationError] = useState('');
   const [editingField, setEditingField] = useState(null);
   const [isHtmlField, setIsHtmlField] = useState(false);
-  const [persona, setPersona] = useState({});
   const [formato, setFormato] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
@@ -234,7 +233,6 @@ function HomePage() {
     setObjetivo(state.objetivo ?? '');
     setTomDeVoz(state.tomDeVoz ?? '');
     setCampaignContent(state.campaignContent ?? null);
-    setPersona(state.persona ?? {});
     setFormato(state.formato ?? '');
     setAspectRatio(state.aspectRatio ?? '1:1');
     setGeneratedImageUrl(state.generatedImageUrl ?? null);
@@ -300,7 +298,6 @@ function HomePage() {
       objetivo,
       tomDeVoz,
       campaignContent,
-      persona,
       formato,
       aspectRatio,
       followupPosts,
@@ -368,8 +365,7 @@ function HomePage() {
   };
 
   const loadCampaignStandards = useCallback(() => {
-    const { persona: personaData, formato: formatoData, colors: colorsData } = getCampaignPrompt();
-    setPersona(personaData || {});
+    const { formato: formatoData, colors: colorsData } = getCampaignPrompt();
     setFormato(formatoData || '');
     setStandardsColors(colorsData || []);
   }, []);
@@ -739,7 +735,7 @@ function HomePage() {
     setGenerationStatus('Iniciando geração de campanha...');
 
     try {
-      const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
+      const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
 
       setGenerationStatus('Criando o conteúdo geral da campanha...');
@@ -946,7 +942,7 @@ function HomePage() {
     }
   };
   const currentTheme = darkMode ? darkTheme : lightTheme;
-  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, persona, formato, aspectRatio, followupPosts, colors: standardsColors, };
+  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, formato, aspectRatio, followupPosts, colors: standardsColors, };
 
   return (
     <ThemeProvider theme={currentTheme}>

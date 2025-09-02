@@ -49,6 +49,16 @@ export function getCampaignPrompt() {
         return defaultPrompt;
       }
 
+      if (parsedData.persona) {
+        delete parsedData.persona;
+      }
+      if (parsedData.autor) {
+        delete parsedData.autor;
+      }
+      if (parsedData.instrucoes) {
+        delete parsedData.instrucoes;
+      }
+
 
       // Migração para remover o campo aspectRatio
       if (parsedData.aspectRatio) {
