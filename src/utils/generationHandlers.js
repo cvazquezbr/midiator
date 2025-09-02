@@ -2,6 +2,40 @@ import { getCampaignPrompt } from './campaignPrompt.js';
 import geminiAPI from './geminiAPI.js';
 import { getGeminiApiKey } from './geminiCredentials.js';
 import { stripHtml } from '../lib/utils.js';
+import fetchWithAuth from './fetchWithAuth.js';
+
+// --- Prompt Fetching and Caching ---
+const promptCache = new Map();
+
+async function getPrompt(name) {
+  if (promptCache.has(name)) {
+    return promptCache.get(name);
+  }
+  try {
+    const promptData = await fetchWithAuth(`/api/prompts?name=${name}`);
+    if (!promptData || !promptData.prompt_text) {
+      throw new Error(`Prompt "${name}" not found or is empty.`);
+    }
+    promptCache.set(name, promptData.prompt_text);
+    return promptData.prompt_text;
+  } catch (error) {
+    console.error(`Failed to fetch prompt: ${name}`, error);
+    // Fallback or re-throw, depending on desired behavior.
+    // For now, re-throwing ensures the calling function is aware of the failure.
+    throw error;
+  }
+}
+
+function fillPrompt(template, data) {
+    let filledTemplate = template;
+    for (const key in data) {
+        // Using a global regex to replace all occurrences of the placeholder
+        const regex = new RegExp(`{${key}}`, 'g');
+        filledTemplate = filledTemplate.replace(regex, data[key]);
+    }
+    return filledTemplate;
+}
+// ------------------------------------
 
 const formatObjectForPrompt = (obj, excludeKeys = []) => {
   if (!obj || typeof obj !== 'object') return '';
@@ -39,17 +73,15 @@ export const generateCampaignContent = async ({ problema, solucao, persona = nul
     ? `Destinatário (Persona): ${personaString}`
     : 'O destinatário é um público geral interessado no problema e solução apresentados.';
 
-  const promptCompleto = `
-  Você deve gerar conteúdo para posts no LinkedIn.
-    ${personaPromptSection}
-    Emissor (Autor): ${autorString}
-    Formato: ${stripHtml(formato)}
-    Problema: ${stripHtml(problema)}
-    Solução: ${stripHtml(solucao)}
-    ${stripHtml(instrucoes)}
-  `;
-
-  const finalPrompt = `${promptCompleto}\n\nGere uma resposta JSON com os seguintes campos: "titulo" (string), "conteudo" (string), "cta" (string), e "hashtags" (string, separadas por vírgula). A resposta deve ser apenas o JSON.`;
+  const promptTemplate = await getPrompt('generateCampaignContent');
+  const finalPrompt = fillPrompt(promptTemplate, {
+    personaPromptSection: personaPromptSection,
+    autorString: autorString,
+    formato: stripHtml(formato),
+    problema: stripHtml(problema),
+    solucao: stripHtml(solucao),
+    instrucoes: stripHtml(instrucoes)
+  });
 
   const response = await geminiAPI.generateContent(finalPrompt, 'Geração de Conteúdo de Campanha');
 
@@ -112,30 +144,13 @@ export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor 
     const finalAutor = autor || defaultAutor;
     const autorString = formatObjectForPrompt(finalAutor);
 
-    const prompt = `
-      Você é um diretor de arte. Sua tarefa é criar um prompt de texto detalhado para um modelo de geração de imagem (como DALL-E ou Midjourney).
-      O prompt deve descrever uma imagem de fundo visualmente atraente e conceitual para um post de rede social, sobre a qual os campos de texto serão sobrepostos.
-
-      CONTEÚDO DO POST:
-      Título: "${stripHtml(content.titulo)}"
-      Conteúdo: "${stripHtml(content.conteudo)}"
-
-      INFORMAÇÕES DA MARCA:
-      ${autorString}
-
-      REGRAS PARA O PROMPT GERADO:
-      1.  O prompt deve ser em inglês, para máxima compatibilidade com os modelos de imagem.
-      2.  A imagem a ser gerada NÃO DEVE CONTER NENHUM TEXTO, LETRAS OU NÚMEROS. O prompt deve reforçar isso.
-      3.  O prompt deve ser puramente descritivo, focando em elementos visuais, estilo, cores e composição.
-      4.  A composição do prompt deve considerar a razão de aspecto final da imagem, que será de ${aspectRatio}. Por exemplo, um prompt para uma imagem 16:9 (paisagem) pode descrever uma cena mais ampla, enquanto um 4:5 (retrato) pode focar em um elemento mais central e vertical.
-      5.  O prompt deve resultar em uma imagem que tenha áreas mais limpas ou abstratas, adequadas para a sobreposição de texto.
-      6.  O prompt deve ser uma única string de texto.
-
-      Exemplo de um bom prompt para uma imagem 1:1 (quadrada):
-      "A vibrant, abstract background with swirling gradients of blue and gold, representing the flow of data and innovation, with a soft, clean area for text overlay. The style should be elegant and professional. NO TEXT, NO LETTERS, NO NUMBERS."
-
-      Gere apenas o texto do prompt, sem nenhuma outra explicação ou formatação.
-    `;
+    const promptTemplate = await getPrompt('generateCampaignImagePrompt');
+    const prompt = fillPrompt(promptTemplate, {
+      titulo: stripHtml(content.titulo),
+      conteudo: stripHtml(content.conteudo),
+      autorString: autorString,
+      aspectRatio: aspectRatio,
+    });
 
     const imagePrompt = await geminiAPI.generateContent(prompt, 'Geração de Prompt de Imagem de Campanha');
     return imagePrompt.trim();
@@ -160,13 +175,12 @@ export const generateCampaignImage = async ({ prompt, aspectRatio }) => {
     ? `The image should predominantly use the following color palette: ${colors.map(c => c.hex).join(', ')}.`
     : '';
 
-  // The main prompt comes from the dedicated generation step.
-  // We just add the color and aspect ratio constraints.
-  const finalImagePrompt = `
-    ${prompt}
-    ${colorPalettePrompt}
-    The aspect ratio of the image must be ${aspectRatio}.
-  `;
+  const promptTemplate = await getPrompt('generateCampaignImage');
+  const finalImagePrompt = fillPrompt(promptTemplate, {
+      prompt: prompt,
+      colorPalettePrompt: colorPalettePrompt,
+      aspectRatio: aspectRatio,
+  });
 
   const base64Image = await geminiAPI.generateImage(finalImagePrompt, 'Geração de Imagem de Campanha');
   return `data:image/png;base64,${base64Image}`;
@@ -185,19 +199,13 @@ export const generateFormattedContent = async ({ content }) => {
     throw new Error('Chave de API Gemini não configurada.');
   }
   geminiAPI.initialize(apiKey);
-  const prompt = `
-      Com o objetivo de gerar um post de blog no WordPress corporativo, Formatar o texto a seguir observando o padrão com HTML.
-      Considere que o conteúdo gerado já estará embutido em uma página no contexto de seu BODY.
-      Elabore o HTML para melhor estruturar o texto, facilitar a leitura, hierarquizar a informação conforme a importância.
-      O primeiro nível de Header que deve ser utilizado é o H3, já há H1 e H2 no contexto no qual o texto produzido se insere.
-      Elabore um resumo com os três pontos chave no texto de entrada e apresente o resumo com caixas de destaque logo no início.
-      ATENÇÃO aos campos que requeiram escape como aspas. Adicionalmente, o uso de &quot; é válido em HTML mas causa problemas em JSON. Atenção para evitar quebras de linha no conteúdo HTML e caracteres especiais não escapados.
-      Segue o texto:
 
-      Título: ${stripHtml(content.titulo)}
-      Conteúdo: ${stripHtml(content.conteudo)}
-      CTA: ${stripHtml(content.cta)}
-    `;
+  const promptTemplate = await getPrompt('generateFormattedContent');
+  const prompt = fillPrompt(promptTemplate, {
+      titulo: stripHtml(content.titulo),
+      conteudo: stripHtml(content.conteudo),
+      cta: stripHtml(content.cta),
+  });
 
   const rawContent = await geminiAPI.generateContent(prompt, 'Formatação de Conteúdo para HTML');
   const match = rawContent.match(/^`{3}(?:html)?\s*([\s\S]+?)\s*`{3}$/);
@@ -231,49 +239,15 @@ ${existingPosts.map(p => `- Título: "${p.titulo}", Etapa AIDA: ${p.etapa_aida}`
 `
     : '';
 
-  const prompt =
-  `Você é um estrategista de marketing de conteúdo. Sua tarefa é criar um plano para ${neededQuantity} novos posts sequenciais no LinkedIn, baseados em um conteúdo principal e complementando os posts já existentes.
-
-CONTEÚDO PRINCIPAL:
-Tema: "${stripHtml(content.titulo)}"
-Detalhes: "${stripHtml(content.conteudo)}"
-
-PERSONA-ALVO:
-${personaString}
-
-AUTOR:
-${autorString}
-${existingPostsString}
-ESTRUTURA DA SEQUÊNCIA (AIDA):
-1.  **Atenção:** Gancho impactante (dado, insight contraintuitivo).
-2.  **Interesse:** Conexão com problema/oportunidade da persona.
-3.  **Desejo:** Apresentação da transformação/benefício da solução.
-4.  **Ação:** CTA direto para o conteúdo principal.
-
-INSTRUÇÕES:
--   Crie um plano para exatamente ${neededQuantity} novos posts.
--   Para cada post, defina um título curto e chamativo.
--   Defina o "coração do prompt" que será usado para gerar o conteúdo completo em uma etapa posterior.
--   O "coração do prompt" deve ser uma instrução clara e concisa para um redator, incluindo o tipo de gancho, o ângulo e a emoção a ser evocada.
--   Varie os formatos e gatilhos para cada etapa do funil AIDA, evitando as etapas já cobertas nos posts existentes.
-
-FORMATO DE RESPOSTA:
-Retorne um array JSON com a seguinte estrutura. Não inclua markdown ou qualquer outro texto fora do JSON.
-
-\`\`\`json
-[
-  {
-    "post_numero": 1,
-    "etapa_aida": "Atenção",
-    "tipo_gancho": "Estatística Surpreendente",
-    "titulo_sugerido": "O Erro Silencioso que Sabota 70% dos Projetos de TI",
-    "coracao_prompt": "Comece com a estatística mais chocante que você encontrar sobre o fracasso de projetos de software devido à má gestão. Crie um senso de urgência e curiosidade.",
-    "cta_sugerido": "Descubra a causa nº 1 de falhas em projetos.",
-    "hashtags_sugeridas": ["#gestaodeprojetos", "#liderancatecnica"]
-  }
-]
-\`\`\`
-`;
+  const promptTemplate = await getPrompt('generateFollowupPlan');
+  const prompt = fillPrompt(promptTemplate, {
+    neededQuantity: neededQuantity,
+    titulo: stripHtml(content.titulo),
+    conteudo: stripHtml(content.conteudo),
+    personaString: personaString,
+    autorString: autorString,
+    existingPostsString: existingPostsString,
+  });
 
   const response = await geminiAPI.generateContent(prompt, 'Geração de Plano de Follow-up');
   const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
@@ -320,45 +294,17 @@ export const generateFollowupPosts = async ({ content, plan, persona = null, aut
   const MAX_RETRIES = 3;
   const MIN_CONTENT_LENGTH = 600;
 
+  const promptTemplate = await getPrompt('generateFollowupPosts');
+
   for (const postPlan of plan) {
-    const prompt = `
-Você é um especialista em copywriting para o LinkedIn. Sua tarefa é escrever um post impactante e informativo.
-
-PERSONA-ALVO:
-${personaString}
-
-AUTOR DO POST:
-${autorString}
-
-TEMA CENTRAL (do conteúdo principal):
-"${stripHtml(content.titulo)}"
-
-TÍTULO DO POST:
-"${postPlan.titulo_sugerido}"
-
-INSTRUÇÃO CRIATIVA (Coração do Prompt):
-"${postPlan.coracao_prompt}"
-
-REGRAS:
-- Use o TÍTULO DO POST como o título do seu texto.
-- O corpo do post deve ter **pelo menos ${MIN_CONTENT_LENGTH} caracteres**.
-- O corpo do post deve ser estruturado em **até três parágrafos**.
-- Separe os parágrafos com uma linha em branco.
-- O tom deve ser profissional, mas conversacional.
-- Use até 2 emojis relevantes.
-- O texto final NÃO deve conter hashtags.
-- O texto final NÃO deve conter um CTA, ele será adicionado depois.
-
-FORMATO DE RESPOSTA:
-Retorne um objeto JSON com as chaves "titulo_post" e "conteudo_post".
-
-\`\`\`json
-{
-  "titulo_post": "O título do post gerado aqui...",
-  "conteudo_post": "O conteúdo do post gerado aqui..."
-}
-\`\`\`
-`;
+    const prompt = fillPrompt(promptTemplate, {
+      personaString: personaString,
+      autorString: autorString,
+      titulo: stripHtml(content.titulo),
+      titulo_sugerido: postPlan.titulo_sugerido,
+      coracao_prompt: postPlan.coracao_prompt,
+      MIN_CONTENT_LENGTH: MIN_CONTENT_LENGTH,
+    });
 
     let postGenerated = false;
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -430,33 +376,12 @@ export const generateCommonSolutions = async ({ problema, persona, autor }) => {
   const personaString = formatObjectForPrompt(persona, ['description']);
   const autorString = autor ? formatObjectForPrompt(autor) : '';
 
-  const prompt = `
-    Com base na seguinte descrição de Persona, Autor e no Problema apresentado, gere uma lista de 3 a 4 ideias de soluções ou propostas de campanha que o Autor poderia oferecer.
-
-    PERSONA:
-    ${personaString}
-
-    AUTOR:
-    ${autorString}
-
-    PROBLEMA:
-    "${problema}"
-
-    REGRAS:
-    1.  Cada item da lista deve ser uma string única contendo um texto completo sobre a solução.
-    2.  Inicie cada string com um título curto em negrito (usando markdown **Título da Solução**).
-    3.  Após o título, descreva a solução em um ou dois parágrafos concisos.
-    4.  O texto deve ser prático e direto, focando em como a solução resolve o problema para a persona.
-    5.  A resposta DEVE ser um array JSON de strings.
-
-    FORMATO DE RESPOSTA (APENAS O JSON):
-    \`\`\`json
-    [
-      "**Título da Solução 1**\\nDescrição detalhada da solução em um ou dois parágrafos...",
-      "**Título da Solução 2**\\nDescrição detalhada da solução em um ou dois parágrafos..."
-    ]
-    \`\`\`
-  `;
+  const promptTemplate = await getPrompt('generateCommonSolutions');
+  const prompt = fillPrompt(promptTemplate, {
+    personaString: personaString,
+    autorString: autorString,
+    problema: problema,
+  });
 
   const response = await geminiAPI.generateContent(prompt, 'Geração de Soluções Comuns');
   const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
@@ -494,30 +419,11 @@ export const generateCommonProblems = async ({ persona, autor }) => {
   const personaString = formatObjectForPrompt(persona, ['description']);
   const autorString = autor ? formatObjectForPrompt(autor) : '';
 
-  const prompt = `
-    Com base na seguinte descrição de Persona e Autor, gere uma lista de 3 a 4 problemas ou necessidades comuns que essa persona provavelmente enfrenta em relação ao que o autor oferece.
-
-    PERSONA:
-    ${personaString}
-
-    AUTOR:
-    ${autorString}
-
-    REGRAS:
-    1.  Cada item da lista deve ser uma string única contendo um texto completo sobre o problema.
-    2.  Inicie cada string com um título curto em negrito (usando markdown **Título**).
-    3.  Após o título, descreva o problema em um ou dois parágrafos concisos.
-    4.  O texto deve ser prático e direto, focando na "dor" ou necessidade da persona.
-    5.  A resposta DEVE ser um array JSON de strings.
-
-    FORMATO DE RESPOSTA (APENAS O JSON):
-    \`\`\`json
-    [
-      "**Título do Problema 1**\\nDescrição detalhada do problema em um ou dois parágrafos...",
-      "**Título do Problema 2**\\nDescrição detalhada do problema em um ou dois parágrafos..."
-    ]
-    \`\`\`
-  `;
+  const promptTemplate = await getPrompt('generateCommonProblems');
+  const prompt = fillPrompt(promptTemplate, {
+      personaString: personaString,
+      autorString: autorString,
+  });
 
   const response = await geminiAPI.generateContent(prompt, 'Geração de Problemas Comuns da Persona');
   const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
@@ -554,63 +460,11 @@ export const generateIAContent = async ({ promptText, promptNumRecords }) => {
     throw new Error('A quantidade de registros a gerar deve ser maior que zero.');
   }
 
-  const finalPrompt = `A partir do TEXTO BASE fornecido abaixo, gere conteúdo para um carrossel de Instagram com ${promptNumRecords} elementos.
-
-TEXTO BASE:
-${stripHtml(promptText)}
-
-INSTRUÇÕES DE FORMATAÇÃO DA SAÍDA (MUITO IMPORTANTE):
-A SUA RESPOSTA DEVE CONTER *APENAS E SOMENTE* UM BLOCO DE TEXTO FORMATADO COMO CSV, SEM NENHUM TEXTO ADICIONAL ANTES OU DEPOIS DO BLOCO CSV.
-O BLOCO CSV DEVE SER DELIMITADO EXATAMENTE POR TRÊS CRASE SEGUIDAS E A PALAVRA "csv" (\`\`\`csv) NO INÍCIO, E TRÊS CRASE SEGUIDAS (\`\`\`) NO FINAL.
-DENTRO DO BLOCO CSV:
-- CADA CAMPO EM CADA LINHA DEVE SER OBRIGATORIAMENTE ENVOLVIDO POR ASPAS DUPLAS ("").
-- A primeira linha DEVE SER o cabeçalho, com cada cabeçalho envolvido por aspas duplas: "Titulo";"Texto Principal";"Ponte para o Próximo";"prompt_imagem_carrossel"
-- As linhas subsequentes DEVERÃO ser os dados de cada elemento, com os campos separados por PONTO E VÍRGULA (;) e cada campo envolvido por aspas duplas.
-- NÃO inclua números de elemento ou qualquer outra coluna além das 4 especificadas.
-- NÃO inclua explicações, introduções, ou qualquer texto fora do bloco \`\`\`csv ... \`\`\`.
-
-REQUISITOS PARA O CONTEÚDO DE CADA ELEMENTO (LINHA DO CSV):
-1. **Titulo** (Coluna 1):
-   - Máximo de 4 palavras.
-   - Precisa ser curto e impactante.
-   - Exemplo: "Segredo Revelado"
-2. **Texto Principal** (Coluna 2):
-   - Entre 120 e 180 caracteres.
-   - Adaptado do TEXTO BASE, com linguagem conversacional e direta.
-   - Deve conter 1 pergunta retórica para engajamento.
-   - Exemplo: "Sabia que 80% dos negócios falham nisso? Descubra como evitar esse erro..."
-3. **Ponte para o Próximo** (Coluna 3):
-   - Máximo de 40 caracteres.
-   - Criar curiosidade para o próximo elemento.
-   - Usar fórmula: Emoji + Chamada + Dica do próximo.
-   - No último elemento, substitua por uma Chamada para Ação (CTA) final.
-   - Exemplos:
-     → "Próximo: O passo que muda tudo!"
-     → "Siga para o segredo nº3 👇"
-4. **prompt_imagem_carrossel** (Coluna 4):
-   - Um prompt de texto detalhado para um modelo de geração de imagem (como DALL-E ou Midjourney).
-   - O prompt deve descrever uma imagem de fundo visualmente atraente e conceitual para um post de carrossel, sobre a qual os campos de texto seriam sobrepostos.
-   - A imagem descrita NÃO DEVE CONTER TEXTO.
-   - O prompt deve ser em inglês, para compatibilidade com os modelos de imagem.
-   - Exemplo: "A vibrant, abstract background with swirling gradients of blue and gold, representing the flow of data and innovation, with a soft, clean area for text overlay."
-
-ESTRUTURA NARRATIVA SUGERIDA:
-- Elemento 1: Dado impactante ou pergunta instigante extraída do início do TEXTO BASE.
-- Elementos intermediários: Desenvolver os pontos principais do TEXTO BASE.
-- Último Elemento: CTA claro ou resumo conclusivo.
-
-TOM DE VOZ:
-- Empático e motivacional (use "você" e "vamos").
-- Urgência controlada ("Agora você pode...").
-- Toque de storytelling.
-
-Exemplo de como o BLOCO CSV deve se parecer na sua resposta (não inclua este exemplo na sua resposta final, apenas o bloco gerado):
-\`\`\`csv
-"Titulo";"Texto Principal";"Ponte para o Próximo";"prompt_imagem_carrossel"
-"✨ Grande Novidade";"Descubra algo incrível que vai mudar seu dia! Você está pronto para a surpresa?";"➡️ Veja o próximo!";"A vibrant, abstract background with swirling gradients of blue and gold."
-"🎉 Outra Dica";"Continuando nossa jornada com mais um segredo; já se perguntou como isso é possível?";"CTA Final Aqui!";"An image of a brain with glowing neural pathways; symbolizing new knowledge."
-\`\`\`
-Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` com os dados.`;
+  const promptTemplate = await getPrompt('generateIAContent');
+  const finalPrompt = fillPrompt(promptTemplate, {
+    promptNumRecords: promptNumRecords,
+    promptText: stripHtml(promptText),
+  });
 
   const iaResponseText = await geminiAPI.generateContent(finalPrompt, 'Geração de Conteúdo CSV com IA');
   return iaResponseText;
@@ -630,42 +484,8 @@ export const generateColorPalette = async (briefing) => {
   }
   geminiAPI.initialize(apiKey);
 
-  const prompt = `Crie uma paleta harmoniosa de 5 cores baseada no briefing abaixo, aplicando princípios da psicologia das cores na cultura ocidental.
-
-**Briefing do Cliente:**
-${briefing}
-
-**Diretrizes de Psicologia das Cores (Cultura Ocidental):**
-- Considere estas associações-chave:
-  * **Vermelho:** Energia, paixão, urgência (comida, liquidações), perigo.
-  * **Azul:** Confiança, segurança, calma, profissionalismo (bancos, saúde, tech).
-  * **Verde:** Natureza, crescimento, sustentabilidade, saúde, tranquilidade.
-  * **Amarelo:** Otimismo, criatividade, atenção (uso moderado), cautela.
-  * **Roxo:** Luxo, criatividade, espiritualidade, realeza (beleza, artes).
-  * **Laranja:** Entusiasmo, jovialidade, acessibilidade (diversão, calls-to-action).
-  * **Rosa:** Feminilidade, ternura, compaixão (beleza, infantil).
-  * **Preto:** Sofisticação, poder, elegância (luxo, moda).
-  * **Branco:** Pureza, simplicidade, limpeza (saúde, minimalismo).
-  * **Cinza:** Neutralidade, equilíbrio, modernidade (tecnologia, corporativo).
-  * **Marrom:** Solidez, confiabilidade, natureza (orgânico, artesanal).
-- Tons **pastéis** transmitem suavidade; **vibrantes** geram impacto.
-- Evite combinações culturalmente negativas (ex: vermelho+puro preto = agressão/extremismo).
-
-**Formato de Saída OBRIGATÓRIO:**
-A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação markdown (como \`\`\`json) antes ou depois. O JSON deve ter a seguinte estrutura:
-{
-  "palette": [
-    {
-      "hex": "#RRGGBB",
-      "rgb": "RGB(R, G, B)",
-      "name": "Nome da Cor",
-      "role": "Primária | Secundária | Acento | Neutro Claro | Neutro Escuro",
-      "justification": "Explicação psicológica em uma frase."
-    }
-  ],
-  "harmony": "Nome da Harmonia (Análoga, Complementar, Triádica, etc.)"
-}
-`;
+  const promptTemplate = await getPrompt('generateColorPalette');
+  const prompt = fillPrompt(promptTemplate, { briefing: briefing });
 
   try {
     const response = await geminiAPI.generateContent(prompt, 'Geração de Paleta de Cores');

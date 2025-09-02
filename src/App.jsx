@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import PromptsPage from './pages/PromptsPage';
 
 // Route Protection
 import ProtectedRoute from './components/ProtectedRoute';
@@ -69,6 +70,7 @@ function App() {
       {/* Protected Routes for admin users */}
       <Route element={<AdminRoute />}>
         <Route path="/admin/users" element={<AdminDashboardPage />} />
+        <Route path="/admin/prompts" element={<PromptsPage />} />
       </Route>
 
       {/* Fallback for non-matching routes */}
