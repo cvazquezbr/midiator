@@ -752,11 +752,10 @@ function HomePage() {
 
       setFollowupPosts([]);
 
-      setGenerationStatus('Gerando resumos e conteúdo formatado...');
+      setGenerationStatus('Gerando resumos...');
       await Promise.all([
         handleGenerateSummary(1800, normalizedContent),
         handleGenerateSummary(130, normalizedContent),
-        handleGenerateFormattedContent(normalizedContent),
       ]);
 
       toast.success("Campanha gerada com sucesso!");
