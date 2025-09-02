@@ -82,11 +82,16 @@ export const generateCampaignContent = async ({ problema, solucao, objetivo, tom
   }
   geminiAPI.initialize(apiKey);
 
-  const { autor: defaultAutor, formato } = getCampaignPrompt();
-  const finalAutor = autor || defaultAutor;
+  const { formato } = getCampaignPrompt();
 
   const personaString = persona ? formatObjectForPrompt(persona, ['description']) : '';
-  const autorString = formatObjectForPrompt(finalAutor);
+
+  let autorString;
+  if (typeof autor === 'string') {
+    autorString = autor;
+  } else {
+    autorString = autor ? formatObjectForPrompt(autor) : 'indisponível';
+  }
 
   const personaPromptSection = personaString
     ? `Destinatário (Persona): ${personaString}`
@@ -246,11 +251,14 @@ export const generateFollowupPlan = async ({ content, neededQuantity, existingPo
   }
   geminiAPI.initialize(apiKey);
 
-  const { autor: defaultAutor } = getCampaignPrompt();
-  const finalAutor = autor || defaultAutor;
-
   const personaString = persona ? formatObjectForPrompt(persona, ['description']) : '';
-  const autorString = formatObjectForPrompt(finalAutor);
+
+  let autorString;
+  if (typeof autor === 'string') {
+    autorString = autor;
+  } else {
+    autorString = autor ? formatObjectForPrompt(autor) : 'indisponível';
+  }
 
   const existingPostsString = existingPosts.length > 0
     ? `
@@ -305,10 +313,14 @@ export const generateFollowupPosts = async ({ content, plan, persona = null, aut
   }
   geminiAPI.initialize(apiKey);
 
-  const { autor: defaultAutor } = getCampaignPrompt();
-  const finalAutor = autor || defaultAutor;
   const personaString = persona ? formatObjectForPrompt(persona, ['description']) : '';
-  const autorString = formatObjectForPrompt(finalAutor);
+
+  let autorString;
+  if (typeof autor === 'string') {
+    autorString = autor;
+  } else {
+    autorString = autor ? formatObjectForPrompt(autor) : 'indisponível';
+  }
 
   const generatedPosts = [];
   const MAX_RETRIES = 3;
@@ -394,7 +406,13 @@ export const generateCommonSolutions = async ({ problema, persona, autor }) => {
   }
 
   const personaString = formatObjectForPrompt(persona, ['description']);
-  const autorString = autor ? formatObjectForPrompt(autor) : '';
+
+  let autorString;
+  if (typeof autor === 'string') {
+    autorString = autor;
+  } else {
+    autorString = autor ? formatObjectForPrompt(autor) : 'indisponível';
+  }
 
   const promptTemplate = await getPrompt('generateCommonSolutions');
   const prompt = fillPrompt(promptTemplate, {
@@ -437,7 +455,13 @@ export const generateCommonProblems = async ({ persona, autor }) => {
   }
 
   const personaString = formatObjectForPrompt(persona, ['description']);
-  const autorString = autor ? formatObjectForPrompt(autor) : '';
+
+  let autorString;
+  if (typeof autor === 'string') {
+    autorString = autor;
+  } else {
+    autorString = autor ? formatObjectForPrompt(autor) : 'indisponível';
+  }
 
   const promptTemplate = await getPrompt('generateCommonProblems');
   const prompt = fillPrompt(promptTemplate, {
