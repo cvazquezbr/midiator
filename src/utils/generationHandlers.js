@@ -82,7 +82,7 @@ export const generateCampaignContent = async ({ problema, solucao, objetivo, tom
   }
   geminiAPI.initialize(apiKey);
 
-  const { autor: defaultAutor, instrucoes, formato } = getCampaignPrompt();
+  const { autor: defaultAutor, formato } = getCampaignPrompt();
   const finalAutor = autor || defaultAutor;
 
   const personaString = persona ? formatObjectForPrompt(persona, ['description']) : '';
@@ -100,8 +100,7 @@ export const generateCampaignContent = async ({ problema, solucao, objetivo, tom
     problema: stripHtml(problema),
     solucao: stripHtml(solucao),
     objetivo: stripHtml(objetivo),
-    tomDeVoz: stripHtml(tomDeVoz),
-    instrucoes: stripHtml(instrucoes)
+    tomDeVoz: stripHtml(tomDeVoz)
   });
 
   const response = await geminiAPI.generateContent(finalPrompt, 'Geração de Conteúdo de Campanha');
