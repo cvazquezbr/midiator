@@ -78,7 +78,6 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const [value, setValue] = useState(0);
 
   // Other states
-  const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
   const [colors, setColors] = useState([]);
   const [editingField, setEditingField] = useState(null);
@@ -93,14 +92,13 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
       const apiKey = getGeminiApiKey();
       if (apiKey && !geminiAPI.isInitialized) geminiAPI.initialize(apiKey);
 
-      const { instrucoes, formato, colors: loadedColors } = getCampaignPrompt();
+      const { formato, colors: loadedColors } = getCampaignPrompt();
 
-      setInstrucoes(instrucoes);
       setFormato(formato);
       const colorsAsObjects = (loadedColors || []).map(hex => ({ hex, name: `Cor (${hex})`, role: 'Salva', justification: '' }));
       setColors(colorsAsObjects);
 
-      setInitialState({ instrucoes, formato, colors: colorsAsObjects });
+      setInitialState({ formato, colors: colorsAsObjects });
     }
   }, [open]);
 
@@ -108,7 +106,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
 
   const handleSave = () => {
     const colorsToSave = colors.map(color => color.hex).filter(Boolean);
-    saveCampaignPrompt({ instrucoes, formato, colors: colorsToSave });
+    saveCampaignPrompt({ formato, colors: colorsToSave });
     toast.success('Padrões de campanha salvos com sucesso!');
     onClose();
   };
@@ -122,20 +120,17 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const handleCloseEditor = () => setEditingField(null);
 
   const handleSaveEditor = (newContent) => {
-    if (editingField === 'instrucoes') setInstrucoes(newContent);
-    else if (editingField === 'formato') setFormato(newContent);
+    if (editingField === 'formato') setFormato(newContent);
     setEditingField(null);
   };
 
   const getCurrentContent = () => {
     if (!editingField) return '';
-    if (editingField === 'instrucoes') return instrucoes;
     if (editingField === 'formato') return formato;
     return '';
   };
 
   const getEditorTitle = () => {
-    if (editingField === 'instrucoes') return 'Editar Instruções';
     if (editingField === 'formato') return 'Editar Formato';
     return 'Editar';
   };
@@ -178,7 +173,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
 
   const hasUnsavedChanges = () => {
     if (!initialState) return false;
-    const currentState = { instrucoes, formato, colors };
+    const currentState = { formato, colors };
     // Custom comparison for colors as it's an array of objects
     const initialColorsHex = initialState.colors.map(c => c.hex);
     const currentColorsHex = currentState.colors.map(c => c.hex);
@@ -205,8 +200,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs orientation="horizontal" variant="scrollable" value={value} onChange={handleChange}>
               <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Formato" {...a11yProps(0)} />
-              <Tab icon={<TextFieldsIcon />} iconPosition="start" label="Instruções" {...a11yProps(1)} />
-              <Tab icon={<PaletteIcon />} iconPosition="start" label="Cores" {...a11yProps(2)} />
+              <Tab icon={<PaletteIcon />} iconPosition="start" label="Cores" {...a11yProps(1)} />
             </Tabs>
           </Box>
           <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
@@ -214,9 +208,6 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
               <HtmlDisplayField title="Formato" htmlContent={formato} onClick={() => handleOpenEditor('formato')} />
             </TabPanel>
             <TabPanel value={value} index={1}>
-              <HtmlDisplayField title="Instruções" htmlContent={instrucoes} onClick={() => handleOpenEditor('instruções')} />
-            </TabPanel>
-            <TabPanel value={value} index={2}>
               <Stack spacing={2} sx={{ mb: 3 }}>
                 <Button variant="contained" startIcon={<AutoAwesomeIcon />} onClick={() => setShowPaletteWizard(true)} disabled={!onGeneratePalette} sx={{ alignSelf: 'flex-start' }}>Assistente de Paleta</Button>
               </Stack>

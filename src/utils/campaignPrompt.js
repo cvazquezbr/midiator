@@ -32,7 +32,6 @@ export function saveCampaignPrompt(promptData) {
  */
 export function getCampaignPrompt() {
   const defaultPrompt = {
-    instrucoes: '',
     formato: '',
     colors: [],
   };
@@ -44,15 +43,7 @@ export function getCampaignPrompt() {
         return defaultPrompt;
       }
 
-      let parsedData;
-      try {
-        parsedData = JSON.parse(storedData);
-      } catch (e) {
-        console.log("Migrando prompt do formato antigo (string) para o novo (objeto).");
-        const migratedData = { ...defaultPrompt, instrucoes: storedData };
-        saveCampaignPrompt(migratedData);
-        return migratedData;
-      }
+      let parsedData = JSON.parse(storedData);
 
       if (typeof parsedData !== 'object' || parsedData === null) {
         return defaultPrompt;

@@ -105,7 +105,6 @@ function HomePage() {
   const [isHtmlField, setIsHtmlField] = useState(false);
   const [persona, setPersona] = useState({});
   const [autor, setAutor] = useState({});
-  const [instrucoes, setInstrucoes] = useState('');
   const [formato, setFormato] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
@@ -238,7 +237,6 @@ function HomePage() {
     setCampaignContent(state.campaignContent ?? null);
     setPersona(state.persona ?? {});
     setAutor(state.autor ?? {});
-    setInstrucoes(state.instrucoes ?? '');
     setFormato(state.formato ?? '');
     setAspectRatio(state.aspectRatio ?? '1:1');
     setGeneratedImageUrl(state.generatedImageUrl ?? null);
@@ -306,7 +304,6 @@ function HomePage() {
       campaignContent,
       persona,
       autor,
-      instrucoes,
       formato,
       aspectRatio,
       followupPosts,
@@ -374,10 +371,9 @@ function HomePage() {
   };
 
   const loadCampaignStandards = useCallback(() => {
-    const { persona: personaData, autor: autorData, instrucoes: instrucoesData, formato: formatoData, colors: colorsData } = getCampaignPrompt();
+    const { persona: personaData, autor: autorData, formato: formatoData, colors: colorsData } = getCampaignPrompt();
     setPersona(personaData || {});
     setAutor(autorData || {});
-    setInstrucoes(instrucoesData || '');
     setFormato(formatoData || '');
     setStandardsColors(colorsData || []);
   }, []);
@@ -974,7 +970,7 @@ function HomePage() {
     }
   };
   const currentTheme = darkMode ? darkTheme : lightTheme;
-  const campaignData = { problema, solucao, campaignContent, persona, autor, formato, instrucoes, aspectRatio, followupPosts, colors: standardsColors, };
+  const campaignData = { problema, solucao, campaignContent, persona, autor, formato, aspectRatio, followupPosts, colors: standardsColors, };
 
   return (
     <ThemeProvider theme={currentTheme}>
