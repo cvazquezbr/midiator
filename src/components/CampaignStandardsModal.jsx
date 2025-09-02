@@ -198,12 +198,7 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
     <>
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="lg" fullScreen={isMobile}>
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box>
-            Padrões de Campanha
-            <Button size="small" variant="outlined" startIcon={<DescriptionIcon />} onClick={onShowMemorial} sx={{ ml: 2 }}>
-              Ver Memorial Descritivo
-            </Button>
-          </Box>
+          Padrões de Campanha
           <IconButton onClick={handleClose}><CloseIcon /></IconButton>
         </DialogTitle>
         <DialogContent sx={{ p: 0, display: 'flex', flexDirection: 'column' }}>
