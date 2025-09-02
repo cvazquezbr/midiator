@@ -14,7 +14,7 @@ import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 import geminiAPI from '../utils/geminiAPI';
 
-const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected }) => {
+const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected, onUpdate }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -94,6 +94,7 @@ const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected })
             : await saveAutor(autorToSave.name, autorToSave.autor_data);
         toast.success("Autor salvo com sucesso!");
         await fetchAutores();
+        if (onUpdate) onUpdate();
         setSelectedAutor(saved);
         setAutorFormData(saved.autor_data);
         setIsAutorDirty(false);
@@ -179,6 +180,7 @@ Retorne apenas um único objeto JSON.`;
       await deleteAutor(autorId);
       toast.success('Autor excluído com sucesso!');
       fetchAutores(); // Refresh list
+      if (onUpdate) onUpdate();
       setSelectedAutor(null); // Deselect if the deleted one was selected
     } catch (error) {
       console.error(error);

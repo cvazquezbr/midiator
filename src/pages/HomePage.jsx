@@ -384,23 +384,31 @@ function HomePage() {
     if (apiKey) geminiAPI.initialize(apiKey);
   }, [loadCampaignStandards]);
 
+  const fetchPersonasForCampaign = useCallback(() => {
+    return getPersonas()
+      .then(setPersonaList)
+      .catch(err => {
+        console.error("Failed to fetch personas for campaign step:", err);
+        toast.error('Could not load personas for campaign dropdown.');
+      });
+  }, []);
+
+  const fetchAutoresForCampaign = useCallback(() => {
+    return getAutores()
+      .then(setAutorList)
+      .catch(err => {
+        console.error("Failed to fetch autores for campaign step:", err);
+        toast.error('Could not load autores for campaign dropdown.');
+      });
+  }, []);
+
   useEffect(() => {
     // Fetch personas for the campaign step dropdown
     if (user) {
-      getPersonas()
-        .then(setPersonaList)
-        .catch(err => {
-          console.error("Failed to fetch personas for campaign step:", err);
-          toast.error('Could not load personas for campaign dropdown.');
-        });
-      getAutores()
-        .then(setAutorList)
-        .catch(err => {
-          console.error("Failed to fetch autores for campaign step:", err);
-          toast.error('Could not load autores for campaign dropdown.');
-        });
+      fetchPersonasForCampaign();
+      fetchAutoresForCampaign();
     }
-  }, [user]);
+  }, [user, fetchPersonasForCampaign, fetchAutoresForCampaign]);
 
   useEffect(() => {
     const checkCampaignsAndSetInitialStep = async () => {
@@ -942,7 +950,7 @@ function HomePage() {
     }
   };
   const currentTheme = darkMode ? darkTheme : lightTheme;
-  const campaignData = { problema, solucao, campaignContent, persona, autor, formato, aspectRatio, followupPosts, colors: standardsColors, };
+  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, persona, autor, formato, aspectRatio, followupPosts, colors: standardsColors, };
 
   return (
     <ThemeProvider theme={currentTheme}>
@@ -1077,8 +1085,8 @@ function HomePage() {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} ><Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button><Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box><Button onClick={handleNext} disabled={isGenerating || activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)} variant="contained" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Próximo</Button></Box>
               </>
             )}
-            {currentView === 'personas' && <PersonasPage personaDrawerOpen={personaDrawerOpen} setPersonaDrawerOpen={setPersonaDrawerOpen} onNoPersonaSelected={() => setPersonaDrawerOpen(true)} />}
-            {currentView === 'autores' && <AutoresPage autorDrawerOpen={autorDrawerOpen} setAutorDrawerOpen={setAutorDrawerOpen} onNoAutorSelected={() => setAutorDrawerOpen(true)} />}
+            {currentView === 'personas' && <PersonasPage personaDrawerOpen={personaDrawerOpen} setPersonaDrawerOpen={setPersonaDrawerOpen} onNoPersonaSelected={() => setPersonaDrawerOpen(true)} onUpdate={fetchPersonasForCampaign} />}
+            {currentView === 'autores' && <AutoresPage autorDrawerOpen={autorDrawerOpen} setAutorDrawerOpen={setAutorDrawerOpen} onNoAutorSelected={() => setAutorDrawerOpen(true)} onUpdate={fetchAutoresForCampaign} />}
         </Box>
       </Box>
       <UnsavedChangesDialog

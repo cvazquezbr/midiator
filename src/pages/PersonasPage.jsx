@@ -22,7 +22,7 @@ import geminiAPI from '../utils/geminiAPI';
  * where the `PersonaWizard` is displayed. The component is self-contained and handles
  * all its state and API interactions.
  */
-const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected }) => {
+const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected, onUpdate }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -121,6 +121,7 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
             : await savePersona(personaToSave.name, personaToSave.persona_data);
         toast.success("Persona salva com sucesso!");
         await fetchPersonas();
+        if (onUpdate) onUpdate();
         setSelectedPersona(saved);
         setPersonaFormData(saved.persona_data);
         setIsPersonaDirty(false);
@@ -205,6 +206,7 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
       await deletePersona(personaId);
       toast.success('Persona excluída com sucesso!');
       fetchPersonas(); // Refresh list
+      if (onUpdate) onUpdate();
       setSelectedPersona(null); // Deselect if the deleted one was selected
     } catch (error) {
       // Error toast is handled inside deletePersona, but you could add more here if needed
