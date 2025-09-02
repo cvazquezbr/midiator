@@ -12,16 +12,20 @@ async function getPrompt(name) {
     return promptCache.get(name);
   }
   try {
-    const promptData = await fetchWithAuth(`/api/prompts?name=${name}`);
+    const response = await fetchWithAuth(`/api/prompts?name=${name}`);
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({ error: `Prompt '${name}' not found.` }));
+      throw new Error(errData.error || `Failed to fetch prompt '${name}'. Status: ${response.status}`);
+    }
+    const promptData = await response.json();
+
     if (!promptData || !promptData.prompt_text) {
-      throw new Error(`Prompt "${name}" not found or is empty.`);
+      throw new Error(`Prompt "${name}" found but its text is empty.`);
     }
     promptCache.set(name, promptData.prompt_text);
     return promptData.prompt_text;
   } catch (error) {
-    console.error(`Failed to fetch prompt: ${name}`, error);
-    // Fallback or re-throw, depending on desired behavior.
-    // For now, re-throwing ensures the calling function is aware of the failure.
+    console.error(`Failed to fetch and process prompt: ${name}`, error);
     throw error;
   }
 }
