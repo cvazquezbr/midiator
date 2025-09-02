@@ -15,9 +15,14 @@ const PromptsPage = () => {
 
   const fetchPrompts = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
-      // Fetch the light version of prompts for the list view
-      const data = await fetchWithAuth('/api/prompts');
+      const response = await fetchWithAuth('/api/prompts');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(errData.error || 'Failed to fetch prompts');
+      }
+      const data = await response.json();
       setPrompts(data);
     } catch (err) {
       setError(err.message);
@@ -39,7 +44,12 @@ const PromptsPage = () => {
   const handleEdit = async (prompt) => {
     try {
         // Fetch the full prompt data before editing
-        const fullPrompt = await fetchWithAuth(`/api/prompts/${prompt.id}`);
+        const response = await fetchWithAuth(`/api/prompts/${prompt.id}`);
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({ error: response.statusText }));
+            throw new Error(errData.error || 'Failed to fetch prompt details');
+        }
+        const fullPrompt = await response.json();
         setSelectedPrompt(fullPrompt);
         setIsModalOpen(true);
     } catch (err) {
