@@ -188,7 +188,6 @@ const Campaign = ({
     autorList,
     selectedAutorForCampaign,
     setSelectedAutorForCampaign,
-    persona,
     personaList,
     selectedPersonaForCampaign,
     setSelectedPersonaForCampaign,
@@ -239,8 +238,8 @@ const Campaign = ({
         setProblemsError(null);
         setCommonProblems([]);
         try {
-            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
-            if (!finalPersona || Object.keys(finalPersona).length === 0) {
+            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
+            if (finalPersona === 'indisponível') {
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
@@ -251,15 +250,15 @@ const Campaign = ({
         } finally {
             setIsLoadingProblems(false);
         }
-    }, [commonProblems.length, persona, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
+    }, [commonProblems.length, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
 
     const handleRegenerateProblems = useCallback(async () => {
         setIsLoadingProblems(true);
         setProblemsError(null);
         setCommonProblems([]);
         try {
-            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
-            if (!finalPersona || Object.keys(finalPersona).length === 0) {
+            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
+            if (finalPersona === 'indisponível') {
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
@@ -270,7 +269,7 @@ const Campaign = ({
         } finally {
             setIsLoadingProblems(false);
         }
-    }, [persona, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
+    }, [selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
 
     useEffect(() => {
         if (isHintModalOpen) {
@@ -287,7 +286,7 @@ const Campaign = ({
             if (!problema.trim()) {
                 throw new Error("Descreva o problema primeiro.");
             }
-            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
+            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
             const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
             setCommonSolutions(solutions);
@@ -296,7 +295,7 @@ const Campaign = ({
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [commonSolutions.length, problema, persona, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
+    }, [commonSolutions.length, problema, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
 
     const handleRegenerateSolutions = useCallback(async () => {
         setIsLoadingSolutions(true);
@@ -306,7 +305,7 @@ const Campaign = ({
             if (!problema.trim()) {
                 throw new Error("Descreva o problema primeiro.");
             }
-            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
+            const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
             const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
             setCommonSolutions(solutions);
@@ -315,7 +314,7 @@ const Campaign = ({
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [problema, persona, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
+    }, [problema, selectedPersonaForCampaign, personaList, autorList, selectedAutorForCampaign]);
 
     useEffect(() => {
         if (isSolucaoHintModalOpen) {
@@ -379,7 +378,7 @@ const Campaign = ({
                 <TabPanel value={activeTab} index={0}>
                     <Grid container spacing={3} sx={{ mt: 2 }}>
                         <Grid item xs={12}>
-                            <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+                            <FormControl fullWidth variant="outlined" sx={{ mb: 2 }} disabled={campaignContent !== null}>
                                 <InputLabel id="persona-select-label">Selecionar Persona</InputLabel>
                                 <Select
                                     labelId="persona-select-label"
@@ -388,7 +387,7 @@ const Campaign = ({
                                     label="Selecionar Persona"
                                 >
                                     <MenuItem value="">
-                                        <em>Nenhuma (Usará Padrões)</em>
+                                        <em>Não especificar</em>
                                     </MenuItem>
                                     {personaList.map((p) => (
                                         <MenuItem key={p.id} value={p.id}>
@@ -421,7 +420,7 @@ const Campaign = ({
                         {problema.trim() !== '' && (
                             <>
                                 <Grid item xs={12}>
-                                    <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+                                    <FormControl fullWidth variant="outlined" sx={{ mb: 2 }} disabled={campaignContent !== null}>
                                         <InputLabel id="autor-select-label">Selecionar Autor</InputLabel>
                                         <Select
                                             labelId="autor-select-label"
@@ -430,7 +429,7 @@ const Campaign = ({
                                             label="Selecionar Autor"
                                         >
                                             <MenuItem value="">
-                                                <em>Nenhum (Usará Padrões)</em>
+                                                <em>Não especificar</em>
                                             </MenuItem>
                                             {autorList.map((p) => (
                                                 <MenuItem key={p.id} value={p.id}>
