@@ -1287,11 +1287,11 @@ export default ImageGeneratorFrontendOnly;      try {
                 variant="contained"
                 color="primary"
                 onClick={generateImages}
-                disabled={isGenerating || !fontsLoaded || (generatedImages.length > 0 && generatedImages.some(img => img.url))}
+                disabled={isGenerating || !fontsLoaded}
                 startIcon={<ImageIcon />}
                 fullWidth
               >
-                {generatedImages.length > 0 && generatedImages.some(img => img.url) ? 'Imagens Já Geradas' : (isGenerating ? 'Gerando...' : 'Gerar Imagens')}
+                {generatedImages.some(img => img.url) ? 'Regerar imagens' : (isGenerating ? 'Gerando...' : 'Gerar Imagens')}
               </Button>
             </Grid>
 
@@ -1474,6 +1474,46 @@ export default ImageGeneratorFrontendOnly;      try {
                             title="Compartilhar"
                           >
                             <Share />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={async () => {
+                              const imageToRegenerate = generatedImages.find(img => img.index === imageData.index);
+                              if (imageToRegenerate) {
+                                let bgToUse = imageToRegenerate.backgroundImage || backgroundImage;
+
+                                try {
+                                  const newBg = await generateSingleImageWithPrompt(imageToRegenerate.record, imageData.index);
+                                  if (newBg) {
+                                    bgToUse = newBg;
+                                  }
+                                } catch (error) {
+                                  return; // Stop if AI generation fails
+                                }
+
+                                const positionsToUse = imageToRegenerate.customFieldPositions || fieldPositions;
+                                const stylesToUse = imageToRegenerate.customFieldStyles || fieldStyles;
+                                const elementsToUse = imageToRegenerate.customBrandElements !== undefined ? imageToRegenerate.customBrandElements : brandElements;
+                                const sizeToUse = imageToRegenerate.customOriginalImageSize || originalImageSize;
+                                const fontScaleToUse = imageToRegenerate.fontScale || fontScale;
+                                const imageFiltersToUse = imageToRegenerate.customImageFilters || imageFilters;
+
+                                regenerateSingleImage(
+                                  imageData.index,
+                                  imageToRegenerate.record,
+                                  bgToUse,
+                                  positionsToUse,
+                                  stylesToUse,
+                                  sizeToUse,
+                                  elementsToUse,
+                                  fontScaleToUse,
+                                  imageFiltersToUse
+                                );
+                              }
+                            }}
+                            title="Regerar com IA"
+                          >
+                            <AutoFixHigh />
                           </IconButton>
                         </Box>
                       </CardContent>
