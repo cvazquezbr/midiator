@@ -752,40 +752,12 @@ function HomePage() {
 
       setFollowupPosts([]);
 
-      setGenerationStatus('Gerando a imagem de referência da campanha...');
-      const imageSuccess = await handleGenerateImage(normalizedContent);
-      if (!imageSuccess) {
-        setCampaignGenerationFailed(true);
-        setGenerationError("A geração de texto foi bem-sucedida, mas a criação da imagem falhou. Você pode tentar gerar a imagem novamente.");
-        toast.warning("Geração de imagem falhou, mas o texto está pronto.");
-      }
-
       setGenerationStatus('Gerando resumos e conteúdo formatado...');
       await Promise.all([
         handleGenerateSummary(1800, normalizedContent),
         handleGenerateSummary(130, normalizedContent),
         handleGenerateFormattedContent(normalizedContent),
       ]);
-
-      if (followupPostsQuantity > 0) {
-        setGenerationStatus('Planejando os posts de follow-up...');
-        const plan = await generateFollowupPlan({
-          content: normalizedContent,
-          neededQuantity: followupPostsQuantity,
-          existingPosts: [],
-        });
-
-        const newPosts = [];
-        for (let i = 0; i < plan.length; i++) {
-          const postPlan = plan[i];
-          setGenerationStatus(`Gerando post de follow-up ${i + 1}/${plan.length}...`);
-          const generatedPost = await generateFollowupPosts({ content: normalizedContent, plan: [postPlan] });
-          if (generatedPost && generatedPost.length > 0) {
-            newPosts.push(...generatedPost);
-            setFollowupPosts([...newPosts]);
-          }
-        }
-      }
 
       toast.success("Campanha gerada com sucesso!");
 
