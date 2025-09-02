@@ -287,14 +287,15 @@ const Campaign = ({
                 throw new Error("Descreva o problema primeiro.");
             }
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
-            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor });
+            const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || autor;
+            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
             setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [commonSolutions.length, problema, persona, autor, selectedPersonaForCampaign, personaList]);
+    }, [commonSolutions.length, problema, persona, autor, selectedPersonaForCampaign, personaList, autorList]);
 
     const handleRegenerateSolutions = useCallback(async () => {
         setIsLoadingSolutions(true);
@@ -305,14 +306,15 @@ const Campaign = ({
                 throw new Error("Descreva o problema primeiro.");
             }
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
-            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor });
+            const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || autor;
+            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
             setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
             setIsLoadingSolutions(false);
         }
-    }, [problema, persona, autor, selectedPersonaForCampaign, personaList]);
+    }, [problema, persona, autor, selectedPersonaForCampaign, personaList, autorList]);
 
     useEffect(() => {
         if (isSolucaoHintModalOpen) {
