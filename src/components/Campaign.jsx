@@ -375,27 +375,7 @@ const Campaign = ({
                 {/* Painel 0: Problema e Solução */}
                 <TabPanel value={activeTab} index={0}>
                     <Grid container spacing={3} sx={{ mt: 2 }}>
-                        <Grid item xs={12} md={6}>
-                            <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
-                                <InputLabel id="autor-select-label">Selecionar Autor</InputLabel>
-                                <Select
-                                    labelId="autor-select-label"
-                                    value={selectedAutorForCampaign}
-                                    onChange={(e) => setSelectedAutorForCampaign(e.target.value)}
-                                    label="Selecionar Autor"
-                                >
-                                    <MenuItem value="">
-                                        <em>Nenhum (Usará Padrões)</em>
-                                    </MenuItem>
-                                    {autorList.map((p) => (
-                                        <MenuItem key={p.id} value={p.id}>
-                                            {p.name}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12} md={6}>
+                        <Grid item xs={12}>
                             <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
                                 <InputLabel id="persona-select-label">Selecionar Persona</InputLabel>
                                 <Select
@@ -436,24 +416,46 @@ const Campaign = ({
                         </Grid>
 
                         {problema.trim() !== '' && (
-                            <Grid item xs={12}>
-                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                                    <TextField
-                                        label="Solução ou Proposta"
-                                        multiline
-                                        rows={4}
-                                        value={solucao}
-                                        onChange={(e) => setSolucao(e.target.value)}
-                                        variant="outlined"
-                                        fullWidth
-                                        placeholder="Descreva a solução que sua campanha oferece."
-                                        disabled={campaignContent !== null}
-                                    />
-                                    <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setSolucaoHintModalOpen(true)}>
-                                        <GeminiIcon />
-                                    </IconButton>
-                                </Box>
-                            </Grid>
+                            <>
+                                <Grid item xs={12}>
+                                    <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+                                        <InputLabel id="autor-select-label">Selecionar Autor</InputLabel>
+                                        <Select
+                                            labelId="autor-select-label"
+                                            value={selectedAutorForCampaign}
+                                            onChange={(e) => setSelectedAutorForCampaign(e.target.value)}
+                                            label="Selecionar Autor"
+                                        >
+                                            <MenuItem value="">
+                                                <em>Nenhum (Usará Padrões)</em>
+                                            </MenuItem>
+                                            {autorList.map((p) => (
+                                                <MenuItem key={p.id} value={p.id}>
+                                                    {p.name}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                        <TextField
+                                            label="Solução ou Proposta"
+                                            multiline
+                                            rows={4}
+                                            value={solucao}
+                                            onChange={(e) => setSolucao(e.target.value)}
+                                            variant="outlined"
+                                            fullWidth
+                                            placeholder="Descreva a solução que sua campanha oferece."
+                                            disabled={campaignContent !== null}
+                                        />
+                                        <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setSolucaoHintModalOpen(true)}>
+                                            <GeminiIcon />
+                                        </IconButton>
+                                    </Box>
+                                </Grid>
+                            </>
                         )}
                         {solucao.trim() !== '' && (
                             <>
