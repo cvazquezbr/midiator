@@ -33,7 +33,8 @@ import {
   Google,
   Edit,
   SwapHoriz,
-  Share
+  Share,
+  AutoAwesomeOutlined as GeminiIcon,
 } from '@mui/icons-material';
 import GeneratedImageEditor from './GeneratedImageEditor';
 import MemoizedGeneratedImageEditor from './MemoizedGeneratedImageEditor';
@@ -56,7 +57,8 @@ const ImageGeneratorFrontendOnly = ({
   brandElements,
   onBrandElementsChange,
   fontScale = 1,
-  standardsColors
+  standardsColors,
+  handleGenerateSingleImage, // Nova prop
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -170,6 +172,15 @@ const ImageGeneratorFrontendOnly = ({
 
 
   const generateImages = async () => {
+    if (isGenerating) return;
+
+    // Se já existem imagens, o botão funciona como "Regerar Tudo"
+    if (generatedImages.some(img => img.url)) {
+      handleRegenerateAll();
+      return;
+    }
+
+    // Lógica original para gerar pela primeira vez
     if ((!backgroundImage && initialGeneratedImagesData.some(img => !img.backgroundImage)) || csvData.length === 0) {
       alert('Por favor, carregue um arquivo CSV e uma imagem de fundo global, ou garanta que todas as imagens tenham um fundo individual.');
       return;
@@ -227,6 +238,27 @@ const ImageGeneratorFrontendOnly = ({
       setIsGenerating(false);
       setShowProgressModal(false);
     }
+  };
+
+  const handleRegenerateAll = async () => {
+    if (!handleGenerateSingleImage) {
+      alert("A função de regeneração não está disponível.");
+      return;
+    }
+    setShowProgressModal(true);
+    setIsGenerating(true);
+    setProgress(0);
+    isCancelledRef.current = false;
+
+    for (let i = 0; i < csvData.length; i++) {
+      if (isCancelledRef.current) break;
+      const record = csvData[i];
+      await handleGenerateSingleImage(record, i);
+      setProgress(p => p + 1);
+    }
+
+    setIsGenerating(false);
+    setShowProgressModal(false);
   };
 
   const handleCancelGeneration = () => { isCancelledRef.current = true; };
@@ -511,15 +543,15 @@ const ImageGeneratorFrontendOnly = ({
                 variant="contained"
                 color="primary"
                 onClick={generateImages}
-                disabled={isGenerating || !fontsLoaded || (generatedImages.length > 0 && generatedImages.some(img => img.url))}
+                disabled={isGenerating || !fontsLoaded}
                 startIcon={<ImageIcon />}
                 fullWidth
               >
-                {generatedImages.length > 0 && generatedImages.some(img => img.url) ? 'Imagens Já Geradas' : (isGenerating ? 'Gerando...' : 'Gerar Imagens')}
+                {generatedImages.some(img => img.url) ? 'Regerar imagens' : 'Gerar Imagens'}
               </Button>
             </Grid>
 
-            {generatedImages.length > 0 && (
+            {generatedImages.some(img => img.url) && (
               <Grid item xs={12} md={6}>
                 <Button
                   variant="outlined"
@@ -527,7 +559,7 @@ const ImageGeneratorFrontendOnly = ({
                   startIcon={<Download />}
                   fullWidth
                 >
-                  Download Todas ({generatedImages.length})
+                  Download Todas ({generatedImages.filter(img => img.url).length})
                 </Button>
               </Grid>
             )}
@@ -670,35 +702,47 @@ const ImageGeneratorFrontendOnly = ({
                             }}
                           />
                         </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
-                            title="Editar Posições/Estilos"
-                          >
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleReplaceImageClick(imageData.index)}
-                            title="Substituir Imagem de Fundo"
-                          >
-                            <SwapHoriz />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => downloadImage(imageData)}
-                            title="Download"
-                          >
-                            <Download />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleShare(imageData)}
-                            title="Compartilhar"
-                          >
-                            <Share />
-                          </IconButton>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-around', gap: 1 }}>
+                           <Tooltip title="Regerar com IA">
+                                <IconButton
+                                    size="small"
+                                    onClick={() => handleGenerateSingleImage(imageData.record, imageData.index)}
+                                >
+                                    <GeminiIcon />
+                                </IconButton>
+                            </Tooltip>
+                          <Tooltip title="Editar Posições/Estilos">
+                            <IconButton
+                                size="small"
+                                onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
+                            >
+                                <Edit />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Substituir Fundo">
+                            <IconButton
+                                size="small"
+                                onClick={() => handleReplaceImageClick(imageData.index)}
+                            >
+                                <SwapHoriz />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Download">
+                            <IconButton
+                                size="small"
+                                onClick={() => downloadImage(imageData)}
+                            >
+                                <Download />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Compartilhar">
+                            <IconButton
+                                size="small"
+                                onClick={() => handleShare(imageData)}
+                            >
+                                <Share />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       </CardContent>
                     </Card>
