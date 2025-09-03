@@ -201,11 +201,16 @@ export const generateCampaignImage = async ({ prompt, aspectRatio }) => {
     : '';
 
   const promptTemplate = await getPrompt('generateCampaignImage');
-  const finalImagePrompt = fillPrompt(promptTemplate, {
+  let finalImagePrompt = fillPrompt(promptTemplate, {
       prompt: prompt,
       colorPalettePrompt: colorPalettePrompt,
       aspectRatio: aspectRatio,
   });
+
+  // Ensure aspect ratio is in the prompt, even if the template is missing it.
+  if (!finalImagePrompt.includes('--ar')) {
+    finalImagePrompt = `${finalImagePrompt.trim()} --ar ${aspectRatio}`;
+  }
 
   const base64Image = await geminiAPI.generateImage(finalImagePrompt, 'Geração de Imagem de Campanha');
   return `data:image/png;base64,${base64Image}`;
