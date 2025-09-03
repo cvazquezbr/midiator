@@ -29,13 +29,13 @@ const handler = async (req, res) => {
     }
   } else if (req.method === 'POST') {
     try {
-      const { name, campaign_data, persona_id } = await parseBody(req);
+      const { name, campaign_data, autor_id, persona_id } = await parseBody(req);
       if (!name || !campaign_data) {
         return res.status(400).json({ error: 'Campaign name and data are required.' });
       }
       const { rows } = await query(
-        'INSERT INTO campaigns (user_id, name, campaign_data, persona_id) VALUES ($1, $2, $3, $4) RETURNING id, name, updated_at',
-        [userId, name, campaign_data, persona_id]
+        'INSERT INTO campaigns (user_id, name, campaign_data, autor_id, persona_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, updated_at',
+        [userId, name, campaign_data, autor_id, persona_id]
       );
       return res.status(201).json(rows[0]);
     } catch (error) {
