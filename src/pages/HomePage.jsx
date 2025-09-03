@@ -916,7 +916,7 @@ function HomePage() {
 
     setGenerationStatus(`Gerando imagem para o post ${index + 1}/${csvData.length}...`);
     try {
-      const rawBgImageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
+      const rawBgImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
 
       const blob = await (await fetch(rawBgImageUrl)).blob();
       const stableDataUrl = await new Promise((resolve, reject) => {
