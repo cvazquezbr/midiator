@@ -885,49 +885,15 @@ function HomePage() {
       if (generateImagesAutomatically) {
         toast.info('Geração de posts concluída. Iniciando geração automática de imagens...');
         let firstImageSet = false;
-        let currentImagesData = [...newGeneratedImagesData];
 
-        for (let i = 0; i < currentImagesData.length; i++) {
-          const record = currentImagesData[i].record;
+        for (let i = 0; i < csvDataResult.length; i++) {
+          const record = csvDataResult[i];
           const imagePrompt = record.prompt_imagem_carrossel;
 
           if (imagePrompt && imagePrompt.trim() !== '') {
-            setGenerationStatus(`Gerando imagem para o post ${i + 1}/${currentImagesData.length}...`);
-            try {
-              const rawBgImageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
-
-              const blob = await (await fetch(rawBgImageUrl)).blob();
-              const stableDataUrl = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-              });
-
-              if (!firstImageSet) {
-                updateImageAndPalette(stableDataUrl);
-                firstImageSet = true;
-              }
-
-              const finalImageData = await composeSingleImage({
-                record: record,
-                index: i,
-                itemBackgroundImage: stableDataUrl,
-                imageFilters,
-                brandElements,
-                fieldPositions: updatedFieldPositions,
-                fieldStyles: updatedFieldStyles,
-              });
-
-              finalImageData.backgroundImage = stableDataUrl;
-
-              currentImagesData[i] = finalImageData;
-              setGeneratedImagesData([...currentImagesData]);
-              toast.success(`Imagem final para o post #${i + 1} gerada.`);
-
-            } catch (error) {
-              console.error(`Error during automatic generation for post ${i + 1}:`, error);
-              toast.error(`Falha na geração automática para o post #${i + 1}: ${error.message}`);
+            const success = await handleGenerateSingleImage(record, i, !firstImageSet);
+            if (success && !firstImageSet) {
+              firstImageSet = true;
             }
           }
         }
@@ -937,6 +903,58 @@ function HomePage() {
       toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
     } finally {
       setIsGenerating(false);
+      setGenerationStatus('');
+    }
+  };
+
+  const handleGenerateSingleImage = async (record, index, setAsBackground = false) => {
+    const imagePrompt = record.prompt_imagem_carrossel;
+    if (!imagePrompt || imagePrompt.trim() === '') {
+      toast.info(`O post #${index + 1} não possui um prompt para geração de imagem.`);
+      return false;
+    }
+
+    setGenerationStatus(`Gerando imagem para o post ${index + 1}/${csvData.length}...`);
+    try {
+      const rawBgImageUrl = await generateCampaignImage({ content: { titulo: imagePrompt }, aspectRatio });
+
+      const blob = await (await fetch(rawBgImageUrl)).blob();
+      const stableDataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      if (setAsBackground) {
+        updateImageAndPalette(stableDataUrl);
+      }
+
+      const finalImageData = await composeSingleImage({
+        record: record,
+        index: index,
+        itemBackgroundImage: stableDataUrl,
+        imageFilters,
+        brandElements,
+        fieldPositions,
+        fieldStyles,
+      });
+
+      finalImageData.backgroundImage = stableDataUrl;
+
+      setGeneratedImagesData(currentImagesData => {
+        const newImagesData = [...currentImagesData];
+        newImagesData[index] = finalImageData;
+        return newImagesData;
+      });
+
+      toast.success(`Imagem final para o post #${index + 1} gerada.`);
+      return true;
+    } catch (error) {
+      console.error(`Error during image generation for post ${index + 1}:`, error);
+      toast.error(`Falha na geração para o post #${index + 1}: ${error.message}`);
+      return false;
+    } finally {
       setGenerationStatus('');
     }
   };
@@ -1068,7 +1086,7 @@ function HomePage() {
                     activeStep={activeStep}
                   />
                 </div>
-                <div hidden={activeStep !== 4}><ImageGeneratorFrontendOnly csvData={csvData} backgroundImage={backgroundImage} fieldPositions={fieldPositions} fieldStyles={fieldStyles} displayedImageSize={displayedImageSize} csvHeaders={csvHeaders} colorPalette={colorPalette} standardsColors={standardsColors} setGeneratedImagesData={setGeneratedImagesData} initialGeneratedImagesData={generatedImagesData} onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} originalImageSize={originalImageSize} imageFilters={imageFilters} brandElements={brandElements} onBrandElementsChange={setBrandElements} fontScale={fontScale} /></div>
+                <div hidden={activeStep !== 4}><ImageGeneratorFrontendOnly csvData={csvData} backgroundImage={backgroundImage} fieldPositions={fieldPositions} fieldStyles={fieldStyles} displayedImageSize={displayedImageSize} csvHeaders={csvHeaders} colorPalette={colorPalette} standardsColors={standardsColors} setGeneratedImagesData={setGeneratedImagesData} initialGeneratedImagesData={generatedImagesData} onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} originalImageSize={originalImageSize} imageFilters={imageFilters} brandElements={brandElements} onBrandElementsChange={setBrandElements} fontScale={fontScale} handleGenerateSingleImage={handleGenerateSingleImage} /></div>
                 <div hidden={activeStep !== 5}><AudioGenerator csvData={csvData} fieldPositions={fieldPositions} onAudiosGenerated={setGeneratedAudioData} initialAudioData={generatedAudioData} /></div>
                 <div hidden={activeStep !== 6}><VideoGenerator2 generatedImages={generatedImagesData} generatedAudioData={generatedAudioData} onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)} /></div>
                 <div hidden={activeStep !== 7}><Publisher settings={settings} campaignContent={campaignContent} generatedImagesData={generatedImagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedProfile={selectedProfile} setSelectedProfile={setSelectedProfile} selectedImages={selectedImages} setSelectedImages={setSelectedImages} selectedVideos={selectedVideos} setSelectedVideos={setSelectedVideos} currentCampaign={currentCampaign} /></div>
