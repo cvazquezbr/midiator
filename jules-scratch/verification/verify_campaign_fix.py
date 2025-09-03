@@ -18,11 +18,8 @@ def run(playwright):
         page.get_by_label("Password (min. 8 characters)").fill("password")
         page.get_by_role("button", name="Sign Up").click()
 
-        # Take a screenshot to see what's going on
-        page.screenshot(path="jules-scratch/verification/debug_screenshot.png")
-
         # Wait for redirection to login page by looking for the sign-in button
-        expect(page.get_by_role("button", name="Sign In", exact=True)).to_be_visible(timeout=30000)
+        expect(page.get_by_role("button", name="Sign In", exact=True)).to_be_visible(timeout=10000)
 
         # 2. Log in with the new user
         page.get_by_label("Email Address").fill(unique_email)
