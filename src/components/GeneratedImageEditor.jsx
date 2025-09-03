@@ -205,7 +205,7 @@ const GeneratedImageEditor = ({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="paper" fullScreen={isMobile}>
       <DialogTitle>
-        Editar Imagem Gerada #{imageData.index + 1}
+        Editar Página #{imageData.index + 1}
         <IconButton
           onClick={onClose}
           sx={{ position: 'absolute', right: 8, top: 8 }}
