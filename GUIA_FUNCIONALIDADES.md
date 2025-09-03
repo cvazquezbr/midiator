@@ -157,7 +157,7 @@ const wrapText = (text, maxWidth) => {
 - **Origem**: Canto superior esquerdo (0,0)
 - **Conversão**: Automática para pixels na geração
 
-### **Geração de Imagens**
+### **Geração de Páginas**
 - **Canvas API**: Renderização de alta qualidade
 - **Formato**: PNG com transparência
 - **Resolução**: Mantém resolução original da imagem de fundo

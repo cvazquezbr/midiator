@@ -550,7 +550,7 @@ const ImageGeneratorFrontendOnly = ({
         <CardContent>
           <Typography variant="h5" gutterBottom>
             <ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-            Geração de Imagens
+            Geração de Páginas
           </Typography>
 
           {!fontsLoaded && (

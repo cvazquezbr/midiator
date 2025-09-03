@@ -663,7 +663,7 @@ const Campaign = ({
                             {generatedImageUrl && !isGeneratingImage && (
                                 <Box sx={{ maxWidth: '600px', margin: 'auto' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, flexWrap: 'wrap', gap: 1 }}>
-                                        <Typography variant="h6" gutterBottom>Imagem Gerada</Typography>
+                                        <Typography variant="h6" gutterBottom>Página</Typography>
                                         <Box>
                                             <Button onClick={handleSaveToDrive} disabled={isSavingToDrive || isGeneratingImage} startIcon={<SaveIcon />}>
                                                 {isSavingToDrive ? 'Salvando...' : 'Salvar na Coleção'}
