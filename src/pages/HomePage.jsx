@@ -914,9 +914,11 @@ function HomePage() {
       return false;
     }
 
+    const finalPrompt = `${imagePrompt.trim()} --ar ${aspectRatio}`;
+
     setGenerationStatus(`Gerando imagem para o post ${index + 1}/${csvData.length}...`);
     try {
-      const rawBgImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
+      const rawBgImageUrl = await generateCampaignImage({ prompt: finalPrompt, aspectRatio });
 
       const blob = await (await fetch(rawBgImageUrl)).blob();
       const stableDataUrl = await new Promise((resolve, reject) => {
