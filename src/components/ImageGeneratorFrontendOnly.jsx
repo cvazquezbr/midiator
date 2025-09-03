@@ -35,6 +35,7 @@ import {
   SwapHoriz,
   Share,
   AutoAwesomeOutlined as GeminiIcon,
+  SettingsBackupRestore,
 } from '@mui/icons-material';
 import GeneratedImageEditor from './GeneratedImageEditor';
 import MemoizedGeneratedImageEditor from './MemoizedGeneratedImageEditor';
@@ -262,6 +263,27 @@ const ImageGeneratorFrontendOnly = ({
   };
 
   const handleCancelGeneration = () => { isCancelledRef.current = true; };
+
+  const handleResetImage = (index) => {
+    const imageToReset = generatedImages.find(img => img.index === index);
+    if (imageToReset && backgroundImage) {
+      // Use a cópia mais recente dos estilos/posições globais, não os customizados.
+      regenerateSingleImage(
+        index,
+        imageToReset.record,
+        backgroundImage, // Usando a imagem de fundo global
+        fieldPositions, // Usando as posições de campo globais
+        fieldStyles, // Usando os estilos de campo globais
+        originalImageSize,
+        brandElements,
+        fontScale,
+        imageFilters
+      );
+    } else {
+      alert("Não foi possível resetar a imagem. A imagem de fundo principal não está disponível.");
+    }
+  };
+
   const downloadImage = (imageData) => {
     const link = document.createElement('a');
     link.href = imageData.url;
@@ -709,6 +731,14 @@ const ImageGeneratorFrontendOnly = ({
                                     onClick={() => handleGenerateSingleImage(imageData.record, imageData.index)}
                                 >
                                     <GeminiIcon />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Resetar para Fundo Padrão">
+                                <IconButton
+                                    size="small"
+                                    onClick={() => handleResetImage(imageData.index)}
+                                >
+                                    <SettingsBackupRestore />
                                 </IconButton>
                             </Tooltip>
                           <Tooltip title="Editar Posições/Estilos">
