@@ -246,14 +246,16 @@ export async function handleRunScheduler(request, response) {
     let failedCount = 0;
 
     try {
-        const now = new Date().toISOString();
+        const now = new Date();
         const { rows: duePosts } = await query(
             `SELECT ls.*, c.campaign_data, u.linkedin_access_token
              FROM linkedin_schedules ls
+             JOIN users u ON ls.user_id = u.id
              LEFT JOIN campaigns c ON ls.campaign_id = c.id
-             LEFT JOIN users u ON ls.user_id = u.id
-             WHERE ls.scheduled_at <= $1 AND ls.status = 'scheduled'`,
-            [now]
+             WHERE ls.scheduled_at <= ($1 AT TIME ZONE 'UTC')
+               AND ls.status = 'scheduled'
+               AND u.linkedin_access_token IS NOT NULL`,
+            [now.toISOString()]
         );
 
         if (duePosts.length === 0) {
@@ -276,8 +278,11 @@ export async function handleRunScheduler(request, response) {
 
                     const refreshResponse = await fetch(`${process.env.VITE_API_BASE_URL || 'http://localhost:5173'}/api/linkedin-proxy`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'refreshToken', userId: post.user_id }),
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-internal-secret': process.env.INTERNAL_API_SECRET,
+                        },
+                        body: JSON.stringify({ action: 'refreshTokenInternal', userId: post.user_id }),
                     });
 
                     if (refreshResponse.ok) {

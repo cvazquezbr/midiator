@@ -313,28 +313,66 @@ async function handleGetProfiles(fetch, request, response) {
   }
 }
 
-async function handleRefreshToken(fetch, request, response) {
-    const userId = request.user?.sub || request.body.userId;
-    if (!userId) return response.status(400).json({ error: 'User ID not provided.' });
-    try {
-        const { rows } = await query('SELECT linkedin_refresh_token FROM users WHERE id = $1', [userId]);
-        if (rows.length === 0 || !rows[0].linkedin_refresh_token) return response.status(400).json({ error: 'Refresh token not found.' });
-        const { LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET } = process.env;
-        if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) return response.status(400).json({ error: 'LinkedIn credentials not configured.' });
-        const params = new URLSearchParams({ grant_type: 'refresh_token', refresh_token: rows[0].linkedin_refresh_token, client_id: LINKEDIN_CLIENT_ID, client_secret: LINKEDIN_CLIENT_SECRET });
-        const linkedinResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params.toString() });
-        const data = await linkedinResponse.json();
-        if (linkedinResponse.ok) {
-            const { access_token, expires_in } = data;
-            await query('UPDATE users SET linkedin_access_token = $1, linkedin_access_token_expiry = $2 WHERE id = $3', [access_token, new Date(Date.now() + expires_in * 1000), userId]);
-            return response.status(200).json({ accessToken: access_token });
-        }
-        return response.status(linkedinResponse.status).json(data);
-    } catch (error) {
-        console.error('Error refreshing LinkedIn token:', error);
-        return response.status(500).json({ error: 'Internal Server Error' });
+// For server-to-server calls (e.g., scheduler)
+async function handleRefreshTokenInternal(fetch, userId) {
+    if (!userId) {
+        throw new Error('User ID is required for internal token refresh.');
+    }
+
+    const { rows } = await query('SELECT linkedin_refresh_token FROM users WHERE id = $1', [userId]);
+    if (rows.length === 0 || !rows[0].linkedin_refresh_token) {
+        throw new Error(`Refresh token not found for user ${userId}.`);
+    }
+
+    const { LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET } = process.env;
+    if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
+        throw new Error('LinkedIn credentials not configured.');
+    }
+
+    const params = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: rows[0].linkedin_refresh_token,
+        client_id: LINKEDIN_CLIENT_ID,
+        client_secret: LINKEDIN_CLIENT_SECRET
+    });
+
+    const linkedinResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    });
+
+    const data = await linkedinResponse.json();
+
+    if (linkedinResponse.ok) {
+        const { access_token, expires_in } = data;
+        await query(
+            'UPDATE users SET linkedin_access_token = $1, linkedin_access_token_expiry = $2 WHERE id = $3',
+            [access_token, new Date(Date.now() + expires_in * 1000), userId]
+        );
+        return { success: true, accessToken: access_token };
+    } else {
+        // Construct a meaningful error from LinkedIn's response
+        const errorMessage = data.error_description || data.error || `LinkedIn API error with status ${linkedinResponse.status}`;
+        throw new Error(errorMessage);
     }
 }
+
+// For user-initiated calls (e.g., from the frontend)
+async function handleRefreshToken(fetch, request, response) {
+    const userId = request.user?.sub;
+    if (!userId) {
+        return response.status(401).json({ error: 'User not authenticated.' });
+    }
+    try {
+        const result = await handleRefreshTokenInternal(fetch, userId);
+        return response.status(200).json({ accessToken: result.accessToken });
+    } catch (error) {
+        console.error(`Error refreshing LinkedIn token for user ${userId}:`, error.message);
+        return response.status(500).json({ error: 'Internal Server Error', details: error.message });
+    }
+}
+
 
 async function handleGetShareStatistics(fetch, request, response) {
     const { accessToken, payload } = request.body;
@@ -437,6 +475,7 @@ const protectedHandler = async (request, response) => {
   const { action } = request.body;
   switch (action) {
     case 'tokenExchange': return handleTokenExchange(fetch, request, response);
+    case 'refreshToken': return handleRefreshToken(fetch, request, response);
     case 'testConnection': return handleGetProfile(fetch, request, response);
     case 'getProfile': return handleGetProfile(fetch, request, response);
     case 'registerUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/rest/images?action=initializeUpload');
@@ -455,17 +494,28 @@ const protectedHandler = async (request, response) => {
 };
 
 const mainHandler = async (request, response) => {
-  const { action } = request.body;
-  const fetch = (await import('node-fetch')).default;
+    const { action, userId } = request.body;
+    const fetch = (await import('node-fetch')).default;
 
-  // Actions that do not require user authentication
-  if (action === 'refreshToken') {
-    // Note: handleRefreshToken gets userId from the body, not from a session.
-    return handleRefreshToken(fetch, request, response);
-  }
+    // Server-to-server action, not requiring a user session, but needs to be secure.
+    if (action === 'refreshTokenInternal') {
+        try {
+            // This is a simplified security check. In a real-world scenario,
+            // you'd want a more robust secret or IP check.
+            const internalSecret = request.headers['x-internal-secret'];
+            if (internalSecret !== process.env.INTERNAL_API_SECRET) {
+                return response.status(401).json({ error: 'Unauthorized internal request.' });
+            }
+            const result = await handleRefreshTokenInternal(fetch, userId);
+            return response.status(200).json(result);
+        } catch (error) {
+            console.error(`[INTERNAL] Error refreshing token for user ${userId}:`, error.message);
+            return response.status(500).json({ error: 'Internal Server Error', details: error.message });
+        }
+    }
 
-  // All other actions are protected and require a valid user session.
-  return withAuth(protectedHandler)(request, response);
+    // All other actions are protected and require a valid user session.
+    return withAuth(protectedHandler)(request, response);
 };
 
 export default mainHandler;
