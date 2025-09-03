@@ -103,7 +103,7 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
     if (clientId) {
       if (onBeforeRedirect) await onBeforeRedirect();
 
-      const redirectUri = window.location.href.split('?')[0];
+      const redirectUri = window.location.origin;
       const scope = encodeURIComponent('r_liteprofile r_organization_social w_member_social w_organization_social rw_organization_admin');
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&prompt=select_account`;
       window.location.href = authUrl;
