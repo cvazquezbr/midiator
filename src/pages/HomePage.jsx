@@ -244,7 +244,8 @@ function HomePage() {
     setSelectedImages(state.selectedImages ?? {});
     setSelectedVideos(state.selectedVideos ?? {});
     setInputMethod(state.inputMethod ?? 'ia');
-    setPromptNumRecords(state.promptNumRecords ?? 10);
+    // Default to 5, which matches the slider's max value in PostsCurtosStep.
+    setPromptNumRecords(state.promptNumRecords ?? 5);
     setPromptText(state.promptText ?? '');
     setFieldPositions(state.fieldPositions ?? {});
     setTemplateFieldStyles(state.templateFieldStyles ?? {});
