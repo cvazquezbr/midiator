@@ -432,12 +432,11 @@ async function handleGetMemberPostStatistics(fetch, request, response) {
     }
 }
 
-const mainHandler = async (request, response) => {
+const protectedHandler = async (request, response) => {
   const fetch = (await import('node-fetch')).default;
   const { action } = request.body;
   switch (action) {
     case 'tokenExchange': return handleTokenExchange(fetch, request, response);
-    case 'refreshToken': return handleRefreshToken(fetch, request, response);
     case 'testConnection': return handleGetProfile(fetch, request, response);
     case 'getProfile': return handleGetProfile(fetch, request, response);
     case 'registerUpload': return handleGenericPost(fetch, request, response, 'https://api.linkedin.com/rest/images?action=initializeUpload');
@@ -455,4 +454,18 @@ const mainHandler = async (request, response) => {
   }
 };
 
-export default withAuth(mainHandler);
+const mainHandler = async (request, response) => {
+  const { action } = request.body;
+  const fetch = (await import('node-fetch')).default;
+
+  // Actions that do not require user authentication
+  if (action === 'refreshToken') {
+    // Note: handleRefreshToken gets userId from the body, not from a session.
+    return handleRefreshToken(fetch, request, response);
+  }
+
+  // All other actions are protected and require a valid user session.
+  return withAuth(protectedHandler)(request, response);
+};
+
+export default mainHandler;
