@@ -246,12 +246,12 @@ export async function handleRunScheduler(request, response) {
     let failedCount = 0;
 
     try {
-        const now = new Date();
+        const now = new Date().toISOString();
         const { rows: duePosts } = await query(
             `SELECT ls.*, c.campaign_data, u.linkedin_access_token
              FROM linkedin_schedules ls
              LEFT JOIN campaigns c ON ls.campaign_id = c.id
-             JOIN users u ON ls.user_id = u.id
+             LEFT JOIN users u ON ls.user_id = u.id
              WHERE ls.scheduled_at <= $1 AND ls.status = 'scheduled'`,
             [now]
         );
