@@ -354,7 +354,14 @@ function HomePage() {
     try {
       const loadedCampaign = await loadCampaign(id);
       console.log("Loaded campaign data from DB:", loadedCampaign);
+
+      // Apply the general state from campaign_data
       applyAppState(loadedCampaign.campaign_data);
+
+      // Explicitly set the author and persona IDs from the top-level of the loaded campaign
+      setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
+      setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
+
       setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
       toast.success(`Campaign "${loadedCampaign.name}" loaded successfully!`);
     } catch (err) {
