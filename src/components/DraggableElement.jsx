@@ -101,7 +101,10 @@ const DraggableElementInternal = ({
 
     // Default to text rendering
     if (!enableHtmlRendering) {
-      return content;
+      // Render the calculated lines to respect wrapping
+      return textLines.map((line, index) => (
+        <div key={index}>{line}</div>
+      ));
     }
 
     const sanitizedContent = sanitizeHtml(content);

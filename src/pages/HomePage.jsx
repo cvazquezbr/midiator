@@ -222,13 +222,16 @@ function HomePage() {
     );
     setGeneratedVideosData(Array.isArray(state.generatedVideosData) ? state.generatedVideosData : []);
     setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
-    setBackgroundElement(state.backgroundElement ?? null);
 
+    // Logic to load background image and its associated element state correctly.
     if (state.backgroundImage) {
-      updateImageAndPalette(state.backgroundImage);
+      // Pass the loaded backgroundElement to prevent it from being overwritten with defaults.
+      updateImageAndPalette(state.backgroundImage, state.backgroundElement || null);
     } else {
       setBackgroundImage(null);
+      setBackgroundElement(null); // Explicitly clear both if no image.
     }
+
     setProblema(state.problema ?? '');
     setSolucao(state.solucao ?? '');
     setObjetivo(state.objetivo ?? '');
@@ -567,24 +570,37 @@ function HomePage() {
   const handleCSVUpload = (event) => { const file = event.target.files[0]; parseCsvFile(file); };
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
-  const updateImageAndPalette = useCallback((imageUrl) => {
-    console.log('[HomePage] DIAGNOSTIC: updateImageAndPalette called. Setting backgroundImage. Value starts with:', String(imageUrl).substring(0, 100));
+  const updateImageAndPalette = useCallback((imageUrl, existingBackgroundElement = null) => {
+    console.log('[HomePage] updateImageAndPalette called.', {
+      hasImageUrl: !!imageUrl,
+      hasExistingBackgroundElement: !!existingBackgroundElement
+    });
     setBackgroundImage(imageUrl);
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
       setOriginalImageSize({ width: img.width, height: img.height });
-      setBackgroundElement({
-        id: 'background',
-        x: 0,
-        y: 0,
-        width: 100,
-        height: 100,
-        rotation: 0,
-        visible: true,
-        filters: { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
-        crop: null, // Initial crop is null, meaning no crop
-      });
+      if (existingBackgroundElement) {
+        setBackgroundElement(existingBackgroundElement);
+      } else {
+        setBackgroundElement({
+          id: '__background__',
+          type: 'background',
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 100,
+          rotation: 0,
+          visible: true,
+          filters: { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
+          shadow: false,
+          shadowColor: '#000000',
+          shadowBlur: 10,
+          shadowOffsetX: 5,
+          shadowOffsetY: 5,
+          crop: null,
+        });
+      }
       try {
         const colorThief = new ColorThief();
         const palette = colorThief.getPalette(img, 5);
@@ -933,39 +949,49 @@ function HomePage() {
 
   const handleGenerateSinglePage = async (record, index, setAsBackground = false) => {
     const imagePrompt = record.prompt_imagem_carrossel;
-    if (!imagePrompt || imagePrompt.trim() === '') {
-      toast.info(`O post #${index + 1} não possui um prompt para geração de imagem.`);
-      return false;
+
+    // Determine the background to use for THIS composition.
+    // We start with the current state, but might override it if we generate a new one.
+    let backgroundForComposition = backgroundImage;
+
+    if (setAsBackground && imagePrompt && imagePrompt.trim() !== '') {
+      setGenerationStatus(`Gerando nova imagem de fundo...`);
+      try {
+        const rawBgImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
+        const blob = await (await fetch(rawBgImageUrl)).blob();
+        const stableDataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+
+        // Update the state for future renders, AND update our local var for the current composition.
+        updateImageAndPalette(stableDataUrl);
+        backgroundForComposition = stableDataUrl;
+        toast.info("Nova imagem de fundo foi gerada e definida para a campanha.");
+
+      } catch(error) {
+        toast.error(`Falha ao gerar a imagem de fundo: ${error.message}. Usando a imagem anterior se existir.`);
+        console.error(`Error generating background for post ${index + 1}:`, error);
+      }
     }
 
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
-      const rawBgImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
-
-      const blob = await (await fetch(rawBgImageUrl)).blob();
-      const stableDataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-
-      if (setAsBackground) {
-        updateImageAndPalette(stableDataUrl);
-      }
-
+      // The call from PageGeneratorFrontendOnly doesn't pass setAsBackground,
+      // so it will be false, and `backgroundForComposition` will be the current `backgroundImage` from state.
+      // This is correct.
       const finalPageData = await composeSingleImage({
         record: record,
         index: index,
-        itemBackgroundImage: stableDataUrl,
+        backgroundImage: backgroundForComposition, // Pass the determined background
         brandElements,
         fieldPositions,
         fieldStyles,
         aspectRatio,
         backgroundElement,
       });
-
-      finalPageData.backgroundImage = stableDataUrl;
 
       setGeneratedPagesData(currentPagesData => {
         const newPagesData = [...currentPagesData];
