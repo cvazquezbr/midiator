@@ -148,6 +148,17 @@ const FormattingPanel = ({
     }
   };
 
+  const updateBackgroundElement = (property, value) => {
+    setBackgroundElement(prev => ({ ...prev, [property]: value }));
+  };
+
+  const updateBackgroundFilter = (filter, value) => {
+    setBackgroundElement(prev => ({
+      ...prev,
+      filters: { ...prev.filters, [filter]: value },
+    }));
+  };
+
   const [isTextField, setIsTextField] = React.useState(false);
   const [currentElement, setCurrentElement] = React.useState(null);
   const [expandedPanel, setExpandedPanel] = React.useState(false);
@@ -157,6 +168,7 @@ const FormattingPanel = ({
   };
 
   React.useEffect(() => {
+    // Handles selection of any element, including the background
     if (selectedField) {
       if (selectedField === '__background__') {
         setCurrentElement(backgroundElement);
@@ -563,106 +575,6 @@ const FormattingPanel = ({
                   </AccordionDetails>
                 </Accordion>
 
-                {/* Posicionamento e Tamanho */}
-                <Accordion expanded={expandedPanel === 'positionSize'} onChange={handleAccordionChange('positionSize')}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
-                      <AspectRatio sx={{ mr: 1 }} /> Posição e Tamanho
-                    </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Grid container spacing={2}>
-                      <Grid item xs={6}>
-                        <TextField
-                          label="X (%)"
-                          type="number"
-                          size="small"
-                          value={currentElement.x?.toFixed(1) || '0.0'}
-                          onChange={(e) => handlePositionPropertyChange('x', e.target.value)}
-                          inputProps={{ min: 0, max: 100, step: 0.1 }}
-                          fullWidth
-                        />
-                      </Grid>
-                      <Grid item xs={6}>
-                        <TextField
-                          label="Y (%)"
-                          type="number"
-                          size="small"
-                          value={currentElement.y?.toFixed(1) || '0.0'}
-                          onChange={(e) => handlePositionPropertyChange('y', e.target.value)}
-                          inputProps={{ min: 0, max: 100, step: 0.1 }}
-                          fullWidth
-                        />
-                      </Grid>
-                      <Grid item xs={6}>
-                        <TextField
-                          label="Largura (%)"
-                          type="number"
-                          size="small"
-                          value={currentElement.width?.toFixed(1) || '20.0'}
-                          onChange={(e) => handlePositionPropertyChange('width', e.target.value)}
-                          inputProps={{ min: 5, max: 100, step: 0.1 }}
-                          fullWidth
-                        />
-                      </Grid>
-                      <Grid item xs={6}>
-                        <TextField
-                          label="Altura (%)"
-                          type="number"
-                          size="small"
-                          value={currentElement.height?.toFixed(1) || '10.0'}
-                          onChange={(e) => handlePositionPropertyChange('height', e.target.value)}
-                          inputProps={{ min: 3, max: 100, step: 0.1 }}
-                          fullWidth
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Typography gutterBottom>Rotação: {currentElement.rotation?.toFixed(0) || '0'}°</Typography>
-                        <Slider
-                          value={currentElement.rotation || 0}
-                          onChange={(e, value) => handlePositionPropertyChange('rotation', value)}
-                          min={0}
-                          max={360}
-                          step={1}
-                          valueLabelDisplay="auto"
-                          marks={[
-                            { value: 0, label: '0°' },
-                            { value: 90, label: '90°' },
-                            { value: 180, label: '180°' },
-                            { value: 270, label: '270°' },
-                            { value: 360, label: '360°' },
-                          ]}
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Typography variant="caption" display="block" gutterBottom>Ordem das Camadas</Typography>
-                        <ToggleButtonGroup size="small" fullWidth aria-label="layer order controls">
-                          <Tooltip title="Enviar para o Fundo">
-                            <ToggleButton value="back" onClick={() => onZIndexChange(selectedField, 'back')}>
-                              <FlipToBack />
-                            </ToggleButton>
-                          </Tooltip>
-                          <Tooltip title="Recuar">
-                            <ToggleButton value="backward" onClick={() => onZIndexChange(selectedField, 'backward')}>
-                              <ArrowDownward />
-                            </ToggleButton>
-                          </Tooltip>
-                          <Tooltip title="Avançar">
-                            <ToggleButton value="forward" onClick={() => onZIndexChange(selectedField, 'forward')}>
-                              <ArrowUpward />
-                            </ToggleButton>
-                          </Tooltip>
-                          <Tooltip title="Trazer para Frente">
-                            <ToggleButton value="front" onClick={() => onZIndexChange(selectedField, 'front')}>
-                              <FlipToFront />
-                            </ToggleButton>
-                          </Tooltip>
-                        </ToggleButtonGroup>
-                      </Grid>
-                    </Grid>
-                  </AccordionDetails>
-                </Accordion>
-
                 <Divider sx={{ my: 2 }} />
 
                 <Grid container spacing={2}>
@@ -671,75 +583,7 @@ const FormattingPanel = ({
               </>
             ) : (
               <Box>
-                {/* Posicionamento e Tamanho para Fundo/Elementos */}
-                <Accordion expanded={expandedPanel === 'positionSize'} onChange={handleAccordionChange('positionSize')}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
-                      <AspectRatio sx={{ mr: 1 }} /> Posição e Tamanho
-                    </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Grid container spacing={2}>
-                      <Grid item xs={6}><TextField label="X (%)" type="number" size="small" value={currentElement.x?.toFixed(1) || '0.0'} onChange={(e) => handlePositionPropertyChange('x', e.target.value)} inputProps={{ min: -100, max: 100, step: 0.1 }} fullWidth /></Grid>
-                      <Grid item xs={6}><TextField label="Y (%)" type="number" size="small" value={currentElement.y?.toFixed(1) || '0.0'} onChange={(e) => handlePositionPropertyChange('y', e.target.value)} inputProps={{ min: -100, max: 100, step: 0.1 }} fullWidth /></Grid>
-                      <Grid item xs={6}><TextField label="Largura (%)" type="number" size="small" value={currentElement.width?.toFixed(1) || '100.0'} onChange={(e) => handlePositionPropertyChange('width', e.target.value)} inputProps={{ min: 5, max: 200, step: 0.1 }} fullWidth /></Grid>
-                      <Grid item xs={6}><TextField label="Altura (%)" type="number" size="small" value={currentElement.height?.toFixed(1) || '100.0'} onChange={(e) => handlePositionPropertyChange('height', e.target.value)} inputProps={{ min: 5, max: 200, step: 0.1 }} fullWidth /></Grid>
-                      <Grid item xs={12}>
-                        <Typography gutterBottom>Rotação: {currentElement.rotation?.toFixed(0) || '0'}°</Typography>
-                        <Slider value={currentElement.rotation || 0} onChange={(e, value) => handlePositionPropertyChange('rotation', value)} min={0} max={360} step={1} />
-                      </Grid>
-                    </Grid>
-                  </AccordionDetails>
-                </Accordion>
-
-                {/* Filtros */}
-                <Accordion expanded={expandedPanel === 'elementFilters'} onChange={handleAccordionChange('elementFilters')}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1">🖼️ Filtros</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Typography gutterBottom>Brilho: {currentElement.filters.brightness}%</Typography>
-                    <Slider value={currentElement.filters.brightness} onChange={(e, v) => updateBrandElementFilter(selectedField, 'brightness', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Contraste: {currentElement.filters.contrast}%</Typography>
-                    <Slider value={currentElement.filters.contrast} onChange={(e, v) => updateBrandElementFilter(selectedField, 'contrast', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Saturação: {currentElement.filters.saturate}%</Typography>
-                    <Slider value={currentElement.filters.saturate} onChange={(e, v) => updateBrandElementFilter(selectedField, 'saturate', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Desfoque: {currentElement.filters.blur}px</Typography>
-                    <Slider value={currentElement.filters.blur} onChange={(e, v) => updateBrandElementFilter(selectedField, 'blur', v)} min={0} max={20} step={1} />
-                    <Typography gutterBottom>Opacidade: {currentElement.filters.opacity}%</Typography>
-                    <Slider value={currentElement.filters.opacity} onChange={(e, v) => updateBrandElementFilter(selectedField, 'opacity', v)} min={0} max={100} step={1} />
-                  </AccordionDetails>
-                </Accordion>
-
-                {/* Sombra */}
-                <Accordion expanded={expandedPanel === 'crop'} onChange={handleAccordionChange('crop')}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1">✂️ Cortar</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Button variant="contained" fullWidth onClick={() => setCropMode(!cropMode)}>
-                      {cropMode ? 'Finalizar Corte' : 'Cortar Imagem'}
-                    </Button>
-                  </AccordionDetails>
-                </Accordion>
-
-                <Accordion expanded={expandedPanel === 'shadow'} onChange={handleAccordionChange('shadow')}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1">🎨 Sombra</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <FormControlLabel control={<Switch checked={currentElement.shadow || false} onChange={(e) => setBackgroundElement(b => ({ ...b, shadow: e.target.checked }))} size="small" />} label="Sombra" />
-                    {currentElement.shadow && (
-                      <Grid container spacing={2} sx={{ mt: 1 }}>
-                        <Grid item xs={6}><TextField label="Cor" type="color" value={currentElement.shadowColor || '#000000'} onChange={(e) => setBackgroundElement(b => ({ ...b, shadowColor: e.target.value }))} fullWidth size="small" /></Grid>
-                        <Grid item xs={6}><Typography gutterBottom>Desfoque: {currentElement.shadowBlur || 4}px</Typography><Slider value={currentElement.shadowBlur || 4} onChange={(e, v) => setBackgroundElement(b => ({ ...b, shadowBlur: v }))} min={0} max={50} size="small" /></Grid>
-                        <Grid item xs={6}><Typography gutterBottom>Offset X: {currentElement.shadowOffsetX || 2}px</Typography><Slider value={currentElement.shadowOffsetX || 2} onChange={(e, v) => setBackgroundElement(b => ({ ...b, shadowOffsetX: v }))} min={-50} max={50} size="small" /></Grid>
-                        <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.shadowOffsetY || 2}px</Typography><Slider value={currentElement.shadowOffsetY || 2} onChange={(e, v) => setBackgroundElement(b => ({ ...b, shadowOffsetY: v }))} min={-50} max={50} size="small" /></Grid>
-                      </Grid>
-                    )}
-                  </AccordionDetails>
-                </Accordion>
-
+                {/* Brand Element specific controls will go here, if any, in the future */}
                 {selectedField !== '__background__' && (
                   <Button variant="outlined" color="error" size="small" onClick={() => handleDeleteBrandElement(selectedField)} sx={{ mt: 2 }} fullWidth>
                     Excluir Elemento
@@ -747,6 +591,169 @@ const FormattingPanel = ({
                 )}
               </Box>
             )}
+
+            {/* Background Specific Controls */}
+            {selectedField === '__background__' && currentElement && (
+              <>
+                {/* Filtros do Fundo */}
+                <Accordion expanded={expandedPanel === 'backgroundFilters'} onChange={handleAccordionChange('backgroundFilters')}>
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography variant="subtitle1">🖼️ Filtros</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Typography gutterBottom>Brilho: {currentElement.filters.brightness}%</Typography>
+                    <Slider value={currentElement.filters.brightness} onChange={(e, v) => updateBackgroundFilter('brightness', v)} min={0} max={200} step={1} />
+                    <Typography gutterBottom>Contraste: {currentElement.filters.contrast}%</Typography>
+                    <Slider value={currentElement.filters.contrast} onChange={(e, v) => updateBackgroundFilter('contrast', v)} min={0} max={200} step={1} />
+                    <Typography gutterBottom>Saturação: {currentElement.filters.saturate}%</Typography>
+                    <Slider value={currentElement.filters.saturate} onChange={(e, v) => updateBackgroundFilter('saturate', v)} min={0} max={200} step={1} />
+                    <Typography gutterBottom>Desfoque: {currentElement.filters.blur}px</Typography>
+                    <Slider value={currentElement.filters.blur} onChange={(e, v) => updateBackgroundFilter('blur', v)} min={0} max={20} step={1} />
+                    <Typography gutterBottom>Opacidade: {currentElement.filters.opacity}%</Typography>
+                    <Slider value={currentElement.filters.opacity} onChange={(e, v) => updateBackgroundFilter('opacity', v)} min={0} max={100} step={1} />
+                  </AccordionDetails>
+                </Accordion>
+
+                {/* Sombra do Fundo */}
+                <Accordion expanded={expandedPanel === 'backgroundShadow'} onChange={handleAccordionChange('backgroundShadow')}>
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography variant="subtitle1">🎨 Sombra</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <FormControlLabel
+                      control={<Switch checked={currentElement.shadow || false} onChange={(e) => updateBackgroundElement('shadow', e.target.checked)} size="small" />}
+                      label="Sombra"
+                    />
+                    {currentElement.shadow && (
+                      <Grid container spacing={2} sx={{ mt: 1 }}>
+                        <Grid item xs={6}><TextField label="Cor" type="color" value={currentElement.shadowColor || '#000000'} onChange={(e) => updateBackgroundElement('shadowColor', e.target.value)} fullWidth size="small" /></Grid>
+                        <Grid item xs={6}><Typography gutterBottom>Desfoque: {currentElement.shadowBlur || 4}px</Typography><Slider value={currentElement.shadowBlur || 4} onChange={(e, v) => updateBackgroundElement('shadowBlur', v)} min={0} max={50} size="small" /></Grid>
+                        <Grid item xs={6}><Typography gutterBottom>Offset X: {currentElement.shadowOffsetX || 2}px</Typography><Slider value={currentElement.shadowOffsetX || 2} onChange={(e, v) => updateBackgroundElement('shadowOffsetX', v)} min={-50} max={50} size="small" /></Grid>
+                        <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.shadowOffsetY || 2}px</Typography><Slider value={currentElement.shadowOffsetY || 2} onChange={(e, v) => updateBackgroundElement('shadowOffsetY', v)} min={-50} max={50} size="small" /></Grid>
+                      </Grid>
+                    )}
+                  </AccordionDetails>
+                </Accordion>
+              </>
+            )}
+
+            {/* Common Controls for all elements */}
+            <Accordion expanded={expandedPanel === 'positionSize'} onChange={handleAccordionChange('positionSize')}>
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <AspectRatio sx={{ mr: 1 }} /> Posição e Tamanho
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <TextField
+                      label="X (%)"
+                      type="number"
+                      size="small"
+                      value={currentElement.x?.toFixed(1) || '0.0'}
+                      onChange={(e) => handlePositionPropertyChange('x', e.target.value)}
+                      inputProps={{
+                        min: isTextField ? 0 : -100,
+                        max: 100,
+                        step: 0.1
+                      }}
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField
+                      label="Y (%)"
+                      type="number"
+                      size="small"
+                      value={currentElement.y?.toFixed(1) || '0.0'}
+                      onChange={(e) => handlePositionPropertyChange('y', e.target.value)}
+                      inputProps={{
+                        min: isTextField ? 0 : -100,
+                        max: 100,
+                        step: 0.1
+                      }}
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField
+                      label="Largura (%)"
+                      type="number"
+                      size="small"
+                      value={currentElement.width?.toFixed(1) || '20.0'}
+                      onChange={(e) => handlePositionPropertyChange('width', e.target.value)}
+                      inputProps={{
+                        min: 5,
+                        max: isTextField ? 100 : 200,
+                        step: 0.1
+                      }}
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField
+                      label="Altura (%)"
+                      type="number"
+                      size="small"
+                      value={currentElement.height?.toFixed(1) || '10.0'}
+                      onChange={(e) => handlePositionPropertyChange('height', e.target.value)}
+                      inputProps={{
+                        min: 3,
+                        max: isTextField ? 100 : 200,
+                        step: 0.1
+                      }}
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography gutterBottom>Rotação: {currentElement.rotation?.toFixed(0) || '0'}°</Typography>
+                    <Slider
+                      value={currentElement.rotation || 0}
+                      onChange={(e, value) => handlePositionPropertyChange('rotation', value)}
+                      min={0}
+                      max={360}
+                      step={1}
+                      valueLabelDisplay="auto"
+                      marks={[
+                        { value: 0, label: '0°' },
+                        { value: 90, label: '90°' },
+                        { value: 180, label: '180°' },
+                        { value: 270, label: '270°' },
+                        { value: 360, label: '360°' },
+                      ]}
+                    />
+                  </Grid>
+                  {selectedField !== '__background__' && (
+                    <Grid item xs={12}>
+                      <Typography variant="caption" display="block" gutterBottom>Ordem das Camadas</Typography>
+                      <ToggleButtonGroup size="small" fullWidth aria-label="layer order controls">
+                        <Tooltip title="Enviar para o Fundo">
+                          <ToggleButton value="back" onClick={() => onZIndexChange(selectedField, 'back')}>
+                            <FlipToBack />
+                          </ToggleButton>
+                        </Tooltip>
+                        <Tooltip title="Recuar">
+                          <ToggleButton value="backward" onClick={() => onZIndexChange(selectedField, 'backward')}>
+                            <ArrowDownward />
+                          </ToggleButton>
+                        </Tooltip>
+                        <Tooltip title="Avançar">
+                          <ToggleButton value="forward" onClick={() => onZIndexChange(selectedField, 'forward')}>
+                            <ArrowUpward />
+                          </ToggleButton>
+                        </Tooltip>
+                        <Tooltip title="Trazer para Frente">
+                          <ToggleButton value="front" onClick={() => onZIndexChange(selectedField, 'front')}>
+                            <FlipToFront />
+                          </ToggleButton>
+                        </Tooltip>
+                      </ToggleButtonGroup>
+                    </Grid>
+                  )}
+                </Grid>
+              </AccordionDetails>
+            </Accordion>
           </>
         ) : (
           <Typography variant="h6" color="textSecondary" align="center" gutterBottom sx={{ mt: 4 }}>
