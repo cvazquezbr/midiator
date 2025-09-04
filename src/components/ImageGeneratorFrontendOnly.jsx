@@ -43,29 +43,6 @@ import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi'
 import { composeImage, composeSingleImage, dataURLtoBlob, wrapTextInArea, applyTextEffects, drawTextWithEffects } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
 
-const defaultBackgroundElement = {
-  id: '__background__',
-  x: 0,
-  y: 0,
-  width: 100,
-  height: 100,
-  rotation: 0,
-  visible: true,
-  filters: {
-    brightness: 100,
-    contrast: 100,
-    saturate: 100,
-    blur: 0,
-    opacity: 100,
-  },
-  crop: null,
-  shadow: false,
-  shadowColor: '#000000',
-  shadowBlur: 4,
-  shadowOffsetX: 2,
-  shadowOffsetY: 2,
-};
-
 const ImageGeneratorFrontendOnly = ({
   csvData,
   backgroundImage,
@@ -77,15 +54,13 @@ const ImageGeneratorFrontendOnly = ({
   initialGeneratedImagesData,
   onThumbnailRecordTextUpdate,
   originalImageSize,
+  imageFilters,
   brandElements,
   onBrandElementsChange,
   fontScale = 1,
   standardsColors,
   handleGenerateSingleImage, // Nova prop
-  aspectRatio,
-  backgroundElement,
 }) => {
-  const effectiveBackgroundElement = backgroundElement || defaultBackgroundElement;
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -163,15 +138,11 @@ const ImageGeneratorFrontendOnly = ({
             record: imgData.record,
             index: imgData.index,
             itemBackgroundImage: imgData.backgroundImage,
+            imageFilters: imgData.customImageFilters || imageFilters, // Use custom filters if available
             brandElements: elementsToUse,
             fieldPositions: positionsToUse,
             fieldStyles: stylesToUse,
             fontScale: imgData.fontScale || 1, // Use custom font scale if available
-            aspectRatio,
-            backgroundElement: {
-              ...effectiveBackgroundElement,
-              filters: imgData.customImageFilters || effectiveBackgroundElement.filters,
-            },
           }).catch(error => {
             console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${imgData.index}:`, error);
             return imgData; // On error, return the original data to not lose it
@@ -198,7 +169,7 @@ const ImageGeneratorFrontendOnly = ({
 
       regenerateMissingThumbnails();
     }
-  }, [initialGeneratedImagesData, fontsLoaded, fieldPositions, fieldStyles, brandElements, aspectRatio, effectiveBackgroundElement]);
+  }, [initialGeneratedImagesData, fontsLoaded, fieldPositions, fieldStyles, imageFilters, brandElements]);
 
 
   const generateImages = async () => {
@@ -234,19 +205,17 @@ const ImageGeneratorFrontendOnly = ({
         record,
         index: i,
         itemBackgroundImage,
+        imageFilters,
         brandElements,
         fieldPositions,
         fieldStyles,
         fontScale,
-        aspectRatio,
-        backgroundElement: effectiveBackgroundElement,
       })
       .then(imageData => {
         setProgress(p => p + 1);
         // Persist the styles used for generation with the image data
         return {
           ...imageData,
-        backgroundImage: itemBackgroundImage,
           customFieldStyles: fieldStyles,
           customFieldPositions: fieldPositions,
         };
@@ -308,7 +277,7 @@ const ImageGeneratorFrontendOnly = ({
         originalImageSize,
         brandElements,
         fontScale,
-        effectiveBackgroundElement.filters
+        imageFilters
       );
     } else {
       alert("Não foi possível resetar a imagem. A imagem de fundo principal não está disponível.");
@@ -390,13 +359,12 @@ const ImageGeneratorFrontendOnly = ({
       return {
         ...img, // Keep blob, url, etc.
         record: modifiedImageData.record,
-        backgroundImage: modifiedImageData.backgroundImage, // Use the background from the editor
+        backgroundImage: img.backgroundImage, // Keep the original background!
         // Apply modifications from the editor
         customFieldPositions: modifiedImageData.fieldPositions,
         customFieldStyles: modifiedImageData.fieldStyles,
         customBrandElements: modifiedImageData.brandElements,
         fontScale: modifiedImageData.fontScale,
-        customImageFilters: modifiedImageData.imageFilters, // Persist filters
       };
     });
 
@@ -426,13 +394,13 @@ const ImageGeneratorFrontendOnly = ({
         sizeToUse,
         elementsToUse,
         modifiedImageData.fontScale || 1,
-        modifiedImageData.imageFilters || effectiveBackgroundElement.filters
+        modifiedImageData.imageFilters || imageFilters
       );
     }
     handleCloseGeneratedImageEditor();
   };
 
-  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1, customImageFilters = effectiveBackgroundElement.filters) => {
+  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1, customImageFilters = imageFilters) => {
     if (!currentBackgroundImage || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
       alert('Pré-requisitos para regeneração não atendidos. Fontes, dados ou configurações faltando.');
       return;
@@ -442,15 +410,11 @@ const ImageGeneratorFrontendOnly = ({
         record,
         index,
         itemBackgroundImage: currentBackgroundImage,
+        imageFilters: customImageFilters,
         brandElements: elementsToUse,
         fieldPositions: positionsToUse,
         fieldStyles: stylesToUse,
         fontScale,
-        aspectRatio,
-        backgroundElement: {
-          ...effectiveBackgroundElement,
-          filters: customImageFilters,
-        },
       });
 
       setGeneratedImages(prevImages => {
@@ -497,11 +461,11 @@ const ImageGeneratorFrontendOnly = ({
           const img = new Image();
           img.onload = () => {
             const newSize = { width: img.width, height: img.height };
-            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, newSize, imageToUpdate.customBrandElements || brandElements, fontScale, imageToUpdate.customImageFilters || backgroundElement.filters);
+            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, newSize, imageToUpdate.customBrandElements || brandElements, fontScale);
           };
           img.onerror = () => {
             console.error('Failed to load the new background image to get its dimensions.');
-            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, null, imageToUpdate.customBrandElements || brandElements, fontScale, imageToUpdate.customImageFilters || backgroundElement.filters);
+            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, null, imageToUpdate.customBrandElements || brandElements, fontScale);
           };
           img.src = newBgUrl;
         }
@@ -520,7 +484,7 @@ const ImageGeneratorFrontendOnly = ({
       return;
     }
     if (generatedImages.length === 0) {
-      alert('Nenhuma página foi gerada ainda.');
+      alert('Nenhuma imagem foi gerada ainda.');
       return;
     }
     if (!googleAccessToken) {
@@ -586,12 +550,12 @@ const ImageGeneratorFrontendOnly = ({
         <CardContent>
           <Typography variant="h5" gutterBottom>
             <ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-            Geração de Páginas
+            Geração de Imagens
           </Typography>
 
           {!fontsLoaded && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              Carregando fontes... Aguarde antes de gerar as páginas.
+              Carregando fontes... Aguarde antes de gerar as imagens.
             </Alert>
           )}
 
@@ -605,7 +569,7 @@ const ImageGeneratorFrontendOnly = ({
                 startIcon={<ImageIcon />}
                 fullWidth
               >
-                {generatedImages.some(img => img.url) ? 'Regerar Páginas' : 'Gerar Páginas'}
+                {generatedImages.some(img => img.url) ? 'Regerar imagens' : 'Gerar Imagens'}
               </Button>
             </Grid>
 
@@ -627,7 +591,7 @@ const ImageGeneratorFrontendOnly = ({
             <Box sx={{ mt: 2 }}>
               <LinearProgress />
               <Typography variant="body2" sx={{ mt: 1 }}>
-                Gerando páginas...
+                Gerando imagens...
               </Typography>
             </Box>
           )}
@@ -698,7 +662,7 @@ const ImageGeneratorFrontendOnly = ({
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="h6" gutterBottom>
-                Páginas Geradas ({generatedImages.length})
+                Imagens Geradas ({generatedImages.length})
               </Typography>
 
               <Grid container spacing={2}>
@@ -840,6 +804,7 @@ const ImageGeneratorFrontendOnly = ({
         </DialogActions>
       </Dialog>
 
+      {console.log('[ImageGeneratorFrontendOnly] rendering MemoizedGeneratedImageEditor with props:', { showGeneratedImageEditor, generatedImages, editingGeneratedImageIndex, csvHeaders, fieldPositions, fieldStyles, brandElements, colorPalette, backgroundImage, originalImageSize, standardsColors, imageFilters: effectiveBackgroundElement.filters })}
       <MemoizedGeneratedImageEditor
         showGeneratedImageEditor={showGeneratedImageEditor}
         handleCloseGeneratedImageEditor={handleCloseGeneratedImageEditor}
@@ -853,8 +818,8 @@ const ImageGeneratorFrontendOnly = ({
         colorPalette={colorPalette}
         backgroundImage={backgroundImage}
         originalImageSize={originalImageSize}
+        imageFilters={imageFilters}
         standardsColors={standardsColors}
-        imageFilters={effectiveBackgroundElement.filters}
       />
 
       <input
@@ -869,8 +834,8 @@ const ImageGeneratorFrontendOnly = ({
         progress={progress}
         total={csvData.length}
         onCancel={handleCancelGeneration}
-        title="Gerando Páginas"
-        progressText={`Gerando página ${progress} de ${csvData.length}...`}
+        title="Gerando Imagens"
+        progressText={`Gerando imagem ${progress} de ${csvData.length}...`}
       />
     </Box>
   );

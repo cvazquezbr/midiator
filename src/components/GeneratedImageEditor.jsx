@@ -62,6 +62,7 @@ const GeneratedImageEditor = ({
   brandElements,
   standardsColors
 }) => {
+  console.log('[GeneratedImageEditor] props:', { imageData, globalBackgroundImage, imageFilters, fieldStyles });
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
   const [editedBrandElements, setEditedBrandElements] = useState([]);

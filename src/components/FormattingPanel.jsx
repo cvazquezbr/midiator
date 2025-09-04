@@ -88,6 +88,7 @@ const FormattingPanel = ({
   ];
 
   const updateFieldStyle = (field, property, value) => {
+    console.log(`[FormattingPanel] updating style for ${field}: ${property} = ${value}`);
     setFieldStyles(prev => ({ ...prev, [field]: { ...prev[field], [property]: value } }));
   };
 
