@@ -80,6 +80,10 @@ const PageGeneratorFrontendOnly = ({
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
   useEffect(() => {
+    console.log('[PageGeneratorFrontendOnly] PROPS RECEIVED', { fieldStyles, backgroundElement });
+  }, [fieldStyles, backgroundElement]);
+
+  useEffect(() => {
     const loadFonts = async () => {
       try {
         if (document.fonts && document.fonts.ready) {
