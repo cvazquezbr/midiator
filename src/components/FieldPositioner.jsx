@@ -314,6 +314,18 @@ const FieldPositioner = ({
     }
   }, [isInteracting]);
 
+  const completeFieldStyles = React.useMemo(() => {
+    const safeHeaders = Array.isArray(csvHeaders) ? csvHeaders : [];
+    const styles = {};
+    safeHeaders.forEach(header => {
+      styles[header] = {
+        ...COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER,
+        ...(fieldStyles?.[header] || {}),
+      };
+    });
+    return styles;
+  }, [csvHeaders, fieldStyles]);
+
   const renderableElements = React.useMemo(() => {
     const elements = [
       // Add background element first so it's at the bottom
@@ -342,7 +354,7 @@ const FieldPositioner = ({
       ...(csvHeaders || [])
         .map(header => {
           const position = fieldPositions[header];
-          const style = fieldStyles[header];
+          const style = completeFieldStyles[header]; // Use the guaranteed complete style object
           if (!position || !position.visible) return null;
 
           const record = csvData[currentPreviewIndex] || {};
