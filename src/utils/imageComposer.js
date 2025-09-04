@@ -180,6 +180,19 @@ export const composeImage = async (
  * @param {object} params - The parameters for composition.
  * @returns {Promise<object>} A promise that resolves with the final imageData object.
  */
+const getDimensionsFromAspectRatio = (aspectRatio) => {
+  switch (aspectRatio) {
+    case '16:9':
+      return { width: 1280, height: 720 };
+    case '4:5':
+      return { width: 720, height: 900 };
+    case '1:1':
+      return { width: 720, height: 720 };
+    default:
+      return null;
+  }
+};
+
 export const composeSingleImage = async ({
     record,
     index,
@@ -188,7 +201,8 @@ export const composeSingleImage = async ({
     brandElements,
     fieldPositions,
     fieldStyles,
-    fontScale = 1
+    fontScale = 1,
+    aspectRatio
 }) => {
     if (!itemBackgroundImage) {
         throw new Error(`Background image is missing for record index ${index}.`);
@@ -200,9 +214,24 @@ export const composeSingleImage = async ({
     // 2. Create a new canvas to draw the final image with text
     const finalCanvas = document.createElement('canvas');
     const ctx = finalCanvas.getContext('2d');
-    finalCanvas.width = backgroundCanvas.width;
-    finalCanvas.height = backgroundCanvas.height;
-    ctx.drawImage(backgroundCanvas, 0, 0);
+
+    const dimensions = getDimensionsFromAspectRatio(aspectRatio);
+
+    if (dimensions) {
+        finalCanvas.width = dimensions.width;
+        finalCanvas.height = dimensions.height;
+        const hRatio = finalCanvas.width / backgroundCanvas.width;
+        const vRatio = finalCanvas.height / backgroundCanvas.height;
+        const ratio = Math.max(hRatio, vRatio);
+        const centerShift_x = (finalCanvas.width - backgroundCanvas.width * ratio) / 2;
+        const centerShift_y = (finalCanvas.height - backgroundCanvas.height * ratio) / 2;
+        ctx.drawImage(backgroundCanvas, 0, 0, backgroundCanvas.width, backgroundCanvas.height,
+                      centerShift_x, centerShift_y, backgroundCanvas.width * ratio, backgroundCanvas.height * ratio);
+    } else {
+        finalCanvas.width = backgroundCanvas.width;
+        finalCanvas.height = backgroundCanvas.height;
+        ctx.drawImage(backgroundCanvas, 0, 0);
+    }
 
     // 3. Draw text fields onto the canvas
     for (const field of Object.keys(record)) {

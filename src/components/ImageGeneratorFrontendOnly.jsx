@@ -60,6 +60,7 @@ const ImageGeneratorFrontendOnly = ({
   fontScale = 1,
   standardsColors,
   handleGenerateSingleImage, // Nova prop
+  aspectRatio,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -210,6 +211,7 @@ const ImageGeneratorFrontendOnly = ({
         fieldPositions,
         fieldStyles,
         fontScale,
+        aspectRatio,
       })
       .then(imageData => {
         setProgress(p => p + 1);
@@ -415,6 +417,7 @@ const ImageGeneratorFrontendOnly = ({
         fieldPositions: positionsToUse,
         fieldStyles: stylesToUse,
         fontScale,
+        aspectRatio,
       });
 
       setGeneratedImages(prevImages => {
