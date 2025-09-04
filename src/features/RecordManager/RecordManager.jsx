@@ -72,8 +72,11 @@ const RecordManager = ({
 
     // Inicialização e sincronização com props externas
     useEffect(() => {
+        // Garante que os registros de entrada sejam sempre um array para evitar erros.
+        const safeRegistrosIniciais = Array.isArray(registrosIniciais) ? registrosIniciais : [];
+
         let maxIdCalculado = 0;
-        registrosIniciais.forEach(reg => {
+        safeRegistrosIniciais.forEach(reg => {
             if (reg.id !== undefined && reg.id !== null) {
                 const numIdMatch = String(reg.id).match(/\d+$/);
                 if (numIdMatch) {
@@ -87,7 +90,7 @@ const RecordManager = ({
 
         let idCounterParaLote = maxIdCalculado + 1;
 
-        const dadosProcessados = registrosIniciais.map(reg => {
+        const dadosProcessados = safeRegistrosIniciais.map(reg => {
             const idOriginal = reg.id;
             let idFinal;
             if (idOriginal !== undefined && idOriginal !== null) {
@@ -100,21 +103,21 @@ const RecordManager = ({
         });
 
         setRegistros(dadosProcessados);
-        setProximoId(idCounterParaLote); // Atualiza o proximoId global com base no último ID gerado em lote
+        setProximoId(idCounterParaLote);
 
+        // Garante que as colunas de entrada sejam sempre um array e as processa.
+        const safeColunasIniciais = Array.isArray(colunasIniciais) ? colunasIniciais : [];
         let currentCols;
-        if (colunasIniciais && colunasIniciais.length > 0) {
-            currentCols = [...new Set(colunasIniciais)];
+        if (safeColunasIniciais.length > 0) {
+            currentCols = [...new Set(safeColunasIniciais)];
         } else if (dadosProcessados.length > 0 && dadosProcessados[0]) {
             currentCols = Object.keys(dadosProcessados[0]).filter(k => k !== 'id');
         } else {
             currentCols = [];
         }
         setColunas(currentCols);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [registrosIniciais, colunasIniciais, proximoId]); // proximoId é necessário como dependência porque é lido para inicializar idCounterParaLote.
-                                                      // A lógica de maxIdCalculado e idCounterParaLote garante que os IDs sejam únicos por lote.
+    }, [registrosIniciais, colunasIniciais]); // A dependência de proximoId foi removida para evitar re-execuções desnecessárias.
+                                             // O efeito deve ser executado apenas quando os dados de entrada mudam, não quando o ID interno é atualizado.
 
     // Handlers para abrir modais
     const handleAbrirModalAdicionar = () => {
