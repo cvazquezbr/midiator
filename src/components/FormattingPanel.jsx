@@ -612,28 +612,30 @@ const FormattingPanel = ({
             )}
 
             {/* Background Specific Controls */}
-            {selectedField === '__background__' && currentElement && (
-              <>
-                {/* Filtros do Fundo */}
-                <Accordion expanded={expandedPanel === 'backgroundFilters'} onChange={handleAccordionChange('backgroundFilters')}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1">🖼️ Filtros</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Typography gutterBottom>Brilho: {currentElement.filters.brightness}%</Typography>
-                    <Slider value={currentElement.filters.brightness} onChange={(e, v) => updateBackgroundFilter('brightness', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Contraste: {currentElement.filters.contrast}%</Typography>
-                    <Slider value={currentElement.filters.contrast} onChange={(e, v) => updateBackgroundFilter('contrast', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Saturação: {currentElement.filters.saturate}%</Typography>
-                    <Slider value={currentElement.filters.saturate} onChange={(e, v) => updateBackgroundFilter('saturate', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Desfoque: {currentElement.filters.blur}px</Typography>
-                    <Slider value={currentElement.filters.blur} onChange={(e, v) => updateBackgroundFilter('blur', v)} min={0} max={20} step={1} />
-                    <Typography gutterBottom>Opacidade: {currentElement.filters.opacity}%</Typography>
-                    <Slider value={currentElement.filters.opacity} onChange={(e, v) => updateBackgroundFilter('opacity', v)} min={0} max={100} step={1} />
-                  </AccordionDetails>
-                </Accordion>
+            {selectedField === '__background__' && currentElement && (() => {
+              const filters = currentElement.filters || { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 };
+              return (
+                <>
+                  {/* Filtros do Fundo */}
+                  <Accordion expanded={expandedPanel === 'backgroundFilters'} onChange={handleAccordionChange('backgroundFilters')}>
+                    <AccordionSummary expandIcon={<ExpandMore />}>
+                      <Typography variant="subtitle1">🖼️ Filtros</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Typography gutterBottom>Brilho: {filters.brightness}%</Typography>
+                      <Slider value={filters.brightness} onChange={(e, v) => updateBackgroundFilter('brightness', v)} min={0} max={200} step={1} />
+                      <Typography gutterBottom>Contraste: {filters.contrast}%</Typography>
+                      <Slider value={filters.contrast} onChange={(e, v) => updateBackgroundFilter('contrast', v)} min={0} max={200} step={1} />
+                      <Typography gutterBottom>Saturação: {filters.saturate}%</Typography>
+                      <Slider value={filters.saturate} onChange={(e, v) => updateBackgroundFilter('saturate', v)} min={0} max={200} step={1} />
+                      <Typography gutterBottom>Desfoque: {filters.blur}px</Typography>
+                      <Slider value={filters.blur} onChange={(e, v) => updateBackgroundFilter('blur', v)} min={0} max={20} step={1} />
+                      <Typography gutterBottom>Opacidade: {filters.opacity}%</Typography>
+                      <Slider value={filters.opacity} onChange={(e, v) => updateBackgroundFilter('opacity', v)} min={0} max={100} step={1} />
+                    </AccordionDetails>
+                  </Accordion>
 
-                {/* Sombra do Fundo */}
+                  {/* Sombra do Fundo */}
                 <Accordion expanded={expandedPanel === 'backgroundShadow'} onChange={handleAccordionChange('backgroundShadow')}>
                   <AccordionSummary expandIcon={<ExpandMore />}>
                     <Typography variant="subtitle1">🎨 Sombra</Typography>
@@ -665,8 +667,9 @@ const FormattingPanel = ({
                     {isCropping ? 'Salvar Corte' : 'Cortar Imagem'}
                   </Button>
                 </Box>
-              </>
-            )}
+                </>
+              );
+            })()}
 
             {/* Common Controls for all elements */}
             <Accordion expanded={expandedPanel === 'positionSize'} onChange={handleAccordionChange('positionSize')}>
