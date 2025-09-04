@@ -133,99 +133,101 @@ const getDimensionsFromAspectRatio = (aspectRatio) => {
 
 /**
  * Creates a complete composite image with text and returns full imageData object.
+ * This version uses a single main background image and applies transformations to it.
  * @param {object} params - The parameters for composition.
  * @returns {Promise<object>} A promise that resolves with the final imageData object.
  */
 export const composeSingleImage = async ({
     record,
     index,
-    itemBackgroundImage,
+    backgroundImage, // Main campaign background
     brandElements = [],
     fieldPositions = {},
     fieldStyles = {},
     aspectRatio,
-    backgroundElement = {},
+    backgroundElement, // Transformation object for the background
 }) => {
-    if (!itemBackgroundImage) {
-        throw new Error(`Background image is missing for record index ${index}.`);
-    }
 
-    // 1. Create final canvas
+    // 1. Create final canvas with fixed dimensions based on aspect ratio.
     const finalCanvas = document.createElement('canvas');
     const ctx = finalCanvas.getContext('2d');
     const dimensions = getDimensionsFromAspectRatio(aspectRatio);
 
-    // If dimensions are fixed, use them. Otherwise, we must load the image to find its size.
-    if (dimensions) {
+    if (!dimensions) {
+        finalCanvas.width = 1080;
+        finalCanvas.height = 1080;
+        console.warn(`[imageComposer] Aspect ratio not provided or invalid. Falling back to 1080x1080.`);
+    } else {
         finalCanvas.width = dimensions.width;
         finalCanvas.height = dimensions.height;
-    } else {
-        const bgImg = await loadImage(itemBackgroundImage);
-        finalCanvas.width = bgImg.width;
-        finalCanvas.height = bgImg.height;
     }
 
-    // 2. Draw background image with all transformations
-    ctx.save();
-    const bgImg = await loadImage(itemBackgroundImage);
-    const canvasWidth = finalCanvas.width;
-    const canvasHeight = finalCanvas.height;
+    // Default white background in case no image is provided.
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
-    // Destructure all properties from backgroundElement, providing defaults.
-    const {
-      x = 0, y = 0, width = 100, height = 100, // Position and size in %
-      rotation = 0,
-      filters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
-      crop,
-      shadow, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY
-    } = backgroundElement;
+    // 2. Draw the single background image if it exists, applying all transformations.
+    if (backgroundImage && backgroundElement) {
+        try {
+            const bgImg = await loadImage(backgroundImage);
+            ctx.save();
+            const canvasWidth = finalCanvas.width;
+            const canvasHeight = finalCanvas.height;
 
-    // Apply shadow first, so it's under the rotated image
-    if (shadow) {
-      ctx.shadowColor = shadowColor || '#000000';
-      ctx.shadowBlur = shadowBlur || 10;
-      ctx.shadowOffsetX = shadowOffsetX || 5;
-      ctx.shadowOffsetY = shadowOffsetY || 5;
+            const {
+              x = 0, y = 0, width = 100, height = 100,
+              rotation = 0,
+              filters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
+              crop,
+              shadow, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY
+            } = backgroundElement;
+
+            if (shadow) {
+              ctx.shadowColor = shadowColor || '#000000';
+              ctx.shadowBlur = shadowBlur || 10;
+              ctx.shadowOffsetX = shadowOffsetX || 5;
+              ctx.shadowOffsetY = shadowOffsetY || 5;
+            }
+
+            const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters || {};
+            ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
+
+            const dx = (x / 100) * canvasWidth;
+            const dy = (y / 100) * canvasHeight;
+            const dWidth = (width / 100) * canvasWidth;
+            const dHeight = (height / 100) * canvasHeight;
+
+            if (rotation) {
+              const centerX = dx + dWidth / 2;
+              const centerY = dy + dHeight / 2;
+              ctx.translate(centerX, centerY);
+              ctx.rotate(rotation * Math.PI / 180);
+              ctx.translate(-centerX, -centerY);
+            }
+
+            if (crop && crop.width > 0 && crop.height > 0) {
+              const sx = (crop.x / 100) * bgImg.width;
+              const sy = (crop.y / 100) * bgImg.height;
+              const sWidth = (crop.width / 100) * bgImg.width;
+              const sHeight = (crop.height / 100) * bgImg.height;
+              ctx.drawImage(bgImg, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+            } else {
+              ctx.drawImage(bgImg, dx, dy, dWidth, dHeight);
+            }
+
+            ctx.restore();
+        } catch (error) {
+            console.error('[imageComposer] Failed to draw background image:', error);
+            ctx.fillStyle = 'red';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Erro ao carregar o fundo', finalCanvas.width / 2, finalCanvas.height / 2);
+        }
     }
-
-    // Apply filters
-    const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters || {};
-    ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
-
-    // Calculate destination dimensions in pixels
-    const dx = (x / 100) * canvasWidth;
-    const dy = (y / 100) * canvasHeight;
-    const dWidth = (width / 100) * canvasWidth;
-    const dHeight = (height / 100) * canvasHeight;
-
-    // Apply rotation around the center of the destination rectangle
-    if (rotation) {
-      const centerX = dx + dWidth / 2;
-      const centerY = dy + dHeight / 2;
-      ctx.translate(centerX, centerY);
-      ctx.rotate(rotation * Math.PI / 180);
-      ctx.translate(-centerX, -centerY);
-    }
-
-    // Draw the image
-    if (crop && crop.width > 0 && crop.height > 0) {
-      // Use crop rectangle as source
-      const sx = (crop.x / 100) * bgImg.width;
-      const sy = (crop.y / 100) * bgImg.height;
-      const sWidth = (crop.width / 100) * bgImg.width;
-      const sHeight = (crop.height / 100) * bgImg.height;
-      ctx.drawImage(bgImg, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
-    } else {
-      // Use full image as source
-      ctx.drawImage(bgImg, dx, dy, dWidth, dHeight);
-    }
-
-    ctx.restore();
 
     // 3. Collect and sort all elements (text and brand) by zIndex
     const elementsToDraw = [];
 
-    // Add text fields
     Object.keys(record).forEach(field => {
         const position = fieldPositions[field];
         const style = fieldStyles[field];
@@ -241,9 +243,8 @@ export const composeSingleImage = async ({
         }
     });
 
-    // Add brand elements
     (brandElements || []).forEach(element => {
-        if (element.url) {
+        if (element.url && element.visible !== false) {
             elementsToDraw.push({
                 type: 'brand',
                 ...element,
@@ -252,7 +253,6 @@ export const composeSingleImage = async ({
         }
     });
 
-    // Sort elements by zIndex
     elementsToDraw.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
 
     // 4. Draw sorted elements
@@ -385,6 +385,6 @@ export const composeSingleImage = async ({
         record,
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        backgroundImage: itemBackgroundImage,
+        backgroundImage: backgroundImage, // Return the main background image
     };
 };
