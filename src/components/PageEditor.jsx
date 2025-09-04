@@ -62,7 +62,7 @@ const PageEditor = ({
   brandElements,
   standardsColors
 }) => {
-  console.log('[PageEditor] props:', { pageData, globalBackgroundImage, imageFilters, fieldStyles });
+  console.log('[PageEditor] props:', { pageData, globalBackgroundImage, imageFilters });
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
   const [editedBrandElements, setEditedBrandElements] = useState([]);
