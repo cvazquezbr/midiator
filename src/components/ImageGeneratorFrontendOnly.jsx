@@ -222,6 +222,7 @@ const ImageGeneratorFrontendOnly = ({
         // Persist the styles used for generation with the image data
         return {
           ...imageData,
+        backgroundImage: itemBackgroundImage,
           customFieldStyles: fieldStyles,
           customFieldPositions: fieldPositions,
         };
@@ -365,12 +366,13 @@ const ImageGeneratorFrontendOnly = ({
       return {
         ...img, // Keep blob, url, etc.
         record: modifiedImageData.record,
-        backgroundImage: img.backgroundImage, // Keep the original background!
+        backgroundImage: modifiedImageData.backgroundImage, // Use the background from the editor
         // Apply modifications from the editor
         customFieldPositions: modifiedImageData.fieldPositions,
         customFieldStyles: modifiedImageData.fieldStyles,
         customBrandElements: modifiedImageData.brandElements,
         fontScale: modifiedImageData.fontScale,
+        customImageFilters: modifiedImageData.imageFilters, // Persist filters
       };
     });
 
@@ -471,11 +473,11 @@ const ImageGeneratorFrontendOnly = ({
           const img = new Image();
           img.onload = () => {
             const newSize = { width: img.width, height: img.height };
-            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, newSize, imageToUpdate.customBrandElements || brandElements, fontScale);
+            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, newSize, imageToUpdate.customBrandElements || brandElements, fontScale, imageToUpdate.customImageFilters || backgroundElement.filters);
           };
           img.onerror = () => {
             console.error('Failed to load the new background image to get its dimensions.');
-            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, null, imageToUpdate.customBrandElements || brandElements, fontScale);
+            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, null, imageToUpdate.customBrandElements || brandElements, fontScale, imageToUpdate.customImageFilters || backgroundElement.filters);
           };
           img.src = newBgUrl;
         }
