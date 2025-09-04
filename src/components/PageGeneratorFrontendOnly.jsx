@@ -61,6 +61,7 @@ const PageGeneratorFrontendOnly = ({
   standardsColors,
   handleGenerateSinglePage, // Nova prop
   backgroundElement,
+  aspectRatio,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -148,6 +149,7 @@ const PageGeneratorFrontendOnly = ({
             fieldPositions: positionsToUse,
             fieldStyles: stylesToUse,
             fontScale: pageData.fontScale || 1, // Use custom font scale if available
+            aspectRatio,
           }).catch(error => {
             console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${pageData.index}:`, error);
             return pageData; // On error, return the original data to not lose it
@@ -216,6 +218,7 @@ const PageGeneratorFrontendOnly = ({
         fieldStyles,
         fontScale,
         backgroundElement,
+        aspectRatio,
       })
       .then(pageData => {
         setProgress(p => p + 1);
@@ -421,6 +424,7 @@ const PageGeneratorFrontendOnly = ({
         fieldPositions: positionsToUse,
         fieldStyles: stylesToUse,
         fontScale,
+        aspectRatio,
       });
 
       setGeneratedPages(prevPages => {
