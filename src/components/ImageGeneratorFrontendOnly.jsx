@@ -54,13 +54,13 @@ const ImageGeneratorFrontendOnly = ({
   initialGeneratedImagesData,
   onThumbnailRecordTextUpdate,
   originalImageSize,
-  imageFilters,
   brandElements,
   onBrandElementsChange,
   fontScale = 1,
   standardsColors,
   handleGenerateSingleImage, // Nova prop
   aspectRatio,
+  backgroundElement,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -139,11 +139,15 @@ const ImageGeneratorFrontendOnly = ({
             record: imgData.record,
             index: imgData.index,
             itemBackgroundImage: imgData.backgroundImage,
-            imageFilters: imgData.customImageFilters || imageFilters, // Use custom filters if available
             brandElements: elementsToUse,
             fieldPositions: positionsToUse,
             fieldStyles: stylesToUse,
             fontScale: imgData.fontScale || 1, // Use custom font scale if available
+            aspectRatio,
+            backgroundElement: {
+              ...backgroundElement,
+              filters: imgData.customImageFilters || backgroundElement.filters,
+            },
           }).catch(error => {
             console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${imgData.index}:`, error);
             return imgData; // On error, return the original data to not lose it
@@ -170,7 +174,7 @@ const ImageGeneratorFrontendOnly = ({
 
       regenerateMissingThumbnails();
     }
-  }, [initialGeneratedImagesData, fontsLoaded, fieldPositions, fieldStyles, imageFilters, brandElements]);
+  }, [initialGeneratedImagesData, fontsLoaded, fieldPositions, fieldStyles, brandElements, aspectRatio, backgroundElement]);
 
 
   const generateImages = async () => {
@@ -206,7 +210,6 @@ const ImageGeneratorFrontendOnly = ({
         record,
         index: i,
         itemBackgroundImage,
-        imageFilters,
         brandElements,
         fieldPositions,
         fieldStyles,
@@ -280,7 +283,7 @@ const ImageGeneratorFrontendOnly = ({
         originalImageSize,
         brandElements,
         fontScale,
-        imageFilters
+        backgroundElement.filters
       );
     } else {
       alert("Não foi possível resetar a imagem. A imagem de fundo principal não está disponível.");
@@ -397,13 +400,13 @@ const ImageGeneratorFrontendOnly = ({
         sizeToUse,
         elementsToUse,
         modifiedImageData.fontScale || 1,
-        modifiedImageData.imageFilters || imageFilters
+        modifiedImageData.imageFilters || backgroundElement.filters
       );
     }
     handleCloseGeneratedImageEditor();
   };
 
-  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1, customImageFilters = imageFilters) => {
+  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1, customImageFilters = backgroundElement.filters) => {
     if (!currentBackgroundImage || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
       alert('Pré-requisitos para regeneração não atendidos. Fontes, dados ou configurações faltando.');
       return;
@@ -413,12 +416,15 @@ const ImageGeneratorFrontendOnly = ({
         record,
         index,
         itemBackgroundImage: currentBackgroundImage,
-        imageFilters: customImageFilters,
         brandElements: elementsToUse,
         fieldPositions: positionsToUse,
         fieldStyles: stylesToUse,
         fontScale,
         aspectRatio,
+        backgroundElement: {
+          ...backgroundElement,
+          filters: customImageFilters,
+        },
       });
 
       setGeneratedImages(prevImages => {

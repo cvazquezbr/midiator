@@ -60,7 +60,6 @@ const FormattingPanel = ({
   fieldPositions,
   setFieldPositions,
   csvHeaders,
-  imageFilters,
   brandElements,
   setBrandElements,
   backgroundElement,
@@ -669,36 +668,6 @@ const FormattingPanel = ({
                   <Grid item xs={12}><Button variant="outlined" size="small" onClick={() => resetFieldStyle(selectedField)} color="secondary" fullWidth>Resetar Estilo</Button></Grid>
                 </Grid>
               </>
-            ) : (
-              <Accordion sx={{ mt: 2 }} expanded={expandedPanel === 'elementFilters'} onChange={handleAccordionChange('elementFilters')}>
-                <AccordionSummary expandIcon={<ExpandMore />}>
-                  <Typography variant="subtitle1">🖼️ Filtros do Elemento</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Box sx={{ p: 1 }}>
-                    <Typography gutterBottom>Brilho: {currentElement.filters.brightness}%</Typography>
-                    <Slider value={currentElement.filters.brightness} onChange={(e, v) => updateBrandElementFilter(selectedField, 'brightness', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Contraste: {currentElement.filters.contrast}%</Typography>
-                    <Slider value={currentElement.filters.contrast} onChange={(e, v) => updateBrandElementFilter(selectedField, 'contrast', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Saturação: {currentElement.filters.saturate}%</Typography>
-                    <Slider value={currentElement.filters.saturate} onChange={(e, v) => updateBrandElementFilter(selectedField, 'saturate', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Desfoque: {currentElement.filters.blur}px</Typography>
-                    <Slider value={currentElement.filters.blur} onChange={(e, v) => updateBrandElementFilter(selectedField, 'blur', v)} min={0} max={20} step={1} />
-                    <Typography gutterBottom>Opacidade: {currentElement.filters.opacity}%</Typography>
-                    <Slider value={currentElement.filters.opacity} onChange={(e, v) => updateBrandElementFilter(selectedField, 'opacity', v)} min={0} max={100} step={1} />
-                  </Box>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="small"
-                    onClick={() => handleDeleteBrandElement(selectedField)}
-                    sx={{ mt: 2 }}
-                    fullWidth
-                  >
-                    Excluir Elemento
-                  </Button>
-                </AccordionDetails>
-              </Accordion>
             ) : (
               <Box>
                 {/* Posicionamento e Tamanho para Fundo/Elementos */}

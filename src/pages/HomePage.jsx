@@ -139,7 +139,6 @@ function HomePage() {
   const [generatedVideosData, setGeneratedVideosData] = useState([]);
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [selectedField, setSelectedField] = useState(null);
-  const [imageFilters, setImageFilters] = useState({ brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 });
   const [brandElements, setBrandElements] = useState([]);
   const [backgroundElement, setBackgroundElement] = useState(null);
   const [showSetupModal, setShowSetupModal] = useState(false);
@@ -276,7 +275,6 @@ function HomePage() {
 
     setDisplayedImageSize(state.displayedImageSize ?? { width: 0, height: 0 });
     setOriginalImageSize(state.originalImageSize ?? { width: 0, height: 0 });
-    setImageFilters(state.imageFilters ?? { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 });
   };
 
   const handleSaveCampaign = async (name) => {
@@ -308,7 +306,6 @@ function HomePage() {
       fieldPositions,
       fieldStyles,
       templateFieldStyles,
-      imageFilters,
       brandElements,
       backgroundElement,
       backgroundImage,
@@ -1092,8 +1089,6 @@ function HomePage() {
                     standardsColors={standardsColors}
                     onCsvDataUpdate={handleCsvRecordContentUpdate}
                     originalImageSize={originalImageSize}
-                    imageFilters={backgroundElement?.filters}
-                    setImageFilters={(newFilters) => setBackgroundElement(b => ({ ...b, filters: newFilters }))}
                     brandElements={brandElements}
                     setBrandElements={setBrandElements}
                     backgroundElement={backgroundElement}
