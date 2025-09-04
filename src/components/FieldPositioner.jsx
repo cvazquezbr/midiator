@@ -72,6 +72,10 @@ const FieldPositioner = ({
   currentPreviewIndex,
   setCurrentPreviewIndex,
   onFontScaleChange,
+  backgroundElement,
+  setBackgroundElement,
+  cropMode,
+  setCropMode,
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
@@ -219,7 +223,9 @@ const FieldPositioner = ({
   }, [csvHeaders, fieldPositions, fieldStyles, setFieldPositions, setFieldStyles]);
 
   const handlePositionChange = (id, newPosition) => {
-    if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
+    if (id === '__cropbox__') {
+      setBackgroundElement(prev => ({ ...prev, crop: { ...prev.crop, ...newPosition } }));
+    } else if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
         ...prev,
         [id]: {
@@ -235,7 +241,9 @@ const FieldPositioner = ({
   };
 
   const handleSizeChange = (id, newSize) => {
-    if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
+    if (id === '__cropbox__') {
+      setBackgroundElement(prev => ({ ...prev, crop: { ...prev.crop, ...newSize } }));
+    } else if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
         ...prev,
         [id]: {
@@ -357,6 +365,29 @@ const FieldPositioner = ({
 
   const renderableElements = React.useMemo(() => {
     const elements = [
+      // Add background element first so it's at the bottom
+      ...(backgroundElement ? [{
+        id: '__background__',
+        type: 'background',
+        position: backgroundElement,
+        style: backgroundElement.filters,
+        content: backgroundImage,
+        zIndex: -1, // Ensure it's always at the back
+        rotation: backgroundElement.rotation,
+        fontScale: 1,
+        enableHtmlRendering: false,
+      }] : []),
+      ...(cropMode && backgroundElement ? [{
+        id: '__cropbox__',
+        type: 'cropbox',
+        position: backgroundElement.crop || { x: 10, y: 10, width: 80, height: 80 },
+        style: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+        content: '',
+        zIndex: 1000,
+        rotation: 0,
+        fontScale: 1,
+        enableHtmlRendering: false,
+      }] : []),
       ...(csvHeaders || [])
         .map(header => {
           const position = fieldPositions[header];
@@ -399,7 +430,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => a.zIndex - b.zIndex);
     return elements;
-  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
+  }, [backgroundElement, backgroundImage, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
   if (!backgroundImage) {
     return (
@@ -487,20 +518,6 @@ const FieldPositioner = ({
                 </Box>
               ) : (
                 <>
-                  <img
-                    src={backgroundImage}
-                    alt="Background"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      display: 'block',
-                      objectFit: 'fill',
-                      pointerEvents: 'none',
-                      userSelect: 'none',
-                      WebkitUserDrag: 'none',
-                    }}
-                    draggable={false}
-                  />
                   <Box
                     className="elements-wrapper"
                     sx={{
@@ -512,12 +529,12 @@ const FieldPositioner = ({
                     }}
                     onClick={(e) => {
                       if (e.target === e.currentTarget) {
-                        handleFieldSelectInternal(null);
+                        handleFieldSelectInternal('__background__');
                       }
                     }}
                     onTouchStart={(e) => {
                       if (e.target === e.currentTarget) {
-                        handleFieldSelectInternal(null);
+                        handleFieldSelectInternal('__background__');
                       }
                     }}
                   >

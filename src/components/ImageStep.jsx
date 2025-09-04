@@ -44,6 +44,8 @@ const ImageStep = ({
   setImageFilters,
   brandElements,
   setBrandElements,
+  backgroundElement,
+  setBackgroundElement,
   onZIndexChange,
   isMobile,
   selectedField,
@@ -58,6 +60,7 @@ const ImageStep = ({
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [fontScale, setFontScale] = useState(1);
+  const [cropMode, setCropMode] = useState(false);
 
   if (!backgroundImage) {
     return (
@@ -170,11 +173,15 @@ const ImageStep = ({
             setImageFilters={setImageFilters}
             brandElements={brandElements}
             setBrandElements={setBrandElements}
+            backgroundElement={backgroundElement}
+            setBackgroundElement={setBackgroundElement}
             onZIndexChange={onZIndexChange}
             onOpenHtmlEditor={onOpenHtmlEditor}
             currentPreviewIndex={currentPreviewIndex}
             setCurrentPreviewIndex={setCurrentPreviewIndex}
             onFontScaleChange={setFontScale}
+            cropMode={cropMode}
+            setCropMode={setCropMode}
           />
         </Grid>
         {!isMobile ? (
@@ -191,6 +198,8 @@ const ImageStep = ({
               setImageFilters={setImageFilters}
               brandElements={brandElements}
               setBrandElements={setBrandElements}
+              backgroundElement={backgroundElement}
+              setBackgroundElement={setBackgroundElement}
               onZIndexChange={onZIndexChange}
               onDeselectField={onDeselectField}
               onOpenHtmlEditor={onOpenHtmlEditor}
@@ -198,6 +207,8 @@ const ImageStep = ({
               fontScale={fontScale}
               templateFieldStyles={templateFieldStyles}
               activeStep={activeStep}
+              cropMode={cropMode}
+              setCropMode={setCropMode}
             />
           </Grid>
         ) : (
@@ -217,6 +228,8 @@ const ImageStep = ({
               setImageFilters={setImageFilters}
               brandElements={brandElements}
               setBrandElements={setBrandElements}
+              backgroundElement={backgroundElement}
+              setBackgroundElement={setBackgroundElement}
               onZIndexChange={onZIndexChange}
               onDeselectField={onDeselectField}
               onOpenHtmlEditor={onOpenHtmlEditor}
@@ -224,6 +237,8 @@ const ImageStep = ({
               fontScale={fontScale}
               templateFieldStyles={templateFieldStyles}
               activeStep={activeStep}
+              cropMode={cropMode}
+              setCropMode={setCropMode}
             />
           </>
         )}

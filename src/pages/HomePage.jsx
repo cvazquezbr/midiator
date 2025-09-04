@@ -139,8 +139,8 @@ function HomePage() {
   const [generatedVideosData, setGeneratedVideosData] = useState([]);
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [selectedField, setSelectedField] = useState(null);
-  const [imageFilters, setImageFilters] = useState({ brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 });
   const [brandElements, setBrandElements] = useState([]);
+  const [backgroundElement, setBackgroundElement] = useState(null);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
@@ -222,6 +222,7 @@ function HomePage() {
     );
     setGeneratedVideosData(Array.isArray(state.generatedVideosData) ? state.generatedVideosData : []);
     setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
+    setBackgroundElement(state.backgroundElement ?? null);
 
     if (state.backgroundImage) {
       updateImageAndPalette(state.backgroundImage);
@@ -274,7 +275,6 @@ function HomePage() {
 
     setDisplayedImageSize(state.displayedImageSize ?? { width: 0, height: 0 });
     setOriginalImageSize(state.originalImageSize ?? { width: 0, height: 0 });
-    setImageFilters(state.imageFilters ?? { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 });
   };
 
   const handleSaveCampaign = async (name) => {
@@ -306,8 +306,8 @@ function HomePage() {
       fieldPositions,
       fieldStyles,
       templateFieldStyles,
-      imageFilters,
       brandElements,
+      backgroundElement,
       backgroundImage,
       generatedImageUrl,
       generatedImagesData,
@@ -570,6 +570,17 @@ function HomePage() {
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
       setOriginalImageSize({ width: img.width, height: img.height });
+      setBackgroundElement({
+        id: '__background__',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        rotation: 0,
+        visible: true,
+        filters: { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
+        crop: null, // Initial crop is null, meaning no crop
+      });
       try {
         const colorThief = new ColorThief();
         const palette = colorThief.getPalette(img, 5);
@@ -583,6 +594,7 @@ function HomePage() {
       console.error("Error loading image to extract colors:", err);
       setBackgroundImage(null);
       setColorPalette([]);
+      setBackgroundElement(null);
     };
     img.src = imageUrl;
   }, []);
@@ -946,6 +958,8 @@ function HomePage() {
         brandElements,
         fieldPositions,
         fieldStyles,
+        aspectRatio,
+        backgroundElement,
       });
 
       finalImageData.backgroundImage = stableDataUrl;
@@ -1075,10 +1089,10 @@ function HomePage() {
                     standardsColors={standardsColors}
                     onCsvDataUpdate={handleCsvRecordContentUpdate}
                     originalImageSize={originalImageSize}
-                    imageFilters={imageFilters}
-                    setImageFilters={setImageFilters}
                     brandElements={brandElements}
                     setBrandElements={setBrandElements}
+                    backgroundElement={backgroundElement}
+                    setBackgroundElement={setBackgroundElement}
                     onZIndexChange={handleZIndexChange}
                     isMobile={isMobile}
                     selectedField={selectedField}
@@ -1094,7 +1108,7 @@ function HomePage() {
                     activeStep={activeStep}
                   />
                 </div>
-                <div hidden={activeStep !== 4}><ImageGeneratorFrontendOnly csvData={csvData} backgroundImage={backgroundImage} fieldPositions={fieldPositions} fieldStyles={fieldStyles} displayedImageSize={displayedImageSize} csvHeaders={csvHeaders} colorPalette={colorPalette} standardsColors={standardsColors} setGeneratedImagesData={setGeneratedImagesData} initialGeneratedImagesData={generatedImagesData} onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} originalImageSize={originalImageSize} imageFilters={imageFilters} brandElements={brandElements} onBrandElementsChange={setBrandElements} fontScale={fontScale} handleGenerateSingleImage={handleGenerateSingleImage} /></div>
+                <div hidden={activeStep !== 4}><ImageGeneratorFrontendOnly csvData={csvData} backgroundImage={backgroundImage} fieldPositions={fieldPositions} fieldStyles={fieldStyles} displayedImageSize={displayedImageSize} csvHeaders={csvHeaders} colorPalette={colorPalette} standardsColors={standardsColors} setGeneratedImagesData={setGeneratedImagesData} initialGeneratedImagesData={generatedImagesData} onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} originalImageSize={originalImageSize} imageFilters={imageFilters} brandElements={brandElements} onBrandElementsChange={setBrandElements} fontScale={fontScale} handleGenerateSingleImage={handleGenerateSingleImage} aspectRatio={aspectRatio} /></div>
                 <div hidden={activeStep !== 5}><AudioGenerator csvData={csvData} fieldPositions={fieldPositions} onAudiosGenerated={setGeneratedAudioData} initialAudioData={generatedAudioData} /></div>
                 <div hidden={activeStep !== 6}><VideoGenerator2 generatedImages={generatedImagesData} generatedAudioData={generatedAudioData} onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)} /></div>
                 <div hidden={activeStep !== 7}><Publisher settings={settings} campaignContent={campaignContent} generatedImagesData={generatedImagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedProfile={selectedProfile} setSelectedProfile={setSelectedProfile} selectedImages={selectedImages} setSelectedImages={setSelectedImages} selectedVideos={selectedVideos} setSelectedVideos={setSelectedVideos} currentCampaign={currentCampaign} /></div>
