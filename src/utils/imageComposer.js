@@ -146,6 +146,7 @@ export const composeSingleImage = async ({
     fieldStyles = {},
     aspectRatio,
     backgroundElement, // Transformation object for the background
+    fontScale = 1,
 }) => {
 
     // 1. Create final canvas with fixed dimensions based on aspect ratio.
@@ -282,18 +283,18 @@ export const composeSingleImage = async ({
 
             const finalStyle = {
                 ...style,
-                fontSize: (style.fontSize || 24),
-                strokeWidth: (style.strokeWidth || 2),
-                shadowBlur: (style.shadowBlur || 4),
-                shadowOffsetX: (style.shadowOffsetX || 2),
-                shadowOffsetY: (style.shadowOffsetY || 2),
+                fontSize: (style.fontSize || 24) * fontScale,
+                strokeWidth: (style.strokeWidth || 2) * fontScale,
+                shadowBlur: (style.shadowBlur || 4) * fontScale,
+                shadowOffsetX: (style.shadowOffsetX || 2) * fontScale,
+                shadowOffsetY: (style.shadowOffsetY || 2) * fontScale,
             };
 
             const padding = (style.padding || 0);
             const borderRadius = (style.borderRadius || 0);
             const borderWidth = (style.borderWidth || 0);
 
-            const backgroundOpacity = style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1;
+            const backgroundOpacity = style.backgroundOpacity !== undefined ? style.backgroundOpacity / 100 : 1;
             const backgroundColorHex = style.backgroundColor || '#000000';
             if (backgroundOpacity > 0) {
                 ctx.fillStyle = hexToRgba(backgroundColorHex, backgroundOpacity);
