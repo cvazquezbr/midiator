@@ -69,6 +69,11 @@ import { autoArrangeFields } from '../utils/autoArrange.js';
 
 import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
 
+const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
+  const hex = x.toString(16);
+  return hex.length === 1 ? '0' + hex : hex;
+}).join('');
+
 function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
@@ -604,7 +609,7 @@ function HomePage() {
       try {
         const colorThief = new ColorThief();
         const palette = colorThief.getPalette(img, 5);
-        setColorPalette(palette.map(rgb => `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`));
+        setColorPalette(palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])));
       } catch (error) {
         console.error("Error extracting color palette:", error);
         setColorPalette([]);

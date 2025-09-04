@@ -52,6 +52,25 @@ import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 import { BrandingWatermark, Edit } from '@mui/icons-material';
 import BrandElementManager from './BrandElementManager';
 
+// Helper function to convert an RGB color string to a hex string.
+const rgbStringToHex = (colorString) => {
+  if (!colorString || !colorString.startsWith('rgb')) {
+    return colorString; // Return as is if not a valid rgb string.
+  }
+  const rgb = colorString.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+  if (!rgb) return colorString; // Return original if parsing fails
+
+  const r = parseInt(rgb[1], 10);
+  const g = parseInt(rgb[2], 10);
+  const b = parseInt(rgb[3], 10);
+
+  return '#' + [r, g, b].map(x => {
+    const hex = x.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('');
+};
+
+
 const FormattingPanel = ({
   selectedField,
   fieldStyles,
@@ -312,7 +331,7 @@ const FormattingPanel = ({
                         <TextField
                           label="Cor"
                           type="color"
-                          value={currentElement.style.color || '#000000'}
+                          value={rgbStringToHex(currentElement.style.color || '#000000')}
                           onChange={(e) => updateFieldStyle(selectedField, 'color', e.target.value)}
                           fullWidth
                           size="small"
@@ -476,7 +495,7 @@ const FormattingPanel = ({
                         <FormControlLabel control={<Switch checked={currentElement.style.textStroke || false} onChange={(e) => updateFieldStyle(selectedField, 'textStroke', e.target.checked)} size="small" />} label="Contorno" />
                         {currentElement.style.textStroke && (
                           <Grid container spacing={2} sx={{ mt: 1 }}>
-                            <Grid item xs={6}><TextField label="Cor do Contorno" type="color" value={currentElement.style.strokeColor || '#ffffff'} onChange={(e) => updateFieldStyle(selectedField, 'strokeColor', e.target.value)} fullWidth size="small" /></Grid>
+                            <Grid item xs={6}><TextField label="Cor do Contorno" type="color" value={rgbStringToHex(currentElement.style.strokeColor || '#ffffff')} onChange={(e) => updateFieldStyle(selectedField, 'strokeColor', e.target.value)} fullWidth size="small" /></Grid>
                             <Grid item xs={6}><Typography gutterBottom>Espessura: {currentElement.style.strokeWidth || 2}px</Typography><Slider value={currentElement.style.strokeWidth || 2} onChange={(e, value) => updateFieldStyle(selectedField, 'strokeWidth', value)} min={1} max={10} size="small" /></Grid>
                           </Grid>
                         )}
@@ -485,7 +504,7 @@ const FormattingPanel = ({
                         <FormControlLabel control={<Switch checked={currentElement.style.textShadow || false} onChange={(e) => updateFieldStyle(selectedField, 'textShadow', e.target.checked)} size="small" />} label="Sombra" />
                         {currentElement.style.textShadow && (
                           <Grid container spacing={2} sx={{ mt: 1 }}>
-                            <Grid item xs={6}><TextField label="Cor da Sombra" type="color" value={currentElement.style.shadowColor || '#000000'} onChange={(e) => updateFieldStyle(selectedField, 'shadowColor', e.target.value)} fullWidth size="small" /></Grid>
+                            <Grid item xs={6}><TextField label="Cor da Sombra" type="color" value={rgbStringToHex(currentElement.style.shadowColor || '#000000')} onChange={(e) => updateFieldStyle(selectedField, 'shadowColor', e.target.value)} fullWidth size="small" /></Grid>
                             <Grid item xs={6}><Typography gutterBottom>Desfoque: {currentElement.style.shadowBlur || 4}px</Typography><Slider value={currentElement.style.shadowBlur || 4} onChange={(e, value) => updateFieldStyle(selectedField, 'shadowBlur', value)} min={0} max={20} size="small" /></Grid>
                             <Grid item xs={6}><Typography gutterBottom>Offset X: {currentElement.style.shadowOffsetX || 2}px</Typography><Slider value={currentElement.style.shadowOffsetX || 2} onChange={(e, value) => updateFieldStyle(selectedField, 'shadowOffsetX', value)} min={-20} max={20} size="small" /></Grid>
                             <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.style.shadowOffsetY || 2}px</Typography><Slider value={currentElement.style.shadowOffsetY || 2} onChange={(e, value) => updateFieldStyle(selectedField, 'shadowOffsetY', value)} min={-20} max={20} size="small" /></Grid>
@@ -510,7 +529,7 @@ const FormattingPanel = ({
                         <TextField
                           label="Cor de Fundo"
                           type="color"
-                          value={currentElement.style.backgroundColor || '#000000'}
+                          value={rgbStringToHex(currentElement.style.backgroundColor || '#000000')}
                           onChange={(e) => updateFieldStyle(selectedField, 'backgroundColor', e.target.value)}
                           fullWidth
                           size="small"
@@ -533,7 +552,7 @@ const FormattingPanel = ({
                         <TextField
                           label="Cor da Borda"
                           type="color"
-                          value={currentElement.style.borderColor || '#000000'}
+                          value={rgbStringToHex(currentElement.style.borderColor || '#000000')}
                           onChange={(e) => updateFieldStyle(selectedField, 'borderColor', e.target.value)}
                           fullWidth
                           size="small"
@@ -626,7 +645,7 @@ const FormattingPanel = ({
                     />
                     {currentElement.shadow && (
                       <Grid container spacing={2} sx={{ mt: 1 }}>
-                        <Grid item xs={6}><TextField label="Cor" type="color" value={currentElement.shadowColor || '#000000'} onChange={(e) => updateBackgroundElement('shadowColor', e.target.value)} fullWidth size="small" /></Grid>
+                        <Grid item xs={6}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.shadowColor || '#000000')} onChange={(e) => updateBackgroundElement('shadowColor', e.target.value)} fullWidth size="small" /></Grid>
                         <Grid item xs={6}><Typography gutterBottom>Desfoque: {currentElement.shadowBlur || 4}px</Typography><Slider value={currentElement.shadowBlur || 4} onChange={(e, v) => updateBackgroundElement('shadowBlur', v)} min={0} max={50} size="small" /></Grid>
                         <Grid item xs={6}><Typography gutterBottom>Offset X: {currentElement.shadowOffsetX || 2}px</Typography><Slider value={currentElement.shadowOffsetX || 2} onChange={(e, v) => updateBackgroundElement('shadowOffsetX', v)} min={-50} max={50} size="small" /></Grid>
                         <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.shadowOffsetY || 2}px</Typography><Slider value={currentElement.shadowOffsetY || 2} onChange={(e, v) => updateBackgroundElement('shadowOffsetY', v)} min={-50} max={50} size="small" /></Grid>
