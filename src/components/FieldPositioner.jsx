@@ -62,7 +62,8 @@ const FieldPositioner = ({
   onImageDisplayedSizeChange,
   colorPalette,
   standardsColors,
-  onSelectFieldExternal,
+  selectedField, // Use prop from parent
+  setSelectedField, // Use prop from parent
   onCsvDataUpdate, // New prop to notify App.jsx of changes
   originalImageSize,
   darkMode,
@@ -78,7 +79,7 @@ const FieldPositioner = ({
   setIsCropping,
 }) => {
   console.log('[FieldPositioner] props:', { backgroundImage, backgroundElement, fieldStyles });
-  const [selectedField, setSelectedField] = useState(null);
+  // const [selectedField, setSelectedField] = useState(null); // REMOVED: Use parent state
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
@@ -116,12 +117,13 @@ const FieldPositioner = ({
   // The backgroundImage prop is now assumed to be the final, composed background for the editor preview.
   // No further composition is needed here.
 
-  const handleFieldSelectInternal = useCallback((fieldToSelect) => {
-    setSelectedField(fieldToSelect);
-    if (onSelectFieldExternal) {
-      onSelectFieldExternal(fieldToSelect);
-    }
-  }, [onSelectFieldExternal]);
+  // REMOVED: No longer needed as we use the parent's state setter directly
+  // const handleFieldSelectInternal = useCallback((fieldToSelect) => {
+  //   setSelectedField(fieldToSelect);
+  //   if (onSelectFieldExternal) {
+  //     onSelectFieldExternal(fieldToSelect);
+  //   }
+  // }, [onSelectFieldExternal]);
 
   const handleContentChange = useCallback((field, newText) => {
     if (!csvData || csvData.length === 0) return;
@@ -242,7 +244,7 @@ const FieldPositioner = ({
       setFieldStyles(prev => ({
         ...prev,
         [selectedField]: {
-          ...prev[selectedField],
+          ...(prev[selectedField] || {}),
           color: color
         }
       }));
@@ -492,12 +494,12 @@ const FieldPositioner = ({
                     }}
                     onClick={(e) => {
                       if (e.target === e.currentTarget) {
-                        handleFieldSelectInternal('__background__');
+                        setSelectedField('__background__');
                       }
                     }}
                     onTouchStart={(e) => {
                       if (e.target === e.currentTarget) {
-                        handleFieldSelectInternal('__background__');
+                        setSelectedField('__background__');
                       }
                     }}
                   >
@@ -509,7 +511,7 @@ const FieldPositioner = ({
                         style={element.style}
                         content={element.content}
                         isSelected={selectedField === element.id}
-                        onSelect={handleFieldSelectInternal}
+                        onSelect={setSelectedField}
                         onPositionChange={handlePositionChange}
                         onSizeChange={handleSizeChange}
                         containerSize={renderedImageMetrics}

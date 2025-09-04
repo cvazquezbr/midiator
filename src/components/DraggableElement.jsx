@@ -99,23 +99,6 @@ const DraggableElementInternal = ({
       );
     }
 
-    if (enableHtmlRendering) {
-      const sanitizedContent = sanitizeHtml(content);
-      return (
-        <div
-          ref={htmlContentRef}
-          dangerouslySetInnerHTML={{ __html: sanitizedContent }}
-          style={{
-            width: '100%',
-            overflow: 'hidden',
-            wordWrap: 'break-word',
-            pointerEvents: 'none',
-            textAlign: style.textAlign || 'left',
-          }}
-        />
-      );
-    }
-
     // Default to text rendering
     if (!enableHtmlRendering) {
       // Render the calculated lines to respect wrapping
@@ -123,6 +106,21 @@ const DraggableElementInternal = ({
         <div key={index}>{line}</div>
       ));
     }
+
+    const sanitizedContent = sanitizeHtml(content);
+    return (
+      <div
+        ref={htmlContentRef}
+        dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+        style={{
+          width: '100%',
+          overflow: 'hidden',
+          wordWrap: 'break-word',
+          pointerEvents: 'none',
+          textAlign: style.textAlign || 'left',
+        }}
+      />
+    );
   };
 
   const getRotatedBoundingBox = useCallback((widthPercent, heightPercent, rotationDegrees) => {
