@@ -56,6 +56,7 @@ const ImageStep = ({
   templateFieldStyles,
   activeStep,
 }) => {
+  console.log('[ImageStep] props:', { backgroundImage, backgroundElement, fieldStyles });
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [fontScale, setFontScale] = useState(1);
   const [cropMode, setCropMode] = useState(false);

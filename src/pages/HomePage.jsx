@@ -467,6 +467,10 @@ function HomePage() {
   }, [darkMode]);
 
   useEffect(() => {
+    console.log('[HomePage] backgroundElement state changed:', backgroundElement);
+  }, [backgroundElement]);
+
+  useEffect(() => {
     if (isMobile) setSidebarOpen(false);
   }, [isMobile]);
 

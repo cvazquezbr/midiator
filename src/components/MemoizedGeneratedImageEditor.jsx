@@ -16,6 +16,7 @@ const MemoizedGeneratedImageEditor = ({
   originalImageSize,
   imageFilters,
 }) => {
+  console.log('[MemoizedGeneratedImageEditor] props:', { imageFilters });
   const imageToEdit = useMemo(() => {
     return generatedImages.find(img => img.index === editingGeneratedImageIndex);
   }, [generatedImages, editingGeneratedImageIndex]);

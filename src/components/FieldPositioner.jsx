@@ -76,6 +76,7 @@ const FieldPositioner = ({
   onFontScaleChange,
   cropMode,
 }) => {
+  console.log('[FieldPositioner] props:', { backgroundImage, backgroundElement, fieldStyles });
   const [selectedField, setSelectedField] = useState(null);
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
