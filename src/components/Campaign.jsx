@@ -180,7 +180,7 @@ const Campaign = ({
     followupPosts,
     isGeneratingFollowup,
     handleGenerateFollowupPosts,
-    generatedImageUrl,
+    generatedPageUrl,
     isGeneratingImage,
     handleGenerateImage,
     setCampaignContent,
@@ -326,8 +326,8 @@ const Campaign = ({
         setIsSavingToDrive(true);
         setImageTabError('');
 
-        if (!generatedImageUrl) {
-            setImageTabError("Nenhuma imagem gerada para salvar.");
+        if (!generatedPageUrl) {
+            setImageTabError("Nenhuma página gerada para salvar.");
             setIsSavingToDrive(false);
             return;
         }
@@ -339,9 +339,9 @@ const Campaign = ({
                 throw new Error("Não foi possível obter a pasta de coleção do Google Drive.");
             }
 
-            const response = await fetch(generatedImageUrl);
+            const response = await fetch(generatedPageUrl);
             if (!response.ok) {
-                throw new Error('Não foi possível baixar a imagem gerada.');
+                throw new Error('Não foi possível baixar a página gerada.');
             }
             const imageBlob = await response.blob();
 
@@ -368,7 +368,7 @@ const Campaign = ({
                     <Tabs value={activeTab} onChange={handleTabChange} aria-label="abas da campanha" variant="scrollable" scrollButtons="auto">
                         <Tab label="Problema e Solução" />
                         <Tab label="Conteúdo Principal" disabled={!campaignContent} />
-                        <Tab label="Imagem" disabled={!campaignContent} />
+                        <Tab label="Página" disabled={!campaignContent} />
                         <Tab label="Posts de Follow-Up" disabled={!campaignContent} />
                         <Tab label="Conteúdo WordPress" disabled={!campaignContent} />
                     </Tabs>
@@ -640,7 +640,7 @@ const Campaign = ({
                     )}
                 </TabPanel>
 
-                {/* Painel 2: Imagem */}
+                {/* Painel 2: Página */}
                 <TabPanel value={activeTab} index={2}>
                     {campaignContent && (
                         <Box sx={{ mt: 2 }}>
@@ -660,29 +660,29 @@ const Campaign = ({
                                 </FormControl>
                             </Grid>
                             {imageTabError && <Grid item xs={12}><Alert severity="error">{imageTabError}</Alert></Grid>}
-                            {generatedImageUrl && !isGeneratingImage && (
+                            {generatedPageUrl && !isGeneratingImage && (
                                 <Box sx={{ maxWidth: '600px', margin: 'auto' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2, flexWrap: 'wrap', gap: 1 }}>
-                                        <Typography variant="h6" gutterBottom>Página</Typography>
+                                        <Typography variant="h6" gutterBottom>Página Gerada</Typography>
                                         <Box>
                                             <Button onClick={handleSaveToDrive} disabled={isSavingToDrive || isGeneratingImage} startIcon={<SaveIcon />}>
                                                 {isSavingToDrive ? 'Salvando...' : 'Salvar na Coleção'}
                                             </Button>
                                             <Button onClick={() => handleGenerateImage(campaignContent)} disabled={isGeneratingImage || isSavingToDrive} startIcon={<GeminiIcon />} sx={{ ml: 1 }}>
-                                                {isGeneratingImage ? 'Gerando...' : 'Regerar Imagem'}
+                                                {isGeneratingImage ? 'Gerando...' : 'Regerar Página'}
                                             </Button>
                                         </Box>
                                     </Box>
-                                    <img src={generatedImageUrl} alt="Imagem gerada pela IA" style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: '8px', marginTop: 2 }} />
+                                    <img src={generatedPageUrl} alt="Página gerada pela IA" style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain', borderRadius: '8px', marginTop: 2 }} />
                                 </Box>
                             )}
                             {isGeneratingImage && (
                                 <Box sx={{ textAlign: 'center', mt: 2 }}>
                                     <CircularProgress />
-                                    <Typography variant="h6" gutterBottom>Gerando Imagem...</Typography>
+                                    <Typography variant="h6" gutterBottom>Gerando Página...</Typography>
                                 </Box>
                             )}
-                            {!generatedImageUrl && !isGeneratingImage && (
+                            {!generatedPageUrl && !isGeneratingImage && (
                                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
                                     <Button
                                         variant="contained"
@@ -691,14 +691,14 @@ const Campaign = ({
                                         startIcon={<ImageIcon />}
                                         disabled={isGeneratingImage}
                                     >
-                                        Gerar Imagem
+                                        Gerar Página
                                     </Button>
                                 </Box>
                             )}
                              {campaignGenerationFailed && (
                                 <Box sx={{ mt: 3, textAlign: 'center' }}>
                                     <Alert severity="error" sx={{ mb: 2 }}>
-                                        <strong>Falha na geração de imagem:</strong> {generationError}
+                                        <strong>Falha na geração de página:</strong> {generationError}
                                     </Alert>
                                     <Button
                                         variant="contained"
@@ -708,7 +708,7 @@ const Campaign = ({
                                         disabled={isGeneratingImage}
                                         startIcon={<ImageIcon />}
                                     >
-                                        {isGeneratingImage ? 'Gerando Imagem...' : 'Tentar Gerar Apenas a Imagem'}
+                                        {isGeneratingImage ? 'Gerando Página...' : 'Tentar Gerar Apenas a Página'}
                                     </Button>
                                 </Box>
                             )}

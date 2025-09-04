@@ -12,14 +12,14 @@ Esta é uma versão 100% frontend do projeto [Midiator](https://github.com/cvazq
 
 ### 🚀 Funcionalidades
 
-Após a geração das imagens, o sistema:
+Após a geração das páginas, o sistema:
 
 1. **Cria uma nova pasta no Google Drive** do usuário com nome personalizado
-2. **Faz upload de todas as imagens** para essa pasta
-3. **Torna as imagens públicas** para acesso via link
+2. **Faz upload de todas as páginas** para essa pasta
+3. **Torna as páginas públicas** para acesso via link
 4. **Cria uma planilha Google Sheets** na mesma pasta com:
    - **Coluna A**: Sequencial (1, 2, 3...)
-   - **Coluna B**: Link direto para cada imagem
+   - **Coluna B**: Link direto para cada página
    - **Demais colunas**: Todos os campos do CSV original
 
 ## 🏗️ Arquitetura
@@ -100,22 +100,22 @@ npm run dev
 ### Fluxo Completo
 
 1. **Upload CSV**: Carregue arquivo com dados
-2. **Upload Imagem**: Defina imagem de fundo  
+2. **Upload Imagem de Fundo**: Defina imagem de fundo
 3. **Configurar Campos**: Posicione e formate textos
 4. **Configurar Google Drive**:
    - Ative a integração
    - Configure credenciais (uma vez)
    - Defina nome do projeto
-5. **Gerar Imagens**: Clique em "Gerar X Imagens"
+5. **Gerar Páginas**: Clique em "Gerar X Páginas"
 
 ### Resultado Automático
 
 - ✅ **Pasta criada** no seu Google Drive
-- ✅ **Imagens enviadas** e organizadas
+- ✅ **Páginas enviadas** e organizadas
 - ✅ **Planilha criada** com dados estruturados:
 
 ```
-| Sequencial | Link_Imagem | Nome | Idade | Cidade |
+| Sequencial | Link_Página | Nome | Idade | Cidade |
 |------------|-------------|------|-------|--------|
 | 1          | https://... | João | 30    | SP     |
 | 2          | https://... | Maria| 25    | RJ     |

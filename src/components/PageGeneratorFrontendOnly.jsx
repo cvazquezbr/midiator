@@ -37,21 +37,21 @@ import {
   AutoAwesomeOutlined as GeminiIcon,
   SettingsBackupRestore,
 } from '@mui/icons-material';
-import GeneratedImageEditor from './GeneratedImageEditor';
-import MemoizedGeneratedImageEditor from './MemoizedGeneratedImageEditor';
+import PageEditor from './PageEditor';
+import MemoizedPageEditor from './MemoizedPageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { composeImage, composeSingleImage, dataURLtoBlob, wrapTextInArea, applyTextEffects, drawTextWithEffects } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
 
-const ImageGeneratorFrontendOnly = ({
+const PageGeneratorFrontendOnly = ({
   csvData,
   backgroundImage,
   fieldPositions,
   fieldStyles,
   csvHeaders,
   colorPalette,
-  setGeneratedImagesData,
-  initialGeneratedImagesData,
+  setGeneratedPagesData,
+  initialGeneratedPagesData,
   onThumbnailRecordTextUpdate,
   originalImageSize,
   imageFilters,
@@ -59,17 +59,17 @@ const ImageGeneratorFrontendOnly = ({
   onBrandElementsChange,
   fontScale = 1,
   standardsColors,
-  handleGenerateSingleImage, // Nova prop
+  handleGenerateSinglePage, // Nova prop
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const isCancelledRef = useRef(false);
-  const [generatedImages, setGeneratedImages] = useState(initialGeneratedImagesData || []);
+  const [generatedPages, setGeneratedPages] = useState(initialGeneratedPagesData || []);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPreview, setSelectedPreview] = useState(null);
-  const [editingGeneratedImageIndex, setEditingGeneratedImageIndex] = useState(null);
-  const [showGeneratedImageEditor, setShowGeneratedImageEditor] = useState(false);
+  const [editingGeneratedPageIndex, setEditingGeneratedPageIndex] = useState(null);
+  const [showGeneratedPageEditor, setShowGeneratedPageEditor] = useState(false);
   const { googleAccessToken } = useUserAuth();
   const isGoogleDriveConnected = !!googleAccessToken;
   const [projectName, setProjectName] = useState('');
@@ -95,95 +95,95 @@ const ImageGeneratorFrontendOnly = ({
   }, []);
 
   useEffect(() => {
-    if (setGeneratedImagesData) {
-      setGeneratedImagesData(generatedImages);
+    if (setGeneratedPagesData) {
+      setGeneratedPagesData(generatedPages);
     }
-  }, [generatedImages, setGeneratedImagesData]);
+  }, [generatedPages, setGeneratedPagesData]);
 
   useEffect(() => {
-    if (initialGeneratedImagesData) {
-      if (initialGeneratedImagesData !== generatedImages) {
-         setGeneratedImages(initialGeneratedImagesData);
+    if (initialGeneratedPagesData) {
+      if (initialGeneratedPagesData !== generatedPages) {
+         setGeneratedPages(initialGeneratedPagesData);
       }
     } else {
-      if (generatedImages.length > 0) {
-        setGeneratedImages([]);
+      if (generatedPages.length > 0) {
+        setGeneratedPages([]);
       }
     }
-  }, [initialGeneratedImagesData]);
+  }, [initialGeneratedPagesData]);
 
   // Effect for regenerating thumbnails on load
   useEffect(() => {
-    if (initialGeneratedImagesData && initialGeneratedImagesData.length > 0 && fontsLoaded) {
+    if (initialGeneratedPagesData && initialGeneratedPagesData.length > 0 && fontsLoaded) {
       const regenerateMissingThumbnails = async () => {
-        const imagesToRegenerate = initialGeneratedImagesData.filter(img => img.record && img.backgroundImage && !img.url);
+        const pagesToRegenerate = initialGeneratedPagesData.filter(img => img.record && img.backgroundImage && !img.url);
 
-        if (imagesToRegenerate.length === 0) return;
+        if (pagesToRegenerate.length === 0) return;
 
-        console.log(`[Thumbnail-Regen] Found ${imagesToRegenerate.length} images missing thumbnails. Regenerating...`);
+        console.log(`[Thumbnail-Regen] Found ${pagesToRegenerate.length} pages missing thumbnails. Regenerating...`);
 
-        const imagePromises = initialGeneratedImagesData.map(imgData => {
-          // If the URL already exists, or it's not an image we should regenerate, return it as is.
-          if (imgData.url || !imagesToRegenerate.some(r => r.index === imgData.index)) {
-            return Promise.resolve(imgData);
+        const pagePromises = initialGeneratedPagesData.map(pageData => {
+          // If the URL already exists, or it's not an page we should regenerate, return it as is.
+          if (pageData.url || !pagesToRegenerate.some(r => r.index === pageData.index)) {
+            return Promise.resolve(pageData);
           }
 
           // Define parameters for regeneration, falling back to global props.
-          const positionsToUse = imgData.customFieldPositions || fieldPositions;
-          const stylesToUse = imgData.customFieldStyles || fieldStyles;
-          const elementsToUse = imgData.customBrandElements !== undefined ? imgData.customBrandElements : brandElements;
+          const positionsToUse = pageData.customFieldPositions || fieldPositions;
+          const stylesToUse = pageData.customFieldStyles || fieldStyles;
+          const elementsToUse = pageData.customBrandElements !== undefined ? pageData.customBrandElements : brandElements;
 
-          // Call the composition function to regenerate the merged image
+          // Call the composition function to regenerate the merged page
           return composeSingleImage({
-            record: imgData.record,
-            index: imgData.index,
-            itemBackgroundImage: imgData.backgroundImage,
-            imageFilters: imgData.customImageFilters || imageFilters, // Use custom filters if available
+            record: pageData.record,
+            index: pageData.index,
+            itemBackgroundImage: pageData.backgroundImage,
+            imageFilters: pageData.customImageFilters || imageFilters, // Use custom filters if available
             brandElements: elementsToUse,
             fieldPositions: positionsToUse,
             fieldStyles: stylesToUse,
-            fontScale: imgData.fontScale || 1, // Use custom font scale if available
+            fontScale: pageData.fontScale || 1, // Use custom font scale if available
           }).catch(error => {
-            console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${imgData.index}:`, error);
-            return imgData; // On error, return the original data to not lose it
+            console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${pageData.index}:`, error);
+            return pageData; // On error, return the original data to not lose it
           });
         });
 
-        const regeneratedImages = await Promise.all(imagePromises.map(async (promise, index) => {
-          const newImageData = await promise;
-          const originalImageData = initialGeneratedImagesData[index];
-          // If regeneration failed, newImageData might be the original data already.
-          if (newImageData === originalImageData) {
-            return originalImageData;
+        const regeneratedPages = await Promise.all(pagePromises.map(async (promise, index) => {
+          const newPageData = await promise;
+          const originalPageData = initialGeneratedPagesData[index];
+          // If regeneration failed, newPageData might be the original data already.
+          if (newPageData === originalPageData) {
+            return originalPageData;
           }
           // Merge new data (url, blob) with old data (custom styles/positions)
-          return { ...originalImageData, ...newImageData };
+          return { ...originalPageData, ...newPageData };
         }));
 
         // Update state only if there are actual changes
-        if (JSON.stringify(regeneratedImages) !== JSON.stringify(generatedImages)) {
-          setGeneratedImages(regeneratedImages);
+        if (JSON.stringify(regeneratedPages) !== JSON.stringify(generatedPages)) {
+          setGeneratedPages(regeneratedPages);
           console.log('[Thumbnail-Regen] Successfully regenerated thumbnails and updated state.');
         }
       };
 
       regenerateMissingThumbnails();
     }
-  }, [initialGeneratedImagesData, fontsLoaded, fieldPositions, fieldStyles, imageFilters, brandElements]);
+  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, imageFilters, brandElements]);
 
 
-  const generateImages = async () => {
+  const generatePages = async () => {
     if (isGenerating) return;
 
-    // Se já existem imagens, o botão funciona como "Regerar Tudo"
-    if (generatedImages.some(img => img.url)) {
+    // Se já existem páginas, o botão funciona como "Regerar Tudo"
+    if (generatedPages.some(img => img.url)) {
       handleRegenerateAll();
       return;
     }
 
     // Lógica original para gerar pela primeira vez
-    if ((!backgroundImage && initialGeneratedImagesData.some(img => !img.backgroundImage)) || csvData.length === 0) {
-      alert('Por favor, carregue um arquivo CSV e uma imagem de fundo global, ou garanta que todas as imagens tenham um fundo individual.');
+    if ((!backgroundImage && initialGeneratedPagesData.some(img => !img.backgroundImage)) || csvData.length === 0) {
+      alert('Por favor, carregue um arquivo CSV e uma imagem de fundo global, ou garanta que todas as páginas tenham um fundo individual.');
       return;
     }
     if (!fontsLoaded) {
@@ -195,11 +195,11 @@ const ImageGeneratorFrontendOnly = ({
     setProgress(0);
     isCancelledRef.current = false;
 
-    const imagePromises = csvData.map((record, i) => {
+    const pagePromises = csvData.map((record, i) => {
       if (isCancelledRef.current) return Promise.resolve(null);
 
-      const initialImageDataItem = initialGeneratedImagesData.find(img => img.index === i);
-      const itemBackgroundImage = initialImageDataItem?.backgroundImage || backgroundImage;
+      const initialPageDataItem = initialGeneratedPagesData.find(img => img.index === i);
+      const itemBackgroundImage = initialPageDataItem?.backgroundImage || backgroundImage;
 
       return composeSingleImage({
         record,
@@ -211,30 +211,30 @@ const ImageGeneratorFrontendOnly = ({
         fieldStyles,
         fontScale,
       })
-      .then(imageData => {
+      .then(pageData => {
         setProgress(p => p + 1);
-        // Persist the styles used for generation with the image data
+        // Persist the styles used for generation with the page data
         return {
-          ...imageData,
+          ...pageData,
           customFieldStyles: fieldStyles,
           customFieldPositions: fieldPositions,
         };
       })
       .catch(error => {
-        console.error(`Erro ao gerar imagem para o registro ${i}:`, error);
-        alert(`Erro ao gerar imagem para o registro ${i}: ${error.message}`);
+        console.error(`Erro ao gerar página para o registro ${i}:`, error);
+        alert(`Erro ao gerar página para o registro ${i}: ${error.message}`);
         return null; // Retorna nulo para este item em caso de erro
       });
     });
 
     try {
-      const images = (await Promise.all(imagePromises)).filter(Boolean); // Filtra os nulos de erros ou cancelamentos
+      const pages = (await Promise.all(pagePromises)).filter(Boolean); // Filtra os nulos de erros ou cancelamentos
       if (!isCancelledRef.current) {
-        setGeneratedImages(images);
+        setGeneratedPages(pages);
       }
     } catch (error) {
-      console.error('Erro geral durante a geração de imagens em lote:', error);
-      alert(`Ocorreu um erro geral durante a geração das imagens: ${error.message}`);
+      console.error('Erro geral durante a geração de páginas em lote:', error);
+      alert(`Ocorreu um erro geral durante a geração das páginas: ${error.message}`);
     } finally {
       setIsGenerating(false);
       setShowProgressModal(false);
@@ -242,7 +242,7 @@ const ImageGeneratorFrontendOnly = ({
   };
 
   const handleRegenerateAll = async () => {
-    if (!handleGenerateSingleImage) {
+    if (!handleGenerateSinglePage) {
       alert("A função de regeneração não está disponível.");
       return;
     }
@@ -254,7 +254,7 @@ const ImageGeneratorFrontendOnly = ({
     for (let i = 0; i < csvData.length; i++) {
       if (isCancelledRef.current) break;
       const record = csvData[i];
-      await handleGenerateSingleImage(record, i);
+      await handleGenerateSinglePage(record, i);
       setProgress(p => p + 1);
     }
 
@@ -264,13 +264,13 @@ const ImageGeneratorFrontendOnly = ({
 
   const handleCancelGeneration = () => { isCancelledRef.current = true; };
 
-  const handleResetImage = (index) => {
-    const imageToReset = generatedImages.find(img => img.index === index);
-    if (imageToReset && backgroundImage) {
+  const handleResetPage = (index) => {
+    const pageToReset = generatedPages.find(img => img.index === index);
+    if (pageToReset && backgroundImage) {
       // Use a cópia mais recente dos estilos/posições globais, não os customizados.
-      regenerateSingleImage(
+      regenerateSinglePage(
         index,
-        imageToReset.record,
+        pageToReset.record,
         backgroundImage, // Usando a imagem de fundo global
         fieldPositions, // Usando as posições de campo globais
         fieldStyles, // Usando os estilos de campo globais
@@ -280,45 +280,45 @@ const ImageGeneratorFrontendOnly = ({
         imageFilters
       );
     } else {
-      alert("Não foi possível resetar a imagem. A imagem de fundo principal não está disponível.");
+      alert("Não foi possível resetar a página. A imagem de fundo principal não está disponível.");
     }
   };
 
-  const downloadImage = (imageData) => {
+  const downloadPage = (pageData) => {
     const link = document.createElement('a');
-    link.href = imageData.url;
-    link.download = imageData.filename;
+    link.href = pageData.url;
+    link.download = pageData.filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const handleShare = async (imageData) => {
-    if (!imageData || !imageData.url) {
-      alert('A imagem não está disponível para compartilhamento.');
+  const handleShare = async (pageData) => {
+    if (!pageData || !pageData.url) {
+      alert('A página não está disponível para compartilhamento.');
       return;
     }
     try {
-      const response = await fetch(imageData.url);
+      const response = await fetch(pageData.url);
       const blob = await response.blob();
-      const file = new File([blob], imageData.filename, { type: blob.type });
+      const file = new File([blob], pageData.filename, { type: blob.type });
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'Compartilhar Imagem', text: `Confira a imagem: ${imageData.filename}` });
+        await navigator.share({ files: [file], title: 'Compartilhar Página', text: `Confira a página: ${pageData.filename}` });
       } else {
         alert('Seu navegador não suporta o compartilhamento de arquivos.');
       }
     } catch (error) {
       if (error.name !== 'AbortError') {
-        alert('Ocorreu um erro ao tentar compartilhar a imagem.');
+        alert('Ocorreu um erro ao tentar compartilhar a página.');
         console.error("Share error:", error);
       }
     }
   };
 
-  const downloadAllImages = () => {
-    generatedImages.forEach((imageData, index) => {
-      setTimeout(() => downloadImage(imageData), index * 100);
+  const downloadAllPages = () => {
+    generatedPages.forEach((pageData, index) => {
+      setTimeout(() => downloadPage(pageData), index * 100);
     });
   };
 
@@ -327,86 +327,86 @@ const ImageGeneratorFrontendOnly = ({
     setSelectedPreview(null);
   };
 
-  const handleOpenGeneratedImageEditor = (imageFromClosure, index) => {
-    setEditingGeneratedImageIndex(index);
-    const imageToEdit = generatedImages.find(img => img.index === index);
-    if (!imageToEdit) {
-      console.error(`[IGFO] handleOpenGeneratedImageEditor: Could not find image in local 'generatedImages' state with index: ${index}.`);
-      setShowGeneratedImageEditor(true);
+  const handleOpenGeneratedPageEditor = (pageFromClosure, index) => {
+    setEditingGeneratedPageIndex(index);
+    const pageToEdit = generatedPages.find(img => img.index === index);
+    if (!pageToEdit) {
+      console.error(`[PGF] handleOpenGeneratedPageEditor: Could not find page in local 'generatedPages' state with index: ${index}.`);
+      setShowGeneratedPageEditor(true);
       return;
     }
-    setShowGeneratedImageEditor(true);
+    setShowGeneratedPageEditor(true);
   };
 
-  const handleCloseGeneratedImageEditor = () => {
-    setShowGeneratedImageEditor(false);
-    setEditingGeneratedImageIndex(null);
+  const handleCloseGeneratedPageEditor = () => {
+    setShowGeneratedPageEditor(false);
+    setEditingGeneratedPageIndex(null);
   };
 
-  const handleSaveIndividualModifications = (modifiedImageData) => {
-    const { index: imageIndex } = modifiedImageData;
+  const handleSaveIndividualModifications = (modifiedPageData) => {
+    const { index: pageIndex } = modifiedPageData;
 
-    const updatedImages = generatedImages.map(img => {
-      if (img.index !== imageIndex) {
+    const updatedPages = generatedPages.map(img => {
+      if (img.index !== pageIndex) {
         return img;
       }
       // BUG FIX: The root of the "disappearing background" bug on save was here.
-      // `modifiedImageData` comes from the editor and does NOT have a `backgroundImage` property.
-      // The spread `{ ...img, ...modifiedImageData }` was overwriting `img.backgroundImage`
+      // `modifiedPageData` comes from the editor and does NOT have a `backgroundImage` property.
+      // The spread `{ ...img, ...modifiedPageData }` was overwriting `img.backgroundImage`
       // with `undefined`.
       // The fix is to manually construct the new object, EXPLICITLY preserving the
       // `backgroundImage` from the existing state (`img`).
       return {
         ...img, // Keep blob, url, etc.
-        record: modifiedImageData.record,
+        record: modifiedPageData.record,
         backgroundImage: img.backgroundImage, // Keep the original background!
         // Apply modifications from the editor
-        customFieldPositions: modifiedImageData.fieldPositions,
-        customFieldStyles: modifiedImageData.fieldStyles,
-        customBrandElements: modifiedImageData.brandElements,
-        fontScale: modifiedImageData.fontScale,
+        customFieldPositions: modifiedPageData.fieldPositions,
+        customFieldStyles: modifiedPageData.fieldStyles,
+        customBrandElements: modifiedPageData.brandElements,
+        fontScale: modifiedPageData.fontScale,
       };
     });
 
-    setGeneratedImages(updatedImages);
+    setGeneratedPages(updatedPages);
 
     if (onThumbnailRecordTextUpdate) {
-      onThumbnailRecordTextUpdate(imageIndex, modifiedImageData.record);
+      onThumbnailRecordTextUpdate(pageIndex, modifiedPageData.record);
     }
 
-    const imageToRegenerate = updatedImages.find(im => im.index === imageIndex);
+    const pageToRegenerate = updatedPages.find(im => im.index === pageIndex);
 
-    if (imageToRegenerate) {
+    if (pageToRegenerate) {
       // Explicitly define the parameters to be used for regeneration,
       // falling back to global props if custom ones don't exist.
-      const bgToUse = imageToRegenerate.backgroundImage || backgroundImage;
-      const positionsToUse = imageToRegenerate.customFieldPositions || fieldPositions;
-      const stylesToUse = imageToRegenerate.customFieldStyles || fieldStyles;
-      const elementsToUse = imageToRegenerate.customBrandElements !== undefined ? imageToRegenerate.customBrandElements : brandElements;
-      const sizeToUse = imageToRegenerate.customOriginalImageSize || originalImageSize;
+      const bgToUse = pageToRegenerate.backgroundImage || backgroundImage;
+      const positionsToUse = pageToRegenerate.customFieldPositions || fieldPositions;
+      const stylesToUse = pageToRegenerate.customFieldStyles || fieldStyles;
+      const elementsToUse = pageToRegenerate.customBrandElements !== undefined ? pageToRegenerate.customBrandElements : brandElements;
+      const sizeToUse = pageToRegenerate.customOriginalImageSize || originalImageSize;
 
-      regenerateSingleImage(
-        imageIndex,
-        imageToRegenerate.record,
+      regenerateSinglePage(
+        pageIndex,
+        pageToRegenerate.record,
         bgToUse,
         positionsToUse,
         stylesToUse,
         sizeToUse,
         elementsToUse,
-        modifiedImageData.fontScale || 1,
-        modifiedImageData.imageFilters || imageFilters
+        modifiedPageData.fontScale || 1,
+        modifiedPageData.imageFilters || imageFilters
       );
     }
-    handleCloseGeneratedImageEditor();
+    handleCloseGeneratedPageEditor();
   };
 
-  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1, customImageFilters = imageFilters) => {
+  const regenerateSinglePage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1, customImageFilters = imageFilters) => {
     if (!currentBackgroundImage || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
       alert('Pré-requisitos para regeneração não atendidos. Fontes, dados ou configurações faltando.');
       return;
     }
     try {
-      const newImageData = await composeSingleImage({
+      const newPageData = await composeSingleImage({
         record,
         index,
         itemBackgroundImage: currentBackgroundImage,
@@ -417,15 +417,15 @@ const ImageGeneratorFrontendOnly = ({
         fontScale,
       });
 
-      setGeneratedImages(prevImages => {
-        const updatedImages = prevImages.map(img => {
+      setGeneratedPages(prevPages => {
+        const updatedPages = prevPages.map(img => {
           if (img.index === index) {
             // The new object from composeSingleImage contains the new url, blob, etc.
             // We merge it with the existing `img` data to preserve all fields,
             // especially the `backgroundImage` which might be lost otherwise.
             return {
               ...img,
-              ...newImageData,
+              ...newPageData,
               customFieldPositions: positionsToUse,
               customFieldStyles: stylesToUse, // Persist the styles used for regeneration
               customBrandElements: elementsToUse,
@@ -435,15 +435,15 @@ const ImageGeneratorFrontendOnly = ({
           }
           return img;
         });
-        return updatedImages;
+        return updatedPages;
       });
     } catch (error) {
-      console.error(`Erro na regeneração da imagem (índice ${index}):`, error);
-      alert(`Erro na regeneração da imagem (índice ${index}): ${error.message}`);
+      console.error(`Erro na regeneração da página (índice ${index}):`, error);
+      alert(`Erro na regeneração da página (índice ${index}): ${error.message}`);
     }
   };
 
-  const handleReplaceImageClick = (index) => {
+  const handleReplacePageClick = (index) => {
     setReplacingImageIndex(index);
     if (individualImageInputRef.current) {
       individualImageInputRef.current.click();
@@ -456,16 +456,16 @@ const ImageGeneratorFrontendOnly = ({
       const reader = new FileReader();
       reader.onload = (e) => {
         const newBgUrl = e.target.result;
-        const imageToUpdate = generatedImages.find(img => img.index === replacingImageIndex);
-        if (imageToUpdate) {
+        const pageToUpdate = generatedPages.find(img => img.index === replacingImageIndex);
+        if (pageToUpdate) {
           const img = new Image();
           img.onload = () => {
             const newSize = { width: img.width, height: img.height };
-            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, newSize, imageToUpdate.customBrandElements || brandElements, fontScale);
+            regenerateSinglePage(replacingImageIndex, pageToUpdate.record, newBgUrl, pageToUpdate.customFieldPositions || fieldPositions, pageToUpdate.customFieldStyles || fieldStyles, newSize, pageToUpdate.customBrandElements || brandElements, fontScale);
           };
           img.onerror = () => {
-            console.error('Failed to load the new background image to get its dimensions.');
-            regenerateSingleImage(replacingImageIndex, imageToUpdate.record, newBgUrl, imageToUpdate.customFieldPositions || fieldPositions, imageToUpdate.customFieldStyles || fieldStyles, null, imageToUpdate.customBrandElements || brandElements, fontScale);
+            console.error('Failed to load the new background page to get its dimensions.');
+            regenerateSinglePage(replacingImageIndex, pageToUpdate.record, newBgUrl, pageToUpdate.customFieldPositions || fieldPositions, pageToUpdate.customFieldStyles || fieldStyles, null, pageToUpdate.customBrandElements || brandElements, fontScale);
           };
           img.src = newBgUrl;
         }
@@ -483,8 +483,8 @@ const ImageGeneratorFrontendOnly = ({
       alert('Por favor, digite um nome para o projeto.');
       return;
     }
-    if (generatedImages.length === 0) {
-      alert('Nenhuma imagem foi gerada ainda.');
+    if (generatedPages.length === 0) {
+      alert('Nenhuma página foi gerada ainda.');
       return;
     }
     if (!googleAccessToken) {
@@ -502,19 +502,19 @@ const ImageGeneratorFrontendOnly = ({
 
       const uploadResults = [];
       const sheetData = [];
-      const allHeaders = Array.from(new Set(generatedImages.flatMap(img => Object.keys(img.record))));
+      const allHeaders = Array.from(new Set(generatedPages.flatMap(img => Object.keys(img.record))));
 
-      for (let i = 0; i < generatedImages.length; i++) {
-        const imageData = generatedImages[i];
+      for (let i = 0; i < generatedPages.length; i++) {
+        const pageData = generatedPages[i];
         try {
-          const response = await fetch(imageData.dataUrl);
+          const response = await fetch(pageData.dataUrl);
           const blob = await response.blob();
-          const result = await uploadFile(blob, imageData.filename, contentFolder.id, googleAccessToken);
-          uploadResults.push({ filename: imageData.filename, success: true, fileId: result.id });
-          const row = [i + 1, `https://drive.google.com/file/d/${result.id}/view?usp=sharing`, ...allHeaders.map(header => imageData.record[header] || '')];
+          const result = await uploadFile(blob, pageData.filename, contentFolder.id, googleAccessToken);
+          uploadResults.push({ filename: pageData.filename, success: true, fileId: result.id });
+          const row = [i + 1, `https://drive.google.com/file/d/${result.id}/view?usp=sharing`, ...allHeaders.map(header => pageData.record[header] || '')];
           sheetData.push(row);
         } catch (error) {
-          uploadResults.push({ filename: imageData.filename, success: false, error: error.message });
+          uploadResults.push({ filename: pageData.filename, success: false, error: error.message });
         }
       }
 
@@ -550,12 +550,12 @@ const ImageGeneratorFrontendOnly = ({
         <CardContent>
           <Typography variant="h5" gutterBottom>
             <ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-            Geração de Imagens
+            Geração de Páginas
           </Typography>
 
           {!fontsLoaded && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              Carregando fontes... Aguarde antes de gerar as imagens.
+              Carregando fontes... Aguarde antes de gerar as páginas.
             </Alert>
           )}
 
@@ -564,24 +564,24 @@ const ImageGeneratorFrontendOnly = ({
               <Button
                 variant="contained"
                 color="primary"
-                onClick={generateImages}
+                onClick={generatePages}
                 disabled={isGenerating || !fontsLoaded}
                 startIcon={<ImageIcon />}
                 fullWidth
               >
-                {generatedImages.some(img => img.url) ? 'Regerar imagens' : 'Gerar Imagens'}
+                {generatedPages.some(img => img.url) ? 'Regerar páginas' : 'Gerar Páginas'}
               </Button>
             </Grid>
 
-            {generatedImages.some(img => img.url) && (
+            {generatedPages.some(img => img.url) && (
               <Grid item xs={12} md={6}>
                 <Button
                   variant="outlined"
-                  onClick={downloadAllImages}
+                  onClick={downloadAllPages}
                   startIcon={<Download />}
                   fullWidth
                 >
-                  Download Todas ({generatedImages.filter(img => img.url).length})
+                  Download Todas ({generatedPages.filter(img => img.url).length})
                 </Button>
               </Grid>
             )}
@@ -591,12 +591,12 @@ const ImageGeneratorFrontendOnly = ({
             <Box sx={{ mt: 2 }}>
               <LinearProgress />
               <Typography variant="body2" sx={{ mt: 1 }}>
-                Gerando imagens...
+                Gerando páginas...
               </Typography>
             </Box>
           )}
 
-          {generatedImages.length > 0 && (
+          {generatedPages.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="h6" gutterBottom>
@@ -658,15 +658,15 @@ const ImageGeneratorFrontendOnly = ({
             </Box>
           )}
 
-          {generatedImages.length > 0 && (
+          {generatedPages.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="h6" gutterBottom>
-                Imagens Geradas ({generatedImages.length})
+                Páginas Geradas ({generatedPages.length})
               </Typography>
 
               <Grid container spacing={2}>
-                {generatedImages.map((imageData, index) => (
+                {generatedPages.map((pageData, index) => (
                   <Grid item xs={12} sm={6} md={4} key={index}>
                     <Card variant="outlined">
                       <CardContent>
@@ -678,7 +678,7 @@ const ImageGeneratorFrontendOnly = ({
                             sx={{ mr: 1 }}
                           />
                           <Typography variant="body2" noWrap sx={{ flexGrow: 1 }}>
-                            {imageData.filename}
+                            {pageData.filename}
                           </Typography>
                         </Box>
 
@@ -706,11 +706,11 @@ const ImageGeneratorFrontendOnly = ({
                           },
                           transition: 'box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out',
                         }}
-                        onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
+                        onClick={() => handleOpenGeneratedPageEditor(pageData, pageData.index)}
                         >
                           <img
                             key={index}
-                            src={imageData.url}
+                            src={pageData.url}
                             alt={`Preview ${index + 1}`}
                             style={{
                               display: 'block',
@@ -728,7 +728,7 @@ const ImageGeneratorFrontendOnly = ({
                            <Tooltip title="Regerar com IA">
                                 <IconButton
                                     size="small"
-                                    onClick={() => handleGenerateSingleImage(imageData.record, imageData.index)}
+                                    onClick={() => handleGenerateSinglePage(pageData.record, pageData.index)}
                                 >
                                     <GeminiIcon />
                                 </IconButton>
@@ -736,7 +736,7 @@ const ImageGeneratorFrontendOnly = ({
                             <Tooltip title="Resetar para Fundo Padrão">
                                 <IconButton
                                     size="small"
-                                    onClick={() => handleResetImage(imageData.index)}
+                                    onClick={() => handleResetPage(pageData.index)}
                                 >
                                     <SettingsBackupRestore />
                                 </IconButton>
@@ -744,7 +744,7 @@ const ImageGeneratorFrontendOnly = ({
                           <Tooltip title="Editar Posições/Estilos">
                             <IconButton
                                 size="small"
-                                onClick={() => handleOpenGeneratedImageEditor(imageData, imageData.index)}
+                                onClick={() => handleOpenGeneratedPageEditor(pageData, pageData.index)}
                             >
                                 <Edit />
                             </IconButton>
@@ -752,7 +752,7 @@ const ImageGeneratorFrontendOnly = ({
                           <Tooltip title="Substituir Fundo">
                             <IconButton
                                 size="small"
-                                onClick={() => handleReplaceImageClick(imageData.index)}
+                                onClick={() => handleReplacePageClick(pageData.index)}
                             >
                                 <SwapHoriz />
                             </IconButton>
@@ -760,7 +760,7 @@ const ImageGeneratorFrontendOnly = ({
                           <Tooltip title="Download">
                             <IconButton
                                 size="small"
-                                onClick={() => downloadImage(imageData)}
+                                onClick={() => downloadPage(pageData)}
                             >
                                 <Download />
                             </IconButton>
@@ -768,7 +768,7 @@ const ImageGeneratorFrontendOnly = ({
                           <Tooltip title="Compartilhar">
                             <IconButton
                                 size="small"
-                                onClick={() => handleShare(imageData)}
+                                onClick={() => handleShare(pageData)}
                             >
                                 <Share />
                             </IconButton>
@@ -799,17 +799,17 @@ const ImageGeneratorFrontendOnly = ({
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => downloadImage(selectedPreview)} startIcon={<Download />}>Download</Button>
+          <Button onClick={() => downloadPage(selectedPreview)} startIcon={<Download />}>Download</Button>
           <Button onClick={closePreview}>Fechar</Button>
         </DialogActions>
       </Dialog>
 
-      {console.log('[ImageGeneratorFrontendOnly] rendering MemoizedGeneratedImageEditor with props:', { showGeneratedImageEditor, generatedImages, editingGeneratedImageIndex, csvHeaders, fieldPositions, fieldStyles, brandElements, colorPalette, backgroundImage, originalImageSize, standardsColors, imageFilters: effectiveBackgroundElement.filters })}
-      <MemoizedGeneratedImageEditor
-        showGeneratedImageEditor={showGeneratedImageEditor}
-        handleCloseGeneratedImageEditor={handleCloseGeneratedImageEditor}
-        generatedImages={generatedImages}
-        editingGeneratedImageIndex={editingGeneratedImageIndex}
+      {console.log('[PageGeneratorFrontendOnly] rendering MemoizedPageEditor with props:', { showGeneratedPageEditor, generatedPages, editingGeneratedPageIndex, csvHeaders, fieldPositions, fieldStyles, brandElements, colorPalette, backgroundImage, originalImageSize, standardsColors, imageFilters })}
+      <MemoizedPageEditor
+        showGeneratedPageEditor={showGeneratedPageEditor}
+        handleCloseGeneratedPageEditor={handleCloseGeneratedPageEditor}
+        generatedPages={generatedPages}
+        editingGeneratedPageIndex={editingGeneratedPageIndex}
         csvHeaders={csvHeaders}
         fieldPositions={fieldPositions}
         fieldStyles={fieldStyles}
@@ -834,11 +834,11 @@ const ImageGeneratorFrontendOnly = ({
         progress={progress}
         total={csvData.length}
         onCancel={handleCancelGeneration}
-        title="Gerando Imagens"
-        progressText={`Gerando imagem ${progress} de ${csvData.length}...`}
+        title="Gerando Páginas"
+        progressText={`Gerando página ${progress} de ${csvData.length}...`}
       />
     </Box>
   );
 };
 
-export default ImageGeneratorFrontendOnly;
+export default PageGeneratorFrontendOnly;
