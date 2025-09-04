@@ -102,9 +102,13 @@ const DraggableElementInternal = ({
     // Default to text rendering
     if (!enableHtmlRendering) {
       // Render the calculated lines to respect wrapping
-      return textLines.map((line, index) => (
-        <div key={index}>{line}</div>
-      ));
+      return (
+        <div style={textContentStyle}>
+          {textLines.map((line, index) => (
+            <div key={index}>{line}</div>
+          ))}
+        </div>
+      );
     }
 
     const sanitizedContent = sanitizeHtml(content);
@@ -117,7 +121,7 @@ const DraggableElementInternal = ({
           overflow: 'hidden',
           wordWrap: 'break-word',
           pointerEvents: 'none',
-          textAlign: style.textAlign || 'left',
+          ...textContentStyle,
         }}
       />
     );
@@ -614,7 +618,6 @@ const DraggableElementInternal = ({
             justifyContent: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
             alignItems: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
             height: '100%',
-            ...textContentStyle,
           }}
         >
             {renderContent()}
