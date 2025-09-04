@@ -84,9 +84,19 @@ const DraggableElementInternal = ({
     }
 
     if (element.type === 'cropbox') {
-        return (
-            <Box sx={{ width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)', border: '1px dashed #fff' }} />
-        );
+      return (
+        <Box
+          sx={{
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            border: '2px dashed rgba(255, 255, 255, 0.7)',
+            boxSizing: 'border-box',
+            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
+            pointerEvents: 'none',
+          }}
+        />
+      );
     }
 
     // Default to text rendering
@@ -390,7 +400,11 @@ const DraggableElementInternal = ({
         rotationDegrees
       );
       
-      onPositionChange(element.id, { ...position, x: newX, y: newY, rotation: rotationDegrees });
+      if (element.type === 'cropbox') {
+        onPositionChange(element.id, { x: newX, y: newY });
+      } else {
+        onPositionChange(element.id, { ...position, x: newX, y: newY, rotation: rotationDegrees });
+      }
       onSizeChange(element.id, { width: newWidth, height: newHeight });
     }
   }, [isDragging, isResizing, isRotating, dragStart, initialRotation, element, position, containerSize, initialPosition, initialSize, resizeHandle, onPositionChange, onSizeChange, getRotatedBoundingBox]);
@@ -452,7 +466,11 @@ const DraggableElementInternal = ({
         rotationDegrees
       );
 
-      onPositionChange(element.id, { ...position, x: newX, y: newY, rotation: rotationDegrees });
+      if (element.type === 'cropbox') {
+        onPositionChange(element.id, { x: newX, y: newY });
+      } else {
+        onPositionChange(element.id, { ...position, x: newX, y: newY, rotation: rotationDegrees });
+      }
       onSizeChange(element.id, { width: newWidth, height: newHeight });
     }
   }, [isDragging, isResizing, isRotating, dragStart, initialRotation, element, position, containerSize, initialPosition, initialSize, resizeHandle, onPositionChange, onSizeChange, getRotatedBoundingBox]);
@@ -615,18 +633,20 @@ const DraggableElementInternal = ({
                 onTouchStart={(e) => handleTouchStart(e, 'resize', handle)}
               />
             ))}
-            <Box
-              className={styles.rotateHandle}
-              sx={{
-                top: `-${handleSize * 2.5}px`,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: `${handleSize * 1.5}px`,
-                height: `${handleSize * 1.5}px`,
-              }}
-              onMouseDown={(e) => doHandleMouseDown(e, 'rotate')}
-              onTouchStart={(e) => handleTouchStart(e, 'rotate')}
-            />
+            {element.type !== 'cropbox' && (
+              <Box
+                className={styles.rotateHandle}
+                sx={{
+                  top: `-${handleSize * 2.5}px`,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: `${handleSize * 1.5}px`,
+                  height: `${handleSize * 1.5}px`,
+                }}
+                onMouseDown={(e) => doHandleMouseDown(e, 'rotate')}
+                onTouchStart={(e) => handleTouchStart(e, 'rotate')}
+              />
+            )}
           </>
         )}
       </Box>

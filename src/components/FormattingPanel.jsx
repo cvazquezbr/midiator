@@ -70,8 +70,8 @@ const FormattingPanel = ({
   standardsColors,
   templateFieldStyles,
   activeStep,
-  cropMode,
-  setCropMode,
+  isCropping,
+  setIsCropping,
 }) => {
   const fonts = [
     // Sans-serif
@@ -634,6 +634,18 @@ const FormattingPanel = ({
                     )}
                   </AccordionDetails>
                 </Accordion>
+
+                {/* Cortar Imagem */}
+                <Box sx={{ mt: 2 }}>
+                  <Button
+                    variant={isCropping ? "contained" : "outlined"}
+                    color="primary"
+                    onClick={() => setIsCropping(!isCropping)}
+                    fullWidth
+                  >
+                    {isCropping ? 'Salvar Corte' : 'Cortar Imagem'}
+                  </Button>
+                </Box>
               </>
             )}
 

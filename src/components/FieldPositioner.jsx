@@ -74,7 +74,8 @@ const FieldPositioner = ({
   currentPreviewIndex,
   setCurrentPreviewIndex,
   onFontScaleChange,
-  cropMode,
+  isCropping,
+  setIsCropping,
 }) => {
   console.log('[FieldPositioner] props:', { backgroundImage, backgroundElement, fieldStyles });
   const [selectedField, setSelectedField] = useState(null);
@@ -381,7 +382,7 @@ const FieldPositioner = ({
         fontScale: 1,
         enableHtmlRendering: false,
       }] : []),
-      ...(cropMode && backgroundElement ? [{
+      ...(isCropping && backgroundElement ? [{
         id: '__cropbox__',
         type: 'cropbox',
         position: backgroundElement.crop || { x: 10, y: 10, width: 80, height: 80 },
@@ -434,7 +435,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => a.zIndex - b.zIndex);
     return elements;
-  }, [backgroundElement, backgroundImage, cropMode, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
+  }, [backgroundElement, backgroundImage, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
   if (!backgroundImage) {
     return (

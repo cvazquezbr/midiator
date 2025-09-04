@@ -59,7 +59,7 @@ const ImageStep = ({
   console.log('[ImageStep] props:', { backgroundImage, backgroundElement, fieldStyles });
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [fontScale, setFontScale] = useState(1);
-  const [cropMode, setCropMode] = useState(false);
+  const [isCropping, setIsCropping] = useState(false);
 
   if (!backgroundImage) {
     return (
@@ -177,8 +177,8 @@ const ImageStep = ({
             currentPreviewIndex={currentPreviewIndex}
             setCurrentPreviewIndex={setCurrentPreviewIndex}
             onFontScaleChange={setFontScale}
-            cropMode={cropMode}
-            setCropMode={setCropMode}
+            isCropping={isCropping}
+            setIsCropping={setIsCropping}
           />
         </Grid>
         {!isMobile ? (
@@ -202,8 +202,8 @@ const ImageStep = ({
               fontScale={fontScale}
               templateFieldStyles={templateFieldStyles}
               activeStep={activeStep}
-              cropMode={cropMode}
-              setCropMode={setCropMode}
+              isCropping={isCropping}
+              setIsCropping={setIsCropping}
             />
           </Grid>
         ) : (
@@ -227,11 +227,11 @@ const ImageStep = ({
               onDeselectField={onDeselectField}
               onOpenHtmlEditor={onOpenHtmlEditor}
               standardsColors={standardsColors}
-              fontScale={fontScale}
+.              fontScale={fontScale}
               templateFieldStyles={templateFieldStyles}
               activeStep={activeStep}
-              cropMode={cropMode}
-              setCropMode={setCropMode}
+              isCropping={isCropping}
+              setIsCropping={setIsCropping}
             />
           </>
         )}
