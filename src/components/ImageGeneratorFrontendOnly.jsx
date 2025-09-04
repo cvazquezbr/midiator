@@ -828,6 +828,7 @@ const ImageGeneratorFrontendOnly = ({
         backgroundImage={backgroundImage}
         originalImageSize={originalImageSize}
         standardsColors={standardsColors}
+        imageFilters={backgroundElement.filters}
       />
 
       <input
