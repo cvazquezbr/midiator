@@ -575,7 +575,7 @@ function HomePage() {
     img.onload = () => {
       setOriginalImageSize({ width: img.width, height: img.height });
       setBackgroundElement({
-        id: '__background__',
+        id: 'background',
         x: 0,
         y: 0,
         width: 100,

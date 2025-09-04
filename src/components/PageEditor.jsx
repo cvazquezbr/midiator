@@ -80,7 +80,7 @@ const PageEditor = ({
 
   // Local state for image filters and toggles
   const defaultFilters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 };
-  const [editedImageFilters, setEditedImageFilters] = useState(imageFilters || defaultFilters);
+  const [editedBackgroundElement, setEditedBackgroundElement] = useState(null);
 
   const handleInternalFieldSelection = useCallback((fieldToSelect) => {
     setSelectedFieldInternal(fieldToSelect);
@@ -150,7 +150,17 @@ const PageEditor = ({
       setEditedStyles(newEditedStyles);
       setStylesAreInitialized(true);
 
-      setEditedImageFilters(imageFilters || defaultFilters);
+      setEditedBackgroundElement({
+        id: 'background',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        rotation: 0,
+        visible: true,
+        filters: pageData.imageFilters || defaultFilters,
+        crop: null, // PageEditor doesn't support cropping yet
+      });
       setFontScale(pageData.fontScale || 1); // Initialize font scale from pageData
     } else {
       setStylesAreInitialized(false);
@@ -175,7 +185,7 @@ const PageEditor = ({
       fieldPositions: editedPositions,
       fieldStyles: editedStyles,
       brandElements: editedBrandElements,
-      imageFilters: editedImageFilters, // Pass back the edited filters
+      imageFilters: editedBackgroundElement ? editedBackgroundElement.filters : defaultFilters,
       fontScale: fontScale,
 
       // Explicitly set the background image that was used for editing
@@ -236,10 +246,11 @@ const PageEditor = ({
                 onSelectFieldExternal={handleInternalFieldSelection} // Use memoized handler
                 onCsvDataUpdate={handleFieldPositionerCsvDataUpdate} // Use memoized handler
                 originalImageSize={originalImageSize}
-                imageFilters={editedImageFilters}
                 onFontScaleChange={setFontScale}
                 brandElements={editedBrandElements}
                 setBrandElements={setEditedBrandElements}
+                backgroundElement={editedBackgroundElement}
+                setBackgroundElement={setEditedBackgroundElement}
                 currentPreviewIndex={0}
               />
             </Grid>
@@ -252,8 +263,8 @@ const PageEditor = ({
                   fieldPositions={editedPositions}
                   setFieldPositions={setEditedPositions}
                   csvHeaders={editorCsvHeaders}
-                  imageFilters={editedImageFilters}
-                  setImageFilters={setEditedImageFilters}
+                  backgroundElement={editedBackgroundElement}
+                  setBackgroundElement={setEditedBackgroundElement}
                   brandElements={editedBrandElements}
                   setBrandElements={setEditedBrandElements}
                   onDeselectField={handleDeselectField}
@@ -293,8 +304,8 @@ const PageEditor = ({
             setFieldPositions={setEditedPositions}
             csvHeaders={editorCsvHeaders}
             onOpenHtmlEditor={handleOpenHtmlEditor}
-            imageFilters={editedImageFilters}
-            setImageFilters={setEditedImageFilters}
+            backgroundElement={editedBackgroundElement}
+            setBackgroundElement={setEditedBackgroundElement}
             brandElements={editedBrandElements}
             setBrandElements={setEditedBrandElements}
             fontScale={fontScale}
