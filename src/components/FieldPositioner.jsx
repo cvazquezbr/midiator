@@ -164,64 +164,10 @@ const FieldPositioner = ({
     return () => observer.disconnect();
   }, [onImageDisplayedSizeChange, backgroundImage]);
 
-  // Effect to initialize or update field positions and styles based on csvHeaders and props.
-  // This ensures that every field in csvHeaders has a corresponding position and a complete style object.
-  useEffect(() => {
-    // Diagnostic logs removed.
-
-    if (csvHeaders.length > 0) {
-      const newCombinedPositions = {};
-      const newCombinedStyles = {};
-      let positionsHaveChanged = false;
-      let stylesHaveChanged = false;
-
-      csvHeaders.forEach((header, index) => {
-        // Logic for positions: use existing if available, else default.
-        const existingPosition = fieldPositions[header];
-        const defaultPosition = {
-          x: 10 + (index % 3) * 30,
-          y: 10 + Math.floor(index / 3) * 25,
-          width: 25,
-          height: 15,
-          visible: true,
-          rotation: 0 // Initialize rotation
-        };
-        // Ensure all default keys are present if existingPosition is only partial
-        newCombinedPositions[header] = existingPosition
-          ? { ...defaultPosition, ...existingPosition, rotation: existingPosition.rotation || 0 }
-          : defaultPosition;
-
-        // Logic for styles: merge existing styles with a complete default set.
-        // Custom styles from fieldStyles[header] (from parent) override the defaults.
-        newCombinedStyles[header] = {
-          ...COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER,
-          ...(fieldStyles[header] || {}),
-        };
-      });
-
-      // Check if the newly combined positions are different from the current prop
-      if (JSON.stringify(newCombinedPositions) !== JSON.stringify(fieldPositions)) {
-        positionsHaveChanged = true;
-      }
-
-      // Check if the newly combined styles are different from the current prop
-      if (JSON.stringify(newCombinedStyles) !== JSON.stringify(fieldStyles)) {
-        stylesHaveChanged = true;
-      }
-
-      // Call parent setters only if there's an actual change.
-      if (positionsHaveChanged) {
-        setFieldPositions(newCombinedPositions);
-      }
-      if (stylesHaveChanged) {
-        setFieldStyles(newCombinedStyles);
-      }
-    }
-    // This effect depends on the content of fieldPositions and fieldStyles objects, not just their references.
-    // Stringifying them for the dependency array is a common way to track changes in object content,
-    // though it can be performance-intensive for very large/complex objects.
-    // For this use case, it's likely acceptable.
-  }, [csvHeaders, fieldPositions, fieldStyles, setFieldPositions, setFieldStyles]);
+  // This component should not be responsible for initializing or updating the parent's state.
+  // It should just render the props it receives. The parent (HomePage) is responsible for
+  // ensuring the fieldPositions and fieldStyles objects are complete.
+  // The previous useEffect was causing state conflicts and loops. It has been removed.
 
   const handlePositionChange = (id, newPosition) => {
     if (id === 'background') {
