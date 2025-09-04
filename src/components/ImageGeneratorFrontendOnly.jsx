@@ -43,6 +43,29 @@ import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi'
 import { composeImage, composeSingleImage, dataURLtoBlob, wrapTextInArea, applyTextEffects, drawTextWithEffects } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
 
+const defaultBackgroundElement = {
+  id: '__background__',
+  x: 0,
+  y: 0,
+  width: 100,
+  height: 100,
+  rotation: 0,
+  visible: true,
+  filters: {
+    brightness: 100,
+    contrast: 100,
+    saturate: 100,
+    blur: 0,
+    opacity: 100,
+  },
+  crop: null,
+  shadow: false,
+  shadowColor: '#000000',
+  shadowBlur: 4,
+  shadowOffsetX: 2,
+  shadowOffsetY: 2,
+};
+
 const ImageGeneratorFrontendOnly = ({
   csvData,
   backgroundImage,
@@ -62,6 +85,7 @@ const ImageGeneratorFrontendOnly = ({
   aspectRatio,
   backgroundElement,
 }) => {
+  const effectiveBackgroundElement = backgroundElement || defaultBackgroundElement;
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -145,8 +169,8 @@ const ImageGeneratorFrontendOnly = ({
             fontScale: imgData.fontScale || 1, // Use custom font scale if available
             aspectRatio,
             backgroundElement: {
-              ...backgroundElement,
-              filters: imgData.customImageFilters || backgroundElement.filters,
+              ...effectiveBackgroundElement,
+              filters: imgData.customImageFilters || effectiveBackgroundElement.filters,
             },
           }).catch(error => {
             console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${imgData.index}:`, error);
@@ -174,7 +198,7 @@ const ImageGeneratorFrontendOnly = ({
 
       regenerateMissingThumbnails();
     }
-  }, [initialGeneratedImagesData, fontsLoaded, fieldPositions, fieldStyles, brandElements, aspectRatio, backgroundElement]);
+  }, [initialGeneratedImagesData, fontsLoaded, fieldPositions, fieldStyles, brandElements, aspectRatio, effectiveBackgroundElement]);
 
 
   const generateImages = async () => {
@@ -215,7 +239,7 @@ const ImageGeneratorFrontendOnly = ({
         fieldStyles,
         fontScale,
         aspectRatio,
-        backgroundElement,
+        backgroundElement: effectiveBackgroundElement,
       })
       .then(imageData => {
         setProgress(p => p + 1);
@@ -284,7 +308,7 @@ const ImageGeneratorFrontendOnly = ({
         originalImageSize,
         brandElements,
         fontScale,
-        backgroundElement.filters
+        effectiveBackgroundElement.filters
       );
     } else {
       alert("Não foi possível resetar a imagem. A imagem de fundo principal não está disponível.");
@@ -402,13 +426,13 @@ const ImageGeneratorFrontendOnly = ({
         sizeToUse,
         elementsToUse,
         modifiedImageData.fontScale || 1,
-        modifiedImageData.imageFilters || backgroundElement.filters
+        modifiedImageData.imageFilters || effectiveBackgroundElement.filters
       );
     }
     handleCloseGeneratedImageEditor();
   };
 
-  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1, customImageFilters = backgroundElement.filters) => {
+  const regenerateSingleImage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1, customImageFilters = effectiveBackgroundElement.filters) => {
     if (!currentBackgroundImage || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
       alert('Pré-requisitos para regeneração não atendidos. Fontes, dados ou configurações faltando.');
       return;
@@ -424,7 +448,7 @@ const ImageGeneratorFrontendOnly = ({
         fontScale,
         aspectRatio,
         backgroundElement: {
-          ...backgroundElement,
+          ...effectiveBackgroundElement,
           filters: customImageFilters,
         },
       });
@@ -830,7 +854,7 @@ const ImageGeneratorFrontendOnly = ({
         backgroundImage={backgroundImage}
         originalImageSize={originalImageSize}
         standardsColors={standardsColors}
-        imageFilters={backgroundElement.filters}
+        imageFilters={effectiveBackgroundElement.filters}
       />
 
       <input
