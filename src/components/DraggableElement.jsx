@@ -76,7 +76,7 @@ const DraggableElementInternal = ({
           style={{
             width: '100%',
             height: '100%',
-            objectFit: 'cover',
+            objectFit: element.type === 'background' ? 'fill' : 'cover',
             pointerEvents: 'none',
           }}
         />
@@ -469,16 +469,6 @@ const DraggableElementInternal = ({
     setResizeHandle(null);
   }, []);
 
-  const effectiveHandleMouseDown = (e, type, handle = null) => {
-    if (element.type === 'background') return;
-    doHandleMouseDown(e, type, handle);
-  };
-
-  const effectiveHandleTouchStart = (e, type, handle = null) => {
-    if (element.type === 'background') return;
-    handleTouchStart(e, type, handle);
-  };
-
   useEffect(() => {
     if (isDragging || isResizing || isRotating) {
       const options = { passive: false, capture: true };
@@ -553,11 +543,21 @@ const DraggableElementInternal = ({
     pointerEvents: 'none',
   };
 
+  const effectiveHandleMouseDown = (e, type, handle = null) => {
+    if (element.type === 'background') return;
+    doHandleMouseDown(e, type, handle);
+  };
+
+  const effectiveHandleTouchStart = (e, type, handle = null) => {
+    if (element.type === 'background') return;
+    handleTouchStart(e, type, handle);
+  };
+
   return (
     <>
       <Box
         ref={textBoxRef}
-        className={`${styles.textBox} ${isDragging ? styles.dragging : ''} ${isSelected ? styles.selected : ''}`}
+        className={`${styles.textBox} ${isDragging ? styles.dragging : ''} ${isSelected && element.type !== 'background' ? styles.selected : ''}`}
         sx={{
           left: `${position.x}%`,
           top: `${position.y}%`,
@@ -565,15 +565,13 @@ const DraggableElementInternal = ({
           height: `${position.height}%`,
           transform: `rotate(${rotation || 0}deg)`,
           zIndex: position.zIndex || 'auto',
-          // Conditional styling based on element type
           backgroundColor: element.type === 'image' || element.type === 'background' || element.type === 'cropbox'
             ? 'transparent'
             : hexToRgba(style.backgroundColor || '#000000', style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1),
-          border: element.type === 'image' || element.type === 'background'
+          border: element.type === 'image' || element.type === 'background' || element.type === 'cropbox'
             ? 'none'
             : `${(style.borderWidth || 0) * fontScale}px solid ${style.borderColor || '#000000'}`,
           borderRadius: `${(style.borderRadius || 0) * fontScale}px`,
-          // Padding should only apply to text boxes, not image containers
           padding: element.type === 'image' || element.type === 'background' || element.type === 'cropbox' ? 0 : `${(style.padding || 0) * fontScale}px`,
         }}
         onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
@@ -594,14 +592,13 @@ const DraggableElementInternal = ({
             flexDirection: 'column',
             justifyContent: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
             alignItems: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
-            height: '100%', // Ensure the flex container takes up the full height of the parent
+            height: '100%',
           }}
         >
             {renderContent()}
         </Box>
 
-        {/* Handles de redimensionamento e rotação */}
-        {isSelected && (
+        {isSelected && element.type !== 'background' && (
           <>
             {resizeHandles.map((handle) => (
               <Box
@@ -614,11 +611,10 @@ const DraggableElementInternal = ({
                   height: `${handleSize}px`,
                   cursor: handle.cursor,
                 }}
-                onMouseDown={(e) => effectiveHandleMouseDown(e, 'resize', handle)}
-                onTouchStart={(e) => effectiveHandleTouchStart(e, 'resize', handle)}
+                onMouseDown={(e) => doHandleMouseDown(e, 'resize', handle)}
+                onTouchStart={(e) => handleTouchStart(e, 'resize', handle)}
               />
             ))}
-            {element.type !== 'background' && (
             <Box
               className={styles.rotateHandle}
               sx={{
@@ -628,10 +624,9 @@ const DraggableElementInternal = ({
                 width: `${handleSize * 1.5}px`,
                 height: `${handleSize * 1.5}px`,
               }}
-              onMouseDown={(e) => effectiveHandleMouseDown(e, 'rotate')}
-              onTouchStart={(e) => effectiveHandleTouchStart(e, 'rotate')}
+              onMouseDown={(e) => doHandleMouseDown(e, 'rotate')}
+              onTouchStart={(e) => handleTouchStart(e, 'rotate')}
             />
-            )}
           </>
         )}
       </Box>
