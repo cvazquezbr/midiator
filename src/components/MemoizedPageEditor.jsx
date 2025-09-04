@@ -50,9 +50,12 @@ const MemoizedPageEditor = ({
   }, [pageToEdit, fieldStyles]);
 
   const memoizedBrandElements = useMemo(() => {
-    return pageToEdit?.customBrandElements !== undefined
-      ? pageToEdit.customBrandElements
-      : brandElements;
+    // Defensively check if customBrandElements is an array. If not, fallback to the global brandElements.
+    if (pageToEdit && Array.isArray(pageToEdit.customBrandElements)) {
+      return pageToEdit.customBrandElements;
+    }
+    // Fallback to global brandElements, ensuring it's also an array.
+    return Array.isArray(brandElements) ? brandElements : [];
   }, [pageToEdit, brandElements]);
 
   if (!showGeneratedPageEditor || editingGeneratedPageIndex === null || !pageToEdit) {
