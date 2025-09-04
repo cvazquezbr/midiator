@@ -37,8 +37,8 @@ import {
   AutoAwesomeOutlined as GeminiIcon,
   SettingsBackupRestore,
 } from '@mui/icons-material';
-import GeneratedImageEditor from './GeneratedImageEditor';
-import MemoizedGeneratedImageEditor from './MemoizedGeneratedImageEditor';
+import GeneratedPageEditor from './GeneratedPageEditor';
+import MemoizedGeneratedPageEditor from './MemoizedGeneratedPageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { composeImage, composeSingleImage, dataURLtoBlob, wrapTextInArea, applyTextEffects, drawTextWithEffects } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
@@ -221,8 +221,8 @@ const ImageGeneratorFrontendOnly = ({
         };
       })
       .catch(error => {
-        console.error(`Erro ao gerar imagem para o registro ${i}:`, error);
-        alert(`Erro ao gerar imagem para o registro ${i}: ${error.message}`);
+        console.error(`Erro ao gerar página para o registro ${i}:`, error);
+        alert(`Erro ao gerar página para o registro ${i}: ${error.message}`);
         return null; // Retorna nulo para este item em caso de erro
       });
     });
@@ -233,8 +233,8 @@ const ImageGeneratorFrontendOnly = ({
         setGeneratedImages(images);
       }
     } catch (error) {
-      console.error('Erro geral durante a geração de imagens em lote:', error);
-      alert(`Ocorreu um erro geral durante a geração das imagens: ${error.message}`);
+      console.error('Erro geral durante a geração de páginas em lote:', error);
+      alert(`Ocorreu um erro geral durante a geração das páginas: ${error.message}`);
     } finally {
       setIsGenerating(false);
       setShowProgressModal(false);
@@ -295,7 +295,7 @@ const ImageGeneratorFrontendOnly = ({
 
   const handleShare = async (imageData) => {
     if (!imageData || !imageData.url) {
-      alert('A imagem não está disponível para compartilhamento.');
+      alert('A página não está disponível para compartilhamento.');
       return;
     }
     try {
@@ -304,7 +304,7 @@ const ImageGeneratorFrontendOnly = ({
       const file = new File([blob], imageData.filename, { type: blob.type });
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'Compartilhar Imagem', text: `Confira a imagem: ${imageData.filename}` });
+        await navigator.share({ files: [file], title: 'Compartilhar Página', text: `Confira a página: ${imageData.filename}` });
       } else {
         alert('Seu navegador não suporta o compartilhamento de arquivos.');
       }
@@ -438,8 +438,8 @@ const ImageGeneratorFrontendOnly = ({
         return updatedImages;
       });
     } catch (error) {
-      console.error(`Erro na regeneração da imagem (índice ${index}):`, error);
-      alert(`Erro na regeneração da imagem (índice ${index}): ${error.message}`);
+      console.error(`Erro na regeneração da página (índice ${index}):`, error);
+      alert(`Erro na regeneração da página (índice ${index}): ${error.message}`);
     }
   };
 
@@ -484,7 +484,7 @@ const ImageGeneratorFrontendOnly = ({
       return;
     }
     if (generatedImages.length === 0) {
-      alert('Nenhuma imagem foi gerada ainda.');
+      alert('Nenhuma página foi gerada ainda.');
       return;
     }
     if (!googleAccessToken) {
@@ -550,7 +550,7 @@ const ImageGeneratorFrontendOnly = ({
         <CardContent>
           <Typography variant="h5" gutterBottom>
             <ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-            Geração de Imagens
+            Geração de Páginas
           </Typography>
 
           {!fontsLoaded && (
@@ -569,7 +569,7 @@ const ImageGeneratorFrontendOnly = ({
                 startIcon={<ImageIcon />}
                 fullWidth
               >
-                {generatedImages.some(img => img.url) ? 'Regerar imagens' : 'Gerar Imagens'}
+                {generatedImages.some(img => img.url) ? 'Regerar páginas' : 'Gerar Páginas'}
               </Button>
             </Grid>
 
@@ -591,7 +591,7 @@ const ImageGeneratorFrontendOnly = ({
             <Box sx={{ mt: 2 }}>
               <LinearProgress />
               <Typography variant="body2" sx={{ mt: 1 }}>
-                Gerando imagens...
+                Gerando páginas...
               </Typography>
             </Box>
           )}
@@ -662,7 +662,7 @@ const ImageGeneratorFrontendOnly = ({
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="h6" gutterBottom>
-                Imagens Geradas ({generatedImages.length})
+                Páginas Geradas ({generatedImages.length})
               </Typography>
 
               <Grid container spacing={2}>
@@ -765,7 +765,7 @@ const ImageGeneratorFrontendOnly = ({
                                 <Download />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Compartilhar">
+                          <Tooltip title="Compartilhar Página">
                             <IconButton
                                 size="small"
                                 onClick={() => handleShare(imageData)}
@@ -804,8 +804,7 @@ const ImageGeneratorFrontendOnly = ({
         </DialogActions>
       </Dialog>
 
-      {console.log('[ImageGeneratorFrontendOnly] rendering MemoizedGeneratedImageEditor with props:', { showGeneratedImageEditor, generatedImages, editingGeneratedImageIndex, csvHeaders, fieldPositions, fieldStyles, brandElements, colorPalette, backgroundImage, originalImageSize, standardsColors, imageFilters: effectiveBackgroundElement.filters })}
-      <MemoizedGeneratedImageEditor
+      <MemoizedGeneratedPageEditor
         showGeneratedImageEditor={showGeneratedImageEditor}
         handleCloseGeneratedImageEditor={handleCloseGeneratedImageEditor}
         generatedImages={generatedImages}
@@ -834,8 +833,8 @@ const ImageGeneratorFrontendOnly = ({
         progress={progress}
         total={csvData.length}
         onCancel={handleCancelGeneration}
-        title="Gerando Imagens"
-        progressText={`Gerando imagem ${progress} de ${csvData.length}...`}
+        title="Gerando Páginas"
+        progressText={`Gerando página ${progress} de ${csvData.length}...`}
       />
     </Box>
   );

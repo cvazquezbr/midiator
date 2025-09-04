@@ -121,13 +121,13 @@ const loadImage = (src) => {
 /**
  * Composes a new image by applying filters and brand elements to a background.
  * @param {string} backgroundImageUrl - The URL or base64 string of the background image.
- * @param {object} backgroundElement - An object containing all properties of the background image.
+ * @param {object} imageFilters - An object containing filter values for the background.
  * @param {Array<object>} brandElements - An array of brand element objects to overlay.
  * @returns {Promise<HTMLCanvasElement>} A promise that resolves with the canvas containing the composed background.
  */
 export const composeImage = async (
   backgroundImageUrl,
-  backgroundElement = {},
+  imageFilters = {},
   brandElements = []
 ) => {
   try {
@@ -137,49 +137,9 @@ export const composeImage = async (
     canvas.width = bgImg.width;
     canvas.height = bgImg.height;
 
-    const {
-      x = 0, y = 0, width = 100, height = 100, rotation = 0,
-      filters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
-      crop,
-      shadow, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY
-    } = backgroundElement;
-
-    ctx.save();
-
-    if (shadow) {
-      ctx.shadowColor = shadowColor || '#000000';
-      ctx.shadowBlur = shadowBlur || 10;
-      ctx.shadowOffsetX = shadowOffsetX || 5;
-      ctx.shadowOffsetY = shadowOffsetY || 5;
-    }
-
-    const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters;
+    const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = imageFilters;
     ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
-
-    const destX = (x / 100) * canvas.width;
-    const destY = (y / 100) * canvas.height;
-    const destWidth = (width / 100) * canvas.width;
-    const destHeight = (height / 100) * canvas.height;
-
-    if (rotation) {
-      const centerX = destX + destWidth / 2;
-      const centerY = destY + destHeight / 2;
-      ctx.translate(centerX, centerY);
-      ctx.rotate(rotation * Math.PI / 180);
-      ctx.translate(-centerX, -centerY);
-    }
-
-    if (crop) {
-      const sx = (crop.x / 100) * bgImg.width;
-      const sy = (crop.y / 100) * bgImg.height;
-      const sWidth = (crop.width / 100) * bgImg.width;
-      const sHeight = (crop.height / 100) * bgImg.height;
-      ctx.drawImage(bgImg, sx, sy, sWidth, sHeight, destX, destY, destWidth, destHeight);
-    } else {
-      ctx.drawImage(bgImg, destX, destY, destWidth, destHeight);
-    }
-
-    ctx.restore();
+    ctx.drawImage(bgImg, 0, 0);
     ctx.filter = 'none';
 
     for (const element of brandElements) {
@@ -220,58 +180,29 @@ export const composeImage = async (
  * @param {object} params - The parameters for composition.
  * @returns {Promise<object>} A promise that resolves with the final imageData object.
  */
-const getDimensionsFromAspectRatio = (aspectRatio) => {
-  switch (aspectRatio) {
-    case '16:9':
-      return { width: 1280, height: 720 };
-    case '4:5':
-      return { width: 720, height: 900 };
-    case '1:1':
-      return { width: 720, height: 720 };
-    default:
-      return null;
-  }
-};
-
 export const composeSingleImage = async ({
     record,
     index,
     itemBackgroundImage,
+    imageFilters,
     brandElements,
     fieldPositions,
     fieldStyles,
-    fontScale = 1,
-    aspectRatio,
-    backgroundElement,
+    fontScale = 1
 }) => {
     if (!itemBackgroundImage) {
         throw new Error(`Background image is missing for record index ${index}.`);
     }
 
     // 1. Compose the background with filters and brand elements
-    const backgroundCanvas = await composeImage(itemBackgroundImage, backgroundElement, brandElements);
+    const backgroundCanvas = await composeImage(itemBackgroundImage, imageFilters, brandElements);
 
     // 2. Create a new canvas to draw the final image with text
     const finalCanvas = document.createElement('canvas');
     const ctx = finalCanvas.getContext('2d');
-
-    const dimensions = getDimensionsFromAspectRatio(aspectRatio);
-
-    if (dimensions) {
-        finalCanvas.width = dimensions.width;
-        finalCanvas.height = dimensions.height;
-        const hRatio = finalCanvas.width / backgroundCanvas.width;
-        const vRatio = finalCanvas.height / backgroundCanvas.height;
-        const ratio = Math.max(hRatio, vRatio);
-        const centerShift_x = (finalCanvas.width - backgroundCanvas.width * ratio) / 2;
-        const centerShift_y = (finalCanvas.height - backgroundCanvas.height * ratio) / 2;
-        ctx.drawImage(backgroundCanvas, 0, 0, backgroundCanvas.width, backgroundCanvas.height,
-                      centerShift_x, centerShift_y, backgroundCanvas.width * ratio, backgroundCanvas.height * ratio);
-    } else {
-        finalCanvas.width = backgroundCanvas.width;
-        finalCanvas.height = backgroundCanvas.height;
-        ctx.drawImage(backgroundCanvas, 0, 0);
-    }
+    finalCanvas.width = backgroundCanvas.width;
+    finalCanvas.height = backgroundCanvas.height;
+    ctx.drawImage(backgroundCanvas, 0, 0);
 
     // 3. Draw text fields onto the canvas
     for (const field of Object.keys(record)) {

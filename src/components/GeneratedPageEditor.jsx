@@ -47,7 +47,7 @@ const COMPLETE_DEFAULT_STYLE = {
   backgroundOpacity: 0,
 };
 
-const GeneratedImageEditor = ({
+const GeneratedPageEditor = ({
   open,
   onClose,
   imageData, // Contém a imagem de fundo (imageData.backgroundImageToEdit || globalBackgroundImage), csvRecord (imageData.record)
@@ -62,7 +62,6 @@ const GeneratedImageEditor = ({
   brandElements,
   standardsColors
 }) => {
-  console.log('[GeneratedImageEditor] props:', { imageData, globalBackgroundImage, imageFilters, fieldStyles });
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
   const [editedBrandElements, setEditedBrandElements] = useState([]);
@@ -206,7 +205,7 @@ const GeneratedImageEditor = ({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="paper" fullScreen={isMobile}>
       <DialogTitle>
-        Editar Página #{imageData.index + 1}
+        Editar Página Gerada #{imageData.index + 1}
         <IconButton
           onClick={onClose}
           sx={{ position: 'absolute', right: 8, top: 8 }}
@@ -269,7 +268,7 @@ const GeneratedImageEditor = ({
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
         <Button onClick={handleSave} color="primary" variant="contained">
-          Salvar Alterações na Imagem
+          Salvar Alterações na Página
         </Button>
       </DialogActions>
       {isMobile && (
@@ -318,4 +317,4 @@ const GeneratedImageEditor = ({
   );
 };
 
-export default GeneratedImageEditor;
+export default GeneratedPageEditor;

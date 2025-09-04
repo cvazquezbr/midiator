@@ -68,15 +68,11 @@ const FieldPositioner = ({
   darkMode,
   brandElements,
   setBrandElements,
-  backgroundElement,
-  setBackgroundElement,
   onOpenHtmlEditor,
   currentPreviewIndex,
   setCurrentPreviewIndex,
   onFontScaleChange,
-  cropMode,
 }) => {
-  console.log('[FieldPositioner] props:', { backgroundImage, backgroundElement, fieldStyles });
   const [selectedField, setSelectedField] = useState(null);
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
@@ -223,9 +219,7 @@ const FieldPositioner = ({
   }, [csvHeaders, fieldPositions, fieldStyles, setFieldPositions, setFieldStyles]);
 
   const handlePositionChange = (id, newPosition) => {
-    if (id === '__cropbox__') {
-      setBackgroundElement(prev => ({ ...prev, crop: { ...prev.crop, ...newPosition } }));
-    } else if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
+    if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
         ...prev,
         [id]: {
@@ -241,9 +235,7 @@ const FieldPositioner = ({
   };
 
   const handleSizeChange = (id, newSize) => {
-    if (id === '__cropbox__') {
-      setBackgroundElement(prev => ({ ...prev, crop: { ...prev.crop, ...newSize } }));
-    } else if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
+    if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
         ...prev,
         [id]: {
@@ -365,29 +357,6 @@ const FieldPositioner = ({
 
   const renderableElements = React.useMemo(() => {
     const elements = [
-      // Add background element first so it's at the bottom
-      ...(backgroundElement ? [{
-        id: '__background__',
-        type: 'background',
-        position: backgroundElement,
-        style: backgroundElement.filters,
-        content: backgroundImage,
-        zIndex: -1, // Ensure it's always at the back
-        rotation: backgroundElement.rotation,
-        fontScale: 1,
-        enableHtmlRendering: false,
-      }] : []),
-      ...(cropMode && backgroundElement ? [{
-        id: '__cropbox__',
-        type: 'cropbox',
-        position: backgroundElement.crop || { x: 10, y: 10, width: 80, height: 80 },
-        style: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-        content: '',
-        zIndex: 1000,
-        rotation: 0,
-        fontScale: 1,
-        enableHtmlRendering: false,
-      }] : []),
       ...(csvHeaders || [])
         .map(header => {
           const position = fieldPositions[header];
@@ -430,7 +399,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => a.zIndex - b.zIndex);
     return elements;
-  }, [backgroundElement, backgroundImage, cropMode, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
+  }, [csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
   if (!backgroundImage) {
     return (
@@ -518,6 +487,20 @@ const FieldPositioner = ({
                 </Box>
               ) : (
                 <>
+                  <img
+                    src={backgroundImage}
+                    alt="Background"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'block',
+                      objectFit: 'fill',
+                      pointerEvents: 'none',
+                      userSelect: 'none',
+                      WebkitUserDrag: 'none',
+                    }}
+                    draggable={false}
+                  />
                   <Box
                     className="elements-wrapper"
                     sx={{
@@ -529,19 +512,19 @@ const FieldPositioner = ({
                     }}
                     onClick={(e) => {
                       if (e.target === e.currentTarget) {
-                        handleFieldSelectInternal('__background__');
+                        handleFieldSelectInternal(null);
                       }
                     }}
                     onTouchStart={(e) => {
                       if (e.target === e.currentTarget) {
-                        handleFieldSelectInternal('__background__');
+                        handleFieldSelectInternal(null);
                       }
                     }}
                   >
                     {renderedImageMetrics.width > 0 && renderableElements.map(element => (
                       <DraggableElement
                         key={element.id}
-                        element={element.type === 'image' || element.type === 'background' || element.type === 'cropbox' ? { ...element.position, type: element.type } : { id: element.id, type: 'text' }}
+                        element={element.type === 'image' ? { ...element.position, type: 'image' } : { id: element.id, type: 'text' }}
                         position={element.position}
                         style={element.style}
                         content={element.content}

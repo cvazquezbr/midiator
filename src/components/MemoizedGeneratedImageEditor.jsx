@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import GeneratedImageEditor from './GeneratedImageEditor';
+import GeneratedPageEditor from './GeneratedPageEditor';
 
-const MemoizedGeneratedImageEditor = ({
+const MemoizedGeneratedPageEditor = ({
   showGeneratedImageEditor,
   handleCloseGeneratedImageEditor,
   generatedImages,
@@ -16,7 +16,6 @@ const MemoizedGeneratedImageEditor = ({
   originalImageSize,
   imageFilters,
 }) => {
-  console.log('[MemoizedGeneratedImageEditor] props:', { imageFilters });
   const imageToEdit = useMemo(() => {
     return generatedImages.find(img => img.index === editingGeneratedImageIndex);
   }, [generatedImages, editingGeneratedImageIndex]);
@@ -63,7 +62,7 @@ const MemoizedGeneratedImageEditor = ({
   }
 
   return (
-    <GeneratedImageEditor
+    <GeneratedPageEditor
       open={showGeneratedImageEditor}
       onClose={handleCloseGeneratedImageEditor}
       imageData={imageToEdit}
@@ -80,4 +79,4 @@ const MemoizedGeneratedImageEditor = ({
   );
 };
 
-export default MemoizedGeneratedImageEditor;
+export default MemoizedGeneratedPageEditor;

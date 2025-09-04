@@ -68,25 +68,19 @@ const DraggableElementInternal = ({
 
   // Função para renderizar conteúdo HTML ou texto simples
   const renderContent = () => {
-    if (element.type === 'image' || element.type === 'background') {
+    if (element.type === 'image') {
       return (
         <img
-          src={content}
-          alt={element.name || 'Element'}
+          src={element.url}
+          alt={element.name || 'Brand Element'}
           style={{
             width: '100%',
             height: '100%',
-            objectFit: 'cover',
+            objectFit: 'contain', // or 'cover', depending on desired behavior
             pointerEvents: 'none',
           }}
         />
       );
-    }
-
-    if (element.type === 'cropbox') {
-        return (
-            <Box sx={{ width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)', border: '1px dashed #fff' }} />
-        );
     }
 
     // Default to text rendering
@@ -470,12 +464,10 @@ const DraggableElementInternal = ({
   }, []);
 
   const effectiveHandleMouseDown = (e, type, handle = null) => {
-    if (element.type === 'background') return;
     doHandleMouseDown(e, type, handle);
   };
 
   const effectiveHandleTouchStart = (e, type, handle = null) => {
-    if (element.type === 'background') return;
     handleTouchStart(e, type, handle);
   };
 
@@ -566,15 +558,15 @@ const DraggableElementInternal = ({
           transform: `rotate(${rotation || 0}deg)`,
           zIndex: position.zIndex || 'auto',
           // Conditional styling based on element type
-          backgroundColor: element.type === 'image' || element.type === 'background' || element.type === 'cropbox'
+          backgroundColor: element.type === 'image'
             ? 'transparent'
             : hexToRgba(style.backgroundColor || '#000000', style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1),
-          border: element.type === 'image' || element.type === 'background'
+          border: element.type === 'image'
             ? 'none'
             : `${(style.borderWidth || 0) * fontScale}px solid ${style.borderColor || '#000000'}`,
           borderRadius: `${(style.borderRadius || 0) * fontScale}px`,
           // Padding should only apply to text boxes, not image containers
-          padding: element.type === 'image' || element.type === 'background' || element.type === 'cropbox' ? 0 : `${(style.padding || 0) * fontScale}px`,
+          padding: element.type === 'image' ? 0 : `${(style.padding || 0) * fontScale}px`,
         }}
         onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
         onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
@@ -597,7 +589,69 @@ const DraggableElementInternal = ({
             height: '100%', // Ensure the flex container takes up the full height of the parent
           }}
         >
-            {renderContent()}
+            {element.type === 'image' ? (
+              <img
+                src={content} // Use content prop which holds the URL
+                alt={element.name || 'Brand Element'}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  pointerEvents: 'none',
+                  filter: getFilterString(style),
+                }}
+              />
+            ) : isEditing ? (
+              <textarea
+                ref={textareaRef}
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                onBlur={() => {
+                  setIsEditing(false);
+                  onContentChange(element.id, editedContent);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    setIsEditing(false);
+                    onContentChange(element.id, editedContent);
+                  }
+                }}
+                className={styles.textArea}
+                style={{ ...textContentStyle, pointerEvents: 'auto' }}
+                autoFocus
+              />
+            ) : (
+              <Box
+                className={`${styles.textContent} ${enableHtmlRendering ? styles.htmlContent : ''}`}
+                sx={textContentStyle}
+              >
+                {enableHtmlRendering ? (
+                  <div
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
+                    style={{
+                      width: '100%',
+                      overflow: 'hidden',
+                      wordWrap: 'break-word',
+                      pointerEvents: 'none',
+                      // Apply all text styles directly here to override HTML content styles
+                      fontFamily: style.fontFamily,
+                      fontSize: `${scaledFontSize}px`,
+                      fontWeight: style.fontWeight,
+                      fontStyle: style.fontStyle,
+                      color: style.color,
+                      lineHeight: `${scaledLineHeight}px`,
+                      textAlign: style.textAlign || 'left',
+                    }}
+                  />
+                ) : (
+                  textLines.map((line, index) => (
+                    <div key={index} style={{ marginBottom: index < textLines.length - 1 ? '2px' : 0 }}>
+                      {line}
+                    </div>
+                  ))
+                )}
+              </Box>
+            )}
         </Box>
 
         {/* Handles de redimensionamento e rotação */}
@@ -618,7 +672,6 @@ const DraggableElementInternal = ({
                 onTouchStart={(e) => effectiveHandleTouchStart(e, 'resize', handle)}
               />
             ))}
-            {element.type !== 'background' && (
             <Box
               className={styles.rotateHandle}
               sx={{
@@ -631,7 +684,6 @@ const DraggableElementInternal = ({
               onMouseDown={(e) => effectiveHandleMouseDown(e, 'rotate')}
               onTouchStart={(e) => effectiveHandleTouchStart(e, 'rotate')}
             />
-            )}
           </>
         )}
       </Box>

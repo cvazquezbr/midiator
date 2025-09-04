@@ -60,18 +60,16 @@ const FormattingPanel = ({
   fieldPositions,
   setFieldPositions,
   csvHeaders,
+  imageFilters,
+  setImageFilters,
   brandElements,
   setBrandElements,
-  backgroundElement,
-  setBackgroundElement,
   onZIndexChange,
   onDeselectField,
   onOpenHtmlEditor,
   standardsColors,
   templateFieldStyles,
   activeStep,
-  cropMode,
-  setCropMode,
 }) => {
   const fonts = [
     // Sans-serif
@@ -88,7 +86,6 @@ const FormattingPanel = ({
   ];
 
   const updateFieldStyle = (field, property, value) => {
-    console.log(`[FormattingPanel] updating style for ${field}: ${property} = ${value}`);
     setFieldStyles(prev => ({ ...prev, [field]: { ...prev[field], [property]: value } }));
   };
 
@@ -132,20 +129,13 @@ const FormattingPanel = ({
   };
 
   const updateBrandElementFilter = (elementId, filterProperty, value) => {
-    if (elementId === '__background__') {
-      setBackgroundElement(prev => ({
-        ...prev,
-        filters: { ...prev.filters, [filterProperty]: value },
-      }));
-    } else {
-      setBrandElements(prev =>
-        prev.map(el =>
-          el.id === elementId
-            ? { ...el, filters: { ...el.filters, [filterProperty]: value } }
-            : el
-        )
-      );
-    }
+    setBrandElements(prev =>
+      prev.map(el =>
+        el.id === elementId
+          ? { ...el, filters: { ...el.filters, [filterProperty]: value } }
+          : el
+      )
+    );
   };
 
   const [isTextField, setIsTextField] = React.useState(false);
@@ -158,47 +148,40 @@ const FormattingPanel = ({
 
   React.useEffect(() => {
     if (selectedField) {
-      if (selectedField === '__background__') {
-        setCurrentElement(backgroundElement);
+      const brandEl = brandElements?.find(el => el.id === selectedField);
+      if (brandEl) {
+        // Defensively add filters if they are missing
+        const elementWithFilters = {
+          ...brandEl,
+          filters: brandEl.filters || {
+            brightness: 100,
+            contrast: 100,
+            saturate: 100,
+            blur: 0,
+            opacity: 100,
+          },
+        };
+        setCurrentElement(elementWithFilters);
         setIsTextField(false);
+      } else if (fieldPositions[selectedField]) {
+        setCurrentElement({
+          ...fieldPositions[selectedField],
+          style: fieldStyles[selectedField] || {},
+        });
+        setIsTextField(true);
       } else {
-        const brandEl = brandElements?.find(el => el.id === selectedField);
-        if (brandEl) {
-          // Defensively add filters if they are missing
-          const elementWithFilters = {
-            ...brandEl,
-            filters: brandEl.filters || {
-              brightness: 100,
-              contrast: 100,
-              saturate: 100,
-              blur: 0,
-              opacity: 100,
-            },
-          };
-          setCurrentElement(elementWithFilters);
-          setIsTextField(false);
-        } else if (fieldPositions[selectedField]) {
-          setCurrentElement({
-            ...fieldPositions[selectedField],
-            style: fieldStyles[selectedField] || {},
-          });
-          setIsTextField(true);
-        } else {
-          setCurrentElement(null);
-        }
+        setCurrentElement(null);
       }
     } else {
       setCurrentElement(null);
     }
-  }, [selectedField, fieldPositions, fieldStyles, brandElements, backgroundElement]);
+  }, [selectedField, fieldPositions, fieldStyles, brandElements]);
 
   const handlePositionPropertyChange = (property, value) => {
     const numericValue = parseFloat(value);
     if (isNaN(numericValue)) return;
 
-    if (selectedField === '__background__') {
-      setBackgroundElement(prev => ({ ...prev, [property]: numericValue }));
-    } else if (isTextField) {
+    if (isTextField) {
       updateFieldPosition(selectedField, property, numericValue);
     } else {
       setBrandElements(prev =>
@@ -670,34 +653,12 @@ const FormattingPanel = ({
                 </Grid>
               </>
             ) : (
-              <Box>
-                {/* Posicionamento e Tamanho para Fundo/Elementos */}
-                <Accordion expanded={expandedPanel === 'positionSize'} onChange={handleAccordionChange('positionSize')}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
-                      <AspectRatio sx={{ mr: 1 }} /> Posição e Tamanho
-                    </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Grid container spacing={2}>
-                      <Grid item xs={6}><TextField label="X (%)" type="number" size="small" value={currentElement.x?.toFixed(1) || '0.0'} onChange={(e) => handlePositionPropertyChange('x', e.target.value)} inputProps={{ min: -100, max: 100, step: 0.1 }} fullWidth /></Grid>
-                      <Grid item xs={6}><TextField label="Y (%)" type="number" size="small" value={currentElement.y?.toFixed(1) || '0.0'} onChange={(e) => handlePositionPropertyChange('y', e.target.value)} inputProps={{ min: -100, max: 100, step: 0.1 }} fullWidth /></Grid>
-                      <Grid item xs={6}><TextField label="Largura (%)" type="number" size="small" value={currentElement.width?.toFixed(1) || '100.0'} onChange={(e) => handlePositionPropertyChange('width', e.target.value)} inputProps={{ min: 5, max: 200, step: 0.1 }} fullWidth /></Grid>
-                      <Grid item xs={6}><TextField label="Altura (%)" type="number" size="small" value={currentElement.height?.toFixed(1) || '100.0'} onChange={(e) => handlePositionPropertyChange('height', e.target.value)} inputProps={{ min: 5, max: 200, step: 0.1 }} fullWidth /></Grid>
-                      <Grid item xs={12}>
-                        <Typography gutterBottom>Rotação: {currentElement.rotation?.toFixed(0) || '0'}°</Typography>
-                        <Slider value={currentElement.rotation || 0} onChange={(e, value) => handlePositionPropertyChange('rotation', value)} min={0} max={360} step={1} />
-                      </Grid>
-                    </Grid>
-                  </AccordionDetails>
-                </Accordion>
-
-                {/* Filtros */}
-                <Accordion expanded={expandedPanel === 'elementFilters'} onChange={handleAccordionChange('elementFilters')}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1">🖼️ Filtros</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
+              <Accordion sx={{ mt: 2 }} expanded={expandedPanel === 'elementFilters'} onChange={handleAccordionChange('elementFilters')}>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                  <Typography variant="subtitle1">🖼️ Filtros do Elemento</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Box sx={{ p: 1 }}>
                     <Typography gutterBottom>Brilho: {currentElement.filters.brightness}%</Typography>
                     <Slider value={currentElement.filters.brightness} onChange={(e, v) => updateBrandElementFilter(selectedField, 'brightness', v)} min={0} max={200} step={1} />
                     <Typography gutterBottom>Contraste: {currentElement.filters.contrast}%</Typography>
@@ -708,53 +669,51 @@ const FormattingPanel = ({
                     <Slider value={currentElement.filters.blur} onChange={(e, v) => updateBrandElementFilter(selectedField, 'blur', v)} min={0} max={20} step={1} />
                     <Typography gutterBottom>Opacidade: {currentElement.filters.opacity}%</Typography>
                     <Slider value={currentElement.filters.opacity} onChange={(e, v) => updateBrandElementFilter(selectedField, 'opacity', v)} min={0} max={100} step={1} />
-                  </AccordionDetails>
-                </Accordion>
-
-                {/* Sombra */}
-                <Accordion expanded={expandedPanel === 'crop'} onChange={handleAccordionChange('crop')}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1">✂️ Cortar</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Button variant="contained" fullWidth onClick={() => setCropMode(!cropMode)}>
-                      {cropMode ? 'Finalizar Corte' : 'Cortar Imagem'}
-                    </Button>
-                  </AccordionDetails>
-                </Accordion>
-
-                <Accordion expanded={expandedPanel === 'shadow'} onChange={handleAccordionChange('shadow')}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1">🎨 Sombra</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <FormControlLabel control={<Switch checked={currentElement.shadow || false} onChange={(e) => setBackgroundElement(b => ({ ...b, shadow: e.target.checked }))} size="small" />} label="Sombra" />
-                    {currentElement.shadow && (
-                      <Grid container spacing={2} sx={{ mt: 1 }}>
-                        <Grid item xs={6}><TextField label="Cor" type="color" value={currentElement.shadowColor || '#000000'} onChange={(e) => setBackgroundElement(b => ({ ...b, shadowColor: e.target.value }))} fullWidth size="small" /></Grid>
-                        <Grid item xs={6}><Typography gutterBottom>Desfoque: {currentElement.shadowBlur || 4}px</Typography><Slider value={currentElement.shadowBlur || 4} onChange={(e, v) => setBackgroundElement(b => ({ ...b, shadowBlur: v }))} min={0} max={50} size="small" /></Grid>
-                        <Grid item xs={6}><Typography gutterBottom>Offset X: {currentElement.shadowOffsetX || 2}px</Typography><Slider value={currentElement.shadowOffsetX || 2} onChange={(e, v) => setBackgroundElement(b => ({ ...b, shadowOffsetX: v }))} min={-50} max={50} size="small" /></Grid>
-                        <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.shadowOffsetY || 2}px</Typography><Slider value={currentElement.shadowOffsetY || 2} onChange={(e, v) => setBackgroundElement(b => ({ ...b, shadowOffsetY: v }))} min={-50} max={50} size="small" /></Grid>
-                      </Grid>
-                    )}
-                  </AccordionDetails>
-                </Accordion>
-
-                {selectedField !== '__background__' && (
-                  <Button variant="outlined" color="error" size="small" onClick={() => handleDeleteBrandElement(selectedField)} sx={{ mt: 2 }} fullWidth>
+                  </Box>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    onClick={() => handleDeleteBrandElement(selectedField)}
+                    sx={{ mt: 2 }}
+                    fullWidth
+                  >
                     Excluir Elemento
                   </Button>
-                )}
-              </Box>
+                </AccordionDetails>
+              </Accordion>
             )}
           </>
         ) : (
           <Typography variant="h6" color="textSecondary" align="center" gutterBottom sx={{ mt: 4 }}>
-            Selecione um elemento para editar suas propriedades
+            Selecione um campo de texto para editar suas propriedades
           </Typography>
         )}
 
         <Divider sx={{ my: 2 }} />
+
+        {/* Filtros de Imagem de Fundo */}
+        <Accordion expanded={expandedPanel === 'backgroundFilters'} onChange={handleAccordionChange('backgroundFilters')}>
+          <AccordionSummary expandIcon={<ExpandMore />}>
+            <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center' }}>
+                <Tune sx={{ mr: 1 }} /> Filtros do Fundo
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Box sx={{ p: 1 }}>
+              <Typography gutterBottom>Brilho: {imageFilters.brightness}%</Typography>
+              <Slider value={imageFilters.brightness} onChange={(e, v) => setImageFilters(f => ({ ...f, brightness: v }))} min={0} max={200} step={1} />
+              <Typography gutterBottom>Contraste: {imageFilters.contrast}%</Typography>
+              <Slider value={imageFilters.contrast} onChange={(e, v) => setImageFilters(f => ({ ...f, contrast: v }))} min={0} max={200} step={1} />
+              <Typography gutterBottom>Saturação: {imageFilters.saturate}%</Typography>
+              <Slider value={imageFilters.saturate} onChange={(e, v) => setImageFilters(f => ({ ...f, saturate: v }))} min={0} max={200} step={1} />
+              <Typography gutterBottom>Desfoque: {imageFilters.blur}px</Typography>
+              <Slider value={imageFilters.blur} onChange={(e, v) => setImageFilters(f => ({ ...f, blur: v }))} min={0} max={20} step={1} />
+              <Typography gutterBottom>Opacidade: {imageFilters.opacity}%</Typography>
+              <Slider value={imageFilters.opacity} onChange={(e, v) => setImageFilters(f => ({ ...f, opacity: v }))} min={0} max={100} step={1} />
+            </Box>
+          </AccordionDetails>
+        </Accordion>
 
         {/* Brand Elements */}
         <Accordion expanded={expandedPanel === 'brandElements'} onChange={handleAccordionChange('brandElements')}>
