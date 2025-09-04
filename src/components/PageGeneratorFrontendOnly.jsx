@@ -60,6 +60,7 @@ const PageGeneratorFrontendOnly = ({
   fontScale = 1,
   standardsColors,
   handleGenerateSinglePage, // Nova prop
+  backgroundElement,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -214,6 +215,7 @@ const PageGeneratorFrontendOnly = ({
         fieldPositions,
         fieldStyles,
         fontScale,
+        backgroundElement,
       })
       .then(pageData => {
         setProgress(p => p + 1);
