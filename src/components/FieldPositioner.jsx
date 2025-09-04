@@ -223,7 +223,9 @@ const FieldPositioner = ({
   }, [csvHeaders, fieldPositions, fieldStyles, setFieldPositions, setFieldStyles]);
 
   const handlePositionChange = (id, newPosition) => {
-    if (id === '__cropbox__') {
+    if (id === 'background') {
+      setBackgroundElement(prev => ({ ...prev, ...newPosition }));
+    } else if (id === '__cropbox__') {
       setBackgroundElement(prev => ({ ...prev, crop: { ...prev.crop, ...newPosition } }));
     } else if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
@@ -241,7 +243,9 @@ const FieldPositioner = ({
   };
 
   const handleSizeChange = (id, newSize) => {
-    if (id === '__cropbox__') {
+    if (id === 'background') {
+      setBackgroundElement(prev => ({ ...prev, ...newSize }));
+    } else if (id === '__cropbox__') {
       setBackgroundElement(prev => ({ ...prev, crop: { ...prev.crop, ...newSize } }));
     } else if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
@@ -367,7 +371,7 @@ const FieldPositioner = ({
     const elements = [
       // Add background element first so it's at the bottom
       ...(backgroundElement ? [{
-        id: '__background__',
+        id: 'background',
         type: 'background',
         position: backgroundElement,
         style: backgroundElement.filters,
@@ -529,12 +533,12 @@ const FieldPositioner = ({
                     }}
                     onClick={(e) => {
                       if (e.target === e.currentTarget) {
-                        handleFieldSelectInternal('__background__');
+                        handleFieldSelectInternal('background');
                       }
                     }}
                     onTouchStart={(e) => {
                       if (e.target === e.currentTarget) {
-                        handleFieldSelectInternal('__background__');
+                        handleFieldSelectInternal('background');
                       }
                     }}
                   >
