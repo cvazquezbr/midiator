@@ -40,8 +40,6 @@ const ImageStep = ({
   standardsColors,
   onCsvDataUpdate,
   originalImageSize,
-  imageFilters,
-  setImageFilters,
   brandElements,
   setBrandElements,
   backgroundElement,
@@ -169,8 +167,6 @@ const ImageStep = ({
             onCsvDataUpdate={onCsvDataUpdate}
             onSelectFieldExternal={setSelectedField}
             originalImageSize={originalImageSize}
-            imageFilters={imageFilters}
-            setImageFilters={setImageFilters}
             brandElements={brandElements}
             setBrandElements={setBrandElements}
             backgroundElement={backgroundElement}
@@ -194,8 +190,6 @@ const ImageStep = ({
               fieldPositions={fieldPositions}
               setFieldPositions={setFieldPositions}
               csvHeaders={csvHeaders}
-              imageFilters={imageFilters}
-              setImageFilters={setImageFilters}
               brandElements={brandElements}
               setBrandElements={setBrandElements}
               backgroundElement={backgroundElement}
@@ -224,8 +218,6 @@ const ImageStep = ({
               fieldPositions={fieldPositions}
               setFieldPositions={setFieldPositions}
               csvHeaders={csvHeaders}
-              imageFilters={imageFilters}
-              setImageFilters={setImageFilters}
               brandElements={brandElements}
               setBrandElements={setBrandElements}
               backgroundElement={backgroundElement}

@@ -121,7 +121,7 @@ const loadImage = (src) => {
 /**
  * Composes a new image by applying filters and brand elements to a background.
  * @param {string} backgroundImageUrl - The URL or base64 string of the background image.
- * @param {object} imageFilters - An object containing filter values for the background.
+ * @param {object} backgroundElement - An object containing all properties of the background image.
  * @param {Array<object>} brandElements - An array of brand element objects to overlay.
  * @returns {Promise<HTMLCanvasElement>} A promise that resolves with the canvas containing the composed background.
  */
@@ -237,13 +237,12 @@ export const composeSingleImage = async ({
     record,
     index,
     itemBackgroundImage,
-    imageFilters,
     brandElements,
     fieldPositions,
     fieldStyles,
     fontScale = 1,
     aspectRatio,
-    backgroundElement
+    backgroundElement,
 }) => {
     if (!itemBackgroundImage) {
         throw new Error(`Background image is missing for record index ${index}.`);
