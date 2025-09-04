@@ -212,6 +212,7 @@ const ImageGeneratorFrontendOnly = ({
         fieldStyles,
         fontScale,
         aspectRatio,
+        backgroundElement,
       })
       .then(imageData => {
         setProgress(p => p + 1);

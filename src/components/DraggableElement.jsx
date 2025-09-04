@@ -568,8 +568,8 @@ const DraggableElementInternal = ({
           // Padding should only apply to text boxes, not image containers
           padding: element.type === 'image' ? 0 : `${(style.padding || 0) * fontScale}px`,
         }}
-        onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
-        onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
+        onMouseDown={(e) => { if (element.type !== 'background') effectiveHandleMouseDown(e, 'drag'); }}
+        onTouchStart={(e) => { if (element.type !== 'background') effectiveHandleTouchStart(e, 'drag'); }}
         onClick={() => onSelect(element.id)}
         onDoubleClick={() => {
           if (element.type === 'text' && !enableHtmlRendering) {
@@ -589,18 +589,20 @@ const DraggableElementInternal = ({
             height: '100%', // Ensure the flex container takes up the full height of the parent
           }}
         >
-            {element.type === 'image' ? (
+            {element.type === 'image' || element.type === 'background' ? (
               <img
                 src={content} // Use content prop which holds the URL
                 alt={element.name || 'Brand Element'}
                 style={{
                   width: '100%',
                   height: '100%',
-                  objectFit: 'contain',
+                  objectFit: 'cover',
                   pointerEvents: 'none',
                   filter: getFilterString(style),
                 }}
               />
+            ) : element.type === 'cropbox' ? (
+              <Box sx={{ width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)', border: '1px dashed #fff' }} />
             ) : isEditing ? (
               <textarea
                 ref={textareaRef}
@@ -672,6 +674,7 @@ const DraggableElementInternal = ({
                 onTouchStart={(e) => effectiveHandleTouchStart(e, 'resize', handle)}
               />
             ))}
+            {element.type !== 'background' && (
             <Box
               className={styles.rotateHandle}
               sx={{
@@ -684,6 +687,7 @@ const DraggableElementInternal = ({
               onMouseDown={(e) => effectiveHandleMouseDown(e, 'rotate')}
               onTouchStart={(e) => effectiveHandleTouchStart(e, 'rotate')}
             />
+            )}
           </>
         )}
       </Box>

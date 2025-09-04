@@ -141,6 +141,7 @@ function HomePage() {
   const [selectedField, setSelectedField] = useState(null);
   const [imageFilters, setImageFilters] = useState({ brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 });
   const [brandElements, setBrandElements] = useState([]);
+  const [backgroundElement, setBackgroundElement] = useState(null);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
@@ -222,6 +223,7 @@ function HomePage() {
     );
     setGeneratedVideosData(Array.isArray(state.generatedVideosData) ? state.generatedVideosData : []);
     setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
+    setBackgroundElement(state.backgroundElement ?? null);
 
     if (state.backgroundImage) {
       updateImageAndPalette(state.backgroundImage);
@@ -308,6 +310,7 @@ function HomePage() {
       templateFieldStyles,
       imageFilters,
       brandElements,
+      backgroundElement,
       backgroundImage,
       generatedImageUrl,
       generatedImagesData,
@@ -570,6 +573,17 @@ function HomePage() {
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
       setOriginalImageSize({ width: img.width, height: img.height });
+      setBackgroundElement({
+        id: '__background__',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        rotation: 0,
+        visible: true,
+        filters: { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
+        crop: null, // Initial crop is null, meaning no crop
+      });
       try {
         const colorThief = new ColorThief();
         const palette = colorThief.getPalette(img, 5);
@@ -583,6 +597,7 @@ function HomePage() {
       console.error("Error loading image to extract colors:", err);
       setBackgroundImage(null);
       setColorPalette([]);
+      setBackgroundElement(null);
     };
     img.src = imageUrl;
   }, []);
@@ -947,6 +962,7 @@ function HomePage() {
         fieldPositions,
         fieldStyles,
         aspectRatio,
+        backgroundElement,
       });
 
       finalImageData.backgroundImage = stableDataUrl;
@@ -1076,10 +1092,12 @@ function HomePage() {
                     standardsColors={standardsColors}
                     onCsvDataUpdate={handleCsvRecordContentUpdate}
                     originalImageSize={originalImageSize}
-                    imageFilters={imageFilters}
-                    setImageFilters={setImageFilters}
+                    imageFilters={backgroundElement?.filters}
+                    setImageFilters={(newFilters) => setBackgroundElement(b => ({ ...b, filters: newFilters }))}
                     brandElements={brandElements}
                     setBrandElements={setBrandElements}
+                    backgroundElement={backgroundElement}
+                    setBackgroundElement={setBackgroundElement}
                     onZIndexChange={handleZIndexChange}
                     isMobile={isMobile}
                     selectedField={selectedField}
