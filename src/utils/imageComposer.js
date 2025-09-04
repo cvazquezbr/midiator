@@ -118,108 +118,6 @@ const loadImage = (src) => {
   });
 };
 
-/**
- * Composes a new image by applying filters and brand elements to a background.
- * @param {string} backgroundImageUrl - The URL or base64 string of the background image.
- * @param {object} backgroundElement - An object containing all properties of the background image.
- * @param {Array<object>} brandElements - An array of brand element objects to overlay.
- * @returns {Promise<HTMLCanvasElement>} A promise that resolves with the canvas containing the composed background.
- */
-export const composeImage = async (
-  backgroundImageUrl,
-  backgroundElement = {},
-  brandElements = []
-) => {
-  try {
-    const bgImg = await loadImage(backgroundImageUrl);
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = bgImg.width;
-    canvas.height = bgImg.height;
-
-    const {
-      x = 0, y = 0, width = 100, height = 100, rotation = 0,
-      filters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
-      crop,
-      shadow, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY
-    } = backgroundElement;
-
-    ctx.save();
-
-    if (shadow) {
-      ctx.shadowColor = shadowColor || '#000000';
-      ctx.shadowBlur = shadowBlur || 10;
-      ctx.shadowOffsetX = shadowOffsetX || 5;
-      ctx.shadowOffsetY = shadowOffsetY || 5;
-    }
-
-    const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters;
-    ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
-
-    const destX = (x / 100) * canvas.width;
-    const destY = (y / 100) * canvas.height;
-    const destWidth = (width / 100) * canvas.width;
-    const destHeight = (height / 100) * canvas.height;
-
-    if (rotation) {
-      const centerX = destX + destWidth / 2;
-      const centerY = destY + destHeight / 2;
-      ctx.translate(centerX, centerY);
-      ctx.rotate(rotation * Math.PI / 180);
-      ctx.translate(-centerX, -centerY);
-    }
-
-    if (crop) {
-      const sx = (crop.x / 100) * bgImg.width;
-      const sy = (crop.y / 100) * bgImg.height;
-      const sWidth = (crop.width / 100) * bgImg.width;
-      const sHeight = (crop.height / 100) * bgImg.height;
-      ctx.drawImage(bgImg, sx, sy, sWidth, sHeight, destX, destY, destWidth, destHeight);
-    } else {
-      ctx.drawImage(bgImg, destX, destY, destWidth, destHeight);
-    }
-
-    ctx.restore();
-    ctx.filter = 'none';
-
-    for (const element of brandElements) {
-      if (!element.url) continue;
-      try {
-        const elementImg = await loadImage(element.url);
-        ctx.save();
-        const elX = (element.x / 100) * canvas.width;
-        const elY = (element.y / 100) * canvas.height;
-        const elWidth = (element.width / 100) * canvas.width;
-        const elHeight = (element.height / 100) * canvas.height;
-        if (element.rotation) {
-            const centerX = elX + elWidth / 2;
-            const centerY = elY + elHeight / 2;
-            ctx.translate(centerX, centerY);
-            ctx.rotate(element.rotation * Math.PI / 180);
-            ctx.translate(-centerX, -centerY);
-        }
-        if (element.filters) {
-            const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = element.filters;
-            ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
-        }
-        ctx.drawImage(elementImg, elX, elY, elWidth, elHeight);
-        ctx.restore();
-      } catch (error) {
-        console.error(`[composeImage] Failed to load or draw brand element ${element.id}:`, error);
-      }
-    }
-    return canvas;
-  } catch (error) {
-    console.error('Error composing image:', error);
-    throw error;
-  }
-};
-
-/**
- * Creates a complete composite image with text and returns full imageData object.
- * @param {object} params - The parameters for composition.
- * @returns {Promise<object>} A promise that resolves with the final imageData object.
- */
 const getDimensionsFromAspectRatio = (aspectRatio) => {
   switch (aspectRatio) {
     case '16:9':
@@ -233,150 +131,257 @@ const getDimensionsFromAspectRatio = (aspectRatio) => {
   }
 };
 
+/**
+ * Creates a complete composite image with text and returns full imageData object.
+ * @param {object} params - The parameters for composition.
+ * @returns {Promise<object>} A promise that resolves with the final imageData object.
+ */
 export const composeSingleImage = async ({
     record,
     index,
     itemBackgroundImage,
-    brandElements,
-    fieldPositions,
-    fieldStyles,
-    fontScale = 1,
+    brandElements = [],
+    fieldPositions = {},
+    fieldStyles = {},
     aspectRatio,
-    backgroundElement,
+    backgroundElement = {},
 }) => {
     if (!itemBackgroundImage) {
         throw new Error(`Background image is missing for record index ${index}.`);
     }
 
-    // 1. Compose the background with filters and brand elements
-    const backgroundCanvas = await composeImage(itemBackgroundImage, backgroundElement, brandElements);
-
-    // 2. Create a new canvas to draw the final image with text
+    // 1. Create final canvas
     const finalCanvas = document.createElement('canvas');
     const ctx = finalCanvas.getContext('2d');
-
     const dimensions = getDimensionsFromAspectRatio(aspectRatio);
 
+    // If dimensions are fixed, use them. Otherwise, we must load the image to find its size.
     if (dimensions) {
         finalCanvas.width = dimensions.width;
         finalCanvas.height = dimensions.height;
-        const hRatio = finalCanvas.width / backgroundCanvas.width;
-        const vRatio = finalCanvas.height / backgroundCanvas.height;
-        const ratio = Math.max(hRatio, vRatio);
-        const centerShift_x = (finalCanvas.width - backgroundCanvas.width * ratio) / 2;
-        const centerShift_y = (finalCanvas.height - backgroundCanvas.height * ratio) / 2;
-        ctx.drawImage(backgroundCanvas, 0, 0, backgroundCanvas.width, backgroundCanvas.height,
-                      centerShift_x, centerShift_y, backgroundCanvas.width * ratio, backgroundCanvas.height * ratio);
     } else {
-        finalCanvas.width = backgroundCanvas.width;
-        finalCanvas.height = backgroundCanvas.height;
-        ctx.drawImage(backgroundCanvas, 0, 0);
+        const bgImg = await loadImage(itemBackgroundImage);
+        finalCanvas.width = bgImg.width;
+        finalCanvas.height = bgImg.height;
     }
 
-    // 3. Draw text fields onto the canvas
-    for (const field of Object.keys(record)) {
+    // 2. Draw background image with all transformations
+    ctx.save();
+    const bgImg = await loadImage(itemBackgroundImage);
+    const {
+      // x, y, width, height are ignored for the main background to implement "cover"
+      rotation = 0,
+      filters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
+      crop,
+      shadow, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY
+    } = backgroundElement;
+
+    if (shadow) {
+      ctx.shadowColor = shadowColor || '#000000';
+      ctx.shadowBlur = shadowBlur || 10;
+      ctx.shadowOffsetX = shadowOffsetX || 5;
+      ctx.shadowOffsetY = shadowOffsetY || 5;
+    }
+
+    const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters || {};
+    ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
+
+    // Implement "cover" effect for the background
+    const canvasWidth = finalCanvas.width;
+    const canvasHeight = finalCanvas.height;
+    const imgAspectRatio = bgImg.width / bgImg.height;
+    const canvasAspectRatio = canvasWidth / canvasHeight;
+
+    let drawWidth = canvasWidth;
+    let drawHeight = canvasHeight;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (imgAspectRatio > canvasAspectRatio) {
+      // Image is wider than canvas, so height should be scaled to canvas height
+      drawHeight = canvasHeight;
+      drawWidth = drawHeight * imgAspectRatio;
+      offsetX = (canvasWidth - drawWidth) / 2;
+    } else {
+      // Image is taller or same aspect ratio, so width should be scaled to canvas width
+      drawWidth = canvasWidth;
+      drawHeight = drawWidth / imgAspectRatio;
+      offsetY = (canvasHeight - drawHeight) / 2;
+    }
+
+    if (rotation) {
+      ctx.translate(canvasWidth / 2, canvasHeight / 2);
+      ctx.rotate(rotation * Math.PI / 180);
+      ctx.translate(-canvasWidth / 2, -canvasHeight / 2);
+    }
+
+    if (crop) {
+      const sx = (crop.x / 100) * bgImg.width;
+      const sy = (crop.y / 100) * bgImg.height;
+      const sWidth = (crop.width / 100) * bgImg.width;
+      const sHeight = (crop.height / 100) * bgImg.height;
+      ctx.drawImage(bgImg, sx, sy, sWidth, sHeight, offsetX, offsetY, drawWidth, drawHeight);
+    } else {
+      ctx.drawImage(bgImg, offsetX, offsetY, drawWidth, drawHeight);
+    }
+    ctx.restore();
+
+    // 3. Collect and sort all elements (text and brand) by zIndex
+    const elementsToDraw = [];
+
+    // Add text fields
+    Object.keys(record).forEach(field => {
         const position = fieldPositions[field];
         const style = fieldStyles[field];
-        if (!position || !position.visible || !style) continue;
-        const text = record[field] || "";
-        if (!text) continue;
+        if (position && position.visible && style) {
+            elementsToDraw.push({
+                type: 'text',
+                id: field,
+                content: record[field] || '',
+                position,
+                style,
+                zIndex: position.zIndex || 0,
+            });
+        }
+    });
 
+    // Add brand elements
+    (brandElements || []).forEach(element => {
+        if (element.url) {
+            elementsToDraw.push({
+                type: 'brand',
+                ...element,
+                zIndex: element.zIndex || 0,
+            });
+        }
+    });
+
+    // Sort elements by zIndex
+    elementsToDraw.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+    // 4. Draw sorted elements
+    for (const element of elementsToDraw) {
         ctx.save();
-        const posPx = {
-            x: (position.x / 100) * finalCanvas.width,
-            y: (position.y / 100) * finalCanvas.height,
-            width: (position.width / 100) * finalCanvas.width,
-            height: (position.height / 100) * finalCanvas.height
-        };
+        if (element.type === 'text') {
+            const { content, position, style } = element;
+            if (!content) {
+                ctx.restore();
+                continue;
+            }
 
-        if (position.rotation) {
-            const centerX = posPx.x + posPx.width / 2;
-            const centerY = posPx.y + posPx.height / 2;
-            ctx.translate(centerX, centerY);
-            ctx.rotate(position.rotation * Math.PI / 180);
-            ctx.translate(-centerX, -centerY);
-        }
+            const posPx = {
+                x: (position.x / 100) * finalCanvas.width,
+                y: (position.y / 100) * finalCanvas.height,
+                width: (position.width / 100) * finalCanvas.width,
+                height: (position.height / 100) * finalCanvas.height
+            };
 
-        // Create a render-specific style object.
-        // The fontSize is treated as pre-scaled, but other pixel values must be scaled up for the full-res canvas.
-        const finalStyle = {
-            ...style,
-            fontSize: (style.fontSize || 24),
-            strokeWidth: (style.strokeWidth || 2),
-            shadowBlur: (style.shadowBlur || 4),
-            shadowOffsetX: (style.shadowOffsetX || 2),
-            shadowOffsetY: (style.shadowOffsetY || 2),
-        };
+            if (position.rotation) {
+                const centerX = posPx.x + posPx.width / 2;
+                const centerY = posPx.y + posPx.height / 2;
+                ctx.translate(centerX, centerY);
+                ctx.rotate(position.rotation * Math.PI / 180);
+                ctx.translate(-centerX, -centerY);
+            }
 
-        const padding = (style.padding || 0);
-        const borderRadius = (style.borderRadius || 0);
-        const borderWidth = (style.borderWidth || 0);
+            const finalStyle = {
+                ...style,
+                fontSize: (style.fontSize || 24),
+                strokeWidth: (style.strokeWidth || 2),
+                shadowBlur: (style.shadowBlur || 4),
+                shadowOffsetX: (style.shadowOffsetX || 2),
+                shadowOffsetY: (style.shadowOffsetY || 2),
+            };
 
-        // Draw the textbox background and border using scaled values
-        const backgroundOpacity = style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1;
-        const backgroundColorHex = style.backgroundColor || '#000000';
-        if (backgroundOpacity > 0) {
-            ctx.fillStyle = hexToRgba(backgroundColorHex, backgroundOpacity);
-            drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, borderRadius);
-            ctx.fill();
-        }
-        if (borderWidth > 0) {
-            ctx.strokeStyle = style.borderColor || '#000000';
-            ctx.lineWidth = borderWidth;
-            drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, borderRadius);
-            ctx.stroke();
-        }
+            const padding = (style.padding || 0);
+            const borderRadius = (style.borderRadius || 0);
+            const borderWidth = (style.borderWidth || 0);
 
-        // Apply final text effects with the scaled font size
-        applyTextEffects(ctx, finalStyle);
+            const backgroundOpacity = style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1;
+            const backgroundColorHex = style.backgroundColor || '#000000';
+            if (backgroundOpacity > 0) {
+                ctx.fillStyle = hexToRgba(backgroundColorHex, backgroundOpacity);
+                drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, borderRadius);
+                ctx.fill();
+            }
+            if (borderWidth > 0) {
+                ctx.strokeStyle = style.borderColor || '#000000';
+                ctx.lineWidth = borderWidth;
+                drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, borderRadius);
+                ctx.stroke();
+            }
 
-        const effectiveTextWidth = Math.max(0, posPx.width - (2 * padding));
-        const effectiveTextHeight = Math.max(0, posPx.height - (2 * padding));
-        const textContentStartX = posPx.x + padding;
-        const textContentStartY = posPx.y + padding;
+            applyTextEffects(ctx, finalStyle);
 
-        const lines = wrapTextInArea(ctx, text, finalStyle, effectiveTextWidth, effectiveTextHeight);
-        const lineHeight = finalStyle.fontSize * (finalStyle.lineHeightMultiplier || 1.2);
+            const effectiveTextWidth = Math.max(0, posPx.width - (2 * padding));
+            const effectiveTextHeight = Math.max(0, posPx.height - (2 * padding));
+            const textContentStartX = posPx.x + padding;
+            const textContentStartY = posPx.y + padding;
 
-        let currentLineRenderY = textContentStartY;
-        if (finalStyle.verticalAlign === 'middle') {
-            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalStyle.fontSize) : 0);
-            currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
-        } else if (finalStyle.verticalAlign === 'bottom') {
-            const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalStyle.fontSize) : 0);
-            currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
-        }
+            const lines = wrapTextInArea(ctx, content, finalStyle, effectiveTextWidth, effectiveTextHeight);
+            const lineHeight = finalStyle.fontSize * (finalStyle.lineHeightMultiplier || 1.2);
 
-        if (containsHtml(text)) {
-            // For HTML fields, we delegate the entire rendering, including wrapping, to the HTML renderer.
-            await renderHtmlToCanvas(ctx, text, textContentStartX, textContentStartY, effectiveTextWidth, effectiveTextHeight, finalStyle);
-        } else {
-            // For plain text fields, we use the manual wrapping and line-by-line drawing.
-            for (const line of lines) {
-                let currentLineRenderX;
-                if (finalStyle.textAlign === 'center') {
-                    currentLineRenderX = textContentStartX + effectiveTextWidth / 2;
-                } else if (finalStyle.textAlign === 'right') {
-                    currentLineRenderX = textContentStartX + effectiveTextWidth;
-                } else {
-                    currentLineRenderX = textContentStartX;
+            let currentLineRenderY = textContentStartY;
+            if (finalStyle.verticalAlign === 'middle') {
+                const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalStyle.fontSize) : 0);
+                currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
+            } else if (finalStyle.verticalAlign === 'bottom') {
+                const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalStyle.fontSize) : 0);
+                currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
+            }
+
+            if (containsHtml(content)) {
+                await renderHtmlToCanvas(ctx, content, textContentStartX, textContentStartY, effectiveTextWidth, effectiveTextHeight, finalStyle);
+            } else {
+                for (const line of lines) {
+                    let currentLineRenderX;
+                    if (finalStyle.textAlign === 'center') {
+                        currentLineRenderX = textContentStartX + effectiveTextWidth / 2;
+                    } else if (finalStyle.textAlign === 'right') {
+                        currentLineRenderX = textContentStartX + effectiveTextWidth;
+                    } else {
+                        currentLineRenderX = textContentStartX;
+                    }
+                    const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
+                    if (finalStyle.textStroke) {
+                        ctx.strokeText(line, currentLineRenderX, finalLineY);
+                    }
+                    ctx.fillText(line, currentLineRenderX, finalLineY);
                 }
-                const finalLineY = currentLineRenderY + (lines.indexOf(line) * lineHeight);
-                // For plain text, we call the simpler drawing function directly.
-                if (finalStyle.textStroke) {
-                    ctx.strokeText(line, currentLineRenderX, finalLineY);
+            }
+
+        } else if (element.type === 'brand') {
+            try {
+                const elementImg = await loadImage(element.url);
+                const elX = (element.x / 100) * finalCanvas.width;
+                const elY = (element.y / 100) * finalCanvas.height;
+                const elWidth = (element.width / 100) * finalCanvas.width;
+                const elHeight = (element.height / 100) * finalCanvas.height;
+
+                if (element.rotation) {
+                    const centerX = elX + elWidth / 2;
+                    const centerY = elY + elHeight / 2;
+                    ctx.translate(centerX, centerY);
+                    ctx.rotate(element.rotation * Math.PI / 180);
+                    ctx.translate(-centerX, -centerY);
                 }
-                ctx.fillText(line, currentLineRenderX, finalLineY);
+                if (element.filters) {
+                    const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = element.filters;
+                    ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
+                }
+                ctx.drawImage(elementImg, elX, elY, elWidth, elHeight);
+            } catch (error) {
+                console.error(`[composeSingleImage] Failed to load or draw brand element ${element.id}:`, error);
             }
         }
         ctx.restore();
     }
 
-    // 4. Generate final data URL and blob
+    // 5. Generate final data URL and blob
     const dataUrl = finalCanvas.toDataURL('image/png', 1.0);
     const blob = dataURLtoBlob(dataUrl);
 
-    // 5. Return the complete imageData object
+    // 6. Return the complete imageData object
     return {
         url: dataUrl,
         dataUrl: dataUrl,
@@ -384,8 +389,6 @@ export const composeSingleImage = async ({
         record,
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        backgroundImage: itemBackgroundImage, // Always preserve the original background
-        fontScale, // Preserve the font scale used for generation
-        // customFieldPositions and customFieldStyles are not handled here as this is for initial generation
+        backgroundImage: itemBackgroundImage,
     };
 };
