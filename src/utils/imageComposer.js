@@ -168,14 +168,19 @@ export const composeSingleImage = async ({
     // 2. Draw background image with all transformations
     ctx.save();
     const bgImg = await loadImage(itemBackgroundImage);
+    const canvasWidth = finalCanvas.width;
+    const canvasHeight = finalCanvas.height;
+
+    // Destructure all properties from backgroundElement, providing defaults.
     const {
-      // x, y, width, height are ignored for the main background to implement "cover"
+      x = 0, y = 0, width = 100, height = 100, // Position and size in %
       rotation = 0,
       filters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
       crop,
       shadow, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY
     } = backgroundElement;
 
+    // Apply shadow first, so it's under the rotated image
     if (shadow) {
       ctx.shadowColor = shadowColor || '#000000';
       ctx.shadowBlur = shadowBlur || 10;
@@ -183,47 +188,38 @@ export const composeSingleImage = async ({
       ctx.shadowOffsetY = shadowOffsetY || 5;
     }
 
+    // Apply filters
     const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters || {};
     ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
 
-    // Implement "cover" effect for the background
-    const canvasWidth = finalCanvas.width;
-    const canvasHeight = finalCanvas.height;
-    const imgAspectRatio = bgImg.width / bgImg.height;
-    const canvasAspectRatio = canvasWidth / canvasHeight;
+    // Calculate destination dimensions in pixels
+    const dx = (x / 100) * canvasWidth;
+    const dy = (y / 100) * canvasHeight;
+    const dWidth = (width / 100) * canvasWidth;
+    const dHeight = (height / 100) * canvasHeight;
 
-    let drawWidth = canvasWidth;
-    let drawHeight = canvasHeight;
-    let offsetX = 0;
-    let offsetY = 0;
-
-    if (imgAspectRatio > canvasAspectRatio) {
-      // Image is wider than canvas, so height should be scaled to canvas height
-      drawHeight = canvasHeight;
-      drawWidth = drawHeight * imgAspectRatio;
-      offsetX = (canvasWidth - drawWidth) / 2;
-    } else {
-      // Image is taller or same aspect ratio, so width should be scaled to canvas width
-      drawWidth = canvasWidth;
-      drawHeight = drawWidth / imgAspectRatio;
-      offsetY = (canvasHeight - drawHeight) / 2;
-    }
-
+    // Apply rotation around the center of the destination rectangle
     if (rotation) {
-      ctx.translate(canvasWidth / 2, canvasHeight / 2);
+      const centerX = dx + dWidth / 2;
+      const centerY = dy + dHeight / 2;
+      ctx.translate(centerX, centerY);
       ctx.rotate(rotation * Math.PI / 180);
-      ctx.translate(-canvasWidth / 2, -canvasHeight / 2);
+      ctx.translate(-centerX, -centerY);
     }
 
-    if (crop) {
+    // Draw the image
+    if (crop && crop.width > 0 && crop.height > 0) {
+      // Use crop rectangle as source
       const sx = (crop.x / 100) * bgImg.width;
       const sy = (crop.y / 100) * bgImg.height;
       const sWidth = (crop.width / 100) * bgImg.width;
       const sHeight = (crop.height / 100) * bgImg.height;
-      ctx.drawImage(bgImg, sx, sy, sWidth, sHeight, offsetX, offsetY, drawWidth, drawHeight);
+      ctx.drawImage(bgImg, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
     } else {
-      ctx.drawImage(bgImg, offsetX, offsetY, drawWidth, drawHeight);
+      // Use full image as source
+      ctx.drawImage(bgImg, dx, dy, dWidth, dHeight);
     }
+
     ctx.restore();
 
     // 3. Collect and sort all elements (text and brand) by zIndex
