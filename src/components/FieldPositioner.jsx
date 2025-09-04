@@ -170,7 +170,7 @@ const FieldPositioner = ({
   // The previous useEffect was causing state conflicts and loops. It has been removed.
 
   const handlePositionChange = (id, newPosition) => {
-    if (id === 'background') {
+    if (id === '__background__') {
       setBackgroundElement(prev => ({ ...prev, ...newPosition }));
     } else if (id === '__cropbox__') {
       setBackgroundElement(prev => ({ ...prev, crop: { ...prev.crop, ...newPosition } }));
@@ -190,7 +190,7 @@ const FieldPositioner = ({
   };
 
   const handleSizeChange = (id, newSize) => {
-    if (id === 'background') {
+    if (id === '__background__') {
       setBackgroundElement(prev => ({ ...prev, ...newSize }));
     } else if (id === '__cropbox__') {
       setBackgroundElement(prev => ({ ...prev, crop: { ...prev.crop, ...newSize } }));
@@ -330,7 +330,7 @@ const FieldPositioner = ({
     const elements = [
       // Add background element first so it's at the bottom
       ...(backgroundElement ? [{
-        id: 'background',
+        id: '__background__',
         type: 'background',
         position: backgroundElement,
         style: backgroundElement.filters,
@@ -492,12 +492,12 @@ const FieldPositioner = ({
                     }}
                     onClick={(e) => {
                       if (e.target === e.currentTarget) {
-                        handleFieldSelectInternal('background');
+                        handleFieldSelectInternal('__background__');
                       }
                     }}
                     onTouchStart={(e) => {
                       if (e.target === e.currentTarget) {
-                        handleFieldSelectInternal('background');
+                        handleFieldSelectInternal('__background__');
                       }
                     }}
                   >
