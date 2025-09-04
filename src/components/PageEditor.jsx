@@ -98,9 +98,16 @@ const PageEditor = ({
 
   useEffect(() => {
     if (open && pageData && initialFieldPositions && initialFieldStyles) {
-      const brands = JSON.parse(JSON.stringify(pageData.customBrandElements || brandElements || []));
+      // Ensure brandElements and globalCsvHeaders are arrays before use.
+      const safeBrandElements = Array.isArray(pageData.customBrandElements)
+        ? pageData.customBrandElements
+        : (Array.isArray(brandElements) ? brandElements : []);
 
+      const safeGlobalCsvHeaders = Array.isArray(globalCsvHeaders) ? globalCsvHeaders : [];
+
+      const brands = JSON.parse(JSON.stringify(safeBrandElements));
       const positions = JSON.parse(JSON.stringify(initialFieldPositions));
+
       // Defensively add filters to brand elements
       brands.forEach(el => {
         if (!el.filters) {
@@ -121,7 +128,7 @@ const PageEditor = ({
       let zIndexCounter = zIndices.size > 0 ? Math.max(...zIndices) + 1 : 0;
 
       // Assign zIndex to text fields if they don't have one
-      globalCsvHeaders.forEach(header => {
+      safeGlobalCsvHeaders.forEach(header => {
         if (!positions[header]) positions[header] = {};
         if (positions[header].zIndex === undefined) {
           positions[header].zIndex = zIndexCounter++;
@@ -141,7 +148,7 @@ const PageEditor = ({
 
       // Simplified style initialization, as props are now pre-merged
       const newEditedStyles = {};
-      globalCsvHeaders.forEach(field => {
+      safeGlobalCsvHeaders.forEach(field => {
         newEditedStyles[field] = {
           ...COMPLETE_DEFAULT_STYLE,
           ...(initialFieldStyles?.[field] || {}),
