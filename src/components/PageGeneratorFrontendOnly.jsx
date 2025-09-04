@@ -40,7 +40,7 @@ import {
 import PageEditor from './PageEditor';
 import MemoizedPageEditor from './MemoizedPageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
-import { composeImage, composeSingleImage, dataURLtoBlob, wrapTextInArea, applyTextEffects, drawTextWithEffects } from '../utils/imageComposer';
+import { composeSingleImage, dataURLtoBlob, wrapTextInArea, applyTextEffects, drawTextWithEffects } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
 
 const PageGeneratorFrontendOnly = ({
