@@ -119,25 +119,8 @@ const DraggableElementInternal = ({
     // Default to text rendering
     if (!enableHtmlRendering) {
       // Render the calculated lines to respect wrapping
-      // DIAGNOSTIC: Apply styles directly to each line's div
       return textLines.map((line, index) => (
-        <div
-          key={index}
-          style={{
-            fontFamily: style.fontFamily,
-            fontSize: `${scaledFontSize}px`,
-            fontWeight: style.fontWeight,
-            fontStyle: style.fontStyle,
-            color: style.color,
-            textDecoration: style.textDecoration,
-            lineHeight: `${scaledLineHeight}px`,
-            textAlign: style.textAlign,
-            textShadow: style.textShadow ? `${(style.shadowOffsetX || 2) * fontScale}px ${(style.shadowOffsetY || 2) * fontScale}px ${(style.shadowBlur || 4) * fontScale}px ${style.shadowColor || '#000000'}` : 'none',
-            WebkitTextStroke: style.textStroke ? `${(style.strokeWidth || 2) * fontScale}px ${style.strokeColor || '#ffffff'}` : 'none',
-          }}
-        >
-          {line}
-        </div>
+        <div key={index}>{line}</div>
       ));
     }
   };
@@ -608,11 +591,9 @@ const DraggableElementInternal = ({
           backgroundColor: element.type === 'image' || element.type === 'background' || element.type === 'cropbox'
             ? 'transparent'
             : hexToRgba(style.backgroundColor || '#000000', style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1),
-          border: element.type === 'background'
-            ? '5px dashed red'
-            : (element.type === 'image' || element.type === 'cropbox'
-              ? 'none'
-              : `${(style.borderWidth || 0) * fontScale}px solid ${style.borderColor || '#000000'}`),
+          border: element.type === 'image' || element.type === 'background' || element.type === 'cropbox'
+            ? 'none'
+            : `${(style.borderWidth || 0) * fontScale}px solid ${style.borderColor || '#000000'}`,
           borderRadius: `${(style.borderRadius || 0) * fontScale}px`,
           padding: element.type === 'image' || element.type === 'background' || element.type === 'cropbox' ? 0 : `${(style.padding || 0) * fontScale}px`,
         }}
