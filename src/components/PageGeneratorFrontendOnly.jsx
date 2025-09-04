@@ -102,17 +102,15 @@ const PageGeneratorFrontendOnly = ({
 
   useEffect(() => {
     if (initialGeneratedPagesData) {
-      // Prevent infinite loops by comparing the actual content, not the array reference.
-      if (JSON.stringify(initialGeneratedPagesData) !== JSON.stringify(generatedPages)) {
-        setGeneratedPages(initialGeneratedPagesData);
+      if (initialGeneratedPagesData !== generatedPages) {
+         setGeneratedPages(initialGeneratedPagesData);
       }
     } else {
-      // If the initial data is cleared, clear the local state as well.
       if (generatedPages.length > 0) {
         setGeneratedPages([]);
       }
     }
-  }, [initialGeneratedPagesData, generatedPages]);
+  }, [initialGeneratedPagesData]);
 
   // Effect for regenerating thumbnails on load
   useEffect(() => {
