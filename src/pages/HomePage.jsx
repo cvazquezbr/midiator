@@ -1017,58 +1017,87 @@ function HomePage() {
           <Toolbar />
             {currentView === 'campaigns' && (
               <>
-                <div hidden={activeStep !== 0}>
+                {activeStep === 0 && (
                   <MyCampaignsStep
                     onLoadCampaign={handleLoadCampaign}
                     onEditCampaign={handleEditCampaign}
                     onCreateNew={handleCreateNewCampaign}
                   />
-                </div>
-                <div hidden={activeStep !== 1}><Container maxWidth="lg"><Campaign
-                  steps={steps}
-                  activeStep={activeStep}
-                  {...campaignData}
-                  setProblema={setProblema}
-                  setSolucao={setSolucao}
-                  objetivo={objetivo}
-                  setObjetivo={setObjetivo}
-                  tomDeVoz={tomDeVoz}
-                  setTomDeVoz={setTomDeVoz}
-                  isGeneratingCampaign={isGeneratingCampaign}
-                  campaignGenerationFailed={campaignGenerationFailed}
-                  generationError={generationError}
-                  handleGenerateCampaignContent={handleGenerateCampaignContent}
-                  handleResetCampaign={handleResetCampaign}
-                  handleExportHtml={() => exportHtml(campaignData)}
-                  editingField={editingField}
-                  setEditingField={(field) => {
-                    setEditingField(field);
-                    setIsHtmlField(field === 'conteudoFormatado');
-                  }}
-                  isGeneratingSummaryMedio={isGeneratingSummaryMedio}
-                  handleGenerateSummary={handleGenerateSummary}
-                  isGeneratingSummaryPequeno={isGeneratingSummaryPequeno}
-                  isGeneratingConteudoFormatado={isGeneratingConteudoFormatado}
-                  handleGenerateFormattedContent={handleGenerateFormattedContent}
-                  isGeneratingFollowup={isGeneratingFollowup}
-                  handleGenerateFollowupPosts={handleGenerateFollowupPosts}
-                  generatedPageUrl={generatedPageUrl}
-                  isGeneratingImage={isGeneratingImage}
-                  handleGenerateImage={handleGenerateImage}
-                  setCampaignContent={setCampaignContent}
-                  onEditFollowup={handleEditFollowup}
-                  followupPostsQuantity={followupPostsQuantity}
-                  setFollowupPostsQuantity={setFollowupPostsQuantity}
-                  setAspectRatio={setAspectRatio}
-                  autorList={autorList}
-                  selectedAutorForCampaign={selectedAutorForCampaign}
-                  setSelectedAutorForCampaign={setSelectedAutorForCampaign}
-                  personaList={personaList}
-                  selectedPersonaForCampaign={selectedPersonaForCampaign}
-                  setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
-                /></Container></div>
-                <div hidden={activeStep !== 2}><PostsCurtosStep steps={steps} inputMethod={inputMethod} setInputMethod={setInputMethod} handleDrop={handleDrop} handleDragOver={handleDragOver} fileInputRef={fileInputRef} handleCSVUpload={handleCSVUpload} downloadExampleCsv={downloadExampleCsv} setShowSetupModal={setShowSetupModal} promptNumRecords={promptNumRecords} setPromptNumRecords={setPromptNumRecords} promptText={promptText} setPromptText={setPromptText} generateImagesAutomatically={generateImagesAutomatically} setGenerateImagesAutomatically={setGenerateImagesAutomatically} handleGenerateIAContent={handleGenerateIAContent} isGenerating={isGenerating} csvData={csvData} csvHeaders={csvHeaders} onDadosAlterados={handleDadosAlterados} darkMode={darkMode} exportCsv={exportCsv} /></div>
-                <div hidden={activeStep !== 3}>
+                )}
+                {activeStep === 1 && (
+                  <Container maxWidth="lg">
+                    <Campaign
+                      steps={steps}
+                      activeStep={activeStep}
+                      {...campaignData}
+                      setProblema={setProblema}
+                      setSolucao={setSolucao}
+                      objetivo={objetivo}
+                      setObjetivo={setObjetivo}
+                      tomDeVoz={tomDeVoz}
+                      setTomDeVoz={setTomDeVoz}
+                      isGeneratingCampaign={isGeneratingCampaign}
+                      campaignGenerationFailed={campaignGenerationFailed}
+                      generationError={generationError}
+                      handleGenerateCampaignContent={handleGenerateCampaignContent}
+                      handleResetCampaign={handleResetCampaign}
+                      handleExportHtml={() => exportHtml(campaignData)}
+                      editingField={editingField}
+                      setEditingField={(field) => {
+                        setEditingField(field);
+                        setIsHtmlField(field === 'conteudoFormatado');
+                      }}
+                      isGeneratingSummaryMedio={isGeneratingSummaryMedio}
+                      handleGenerateSummary={handleGenerateSummary}
+                      isGeneratingSummaryPequeno={isGeneratingSummaryPequeno}
+                      isGeneratingConteudoFormatado={isGeneratingConteudoFormatado}
+                      handleGenerateFormattedContent={handleGenerateFormattedContent}
+                      isGeneratingFollowup={isGeneratingFollowup}
+                      handleGenerateFollowupPosts={handleGenerateFollowupPosts}
+                      generatedPageUrl={generatedPageUrl}
+                      isGeneratingImage={isGeneratingImage}
+                      handleGenerateImage={handleGenerateImage}
+                      setCampaignContent={setCampaignContent}
+                      onEditFollowup={handleEditFollowup}
+                      followupPostsQuantity={followupPostsQuantity}
+                      setFollowupPostsQuantity={setFollowupPostsQuantity}
+                      setAspectRatio={setAspectRatio}
+                      autorList={autorList}
+                      selectedAutorForCampaign={selectedAutorForCampaign}
+                      setSelectedAutorForCampaign={setSelectedAutorForCampaign}
+                      personaList={personaList}
+                      selectedPersonaForCampaign={selectedPersonaForCampaign}
+                      setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
+                    />
+                  </Container>
+                )}
+                {activeStep === 2 && (
+                  <PostsCurtosStep
+                    steps={steps}
+                    inputMethod={inputMethod}
+                    setInputMethod={setInputMethod}
+                    handleDrop={handleDrop}
+                    handleDragOver={handleDragOver}
+                    fileInputRef={fileInputRef}
+                    handleCSVUpload={handleCSVUpload}
+                    downloadExampleCsv={downloadExampleCsv}
+                    setShowSetupModal={setShowSetupModal}
+                    promptNumRecords={promptNumRecords}
+                    setPromptNumRecords={setPromptNumRecords}
+                    promptText={promptText}
+                    setPromptText={setPromptText}
+                    generateImagesAutomatically={generateImagesAutomatically}
+                    setGenerateImagesAutomatically={setGenerateImagesAutomatically}
+                    handleGenerateIAContent={handleGenerateIAContent}
+                    isGenerating={isGenerating}
+                    csvData={csvData}
+                    csvHeaders={csvHeaders}
+                    onDadosAlterados={handleDadosAlterados}
+                    darkMode={darkMode}
+                    exportCsv={exportCsv}
+                  />
+                )}
+                {activeStep === 3 && (
                   <ImageStep
                     steps={steps}
                     isDraggingOverImage={isDraggingOverImage}
@@ -1110,12 +1139,68 @@ function HomePage() {
                     templateFieldStyles={templateFieldStyles}
                     activeStep={activeStep}
                   />
-                </div>
-                <div hidden={activeStep !== 4}><PageGeneratorFrontendOnly csvData={csvData} backgroundImage={backgroundImage} fieldPositions={fieldPositions} fieldStyles={fieldStyles} displayedImageSize={displayedImageSize} csvHeaders={csvHeaders} colorPalette={colorPalette} standardsColors={standardsColors} setGeneratedPagesData={setGeneratedPagesData} initialGeneratedPagesData={generatedPagesData} onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} originalImageSize={originalImageSize} brandElements={brandElements} onBrandElementsChange={setBrandElements} fontScale={fontScale} handleGenerateSinglePage={handleGenerateSinglePage} aspectRatio={aspectRatio} backgroundElement={backgroundElement} /></div>
-                <div hidden={activeStep !== 5}><AudioGenerator csvData={csvData} fieldPositions={fieldPositions} onAudiosGenerated={setGeneratedAudioData} initialAudioData={generatedAudioData} /></div>
-                <div hidden={activeStep !== 6}><VideoGenerator2 generatedPages={generatedPagesData} generatedAudioData={generatedAudioData} onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)} /></div>
-                <div hidden={activeStep !== 7}><Publisher settings={settings} campaignContent={campaignContent} generatedPagesData={generatedPagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedProfile={selectedProfile} setSelectedProfile={setSelectedProfile} selectedImages={selectedImages} setSelectedImages={setSelectedImages} selectedVideos={selectedVideos} setSelectedVideos={setSelectedVideos} currentCampaign={currentCampaign} /></div>
-                <div hidden={activeStep !== 8}><Monitor currentCampaign={currentCampaign} /></div>
+                )}
+                {activeStep === 4 && (
+                  <PageGeneratorFrontendOnly
+                    csvData={csvData}
+                    backgroundImage={backgroundImage}
+                    fieldPositions={fieldPositions}
+                    fieldStyles={fieldStyles}
+                    displayedImageSize={displayedImageSize}
+                    csvHeaders={csvHeaders}
+                    colorPalette={colorPalette}
+                    standardsColors={standardsColors}
+                    setGeneratedPagesData={setGeneratedPagesData}
+                    initialGeneratedPagesData={generatedPagesData}
+                    onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
+                    originalImageSize={originalImageSize}
+                    brandElements={brandElements}
+                    onBrandElementsChange={setBrandElements}
+                    fontScale={fontScale}
+                    handleGenerateSinglePage={handleGenerateSinglePage}
+                    aspectRatio={aspectRatio}
+                    backgroundElement={backgroundElement}
+                  />
+                )}
+                {activeStep === 5 && (
+                  <AudioGenerator
+                    csvData={csvData}
+                    fieldPositions={fieldPositions}
+                    onAudiosGenerated={setGeneratedAudioData}
+                    initialAudioData={generatedAudioData}
+                  />
+                )}
+                {activeStep === 6 && (
+                  <VideoGenerator2
+                    generatedPages={generatedPagesData}
+                    generatedAudioData={generatedAudioData}
+                    onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)}
+                  />
+                )}
+                {activeStep === 7 && (
+                  <Publisher
+                    settings={settings}
+                    campaignContent={campaignContent}
+                    generatedPagesData={generatedPagesData}
+                    generatedVideosData={generatedVideosData}
+                    followupPosts={followupPosts}
+                    isScheduled={isScheduled}
+                    setIsScheduled={setIsScheduled}
+                    scheduleDate={scheduleDate}
+                    setScheduleDate={setScheduleDate}
+                    weeklySchedule={weeklySchedule}
+                    setWeeklySchedule={setWeeklySchedule}
+                    selectedProfile={selectedProfile}
+                    setSelectedProfile={setSelectedProfile}
+                    selectedImages={selectedImages}
+                    setSelectedImages={setSelectedImages}
+                    selectedVideos={selectedVideos}
+                    setSelectedVideos={setSelectedVideos}
+                    currentCampaign={currentCampaign}
+                  />
+                )}
+                {activeStep === 8 && <Monitor currentCampaign={currentCampaign} />}
+
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} ><Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button><Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box><Button onClick={handleNext} disabled={isGenerating || activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)} variant="contained" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Próximo</Button></Box>
               </>
             )}
