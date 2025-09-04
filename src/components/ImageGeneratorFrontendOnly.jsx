@@ -494,7 +494,7 @@ const ImageGeneratorFrontendOnly = ({
       return;
     }
     if (generatedImages.length === 0) {
-      alert('Nenhuma imagem foi gerada ainda.');
+      alert('Nenhuma página foi gerada ainda.');
       return;
     }
     if (!googleAccessToken) {
@@ -565,7 +565,7 @@ const ImageGeneratorFrontendOnly = ({
 
           {!fontsLoaded && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              Carregando fontes... Aguarde antes de gerar as imagens.
+              Carregando fontes... Aguarde antes de gerar as páginas.
             </Alert>
           )}
 
@@ -579,7 +579,7 @@ const ImageGeneratorFrontendOnly = ({
                 startIcon={<ImageIcon />}
                 fullWidth
               >
-                {generatedImages.some(img => img.url) ? 'Regerar imagens' : 'Gerar Imagens'}
+                {generatedImages.some(img => img.url) ? 'Regerar Páginas' : 'Gerar Páginas'}
               </Button>
             </Grid>
 
@@ -601,7 +601,7 @@ const ImageGeneratorFrontendOnly = ({
             <Box sx={{ mt: 2 }}>
               <LinearProgress />
               <Typography variant="body2" sx={{ mt: 1 }}>
-                Gerando imagens...
+                Gerando páginas...
               </Typography>
             </Box>
           )}
@@ -672,7 +672,7 @@ const ImageGeneratorFrontendOnly = ({
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="h6" gutterBottom>
-                Imagens Geradas ({generatedImages.length})
+                Páginas Geradas ({generatedImages.length})
               </Typography>
 
               <Grid container spacing={2}>
@@ -827,7 +827,6 @@ const ImageGeneratorFrontendOnly = ({
         colorPalette={colorPalette}
         backgroundImage={backgroundImage}
         originalImageSize={originalImageSize}
-        imageFilters={imageFilters}
         standardsColors={standardsColors}
       />
 
@@ -843,8 +842,8 @@ const ImageGeneratorFrontendOnly = ({
         progress={progress}
         total={csvData.length}
         onCancel={handleCancelGeneration}
-        title="Gerando Imagens"
-        progressText={`Gerando imagem ${progress} de ${csvData.length}...`}
+        title="Gerando Páginas"
+        progressText={`Gerando página ${progress} de ${csvData.length}...`}
       />
     </Box>
   );

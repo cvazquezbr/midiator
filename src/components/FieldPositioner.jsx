@@ -68,14 +68,13 @@ const FieldPositioner = ({
   darkMode,
   brandElements,
   setBrandElements,
+  backgroundElement,
+  setBackgroundElement,
   onOpenHtmlEditor,
   currentPreviewIndex,
   setCurrentPreviewIndex,
   onFontScaleChange,
-  backgroundElement,
-  setBackgroundElement,
   cropMode,
-  setCropMode,
 }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
@@ -430,7 +429,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => a.zIndex - b.zIndex);
     return elements;
-  }, [backgroundElement, backgroundImage, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
+  }, [backgroundElement, backgroundImage, cropMode, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
   if (!backgroundImage) {
     return (
@@ -541,7 +540,7 @@ const FieldPositioner = ({
                     {renderedImageMetrics.width > 0 && renderableElements.map(element => (
                       <DraggableElement
                         key={element.id}
-                        element={element.type === 'image' ? { ...element.position, type: 'image' } : { id: element.id, type: 'text' }}
+                        element={element.type === 'image' || element.type === 'background' || element.type === 'cropbox' ? { ...element.position, type: element.type } : { id: element.id, type: 'text' }}
                         position={element.position}
                         style={element.style}
                         content={element.content}
@@ -607,4 +606,3 @@ const FieldPositioner = ({
 };
 
 export default FieldPositioner;
-
