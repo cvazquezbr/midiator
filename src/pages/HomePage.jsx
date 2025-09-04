@@ -30,7 +30,7 @@ import Sidebar from '../components/Sidebar';
 import FieldPositioner from '../components/FieldPositioner';
 import FormattingPanel from '../components/FormattingPanel';
 import FormattingDrawer from '../components/FormattingDrawer';
-import ImageGeneratorFrontendOnly from '../components/ImageGeneratorFrontendOnly';
+import PageGeneratorFrontendOnly from '../components/PageGeneratorFrontendOnly';
 import AudioGenerator from '../components/AudioGenerator';
 import VideoGenerator2 from '../components/VideoGenerator2';
 import PostsCurtosStep from '../components/PostsCurtosStep';
@@ -105,7 +105,7 @@ function HomePage() {
   const [isHtmlField, setIsHtmlField] = useState(false);
   const [formato, setFormato] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1:1');
-  const [generatedImageUrl, setGeneratedImageUrl] = useState(null);
+  const [generatedPageUrl, setGeneratedPageUrl] = useState(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
   const [isGeneratingSummaryPequeno, setIsGeneratingSummaryPequeno] = useState(false);
@@ -134,7 +134,7 @@ function HomePage() {
   const [templateFieldStyles, setTemplateFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
   const [originalImageSize, setOriginalImageSize] = useState({ width: 0, height: 0 });
-  const [generatedImagesData, setGeneratedImagesData] = useState([]);
+  const [generatedPagesData, setGeneratedPagesData] = useState([]);
   const [generatedAudioData, setGeneratedAudioData] = useState([]);
   const [generatedVideosData, setGeneratedVideosData] = useState([]);
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
@@ -213,7 +213,7 @@ function HomePage() {
     setColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
     setStandardsColors(Array.isArray(state.standardsColors) ? state.standardsColors : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
-    setGeneratedImagesData(Array.isArray(state.generatedImagesData) ? state.generatedImagesData : []);
+    setGeneratedPagesData(Array.isArray(state.generatedPagesData) ? state.generatedPagesData : []);
     // FIX: Filter out invalid audio data on load to prevent crashes
     setGeneratedAudioData(
       Array.isArray(state.generatedAudioData)
@@ -236,7 +236,7 @@ function HomePage() {
     setCampaignContent(state.campaignContent ?? null);
     setFormato(state.formato ?? '');
     setAspectRatio(state.aspectRatio ?? '1:1');
-    setGeneratedImageUrl(state.generatedImageUrl ?? null);
+    setGeneratedPageUrl(state.generatedPageUrl ?? null);
     setFollowupPostsQuantity(state.followupPostsQuantity ?? 5);
     setIsScheduled(state.isScheduled ?? false);
     setScheduleDate(state.scheduleDate ? new Date(state.scheduleDate) : new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
@@ -309,8 +309,8 @@ function HomePage() {
       brandElements,
       backgroundElement,
       backgroundImage,
-      generatedImageUrl,
-      generatedImagesData,
+      generatedPageUrl,
+      generatedPagesData,
       generatedAudioData,
       generatedVideosData,
       standardsColors,
@@ -680,7 +680,7 @@ function HomePage() {
       case 2: return campaignContent !== null;
       case 3: return csvData.length > 0;
       case 4: return backgroundImage !== null;
-      case 5: if (generatedImagesData.length === 0 || !generatedImagesData.every(img => img.blob)) { toast.error("Por favor, gere todas as páginas na etapa 4 antes de prosseguir."); return false; } return true;
+      case 5: if (generatedPagesData.length === 0 || !generatedPagesData.every(img => img.blob)) { toast.error("Por favor, gere todas as páginas na etapa 4 antes de prosseguir."); return false; } return true;
       default: return true;
     }
   };
@@ -722,13 +722,13 @@ function HomePage() {
     setFieldStyles(updatedFieldStyles);
     setInitialFieldStyles(updatedFieldStyles);
 
-    setGeneratedImagesData(prevGeneratedImages => {
-        const newGeneratedImages = novosRegistros.map((record, index) => {
-            const existingImage = prevGeneratedImages.find(img => img.index === index);
+    setGeneratedPagesData(prevGeneratedPages => {
+        const newGeneratedPages = novosRegistros.map((record, index) => {
+            const existingPage = prevGeneratedPages.find(img => img.index === index);
 
-            if (existingImage) {
+            if (existingPage) {
                 return {
-                    ...existingImage,
+                    ...existingPage,
                     record: record,
                 };
             }
@@ -747,7 +747,7 @@ function HomePage() {
                 fontScale: 1,
             };
         });
-        return newGeneratedImages;
+        return newGeneratedPages;
     });
   }, [darkMode, fieldPositions, fieldStyles, backgroundImage, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles]);
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => { setCsvData(newCsvData); }, [setCsvData]);
@@ -806,14 +806,14 @@ function HomePage() {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || autor;
       const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor });
       const imageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
-      console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Setting generatedImageUrl. Value starts with:', String(imageUrl).substring(0, 100));
-      setGeneratedImageUrl(imageUrl);
+      console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Setting generatedPageUrl. Value starts with:', String(imageUrl).substring(0, 100));
+      setGeneratedPageUrl(imageUrl);
       updateImageAndPalette(imageUrl);
       return true;
     } catch (imageError) {
       toast.error(`Ocorreu um erro ao gerar a imagem da campanha: ${imageError.message}`);
-      console.log('[HomePage] DIAGNOSTIC: handleGenerateImage failed. Setting generatedImageUrl to null.');
-      setGeneratedImageUrl(null);
+      console.log('[HomePage] DIAGNOSTIC: handleGenerateImage failed. Setting generatedPageUrl to null.');
+      setGeneratedPageUrl(null);
       return false;
     } finally {
       setIsGeneratingImage(false);
@@ -853,9 +853,9 @@ function HomePage() {
     }
   };
   const handleResetCampaign = () => {
-    console.log('[HomePage] DIAGNOSTIC: handleResetCampaign called. Setting generatedImageUrl to null.');
+    console.log('[HomePage] DIAGNOSTIC: handleResetCampaign called. Setting generatedPageUrl to null.');
     setCampaignContent(null);
-    setGeneratedImageUrl(null);
+    setGeneratedPageUrl(null);
     setFollowupPosts([]);
     setFollowupPostsQuantity(5);
   };
@@ -884,7 +884,7 @@ function HomePage() {
         standardsColors,
       });
 
-      const newGeneratedImagesData = csvDataResult.map((record, index) => ({
+      const newGeneratedPagesData = csvDataResult.map((record, index) => ({
         index,
         record,
         blob: null,
@@ -903,11 +903,11 @@ function HomePage() {
       setFieldPositions(updatedFieldPositions);
       setFieldStyles(updatedFieldStyles);
       setInitialFieldStyles(updatedFieldStyles);
-      setGeneratedImagesData(newGeneratedImagesData);
+      setGeneratedPagesData(newGeneratedPagesData);
       setInputMethod('manual');
 
       if (generateImagesAutomatically) {
-        toast.info('Geração de posts concluída. Iniciando geração automática de imagens...');
+        toast.info('Geração de posts concluída. Iniciando geração automática de páginas...');
         let firstImageSet = false;
 
         for (let i = 0; i < csvDataResult.length; i++) {
@@ -915,13 +915,13 @@ function HomePage() {
           const imagePrompt = record.prompt_imagem_carrossel;
 
           if (imagePrompt && imagePrompt.trim() !== '') {
-            const success = await handleGenerateSingleImage(record, i, !firstImageSet);
+            const success = await handleGenerateSinglePage(record, i, !firstImageSet);
             if (success && !firstImageSet) {
               firstImageSet = true;
             }
           }
         }
-        toast.success('Geração automática de imagens concluída!');
+        toast.success('Geração automática de páginas concluída!');
       }
     } catch (error) {
       toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
@@ -931,14 +931,14 @@ function HomePage() {
     }
   };
 
-  const handleGenerateSingleImage = async (record, index, setAsBackground = false) => {
+  const handleGenerateSinglePage = async (record, index, setAsBackground = false) => {
     const imagePrompt = record.prompt_imagem_carrossel;
     if (!imagePrompt || imagePrompt.trim() === '') {
       toast.info(`O post #${index + 1} não possui um prompt para geração de imagem.`);
       return false;
     }
 
-    setGenerationStatus(`Gerando imagem para o post ${index + 1}/${csvData.length}...`);
+    setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
       const rawBgImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
 
@@ -954,7 +954,7 @@ function HomePage() {
         updateImageAndPalette(stableDataUrl);
       }
 
-      const finalImageData = await composeSingleImage({
+      const finalPageData = await composeSingleImage({
         record: record,
         index: index,
         itemBackgroundImage: stableDataUrl,
@@ -965,18 +965,18 @@ function HomePage() {
         backgroundElement,
       });
 
-      finalImageData.backgroundImage = stableDataUrl;
+      finalPageData.backgroundImage = stableDataUrl;
 
-      setGeneratedImagesData(currentImagesData => {
-        const newImagesData = [...currentImagesData];
-        newImagesData[index] = finalImageData;
-        return newImagesData;
+      setGeneratedPagesData(currentPagesData => {
+        const newPagesData = [...currentPagesData];
+        newPagesData[index] = finalPageData;
+        return newPagesData;
       });
 
-      toast.success(`Imagem final para o post #${index + 1} gerada.`);
+      toast.success(`Página final para o post #${index + 1} gerada.`);
       return true;
     } catch (error) {
-      console.error(`Error during image generation for post ${index + 1}:`, error);
+      console.error(`Error during page generation for post ${index + 1}:`, error);
       toast.error(`Falha na geração para o post #${index + 1}: ${error.message}`);
       return false;
     } finally {
@@ -1052,7 +1052,7 @@ function HomePage() {
                   handleGenerateFormattedContent={handleGenerateFormattedContent}
                   isGeneratingFollowup={isGeneratingFollowup}
                   handleGenerateFollowupPosts={handleGenerateFollowupPosts}
-                  generatedImageUrl={generatedImageUrl}
+                  generatedPageUrl={generatedPageUrl}
                   isGeneratingImage={isGeneratingImage}
                   handleGenerateImage={handleGenerateImage}
                   setCampaignContent={setCampaignContent}
@@ -1111,10 +1111,10 @@ function HomePage() {
                     activeStep={activeStep}
                   />
                 </div>
-                <div hidden={activeStep !== 4}><ImageGeneratorFrontendOnly csvData={csvData} backgroundImage={backgroundImage} fieldPositions={fieldPositions} fieldStyles={fieldStyles} displayedImageSize={displayedImageSize} csvHeaders={csvHeaders} colorPalette={colorPalette} standardsColors={standardsColors} setGeneratedImagesData={setGeneratedImagesData} initialGeneratedImagesData={generatedImagesData} onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} originalImageSize={originalImageSize} brandElements={brandElements} onBrandElementsChange={setBrandElements} fontScale={fontScale} handleGenerateSingleImage={handleGenerateSingleImage} aspectRatio={aspectRatio} backgroundElement={backgroundElement} /></div>
+                <div hidden={activeStep !== 4}><PageGeneratorFrontendOnly csvData={csvData} backgroundImage={backgroundImage} fieldPositions={fieldPositions} fieldStyles={fieldStyles} displayedImageSize={displayedImageSize} csvHeaders={csvHeaders} colorPalette={colorPalette} standardsColors={standardsColors} setGeneratedPagesData={setGeneratedPagesData} initialGeneratedPagesData={generatedPagesData} onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate} originalImageSize={originalImageSize} brandElements={brandElements} onBrandElementsChange={setBrandElements} fontScale={fontScale} handleGenerateSinglePage={handleGenerateSinglePage} aspectRatio={aspectRatio} backgroundElement={backgroundElement} /></div>
                 <div hidden={activeStep !== 5}><AudioGenerator csvData={csvData} fieldPositions={fieldPositions} onAudiosGenerated={setGeneratedAudioData} initialAudioData={generatedAudioData} /></div>
-                <div hidden={activeStep !== 6}><VideoGenerator2 generatedImages={generatedImagesData} generatedAudioData={generatedAudioData} onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)} /></div>
-                <div hidden={activeStep !== 7}><Publisher settings={settings} campaignContent={campaignContent} generatedImagesData={generatedImagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedProfile={selectedProfile} setSelectedProfile={setSelectedProfile} selectedImages={selectedImages} setSelectedImages={setSelectedImages} selectedVideos={selectedVideos} setSelectedVideos={setSelectedVideos} currentCampaign={currentCampaign} /></div>
+                <div hidden={activeStep !== 6}><VideoGenerator2 generatedPages={generatedPagesData} generatedAudioData={generatedAudioData} onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)} /></div>
+                <div hidden={activeStep !== 7}><Publisher settings={settings} campaignContent={campaignContent} generatedPagesData={generatedPagesData} generatedVideosData={generatedVideosData} followupPosts={followupPosts} isScheduled={isScheduled} setIsScheduled={setIsScheduled} scheduleDate={scheduleDate} setScheduleDate={setScheduleDate} weeklySchedule={weeklySchedule} setWeeklySchedule={setWeeklySchedule} selectedProfile={selectedProfile} setSelectedProfile={setSelectedProfile} selectedImages={selectedImages} setSelectedImages={setSelectedImages} selectedVideos={selectedVideos} setSelectedVideos={setSelectedVideos} currentCampaign={currentCampaign} /></div>
                 <div hidden={activeStep !== 8}><Monitor currentCampaign={currentCampaign} /></div>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} ><Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button><Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box><Button onClick={handleNext} disabled={isGenerating || activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)} variant="contained" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Próximo</Button></Box>
               </>

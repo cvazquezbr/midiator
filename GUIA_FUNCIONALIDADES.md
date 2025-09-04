@@ -2,7 +2,7 @@
 
 ## 🎯 **Visão Geral**
 
-O Midiator Editor Avançado é uma aplicação React que permite criar imagens personalizadas a partir de dados CSV, com controles de formatação individual para cada campo e funcionalidades de edição estilo Canva.
+O Midiator Editor Avançado é uma aplicação React que permite criar páginas personalizadas a partir de dados CSV, com controles de formatação individual para cada campo e funcionalidades de edição estilo Canva.
 
 ## 🚀 **Funcionalidades Principais**
 
@@ -67,7 +67,7 @@ SW ---- S ---- SE
 1. **Upload do CSV**: Carregamento e validação
 2. **Upload da Imagem**: Seleção do background
 3. **Posicionar e Formatar**: Editor principal
-4. **Gerar Imagens**: Processamento final
+4. **Gerar Páginas**: Processamento final
 
 #### **Indicadores de Status**
 - **Registros CSV**: Quantidade de dados carregados
@@ -90,10 +90,10 @@ SW ---- S ---- SE
 2. Escolha arquivo com cabeçalhos na primeira linha
 3. Aguarde confirmação de carregamento
 
-### **Passo 2: Upload da Imagem**
+### **Passo 2: Upload da Imagem de Fundo**
 1. Clique em "Selecionar Imagem PNG/JPG"
 2. Escolha imagem de fundo
-3. Visualize preview da imagem
+3. Visualize preview da imagem de fundo
 
 ### **Passo 3: Posicionar e Formatar**
 
@@ -122,9 +122,9 @@ SW ---- S ---- SE
 - **Resetar Estilo**: Volta configurações padrão
 - **Visibilidade**: Toggle para mostrar/ocultar campo
 
-### **Passo 4: Gerar Imagens**
+### **Passo 4: Gerar Páginas**
 1. Revise configurações no resumo
-2. Clique em "Gerar X Imagens"
+2. Clique em "Gerar X Páginas"
 3. Aguarde processamento
 4. Faça download individual ou em lote
 
@@ -170,7 +170,7 @@ const wrapText = (text, maxWidth) => {
 2. **Teste estilos**: Configure um campo e use "Aplicar a Todos"
 3. **Áreas adequadas**: Defina áreas maiores para textos longos
 4. **Contraste**: Use contorno para texto sobre fundos complexos
-5. **Preview**: Sempre visualize antes de gerar todas as imagens
+5. **Preview**: Sempre visualize antes de gerar todas as páginas
 
 ### **Resolução de Problemas**
 - **Texto cortado**: Aumente altura da área

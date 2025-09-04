@@ -1,7 +1,7 @@
 import { containsHtml, renderHtmlToCanvas } from './htmlRenderer';
 import { isHtmlField } from '../lib/utils';
 
-// Helper functions moved from ImageGeneratorFrontendOnly.jsx and adapted for utility use
+// Helper functions moved from PageGeneratorFrontendOnly.jsx and adapted for utility use
 
 export const dataURLtoBlob = (dataurl) => {
     if (!dataurl) return null;

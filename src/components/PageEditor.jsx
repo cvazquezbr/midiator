@@ -47,14 +47,14 @@ const COMPLETE_DEFAULT_STYLE = {
   backgroundOpacity: 0,
 };
 
-const GeneratedImageEditor = ({
+const PageEditor = ({
   open,
   onClose,
-  imageData, // Contém a imagem de fundo (imageData.backgroundImageToEdit || globalBackgroundImage), csvRecord (imageData.record)
+  pageData, // Contém a imagem de fundo (pageData.backgroundImageToEdit || globalBackgroundImage), csvRecord (pageData.record)
   globalCsvHeaders, // Todos os cabeçalhos CSV possíveis (para consistência do painel de formatação)
-  initialFieldPositions, // Posições dos campos para esta imagem específica
-  initialFieldStyles, // Estilos dos campos para esta imagem específica
-  onSave, // Callback: (editedImageData) => void
+  initialFieldPositions, // Posições dos campos para esta página específica
+  initialFieldStyles, // Estilos dos campos para esta página específica
+  onSave, // Callback: (editedPageData) => void
   colorPalette, // Paleta de cores global
   globalBackgroundImage, // Imagem de fundo global, como fallback
   originalImageSize,
@@ -62,7 +62,7 @@ const GeneratedImageEditor = ({
   brandElements,
   standardsColors
 }) => {
-  console.log('[GeneratedImageEditor] props:', { imageData, globalBackgroundImage, imageFilters, fieldStyles });
+  console.log('[PageEditor] props:', { pageData, globalBackgroundImage, imageFilters, fieldStyles });
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
   const [editedBrandElements, setEditedBrandElements] = useState([]);
@@ -97,8 +97,8 @@ const GeneratedImageEditor = ({
   };
 
   useEffect(() => {
-    if (open && imageData && initialFieldPositions && initialFieldStyles) {
-      const brands = JSON.parse(JSON.stringify(imageData.customBrandElements || brandElements || []));
+    if (open && pageData && initialFieldPositions && initialFieldStyles) {
+      const brands = JSON.parse(JSON.stringify(pageData.customBrandElements || brandElements || []));
 
       const positions = JSON.parse(JSON.stringify(initialFieldPositions));
       // Defensively add filters to brand elements
@@ -137,7 +137,7 @@ const GeneratedImageEditor = ({
 
       setEditedPositions(positions);
       setEditedBrandElements(brands);
-      setEditedRecord(JSON.parse(JSON.stringify(imageData.record)));
+      setEditedRecord(JSON.parse(JSON.stringify(pageData.record)));
 
       // Simplified style initialization, as props are now pre-merged
       const newEditedStyles = {};
@@ -151,24 +151,24 @@ const GeneratedImageEditor = ({
       setStylesAreInitialized(true);
 
       setEditedImageFilters(imageFilters || defaultFilters);
-      setFontScale(imageData.fontScale || 1); // Initialize font scale from imageData
+      setFontScale(pageData.fontScale || 1); // Initialize font scale from pageData
     } else {
       setStylesAreInitialized(false);
     }
-  }, [open, imageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, imageFilters, brandElements]);
+  }, [open, pageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, imageFilters, brandElements]);
 
-  if (!imageData) {
+  if (!pageData) {
     return null;
   }
 
   const handleSave = () => {
-    // Construct a new object explicitly to avoid propagating stale props from imageData
+    // Construct a new object explicitly to avoid propagating stale props from pageData
     const savedData = {
-      // Core identifiers from the original imageData that should not change
-      index: imageData.index,
-      blob: imageData.blob,
-      url: imageData.url,
-      filename: imageData.filename,
+      // Core identifiers from the original pageData that should not change
+      index: pageData.index,
+      blob: pageData.blob,
+      url: pageData.url,
+      filename: pageData.filename,
 
       // The state that was actually edited in this component
       record: editedRecord,
@@ -186,16 +186,16 @@ const GeneratedImageEditor = ({
   };
 
   // Determina a imagem de fundo a ser usada no editor
-  // Prioriza uma imagem de fundo específica da imageData (se existir, ex: após substituição individual)
+  // Prioriza a imagem de fundo específica da pageData (se existir, ex: após substituição individual)
   // Caso contrário, usa a imagem de fundo global.
-  const currentBackgroundImageForEditor = imageData.backgroundImage || globalBackgroundImage;
+  const currentBackgroundImageForEditor = pageData.backgroundImage || globalBackgroundImage;
 
   // Os cabeçalhos CSV para este editor devem ser os da linha específica sendo editada.
   // FieldPositioner e FormattingPanel esperam uma lista de todos os cabeçalhos para popular seletores, etc.
-  // mas o preview de dados em FieldPositioner usará o imageData.record
+  // mas o preview de dados em FieldPositioner usará o pageData.record
   const editorCsvHeaders = globalCsvHeaders;
   // Use editedRecord for the preview data if it's available
-  const editorCsvData = editedRecord ? [editedRecord] : (imageData ? [imageData.record] : []);
+  const editorCsvData = editedRecord ? [editedRecord] : (pageData ? [pageData.record] : []);
 
   // Log state before passing to FieldPositioner // LOGS REMOVED
   // if (stylesAreInitialized && currentBackgroundImageForEditor) {
@@ -206,7 +206,7 @@ const GeneratedImageEditor = ({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="paper" fullScreen={isMobile}>
       <DialogTitle>
-        Editar Página #{imageData.index + 1}
+        Editar Página Gerada #{pageData.index + 1}
         <IconButton
           onClick={onClose}
           sx={{ position: 'absolute', right: 8, top: 8 }}
@@ -269,7 +269,7 @@ const GeneratedImageEditor = ({
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
         <Button onClick={handleSave} color="primary" variant="contained">
-          Salvar Alterações na Imagem
+          Salvar Alterações na Página
         </Button>
       </DialogActions>
       {isMobile && (
@@ -318,4 +318,4 @@ const GeneratedImageEditor = ({
   );
 };
 
-export default GeneratedImageEditor;
+export default PageEditor;
