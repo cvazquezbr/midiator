@@ -415,7 +415,7 @@ const PageGeneratorFrontendOnly = ({
         record,
         index,
         itemBackgroundImage: currentBackgroundImage,
-        imageFilters: customImageFilters,
+        backgroundElement: { filters: customImageFilters },
         brandElements: elementsToUse,
         fieldPositions: positionsToUse,
         fieldStyles: stylesToUse,
