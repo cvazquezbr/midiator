@@ -331,14 +331,18 @@ function HomePage() {
     setIsSaving(true);
     setUploadProgress({ current: 0, total: 0 });
     try {
+      // Ensure empty strings for IDs are converted to null for the database.
+      const autorIdToSend = selectedAutorForCampaign === '' ? null : selectedAutorForCampaign;
+      const personaIdToSend = selectedPersonaForCampaign === '' ? null : selectedPersonaForCampaign;
+
       if (currentCampaign) {
         console.log(`[HomePage] Updating existing campaign, ID: ${currentCampaign.id}`);
-        const updated = await updateCampaign(currentCampaign.id, name, campaignDataToSave, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign);
+        const updated = await updateCampaign(currentCampaign.id, name, campaignDataToSave, setUploadProgress, user.uuid, autorIdToSend, personaIdToSend);
         toast.success(`Campaign "${name}" updated.`);
         setCurrentCampaign(updated);
       } else {
         console.log(`[HomePage] Saving new campaign.`);
-        const newCampaign = await saveCampaign(name, campaignDataToSave, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign);
+        const newCampaign = await saveCampaign(name, campaignDataToSave, setUploadProgress, user.uuid, autorIdToSend, personaIdToSend);
         toast.success(`Campaign "${name}" saved.`);
         setCurrentCampaign(newCampaign);
       }
@@ -576,53 +580,82 @@ function HomePage() {
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
   const updateImageAndPalette = useCallback((imageUrl, existingBackgroundElement = null) => {
-    console.log('[HomePage] updateImageAndPalette called.', {
-      hasImageUrl: !!imageUrl,
-      hasExistingBackgroundElement: !!existingBackgroundElement
-    });
-    setBackgroundImage(imageUrl);
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-    img.onload = () => {
-      setOriginalImageSize({ width: img.width, height: img.height });
-      if (existingBackgroundElement) {
-        setBackgroundElement(existingBackgroundElement);
-      } else {
-        setBackgroundElement({
-          id: '__background__',
-          type: 'background',
-          x: 0,
-          y: 0,
-          width: 100,
-          height: 100,
-          rotation: 0,
-          visible: true,
-          filters: { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
-          shadow: false,
-          shadowColor: '#000000',
-          shadowBlur: 10,
-          shadowOffsetX: 5,
-          shadowOffsetY: 5,
-          crop: null,
-        });
-      }
-      try {
-        const colorThief = new ColorThief();
-        const palette = colorThief.getPalette(img, 5);
-        setColorPalette(palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])));
-      } catch (error) {
-        console.error("Error extracting color palette:", error);
+    const processImage = (urlToProcess) => {
+      if (!urlToProcess) {
+        setBackgroundImage(null);
         setColorPalette([]);
+        setBackgroundElement(null);
+        return;
       }
+
+      setBackgroundImage(urlToProcess);
+      const img = new Image();
+      // No need for crossOrigin if it's a data URL, but it doesn't hurt.
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        setOriginalImageSize({ width: img.width, height: img.height });
+        if (existingBackgroundElement) {
+          setBackgroundElement(existingBackgroundElement);
+        } else {
+          setBackgroundElement({
+            id: '__background__',
+            type: 'background',
+            x: 0, y: 0, width: 100, height: 100, rotation: 0, visible: true,
+            filters: { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
+            shadow: false, shadowColor: '#000000', shadowBlur: 10, shadowOffsetX: 5, shadowOffsetY: 5,
+            crop: null,
+          });
+        }
+        try {
+          const colorThief = new ColorThief();
+          const palette = colorThief.getPalette(img, 5);
+          setColorPalette(palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])));
+        } catch (error) {
+          console.error("Error extracting color palette:", error);
+          setColorPalette([]);
+        }
+      };
+      img.onerror = (err) => {
+        console.error("Error loading image to extract colors:", err);
+        toast.error("Failed to load image data. It might be invalid or unsupported.");
+        setBackgroundImage(null);
+        setColorPalette([]);
+        setBackgroundElement(null);
+      };
+      img.src = urlToProcess;
     };
-    img.onerror = (err) => {
-      console.error("Error loading image to extract colors:", err);
-      setBackgroundImage(null);
-      setColorPalette([]);
-      setBackgroundElement(null);
-    };
-    img.src = imageUrl;
-  }, []);
+
+    if (imageUrl && imageUrl.startsWith('http')) {
+      console.log("[HomePage] URL is from http, converting to base64 to avoid CORS issues.");
+      fetch(imageUrl)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok for image fetch.');
+          }
+          return response.blob();
+        })
+        .then(blob => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            processImage(reader.result);
+          };
+          reader.onerror = (err) => {
+            console.error("FileReader error:", err);
+            toast.error("Could not read the fetched image file.");
+          };
+          reader.readAsDataURL(blob);
+        })
+        .catch(error => {
+          console.error('Error fetching or converting image:', error);
+          toast.error("Could not load image from URL. It may be protected by CORS policy.");
+          // Fallback to trying the direct URL anyway, it might work in some cases
+          processImage(imageUrl);
+        });
+    } else {
+      // It's already a data URL, null, or undefined. Process directly.
+      processImage(imageUrl);
+    }
+  }, [setBackgroundImage, setOriginalImageSize, setBackgroundElement, setColorPalette]);
   const parseImageFile = async (file) => {
     if (!file) return;
     console.log(`[HomePage] Parsing image file: ${file.name}`);
