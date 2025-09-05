@@ -623,66 +623,60 @@ function HomePage() {
     };
     img.src = imageUrl;
   }, []);
-  const parseImageFile = async (file) => {
+  const parseImageFile = (file) => {
     if (!file) return;
-    console.log(`[HomePage] Parsing image file: ${file.name}`);
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageUrl = e.target.result;
-      updateImageAndPalette(imageUrl);
-
-      const imageStepIndex = steps.findIndex(step => step.label === 'Imagem e Formatação');
-      if (imageStepIndex !== -1) {
-        setActiveStep(imageStepIndex);
-      }
-
-      if (window.confirm("Deseja salvar esta imagem na sua biblioteca de fundos no Google Drive?")) {
-        const uploadToDrive = async () => {
-            const toastId = toast.loading("Salvando imagem na biblioteca...");
-            console.log("[HomePage] Starting image upload to Drive process.");
-            try {
-                if (!googleAccessToken) {
-                    throw new Error("Por favor, conecte sua conta Google primeiro.");
-                }
-
-                let midiatorFolder = await findFolderByName('midiator');
-                if (!midiatorFolder) {
-                    console.log("[HomePage] 'midiator' folder not found, creating it.");
-                    midiatorFolder = await createFolder('midiator');
-                    if (!midiatorFolder) throw new Error("Falha ao criar a pasta 'midiator' no Drive.");
-                }
-
-                let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id);
-                if (!backgroundsFolder) {
-                    console.log("[HomePage] 'backgrounds' folder not found, creating it.");
-                    backgroundsFolder = await createFolder('backgrounds', midiatorFolder.id);
-                    if (!backgroundsFolder) throw new Error("Falha ao criar a pasta 'backgrounds' no Drive.");
-                }
-
-                const uploadedFile = await uploadFile(file, file.name, backgroundsFolder.id);
-                if (!uploadedFile) {
-                    throw new Error("O upload do arquivo para o Drive falhou e não retornou informações.");
-                }
-
-                toast.success("Imagem salva com sucesso na sua biblioteca!", { id: toastId });
-                console.log("[HomePage] Image successfully uploaded to Drive:", uploadedFile);
-
-            } catch (err) {
-                console.error("[HomePage] Failed to upload background to Drive:", err);
-                toast.error(`Falha ao salvar imagem: ${err.message}`, { id: toastId });
-            }
-        };
-        uploadToDrive();
-      }
-    };
-    reader.readAsDataURL(file);
+    handleBackgroundImageUpload(file);
   };
   const handleImageUpload = (event) => { const file = event.target.files[0]; parseImageFile(file); };
   const handleImageDrop = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(false); const file = event.dataTransfer.files[0]; parseImageFile(file); };
   const handleImageDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
   const handleImageDragEnter = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(true); };
   const handleImageDragLeave = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(false); };
+
+  const handleBackgroundImageUpload = async (file) => {
+    if (!file) return;
+
+    const toastId = toast.loading("Salvando imagem na sua biblioteca do Google Drive...");
+    try {
+      if (!googleAccessToken) {
+        throw new Error("Por favor, conecte sua conta Google primeiro para salvar a imagem.");
+      }
+
+      let midiatorFolder = await findFolderByName('midiator');
+      if (!midiatorFolder) {
+        midiatorFolder = await createFolder('midiator');
+        if (!midiatorFolder) throw new Error("Falha ao criar a pasta 'midiator' no Drive.");
+      }
+
+      let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id);
+      if (!backgroundsFolder) {
+        backgroundsFolder = await createFolder('backgrounds', midiatorFolder.id);
+        if (!backgroundsFolder) throw new Error("Falha ao criar a pasta 'backgrounds' no Drive.");
+      }
+
+      const uploadedFile = await uploadFile(file, file.name, backgroundsFolder.id);
+      if (!uploadedFile || !uploadedFile.id) {
+        throw new Error("O upload do arquivo para o Drive falhou.");
+      }
+
+      // Construct a direct-access URL. This format works for public files.
+      // Ensure the file permissions are set correctly in the Drive API if issues arise.
+      const permanentUrl = `https://lh3.googleusercontent.com/d/${uploadedFile.id}`;
+
+      updateImageAndPalette(permanentUrl);
+
+      const imageStepIndex = steps.findIndex(step => step.label === 'Imagem e Formatação');
+      if (imageStepIndex !== -1 && activeStep < imageStepIndex) {
+        setActiveStep(imageStepIndex);
+      }
+
+      toast.success("Imagem salva e definida como fundo!", { id: toastId });
+    } catch (err) {
+      console.error("Failed to upload and set background image:", err);
+      toast.error(`Falha ao salvar imagem: ${err.message}`, { id: toastId });
+    }
+  };
+
   const handleNext = () => {
     handleNavigation(() => {
       if (activeStep === 3) {
@@ -1263,7 +1257,7 @@ function HomePage() {
       <BackgroundImageSelector
         open={showBgSelector}
         onClose={() => setShowBgSelector(false)}
-        onSelect={updateImageAndPalette}
+        onSelect={handleBackgroundImageUpload}
         onLocalUpload={parseImageFile}
       />
       <LoadingDialog
