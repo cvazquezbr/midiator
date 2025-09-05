@@ -1139,6 +1139,7 @@ function HomePage() {
                 )}
                 {activeStep === 3 && (
                   <ImageStep
+                    aspectRatio={aspectRatio}
                     steps={steps}
                     isDraggingOverImage={isDraggingOverImage}
                     handleImageDrop={handleImageDrop}
