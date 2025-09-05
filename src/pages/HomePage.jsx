@@ -586,11 +586,12 @@ function HomePage() {
     img.onload = () => {
       setOriginalImageSize({ width: img.width, height: img.height });
       if (existingBackgroundElement) {
-        setBackgroundElement(existingBackgroundElement);
+        setBackgroundElement({ ...existingBackgroundElement, src: imageUrl });
       } else {
         setBackgroundElement({
           id: '__background__',
           type: 'background',
+          src: imageUrl,
           x: 0,
           y: 0,
           width: 100,
@@ -663,7 +664,24 @@ function HomePage() {
       }
 
       const permanentUrl = `https://lh3.googleusercontent.com/d/${uploadedFile.id}`;
-      setBackgroundImage(permanentUrl); // Update to permanent URL without reprocessing
+
+      // FIX: Update both the general background image state and the src within the element state.
+      // This ensures that when the local URL is revoked, the element still has a valid source.
+      setBackgroundImage(permanentUrl);
+      setBackgroundElement(prev => {
+        if (prev) {
+          return { ...prev, src: permanentUrl };
+        }
+        // This fallback should ideally not be hit if updateImageAndPalette ran correctly
+        return {
+          id: '__background__',
+          type: 'background',
+          src: permanentUrl,
+          x: 0, y: 0, width: 100, height: 100, rotation: 0, visible: true,
+          filters: { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
+          shadow: false, shadowColor: '#000000', shadowBlur: 10, shadowOffsetX: 5, shadowOffsetY: 5, crop: null,
+        };
+      });
 
       const imageStepIndex = steps.findIndex(step => step.label === 'Imagem e Formatação');
       if (imageStepIndex !== -1 && activeStep < imageStepIndex) {
@@ -678,7 +696,8 @@ function HomePage() {
       setBackgroundImage(null);
       setBackgroundElement(null);
     } finally {
-      URL.revokeObjectURL(localUrl); // Clean up local URL
+      // It's now safe to revoke the local URL because the state points to the permanent one.
+      URL.revokeObjectURL(localUrl);
     }
   };
 

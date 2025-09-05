@@ -72,7 +72,7 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
   if (needsUpload(cleanState.backgroundImage)) {
     assetsToUploadCount++;
   }
-  if (needsUpload(cleanState.generatedImageUrl)) {
+  if (needsUpload(cleanState.generatedPageUrl)) {
     assetsToUploadCount++;
   }
   if (Array.isArray(cleanState.brandElements)) {
@@ -104,11 +104,11 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
     }
 
     // Main Campaign Image
-    if (needsUpload(cleanState.generatedImageUrl)) {
+    if (needsUpload(cleanState.generatedPageUrl)) {
       const filename = `campaign_image_${Date.now()}.png`;
       console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-      const permanentUrl = await uploadAsset(cleanState.generatedImageUrl, filename, campaignId, userId);
-      cleanState.generatedImageUrl = permanentUrl;
+      const permanentUrl = await uploadAsset(cleanState.generatedPageUrl, filename, campaignId, userId);
+      cleanState.generatedPageUrl = permanentUrl;
       assetsUploadedCount++;
       onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
     }
