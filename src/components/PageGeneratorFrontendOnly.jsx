@@ -143,7 +143,6 @@ const PageGeneratorFrontendOnly = ({
           return composeSingleImage({
             record: pageData.record,
             index: pageData.index,
-            itemBackgroundImage: pageData.backgroundImage,
             backgroundElement: backgroundElementToUse,
             brandElements: elementsToUse,
             fieldPositions: positionsToUse,
@@ -206,12 +205,17 @@ const PageGeneratorFrontendOnly = ({
       if (isCancelledRef.current) return Promise.resolve(null);
 
       const initialPageDataItem = initialGeneratedPagesData.find(img => img.index === i);
-      const itemBackgroundImage = initialPageDataItem?.backgroundImage || backgroundImage;
+
+      // The backgroundElement passed to this component is the global one.
+      // For the first generation, we don't have per-page customizations yet.
+      const backgroundToUse = {
+          ...(backgroundElement || {}),
+          src: initialPageDataItem?.backgroundImage || backgroundImage,
+      };
 
       return composeSingleImage({
         record,
         index: i,
-        itemBackgroundImage,
         brandElements,
         fieldPositions,
         fieldStyles,
@@ -425,11 +429,14 @@ const PageGeneratorFrontendOnly = ({
       throw new Error('Pré-requisitos para regeneração não atendidos.');
     }
     // This function is now pure and returns the data, it does not set state.
+    const backgroundWithSrc = {
+      ...backgroundElementToUse,
+      src: currentBackgroundImage,
+    };
     return composeSingleImage({
       record,
       index,
-      itemBackgroundImage: currentBackgroundImage,
-      backgroundElement: backgroundElementToUse,
+      backgroundElement: backgroundWithSrc,
       brandElements: elementsToUse,
       fieldPositions: positionsToUse,
       fieldStyles: stylesToUse,
