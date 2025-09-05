@@ -282,11 +282,7 @@ const FieldPositioner = ({
     setCurrentPreviewIndex(csvData.length - 1);
   };
 
-  const aspectRatio = aspectRatioProp
-    ? String(aspectRatioProp).replace(':', ' / ')
-    : (effectiveImageSize?.width && effectiveImageSize?.height)
-    ? `${effectiveImageSize.width} / ${effectiveImageSize.height}`
-    : '16 / 9';
+  const aspectRatio = aspectRatioProp ? String(aspectRatioProp).replace(':', ' / ') : '16 / 9';
 
   // Effect to calculate font scale based on the actual rendered image size
   useEffect(() => {
