@@ -819,8 +819,8 @@ const PageGeneratorFrontendOnly = ({
         </DialogActions>
       </Dialog>
 
-      {console.log('[PageGeneratorFrontendOnly] rendering MemoizedPageEditor with props:', { showGeneratedPageEditor, generatedPages, editingGeneratedPageIndex, csvHeaders, fieldPositions, fieldStyles, brandElements, colorPalette, originalImageSize, standardsColors, backgroundElement })}
-      <MemoizedPageEditor
+      {console.log('[PageGeneratorFrontendOnly] rendering PageEditor with props:', { showGeneratedPageEditor, generatedPages, editingGeneratedPageIndex, csvHeaders, fieldPositions, fieldStyles, brandElements, colorPalette, originalImageSize, standardsColors, backgroundElement })}
+      <PageEditor
         showGeneratedPageEditor={showGeneratedPageEditor}
         handleCloseGeneratedPageEditor={handleCloseGeneratedPageEditor}
         generatedPages={generatedPages}
