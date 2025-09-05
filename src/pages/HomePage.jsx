@@ -67,7 +67,7 @@ import ColorThief from 'colorthief';
 import { composeSingleImage } from '../utils/imageComposer.js';
 import { autoArrangeFields } from '../utils/autoArrange.js';
 
-import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile, findFileByNameInFolder } from '../utils/googleApi';
+import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
 
 const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
   const hex = x.toString(16);
@@ -583,12 +583,11 @@ function HomePage() {
     img.onload = () => {
       setOriginalImageSize({ width: img.width, height: img.height });
       if (existingBackgroundElement) {
-        setBackgroundElement({ ...existingBackgroundElement, src: imageUrl });
+        setBackgroundElement(existingBackgroundElement);
       } else {
         setBackgroundElement({
           id: '__background__',
           type: 'background',
-          src: imageUrl,
           x: 0,
           y: 0,
           width: 100,
@@ -633,13 +632,21 @@ function HomePage() {
   const handleBackgroundImageUpload = async (file) => {
     if (!file) return;
 
+    // --- ROBUST FIX using FileReader and data:URL ---
+    // This converts the file to a self-contained data URL immediately.
+    // This URL does not expire and does not need to be revoked, fixing the
+    // "disappearing image" bug when thumbnails are generated later.
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target.result;
       updateImageAndPalette(dataUrl, null);
     };
     reader.readAsDataURL(file);
+    // --- End of robust fix ---
 
+    // TODO: Move the Google Drive upload to a separate, user-initiated action
+    // to avoid unconditional uploads. For now, the logic is disabled.
+    /*
     const toastId = toast.loading("Salvando imagem na sua biblioteca do Google Drive (opcional)...");
     try {
       if (!googleAccessToken) {
@@ -672,6 +679,7 @@ function HomePage() {
       }
 
       const permanentUrl = `https://lh3.googleusercontent.com/d/${uploadedFile.id}`;
+      setBackgroundImage(permanentUrl);
       setBackgroundElement(prev => {
         if (prev) {
           return { ...prev, src: permanentUrl };
@@ -683,6 +691,7 @@ function HomePage() {
       console.error("Failed to upload and set background image to Google Drive:", err);
       toast.error(`Falha ao salvar no Google Drive: ${err.message}`, { id: toastId });
     }
+    */
   };
 
   const handleNext = () => {
@@ -736,8 +745,6 @@ function HomePage() {
             if (existingPage) {
                 return { ...existingPage, record: record };
             }
-            // This object should not contain a `backgroundImage` property.
-            // It will rely on the global `backgroundElement` when rendered.
             return {
                 index,
                 record,

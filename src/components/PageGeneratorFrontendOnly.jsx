@@ -120,25 +120,25 @@ const PageGeneratorFrontendOnly = ({
   useEffect(() => {
     if (initialGeneratedPagesData && initialGeneratedPagesData.length > 0 && fontsLoaded) {
       const regenerateMissingThumbnails = async () => {
-        const pagesToRegenerate = initialGeneratedPagesData.filter(img => img.record && img.backgroundImage && !img.url);
+        const pagesToRegenerate = initialGeneratedPagesData.filter(img => img.record && !img.url);
 
         if (pagesToRegenerate.length === 0) return;
 
         console.log(`[Thumbnail-Regen] Found ${pagesToRegenerate.length} pages missing thumbnails. Regenerating...`);
 
         const pagePromises = initialGeneratedPagesData.map(pageData => {
-          // If the URL already exists, or it's not an page we should regenerate, return it as is.
           if (pageData.url || !pagesToRegenerate.some(r => r.index === pageData.index)) {
             return Promise.resolve(pageData);
           }
 
-          // Define parameters for regeneration, falling back to global props.
           const positionsToUse = pageData.customFieldPositions || fieldPositions;
           const stylesToUse = pageData.customFieldStyles || fieldStyles;
           const elementsToUse = pageData.customBrandElements !== undefined ? pageData.customBrandElements : brandElements;
+
+          // The source of truth for the background is the element object.
+          // It may have a custom `src` if the user replaced the background for that specific page.
           const backgroundElementToUse = pageData.customBackgroundElement || backgroundElement;
 
-          // Call the composition function to regenerate the merged page
           return composeSingleImage({
             record: pageData.record,
             index: pageData.index,
@@ -146,26 +146,23 @@ const PageGeneratorFrontendOnly = ({
             brandElements: elementsToUse,
             fieldPositions: positionsToUse,
             fieldStyles: stylesToUse,
-            fontScale: pageData.fontScale || 1, // Use custom font scale if available
+            fontScale: pageData.fontScale || 1,
             aspectRatio,
           }).catch(error => {
             console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${pageData.index}:`, error);
-            return pageData; // On error, return the original data to not lose it
+            return pageData;
           });
         });
 
         const regeneratedPages = await Promise.all(pagePromises.map(async (promise, index) => {
           const newPageData = await promise;
           const originalPageData = initialGeneratedPagesData[index];
-          // If regeneration failed, newPageData might be the original data already.
           if (newPageData === originalPageData) {
             return originalPageData;
           }
-          // Merge new data (url, blob) with old data (custom styles/positions)
           return { ...originalPageData, ...newPageData };
         }));
 
-        // Update state only if there are actual changes
         if (JSON.stringify(regeneratedPages) !== JSON.stringify(generatedPages)) {
           setGeneratedPages(regeneratedPages);
           console.log('[Thumbnail-Regen] Successfully regenerated thumbnails and updated state.');
@@ -180,20 +177,18 @@ const PageGeneratorFrontendOnly = ({
   const generatePages = async () => {
     if (isGenerating) return;
 
-    // Se já existem páginas, o botão funciona como "Regerar Tudo"
     if (generatedPages.some(img => img.url)) {
       handleRegenerateAll();
       return;
     }
 
-    // Lógica original para gerar pela primeira vez
-    if (!backgroundElement?.src && !initialGeneratedPagesData.every(img => img.customBackgroundElement?.src)) {
-      alert('Por favor, carregue uma imagem de fundo global para a campanha, ou garanta que todas as páginas tenham um fundo individual customizado.');
+    if (!backgroundElement?.src) {
+      alert('Por favor, carregue uma imagem de fundo global para a campanha.');
       return;
     }
     if (csvData.length === 0) {
-        alert('Por favor, carregue um arquivo CSV com os dados para gerar as páginas.');
-        return;
+      alert('Por favor, carregue um arquivo CSV com os dados para gerar as páginas.');
+      return;
     }
     if (!fontsLoaded) {
       alert('Aguardando carregamento das fontes. Tente novamente em alguns segundos.');
@@ -279,7 +274,7 @@ const PageGeneratorFrontendOnly = ({
       regenerateSinglePage(
         index,
         pageToReset.record,
-        backgroundElement.src, // Usando a imagem de fundo global
+        backgroundElement, // Passa o elemento de fundo global
         fieldPositions, // Usando as posições de campo globais
         fieldStyles, // Usando os estilos de campo globais
         originalImageSize,
@@ -361,7 +356,6 @@ const PageGeneratorFrontendOnly = ({
       return {
         ...img,
         record: modifiedPageData.record,
-        backgroundImage: modifiedPageData.backgroundImage,
         customFieldPositions: modifiedPageData.fieldPositions,
         customFieldStyles: modifiedPageData.fieldStyles,
         customBrandElements: modifiedPageData.brandElements,
@@ -375,23 +369,24 @@ const PageGeneratorFrontendOnly = ({
 
     if (pageToRegenerate) {
       try {
-        const bgToUse = pageToRegenerate.backgroundImage || backgroundElement?.src;
         const positionsToUse = pageToRegenerate.customFieldPositions || fieldPositions;
         const stylesToUse = pageToRegenerate.customFieldStyles || fieldStyles;
         const elementsToUse = pageToRegenerate.customBrandElements !== undefined ? pageToRegenerate.customBrandElements : brandElements;
         const sizeToUse = pageToRegenerate.customOriginalImageSize || originalImageSize;
 
+        // The background to use is the one saved from the editor, or the global one as a fallback.
+        const backgroundToUse = pageToRegenerate.customBackgroundElement || backgroundElement;
+
         // Await the pure function to get the new image data
         const newPageData = await regenerateSinglePage(
           pageIndex,
           pageToRegenerate.record,
-          bgToUse,
+          backgroundToUse,
           positionsToUse,
           stylesToUse,
           sizeToUse,
           elementsToUse,
-          1, // Always use a fontScale of 1 when saving/regenerating from an edit
-          pageToRegenerate.customBackgroundElement || backgroundElement,
+          1 // Always use a fontScale of 1 when saving/regenerating from an edit
         );
 
         // Now, create the final array by merging the regenerated image data (url, blob)
@@ -419,20 +414,16 @@ const PageGeneratorFrontendOnly = ({
     handleCloseGeneratedPageEditor();
   };
 
-  const regenerateSinglePage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1, backgroundElementToUse = backgroundElement) => {
-    if (!currentBackgroundImage || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
+  const regenerateSinglePage = async (index, record, backgroundElementToUse, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1) => {
+    if (!backgroundElementToUse?.src || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
       console.error('Pré-requisitos para regeneração não atendidos. Fontes, dados ou configurações faltando.');
       throw new Error('Pré-requisitos para regeneração não atendidos.');
     }
     // This function is now pure and returns the data, it does not set state.
-    const backgroundWithSrc = {
-      ...backgroundElementToUse,
-      src: currentBackgroundImage,
-    };
     return composeSingleImage({
       record,
       index,
-      backgroundElement: backgroundWithSrc,
+      backgroundElement: backgroundElementToUse,
       brandElements: elementsToUse,
       fieldPositions: positionsToUse,
       fieldStyles: stylesToUse,
@@ -456,16 +447,42 @@ const PageGeneratorFrontendOnly = ({
         const newBgUrl = e.target.result;
         const pageToUpdate = generatedPages.find(img => img.index === replacingImageIndex);
         if (pageToUpdate) {
-          const img = new Image();
-          img.onload = () => {
-            const newSize = { width: img.width, height: img.height };
-            regenerateSinglePage(replacingImageIndex, pageToUpdate.record, newBgUrl, pageToUpdate.customFieldPositions || fieldPositions, pageToUpdate.customFieldStyles || fieldStyles, newSize, pageToUpdate.customBrandElements || brandElements, fontScale, pageToUpdate.customBackgroundElement || backgroundElement);
+          // Clone the existing background element (custom or global) and just update the source.
+          // This preserves all other properties like filters, shadows, etc.
+          const baseElement = pageToUpdate.customBackgroundElement || backgroundElement;
+          const newBackgroundElement = {
+            ...baseElement,
+            src: newBgUrl,
           };
-          img.onerror = () => {
-            console.error('Failed to load the new background page to get its dimensions.');
-            regenerateSinglePage(replacingImageIndex, pageToUpdate.record, newBgUrl, pageToUpdate.customFieldPositions || fieldPositions, pageToUpdate.customFieldStyles || fieldStyles, null, pageToUpdate.customBrandElements || brandElements, fontScale, pageToUpdate.customBackgroundElement || backgroundElement);
-          };
-          img.src = newBgUrl;
+
+          // Regenerate the page with the new background element object.
+          regenerateSinglePage(
+            replacingImageIndex,
+            pageToUpdate.record,
+            newBackgroundElement, // Pass the correct object
+            pageToUpdate.customFieldPositions || fieldPositions,
+            pageToUpdate.customFieldStyles || fieldStyles,
+            null, // Let composer determine size from new image
+            pageToUpdate.customBrandElements || brandElements,
+            fontScale
+          ).then(newlyGeneratedPage => {
+             // After regeneration, update the state
+             setGeneratedPages(currentPages => currentPages.map(p => {
+               if (p.index === replacingImageIndex) {
+                 // We need to merge the new URL/blob with the existing data,
+                 // and critically, store the new custom background element.
+                 return {
+                   ...p,
+                   ...newlyGeneratedPage,
+                   customBackgroundElement: newBackgroundElement,
+                 };
+               }
+               return p;
+             }));
+          }).catch(error => {
+            console.error(`Error regenerating page ${replacingImageIndex} with new background:`, error);
+            alert(`Falha ao substituir o fundo da página: ${error.message}`);
+          });
         }
       };
       reader.readAsDataURL(file);
@@ -681,10 +698,10 @@ const PageGeneratorFrontendOnly = ({
                         </Box>
 
 <Box sx={{
-                          aspectRatio: aspectRatio ? String(aspectRatio).replace(':', ' / ') : '1 / 1',
                           width: '100%',
                           maxWidth: '100%',
                           height: 'auto',
+                          maxHeight: '180px',
                           display: 'flex',
                           flexDirection: 'column',
                           justifyContent: 'center',
@@ -817,7 +834,6 @@ const PageGeneratorFrontendOnly = ({
         originalImageSize={originalImageSize}
         standardsColors={standardsColors}
         backgroundElement={backgroundElement}
-        aspectRatio={aspectRatio}
       />
 
       <input

@@ -144,7 +144,7 @@ export const composeSingleImage = async ({
     fieldPositions = {},
     fieldStyles = {},
     aspectRatio,
-    backgroundElement, // Transformation object for the background, now includes src
+    backgroundElement, // The single source of truth for the background
     fontScale = 1,
 }) => {
 
@@ -167,7 +167,7 @@ export const composeSingleImage = async ({
     ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
     // 2. Draw the single background image if it exists, applying all transformations.
-    if (backgroundElement && backgroundElement.src) {
+    if (backgroundElement?.src) {
         try {
             const bgImg = await loadImage(backgroundElement.src);
             ctx.save();
@@ -385,6 +385,7 @@ export const composeSingleImage = async ({
         record,
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        backgroundImage: backgroundElement ? backgroundElement.src : null, // Return the used background image src
+        // Return the state of the background that was actually used for composition
+        customBackgroundElement: backgroundElement,
     };
 };
