@@ -75,9 +75,17 @@ const BackgroundImageSelector = ({ open, onClose, onSelect, onLocalUpload }) => 
     try {
       // Call no longer needs token argument
       const blob = await getFileAsBlob(image.id);
-      const blobUrl = URL.createObjectURL(blob);
-      onSelect(blobUrl);
-      onClose(); // Close dialog on selection
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUrl = reader.result;
+        onSelect(dataUrl);
+        onClose(); // Close dialog on selection
+      };
+      reader.onerror = (error) => {
+        console.error("Error converting blob to data URL:", error);
+        toast.error("Falha ao converter a imagem para um formato utilizável.");
+      };
+      reader.readAsDataURL(blob);
     } catch (err) {
       setError(`Falha ao carregar imagem: ${err.message}`);
       toast.error(`Falha ao carregar imagem: ${err.message}`);
