@@ -107,32 +107,11 @@ const FormattingPanel = ({
   ];
 
   const updateFieldStyle = (field, property, value) => {
-    const boxProperties = [
-      'backgroundColor',
-      'backgroundOpacity',
-      'borderColor',
-      'borderWidth',
-      'borderRadius',
-      'padding'
-    ];
-
-    if (boxProperties.includes(property)) {
-      // Apply box styles to all fields to maintain consistency
-      const newStyles = { ...fieldStyles };
-      (csvHeaders || []).forEach(header => {
-        newStyles[header] = {
-          ...(fieldStyles[header] || {}),
-          [property]: value
-        };
-      });
-      setFieldStyles(newStyles);
-    } else {
-      // Original logic for font-specific styles
-      setFieldStyles(prev => ({
-        ...prev,
-        [field]: { ...(prev[field] || {}), [property]: value }
-      }));
-    }
+    // Per user feedback, all style updates should apply only to the selected field.
+    setFieldStyles(prev => ({
+      ...prev,
+      [field]: { ...(prev[field] || {}), [property]: value }
+    }));
   };
 
   const updateFieldPosition = (field, property, value) => {
@@ -560,9 +539,9 @@ const FormattingPanel = ({
                         />
                       </Grid>
                       <Grid item xs={6}>
-                        <Typography gutterBottom>Opacidade: {Math.round((currentElement.style.backgroundOpacity || 1) * 100)}%</Typography>
+                        <Typography gutterBottom>Opacidade: {Math.round((currentElement.style.backgroundOpacity ?? 1) * 100)}%</Typography>
                         <Slider
-                          value={currentElement.style.backgroundOpacity || 1}
+                          value={currentElement.style.backgroundOpacity ?? 1}
                           onChange={(e, value) => updateFieldStyle(selectedField, 'backgroundOpacity', value)}
                           min={0}
                           max={1}
