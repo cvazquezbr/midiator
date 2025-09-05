@@ -202,6 +202,8 @@ const PageGeneratorFrontendOnly = ({
     setProgress(0);
     isCancelledRef.current = false;
 
+    console.log('[PageGenerator] Initial generation. Using fieldStyles:', fieldStyles);
+
     const pagePromises = csvData.map((record, i) => {
       if (isCancelledRef.current) return Promise.resolve(null);
 
@@ -414,6 +416,7 @@ const PageGeneratorFrontendOnly = ({
       alert('Pré-requisitos para regeneração não atendidos. Fontes, dados ou configurações faltando.');
       return;
     }
+    console.log(`[PageGenerator] Regenerating page ${index}. Using stylesToUse:`, stylesToUse);
     try {
       const newPageData = await composeSingleImage({
         record,
