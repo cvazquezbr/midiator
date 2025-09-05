@@ -804,10 +804,9 @@ const PageGeneratorFrontendOnly = ({
       <PageEditor
         open={showGeneratedPageEditor}
         onClose={handleCloseGeneratedPageEditor}
-        generatedPages={initialGeneratedPagesData}
-        editingGeneratedPageIndex={editingGeneratedPageIndex}
-        csvHeaders={csvHeaders}
-        fieldPositions={fieldPositions}
+        pageData={initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex)}
+        globalCsvHeaders={csvHeaders}
+        initialFieldPositions={fieldPositions}
         fieldStyles={fieldStyles}
         brandElements={brandElements}
         handleSaveIndividualModifications={handleSaveIndividualModifications}
