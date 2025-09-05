@@ -101,7 +101,7 @@ const PostsCurtosStep = ({
 
         {/* Seletor de método de entrada - sempre visível quando não há dados */}
         {!showRecordManager && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, mb: 4 }}>
               <ToggleButtonGroup
                 color="primary"
                 value={inputMethod}
@@ -119,6 +119,21 @@ const PostsCurtosStep = ({
                 <ToggleButton value="csv">Carregar CSV</ToggleButton>
                 <ToggleButton value="manual">Criação Manual</ToggleButton>
               </ToggleButtonGroup>
+
+              <FormControl variant="outlined" sx={{ minWidth: 200 }}>
+                <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
+                <Select
+                  labelId="aspect-ratio-label"
+                  value={aspectRatio}
+                  onChange={(e) => setAspectRatio(e.target.value)}
+                  label="Razão de Aspecto"
+                  size="small"
+                >
+                  <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
+                  <MenuItem value="4:5">Retrato (4:5)</MenuItem>
+                  <MenuItem value="16:9">Paisagem (16:9)</MenuItem>
+                </Select>
+              </FormControl>
             </Box>
         )}
 
@@ -166,20 +181,6 @@ const PostsCurtosStep = ({
                     label="Gerar imagens"
                     sx={{ m: 0 }} // Remove default margin
                   />
-                  <FormControl variant="outlined" sx={{ minWidth: 150 }}>
-                    <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
-                    <Select
-                      labelId="aspect-ratio-label"
-                      value={aspectRatio}
-                      onChange={(e) => setAspectRatio(e.target.value)}
-                      label="Razão de Aspecto"
-                      size="small"
-                    >
-                      <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
-                      <MenuItem value="4:5">Retrato (4:5)</MenuItem>
-                      <MenuItem value="16:9">Paisagem (16:9)</MenuItem>
-                    </Select>
-                  </FormControl>
                 </Box>
                 <Button
                   variant="contained"
