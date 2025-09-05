@@ -78,7 +78,7 @@ const FieldPositioner = ({
   isCropping,
   setIsCropping,
 }) => {
-  console.log('[FieldPositioner] props:', { backgroundImageSrc, backgroundElement, fieldStyles });
+  console.log('[FieldPositioner] props:', { backgroundElement, fieldStyles });
   // const [selectedField, setSelectedField] = useState(null); // REMOVED: Use parent state
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
@@ -165,7 +165,7 @@ const FieldPositioner = ({
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [onImageDisplayedSizeChange, backgroundImageSrc]);
+  }, [onImageDisplayedSizeChange, backgroundElement?.src]);
 
   // This component should not be responsible for initializing or updating the parent's state.
   // It should just render the props it receives. The parent (HomePage) is responsible for
