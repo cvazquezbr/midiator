@@ -60,6 +60,7 @@ const PageEditor = ({
   brandElements,
   standardsColors,
   globalBackgroundElement,
+  aspectRatio,
 }) => {
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
@@ -233,6 +234,7 @@ const PageEditor = ({
           <Grid container spacing={2}>
             <Grid item xs={12} md={isMobile ? 12 : 8}>
               <FieldPositioner
+                aspectRatio={aspectRatio}
                 csvHeaders={editorCsvHeaders} // Headers relevantes para esta imagem
                 fieldPositions={editedPositions}
                 setFieldPositions={setEditedPositions}
