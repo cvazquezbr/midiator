@@ -402,7 +402,7 @@ const PageGeneratorFrontendOnly = ({
         stylesToUse,
         sizeToUse,
         elementsToUse,
-        modifiedPageData.fontScale || 1,
+        1, // Always use a fontScale of 1 when saving/regenerating from an edit
         modifiedPageData.imageFilters || imageFilters
       );
     }
