@@ -15,6 +15,7 @@ const MemoizedPageEditor = ({
   backgroundImage,
   originalImageSize,
   backgroundElement,
+  aspectRatio,
 }) => {
   console.log('[MemoizedPageEditor] props:', { backgroundElement });
   const pageToEdit = useMemo(() => {
@@ -79,6 +80,7 @@ const MemoizedPageEditor = ({
       originalImageSize={pageToEdit.customOriginalImageSize || originalImageSize}
       globalBackgroundElement={backgroundElement}
       brandElements={memoizedBrandElements}
+      aspectRatio={aspectRatio}
     />
   );
 };
