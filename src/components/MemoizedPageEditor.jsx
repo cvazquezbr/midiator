@@ -12,7 +12,6 @@ const MemoizedPageEditor = ({
   brandElements,
   handleSaveIndividualModifications,
   colorPalette,
-  backgroundImage,
   originalImageSize,
   backgroundElement,
   aspectRatio,
@@ -77,9 +76,8 @@ const MemoizedPageEditor = ({
         initialFieldStyles={memoizedStyles}
         onSave={handleSaveIndividualModifications}
         colorPalette={colorPalette}
-        globalBackgroundImage={pageToEdit.backgroundImage || backgroundImage}
-        originalImageSize={pageToEdit.customOriginalImageSize || originalImageSize}
         globalBackgroundElement={backgroundElement}
+        originalImageSize={pageToEdit.customOriginalImageSize || originalImageSize}
         brandElements={memoizedBrandElements}
         aspectRatio={aspectRatio}
       />
@@ -94,7 +92,6 @@ const MemoizedPageEditor = ({
     memoizedStyles,
     handleSaveIndividualModifications,
     colorPalette,
-    backgroundImage,
     originalImageSize,
     backgroundElement,
     memoizedBrandElements,

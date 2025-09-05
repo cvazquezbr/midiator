@@ -94,7 +94,6 @@ function HomePage() {
   const [autorDrawerOpen, setAutorDrawerOpen] = useState(!isMobile);
   const [csvData, setCsvData] = useState([]);
   const [csvHeaders, setCsvHeaders] = useState([]);
-  const [backgroundImage, setBackgroundImage] = useState(null);
   const [colorPalette, setColorPalette] = useState([]);
   const [standardsColors, setStandardsColors] = useState([]);
   const [problema, setProblema] = useState('');
@@ -229,12 +228,12 @@ function HomePage() {
     setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
 
     // Logic to load background image and its associated element state correctly.
-    if (state.backgroundImage) {
-      // Pass the loaded backgroundElement to prevent it from being overwritten with defaults.
-      updateImageAndPalette(state.backgroundImage, state.backgroundElement || null);
+    // This handles both legacy campaigns with just `backgroundImage` and new ones with `backgroundElement`.
+    const backgroundSrc = state.backgroundElement?.src || state.backgroundImage;
+    if (backgroundSrc) {
+      updateImageAndPalette(backgroundSrc, state.backgroundElement || null);
     } else {
-      setBackgroundImage(null);
-      setBackgroundElement(null); // Explicitly clear both if no image.
+      setBackgroundElement(null);
     }
 
     setProblema(state.problema ?? '');
@@ -316,7 +315,6 @@ function HomePage() {
       templateFieldStyles,
       brandElements,
       backgroundElement,
-      backgroundImage,
       generatedPageUrl,
       generatedPagesData,
       generatedAudioData,
@@ -580,7 +578,6 @@ function HomePage() {
       hasImageUrl: !!imageUrl,
       hasExistingBackgroundElement: !!existingBackgroundElement
     });
-    setBackgroundImage(imageUrl);
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
@@ -618,7 +615,6 @@ function HomePage() {
     };
     img.onerror = (err) => {
       console.error("Error loading image to extract colors:", err);
-      setBackgroundImage(null);
       setColorPalette([]);
       setBackgroundElement(null);
     };
@@ -637,24 +633,16 @@ function HomePage() {
   const handleBackgroundImageUpload = async (file) => {
     if (!file) return;
 
-    // --- ROBUST FIX using FileReader and data:URL ---
-    // This converts the file to a self-contained data URL immediately.
-    // This URL does not expire and does not need to be revoked, fixing the
-    // "disappearing image" bug when thumbnails are generated later.
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target.result;
       updateImageAndPalette(dataUrl, null);
     };
     reader.readAsDataURL(file);
-    // --- End of robust fix ---
 
-    // The optional upload to Google Drive can proceed in the background.
-    // It no longer affects the immediate display of the image.
     const toastId = toast.loading("Salvando imagem na sua biblioteca do Google Drive (opcional)...");
     try {
       if (!googleAccessToken) {
-        // This is not a hard error, just an info message.
         toast.info("Conecte sua conta Google para salvar a imagem na sua biblioteca.", { id: toastId });
         return;
       }
@@ -662,13 +650,11 @@ function HomePage() {
       let midiatorFolder = await findFolderByName('midiator');
       if (!midiatorFolder) {
         midiatorFolder = await createFolder('midiator');
-        if (!midiatorFolder) throw new Error("Falha ao criar a pasta 'midiator' no Drive.");
       }
 
       let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id);
       if (!backgroundsFolder) {
         backgroundsFolder = await createFolder('backgrounds', midiatorFolder.id);
-        if (!backgroundsFolder) throw new Error("Falha ao criar a pasta 'backgrounds' no Drive.");
       }
 
       let uploadedFile;
@@ -685,21 +671,17 @@ function HomePage() {
         throw new Error("O upload do arquivo para o Drive falhou.");
       }
 
-      // Update the state with the permanent URL from Google Drive.
-      // This replaces the data:URL, which can be very long.
       const permanentUrl = `https://lh3.googleusercontent.com/d/${uploadedFile.id}`;
-      setBackgroundImage(permanentUrl);
       setBackgroundElement(prev => {
         if (prev) {
           return { ...prev, src: permanentUrl };
         }
-        return null;
+        return null; // Should not happen if onload has fired
       });
 
     } catch (err) {
       console.error("Failed to upload and set background image to Google Drive:", err);
       toast.error(`Falha ao salvar no Google Drive: ${err.message}`, { id: toastId });
-      // Do not clear the image here. The data:URL is still valid and usable.
     }
   };
 
@@ -720,7 +702,7 @@ function HomePage() {
       case 1: return true;
       case 2: return campaignContent !== null;
       case 3: return csvData.length > 0;
-      case 4: return backgroundImage !== null;
+      case 4: return backgroundElement?.src != null;
       case 5: if (generatedPagesData.length === 0 || !generatedPagesData.every(img => img.blob)) { toast.error("Por favor, gere todas as páginas na etapa 4 antes de prosseguir."); return false; } return true;
       default: return true;
     }
@@ -754,13 +736,14 @@ function HomePage() {
             if (existingPage) {
                 return { ...existingPage, record: record };
             }
+            // This object should not contain a `backgroundImage` property.
+            // It will rely on the global `backgroundElement` when rendered.
             return {
                 index,
                 record,
                 blob: null,
                 url: null,
                 filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-                backgroundImage: backgroundImage,
                 customFieldPositions: null,
                 customFieldStyles: null,
                 customBrandElements: null,
@@ -770,7 +753,7 @@ function HomePage() {
         });
         return newGeneratedPages;
     });
-  }, [csvHeaders, backgroundImage]);
+  }, [csvHeaders]);
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
     setCsvData(newCsvData);
     // Esta função é chamada ao editar texto diretamente na thumbnail (ImageStep)
@@ -788,7 +771,6 @@ function HomePage() {
                 blob: null,
                 url: null,
                 filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-                backgroundImage: backgroundImage,
                 customFieldPositions: null,
                 customFieldStyles: null,
                 customBrandElements: null,
@@ -798,7 +780,7 @@ function HomePage() {
         });
         return newGeneratedPages;
     });
-  }, [backgroundImage]);
+  }, []);
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => { setCsvData(prevCsvData => { if (recordIndex < 0 || recordIndex >= prevCsvData.length) { return prevCsvData; } return prevCsvData.map((row, idx) => { if (idx === recordIndex) { return updatedRecord; } return row; }); }); }, [setCsvData]);
   const handleGenerateCampaignContent = async (regenerate = false) => {
     setIsGeneratingCampaign(true);
@@ -938,7 +920,6 @@ function HomePage() {
         blob: null,
         url: null,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        backgroundImage: backgroundImage,
         customFieldPositions: null,
         customFieldStyles: null,
         customBrandElements: null,
@@ -982,9 +963,7 @@ function HomePage() {
   const handleGenerateSinglePage = async (record, index, setAsBackground = false) => {
     const imagePrompt = record.prompt_imagem_carrossel;
 
-    // Determine the background to use for THIS composition.
-    // We start with the current state, but might override it if we generate a new one.
-    let backgroundForComposition = backgroundImage;
+    let composingElement = backgroundElement;
 
     if (setAsBackground && imagePrompt && imagePrompt.trim() !== '') {
       setGenerationStatus(`Gerando nova imagem de fundo...`);
@@ -998,9 +977,12 @@ function HomePage() {
           reader.readAsDataURL(blob);
         });
 
-        // Update the state for future renders, AND update our local var for the current composition.
+        // This is tricky. updateImageAndPalette is async and sets state.
+        // For the composition to work immediately, we need the new element data.
+        // A full solution would be to have updateImageAndPalette return the new element.
+        // For now, we create a temporary element for composition.
         updateImageAndPalette(stableDataUrl);
-        backgroundForComposition = stableDataUrl;
+        composingElement = { ...(backgroundElement || {}), src: stableDataUrl };
         toast.info("Nova imagem de fundo foi gerada e definida para a campanha.");
 
       } catch(error) {
@@ -1011,18 +993,14 @@ function HomePage() {
 
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
-      // The call from PageGeneratorFrontendOnly doesn't pass setAsBackground,
-      // so it will be false, and `backgroundForComposition` will be the current `backgroundImage` from state.
-      // This is correct.
       const finalPageData = await composeSingleImage({
         record: record,
         index: index,
-        backgroundImage: backgroundForComposition, // Pass the determined background
         brandElements,
         fieldPositions,
         fieldStyles,
         aspectRatio,
-        backgroundElement,
+        backgroundElement: composingElement,
       });
 
       setGeneratedPagesData(currentPagesData => {
@@ -1067,7 +1045,7 @@ function HomePage() {
         />
         {currentView === 'campaigns' && (
           <>
-            <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImage={backgroundImage} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
+            <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImage={backgroundElement?.src} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
             {!isMobile && <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out', backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', '&:hover': { backgroundColor: 'background.default' } }} >{sidebarOpen ? <ChevronLeft /> : <ChevronRight />}</Fab>}
           </>
         )}
@@ -1168,7 +1146,6 @@ function HomePage() {
                     handleImageDragLeave={handleImageDragLeave}
                     imageInputRef={imageInputRef}
                     handleImageUpload={handleImageUpload}
-                    backgroundImage={backgroundImage}
                     onChangeBackgroundImage={() => setShowBgSelector(true)}
                     csvHeaders={csvHeaders}
                     fieldPositions={fieldPositions}
@@ -1204,7 +1181,6 @@ function HomePage() {
                 {activeStep === 4 && (
                   <PageGeneratorFrontendOnly
                     csvData={csvData}
-                    backgroundImage={backgroundImage}
                     fieldPositions={fieldPositions}
                     fieldStyles={fieldStyles}
                     displayedImageSize={displayedImageSize}

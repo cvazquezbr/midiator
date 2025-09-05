@@ -45,7 +45,6 @@ import { useUserAuth } from '../context/UserAuthContext';
 
 const PageGeneratorFrontendOnly = ({
   csvData,
-  backgroundImage,
   fieldPositions,
   fieldStyles,
   csvHeaders,
@@ -188,9 +187,13 @@ const PageGeneratorFrontendOnly = ({
     }
 
     // Lógica original para gerar pela primeira vez
-    if ((!backgroundImage && initialGeneratedPagesData.some(img => !img.backgroundImage)) || csvData.length === 0) {
-      alert('Por favor, carregue um arquivo CSV e uma imagem de fundo global, ou garanta que todas as páginas tenham um fundo individual.');
+    if (!backgroundElement?.src && !initialGeneratedPagesData.every(img => img.customBackgroundElement?.src)) {
+      alert('Por favor, carregue uma imagem de fundo global para a campanha, ou garanta que todas as páginas tenham um fundo individual customizado.');
       return;
+    }
+    if (csvData.length === 0) {
+        alert('Por favor, carregue um arquivo CSV com os dados para gerar as páginas.');
+        return;
     }
     if (!fontsLoaded) {
       alert('Aguardando carregamento das fontes. Tente novamente em alguns segundos.');
@@ -204,15 +207,8 @@ const PageGeneratorFrontendOnly = ({
     const pagePromises = csvData.map((record, i) => {
       if (isCancelledRef.current) return Promise.resolve(null);
 
-      const initialPageDataItem = initialGeneratedPagesData.find(img => img.index === i);
-
-      // The backgroundElement passed to this component is the global one.
-      // For the first generation, we don't have per-page customizations yet.
-      const backgroundToUse = {
-          ...(backgroundElement || {}),
-          src: initialPageDataItem?.backgroundImage || backgroundImage,
-      };
-
+      // For the first generation, we only use the global background element.
+      // Per-page customizations happen in the editor.
       return composeSingleImage({
         record,
         index: i,
@@ -220,7 +216,7 @@ const PageGeneratorFrontendOnly = ({
         fieldPositions,
         fieldStyles,
         fontScale,
-        backgroundElement,
+        backgroundElement: backgroundElement, // Pass the global element
         aspectRatio,
       })
       .then(pageData => {
@@ -278,12 +274,12 @@ const PageGeneratorFrontendOnly = ({
 
   const handleResetPage = (index) => {
     const pageToReset = generatedPages.find(img => img.index === index);
-    if (pageToReset && backgroundImage) {
+    if (pageToReset && backgroundElement?.src) {
       // Use a cópia mais recente dos estilos/posições globais, não os customizados.
       regenerateSinglePage(
         index,
         pageToReset.record,
-        backgroundImage, // Usando a imagem de fundo global
+        backgroundElement.src, // Usando a imagem de fundo global
         fieldPositions, // Usando as posições de campo globais
         fieldStyles, // Usando os estilos de campo globais
         originalImageSize,
@@ -818,7 +814,6 @@ const PageGeneratorFrontendOnly = ({
         brandElements={brandElements}
         handleSaveIndividualModifications={handleSaveIndividualModifications}
         colorPalette={colorPalette}
-        backgroundImage={backgroundImage}
         originalImageSize={originalImageSize}
         standardsColors={standardsColors}
         backgroundElement={backgroundElement}

@@ -56,14 +56,13 @@ const PageEditor = ({
   initialFieldStyles, // Estilos dos campos para esta página específica
   onSave, // Callback: (editedPageData) => void
   colorPalette, // Paleta de cores global
-  globalBackgroundImage, // Imagem de fundo global, como fallback
   originalImageSize,
   brandElements,
   standardsColors,
   globalBackgroundElement,
   aspectRatio,
 }) => {
-  console.log('[PageEditor] props:', { pageData, globalBackgroundImage, globalBackgroundElement });
+  console.log('[PageEditor] props:', { pageData, globalBackgroundElement });
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
   const [editedBrandElements, setEditedBrandElements] = useState([]);
@@ -197,17 +196,18 @@ const PageEditor = ({
       fontScale: fontScale,
       customBackgroundElement: editedBackgroundElement,
 
-      // Explicitly set the background image that was used for editing
-      backgroundImage: currentBackgroundImageForEditor,
+      // The `backgroundImage` property on the page data is now deprecated.
+      // The `customBackgroundElement.src` is the source of truth.
+      // We'll set it here to ensure consistency on save.
+      backgroundImage: editedBackgroundElement?.src,
     };
     onSave(savedData);
     onClose();
   };
 
-  // Determina a imagem de fundo a ser usada no editor
-  // Prioriza a imagem de fundo específica da pageData (se existir, ex: após substituição individual)
-  // Caso contrário, usa a imagem de fundo global.
-  const currentBackgroundImageForEditor = pageData.backgroundImage || globalBackgroundImage;
+  // The single source of truth for the background image URL is the `src` property
+  // of the `editedBackgroundElement` state.
+  const currentBackgroundImageForEditor = editedBackgroundElement?.src;
 
   // Os cabeçalhos CSV para este editor devem ser os da linha específica sendo editada.
   // FieldPositioner e FormattingPanel esperam uma lista de todos os cabeçalhos para popular seletores, etc.
