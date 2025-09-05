@@ -76,7 +76,7 @@ const DraggableElementInternal = ({
           style={{
             width: '100%',
             height: '100%',
-            objectFit: element.type === 'background' ? 'fill' : 'cover',
+            objectFit: 'cover',
             pointerEvents: 'none',
           }}
         />
