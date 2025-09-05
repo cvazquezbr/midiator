@@ -114,6 +114,38 @@ export const findFolderByName = async (name, parentId = null) => {
   }
 };
 
+export const findFileByNameInFolder = async (name, folderId) => {
+  console.log(`[googleApi] Finding file by name: '${name}' in folder ${folderId}`);
+  try {
+    if (!currentAccessToken) {
+      toast.error('Conexão com o Google Drive não estabelecida.');
+      throw new Error('Sessão com o Google não iniciada para buscar arquivo.');
+    }
+    if (!folderId) {
+        throw new Error('Folder ID is required to find a file.');
+    }
+    let query = `name='${name.replace(/'/g, "\\'")}' and '${folderId}' in parents and trashed=false and mimeType != 'application/vnd.google-apps.folder'`;
+
+    const response = await fetchWithRefresh(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,parents)&orderBy=createdTime desc`, {});
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      const errorMessage = errorBody.error?.message || response.statusText;
+      console.error(`[googleApi] Failed to find file '${name}':`, errorMessage);
+      throw new Error(`Não foi possível encontrar o arquivo '${name}': ${errorMessage}`);
+    }
+    const result = await response.json();
+    if (result.files && result.files.length > 0) {
+        console.log(`[googleApi] Found file '${name}' with ID: ${result.files[0].id}`);
+        return result.files[0];
+    }
+    console.log(`[googleApi] File '${name}' not found in folder ${folderId}.`);
+    return null;
+  } catch (error) {
+    console.error(`[googleApi] Error in findFileByNameInFolder for '${name}':`, error);
+    throw error;
+  }
+};
+
 export const listFiles = async (folderId, pageSize = 100) => {
   console.log(`[googleApi] Listing files in folder: ${folderId}`);
   try {
