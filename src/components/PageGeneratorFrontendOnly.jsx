@@ -65,7 +65,6 @@ const PageGeneratorFrontendOnly = ({
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const isCancelledRef = useRef(false);
-  const [generatedPages, setGeneratedPages] = useState(initialGeneratedPagesData || []);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedPreview, setSelectedPreview] = useState(null);
   const [editingGeneratedPageIndex, setEditingGeneratedPageIndex] = useState(null);
@@ -97,24 +96,6 @@ const PageGeneratorFrontendOnly = ({
     };
     loadFonts();
   }, []);
-
-  useEffect(() => {
-    if (setGeneratedPagesData) {
-      setGeneratedPagesData(generatedPages);
-    }
-  }, [generatedPages, setGeneratedPagesData]);
-
-  useEffect(() => {
-    if (initialGeneratedPagesData) {
-      if (initialGeneratedPagesData !== generatedPages) {
-         setGeneratedPages(initialGeneratedPagesData);
-      }
-    } else {
-      if (generatedPages.length > 0) {
-        setGeneratedPages([]);
-      }
-    }
-  }, [initialGeneratedPagesData]);
 
   // Effect for regenerating thumbnails on load
   useEffect(() => {
@@ -163,21 +144,21 @@ const PageGeneratorFrontendOnly = ({
           return { ...originalPageData, ...newPageData };
         }));
 
-        if (JSON.stringify(regeneratedPages) !== JSON.stringify(generatedPages)) {
-          setGeneratedPages(regeneratedPages);
+        if (JSON.stringify(regeneratedPages) !== JSON.stringify(initialGeneratedPagesData)) {
+          setGeneratedPagesData(regeneratedPages);
           console.log('[Thumbnail-Regen] Successfully regenerated thumbnails and updated state.');
         }
       };
 
       regenerateMissingThumbnails();
     }
-  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, backgroundElement, brandElements]);
+  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, backgroundElement, brandElements, setGeneratedPagesData]);
 
 
   const generatePages = async () => {
     if (isGenerating) return;
 
-    if (generatedPages.some(img => img.url)) {
+    if (initialGeneratedPagesData.some(img => img.url)) {
       handleRegenerateAll();
       return;
     }
@@ -233,7 +214,7 @@ const PageGeneratorFrontendOnly = ({
     try {
       const pages = (await Promise.all(pagePromises)).filter(Boolean); // Filtra os nulos de erros ou cancelamentos
       if (!isCancelledRef.current) {
-        setGeneratedPages(pages);
+        setGeneratedPagesData(pages);
       }
     } catch (error) {
       console.error('Erro geral durante a geração de páginas em lote:', error);
@@ -268,7 +249,7 @@ const PageGeneratorFrontendOnly = ({
   const handleCancelGeneration = () => { isCancelledRef.current = true; };
 
   const handleResetPage = (index) => {
-    const pageToReset = generatedPages.find(img => img.index === index);
+    const pageToReset = initialGeneratedPagesData.find(img => img.index === index);
     if (pageToReset && backgroundElement?.src) {
       // Use a cópia mais recente dos estilos/posições globais, não os customizados.
       regenerateSinglePage(
@@ -319,7 +300,7 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const downloadAllPages = () => {
-    generatedPages.forEach((pageData, index) => {
+    initialGeneratedPagesData.forEach((pageData, index) => {
       setTimeout(() => downloadPage(pageData), index * 100);
     });
   };
@@ -331,9 +312,9 @@ const PageGeneratorFrontendOnly = ({
 
   const handleOpenGeneratedPageEditor = (pageFromClosure, index) => {
     setEditingGeneratedPageIndex(index);
-    const pageToEdit = generatedPages.find(img => img.index === index);
+    const pageToEdit = initialGeneratedPagesData.find(img => img.index === index);
     if (!pageToEdit) {
-      console.error(`[PGF] handleOpenGeneratedPageEditor: Could not find page in local 'generatedPages' state with index: ${index}.`);
+      console.error(`[PGF] handleOpenGeneratedPageEditor: Could not find page in local 'initialGeneratedPagesData' state with index: ${index}.`);
       setShowGeneratedPageEditor(true);
       return;
     }
@@ -349,7 +330,7 @@ const PageGeneratorFrontendOnly = ({
     const { index: pageIndex } = modifiedPageData;
 
     // First, create a new array with the updated metadata from the editor
-    const pagesWithUpdatedMetadata = generatedPages.map(img => {
+    const pagesWithUpdatedMetadata = initialGeneratedPagesData.map(img => {
       if (img.index !== pageIndex) {
         return img;
       }
@@ -399,7 +380,7 @@ const PageGeneratorFrontendOnly = ({
         });
 
         // Perform a single, atomic state update
-        setGeneratedPages(finalUpdatedPages);
+        setGeneratedPagesData(finalUpdatedPages);
 
       } catch (error) {
         console.error(`Error during page regeneration for index ${pageIndex}:`, error);
@@ -445,7 +426,7 @@ const PageGeneratorFrontendOnly = ({
       const reader = new FileReader();
       reader.onload = (e) => {
         const newBgUrl = e.target.result;
-        const pageToUpdate = generatedPages.find(img => img.index === replacingImageIndex);
+        const pageToUpdate = initialGeneratedPagesData.find(img => img.index === replacingImageIndex);
         if (pageToUpdate) {
           // Clone the existing background element (custom or global) and just update the source.
           // This preserves all other properties like filters, shadows, etc.
@@ -467,7 +448,7 @@ const PageGeneratorFrontendOnly = ({
             fontScale
           ).then(newlyGeneratedPage => {
              // After regeneration, update the state
-             setGeneratedPages(currentPages => currentPages.map(p => {
+             setGeneratedPagesData(currentPages => currentPages.map(p => {
                if (p.index === replacingImageIndex) {
                  // We need to merge the new URL/blob with the existing data,
                  // and critically, store the new custom background element.
@@ -498,7 +479,7 @@ const PageGeneratorFrontendOnly = ({
       alert('Por favor, digite um nome para o projeto.');
       return;
     }
-    if (generatedPages.length === 0) {
+    if (initialGeneratedPagesData.length === 0) {
       alert('Nenhuma página foi gerada ainda.');
       return;
     }
@@ -517,10 +498,10 @@ const PageGeneratorFrontendOnly = ({
 
       const uploadResults = [];
       const sheetData = [];
-      const allHeaders = Array.from(new Set(generatedPages.flatMap(img => Object.keys(img.record))));
+      const allHeaders = Array.from(new Set(initialGeneratedPagesData.flatMap(img => Object.keys(img.record))));
 
-      for (let i = 0; i < generatedPages.length; i++) {
-        const pageData = generatedPages[i];
+      for (let i = 0; i < initialGeneratedPagesData.length; i++) {
+        const pageData = initialGeneratedPagesData[i];
         try {
           const response = await fetch(pageData.dataUrl);
           const blob = await response.blob();
@@ -584,11 +565,11 @@ const PageGeneratorFrontendOnly = ({
                 startIcon={<ImageIcon />}
                 fullWidth
               >
-                {generatedPages.some(img => img.url) ? 'Regerar páginas' : 'Gerar Páginas'}
+                {initialGeneratedPagesData.some(img => img.url) ? 'Regerar páginas' : 'Gerar Páginas'}
               </Button>
             </Grid>
 
-            {generatedPages.some(img => img.url) && (
+            {initialGeneratedPagesData.some(img => img.url) && (
               <Grid item xs={12} md={6}>
                 <Button
                   variant="outlined"
@@ -596,7 +577,7 @@ const PageGeneratorFrontendOnly = ({
                   startIcon={<Download />}
                   fullWidth
                 >
-                  Download Todas ({generatedPages.filter(img => img.url).length})
+                  Download Todas ({initialGeneratedPagesData.filter(img => img.url).length})
                 </Button>
               </Grid>
             )}
@@ -611,7 +592,7 @@ const PageGeneratorFrontendOnly = ({
             </Box>
           )}
 
-          {generatedPages.length > 0 && (
+          {initialGeneratedPagesData.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="h6" gutterBottom>
@@ -673,15 +654,15 @@ const PageGeneratorFrontendOnly = ({
             </Box>
           )}
 
-          {generatedPages.length > 0 && (
+          {initialGeneratedPagesData.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="h6" gutterBottom>
-                Páginas Geradas ({generatedPages.length})
+                Páginas Geradas ({initialGeneratedPagesData.length})
               </Typography>
 
               <Grid container spacing={2}>
-                {generatedPages.map((pageData, index) => (
+                {initialGeneratedPagesData.map((pageData, index) => (
                   <Grid item xs={12} sm={6} md={4} key={index}>
                     <Card variant="outlined">
                       <CardContent>
@@ -819,11 +800,11 @@ const PageGeneratorFrontendOnly = ({
         </DialogActions>
       </Dialog>
 
-      {console.log('[PageGeneratorFrontendOnly] rendering PageEditor with props:', { showGeneratedPageEditor, generatedPages, editingGeneratedPageIndex, csvHeaders, fieldPositions, fieldStyles, brandElements, colorPalette, originalImageSize, standardsColors, backgroundElement })}
+      {console.log('[PageGeneratorFrontendOnly] rendering PageEditor with props:', { showGeneratedPageEditor, initialGeneratedPagesData, editingGeneratedPageIndex, csvHeaders, fieldPositions, fieldStyles, brandElements, colorPalette, originalImageSize, standardsColors, backgroundElement })}
       <PageEditor
         open={showGeneratedPageEditor}
         onClose={handleCloseGeneratedPageEditor}
-        generatedPages={generatedPages}
+        generatedPages={initialGeneratedPagesData}
         editingGeneratedPageIndex={editingGeneratedPageIndex}
         csvHeaders={csvHeaders}
         fieldPositions={fieldPositions}
