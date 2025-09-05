@@ -352,20 +352,18 @@ const PageGeneratorFrontendOnly = ({
     setEditingGeneratedPageIndex(null);
   };
 
-  const handleSaveIndividualModifications = (modifiedPageData) => {
+  const handleSaveIndividualModifications = async (modifiedPageData) => {
     const { index: pageIndex } = modifiedPageData;
 
-    const updatedPages = generatedPages.map(img => {
+    // First, create a new array with the updated metadata from the editor
+    const pagesWithUpdatedMetadata = generatedPages.map(img => {
       if (img.index !== pageIndex) {
         return img;
       }
-      // The editor now sends back the correct background image it used.
-      // We trust the editor's data.
       return {
-        ...img, // Keep existing properties like blob, url, etc.
+        ...img,
         record: modifiedPageData.record,
-        backgroundImage: modifiedPageData.backgroundImage, // Use the background from the editor.
-        // Apply other modifications from the editor
+        backgroundImage: modifiedPageData.backgroundImage,
         customFieldPositions: modifiedPageData.fieldPositions,
         customFieldStyles: modifiedPageData.fieldStyles,
         customBrandElements: modifiedPageData.brandElements,
@@ -373,80 +371,72 @@ const PageGeneratorFrontendOnly = ({
       };
     });
 
-    setGeneratedPages(updatedPages);
+    // Find the page we just updated to get all its data for regeneration
+    const pageToRegenerate = pagesWithUpdatedMetadata.find(p => p.index === pageIndex);
+
+    if (pageToRegenerate) {
+      try {
+        const bgToUse = pageToRegenerate.backgroundImage || backgroundImage;
+        const positionsToUse = pageToRegenerate.customFieldPositions || fieldPositions;
+        const stylesToUse = pageToRegenerate.customFieldStyles || fieldStyles;
+        const elementsToUse = pageToRegenerate.customBrandElements !== undefined ? pageToRegenerate.customBrandElements : brandElements;
+        const sizeToUse = pageToRegenerate.customOriginalImageSize || originalImageSize;
+
+        // Await the pure function to get the new image data
+        const newPageData = await regenerateSinglePage(
+          pageIndex,
+          pageToRegenerate.record,
+          bgToUse,
+          positionsToUse,
+          stylesToUse,
+          sizeToUse,
+          elementsToUse,
+          1, // Always use a fontScale of 1 when saving/regenerating from an edit
+          modifiedPageData.imageFilters || imageFilters
+        );
+
+        // Now, create the final array by merging the regenerated image data (url, blob)
+        // into the array that already has the updated metadata.
+        const finalUpdatedPages = pagesWithUpdatedMetadata.map(img => {
+          if (img.index === pageIndex) {
+            return { ...img, ...newPageData };
+          }
+          return img;
+        });
+
+        // Perform a single, atomic state update
+        setGeneratedPages(finalUpdatedPages);
+
+      } catch (error) {
+        console.error(`Error during page regeneration for index ${pageIndex}:`, error);
+        alert(`Failed to regenerate page: ${error.message}`);
+      }
+    }
 
     if (onThumbnailRecordTextUpdate) {
       onThumbnailRecordTextUpdate(pageIndex, modifiedPageData.record);
     }
 
-    const pageToRegenerate = updatedPages.find(im => im.index === pageIndex);
-
-    if (pageToRegenerate) {
-      // Explicitly define the parameters to be used for regeneration,
-      // falling back to global props if custom ones don't exist.
-      const bgToUse = pageToRegenerate.backgroundImage || backgroundImage;
-      const positionsToUse = pageToRegenerate.customFieldPositions || fieldPositions;
-      const stylesToUse = pageToRegenerate.customFieldStyles || fieldStyles;
-      const elementsToUse = pageToRegenerate.customBrandElements !== undefined ? pageToRegenerate.customBrandElements : brandElements;
-      const sizeToUse = pageToRegenerate.customOriginalImageSize || originalImageSize;
-
-      regenerateSinglePage(
-        pageIndex,
-        pageToRegenerate.record,
-        bgToUse,
-        positionsToUse,
-        stylesToUse,
-        sizeToUse,
-        elementsToUse,
-        1, // Always use a fontScale of 1 when saving/regenerating from an edit
-        modifiedPageData.imageFilters || imageFilters
-      );
-    }
     handleCloseGeneratedPageEditor();
   };
 
   const regenerateSinglePage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1, customImageFilters = imageFilters) => {
     if (!currentBackgroundImage || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
-      alert('Pré-requisitos para regeneração não atendidos. Fontes, dados ou configurações faltando.');
-      return;
+      console.error('Pré-requisitos para regeneração não atendidos. Fontes, dados ou configurações faltando.');
+      throw new Error('Pré-requisitos para regeneração não atendidos.');
     }
-    try {
-      const newPageData = await composeSingleImage({
-        record,
-        index,
-        itemBackgroundImage: currentBackgroundImage,
-        backgroundElement: { filters: customImageFilters },
-        brandElements: elementsToUse,
-        fieldPositions: positionsToUse,
-        fieldStyles: stylesToUse,
-        fontScale,
-        aspectRatio,
-      });
-
-      setGeneratedPages(prevPages => {
-        const updatedPages = prevPages.map(img => {
-          if (img.index === index) {
-            // The new object from composeSingleImage contains the new url, blob, etc.
-            // We merge it with the existing `img` data to preserve all fields,
-            // especially the `backgroundImage` which might be lost otherwise.
-            return {
-              ...img,
-              ...newPageData,
-              customFieldPositions: positionsToUse,
-              customFieldStyles: stylesToUse, // Persist the styles used for regeneration
-              customBrandElements: elementsToUse,
-              customOriginalImageSize: customSize,
-              backgroundImage: currentBackgroundImage, // Explicitly preserve the background used for regeneration
-            };
-          }
-          return img;
-        });
-        return updatedPages;
-      });
-    } catch (error) {
-      console.error(`Erro na regeneração da página (índice ${index}):`, error);
-      alert(`Erro na regeneração da página (índice ${index}): ${error.message}`);
-    }
+    // This function is now pure and returns the data, it does not set state.
+    return composeSingleImage({
+      record,
+      index,
+      itemBackgroundImage: currentBackgroundImage,
+      backgroundElement: { filters: customImageFilters },
+      brandElements: elementsToUse,
+      fieldPositions: positionsToUse,
+      fieldStyles: stylesToUse,
+      fontScale,
+      aspectRatio,
+    });
   };
 
   const handleReplacePageClick = (index) => {

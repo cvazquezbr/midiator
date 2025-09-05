@@ -260,7 +260,7 @@ export const composeSingleImage = async ({
     for (const element of elementsToDraw) {
         ctx.save();
         if (element.type === 'text') {
-            const { content, position, style } = element;
+            const { id, content, position, style } = element;
             if (!content) {
                 ctx.restore();
                 continue;
