@@ -540,6 +540,13 @@ const PageGeneratorFrontendOnly = ({
     }
   };
 
+  // Logic to determine props for the PageEditor
+  const pageToEdit = initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex);
+  const editorPositions = pageToEdit?.customFieldPositions || fieldPositions;
+  const editorStyles = pageToEdit?.customFieldStyles || fieldStyles;
+  const editorBrandElements = pageToEdit?.customBrandElements !== undefined ? pageToEdit.customBrandElements : brandElements;
+  const editorBackgroundElement = pageToEdit?.customBackgroundElement || backgroundElement;
+
   return (
     <Box sx={{ mt: 3 }}>
       <Card>
@@ -804,16 +811,16 @@ const PageGeneratorFrontendOnly = ({
       <PageEditor
         open={showGeneratedPageEditor}
         onClose={handleCloseGeneratedPageEditor}
-        pageData={initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex)}
+        pageData={pageToEdit}
         globalCsvHeaders={csvHeaders}
-        initialFieldPositions={fieldPositions}
-        initialFieldStyles={fieldStyles}
-        brandElements={brandElements}
+        initialFieldPositions={editorPositions}
+        initialFieldStyles={editorStyles}
+        brandElements={editorBrandElements}
         handleSaveIndividualModifications={handleSaveIndividualModifications}
         colorPalette={colorPalette}
         originalImageSize={originalImageSize}
         standardsColors={standardsColors}
-        backgroundElement={backgroundElement}
+        globalBackgroundElement={editorBackgroundElement}
         aspectRatio={aspectRatio}
       />
 
