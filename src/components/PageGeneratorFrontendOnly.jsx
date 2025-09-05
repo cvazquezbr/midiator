@@ -834,6 +834,7 @@ const PageGeneratorFrontendOnly = ({
         originalImageSize={originalImageSize}
         standardsColors={standardsColors}
         backgroundElement={backgroundElement}
+        aspectRatio={aspectRatio}
       />
 
       <input
