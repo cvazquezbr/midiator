@@ -58,7 +58,6 @@ const PageEditor = ({
   colorPalette, // Paleta de cores global
   globalBackgroundImage, // Imagem de fundo global, como fallback
   originalImageSize,
-  imageFilters, // Adicionado
   brandElements,
   standardsColors,
   globalBackgroundElement,
@@ -174,7 +173,7 @@ const PageEditor = ({
     } else {
       setStylesAreInitialized(false);
     }
-  }, [open, pageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, imageFilters, brandElements]);
+  }, [open, pageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, brandElements, globalBackgroundElement]);
 
   if (!pageData) {
     return null;
@@ -194,7 +193,6 @@ const PageEditor = ({
       fieldPositions: editedPositions,
       fieldStyles: editedStyles,
       brandElements: editedBrandElements,
-      imageFilters: editedBackgroundElement ? editedBackgroundElement.filters : defaultFilters,
       fontScale: fontScale,
       customBackgroundElement: editedBackgroundElement,
 
