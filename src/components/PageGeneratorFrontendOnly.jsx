@@ -176,7 +176,7 @@ const PageGeneratorFrontendOnly = ({
 
       regenerateMissingThumbnails();
     }
-  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, imageFilters, brandElements]);
+  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, backgroundElement, brandElements]);
 
 
   const generatePages = async () => {
@@ -812,7 +812,7 @@ const PageGeneratorFrontendOnly = ({
         handleSaveIndividualModifications={handleSaveIndividualModifications}
         colorPalette={colorPalette}
         backgroundImage={backgroundImage}
-        originalImageSizd={originalImageSize}
+        originalImageSize={originalImageSize}
         standardsColors={standardsColors}
         backgroundElement={backgroundElement}
       />

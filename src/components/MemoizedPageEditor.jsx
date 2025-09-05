@@ -14,9 +14,9 @@ const MemoizedPageEditor = ({
   colorPalette,
   backgroundImage,
   originalImageSize,
-  imageFilters,
+  backgroundElement,
 }) => {
-  console.log('[MemoizedPageEditor] props:', { imageFilters });
+  console.log('[MemoizedPageEditor] props:', { backgroundElement });
   const pageToEdit = useMemo(() => {
     return generatedPages.find(img => img.index === editingGeneratedPageIndex);
   }, [generatedPages, editingGeneratedPageIndex]);
@@ -77,7 +77,7 @@ const MemoizedPageEditor = ({
       colorPalette={colorPalette}
       globalBackgroundImage={pageToEdit.backgroundImage || backgroundImage}
       originalImageSize={pageToEdit.customOriginalImageSize || originalImageSize}
-      imageFilters={imageFilters}
+      globalBackgroundElement={backgroundElement}
       brandElements={memoizedBrandElements}
     />
   );

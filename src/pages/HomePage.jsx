@@ -67,7 +67,7 @@ import ColorThief from 'colorthief';
 import { composeSingleImage } from '../utils/imageComposer.js';
 import { autoArrangeFields } from '../utils/autoArrange.js';
 
-import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
+import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile, findFileByNameInFolder } from '../utils/googleApi';
 
 const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
   const hex = x.toString(16);
@@ -658,7 +658,16 @@ function HomePage() {
         if (!backgroundsFolder) throw new Error("Falha ao criar a pasta 'backgrounds' no Drive.");
       }
 
-      const uploadedFile = await uploadFile(file, file.name, backgroundsFolder.id);
+      // MITIGATION: Check if file with the same name already exists
+      let uploadedFile;
+      const existingFile = await findFileByNameInFolder(file.name, backgroundsFolder.id);
+      if (existingFile) {
+        toast.info(`Usando imagem existente "${file.name}" do Google Drive.`);
+        uploadedFile = existingFile;
+      } else {
+        uploadedFile = await uploadFile(file, file.name, backgroundsFolder.id);
+      }
+
       if (!uploadedFile || !uploadedFile.id) {
         throw new Error("O upload do arquivo para o Drive falhou.");
       }
