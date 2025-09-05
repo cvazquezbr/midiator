@@ -61,6 +61,7 @@ const PageEditor = ({
   brandElements,
   standardsColors,
   globalBackgroundElement,
+  aspectRatio,
 }) => {
   console.log('[PageEditor] props:', { pageData, globalBackgroundImage, globalBackgroundElement });
   const [editedPositions, setEditedPositions] = useState({});
@@ -261,6 +262,7 @@ const PageEditor = ({
                 backgroundElement={editedBackgroundElement}
                 setBackgroundElement={setEditedBackgroundElement}
                 currentPreviewIndex={0}
+                aspectRatio={aspectRatio}
               />
             </Grid>
             {!isMobile && (

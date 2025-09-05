@@ -678,10 +678,10 @@ const PageGeneratorFrontendOnly = ({
                         </Box>
 
 <Box sx={{
+                          aspectRatio: aspectRatio ? String(aspectRatio).replace(':', ' / ') : '1 / 1',
                           width: '100%',
                           maxWidth: '100%',
                           height: 'auto',
-                          maxHeight: '180px',
                           display: 'flex',
                           flexDirection: 'column',
                           justifyContent: 'center',
@@ -815,6 +815,7 @@ const PageGeneratorFrontendOnly = ({
         originalImageSize={originalImageSize}
         standardsColors={standardsColors}
         backgroundElement={backgroundElement}
+        aspectRatio={aspectRatio}
       />
 
       <input
