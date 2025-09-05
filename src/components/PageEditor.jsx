@@ -60,7 +60,8 @@ const PageEditor = ({
   originalImageSize,
   imageFilters, // Adicionado
   brandElements,
-  standardsColors
+  standardsColors,
+  globalBackgroundElement,
 }) => {
   console.log('[PageEditor] props:', { pageData, globalBackgroundImage, imageFilters });
   const [editedPositions, setEditedPositions] = useState({});
@@ -157,7 +158,7 @@ const PageEditor = ({
       setEditedStyles(newEditedStyles);
       setStylesAreInitialized(true);
 
-      setEditedBackgroundElement({
+      const backgroundToUse = pageData.customBackgroundElement || globalBackgroundElement || {
         id: 'background',
         x: 0,
         y: 0,
@@ -165,9 +166,10 @@ const PageEditor = ({
         height: 100,
         rotation: 0,
         visible: true,
-        filters: pageData.imageFilters || defaultFilters,
-        crop: null, // PageEditor doesn't support cropping yet
-      });
+        filters: defaultFilters,
+        crop: null,
+      };
+      setEditedBackgroundElement(backgroundToUse);
       setFontScale(pageData.fontScale || 1); // Initialize font scale from pageData
     } else {
       setStylesAreInitialized(false);
@@ -194,6 +196,7 @@ const PageEditor = ({
       brandElements: editedBrandElements,
       imageFilters: editedBackgroundElement ? editedBackgroundElement.filters : defaultFilters,
       fontScale: fontScale,
+      customBackgroundElement: editedBackgroundElement,
 
       // Explicitly set the background image that was used for editing
       backgroundImage: currentBackgroundImageForEditor,

@@ -554,6 +554,12 @@ const DraggableElementInternal = ({
     return `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
   };
 
+  const getBoxShadowString = (style) => {
+    if (!style || !style.shadow) return 'none';
+    const { shadowColor = '#000000', shadowBlur = 4, shadowOffsetX = 2, shadowOffsetY = 2 } = style;
+    return `${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px ${shadowColor}`;
+  };
+
   const textContentStyle = {
     fontFamily: style.fontFamily || 'Arial',
     fontSize: `${scaledFontSize}px`,
@@ -569,12 +575,10 @@ const DraggableElementInternal = ({
   };
 
   const effectiveHandleMouseDown = (e, type, handle = null) => {
-    if (element.type === 'background') return;
     doHandleMouseDown(e, type, handle);
   };
 
   const effectiveHandleTouchStart = (e, type, handle = null) => {
-    if (element.type === 'background') return;
     handleTouchStart(e, type, handle);
   };
 
@@ -598,6 +602,8 @@ const DraggableElementInternal = ({
             : `${(style.borderWidth || 0) * fontScale}px solid ${style.borderColor || '#000000'}`,
           borderRadius: `${(style.borderRadius || 0) * fontScale}px`,
           padding: element.type === 'image' || element.type === 'background' || element.type === 'cropbox' ? 0 : `${(style.padding || 0) * fontScale}px`,
+          filter: (element.type === 'image' || element.type === 'background') ? getFilterString(style) : 'none',
+          boxShadow: (element.type === 'image' || element.type === 'background') ? getBoxShadowString(style) : 'none',
         }}
         onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
         onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
@@ -623,7 +629,7 @@ const DraggableElementInternal = ({
             {renderContent()}
         </Box>
 
-        {isSelected && element.type !== 'background' && (
+        {isSelected && (
           <>
             {resizeHandles.map((handle) => (
               <Box

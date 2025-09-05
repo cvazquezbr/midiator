@@ -368,6 +368,7 @@ const PageGeneratorFrontendOnly = ({
         customFieldStyles: modifiedPageData.fieldStyles,
         customBrandElements: modifiedPageData.brandElements,
         fontScale: modifiedPageData.fontScale,
+        customBackgroundElement: modifiedPageData.customBackgroundElement,
       };
     });
 
@@ -392,7 +393,8 @@ const PageGeneratorFrontendOnly = ({
           sizeToUse,
           elementsToUse,
           1, // Always use a fontScale of 1 when saving/regenerating from an edit
-          modifiedPageData.imageFilters || imageFilters
+          modifiedPageData.imageFilters || imageFilters,
+          pageToRegenerate.customBackgroundElement || backgroundElement,
         );
 
         // Now, create the final array by merging the regenerated image data (url, blob)
@@ -420,7 +422,7 @@ const PageGeneratorFrontendOnly = ({
     handleCloseGeneratedPageEditor();
   };
 
-  const regenerateSinglePage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1, customImageFilters = imageFilters) => {
+  const regenerateSinglePage = async (index, record, currentBackgroundImage, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1, customImageFilters = imageFilters, backgroundElementToUse = backgroundElement) => {
     if (!currentBackgroundImage || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
       console.error('Pré-requisitos para regeneração não atendidos. Fontes, dados ou configurações faltando.');
       throw new Error('Pré-requisitos para regeneração não atendidos.');
@@ -430,7 +432,7 @@ const PageGeneratorFrontendOnly = ({
       record,
       index,
       itemBackgroundImage: currentBackgroundImage,
-      backgroundElement: { filters: customImageFilters },
+      backgroundElement: backgroundElementToUse,
       brandElements: elementsToUse,
       fieldPositions: positionsToUse,
       fieldStyles: stylesToUse,
@@ -816,6 +818,7 @@ const PageGeneratorFrontendOnly = ({
         originalImageSize={originalImageSize}
         imageFilters={imageFilters}
         standardsColors={standardsColors}
+        backgroundElement={backgroundElement}
       />
 
       <input
