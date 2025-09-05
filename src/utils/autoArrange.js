@@ -53,7 +53,7 @@ const COMPLETE_DEFAULT_STYLE = {
   borderWidth: 0,
   borderRadius: 0,
   padding: 5,
-  backgroundOpacity: 1,
+  backgroundOpacity: 0,
 };
 
 export const autoArrangeFields = ({
@@ -79,6 +79,14 @@ export const autoArrangeFields = ({
 
     const newPositions = { ...fieldPositions };
     const newStyles = { ...fieldStyles };
+
+    // Ensure all fields have a complete default style object to begin with.
+    csvHeaders.forEach(header => {
+      newStyles[header] = {
+        ...COMPLETE_DEFAULT_STYLE,
+        ...(newStyles[header] || {}),
+      };
+    });
 
     // 2. Calculate Safe Zone and Bands
     const safeZone = {
@@ -119,6 +127,7 @@ export const autoArrangeFields = ({
       );
 
       newStyles[titleField] = {
+        ...COMPLETE_DEFAULT_STYLE,
         ...(newStyles[titleField] || {}),
         fontFamily: 'Anton',
         fontSize: bestFontSize,
@@ -147,6 +156,7 @@ export const autoArrangeFields = ({
         visible: true,
       };
       newStyles[subtitleField] = {
+        ...COMPLETE_DEFAULT_STYLE,
         ...(newStyles[subtitleField] || {}),
         textAlign: 'center',
         verticalAlign: 'middle',
@@ -192,6 +202,7 @@ export const autoArrangeFields = ({
         visible: true,
       };
       newStyles[sideLabelField] = {
+        ...COMPLETE_DEFAULT_STYLE,
         ...(newStyles[sideLabelField] || {}),
         textAlign: 'center',
         verticalAlign: 'middle',
