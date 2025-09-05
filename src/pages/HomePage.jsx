@@ -636,6 +636,9 @@ function HomePage() {
   const handleBackgroundImageUpload = async (file) => {
     if (!file) return;
 
+    const localUrl = URL.createObjectURL(file);
+    updateImageAndPalette(localUrl, null); // Process locally first
+
     const toastId = toast.loading("Salvando imagem na sua biblioteca do Google Drive...");
     try {
       if (!googleAccessToken) {
@@ -659,11 +662,8 @@ function HomePage() {
         throw new Error("O upload do arquivo para o Drive falhou.");
       }
 
-      // Construct a direct-access URL. This format works for public files.
-      // Ensure the file permissions are set correctly in the Drive API if issues arise.
       const permanentUrl = `https://lh3.googleusercontent.com/d/${uploadedFile.id}`;
-
-      updateImageAndPalette(permanentUrl);
+      setBackgroundImage(permanentUrl); // Update to permanent URL without reprocessing
 
       const imageStepIndex = steps.findIndex(step => step.label === 'Imagem e Formatação');
       if (imageStepIndex !== -1 && activeStep < imageStepIndex) {
@@ -674,6 +674,11 @@ function HomePage() {
     } catch (err) {
       console.error("Failed to upload and set background image:", err);
       toast.error(`Falha ao salvar imagem: ${err.message}`, { id: toastId });
+      // Clear image if upload fails
+      setBackgroundImage(null);
+      setBackgroundElement(null);
+    } finally {
+      URL.revokeObjectURL(localUrl); // Clean up local URL
     }
   };
 
