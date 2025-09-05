@@ -14,6 +14,10 @@ import {
   Slider,
   FormControlLabel,
   Switch,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   CloudUpload,
@@ -45,7 +49,14 @@ const PostsCurtosStep = ({
   csvHeaders,
   onDadosAlterados,
   darkMode,
-  exportCsv, // Nova prop
+  exportCsv,
+  autorList,
+  selectedAutorForCampaign,
+  setSelectedAutorForCampaign,
+  personaList,
+  selectedPersonaForCampaign,
+  setSelectedPersonaForCampaign,
+  sidebarOpen,
 }) => {
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
   const [isGeminiKeyConfigured, setIsGeminiKeyConfigured] = useState(true);
@@ -126,6 +137,48 @@ const PostsCurtosStep = ({
                     A chave de API do Gemini não está configurada. Por favor, vá para <MuiLink component="button" variant="body2" onClick={() => setShowSetupModal(true)}>Configurações</MuiLink> para adicioná-la.
                   </Alert>
                 )}
+                <Grid container spacing={2} sx={{ mb: 2 }}>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth>
+                      <InputLabel id="persona-select-label">Persona</InputLabel>
+                      <Select
+                        labelId="persona-select-label"
+                        value={selectedPersonaForCampaign}
+                        onChange={(e) => setSelectedPersonaForCampaign(e.target.value)}
+                        label="Persona"
+                      >
+                        <MenuItem value="">
+                          <em>Não especificar</em>
+                        </MenuItem>
+                        {personaList.map((p) => (
+                          <MenuItem key={p.id} value={p.id}>
+                            {p.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <FormControl fullWidth>
+                      <InputLabel id="autor-select-label">Autor</InputLabel>
+                      <Select
+                        labelId="autor-select-label"
+                        value={selectedAutorForCampaign}
+                        onChange={(e) => setSelectedAutorForCampaign(e.target.value)}
+                        label="Autor"
+                      >
+                        <MenuItem value="">
+                          <em>Não especificar</em>
+                        </MenuItem>
+                        {autorList.map((a) => (
+                          <MenuItem key={a.id} value={a.id}>
+                            {a.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </Grid>
                 <Typography gutterBottom>Quantidade de Posts</Typography>
                 <Slider
                   value={promptNumRecords}
@@ -229,6 +282,7 @@ const PostsCurtosStep = ({
               colunasIniciais={csvHeaders}
               onDadosAlterados={onDadosAlterados}
               darkMode={darkMode}
+              sidebarOpen={sidebarOpen}
             />
           </Box>
         )}

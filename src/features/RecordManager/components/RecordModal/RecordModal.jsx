@@ -27,6 +27,7 @@ const RecordModal = ({
     isPrimeiroRegistro,
     darkMode = false,
     onStartEditField,
+    sidebarOpen,
 }) => {
     if (!aberto) return null;
 
@@ -34,9 +35,21 @@ const RecordModal = ({
     const overlayClasses = `${styles.modalOverlay} ${darkMode ? styles.darkMode : ''}`;
     const contentClasses = `${styles.modalContent} ${darkMode ? styles.modalContentDarkMode : ''}`;
 
+    // Adiciona um estilo dinâmico para ajustar a posição do modal
+    // quando a barra lateral estiver aberta.
+    const contentStyle = {
+        marginLeft: sidebarOpen ? '320px' : '0',
+        transition: 'margin-left 0.2s ease-in-out',
+        width: sidebarOpen ? 'calc(100% - 320px)' : '100%',
+    };
+
     return (
         <div className={overlayClasses} onClick={onFechar}>
-            <div className={contentClasses} onClick={(e) => e.stopPropagation()}>
+            <div
+                className={contentClasses}
+                style={contentStyle}
+                onClick={(e) => e.stopPropagation()}
+            >
                 <button type="button" onClick={onFechar} className={styles.closeButton} title="Fechar">&times;</button>
                 <h2>{tituloModal}</h2>
                 <RecordForm

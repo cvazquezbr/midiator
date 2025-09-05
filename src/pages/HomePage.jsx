@@ -718,42 +718,22 @@ function HomePage() {
   };
   const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
     setCsvData(novosRegistros);
-    setCsvHeaders(novasColunas);
+    // A atualização de colunas é mantida para o caso de adição/remoção de colunas.
+    if (JSON.stringify(novasColunas) !== JSON.stringify(csvHeaders)) {
+        setCsvHeaders(novasColunas);
+    }
 
-    const updatedFieldPositions = {};
-    const updatedFieldStyles = {};
-    const defaultStylesBase = {
-      fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
-      textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
-      strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
-      shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
-      textAlign: 'left', verticalAlign: 'top',
-      backgroundColor: 'rgba(0,0,0,0)',
-      borderColor: '#000000',
-      borderWidth: 0,
-      borderRadius: 0,
-      padding: 5,
-      backgroundOpacity: 0,
-    };
-    novasColunas.forEach((header, index) => {
-      updatedFieldPositions[header] = fieldPositions[header] || { x: 10 + (index % 5) * 18, y: 10 + Math.floor(index / 5) * 12, width: 15, height: 10, visible: true };
-      updatedFieldStyles[header] = { ...defaultStylesBase, ...(fieldStyles[header] || {}) };
-    });
-    setFieldPositions(updatedFieldPositions);
-    setFieldStyles(updatedFieldStyles);
-    setInitialFieldStyles(updatedFieldStyles);
+    // A lógica de reposicionamento e re-estilização foi removida daqui
+    // para evitar que a edição de um simples campo de texto reorganize a UI inteira.
+    // Essa lógica agora deve ser chamada explicitamente quando as colunas mudam.
 
+    // A atualização dos dados das páginas geradas é mantida para consistência.
     setGeneratedPagesData(prevGeneratedPages => {
         const newGeneratedPages = novosRegistros.map((record, index) => {
             const existingPage = prevGeneratedPages.find(img => img.index === index);
-
             if (existingPage) {
-                return {
-                    ...existingPage,
-                    record: record,
-                };
+                return { ...existingPage, record: record };
             }
-
             return {
                 index,
                 record,
@@ -770,8 +750,35 @@ function HomePage() {
         });
         return newGeneratedPages;
     });
-  }, [darkMode, fieldPositions, fieldStyles, backgroundImage, setCsvData, setCsvHeaders, setFieldPositions, setFieldStyles]);
-  const handleCsvRecordContentUpdate = useCallback((newCsvData) => { setCsvData(newCsvData); }, [setCsvData]);
+  }, [csvHeaders, backgroundImage]);
+  const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
+    setCsvData(newCsvData);
+    // Esta função é chamada ao editar texto diretamente na thumbnail (ImageStep)
+    // e precisa atualizar os dados das páginas também.
+    setGeneratedPagesData(prevGeneratedPages => {
+        const newGeneratedPages = newCsvData.map((record, index) => {
+            const existingPage = prevGeneratedPages.find(img => img.index === index);
+            if (existingPage) {
+                return { ...existingPage, record: record };
+            }
+            // Retorna um novo objeto se não houver página existente.
+            return {
+                index,
+                record,
+                blob: null,
+                url: null,
+                filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+                backgroundImage: backgroundImage,
+                customFieldPositions: null,
+                customFieldStyles: null,
+                customBrandElements: null,
+                customImageFilters: null,
+                fontScale: 1,
+            };
+        });
+        return newGeneratedPages;
+    });
+  }, [backgroundImage]);
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => { setCsvData(prevCsvData => { if (recordIndex < 0 || recordIndex >= prevCsvData.length) { return prevCsvData; } return prevCsvData.map((row, idx) => { if (idx === recordIndex) { return updatedRecord; } return row; }); }); }, [setCsvData]);
   const handleGenerateCampaignContent = async (regenerate = false) => {
     setIsGeneratingCampaign(true);
@@ -1126,6 +1133,13 @@ function HomePage() {
                     onDadosAlterados={handleDadosAlterados}
                     darkMode={darkMode}
                     exportCsv={exportCsv}
+                    autorList={autorList}
+                    selectedAutorForCampaign={selectedAutorForCampaign}
+                    setSelectedAutorForCampaign={setSelectedAutorForCampaign}
+                    personaList={personaList}
+                    selectedPersonaForCampaign={selectedPersonaForCampaign}
+                    setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
+                    sidebarOpen={sidebarOpen}
                   />
                 )}
                 {activeStep === 3 && (
