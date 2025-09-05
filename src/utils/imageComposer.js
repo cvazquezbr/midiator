@@ -294,7 +294,7 @@ export const composeSingleImage = async ({
             const borderRadius = (style.borderRadius || 0);
             const borderWidth = (style.borderWidth || 0);
 
-            const backgroundOpacity = style.backgroundOpacity !== undefined ? style.backgroundOpacity / 100 : 1;
+            const backgroundOpacity = style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1;
             const backgroundColorHex = style.backgroundColor || '#000000';
             if (backgroundOpacity > 0) {
                 ctx.fillStyle = hexToRgba(backgroundColorHex, backgroundOpacity);
