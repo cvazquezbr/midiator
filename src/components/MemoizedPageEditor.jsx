@@ -59,30 +59,49 @@ const MemoizedPageEditor = ({
     return Array.isArray(brandElements) ? brandElements : [];
   }, [pageToEdit, brandElements]);
 
-  if (!showGeneratedPageEditor || editingGeneratedPageIndex === null || !pageToEdit) {
-    if (showGeneratedPageEditor && editingGeneratedPageIndex !== null) {
-      console.error(`[MemoizedEditor] Render: Could not find page with index ${editingGeneratedPageIndex} to edit.`);
+  const editorContent = useMemo(() => {
+    if (!showGeneratedPageEditor || editingGeneratedPageIndex === null || !pageToEdit) {
+      if (showGeneratedPageEditor && editingGeneratedPageIndex !== null) {
+        console.error(`[MemoizedEditor] Render: Could not find page with index ${editingGeneratedPageIndex} to edit.`);
+      }
+      return null;
     }
-    return null;
-  }
 
-  return (
-    <PageEditor
-      open={showGeneratedPageEditor}
-      onClose={handleCloseGeneratedPageEditor}
-      pageData={pageToEdit}
-      globalCsvHeaders={csvHeaders}
-      initialFieldPositions={memoizedPositions}
-      initialFieldStyles={memoizedStyles}
-      onSave={handleSaveIndividualModifications}
-      colorPalette={colorPalette}
-      globalBackgroundImage={pageToEdit.backgroundImage || backgroundImage}
-      originalImageSize={pageToEdit.customOriginalImageSize || originalImageSize}
-      globalBackgroundElement={backgroundElement}
-      brandElements={memoizedBrandElements}
-      aspectRatio={aspectRatio}
-    />
-  );
+    return (
+      <PageEditor
+        open={showGeneratedPageEditor}
+        onClose={handleCloseGeneratedPageEditor}
+        pageData={pageToEdit}
+        globalCsvHeaders={csvHeaders}
+        initialFieldPositions={memoizedPositions}
+        initialFieldStyles={memoizedStyles}
+        onSave={handleSaveIndividualModifications}
+        colorPalette={colorPalette}
+        globalBackgroundImage={pageToEdit.backgroundImage || backgroundImage}
+        originalImageSize={pageToEdit.customOriginalImageSize || originalImageSize}
+        globalBackgroundElement={backgroundElement}
+        brandElements={memoizedBrandElements}
+        aspectRatio={aspectRatio}
+      />
+    );
+  }, [
+    showGeneratedPageEditor,
+    editingGeneratedPageIndex,
+    pageToEdit,
+    handleCloseGeneratedPageEditor,
+    csvHeaders,
+    memoizedPositions,
+    memoizedStyles,
+    handleSaveIndividualModifications,
+    colorPalette,
+    backgroundImage,
+    originalImageSize,
+    backgroundElement,
+    memoizedBrandElements,
+    aspectRatio
+  ]);
+
+  return editorContent;
 };
 
 export default MemoizedPageEditor;
