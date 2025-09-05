@@ -52,6 +52,7 @@ import { autoArrangeFields as autoArrangeFieldsUtil } from '../utils/autoArrange
 
 
 const FieldPositioner = ({
+  aspectRatio: aspectRatioProp,
   backgroundImage,
   csvHeaders,
   fieldPositions,
@@ -281,7 +282,9 @@ const FieldPositioner = ({
     setCurrentPreviewIndex(csvData.length - 1);
   };
 
-  const aspectRatio = (effectiveImageSize?.width && effectiveImageSize?.height)
+  const aspectRatio = aspectRatioProp
+    ? String(aspectRatioProp).replace(':', ' / ')
+    : (effectiveImageSize?.width && effectiveImageSize?.height)
     ? `${effectiveImageSize.width} / ${effectiveImageSize.height}`
     : '16 / 9';
 

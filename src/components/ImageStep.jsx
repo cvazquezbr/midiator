@@ -18,6 +18,7 @@ import FormattingPanel from './FormattingPanel';
 import FormattingDrawer from './FormattingDrawer';
 
 const ImageStep = ({
+  aspectRatio,
   steps,
   isDraggingOverImage,
   handleImageDrop,
@@ -155,6 +156,7 @@ const ImageStep = ({
       <Grid container spacing={isMobile ? 0 : 2}>
         <Grid item xs={12} md={8}>
           <FieldPositioner
+            aspectRatio={aspectRatio}
             backgroundImage={backgroundImage}
             csvHeaders={csvHeaders}
             fieldPositions={fieldPositions}
