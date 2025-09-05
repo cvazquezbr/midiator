@@ -637,13 +637,26 @@ function HomePage() {
   const handleBackgroundImageUpload = async (file) => {
     if (!file) return;
 
-    const localUrl = URL.createObjectURL(file);
-    updateImageAndPalette(localUrl, null); // Process locally first
+    // --- ROBUST FIX using FileReader and data:URL ---
+    // This converts the file to a self-contained data URL immediately.
+    // This URL does not expire and does not need to be revoked, fixing the
+    // "disappearing image" bug when thumbnails are generated later.
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      updateImageAndPalette(dataUrl, null);
+    };
+    reader.readAsDataURL(file);
+    // --- End of robust fix ---
 
-    const toastId = toast.loading("Salvando imagem na sua biblioteca do Google Drive...");
+    // The optional upload to Google Drive can proceed in the background.
+    // It no longer affects the immediate display of the image.
+    const toastId = toast.loading("Salvando imagem na sua biblioteca do Google Drive (opcional)...");
     try {
       if (!googleAccessToken) {
-        throw new Error("Por favor, conecte sua conta Google primeiro para salvar a imagem.");
+        // This is not a hard error, just an info message.
+        toast.info("Conecte sua conta Google para salvar a imagem na sua biblioteca.", { id: toastId });
+        return;
       }
 
       let midiatorFolder = await findFolderByName('midiator');
@@ -658,55 +671,35 @@ function HomePage() {
         if (!backgroundsFolder) throw new Error("Falha ao criar a pasta 'backgrounds' no Drive.");
       }
 
-      // MITIGATION: Check if file with the same name already exists
       let uploadedFile;
       const existingFile = await findFileByNameInFolder(file.name, backgroundsFolder.id);
       if (existingFile) {
-        toast.info(`Usando imagem existente "${file.name}" do Google Drive.`);
+        toast.info(`Imagem "${file.name}" já existe na sua biblioteca do Google Drive.`, { id: toastId });
         uploadedFile = existingFile;
       } else {
         uploadedFile = await uploadFile(file, file.name, backgroundsFolder.id);
+        toast.success(`Imagem "${file.name}" salva na sua biblioteca do Google Drive!`, { id: toastId });
       }
 
       if (!uploadedFile || !uploadedFile.id) {
         throw new Error("O upload do arquivo para o Drive falhou.");
       }
 
+      // Update the state with the permanent URL from Google Drive.
+      // This replaces the data:URL, which can be very long.
       const permanentUrl = `https://lh3.googleusercontent.com/d/${uploadedFile.id}`;
-
-      // FIX: Update both the general background image state and the src within the element state.
-      // This ensures that when the local URL is revoked, the element still has a valid source.
       setBackgroundImage(permanentUrl);
       setBackgroundElement(prev => {
         if (prev) {
           return { ...prev, src: permanentUrl };
         }
-        // This fallback should ideally not be hit if updateImageAndPalette ran correctly
-        return {
-          id: '__background__',
-          type: 'background',
-          src: permanentUrl,
-          x: 0, y: 0, width: 100, height: 100, rotation: 0, visible: true,
-          filters: { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
-          shadow: false, shadowColor: '#000000', shadowBlur: 10, shadowOffsetX: 5, shadowOffsetY: 5, crop: null,
-        };
+        return null;
       });
 
-      const imageStepIndex = steps.findIndex(step => step.label === 'Imagem e Formatação');
-      if (imageStepIndex !== -1 && activeStep < imageStepIndex) {
-        setActiveStep(imageStepIndex);
-      }
-
-      toast.success("Imagem salva e definida como fundo!", { id: toastId });
     } catch (err) {
-      console.error("Failed to upload and set background image:", err);
-      toast.error(`Falha ao salvar imagem: ${err.message}`, { id: toastId });
-      // Clear image if upload fails
-      setBackgroundImage(null);
-      setBackgroundElement(null);
-    } finally {
-      // It's now safe to revoke the local URL because the state points to the permanent one.
-      URL.revokeObjectURL(localUrl);
+      console.error("Failed to upload and set background image to Google Drive:", err);
+      toast.error(`Falha ao salvar no Google Drive: ${err.message}`, { id: toastId });
+      // Do not clear the image here. The data:URL is still valid and usable.
     }
   };
 
