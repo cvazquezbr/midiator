@@ -107,8 +107,32 @@ const FormattingPanel = ({
   ];
 
   const updateFieldStyle = (field, property, value) => {
-    console.log(`[FormattingPanel] updating style for ${field}: ${property} = ${value}`);
-    setFieldStyles(prev => ({ ...prev, [field]: { ...prev[field], [property]: value } }));
+    const boxProperties = [
+      'backgroundColor',
+      'backgroundOpacity',
+      'borderColor',
+      'borderWidth',
+      'borderRadius',
+      'padding'
+    ];
+
+    if (boxProperties.includes(property)) {
+      // Apply box styles to all fields to maintain consistency
+      const newStyles = { ...fieldStyles };
+      (csvHeaders || []).forEach(header => {
+        newStyles[header] = {
+          ...(fieldStyles[header] || {}),
+          [property]: value
+        };
+      });
+      setFieldStyles(newStyles);
+    } else {
+      // Original logic for font-specific styles
+      setFieldStyles(prev => ({
+        ...prev,
+        [field]: { ...(prev[field] || {}), [property]: value }
+      }));
+    }
   };
 
   const updateFieldPosition = (field, property, value) => {
