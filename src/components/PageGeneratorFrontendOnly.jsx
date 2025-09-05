@@ -359,17 +359,13 @@ const PageGeneratorFrontendOnly = ({
       if (img.index !== pageIndex) {
         return img;
       }
-      // BUG FIX: The root of the "disappearing background" bug on save was here.
-      // `modifiedPageData` comes from the editor and does NOT have a `backgroundImage` property.
-      // The spread `{ ...img, ...modifiedPageData }` was overwriting `img.backgroundImage`
-      // with `undefined`.
-      // The fix is to manually construct the new object, EXPLICITLY preserving the
-      // `backgroundImage` from the existing state (`img`).
+      // The editor now sends back the correct background image it used.
+      // We trust the editor's data.
       return {
-        ...img, // Keep blob, url, etc.
+        ...img, // Keep existing properties like blob, url, etc.
         record: modifiedPageData.record,
-        backgroundImage: img.backgroundImage, // Keep the original background!
-        // Apply modifications from the editor
+        backgroundImage: modifiedPageData.backgroundImage, // Use the background from the editor.
+        // Apply other modifications from the editor
         customFieldPositions: modifiedPageData.fieldPositions,
         customFieldStyles: modifiedPageData.fieldStyles,
         customBrandElements: modifiedPageData.brandElements,
