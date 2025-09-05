@@ -50,13 +50,8 @@ const PostsCurtosStep = ({
   onDadosAlterados,
   darkMode,
   exportCsv,
-  autorList,
-  selectedAutorForCampaign,
-  setSelectedAutorForCampaign,
-  personaList,
-  selectedPersonaForCampaign,
-  setSelectedPersonaForCampaign,
-  sidebarOpen,
+  aspectRatio,
+  setAspectRatio,
 }) => {
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
   const [isGeminiKeyConfigured, setIsGeminiKeyConfigured] = useState(true);
@@ -137,48 +132,6 @@ const PostsCurtosStep = ({
                     A chave de API do Gemini não está configurada. Por favor, vá para <MuiLink component="button" variant="body2" onClick={() => setShowSetupModal(true)}>Configurações</MuiLink> para adicioná-la.
                   </Alert>
                 )}
-                <Grid container spacing={2} sx={{ mb: 2 }}>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel id="persona-select-label">Persona</InputLabel>
-                      <Select
-                        labelId="persona-select-label"
-                        value={selectedPersonaForCampaign}
-                        onChange={(e) => setSelectedPersonaForCampaign(e.target.value)}
-                        label="Persona"
-                      >
-                        <MenuItem value="">
-                          <em>Não especificar</em>
-                        </MenuItem>
-                        {personaList.map((p) => (
-                          <MenuItem key={p.id} value={p.id}>
-                            {p.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <FormControl fullWidth>
-                      <InputLabel id="autor-select-label">Autor</InputLabel>
-                      <Select
-                        labelId="autor-select-label"
-                        value={selectedAutorForCampaign}
-                        onChange={(e) => setSelectedAutorForCampaign(e.target.value)}
-                        label="Autor"
-                      >
-                        <MenuItem value="">
-                          <em>Não especificar</em>
-                        </MenuItem>
-                        {autorList.map((a) => (
-                          <MenuItem key={a.id} value={a.id}>
-                            {a.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                </Grid>
                 <Typography gutterBottom>Quantidade de Posts</Typography>
                 <Slider
                   value={promptNumRecords}
@@ -202,16 +155,32 @@ const PostsCurtosStep = ({
                   placeholder="Ex: Um carrossel sobre os benefícios da meditação para reduzir o estresse..."
                   sx={{ mb: 3 }}
                 />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={generateImagesAutomatically}
-                      onChange={(e) => setGenerateImagesAutomatically(e.target.checked)}
-                    />
-                  }
-                  label="Gerar imagens"
-                  sx={{ mb: 2, display: 'block' }}
-                />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={generateImagesAutomatically}
+                        onChange={(e) => setGenerateImagesAutomatically(e.target.checked)}
+                      />
+                    }
+                    label="Gerar imagens"
+                    sx={{ m: 0 }} // Remove default margin
+                  />
+                  <FormControl variant="outlined" sx={{ minWidth: 150 }}>
+                    <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
+                    <Select
+                      labelId="aspect-ratio-label"
+                      value={aspectRatio}
+                      onChange={(e) => setAspectRatio(e.target.value)}
+                      label="Razão de Aspecto"
+                      size="small"
+                    >
+                      <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
+                      <MenuItem value="4:5">Retrato (4:5)</MenuItem>
+                      <MenuItem value="16:9">Paisagem (16:9)</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
                 <Button
                   variant="contained"
                   size="large"
@@ -282,7 +251,6 @@ const PostsCurtosStep = ({
               colunasIniciais={csvHeaders}
               onDadosAlterados={onDadosAlterados}
               darkMode={darkMode}
-              sidebarOpen={sidebarOpen}
             />
           </Box>
         )}

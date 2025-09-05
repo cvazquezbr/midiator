@@ -1133,13 +1133,8 @@ function HomePage() {
                     onDadosAlterados={handleDadosAlterados}
                     darkMode={darkMode}
                     exportCsv={exportCsv}
-                    autorList={autorList}
-                    selectedAutorForCampaign={selectedAutorForCampaign}
-                    setSelectedAutorForCampaign={setSelectedAutorForCampaign}
-                    personaList={personaList}
-                    selectedPersonaForCampaign={selectedPersonaForCampaign}
-                    setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
-                    sidebarOpen={sidebarOpen}
+                    aspectRatio={aspectRatio}
+                    setAspectRatio={setAspectRatio}
                   />
                 )}
                 {activeStep === 3 && (
