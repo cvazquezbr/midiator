@@ -1017,6 +1017,8 @@ function HomePage() {
   const currentTheme = darkMode ? darkTheme : lightTheme;
   const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, formato, aspectRatio, followupPosts, colors: standardsColors, };
 
+  console.log('[HomePage] About to render. Current fieldStyles:', fieldStyles);
+
   return (
     <ThemeProvider theme={currentTheme}>
       <CssBaseline />
