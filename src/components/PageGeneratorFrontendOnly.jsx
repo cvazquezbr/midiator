@@ -821,8 +821,8 @@ const PageGeneratorFrontendOnly = ({
 
       {console.log('[PageGeneratorFrontendOnly] rendering PageEditor with props:', { showGeneratedPageEditor, generatedPages, editingGeneratedPageIndex, csvHeaders, fieldPositions, fieldStyles, brandElements, colorPalette, originalImageSize, standardsColors, backgroundElement })}
       <PageEditor
-        showGeneratedPageEditor={showGeneratedPageEditor}
-        handleCloseGeneratedPageEditor={handleCloseGeneratedPageEditor}
+        open={showGeneratedPageEditor}
+        onClose={handleCloseGeneratedPageEditor}
         generatedPages={generatedPages}
         editingGeneratedPageIndex={editingGeneratedPageIndex}
         csvHeaders={csvHeaders}
