@@ -583,11 +583,14 @@ function HomePage() {
     img.onload = () => {
       setOriginalImageSize({ width: img.width, height: img.height });
       if (existingBackgroundElement) {
-        setBackgroundElement(existingBackgroundElement);
+        // Ensure the new imageUrl is always set, even on an existing element
+        setBackgroundElement({ ...existingBackgroundElement, src: imageUrl });
       } else {
+        // FIX: The src property was missing, causing the image not to appear
         setBackgroundElement({
           id: '__background__',
           type: 'background',
+          src: imageUrl,
           x: 0,
           y: 0,
           width: 100,
