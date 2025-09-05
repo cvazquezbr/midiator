@@ -53,7 +53,7 @@ import { autoArrangeFields as autoArrangeFieldsUtil } from '../utils/autoArrange
 
 const FieldPositioner = ({
   aspectRatio: aspectRatioProp,
-  backgroundImage,
+  backgroundImageSrc,
   csvHeaders,
   fieldPositions,
   setFieldPositions,
@@ -79,7 +79,7 @@ const FieldPositioner = ({
   isCropping,
   setIsCropping,
 }) => {
-  console.log('[FieldPositioner] props:', { backgroundImage, backgroundElement, fieldStyles });
+  console.log('[FieldPositioner] props:', { backgroundImageSrc, backgroundElement, fieldStyles });
   // const [selectedField, setSelectedField] = useState(null); // REMOVED: Use parent state
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
@@ -90,7 +90,7 @@ const FieldPositioner = ({
   const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
-    if (backgroundImage) {
+    if (backgroundImageSrc) {
       setIsImageLoading(true);
       setImageError(false);
       const img = new Image();
@@ -104,13 +104,13 @@ const FieldPositioner = ({
         setIsImageLoading(false);
         setInternalImageSize(null); // Reset size on error
       };
-      img.src = backgroundImage;
+      img.src = backgroundImageSrc;
     } else {
       setInternalImageSize(null);
       setIsImageLoading(false);
       setImageError(false);
     }
-  }, [backgroundImage]);
+  }, [backgroundImageSrc]);
 
   // Use the verified internal size for all calculations, falling back to the prop if not yet loaded.
   const effectiveImageSize = internalImageSize || originalImageSize;
@@ -165,7 +165,7 @@ const FieldPositioner = ({
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [onImageDisplayedSizeChange, backgroundImage]);
+  }, [onImageDisplayedSizeChange, backgroundImageSrc]);
 
   // This component should not be responsible for initializing or updating the parent's state.
   // It should just render the props it receives. The parent (HomePage) is responsible for
@@ -335,7 +335,7 @@ const FieldPositioner = ({
         type: 'background',
         position: backgroundElement,
         style: { ...backgroundElement.filters, ...backgroundElement },
-        content: backgroundImage,
+        content: backgroundImageSrc,
         zIndex: -1, // Ensure it's always at the back
         rotation: backgroundElement.rotation,
         fontScale: 1,
@@ -394,9 +394,9 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => a.zIndex - b.zIndex);
     return elements;
-  }, [backgroundElement, backgroundImage, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
+  }, [backgroundElement, backgroundImageSrc, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
-  if (!backgroundImage) {
+  if (!backgroundImageSrc) {
     return (
       <Box
         sx={{

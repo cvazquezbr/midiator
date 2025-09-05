@@ -156,7 +156,7 @@ const ImageStep = ({
         <Grid item xs={12} md={8}>
           <FieldPositioner
             aspectRatio={aspectRatio}
-            backgroundImage={backgroundElement?.src}
+            backgroundImageSrc={backgroundElement?.src}
             csvHeaders={csvHeaders}
             fieldPositions={fieldPositions}
             setFieldPositions={setFieldPositions}
