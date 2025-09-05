@@ -54,7 +54,8 @@ const RecordManager = ({
     registrosIniciais = [],
     colunasIniciais = [],
     onDadosAlterados,
-    darkMode = false
+    darkMode = false,
+    sidebarOpen = false,
 }) => {
     const [registros, setRegistros] = useState([]);
     const [colunas, setColunas] = useState([]);
@@ -273,6 +274,7 @@ const RecordManager = ({
                     isPrimeiroRegistro={colunas.length === 0 && registros.length === 0}
                     darkMode={darkMode}
                     onStartEditField={handleStartEditField}
+                    sidebarOpen={sidebarOpen}
                 />
             )}
 
@@ -287,6 +289,7 @@ const RecordManager = ({
                     isPrimeiroRegistro={false}
                     darkMode={darkMode}
                     onStartEditField={handleStartEditField}
+                    sidebarOpen={sidebarOpen}
                 />
             )}
 
