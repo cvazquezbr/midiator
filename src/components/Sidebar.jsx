@@ -76,7 +76,7 @@ const Sidebar = ({
   steps,
   activeStep,
   csvData,
-  backgroundImage,
+  backgroundImageSrc,
   visibleFields,
   totalFields,
   styledFields,
@@ -142,8 +142,8 @@ const Sidebar = ({
             <Chip
               icon={<ImageIcon />}
               label="Imagem de fundo"
-              color={backgroundImage ? 'success' : 'default'}
-              variant={backgroundImage ? 'filled' : 'outlined'}
+              color={backgroundImageSrc ? 'success' : 'default'}
+              variant={backgroundImageSrc ? 'filled' : 'outlined'}
               size="small"
             />
             <Chip

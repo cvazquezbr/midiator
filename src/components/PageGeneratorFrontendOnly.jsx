@@ -375,7 +375,7 @@ const PageGeneratorFrontendOnly = ({
 
     if (pageToRegenerate) {
       try {
-        const bgToUse = pageToRegenerate.backgroundImage || backgroundImage;
+        const bgToUse = pageToRegenerate.backgroundImage || backgroundElement?.src;
         const positionsToUse = pageToRegenerate.customFieldPositions || fieldPositions;
         const stylesToUse = pageToRegenerate.customFieldStyles || fieldStyles;
         const elementsToUse = pageToRegenerate.customBrandElements !== undefined ? pageToRegenerate.customBrandElements : brandElements;
@@ -802,7 +802,7 @@ const PageGeneratorFrontendOnly = ({
         </DialogActions>
       </Dialog>
 
-      {console.log('[PageGeneratorFrontendOnly] rendering MemoizedPageEditor with props:', { showGeneratedPageEditor, generatedPages, editingGeneratedPageIndex, csvHeaders, fieldPositions, fieldStyles, brandElements, colorPalette, backgroundImage, originalImageSize, standardsColors, backgroundElement })}
+      {console.log('[PageGeneratorFrontendOnly] rendering MemoizedPageEditor with props:', { showGeneratedPageEditor, generatedPages, editingGeneratedPageIndex, csvHeaders, fieldPositions, fieldStyles, brandElements, colorPalette, originalImageSize, standardsColors, backgroundElement })}
       <MemoizedPageEditor
         showGeneratedPageEditor={showGeneratedPageEditor}
         handleCloseGeneratedPageEditor={handleCloseGeneratedPageEditor}
