@@ -334,7 +334,7 @@ const FieldPositioner = ({
         id: '__background__',
         type: 'background',
         position: backgroundElement,
-        style: backgroundElement.filters,
+        style: { ...backgroundElement.filters, ...backgroundElement },
         content: backgroundImage,
         zIndex: -1, // Ensure it's always at the back
         rotation: backgroundElement.rotation,
@@ -381,7 +381,7 @@ const FieldPositioner = ({
             id: element.id,
             type: 'image',
             position: element,
-            style: { ...element.filters },
+            style: { ...element.filters, ...element },
             content: element.url,
             zIndex: element.zIndex || 0,
             rotation: element.rotation,
