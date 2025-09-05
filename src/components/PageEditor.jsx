@@ -60,9 +60,7 @@ const PageEditor = ({
   brandElements,
   standardsColors,
   globalBackgroundElement,
-  aspectRatio,
 }) => {
-  console.log('[PageEditor] props:', { pageData, globalBackgroundElement });
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
   const [editedBrandElements, setEditedBrandElements] = useState([]);
@@ -195,19 +193,10 @@ const PageEditor = ({
       brandElements: editedBrandElements,
       fontScale: fontScale,
       customBackgroundElement: editedBackgroundElement,
-
-      // The `backgroundImage` property on the page data is now deprecated.
-      // The `customBackgroundElement.src` is the source of truth.
-      // We'll set it here to ensure consistency on save.
-      backgroundImage: editedBackgroundElement?.src,
     };
     onSave(savedData);
     onClose();
   };
-
-  // The single source of truth for the background image URL is the `src` property
-  // of the `editedBackgroundElement` state.
-  const currentBackgroundImageForEditor = editedBackgroundElement?.src;
 
   // Os cabeçalhos CSV para este editor devem ser os da linha específica sendo editada.
   // FieldPositioner e FormattingPanel esperam uma lista de todos os cabeçalhos para popular seletores, etc.
@@ -236,15 +225,14 @@ const PageEditor = ({
       <DialogContent dividers sx={{ overflowY: 'auto' }}>
         {!stylesAreInitialized ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
-            <Typography>Carregando estilos...</Typography>
+            <Typography>Carregando editor...</Typography>
           </Box>
-        ) : !currentBackgroundImageForEditor ? (
+        ) : !editedBackgroundElement?.src ? (
           <Typography>Imagem de fundo não disponível para edição.</Typography>
         ) : (
           <Grid container spacing={2}>
             <Grid item xs={12} md={isMobile ? 12 : 8}>
               <FieldPositioner
-                backgroundImage={currentBackgroundImageForEditor}
                 csvHeaders={editorCsvHeaders} // Headers relevantes para esta imagem
                 fieldPositions={editedPositions}
                 setFieldPositions={setEditedPositions}
@@ -262,7 +250,6 @@ const PageEditor = ({
                 backgroundElement={editedBackgroundElement}
                 setBackgroundElement={setEditedBackgroundElement}
                 currentPreviewIndex={0}
-                aspectRatio={aspectRatio}
               />
             </Grid>
             {!isMobile && (

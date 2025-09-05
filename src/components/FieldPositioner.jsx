@@ -53,7 +53,6 @@ import { autoArrangeFields as autoArrangeFieldsUtil } from '../utils/autoArrange
 
 const FieldPositioner = ({
   aspectRatio: aspectRatioProp,
-  backgroundImageSrc,
   csvHeaders,
   fieldPositions,
   setFieldPositions,
@@ -90,7 +89,8 @@ const FieldPositioner = ({
   const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
-    if (backgroundImageSrc) {
+    const src = backgroundElement?.src;
+    if (src) {
       setIsImageLoading(true);
       setImageError(false);
       const img = new Image();
@@ -104,18 +104,18 @@ const FieldPositioner = ({
         setIsImageLoading(false);
         setInternalImageSize(null); // Reset size on error
       };
-      img.src = backgroundImageSrc;
+      img.src = src;
     } else {
       setInternalImageSize(null);
       setIsImageLoading(false);
       setImageError(false);
     }
-  }, [backgroundImageSrc]);
+  }, [backgroundElement?.src]);
 
   // Use the verified internal size for all calculations, falling back to the prop if not yet loaded.
   const effectiveImageSize = internalImageSize || originalImageSize;
 
-  // The backgroundImage prop is now assumed to be the final, composed background for the editor preview.
+  // The backgroundImageSrc prop is now assumed to be the final, composed background for the editor preview.
   // No further composition is needed here.
 
   // REMOVED: No longer needed as we use the parent's state setter directly
@@ -335,7 +335,7 @@ const FieldPositioner = ({
         type: 'background',
         position: backgroundElement,
         style: { ...backgroundElement.filters, ...backgroundElement },
-        content: backgroundImageSrc,
+        content: backgroundElement.src,
         zIndex: -1, // Ensure it's always at the back
         rotation: backgroundElement.rotation,
         fontScale: 1,
@@ -394,9 +394,9 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => a.zIndex - b.zIndex);
     return elements;
-  }, [backgroundElement, backgroundImageSrc, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
+  }, [backgroundElement, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
-  if (!backgroundImageSrc) {
+  if (!backgroundElement?.src) {
     return (
       <Box
         sx={{

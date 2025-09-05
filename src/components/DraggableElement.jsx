@@ -586,7 +586,7 @@ const DraggableElementInternal = ({
     <>
       <Box
         ref={textBoxRef}
-        className={`${styles.textBox} ${isDragging ? styles.dragging : ''} ${isSelected ? styles.selected : ''}`}
+        className={`${styles.textBox} ${isDragging ? styles.dragging : ''} ${isSelected && element.type !== 'background' ? styles.selected : ''}`}
         sx={{
           left: `${position.x}%`,
           top: `${position.y}%`,
