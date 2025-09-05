@@ -60,10 +60,7 @@ export function getCampaignPrompt() {
       }
 
 
-      // Migração para remover o campo aspectRatio
-      if (parsedData.aspectRatio) {
-        delete parsedData.aspectRatio;
-      }
+      // A migração para remover o campo aspectRatio foi concluída e o código foi removido.
 
       // Garante que 'colors' seja sempre um array.
       if (!Array.isArray(parsedData.colors)) {
