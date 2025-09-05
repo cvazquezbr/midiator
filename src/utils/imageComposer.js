@@ -140,7 +140,7 @@ const getDimensionsFromAspectRatio = (aspectRatio) => {
 export const composeSingleImage = async ({
     record,
     index,
-    backgroundImage, // Main campaign background
+    itemBackgroundImage, // Main campaign background
     brandElements = [],
     fieldPositions = {},
     fieldStyles = {},
@@ -168,9 +168,9 @@ export const composeSingleImage = async ({
     ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
     // 2. Draw the single background image if it exists, applying all transformations.
-    if (backgroundImage && backgroundElement) {
+    if (itemBackgroundImage && backgroundElement) {
         try {
-            const bgImg = await loadImage(backgroundImage);
+            const bgImg = await loadImage(itemBackgroundImage);
             ctx.save();
             const canvasWidth = finalCanvas.width;
             const canvasHeight = finalCanvas.height;
@@ -386,6 +386,6 @@ export const composeSingleImage = async ({
         record,
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        backgroundImage: backgroundImage, // Return the main background image
+        backgroundImage: itemBackgroundImage, // Return the main background image
     };
 };
