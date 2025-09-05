@@ -27,7 +27,6 @@ const ImageStep = ({
   handleImageDragLeave,
   imageInputRef,
   handleImageUpload,
-  backgroundImage,
   onChangeBackgroundImage,
   csvHeaders,
   fieldPositions,
@@ -57,12 +56,12 @@ const ImageStep = ({
   templateFieldStyles,
   activeStep,
 }) => {
-  console.log('[ImageStep] props:', { backgroundImage, backgroundElement, fieldStyles });
+  console.log('[ImageStep] props:', { backgroundElement, fieldStyles });
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [fontScale, setFontScale] = useState(1);
   const [isCropping, setIsCropping] = useState(false);
 
-  if (!backgroundImage) {
+  if (!backgroundElement?.src) {
     return (
       <Card>
         <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 4 } }}>
@@ -157,7 +156,7 @@ const ImageStep = ({
         <Grid item xs={12} md={8}>
           <FieldPositioner
             aspectRatio={aspectRatio}
-            backgroundImage={backgroundImage}
+            backgroundImage={backgroundElement?.src}
             csvHeaders={csvHeaders}
             fieldPositions={fieldPositions}
             setFieldPositions={setFieldPositions}
