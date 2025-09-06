@@ -954,10 +954,7 @@ function HomePage() {
           const imagePrompt = record.prompt_imagem_carrossel;
 
           if (imagePrompt && imagePrompt.trim() !== '') {
-            const success = await handleGenerateSinglePage(record, i, !firstImageSet);
-            if (success && !firstImageSet) {
-              firstImageSet = true;
-            }
+            await handleGenerateSinglePage(record, i);
           }
         }
         toast.success('Geração automática de páginas concluída!');
@@ -970,34 +967,28 @@ function HomePage() {
     }
   };
 
-  const handleGenerateSinglePage = async (record, index, setAsBackground = false) => {
+  const handleGenerateSinglePage = async (record, index) => {
     const imagePrompt = record.prompt_imagem_carrossel;
 
     let composingElement = backgroundElement;
+    let pageUpdateData = {};
 
-    if (setAsBackground && imagePrompt && imagePrompt.trim() !== '') {
-      setGenerationStatus(`Gerando nova imagem de fundo...`);
+    if (imagePrompt && imagePrompt.trim() !== '') {
+      setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
       try {
-        const rawBgImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
-        const blob = await (await fetch(rawBgImageUrl)).blob();
-        const stableDataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
+        const uniqueImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
 
-        // This is tricky. updateImageAndPalette is async and sets state.
-        // For the composition to work immediately, we need the new element data.
-        // A full solution would be to have updateImageAndPalette return the new element.
-        // For now, we create a temporary element for composition.
-        updateImageAndPalette(stableDataUrl);
-        composingElement = { ...(backgroundElement || {}), src: stableDataUrl };
-        toast.info("Nova imagem de fundo foi gerada e definida para a campanha.");
+        const tempBackgroundElement = {
+          ...(backgroundElement || {}),
+          id: `__background_post_${index}`,
+          src: uniqueImageUrl,
+        };
+        composingElement = tempBackgroundElement;
 
-      } catch(error) {
-        toast.error(`Falha ao gerar a imagem de fundo: ${error.message}. Usando a imagem anterior se existir.`);
-        console.error(`Error generating background for post ${index + 1}:`, error);
+        pageUpdateData.customBackgroundElement = tempBackgroundElement;
+
+      } catch (error) {
+        toast.error(`Falha ao gerar imagem para o post #${index + 1}: ${error.message}`);
       }
     }
 
@@ -1015,7 +1006,8 @@ function HomePage() {
 
       setGeneratedPagesData(currentPagesData => {
         const newPagesData = [...currentPagesData];
-        newPagesData[index] = finalPageData;
+        const existingPageData = newPagesData[index] || {};
+        newPagesData[index] = { ...existingPageData, ...finalPageData, ...pageUpdateData };
         return newPagesData;
       });
 
