@@ -4,7 +4,6 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "preinstall": "pnpm config set ignore-scripts false",
     "dev": "vite",
     "build": "vite build",
     "test": "vitest",
