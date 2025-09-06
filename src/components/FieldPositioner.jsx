@@ -364,7 +364,7 @@ const FieldPositioner = ({
         id: '__background__',
         type: 'background',
         position: backgroundElement,
-        style: { ...backgroundElement.filters }, // Only filters apply to the image
+        style: { ...backgroundElement.filters, shadow: backgroundElement.shadow, shadowColor: backgroundElement.shadowColor, shadowBlur: backgroundElement.shadowBlur, shadowOffsetX: backgroundElement.shadowOffsetX, shadowOffsetY: backgroundElement.shadowOffsetY },
         content: backgroundElement.src,
         zIndex: -1, // Above color layer, behind content
         rotation: backgroundElement.rotation,
