@@ -284,6 +284,35 @@ const FieldPositioner = ({
 
   const aspectRatio = aspectRatioProp ? String(aspectRatioProp).replace(':', ' / ') : '16 / 9';
 
+  const getBackgroundStyle = (bgElement) => {
+    if (!bgElement) return { backgroundColor: '#FFFFFF' }; // Default white background
+
+    const style = {
+      position: 'absolute',
+      width: '100%',
+      height: '100%',
+      top: 0,
+      left: 0,
+      zIndex: -2, // Ensure it's the bottom-most layer
+    };
+
+    if (bgElement.gradient) {
+      const stops = bgElement.gradient.stops.map(s => `${s.color} ${s.position}%`).join(', ');
+      if (bgElement.gradient.type === 'radial') {
+        style.backgroundImage = `radial-gradient(circle, ${stops})`;
+      } else {
+        style.backgroundImage = `linear-gradient(${bgElement.gradient.angle || 0}deg, ${stops})`;
+      }
+    } else if (bgElement.backgroundColor) {
+      style.backgroundColor = bgElement.backgroundColor;
+    } else {
+      style.backgroundColor = '#FFFFFF'; // Fallback
+    }
+
+    return style;
+  };
+
+
   // Effect to calculate font scale based on the actual rendered image size
   useEffect(() => {
     if (renderedImageMetrics.width > 0 && effectiveImageSize?.width > 0) {
@@ -329,14 +358,15 @@ const FieldPositioner = ({
 
   const renderableElements = React.useMemo(() => {
     const elements = [
-      // Add background element first so it's at the bottom
-      ...(backgroundElement ? [{
+      // Background IMAGE is now a separate element, rendered only if src exists.
+      // The color/gradient layer is handled separately.
+      ...(backgroundElement?.src ? [{
         id: '__background__',
         type: 'background',
         position: backgroundElement,
-        style: { ...backgroundElement.filters, ...backgroundElement },
+        style: { ...backgroundElement.filters }, // Only filters apply to the image
         content: backgroundElement.src,
-        zIndex: -1, // Ensure it's always at the back
+        zIndex: -1, // Above color layer, behind content
         rotation: backgroundElement.rotation,
         fontScale: 1,
         enableHtmlRendering: false,
@@ -482,6 +512,10 @@ const FieldPositioner = ({
                       }
                     }}
                   >
+                    {/* Layer 1: Solid Color or Gradient Background */}
+                    <Box sx={getBackgroundStyle(backgroundElement)} />
+
+                    {/* Layer 2: Draggable Elements (including BG image) */}
                     {renderedImageMetrics.width > 0 && renderableElements.map(element => (
                       <DraggableElement
                         key={element.id}
