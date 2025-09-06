@@ -51,6 +51,7 @@ import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 
 import { BrandingWatermark, Edit } from '@mui/icons-material';
 import BrandElementManager from './BrandElementManager';
+import BackgroundColorEditor from './BackgroundColorEditor'; // Importar o novo componente
 
 // Helper function to convert an RGB color string to a hex string.
 const rgbStringToHex = (colorString) => {
@@ -619,6 +620,19 @@ const FormattingPanel = ({
               const filters = currentElement.filters || { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100, highlightColor: '#FFFFFF', highlightAmount: 0 };
               return (
                 <>
+                  {/* Cor de Fundo e Gradiente */}
+                  <Accordion expanded={expandedPanel === 'backgroundColor'} onChange={handleAccordionChange('backgroundColor')}>
+                    <AccordionSummary expandIcon={<ExpandMore />}>
+                      <Typography variant="subtitle1">🎨 Cor de Fundo</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <BackgroundColorEditor
+                        backgroundElement={currentElement}
+                        onUpdate={setBackgroundElement}
+                      />
+                    </AccordionDetails>
+                  </Accordion>
+
                   {/* Filtros do Fundo */}
                   <Accordion expanded={expandedPanel === 'backgroundFilters'} onChange={handleAccordionChange('backgroundFilters')}>
                     <AccordionSummary expandIcon={<ExpandMore />}>
@@ -638,35 +652,7 @@ const FormattingPanel = ({
                     </AccordionDetails>
                   </Accordion>
 
-                  {/* Destaque de Cor */}
-                  <Accordion expanded={expandedPanel === 'backgroundHighlight'} onChange={handleAccordionChange('backgroundHighlight')}>
-                    <AccordionSummary expandIcon={<ExpandMore />}>
-                      <Typography variant="subtitle1">🎨 Destaque de Cor</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                      <Grid container spacing={2} alignItems="center">
-                        <Grid item xs={4}>
-                          <Typography gutterBottom>Cor</Typography>
-                          <TextField
-                            type="color"
-                            value={filters.highlightColor || '#FFFFFF'}
-                            onChange={(e) => updateBackgroundFilter('highlightColor', e.target.value)}
-                            fullWidth
-                          />
-                        </Grid>
-                        <Grid item xs={8}>
-                          <Typography gutterBottom>Intensidade: {filters.highlightAmount || 0}%</Typography>
-                          <Slider
-                            value={filters.highlightAmount || 0}
-                            onChange={(e, v) => updateBackgroundFilter('highlightAmount', v)}
-                            min={0}
-                            max={100}
-                            step={1}
-                          />
-                        </Grid>
-                      </Grid>
-                    </AccordionDetails>
-                  </Accordion>
+                  {/* Destaque de Cor (REMOVED) - This was a canvas-only feature */}
 
                   {/* Sombra do Fundo */}
                 <Accordion expanded={expandedPanel === 'backgroundShadow'} onChange={handleAccordionChange('backgroundShadow')}>

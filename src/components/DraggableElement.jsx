@@ -46,12 +46,12 @@ const DraggableElementInternal = ({
   const [initialPosition, setInitialPosition] = useState({ x: 0, y: 0 });
   const [initialSize, setInitialSize] = useState({ width: 0, height: 0 });
   const [initialRotation, setInitialRotation] = useState(0);
-  const [isCanvasLoading, setIsCanvasLoading] = useState(true);
+  // const [isCanvasLoading, setIsCanvasLoading] = useState(true); // Removido
 
   const textBoxRef = useRef(null);
   const textareaRef = useRef(null);
   const htmlContentRef = useRef(null);
-  const canvasRef = useRef(null);
+  // const canvasRef = useRef(null); // Removido
 
   // Função para sanitizar HTML básico
   const sanitizeHtml = (html) => {
@@ -75,72 +75,13 @@ const DraggableElementInternal = ({
     return `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
   };
 
-  useEffect(() => {
-    if (element.type === 'background' && canvasRef.current) {
-      setIsCanvasLoading(true);
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      img.crossOrigin = 'Anonymous';
-
-      img.onload = () => {
-        canvas.width = img.naturalWidth || img.width;
-        canvas.height = img.naturalHeight || img.height;
-        const filters = style || {};
-        ctx.filter = getFilterString(filters);
-        ctx.drawImage(img, 0, 0);
-        ctx.filter = 'none';
-        applyColorHighlight(
-          ctx,
-          canvas.width,
-          canvas.height,
-          filters.highlightColor,
-          filters.highlightAmount
-        );
-        setIsCanvasLoading(false);
-      };
-
-      img.onerror = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        setIsCanvasLoading(false);
-      }
-
-      img.src = content;
-    }
-  }, [
-    content,
-    style?.brightness,
-    style?.contrast,
-    style?.saturate,
-    style?.blur,
-    style?.opacity,
-    style?.highlightColor,
-    style?.highlightAmount,
-    element.type
-  ]);
+  // useEffect para renderização do canvas foi REMOVIDO
 
   // Função para renderizar conteúdo HTML ou texto simples
   const renderContent = () => {
+    // A lógica de renderização do fundo foi movida para o estilo do Box principal.
     if (element.type === 'background') {
-      return (
-        <>
-          {isCanvasLoading && (
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
-              <CircularProgress size={24} />
-            </Box>
-          )}
-          <canvas
-            ref={canvasRef}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'fill',
-              pointerEvents: 'none',
-              display: isCanvasLoading ? 'none' : 'block',
-            }}
-          />
-        </>
-      );
+      return null;
     }
     if (element.type === 'image') {
       return (
@@ -650,29 +591,76 @@ const DraggableElementInternal = ({
     handleTouchStart(e, type, handle);
   };
 
+  const getBackgroundStyle = (style, content) => {
+    const { backgroundType, backgroundColor, gradient, src } = style;
+    const imageUrl = content || src;
+    const css = {
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+    };
+
+    switch (backgroundType) {
+        case 'color':
+            css.backgroundColor = backgroundColor;
+            css.backgroundImage = 'none';
+            break;
+        case 'gradient':
+            if (gradient && gradient.stops) {
+                const stops = gradient.stops.map(s => `${s.color} ${s.position}%`).join(', ');
+                if (gradient.type === 'linear') {
+                    css.backgroundImage = `linear-gradient(${gradient.angle || 90}deg, ${stops})`;
+                } else {
+                    css.backgroundImage = `radial-gradient(circle, ${stops})`;
+                }
+            } else {
+                 css.backgroundImage = 'none';
+            }
+            break;
+        case 'image':
+        default:
+            if (imageUrl) {
+                css.backgroundImage = `url("${imageUrl}")`;
+            } else {
+                css.backgroundImage = 'none';
+            }
+            // A cor de fundo pode ser usada como um "tint" ou fallback
+            css.backgroundColor = style.backgroundColor || 'transparent';
+            break;
+    }
+    return css;
+  };
+
+  const boxSx = {
+    left: `${position.x}%`,
+    top: `${position.y}%`,
+    width: `${position.width}%`,
+    height: `${position.height}%`,
+    transform: `rotate(${rotation || 0}deg)`,
+    zIndex: position.zIndex || 'auto',
+    filter: (element.type === 'image' || element.type === 'background') ? getFilterString(style) : 'none',
+    boxShadow: (element.type === 'image' || element.type === 'background') ? getBoxShadowString(style) : 'none',
+  };
+
+  if (element.type === 'background') {
+    Object.assign(boxSx, getBackgroundStyle(style, content));
+  } else if (element.type === 'image' || element.type === 'cropbox') {
+    boxSx.backgroundColor = 'transparent';
+    boxSx.border = 'none';
+    boxSx.padding = 0;
+  } else { // Text element
+    boxSx.backgroundColor = hexToRgba(style.backgroundColor || '#000000', style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1);
+    boxSx.border = `${(style.borderWidth || 0) * fontScale}px solid ${style.borderColor || '#000000'}`;
+    boxSx.borderRadius = `${(style.borderRadius || 0) * fontScale}px`;
+    boxSx.padding = `${(style.padding || 0) * fontScale}px`;
+  }
+
   return (
     <>
       <Box
         ref={textBoxRef}
         className={`${styles.textBox} ${isDragging ? styles.dragging : ''} ${isSelected && element.type !== 'background' ? styles.selected : ''}`}
-        sx={{
-          left: `${position.x}%`,
-          top: `${position.y}%`,
-          width: `${position.width}%`,
-          height: `${position.height}%`,
-          transform: `rotate(${rotation || 0}deg)`,
-          zIndex: position.zIndex || 'auto',
-          backgroundColor: element.type === 'image' || element.type === 'background' || element.type === 'cropbox'
-            ? 'transparent'
-            : hexToRgba(style.backgroundColor || '#000000', style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1),
-          border: element.type === 'image' || element.type === 'background' || element.type === 'cropbox'
-            ? 'none'
-            : `${(style.borderWidth || 0) * fontScale}px solid ${style.borderColor || '#000000'}`,
-          borderRadius: `${(style.borderRadius || 0) * fontScale}px`,
-          padding: element.type === 'image' || element.type === 'background' || element.type === 'cropbox' ? 0 : `${(style.padding || 0) * fontScale}px`,
-          filter: (element.type === 'image') ? getFilterString(style) : 'none',
-          boxShadow: (element.type === 'image' || element.type === 'background') ? getBoxShadowString(style) : 'none',
-        }}
+        sx={boxSx}
         onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
         onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
         onClick={() => onSelect(element.id)}
