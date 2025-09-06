@@ -142,7 +142,12 @@ const ImageStep = ({
           </Grid>
         ) : (
           <>
-            <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16 }} onClick={() => setIsDrawerOpen(true)}><EditIcon /></Fab>
+            <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16 }} onClick={() => {
+              if (!selectedField) {
+                setSelectedField('__background__');
+              }
+              setIsDrawerOpen(true);
+            }}><EditIcon /></Fab>
             <FormattingDrawer
               open={isDrawerOpen}
               onClose={() => setIsDrawerOpen(false)}
