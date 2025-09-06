@@ -105,7 +105,6 @@ const defaultBackgroundElement = {
   shadowOffsetY: 5,
 };
 
-
 function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
@@ -295,7 +294,6 @@ function HomePage() {
       // No background info in the loaded state, reset to the default
       setBackgroundElement(defaultBackgroundElement);
     }
-
 
     setProblema(state.problema ?? '');
     setSolucao(state.solucao ?? '');
