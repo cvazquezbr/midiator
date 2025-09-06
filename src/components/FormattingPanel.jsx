@@ -616,7 +616,7 @@ const FormattingPanel = ({
 
             {/* Background Specific Controls */}
             {selectedField === '__background__' && currentElement && (() => {
-              const filters = currentElement.filters || { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 };
+              const filters = currentElement.filters || { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100, highlightColor: '#FFFFFF', highlightAmount: 0 };
               return (
                 <>
                   {/* Filtros do Fundo */}
@@ -635,6 +635,36 @@ const FormattingPanel = ({
                       <Slider value={filters.blur} onChange={(e, v) => updateBackgroundFilter('blur', v)} min={0} max={20} step={1} />
                       <Typography gutterBottom>Opacidade: {filters.opacity}%</Typography>
                       <Slider value={filters.opacity} onChange={(e, v) => updateBackgroundFilter('opacity', v)} min={0} max={100} step={1} />
+                    </AccordionDetails>
+                  </Accordion>
+
+                  {/* Destaque de Cor */}
+                  <Accordion expanded={expandedPanel === 'backgroundHighlight'} onChange={handleAccordionChange('backgroundHighlight')}>
+                    <AccordionSummary expandIcon={<ExpandMore />}>
+                      <Typography variant="subtitle1">🎨 Destaque de Cor</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={4}>
+                          <Typography gutterBottom>Cor</Typography>
+                          <TextField
+                            type="color"
+                            value={filters.highlightColor || '#FFFFFF'}
+                            onChange={(e) => updateBackgroundFilter('highlightColor', e.target.value)}
+                            fullWidth
+                          />
+                        </Grid>
+                        <Grid item xs={8}>
+                          <Typography gutterBottom>Intensidade: {filters.highlightAmount || 0}%</Typography>
+                          <Slider
+                            value={filters.highlightAmount || 0}
+                            onChange={(e, v) => updateBackgroundFilter('highlightAmount', v)}
+                            min={0}
+                            max={100}
+                            step={1}
+                          />
+                        </Grid>
+                      </Grid>
                     </AccordionDetails>
                   </Accordion>
 
