@@ -13,17 +13,18 @@ const FormattingDrawer = ({
   fieldPositions,
   setFieldPositions,
   csvHeaders,
-  imageFilters,
-  setImageFilters,
   brandElements,
   setBrandElements,
+  backgroundElement,
+  setBackgroundElement,
   onZIndexChange,
   onDeselectField,
   onOpenHtmlEditor,
-  isHtmlField,
   standardsColors,
   templateFieldStyles,
   activeStep,
+  isCropping,
+  setIsCropping,
 }) => {
   return (
     <Drawer anchor="right" open={open} onClose={onClose} sx={{ zIndex: 1400 }}>
@@ -42,17 +43,18 @@ const FormattingDrawer = ({
           fieldPositions={fieldPositions}
           setFieldPositions={setFieldPositions}
           csvHeaders={csvHeaders}
-          imageFilters={imageFilters}
-          setImageFilters={setImageFilters}
           brandElements={brandElements}
           setBrandElements={setBrandElements}
+          backgroundElement={backgroundElement}
+          setBackgroundElement={setBackgroundElement}
           onZIndexChange={onZIndexChange}
           onDeselectField={onDeselectField}
           onOpenHtmlEditor={onOpenHtmlEditor}
-          isHtmlField={isHtmlField}
           standardsColors={standardsColors}
           templateFieldStyles={templateFieldStyles}
           activeStep={activeStep}
+          isCropping={isCropping}
+          setIsCropping={setIsCropping}
         />
       </Box>
     </Drawer>

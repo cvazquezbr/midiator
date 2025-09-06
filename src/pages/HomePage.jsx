@@ -74,6 +74,38 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
   return hex.length === 1 ? '0' + hex : hex;
 }).join('');
 
+const defaultBackgroundElement = {
+  id: '__background__',
+  type: 'background',
+  src: null,
+  visible: true,
+  rotation: 0,
+  x: 0,
+  y: 0,
+  width: 100,
+  height: 100,
+  crop: null,
+  // Background-specific properties
+  backgroundType: 'color', // 'color', 'gradient', or 'image'
+  backgroundColor: '#FFFFFF',
+  gradient: null, // Initialized as null, created on-demand
+  // Filters
+  filters: {
+    brightness: 100,
+    contrast: 100,
+    saturate: 100,
+    blur: 0,
+    opacity: 100
+  },
+  // Shadow
+  shadow: false,
+  shadowColor: '#000000',
+  shadowBlur: 10,
+  shadowOffsetX: 5,
+  shadowOffsetY: 5,
+};
+
+
 function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
@@ -143,7 +175,7 @@ function HomePage() {
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [selectedField, setSelectedField] = useState(null);
   const [brandElements, setBrandElements] = useState([]);
-  const [backgroundElement, setBackgroundElement] = useState(null);
+  const [backgroundElement, setBackgroundElement] = useState(defaultBackgroundElement);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
@@ -227,13 +259,43 @@ function HomePage() {
     setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
 
     // Logic to load background image and its associated element state correctly.
-    // This handles both legacy campaigns with just `backgroundImage` and new ones with `backgroundElement`.
-    const backgroundSrc = state.backgroundElement?.src || state.backgroundImage;
-    if (backgroundSrc) {
-      updateImageAndPalette(backgroundSrc, state.backgroundElement || null);
+    const loadedBackground = state.backgroundElement;
+
+    if (loadedBackground) {
+      // Merge loaded data with defaults to ensure all properties exist
+      const mergedBackground = {
+        ...defaultBackgroundElement,
+        ...loadedBackground,
+        filters: {
+          ...defaultBackgroundElement.filters,
+          ...(loadedBackground.filters || {}),
+        },
+        gradient: loadedBackground.gradient ? {
+          ...defaultBackgroundElement.gradient,
+          ...loadedBackground.gradient,
+        } : defaultBackgroundElement.gradient,
+      };
+
+      // Handle legacy campaigns that only had `backgroundImage`
+      if (!mergedBackground.src && state.backgroundImage) {
+        mergedBackground.src = state.backgroundImage;
+      }
+
+      // If there's a src, let updateImageAndPalette handle setting the state
+      // as it needs to load the image to get dimensions, etc.
+      if (mergedBackground.src) {
+        updateImageAndPalette(mergedBackground.src, mergedBackground);
+      } else {
+        setBackgroundElement(mergedBackground);
+      }
+    } else if (state.backgroundImage) {
+      // Legacy case: only backgroundImage is present
+      updateImageAndPalette(state.backgroundImage, { ...defaultBackgroundElement, src: state.backgroundImage });
     } else {
-      setBackgroundElement(null);
+      // No background info in the loaded state, reset to the default
+      setBackgroundElement(defaultBackgroundElement);
     }
+
 
     setProblema(state.problema ?? '');
     setSolucao(state.solucao ?? '');
@@ -537,6 +599,8 @@ function HomePage() {
   const handleCreateNewCampaign = () => {
     applyAppState({});
     setCurrentCampaign(null);
+    // Also explicitly reset the background element to the default state for a new campaign
+    setBackgroundElement(defaultBackgroundElement);
     setActiveStep(1);
   };
   const handleEditCampaign = (campaign) => {
@@ -713,7 +777,7 @@ function HomePage() {
       case 1: return true;
       case 2: return campaignContent !== null;
       case 3: return csvData.length > 0;
-      case 4: return backgroundElement?.src != null;
+      case 4: return true; // Always allow proceeding to formatting step
       case 5: if (generatedPagesData.length === 0 || !generatedPagesData.every(img => img.blob)) { toast.error("Por favor, gere todas as páginas na etapa 4 antes de prosseguir."); return false; } return true;
       default: return true;
     }

@@ -21,28 +21,29 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate }) => {
   };
 
   const handleGradientUpdate = (property, value) => {
+    const currentGradient = backgroundElement.gradient || {};
     onUpdate({
       ...backgroundElement,
-      gradient: { ...backgroundElement.gradient, [property]: value },
+      gradient: { ...currentGradient, [property]: value },
     });
   };
 
   const handleStopUpdate = (index, property, value) => {
-    const newStops = [...backgroundElement.gradient.stops];
+    const newStops = [...(backgroundElement.gradient?.stops || [])];
     newStops[index] = { ...newStops[index], [property]: value };
     handleGradientUpdate('stops', newStops);
   };
 
   const addStop = () => {
     const newStops = [
-      ...backgroundElement.gradient.stops,
+      ...(backgroundElement.gradient?.stops || []),
       { color: '#ffffff', position: 100 },
     ];
     handleGradientUpdate('stops', newStops);
   };
 
   const removeStop = (index) => {
-    const newStops = backgroundElement.gradient.stops.filter((_, i) => i !== index);
+    const newStops = (backgroundElement.gradient?.stops || []).filter((_, i) => i !== index);
     handleGradientUpdate('stops', newStops);
   };
 
@@ -57,7 +58,26 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate }) => {
         fullWidth
         size="small"
         onChange={(e, newType) => {
-          if (newType) handleUpdate('backgroundType', newType);
+          if (!newType) return;
+
+          const updatedState = { ...backgroundElement, backgroundType: newType };
+
+          if (newType === 'gradient' && !updatedState.gradient) {
+            updatedState.gradient = {
+              type: 'linear',
+              angle: 90,
+              stops: [
+                { color: '#ffffff', position: 0 },
+                { color: '#000000', position: 100 },
+              ],
+            };
+          }
+
+          if (newType === 'color' && !updatedState.backgroundColor) {
+            updatedState.backgroundColor = '#ffffff';
+          }
+
+          onUpdate(updatedState);
         }}
         aria-label="background type"
       >
@@ -110,7 +130,7 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate }) => {
               <Grid item xs={12}>
                 <Typography gutterBottom>Ângulo do Gradiente</Typography>
                 <Slider
-                  value={backgroundElement.gradient.angle || 0}
+                  value={backgroundElement.gradient?.angle || 0}
                   onChange={(e, value) => handleGradientUpdate('angle', value)}
                   min={0}
                   max={360}
@@ -122,7 +142,7 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate }) => {
 
             <Grid item xs={12}>
               <Typography gutterBottom>Cores do Gradiente</Typography>
-              {backgroundElement.gradient.stops.map((stop, index) => (
+              {backgroundElement.gradient?.stops?.map((stop, index) => (
                 <Grid container spacing={1} key={index} alignItems="center" sx={{ mb: 1 }}>
                   <Grid item xs={3}>
                     <TextField
@@ -144,7 +164,7 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate }) => {
                     />
                   </Grid>
                   <Grid item xs={2}>
-                    <IconButton onClick={() => removeStop(index)} size="small" disabled={backgroundElement.gradient.stops.length <= 2}>
+                    <IconButton onClick={() => removeStop(index)} size="small" disabled={(backgroundElement.gradient?.stops?.length || 0) <= 2}>
                       <Delete />
                     </IconButton>
                   </Grid>
