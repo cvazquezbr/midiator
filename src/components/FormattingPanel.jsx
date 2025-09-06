@@ -620,10 +620,10 @@ const FormattingPanel = ({
               const filters = currentElement.filters || { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100, highlightColor: '#FFFFFF', highlightAmount: 0 };
               return (
                 <>
-                  {/* Cor de Fundo e Gradiente */}
+                  {/* Cor de Fundo e Gradiente (Sempre visível para o fundo) */}
                   <Accordion expanded={expandedPanel === 'backgroundColor'} onChange={handleAccordionChange('backgroundColor')}>
                     <AccordionSummary expandIcon={<ExpandMore />}>
-                      <Typography variant="subtitle1">🎨 Cor de Fundo</Typography>
+                      <Typography variant="subtitle1">🎨 Cor de Fundo da Página</Typography>
                     </AccordionSummary>
                     <AccordionDetails>
                       <BackgroundColorEditor
@@ -633,59 +633,62 @@ const FormattingPanel = ({
                     </AccordionDetails>
                   </Accordion>
 
-                  {/* Filtros do Fundo */}
-                  <Accordion expanded={expandedPanel === 'backgroundFilters'} onChange={handleAccordionChange('backgroundFilters')}>
-                    <AccordionSummary expandIcon={<ExpandMore />}>
-                      <Typography variant="subtitle1">🖼️ Filtros</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                      <Typography gutterBottom>Brilho: {filters.brightness}%</Typography>
-                      <Slider value={filters.brightness} onChange={(e, v) => updateBackgroundFilter('brightness', v)} min={0} max={200} step={1} />
-                      <Typography gutterBottom>Contraste: {filters.contrast}%</Typography>
-                      <Slider value={filters.contrast} onChange={(e, v) => updateBackgroundFilter('contrast', v)} min={0} max={200} step={1} />
-                      <Typography gutterBottom>Saturação: {filters.saturate}%</Typography>
-                      <Slider value={filters.saturate} onChange={(e, v) => updateBackgroundFilter('saturate', v)} min={0} max={200} step={1} />
-                      <Typography gutterBottom>Desfoque: {filters.blur}px</Typography>
-                      <Slider value={filters.blur} onChange={(e, v) => updateBackgroundFilter('blur', v)} min={0} max={20} step={1} />
-                      <Typography gutterBottom>Opacidade: {filters.opacity}%</Typography>
-                      <Slider value={filters.opacity} onChange={(e, v) => updateBackgroundFilter('opacity', v)} min={0} max={100} step={1} />
-                    </AccordionDetails>
-                  </Accordion>
+                  {/* Controles que só aparecem se houver uma imagem de fundo */}
+                  {currentElement.src && (
+                    <>
+                      {/* Filtros da Imagem de Fundo */}
+                      <Accordion expanded={expandedPanel === 'backgroundFilters'} onChange={handleAccordionChange('backgroundFilters')}>
+                        <AccordionSummary expandIcon={<ExpandMore />}>
+                          <Typography variant="subtitle1">🖼️ Filtros da Imagem</Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <Typography gutterBottom>Brilho: {filters.brightness}%</Typography>
+                          <Slider value={filters.brightness} onChange={(e, v) => updateBackgroundFilter('brightness', v)} min={0} max={200} step={1} />
+                          <Typography gutterBottom>Contraste: {filters.contrast}%</Typography>
+                          <Slider value={filters.contrast} onChange={(e, v) => updateBackgroundFilter('contrast', v)} min={0} max={200} step={1} />
+                          <Typography gutterBottom>Saturação: {filters.saturate}%</Typography>
+                          <Slider value={filters.saturate} onChange={(e, v) => updateBackgroundFilter('saturate', v)} min={0} max={200} step={1} />
+                          <Typography gutterBottom>Desfoque: {filters.blur}px</Typography>
+                          <Slider value={filters.blur} onChange={(e, v) => updateBackgroundFilter('blur', v)} min={0} max={20} step={1} />
+                          <Typography gutterBottom>Opacidade: {filters.opacity}%</Typography>
+                          <Slider value={filters.opacity} onChange={(e, v) => updateBackgroundFilter('opacity', v)} min={0} max={100} step={1} />
+                        </AccordionDetails>
+                      </Accordion>
 
-                  {/* Destaque de Cor (REMOVED) - This was a canvas-only feature */}
+                      {/* Sombra da Imagem de Fundo */}
+                      <Accordion expanded={expandedPanel === 'backgroundShadow'} onChange={handleAccordionChange('backgroundShadow')}>
+                        <AccordionSummary expandIcon={<ExpandMore />}>
+                          <Typography variant="subtitle1">🎨 Sombra da Imagem</Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <FormControlLabel
+                            control={<Switch checked={currentElement.shadow || false} onChange={(e) => updateBackgroundElement('shadow', e.target.checked)} size="small" />}
+                            label="Sombra na Imagem"
+                          />
+                          {currentElement.shadow && (
+                            <Grid container spacing={2} sx={{ mt: 1 }}>
+                              <Grid item xs={6}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.shadowColor || '#000000')} onChange={(e) => updateBackgroundElement('shadowColor', e.target.value)} fullWidth size="small" /></Grid>
+                              <Grid item xs={6}><Typography gutterBottom>Desfoque: {currentElement.shadowBlur || 4}px</Typography><Slider value={currentElement.shadowBlur || 4} onChange={(e, v) => updateBackgroundElement('shadowBlur', v)} min={0} max={50} size="small" /></Grid>
+                              <Grid item xs={6}><Typography gutterBottom>Offset X: {currentElement.shadowOffsetX || 2}px</Typography><Slider value={currentElement.shadowOffsetX || 2} onChange={(e, v) => updateBackgroundElement('shadowOffsetX', v)} min={-50} max={50} size="small" /></Grid>
+                              <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.shadowOffsetY || 2}px</Typography><Slider value={currentElement.shadowOffsetY || 2} onChange={(e, v) => updateBackgroundElement('shadowOffsetY', v)} min={-50} max={50} size="small" /></Grid>
+                            </Grid>
+                          )}
+                        </AccordionDetails>
+                      </Accordion>
 
-                  {/* Sombra do Fundo */}
-                <Accordion expanded={expandedPanel === 'backgroundShadow'} onChange={handleAccordionChange('backgroundShadow')}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1">🎨 Sombra</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <FormControlLabel
-                      control={<Switch checked={currentElement.shadow || false} onChange={(e) => updateBackgroundElement('shadow', e.target.checked)} size="small" />}
-                      label="Sombra"
-                    />
-                    {currentElement.shadow && (
-                      <Grid container spacing={2} sx={{ mt: 1 }}>
-                        <Grid item xs={6}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.shadowColor || '#000000')} onChange={(e) => updateBackgroundElement('shadowColor', e.target.value)} fullWidth size="small" /></Grid>
-                        <Grid item xs={6}><Typography gutterBottom>Desfoque: {currentElement.shadowBlur || 4}px</Typography><Slider value={currentElement.shadowBlur || 4} onChange={(e, v) => updateBackgroundElement('shadowBlur', v)} min={0} max={50} size="small" /></Grid>
-                        <Grid item xs={6}><Typography gutterBottom>Offset X: {currentElement.shadowOffsetX || 2}px</Typography><Slider value={currentElement.shadowOffsetX || 2} onChange={(e, v) => updateBackgroundElement('shadowOffsetX', v)} min={-50} max={50} size="small" /></Grid>
-                        <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.shadowOffsetY || 2}px</Typography><Slider value={currentElement.shadowOffsetY || 2} onChange={(e, v) => updateBackgroundElement('shadowOffsetY', v)} min={-50} max={50} size="small" /></Grid>
-                      </Grid>
-                    )}
-                  </AccordionDetails>
-                </Accordion>
-
-                {/* Cortar Imagem */}
-                <Box sx={{ mt: 2 }}>
-                  <Button
-                    variant={isCropping ? "contained" : "outlined"}
-                    color="primary"
-                    onClick={() => setIsCropping(!isCropping)}
-                    fullWidth
-                  >
-                    {isCropping ? 'Salvar Corte' : 'Cortar Imagem'}
-                  </Button>
-                </Box>
+                      {/* Cortar Imagem */}
+                      <Box sx={{ mt: 2 }}>
+                        <Button
+                          variant={isCropping ? "contained" : "outlined"}
+                          color="primary"
+                          onClick={() => setIsCropping(!isCropping)}
+                          fullWidth
+                        >
+                          {isCropping ? 'Salvar Corte' : 'Cortar Imagem'}
+                        </Button>
+                      </Box>
+                    </>
+                  )}
                 </>
               );
             })()}
