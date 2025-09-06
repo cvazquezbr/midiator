@@ -571,8 +571,6 @@ const FieldPositioner = ({
                 ))}
               </Box>
             )}
-        </Box>
-      )}
     </Box>
   );
 };
