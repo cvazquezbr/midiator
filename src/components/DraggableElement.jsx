@@ -164,7 +164,7 @@ const DraggableElementInternal = ({
       return (
         <canvas
           ref={canvasRef}
-          style={{ width: '100%', height: '100%', objectFit: 'fill' }}
+          style={{ width: '100%', height: '100%', objectFit: 'fill', pointerEvents: 'none' }}
         />
       );
     }
