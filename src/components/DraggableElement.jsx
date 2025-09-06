@@ -16,6 +16,41 @@ const hexToRgba = (hex, alpha) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+const hexToRgb = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+};
+
+const colorDistance = (rgb1, rgb2) => {
+  const dr = rgb1.r - rgb2.r;
+  const dg = rgb1.g - rgb2.g;
+  const db = rgb1.b - rgb2.b;
+  return dr * dr + dg * dg + db * db;
+};
+
+const applyColorHighlight = (ctx, width, height, highlightColorHex, highlightAmount) => {
+  if (!highlightColorHex || highlightAmount === 0) return;
+  const highlightRgb = hexToRgb(highlightColorHex);
+  if (!highlightRgb) return;
+
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const data = imageData.data;
+  const maxDistSq = 3 * 255 * 255;
+  const toleranceSq = maxDistSq * (1 - (highlightAmount / 100));
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    const distSq = colorDistance({ r, g, b }, highlightRgb);
+    if (distSq > toleranceSq) {
+      const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+      data[i] = gray;
+      data[i + 1] = gray;
+      data[i + 2] = gray;
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+};
+
 const DraggableElementInternal = ({
   element, // Combined object for field/element data
   position,
@@ -49,6 +84,7 @@ const DraggableElementInternal = ({
   const textBoxRef = useRef(null);
   const textareaRef = useRef(null);
   const htmlContentRef = useRef(null);
+  const canvasRef = useRef(null);
 
   // Função para sanitizar HTML básico
   const sanitizeHtml = (html) => {
@@ -66,9 +102,73 @@ const DraggableElementInternal = ({
     return sanitized;
   };
 
+  const getFilterString = (filters) => {
+    if (!filters) return 'none';
+    const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters;
+    return `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
+  };
+
+  useEffect(() => {
+    if (element.type === 'background' && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        const filters = style || {};
+        ctx.filter = getFilterString(filters);
+
+        ctx.drawImage(img, 0, 0);
+
+        // Reset filter before pixel manipulation
+        ctx.filter = 'none';
+
+        applyColorHighlight(
+          ctx,
+          canvas.width,
+          canvas.height,
+          filters.highlightColor,
+          filters.highlightAmount
+        );
+      };
+
+      img.onerror = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'red';
+        ctx.textAlign = 'center';
+        ctx.font = '20px Arial';
+        ctx.fillText('Erro', canvas.width/2, canvas.height/2);
+      }
+
+      img.src = content;
+    }
+  }, [
+    content,
+    style?.brightness,
+    style?.contrast,
+    style?.saturate,
+    style?.blur,
+    style?.opacity,
+    style?.highlightColor,
+    style?.highlightAmount,
+    element.type
+  ]);
+
   // Função para renderizar conteúdo HTML ou texto simples
   const renderContent = () => {
-    if (element.type === 'image' || element.type === 'background') {
+    if (element.type === 'background') {
+      return (
+        <canvas
+          ref={canvasRef}
+          style={{ width: '100%', height: '100%', objectFit: 'fill' }}
+        />
+      );
+    }
+    if (element.type === 'image') {
       return (
         <img
           src={content}
@@ -76,7 +176,7 @@ const DraggableElementInternal = ({
           style={{
             width: '100%',
             height: '100%',
-            objectFit: element.type === 'background' ? 'fill' : 'cover',
+            objectFit: 'cover',
             pointerEvents: 'none',
           }}
         />
@@ -548,12 +648,6 @@ const DraggableElementInternal = ({
 
   const handleSize = isMobile ? 24 : 12;
 
-  const getFilterString = (filters) => {
-    if (!filters) return 'none';
-    const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters;
-    return `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
-  };
-
   const getBoxShadowString = (style) => {
     if (!style || !style.shadow) return 'none';
     const { shadowColor = '#000000', shadowBlur = 4, shadowOffsetX = 2, shadowOffsetY = 2 } = style;
@@ -602,7 +696,7 @@ const DraggableElementInternal = ({
             : `${(style.borderWidth || 0) * fontScale}px solid ${style.borderColor || '#000000'}`,
           borderRadius: `${(style.borderRadius || 0) * fontScale}px`,
           padding: element.type === 'image' || element.type === 'background' || element.type === 'cropbox' ? 0 : `${(style.padding || 0) * fontScale}px`,
-          filter: (element.type === 'image' || element.type === 'background') ? getFilterString(style) : 'none',
+          filter: (element.type === 'image') ? getFilterString(style) : 'none',
           boxShadow: (element.type === 'image' || element.type === 'background') ? getBoxShadowString(style) : 'none',
         }}
         onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
