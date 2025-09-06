@@ -11,7 +11,7 @@ import {
   ToggleButtonGroup,
   Tooltip,
 } from '@mui/material';
-import { Add, Delete, RadialGradient, LinearGradient } from '@mui/icons-material';
+import { Add, Delete, Gradient } from '@mui/icons-material';
 
 const BackgroundColorEditor = ({ backgroundElement, onUpdate }) => {
   if (!backgroundElement) return null;
@@ -98,10 +98,10 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate }) => {
                     }}
                 >
                     <Tooltip title="Gradiente Linear">
-                        <ToggleButton value="linear"><LinearGradient /></ToggleButton>
+                        <ToggleButton value="linear"><Gradient /></ToggleButton>
                     </Tooltip>
                     <Tooltip title="Gradiente Radial">
-                        <ToggleButton value="radial"><RadialGradient /></ToggleButton>
+                        <ToggleButton value="radial"><Gradient /></ToggleButton>
                     </Tooltip>
                 </ToggleButtonGroup>
             </Grid>
