@@ -980,7 +980,7 @@ function HomePage() {
 
         const tempBackgroundElement = {
           ...(backgroundElement || {}),
-          id: `__background_post_${index}`,
+          id: '__background__',
           src: uniqueImageUrl,
         };
         composingElement = tempBackgroundElement;
