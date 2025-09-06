@@ -427,41 +427,38 @@ const FieldPositioner = ({
   }, [backgroundElement, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
   return (
-    <Grid container spacing={3}>
-      <Grid item xs={12} lg={9}>
-        <Card>
-          <CardContent>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1, sm: 2 }} justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-              <Typography variant="h6">
-                Editor de Campos
-              </Typography>
-              <Stack direction="row" spacing={1}>
-                <Button
-                  size="small"
-                  onClick={centerAllFields}
-                  startIcon={<CenterFocusStrong />}
-                >
-                  Centralizar
-                </Button>
-                <Button
-                  size="small"
-                  onClick={autoArrangeFields}
-                  startIcon={<Add />}
-                >
-                  Auto Organizar
-                </Button>
-              </Stack>
-            </Stack>
+    <Box>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1, sm: 2 }} justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+        <Typography variant="h6">
+          Editor de Campos
+        </Typography>
+        <Stack direction="row" spacing={1}>
+          <Button
+            size="small"
+            onClick={centerAllFields}
+            startIcon={<CenterFocusStrong />}
+          >
+            Centralizar
+          </Button>
+          <Button
+            size="small"
+            onClick={autoArrangeFields}
+            startIcon={<Add />}
+          >
+            Auto Organizar
+          </Button>
+        </Stack>
+      </Stack>
 
-            {csvData.length === 0 && (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                Carregue um arquivo CSV para ver o preview dos dados
-              </Alert>
-            )}
+      {csvData.length === 0 && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Carregue um arquivo CSV para ver o preview dos dados
+        </Alert>
+      )}
 
-            <Box
-              ref={containerRef}
-              className="text-container"
+      <Box
+        ref={containerRef}
+        className="text-container"
               sx={{
                 position: 'relative',
                 border: '2px solid #ddd',
@@ -574,10 +571,9 @@ const FieldPositioner = ({
                 ))}
               </Box>
             )}
-          </CardContent>
-        </Card>
-      </Grid>
-    </Grid>
+        </Box>
+      )}
+    </Box>
   );
 };
 

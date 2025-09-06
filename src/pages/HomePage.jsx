@@ -696,17 +696,38 @@ function HomePage() {
   const handleBackgroundImageUpload = async (file) => {
     if (!file) return;
 
-    // --- ROBUST FIX using FileReader and data:URL ---
-    // This converts the file to a self-contained data URL immediately.
-    // This URL does not expire and does not need to be revoked, fixing the
-    // "disappearing image" bug when thumbnails are generated later.
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target.result;
-      updateImageAndPalette(dataUrl, null);
+
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIMENSION = 720;
+        let { width, height } = img;
+
+        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+          if (width > height) {
+            height = Math.round(height * (MAX_DIMENSION / width));
+            width = MAX_DIMENSION;
+          } else {
+            width = Math.round(width * (MAX_DIMENSION / height));
+            height = MAX_DIMENSION;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const resizedDataUrl = canvas.toDataURL(file.type);
+
+        updateImageAndPalette(resizedDataUrl, null);
+      };
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
-    // --- End of robust fix ---
 
     // TODO: Move the Google Drive upload to a separate, user-initiated action
     // to avoid unconditional uploads. For now, the logic is disabled.
