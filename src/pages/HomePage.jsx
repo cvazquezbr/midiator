@@ -1,5 +1,4 @@
 // Re-submitting the fix for the persona saving bug.
-// Triggering a new build to re-test Vercel deployment.
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -105,7 +104,6 @@ const defaultBackgroundElement = {
   shadowOffsetX: 5,
   shadowOffsetY: 5,
 };
-
 
 function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
@@ -296,7 +294,6 @@ function HomePage() {
       // No background info in the loaded state, reset to the default
       setBackgroundElement(defaultBackgroundElement);
     }
-
 
     setProblema(state.problema ?? '');
     setSolucao(state.solucao ?? '');
