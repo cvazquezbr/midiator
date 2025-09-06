@@ -14,6 +14,9 @@ import {
 import { Add, Delete, Gradient } from '@mui/icons-material';
 
 const BackgroundColorEditor = ({ backgroundElement, onUpdate }) => {
+  // Internal state to switch between solid and gradient editors
+  const [colorMode, setColorMode] = React.useState('solid');
+
   if (!backgroundElement) return null;
 
   const handleUpdate = (property, value) => {
@@ -50,41 +53,19 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate }) => {
   return (
     <Box>
       <Typography variant="caption" display="block" gutterBottom>
-        Tipo de Fundo
+        Cor de Fundo
       </Typography>
       <ToggleButtonGroup
-        value={backgroundElement.backgroundType || 'image'}
+        value={colorMode}
         exclusive
         fullWidth
         size="small"
-        onChange={(e, newType) => {
-          if (!newType) return;
-
-          const updatedState = { ...backgroundElement, backgroundType: newType };
-
-          if (newType === 'gradient' && !updatedState.gradient) {
-            updatedState.gradient = {
-              type: 'linear',
-              angle: 90,
-              stops: [
-                { color: '#ffffff', position: 0 },
-                { color: '#000000', position: 100 },
-              ],
-            };
-          }
-
-          if (newType === 'color' && !updatedState.backgroundColor) {
-            updatedState.backgroundColor = '#ffffff';
-          }
-
-          onUpdate(updatedState);
+        onChange={(e, newMode) => {
+          if (newMode) setColorMode(newMode);
         }}
-        aria-label="background type"
+        aria-label="color mode"
       >
-        <ToggleButton value="image" aria-label="image background">
-          Imagem
-        </ToggleButton>
-        <ToggleButton value="color" aria-label="solid color background">
+        <ToggleButton value="solid" aria-label="solid color background">
           Cor Sólida
         </ToggleButton>
         <ToggleButton value="gradient" aria-label="gradient background">
@@ -92,9 +73,9 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate }) => {
         </ToggleButton>
       </ToggleButtonGroup>
 
-      {backgroundElement.backgroundType === 'color' && (
+      {colorMode === 'solid' && (
         <Box sx={{ mt: 2 }}>
-          <Typography gutterBottom>Cor de Fundo</Typography>
+          <Typography gutterBottom>Cor</Typography>
           <TextField
             type="color"
             value={backgroundElement.backgroundColor || '#ffffff'}
@@ -104,7 +85,7 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate }) => {
         </Box>
       )}
 
-      {backgroundElement.backgroundType === 'gradient' && (
+      {colorMode === 'gradient' && (
         <Box sx={{ mt: 2 }}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
