@@ -1,7 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Box } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 import styles from './DraggableElement.module.css';
 import { wrapTextInArea } from '../utils/imageComposer';
+import { applyColorHighlight } from '../utils/filterUtils';
 
 const hexToRgba = (hex, alpha) => {
   if (!hex || hex.length < 4) {
@@ -14,41 +15,6 @@ const hexToRgba = (hex, alpha) => {
     return `rgba(0, 0, 0, ${alpha})`;
   }
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
-
-const hexToRgb = (hex) => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
-};
-
-const colorDistance = (rgb1, rgb2) => {
-  const dr = rgb1.r - rgb2.r;
-  const dg = rgb1.g - rgb2.g;
-  const db = rgb1.b - rgb2.b;
-  return dr * dr + dg * dg + db * db;
-};
-
-const applyColorHighlight = (ctx, width, height, highlightColorHex, highlightAmount) => {
-  if (!highlightColorHex || highlightAmount === 0) return;
-  const highlightRgb = hexToRgb(highlightColorHex);
-  if (!highlightRgb) return;
-
-  const imageData = ctx.getImageData(0, 0, width, height);
-  const data = imageData.data;
-  const maxDistSq = 3 * 255 * 255;
-  const toleranceSq = maxDistSq * (1 - (highlightAmount / 100));
-
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i], g = data[i + 1], b = data[i + 2];
-    const distSq = colorDistance({ r, g, b }, highlightRgb);
-    if (distSq > toleranceSq) {
-      const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-      data[i] = gray;
-      data[i + 1] = gray;
-      data[i + 2] = gray;
-    }
-  }
-  ctx.putImageData(imageData, 0, 0);
 };
 
 const DraggableElementInternal = ({
@@ -80,6 +46,7 @@ const DraggableElementInternal = ({
   const [initialPosition, setInitialPosition] = useState({ x: 0, y: 0 });
   const [initialSize, setInitialSize] = useState({ width: 0, height: 0 });
   const [initialRotation, setInitialRotation] = useState(0);
+  const [isCanvasLoading, setIsCanvasLoading] = useState(true);
 
   const textBoxRef = useRef(null);
   const textareaRef = useRef(null);
@@ -110,23 +77,19 @@ const DraggableElementInternal = ({
 
   useEffect(() => {
     if (element.type === 'background' && canvasRef.current) {
+      setIsCanvasLoading(true);
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       const img = new Image();
       img.crossOrigin = 'Anonymous';
 
       img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
-
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
         const filters = style || {};
         ctx.filter = getFilterString(filters);
-
         ctx.drawImage(img, 0, 0);
-
-        // Reset filter before pixel manipulation
         ctx.filter = 'none';
-
         applyColorHighlight(
           ctx,
           canvas.width,
@@ -134,14 +97,12 @@ const DraggableElementInternal = ({
           filters.highlightColor,
           filters.highlightAmount
         );
+        setIsCanvasLoading(false);
       };
 
       img.onerror = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = 'red';
-        ctx.textAlign = 'center';
-        ctx.font = '20px Arial';
-        ctx.fillText('Erro', canvas.width/2, canvas.height/2);
+        setIsCanvasLoading(false);
       }
 
       img.src = content;
@@ -162,10 +123,23 @@ const DraggableElementInternal = ({
   const renderContent = () => {
     if (element.type === 'background') {
       return (
-        <canvas
-          ref={canvasRef}
-          style={{ width: '100%', height: '100%', objectFit: 'fill', pointerEvents: 'none' }}
-        />
+        <>
+          {isCanvasLoading && (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+              <CircularProgress size={24} />
+            </Box>
+          )}
+          <canvas
+            ref={canvasRef}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'fill',
+              pointerEvents: 'none',
+              display: isCanvasLoading ? 'none' : 'block',
+            }}
+          />
+        </>
       );
     }
     if (element.type === 'image') {
