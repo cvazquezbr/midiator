@@ -69,6 +69,9 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
   // 1. Count all assets that need uploading for the progress bar.
   const needsUpload = (url) => url && (url.startsWith('data:') || url.startsWith('blob:'));
 
+  if (needsUpload(cleanState.backgroundElement?.src)) {
+    assetsToUploadCount++;
+  }
   if (needsUpload(cleanState.backgroundImage)) {
     assetsToUploadCount++;
   }
@@ -93,7 +96,17 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
 
   // 2. Process each asset type sequentially.
   try {
-    // Background Image
+    // Background Element (from the new editor)
+    if (needsUpload(cleanState.backgroundElement?.src)) {
+        const filename = `bg-element_${Date.now()}.png`;
+        console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
+        const permanentUrl = await uploadAsset(cleanState.backgroundElement.src, filename, campaignId, userId);
+        cleanState.backgroundElement.src = permanentUrl;
+        assetsUploadedCount++;
+        onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
+    }
+
+    // Background Image (legacy)
     if (needsUpload(cleanState.backgroundImage)) {
       const filename = `background_${Date.now()}.png`;
       console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
