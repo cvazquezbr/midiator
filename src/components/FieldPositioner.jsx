@@ -467,7 +467,7 @@ const FieldPositioner = ({
                 border: '2px solid #ddd',
                 borderRadius: 2,
                 overflow: 'hidden',
-                backgroundColor: '#fff',
+                ...getBackgroundStyle(backgroundElement), // Apply dynamic background here
                 cursor: 'default',
                 touchAction: 'pan-x pan-y',
                 WebkitOverflowScrolling: 'touch',
@@ -512,10 +512,7 @@ const FieldPositioner = ({
                       }
                     }}
                   >
-                    {/* Layer 1: Solid Color or Gradient Background */}
-                    <Box sx={getBackgroundStyle(backgroundElement)} />
-
-                    {/* Layer 2: Draggable Elements (including BG image) */}
+                    {/* All elements, including the background image, are rendered here */}
                     {renderedImageMetrics.width > 0 && renderableElements.map(element => (
                       <DraggableElement
                         key={element.id}
