@@ -328,71 +328,47 @@ const PageGeneratorFrontendOnly = ({
 
   const handleSaveIndividualModifications = async (modifiedPageData) => {
     const { index: pageIndex } = modifiedPageData;
-
-    // First, create a new array with the updated metadata from the editor
-    const pagesWithUpdatedMetadata = initialGeneratedPagesData.map(img => {
-      if (img.index !== pageIndex) {
-        return img;
-      }
-      return {
-        ...img,
-        record: modifiedPageData.record,
-        customFieldPositions: modifiedPageData.fieldPositions,
-        customFieldStyles: modifiedPageData.fieldStyles,
-        customBrandElements: modifiedPageData.brandElements,
-        fontScale: modifiedPageData.fontScale,
-        customBackgroundElement: modifiedPageData.customBackgroundElement,
-      };
-    });
-
-    // Find the page we just updated to get all its data for regeneration
-    const pageToRegenerate = pagesWithUpdatedMetadata.find(p => p.index === pageIndex);
-
-    if (pageToRegenerate) {
-      try {
-        const positionsToUse = pageToRegenerate.customFieldPositions || fieldPositions;
-        const stylesToUse = pageToRegenerate.customFieldStyles || fieldStyles;
-        const elementsToUse = pageToRegenerate.customBrandElements !== undefined ? pageToRegenerate.customBrandElements : brandElements;
-        const sizeToUse = pageToRegenerate.customOriginalImageSize || originalImageSize;
-
-        // The background to use is the one saved from the editor, or the global one as a fallback.
-        const backgroundToUse = pageToRegenerate.customBackgroundElement || backgroundElement;
-
-        // Await the pure function to get the new image data
-        const newPageData = await regenerateSinglePage(
-          pageIndex,
-          pageToRegenerate.record,
-          backgroundToUse,
-          positionsToUse,
-          stylesToUse,
-          sizeToUse,
-          elementsToUse,
-          1 // Always use a fontScale of 1 when saving/regenerating from an edit
-        );
-
-        // Now, create the final array by merging the regenerated image data (url, blob)
-        // into the array that already has the updated metadata.
-        const finalUpdatedPages = pagesWithUpdatedMetadata.map(img => {
-          if (img.index === pageIndex) {
-            return { ...img, ...newPageData };
-          }
-          return img;
-        });
-
-        // Perform a single, atomic state update
-        setGeneratedPagesData(finalUpdatedPages);
-
-      } catch (error) {
-        console.error(`Error during page regeneration for index ${pageIndex}:`, error);
-        alert(`Failed to regenerate page: ${error.message}`);
-      }
-    }
-
-    if (onThumbnailRecordTextUpdate) {
-      onThumbnailRecordTextUpdate(pageIndex, modifiedPageData.record);
-    }
-
     handleCloseGeneratedPageEditor();
+
+    try {
+      const backgroundToUse = modifiedPageData.customBackgroundElement || backgroundElement;
+
+      const newPageImageData = await regenerateSinglePage(
+        pageIndex,
+        modifiedPageData.record,
+        backgroundToUse,
+        modifiedPageData.fieldPositions,
+        modifiedPageData.fieldStyles,
+        null,
+        modifiedPageData.brandElements,
+        1
+      );
+
+      setGeneratedPagesData(currentPages =>
+        currentPages.map(page => {
+          if (page.index !== pageIndex) {
+            return page;
+          }
+          return {
+            ...page,
+            record: modifiedPageData.record,
+            customFieldPositions: modifiedPageData.fieldPositions,
+            customFieldStyles: modifiedPageData.fieldStyles,
+            customBrandElements: modifiedPageData.brandElements,
+            fontScale: modifiedPageData.fontScale,
+            customBackgroundElement: modifiedPageData.customBackgroundElement,
+            ...newPageImageData,
+          };
+        })
+      );
+
+      if (onThumbnailRecordTextUpdate) {
+        onThumbnailRecordTextUpdate(pageIndex, modifiedPageData.record);
+      }
+    } catch (error) {
+      console.error(`Error during page regeneration for index ${pageIndex}:`, error);
+      alert(`Failed to regenerate page: ${error.message}`);
+    }
   };
 
   const regenerateSinglePage = async (index, record, backgroundElementToUse, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1) => {
