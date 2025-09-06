@@ -127,7 +127,6 @@ function HomePage() {
   const [inputMethod, setInputMethod] = useState('ia');
   const [promptNumRecords, setPromptNumRecords] = useState(5);
   const [promptText, setPromptText] = useState('');
-  const [generateImagesAutomatically, setGenerateImagesAutomatically] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -945,20 +944,8 @@ function HomePage() {
       setGeneratedPagesData(newGeneratedPagesData);
       setInputMethod('manual');
 
-      if (generateImagesAutomatically) {
-        toast.info('Geração de posts concluída. Iniciando geração automática de páginas...');
-        let firstImageSet = false;
-
-        for (let i = 0; i < csvDataResult.length; i++) {
-          const record = csvDataResult[i];
-          const imagePrompt = record.prompt_imagem_carrossel;
-
-          if (imagePrompt && imagePrompt.trim() !== '') {
-            await handleGenerateSinglePage(record, i);
-          }
-        }
-        toast.success('Geração automática de páginas concluída!');
-      }
+      // A geração de imagens foi movida para a etapa "Gerar Páginas" a pedido do usuário.
+      toast.success('Geração de posts concluída. Prossiga para a próxima etapa para gerar as imagens.');
     } catch (error) {
       toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
     } finally {
@@ -967,7 +954,7 @@ function HomePage() {
     }
   };
 
-  const handleGenerateSinglePage = async (record, index) => {
+  const handleGenerateSinglePage = async (record, index, fontScale = 1) => {
     const imagePrompt = record.prompt_imagem_carrossel;
 
     let composingElement = backgroundElement;
@@ -1002,6 +989,7 @@ function HomePage() {
         fieldStyles,
         aspectRatio,
         backgroundElement: composingElement,
+        fontScale,
       });
 
       setGeneratedPagesData(currentPagesData => {
@@ -1124,8 +1112,6 @@ function HomePage() {
                     setPromptNumRecords={setPromptNumRecords}
                     promptText={promptText}
                     setPromptText={setPromptText}
-                    generateImagesAutomatically={generateImagesAutomatically}
-                    setGenerateImagesAutomatically={setGenerateImagesAutomatically}
                     handleGenerateIAContent={handleGenerateIAContent}
                     isGenerating={isGenerating}
                     csvData={csvData}

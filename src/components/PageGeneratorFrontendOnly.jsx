@@ -238,7 +238,9 @@ const PageGeneratorFrontendOnly = ({
     for (let i = 0; i < csvData.length; i++) {
       if (isCancelledRef.current) break;
       const record = csvData[i];
-      await handleGenerateSinglePage(record, i);
+      const pageData = initialGeneratedPagesData.find(p => p.index === i);
+      const fontScaleToUse = pageData?.fontScale || 1;
+      await handleGenerateSinglePage(record, i, fontScaleToUse);
       setProgress(p => p + 1);
     }
 
@@ -707,7 +709,7 @@ const PageGeneratorFrontendOnly = ({
                            <Tooltip title="Regerar com IA">
                                 <IconButton
                                     size="small"
-                                    onClick={() => handleGenerateSinglePage(pageData.record, pageData.index)}
+                                    onClick={() => handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1)}
                                 >
                                     <GeminiIcon />
                                 </IconButton>
