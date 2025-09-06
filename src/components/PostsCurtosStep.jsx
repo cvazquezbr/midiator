@@ -41,8 +41,6 @@ const PostsCurtosStep = ({
   setPromptNumRecords,
   promptText,
   setPromptText,
-  generateImagesAutomatically,
-  setGenerateImagesAutomatically,
   handleGenerateIAContent,
   isGenerating,
   csvData,
@@ -170,18 +168,6 @@ const PostsCurtosStep = ({
                   placeholder="Ex: Um carrossel sobre os benefícios da meditação para reduzir o estresse..."
                   sx={{ mb: 3 }}
                 />
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={generateImagesAutomatically}
-                        onChange={(e) => setGenerateImagesAutomatically(e.target.checked)}
-                      />
-                    }
-                    label="Gerar imagens"
-                    sx={{ m: 0 }} // Remove default margin
-                  />
-                </Box>
                 <Button
                   variant="contained"
                   size="large"
