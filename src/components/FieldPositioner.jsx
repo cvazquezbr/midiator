@@ -396,26 +396,6 @@ const FieldPositioner = ({
     return elements;
   }, [backgroundElement, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
-  if (!backgroundElement?.src) {
-    return (
-      <Box
-        sx={{
-          height: 400,
-          border: '2px dashed #ccc',
-          borderRadius: 2,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#f5f5f5'
-        }}
-      >
-        <Typography color="textSecondary" variant="h6">
-          Carregue uma imagem de fundo para posicionar os campos
-        </Typography>
-      </Box>
-    );
-  }
-
   return (
     <Grid container spacing={3}>
       <Grid item xs={12} lg={9}>
