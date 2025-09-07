@@ -69,6 +69,8 @@ const FieldPositioner = ({
   darkMode,
   brandElements,
   setBrandElements,
+  backgroundElement,
+  setBackgroundElement,
   onOpenHtmlEditor,
   currentPreviewIndex,
   setCurrentPreviewIndex,
@@ -77,7 +79,7 @@ const FieldPositioner = ({
   setIsCropping,
   pageState,
 }) => {
-  console.log('[FieldPositioner] props:', { fieldStyles, pageState });
+  console.log('[FieldPositioner] props:', { backgroundElement, fieldStyles, pageState });
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
@@ -124,7 +126,11 @@ const FieldPositioner = ({
   }, [onImageDisplayedSizeChange]);
 
   const handlePositionChange = (id, newPosition) => {
-    if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
+    if (id === '__background__') {
+      setBackgroundElement(prev => ({ ...prev, ...newPosition }));
+    } else if (id === '__cropbox__') {
+      setBackgroundElement(prev => ({ ...prev, crop: { ...prev.crop, ...newPosition } }));
+    } else if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
         ...prev,
         [id]: {
@@ -140,7 +146,11 @@ const FieldPositioner = ({
   };
 
   const handleSizeChange = (id, newSize) => {
-    if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
+    if (id === '__background__') {
+      setBackgroundElement(prev => ({ ...prev, ...newSize }));
+    } else if (id === '__cropbox__') {
+      setBackgroundElement(prev => ({ ...prev, crop: { ...prev.crop, ...newSize } }));
+    } else if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
         ...prev,
         [id]: {
@@ -205,7 +215,8 @@ const FieldPositioner = ({
     setIsInteracting(false);
   };
 
-  const aspectRatio = aspectRatioProp ? String(aspectRatioProp).replace(':', ' / ') : '16 / 9';
+  const [num, den] = (aspectRatioProp || '1:1').split(':').map(Number);
+  const paddingTop = den && num ? `${(den / num) * 100}%` : '100%';
 
   useEffect(() => {
     if (renderedImageMetrics.width > 0 && effectiveImageSize?.width > 0) {
@@ -248,6 +259,28 @@ const FieldPositioner = ({
 
   const renderableElements = React.useMemo(() => {
     const elements = [
+      ...(backgroundElement?.src ? [{
+        id: '__background__',
+        type: 'background',
+        position: backgroundElement,
+        style: { ...backgroundElement.filters, shadow: backgroundElement.shadow, shadowColor: backgroundElement.shadowColor, shadowBlur: backgroundElement.shadowBlur, shadowOffsetX: backgroundElement.shadowOffsetX, shadowOffsetY: backgroundElement.shadowOffsetY },
+        content: backgroundElement.src,
+        zIndex: -1,
+        rotation: backgroundElement.rotation,
+        fontScale: 1,
+        enableHtmlRendering: false,
+      }] : []),
+      ...(isCropping && backgroundElement ? [{
+        id: '__cropbox__',
+        type: 'cropbox',
+        position: backgroundElement.crop || { x: 10, y: 10, width: 80, height: 80 },
+        style: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+        content: '',
+        zIndex: 1000,
+        rotation: 0,
+        fontScale: 1,
+        enableHtmlRendering: false,
+      }] : []),
       ...(csvHeaders || [])
         .map(header => {
           const position = fieldPositions[header];
@@ -290,7 +323,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     return elements;
-  }, [isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
+  }, [backgroundElement, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
   return (
     <Box>
@@ -298,94 +331,88 @@ const FieldPositioner = ({
         <Box
           ref={containerRef}
           className="text-container"
-              sx={{
-                border: '2px solid #ddd',
-                backgroundColor: pageState?.backgroundColor || '#FFFFFF',
-                position: 'relative', // Needed for absolute positioning of children
-                cursor: 'default',
-                touchAction: 'pan-x pan-y',
-                WebkitOverflowScrolling: 'touch',
-                '&.interacting': {
-                  touchAction: 'none'
-                },
-                aspectRatio: aspectRatio,
-                width: '100%',
-              }}
-              onTouchStart={handleContainerTouchStart}
-              onTouchEnd={handleContainerTouchEnd}
-            >
-                <>
-                  <Box
-                    className="elements-wrapper"
-                    sx={{
-                      position: 'absolute',
-                      left: 0,
-                      top: 0,
-                      width: '100%',
-                      height: '100%',
-                    }}
-                    onClick={(e) => {
-                      if (e.target === e.currentTarget) {
-                        setSelectedField(null);
-                      }
-                    }}
-                    onTouchStart={(e) => {
-                      if (e.target === e.currentTarget) {
-                        setSelectedField(null);
-                      }
-                    }}
-                  >
-                    {renderableElements.map(element => (
-                      <DraggableElement
-                        key={element.id}
-                        element={element.type === 'image' || element.type === 'background' || element.type === 'cropbox' ? { ...element.position, type: element.type } : { id: element.id, type: 'text' }}
-                        position={element.position}
-                        style={element.style}
-                        content={element.content}
-                        isSelected={selectedField === element.id}
-                        onSelect={setSelectedField}
-                        onPositionChange={handlePositionChange}
-                        onSizeChange={handleSizeChange}
-                        containerSize={renderedImageMetrics}
-                        onContentChange={element.type === 'text' ? handleContentChange : undefined}
-                        onDoubleClick={() => {
-                          if (element.type === 'text' && isHtmlField(element.id)) {
-                            onOpenHtmlEditor(element.id);
-                          }
-                        }}
-                        rotation={element.rotation}
-                        originalImageSize={effectiveImageSize}
-                        fontScale={element.fontScale}
-                        enableHtmlRendering={element.enableHtmlRendering}
-                        darkMode={darkMode}
-                      />
-                    ))}
-                  </Box>
-                </>
-            </Box>
+          sx={{
+            border: '2px solid #ddd',
+            backgroundColor: pageState?.backgroundColor || '#FFFFFF',
+            position: 'relative',
+            cursor: 'default',
+            width: '100%',
+            height: 0,
+            paddingTop: paddingTop,
+          }}
+          onTouchStart={handleContainerTouchStart}
+          onTouchEnd={handleContainerTouchEnd}
+        >
+          <Box
+            className="elements-wrapper"
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setSelectedField('__background__');
+              }
+            }}
+            onTouchStart={(e) => {
+              if (e.target === e.currentTarget) {
+                setSelectedField('__background__');
+              }
+            }}
+          >
+            {renderableElements.map(element => (
+              <DraggableElement
+                key={element.id}
+                element={element.type === 'image' || element.type === 'background' || element.type === 'cropbox' ? { ...element.position, type: element.type } : { id: element.id, type: 'text' }}
+                position={element.position}
+                style={element.style}
+                content={element.content}
+                isSelected={selectedField === element.id}
+                onSelect={setSelectedField}
+                onPositionChange={handlePositionChange}
+                onSizeChange={handleSizeChange}
+                containerSize={renderedImageMetrics}
+                onContentChange={element.type === 'text' ? handleContentChange : undefined}
+                onDoubleClick={() => {
+                  if (element.type === 'text' && isHtmlField(element.id)) {
+                    onOpenHtmlEditor(element.id);
+                  }
+                }}
+                rotation={element.rotation}
+                originalImageSize={effectiveImageSize}
+                fontScale={element.fontScale}
+                enableHtmlRendering={element.enableHtmlRendering}
+                darkMode={darkMode}
+              />
+            ))}
+          </Box>
         </Box>
+      </Box>
 
-            {colorPalette && colorPalette.length > 0 && (
-              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
-                {colorPalette.map((color, index) => (
-                  <Box
-                    key={index}
-                    sx={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: '50%',
-                      backgroundColor: color,
-                      cursor: 'pointer',
-                      border: '2px solid #fff',
-                      boxShadow: '0 0 5px rgba(0,0,0,0.2)',
-                      touchAction: 'manipulation',
-                      '&:active': { transform: 'scale(0.95)' }
-                    }}
-                    onClick={() => handleColorCircleClick(color)}
-                  />
-                ))}
-              </Box>
-            )}
+      {colorPalette && colorPalette.length > 0 && (
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
+          {colorPalette.map((color, index) => (
+            <Box
+              key={index}
+              sx={{
+                width: 30,
+                height: 30,
+                borderRadius: '50%',
+                backgroundColor: color,
+                cursor: 'pointer',
+                border: '2px solid #fff',
+                boxShadow: '0 0 5px rgba(0,0,0,0.2)',
+                touchAction: 'manipulation',
+                '&:active': { transform: 'scale(0.95)' }
+              }}
+              onClick={() => handleColorCircleClick(color)}
+            />
+          ))}
+        </Box>
+      )}
     </Box>
   );
 };

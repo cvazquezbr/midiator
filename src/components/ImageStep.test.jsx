@@ -14,11 +14,17 @@ vi.mock('./FieldPositioner', () => ({
 
 describe('ImageStep', () => {
     const mockSetPageState = vi.fn();
+    const mockSetBackgroundElement = vi.fn();
+    const mockSetElements = vi.fn();
     const mockSetCurrentPreviewIndex = vi.fn();
 
     const defaultProps = {
         pageState: { backgroundColor: '#ffffff' },
         setPageState: mockSetPageState,
+        backgroundElement: null,
+        setBackgroundElement: mockSetBackgroundElement,
+        elements: [],
+        setElements: mockSetElements,
         csvData: [], // Default to no CSV data
         currentPreviewIndex: 0,
         setCurrentPreviewIndex: mockSetCurrentPreviewIndex,

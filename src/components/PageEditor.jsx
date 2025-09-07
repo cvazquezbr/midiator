@@ -59,6 +59,7 @@ const PageEditor = ({
   originalImageSize,
   brandElements,
   standardsColors,
+  globalBackgroundElement,
   aspectRatio,
 }) => {
   const [editedPositions, setEditedPositions] = useState({});
@@ -74,6 +75,39 @@ const PageEditor = ({
 
   const handleOpenHtmlEditor = (fieldId) => {
     setEditingField(fieldId);
+  };
+
+  // Local state for image filters and toggles
+  const defaultFilters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 };
+  const [editedBackgroundElement, setEditedBackgroundElement] = useState(null);
+
+  // Definir um objeto de fundo padrão mais abrangente
+  const defaultBackground = {
+    id: 'background',
+    x: 0,
+    y: 0,
+    width: 100,
+    height: 100,
+    rotation: 0,
+    visible: true,
+    filters: defaultFilters,
+    crop: null,
+    shadow: false,
+    shadowColor: '#000000',
+    shadowBlur: 10,
+    shadowOffsetX: 0,
+    shadowOffsetY: 5,
+    // Novas propriedades para cor de fundo e gradiente
+    backgroundType: 'image', // 'image', 'color', 'gradient'
+    backgroundColor: 'rgba(255, 255, 255, 0)', // Cor sólida de fundo
+    gradient: {
+      type: 'linear', // 'linear' ou 'radial'
+      angle: 90,
+      stops: [
+        { color: 'rgba(255, 255, 255, 0)', position: 0 },
+        { color: 'rgba(0, 0, 0, 0)', position: 100 },
+      ],
+    },
   };
 
   const handleInternalFieldSelection = useCallback((fieldToSelect) => {
@@ -150,11 +184,33 @@ const PageEditor = ({
       });
       setEditedStyles(newEditedStyles);
       setStylesAreInitialized(true);
+
+      // Lógica de merge aprimorada para o elemento de fundo
+      const backgroundToUse = {
+        ...defaultBackground,
+        ...(globalBackgroundElement || {}),
+        ...(pageData.customBackgroundElement || {}),
+        // Garante que os objetos aninhados (filters, gradient) sejam mesclados corretamente
+        filters: {
+          ...defaultBackground.filters,
+          ...(globalBackgroundElement?.filters || {}),
+          ...(pageData.customBackgroundElement?.filters || {}),
+        },
+        gradient: {
+          ...defaultBackground.gradient,
+          ...(globalBackgroundElement?.gradient || {}),
+          ...(pageData.customBackgroundElement?.gradient || {}),
+          // Garante uma cópia profunda do array de stops para evitar mutações indesejadas
+          stops: (pageData.customBackgroundElement?.gradient?.stops || globalBackgroundElement?.gradient?.stops || defaultBackground.gradient.stops).map(stop => ({ ...stop })),
+        }
+      };
+
+      setEditedBackgroundElement(backgroundToUse);
       setFontScale(pageData.fontScale || 1); // Initialize font scale from pageData
     } else {
       setStylesAreInitialized(false);
     }
-  }, [open, pageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, brandElements]);
+  }, [open, pageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, brandElements, globalBackgroundElement]);
 
   if (!pageData) {
     return null;
@@ -175,6 +231,7 @@ const PageEditor = ({
       fieldStyles: editedStyles,
       brandElements: editedBrandElements,
       fontScale: fontScale,
+      customBackgroundElement: editedBackgroundElement,
     };
     onSave(savedData);
     onClose();
@@ -209,6 +266,8 @@ const PageEditor = ({
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
             <Typography>Carregando editor...</Typography>
           </Box>
+        ) : !editedBackgroundElement?.src ? (
+          <Typography>Imagem de fundo não disponível para edição.</Typography>
         ) : (
           <Grid container spacing={2}>
             <Grid item xs={12} md={isMobile ? 12 : 8}>
@@ -228,6 +287,8 @@ const PageEditor = ({
                 onFontScaleChange={setFontScale}
                 brandElements={editedBrandElements}
                 setBrandElements={setEditedBrandElements}
+                backgroundElement={editedBackgroundElement}
+                setBackgroundElement={setEditedBackgroundElement}
                 currentPreviewIndex={0}
               />
             </Grid>
@@ -240,6 +301,8 @@ const PageEditor = ({
                   fieldPositions={editedPositions}
                   setFieldPositions={setEditedPositions}
                   csvHeaders={editorCsvHeaders}
+                  backgroundElement={editedBackgroundElement}
+                  setBackgroundElement={setEditedBackgroundElement}
                   brandElements={editedBrandElements}
                   setBrandElements={setEditedBrandElements}
                   onDeselectField={handleDeselectField}
@@ -279,6 +342,8 @@ const PageEditor = ({
             setFieldPositions={setEditedPositions}
             csvHeaders={editorCsvHeaders}
             onOpenHtmlEditor={handleOpenHtmlEditor}
+            backgroundElement={editedBackgroundElement}
+            setBackgroundElement={setEditedBackgroundElement}
             brandElements={editedBrandElements}
             setBrandElements={setEditedBrandElements}
             fontScale={fontScale}

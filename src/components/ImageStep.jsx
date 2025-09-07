@@ -45,6 +45,8 @@ const ImageStep = ({
   originalImageSize,
   brandElements,
   setBrandElements,
+  backgroundElement,
+  setBackgroundElement,
   pageState,
   setPageState,
   onZIndexChange,
@@ -59,7 +61,7 @@ const ImageStep = ({
   templateFieldStyles,
   activeStep,
 }) => {
-  console.log('[ImageStep] props:', { fieldStyles });
+  console.log('[ImageStep] props:', { backgroundElement, fieldStyles });
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [fontScale, setFontScale] = useState(1);
   const [isCropping, setIsCropping] = useState(false);
@@ -120,6 +122,8 @@ const ImageStep = ({
             originalImageSize={originalImageSize}
             brandElements={brandElements}
             setBrandElements={setBrandElements}
+            backgroundElement={backgroundElement}
+            setBackgroundElement={setBackgroundElement}
             pageState={pageState}
             onZIndexChange={onZIndexChange}
             onOpenHtmlEditor={onOpenHtmlEditor}
@@ -179,6 +183,8 @@ const ImageStep = ({
               csvHeaders={csvHeaders}
               brandElements={brandElements}
               setBrandElements={setBrandElements}
+              backgroundElement={backgroundElement}
+              setBackgroundElement={setBackgroundElement}
               onZIndexChange={onZIndexChange}
               onDeselectField={onDeselectField}
               onOpenHtmlEditor={onOpenHtmlEditor}
@@ -216,6 +222,8 @@ const ImageStep = ({
             csvHeaders={csvHeaders}
             brandElements={brandElements}
             setBrandElements={setBrandElements}
+            backgroundElement={backgroundElement}
+            setBackgroundElement={setBackgroundElement}
             onZIndexChange={onZIndexChange}
             onDeselectField={onDeselectField}
             onOpenHtmlEditor={onOpenHtmlEditor}
