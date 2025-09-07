@@ -15,8 +15,6 @@ const FormattingDrawer = ({
   csvHeaders,
   brandElements,
   setBrandElements,
-  backgroundElement,
-  setBackgroundElement,
   onZIndexChange,
   onDeselectField,
   onOpenHtmlEditor,
@@ -45,8 +43,6 @@ const FormattingDrawer = ({
           csvHeaders={csvHeaders}
           brandElements={brandElements}
           setBrandElements={setBrandElements}
-          backgroundElement={backgroundElement}
-          setBackgroundElement={setBackgroundElement}
           onZIndexChange={onZIndexChange}
           onDeselectField={onDeselectField}
           onOpenHtmlEditor={onOpenHtmlEditor}

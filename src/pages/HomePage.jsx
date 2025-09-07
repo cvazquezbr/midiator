@@ -1168,6 +1168,7 @@ function HomePage() {
                     fontScale={fontScale}
                     handleGenerateSinglePage={handleGenerateSinglePage}
                     aspectRatio={aspectRatio}
+                    pageState={pageState}
                   />
                 )}
                 {activeStep === 5 && (
