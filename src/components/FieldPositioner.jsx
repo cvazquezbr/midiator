@@ -77,8 +77,7 @@ const FieldPositioner = ({
   onFontScaleChange,
   isCropping,
   setIsCropping,
-  pageStyle, // new
-  setPageStyle, // new
+  pageState,
 }) => {
   console.log('[FieldPositioner] props:', { backgroundElement, fieldStyles });
   // const [selectedField, setSelectedField] = useState(null); // REMOVED: Use parent state
@@ -381,7 +380,7 @@ const FieldPositioner = ({
           className="text-container"
               sx={{
                 border: '2px solid #ddd',
-                backgroundColor: pageStyle?.backgroundColor || '#FFFFFF',
+                backgroundColor: pageState?.backgroundColor || '#FFFFFF',
                 cursor: 'default',
                 touchAction: 'pan-x pan-y',
                 WebkitOverflowScrolling: 'touch',

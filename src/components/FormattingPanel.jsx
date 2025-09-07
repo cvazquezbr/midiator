@@ -88,8 +88,8 @@ const FormattingPanel = ({
   onDeselectField,
   onOpenHtmlEditor,
   standardsColors,
-  pageStyle,
-  setPageStyle,
+  pageState,
+  setPageState,
   templateFieldStyles,
   activeStep,
   isCropping,
@@ -631,8 +631,8 @@ const FormattingPanel = ({
                       <BackgroundColorEditor
                         backgroundElement={currentElement}
                         onUpdate={setBackgroundElement}
-                        pageStyle={pageStyle}
-                        onPageStyleUpdate={setPageStyle}
+                        pageState={pageState}
+                        onPageStateUpdate={setPageState}
                       />
                     </AccordionDetails>
                   </Accordion>

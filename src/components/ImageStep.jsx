@@ -53,8 +53,8 @@ const ImageStep = ({
   setBrandElements,
   backgroundElement,
   setBackgroundElement,
-  pageStyle,
-  setPageStyle,
+  pageState,
+  setPageState,
   onZIndexChange,
   isMobile,
   selectedField,
@@ -89,7 +89,7 @@ const ImageStep = ({
   };
 
   return (
-    <Box>
+    <Box sx={{ height: '100%' }}>
       <Grid container spacing={isMobile ? 2 : 4} sx={{ height: '100%' }}>
         <Grid item xs={12} md={8} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <Typography variant="h6" sx={{ flexShrink: 0, textAlign: 'center' }}>
@@ -124,8 +124,7 @@ const ImageStep = ({
               setBrandElements={setBrandElements}
               backgroundElement={backgroundElement}
               setBackgroundElement={setBackgroundElement}
-              pageStyle={pageStyle}
-              setPageStyle={setPageStyle}
+              pageState={pageState}
               onZIndexChange={onZIndexChange}
               onOpenHtmlEditor={onOpenHtmlEditor}
               currentPreviewIndex={currentPreviewIndex}
@@ -144,7 +143,6 @@ const ImageStep = ({
               <Tooltip title="Último Registro"><span><IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><SkipNext /></IconButton></span></Tooltip>
             </Stack>
           )}
-
         </Grid>
 
         {!isMobile ? (
@@ -184,8 +182,8 @@ const ImageStep = ({
                 onDeselectField={onDeselectField}
                 onOpenHtmlEditor={onOpenHtmlEditor}
                 standardsColors={standardsColors}
-                pageStyle={pageStyle}
-                setPageStyle={setPageStyle}
+                pageState={pageState}
+                setPageState={setPageState}
                 fontScale={fontScale}
                 templateFieldStyles={templateFieldStyles}
                 activeStep={activeStep}
@@ -220,6 +218,8 @@ const ImageStep = ({
               onDeselectField={onDeselectField}
               onOpenHtmlEditor={onOpenHtmlEditor}
               standardsColors={standardsColors}
+                pageState={pageState}
+                setPageState={setPageState}
               fontScale={fontScale}
               templateFieldStyles={templateFieldStyles}
               activeStep={activeStep}

@@ -21,10 +21,20 @@ describe('ImageStep', () => {
   beforeEach(() => {
     defaultProps = {
       aspectRatio: '16:9',
+      steps: [],
+      isDraggingOverImage: false,
+      handleImageDrop: vi.fn(),
+      handleImageDragOver: vi.fn(),
+      handleImageDragEnter: vi.fn(),
+      handleImageDragLeave: vi.fn(),
+      imageInputRef: { current: null },
+      handleImageUpload: vi.fn(),
+      onChangeBackgroundImage: vi.fn(),
       csvHeaders: ['header1', 'header2'],
       fieldPositions: { header1: { x: 0, y: 0, width: 10, height: 10, visible: true } },
       setFieldPositions: vi.fn(),
       fieldStyles: { header1: { color: 'red' } },
+      initialFieldStyles: {},
       setFieldStyles: vi.fn(),
       csvData: [{ header1: 'data1', header2: 'data2' }, { header1: 'data3', header2: 'data4' }],
       onImageDisplayedSizeChange: vi.fn(),
@@ -36,6 +46,8 @@ describe('ImageStep', () => {
       setBrandElements: vi.fn(),
       backgroundElement: {},
       setBackgroundElement: vi.fn(),
+      pageState: { backgroundColor: '#FFFFFF' },
+      setPageState: vi.fn(),
       onZIndexChange: vi.fn(),
       isMobile: false,
       selectedField: null,
@@ -47,13 +59,6 @@ describe('ImageStep', () => {
       setCurrentPreviewIndex: vi.fn(),
       templateFieldStyles: {},
       activeStep: 3,
-      handleImageDrop: vi.fn(),
-      handleImageDragOver: vi.fn(),
-      handleImageDragEnter: vi.fn(),
-      handleImageDragLeave: vi.fn(),
-      handleImageUpload: vi.fn(),
-      onChangeBackgroundImage: vi.fn(),
-      imageInputRef: { current: null },
     };
   });
 
