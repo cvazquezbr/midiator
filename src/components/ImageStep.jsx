@@ -140,6 +140,16 @@ const ImageStep = ({
               <Tooltip title="Último Registro"><span><IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><SkipNext /></IconButton></span></Tooltip>
             </Stack>
           )}
+
+          {/* Temporary Debug View */}
+          <Box component="pre" sx={{ bgcolor: 'grey.100', p: 2, mt: 2, overflow: 'auto', maxHeight: 300, border: '1px solid', borderColor: 'grey.300', borderRadius: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+            <Typography variant="h6" component="div" sx={{ mb: 1 }}>Debug Info:</Typography>
+            <strong>backgroundElement:</strong>
+            {JSON.stringify(backgroundElement, null, 2)}
+            <hr style={{ margin: '16px 0' }} />
+            <strong>fieldPositions:</strong>
+            {JSON.stringify(fieldPositions, null, 2)}
+          </Box>
         </Grid>
 
         {!isMobile ? (
