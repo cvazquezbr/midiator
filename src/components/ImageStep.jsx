@@ -45,8 +45,6 @@ const ImageStep = ({
   originalImageSize,
   brandElements,
   setBrandElements,
-  backgroundElement,
-  setBackgroundElement,
   pageState,
   setPageState,
   onZIndexChange,
@@ -183,8 +181,6 @@ const ImageStep = ({
               csvHeaders={csvHeaders}
               brandElements={brandElements}
               setBrandElements={setBrandElements}
-              backgroundElement={backgroundElement}
-              setBackgroundElement={setBackgroundElement}
               onZIndexChange={onZIndexChange}
               onDeselectField={onDeselectField}
               onOpenHtmlEditor={onOpenHtmlEditor}
@@ -222,8 +218,6 @@ const ImageStep = ({
             csvHeaders={csvHeaders}
             brandElements={brandElements}
             setBrandElements={setBrandElements}
-            backgroundElement={backgroundElement}
-            setBackgroundElement={setBackgroundElement}
             onZIndexChange={onZIndexChange}
             onDeselectField={onDeselectField}
             onOpenHtmlEditor={onOpenHtmlEditor}
