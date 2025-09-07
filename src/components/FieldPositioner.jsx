@@ -79,27 +79,13 @@ const FieldPositioner = ({
   setIsCropping,
   pageState,
 }) => {
-  console.log('[FieldPositioner] props:', { backgroundElement, fieldStyles });
-  // const [selectedField, setSelectedField] = useState(null); // REMOVED: Use parent state
+  console.log('[FieldPositioner] props:', { backgroundElement, fieldStyles, pageState });
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
 
-  // The component's size is now determined by its container, not the background image.
-  // The useEffect that loaded the image to get its dimensions has been removed.
   const effectiveImageSize = originalImageSize;
-
-  // The backgroundImageSrc prop is now assumed to be the final, composed background for the editor preview.
-  // No further composition is needed here.
-
-  // REMOVED: No longer needed as we use the parent's state setter directly
-  // const handleFieldSelectInternal = useCallback((fieldToSelect) => {
-  //   setSelectedField(fieldToSelect);
-  //   if (onSelectFieldExternal) {
-  //     onSelectFieldExternal(fieldToSelect);
-  //   }
-  // }, [onSelectFieldExternal]);
 
   const handleContentChange = useCallback((field, newText) => {
     if (!csvData || csvData.length === 0) return;
@@ -114,7 +100,6 @@ const FieldPositioner = ({
       return row;
     });
 
-    // Propagate change upwards
     if (onCsvDataUpdate) {
       onCsvDataUpdate(updatedCsvData);
     }
@@ -127,8 +112,6 @@ const FieldPositioner = ({
     const observer = new ResizeObserver((entries) => {
       for (let entry of entries) {
         const { width, height } = entry.contentRect;
-        // Since the container has the correct aspect ratio and the image has object-fit: fill,
-        // the rendered metrics are simply the container's dimensions.
         setRenderedImageMetrics({ width, height, x: 0, y: 0 });
 
         if (onImageDisplayedSizeChange) {
@@ -140,12 +123,7 @@ const FieldPositioner = ({
     observer.observe(container);
 
     return () => observer.disconnect();
-  }, [onImageDisplayedSizeChange, backgroundElement?.src]);
-
-  // This component should not be responsible for initializing or updating the parent's state.
-  // It should just render the props it receives. The parent (HomePage) is responsible for
-  // ensuring the fieldPositions and fieldStyles objects are complete.
-  // The previous useEffect was causing state conflicts and loops. It has been removed.
+  }, [onImageDisplayedSizeChange]);
 
   const handlePositionChange = (id, newPosition) => {
     if (id === '__background__') {
@@ -191,7 +169,7 @@ const FieldPositioner = ({
     const newPositions = { ...fieldPositions };
     csvHeaders.forEach((header) => {
       if (newPositions[header]) {
-        const fieldWidth = newPositions[header].width || 25; // Usa 25 como padrão se a largura não estiver definida
+        const fieldWidth = newPositions[header].width || 25;
         newPositions[header] = {
           ...newPositions[header],
           x: 50 - (fieldWidth / 2),
@@ -227,9 +205,7 @@ const FieldPositioner = ({
     }
   };
 
-  // Handler para prevenir scroll durante interações
   const handleContainerTouchStart = (e) => {
-    // Só prevenir se não estiver clicando em um TextBox
     if (!e.target.closest('.text-box')) {
       setIsInteracting(true);
     }
@@ -239,30 +215,10 @@ const FieldPositioner = ({
     setIsInteracting(false);
   };
 
-
-  // Navigation handlers
-  const handleNextPreview = () => {
-    setCurrentPreviewIndex(prevIndex => Math.min(prevIndex + 1, csvData.length - 1));
-  };
-
-  const handlePreviousPreview = () => {
-    setCurrentPreviewIndex(prevIndex => Math.max(prevIndex - 1, 0));
-  };
-
-  const handleFirstPreview = () => {
-    setCurrentPreviewIndex(0);
-  };
-
-  const handleLastPreview = () => {
-    setCurrentPreviewIndex(csvData.length - 1);
-  };
-
   const aspectRatio = aspectRatioProp ? String(aspectRatioProp).replace(':', ' / ') : '16 / 9';
 
-  // Effect to calculate font scale based on the actual rendered image size
   useEffect(() => {
     if (renderedImageMetrics.width > 0 && effectiveImageSize?.width > 0) {
-      // The scale is uniform, so we can just use the width ratio.
       const scale = renderedImageMetrics.width / effectiveImageSize.width;
       setFontScale(scale);
       if (onFontScaleChange) {
@@ -276,10 +232,8 @@ const FieldPositioner = ({
     }
   }, [renderedImageMetrics, effectiveImageSize, onFontScaleChange]);
 
-  // Efeito para gerenciar scroll durante interações
   useEffect(() => {
     if (isInteracting) {
-      // Prevenir scroll apenas durante interações ativas
       document.body.style.overflow = 'hidden';
       document.body.style.touchAction = 'none';
       
@@ -304,15 +258,13 @@ const FieldPositioner = ({
 
   const renderableElements = React.useMemo(() => {
     const elements = [
-      // Background IMAGE is now a separate element, rendered only if src exists.
-      // The color/gradient layer is handled separately.
       ...(backgroundElement?.src ? [{
         id: '__background__',
         type: 'background',
         position: backgroundElement,
         style: { ...backgroundElement.filters, shadow: backgroundElement.shadow, shadowColor: backgroundElement.shadowColor, shadowBlur: backgroundElement.shadowBlur, shadowOffsetX: backgroundElement.shadowOffsetX, shadowOffsetY: backgroundElement.shadowOffsetY },
         content: backgroundElement.src,
-        zIndex: -1, // Above color layer, behind content
+        zIndex: -1,
         rotation: backgroundElement.rotation,
         fontScale: 1,
         enableHtmlRendering: false,
@@ -331,7 +283,7 @@ const FieldPositioner = ({
       ...(csvHeaders || [])
         .map(header => {
           const position = fieldPositions[header];
-          const style = completeFieldStyles[header]; // Use the guaranteed complete style object
+          const style = completeFieldStyles[header];
           if (!position || !position.visible) return null;
 
           const record = csvData[currentPreviewIndex] || {};
@@ -368,7 +320,7 @@ const FieldPositioner = ({
         .filter(Boolean)
     ];
 
-    elements.sort((a, b) => a.zIndex - b.zIndex);
+    elements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     return elements;
   }, [backgroundElement, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
@@ -381,6 +333,7 @@ const FieldPositioner = ({
               sx={{
                 border: '2px solid #ddd',
                 backgroundColor: pageState?.backgroundColor || '#FFFFFF',
+                position: 'relative', // Needed for absolute positioning of children
                 cursor: 'default',
                 touchAction: 'pan-x pan-y',
                 WebkitOverflowScrolling: 'touch',
@@ -398,10 +351,10 @@ const FieldPositioner = ({
                     className="elements-wrapper"
                     sx={{
                       position: 'absolute',
-                      left: `${renderedImageMetrics.x}px`,
-                      top: `${renderedImageMetrics.y}px`,
-                      width: `${renderedImageMetrics.width}px`,
-                      height: `${renderedImageMetrics.height}px`,
+                      left: 0,
+                      top: 0,
+                      width: '100%',
+                      height: '100%',
                     }}
                     onClick={(e) => {
                       if (e.target === e.currentTarget) {
@@ -414,7 +367,6 @@ const FieldPositioner = ({
                       }
                     }}
                   >
-                    {/* All elements, including the background image, are rendered here */}
                     {renderedImageMetrics.width > 0 && renderableElements.map(element => (
                       <DraggableElement
                         key={element.id}
@@ -466,6 +418,12 @@ const FieldPositioner = ({
                 ))}
               </Box>
             )}
+      {/* Temporary Debug View */}
+      <Box component="pre" sx={{ bgcolor: 'grey.100', p: 2, mt: 2, overflow: 'auto', maxHeight: 300, border: '1px solid', borderColor: 'grey.300', borderRadius: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'black' }}>
+        <Typography variant="h6" component="div" sx={{ mb: 1 }}>FieldPositioner State:</Typography>
+        <strong>renderableElements:</strong>
+        {JSON.stringify(renderableElements, null, 2)}
+      </Box>
     </Box>
   );
 };

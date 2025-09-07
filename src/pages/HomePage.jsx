@@ -175,7 +175,6 @@ function HomePage() {
   const [selectedField, setSelectedField] = useState(null);
   const [brandElements, setBrandElements] = useState([]);
   const [backgroundElement, setBackgroundElement] = useState(defaultBackgroundElement);
-  const [pageState, setPageState] = useState({ backgroundColor: '#FFFFFF' });
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
@@ -1235,8 +1234,6 @@ function HomePage() {
                     setBrandElements={setBrandElements}
                     backgroundElement={backgroundElement}
                     setBackgroundElement={setBackgroundElement}
-                    pageState={pageState}
-                    setPageState={setPageState}
                     onZIndexChange={handleZIndexChange}
                     isMobile={isMobile}
                     selectedField={selectedField}
@@ -1313,6 +1310,16 @@ function HomePage() {
                 {activeStep === 8 && <Monitor currentCampaign={currentCampaign} />}
 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} ><Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button><Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box><Button onClick={handleNext} disabled={isGenerating || activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)} variant="contained" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Próximo</Button></Box>
+
+                {/* Temporary Debug View */}
+                <Box component="pre" sx={{ bgcolor: 'grey.200', p: 2, mt: 2, overflow: 'auto', maxHeight: 300, border: '1px solid', borderColor: 'grey.300', borderRadius: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'black' }}>
+                  <Typography variant="h6" component="div" sx={{ mb: 1 }}>HomePage State:</Typography>
+                  <strong>pageState:</strong>
+                  {JSON.stringify(pageState, null, 2)}
+                  <hr style={{ margin: '16px 0' }} />
+                  <strong>backgroundElement SRC:</strong>
+                  {backgroundElement?.src || 'null'}
+                </Box>
               </>
             )}
             {currentView === 'personas' && <PersonasPage personaDrawerOpen={personaDrawerOpen} setPersonaDrawerOpen={setPersonaDrawerOpen} onNoPersonaSelected={() => setPersonaDrawerOpen(true)} onUpdate={fetchPersonasForCampaign} />}
