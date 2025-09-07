@@ -89,9 +89,20 @@ const ImageStep = ({
   return (
     <Box>
       <Grid container spacing={isMobile ? 2 : 4}>
-        <Grid item xs={12} md={8}>
-          <Stack spacing={2}>
-            <Typography variant="h6">Editor de Página</Typography>
+        <Grid item xs={12} md={8} sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="h6" sx={{ flexShrink: 0, textAlign: 'center' }}>
+            Editor de Página
+          </Typography>
+          <Box
+            sx={{
+              flexGrow: 1,
+              minHeight: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              my: 2,
+            }}
+          >
             <FieldPositioner
               aspectRatio={aspectRatio}
               csvHeaders={csvHeaders}
@@ -119,16 +130,16 @@ const ImageStep = ({
               isCropping={isCropping}
               setIsCropping={setIsCropping}
             />
-            {csvData && csvData.length > 1 && (
-              <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ mt: 2 }} flexWrap="wrap">
-                <Tooltip title="Primeiro Registro"><span><IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small"><SkipPrevious /></IconButton></span></Tooltip>
-                <Tooltip title="Registro Anterior"><span><IconButton onClick={handlePreviousPreview} disabled={currentPreviewIndex === 0} size="small"><ArrowLeft /></IconButton></span></Tooltip>
-                <Typography variant="body2" sx={{ minWidth: '100px', textAlign: 'center' }}>Registro: {currentPreviewIndex + 1} / {csvData.length}</Typography>
-                <Tooltip title="Próximo Registro"><span><IconButton onClick={handleNextPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><ArrowRight /></IconButton></span></Tooltip>
-                <Tooltip title="Último Registro"><span><IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><SkipNext /></IconButton></span></Tooltip>
-              </Stack>
-            )}
-          </Stack>
+          </Box>
+          {csvData && csvData.length > 1 && (
+            <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ flexShrink: 0 }} flexWrap="wrap">
+              <Tooltip title="Primeiro Registro"><span><IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small"><SkipPrevious /></IconButton></span></Tooltip>
+              <Tooltip title="Registro Anterior"><span><IconButton onClick={handlePreviousPreview} disabled={currentPreviewIndex === 0} size="small"><ArrowLeft /></IconButton></span></Tooltip>
+              <Typography variant="body2" sx={{ minWidth: '100px', textAlign: 'center' }}>Registro: {currentPreviewIndex + 1} / {csvData.length}</Typography>
+              <Tooltip title="Próximo Registro"><span><IconButton onClick={handleNextPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><ArrowRight /></IconButton></span></Tooltip>
+              <Tooltip title="Último Registro"><span><IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><SkipNext /></IconButton></span></Tooltip>
+            </Stack>
+          )}
         </Grid>
 
         {!isMobile ? (
