@@ -418,12 +418,6 @@ const FieldPositioner = ({
                 ))}
               </Box>
             )}
-      {/* Temporary Debug View */}
-      <Box component="pre" sx={{ bgcolor: 'grey.100', p: 2, mt: 2, overflow: 'auto', maxHeight: 300, border: '1px solid', borderColor: 'grey.300', borderRadius: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'black' }}>
-        <Typography variant="h6" component="div" sx={{ mb: 1 }}>FieldPositioner State:</Typography>
-        <strong>renderableElements:</strong>
-        {JSON.stringify(renderableElements, null, 2)}
-      </Box>
     </Box>
   );
 };

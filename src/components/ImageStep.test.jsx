@@ -1,82 +1,79 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import ImageStep from './ImageStep';
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
+import ImageStep from './ImageStep';
 
-// Mock child components to isolate the test to ImageStep's layout
-vi.mock('./FieldPositioner', () => ({
-  default: () => <div data-testid="field-positioner">FieldPositioner</div>,
-}));
+// Mock child components
 vi.mock('./FormattingPanel', () => ({
-  default: () => <div data-testid="formatting-panel">FormattingPanel</div>,
+  default: () => <div data-testid="formatting-panel-mock" />
 }));
-vi.mock('./FormattingDrawer', () => ({
-  default: () => <div data-testid="formatting-drawer">FormattingDrawer</div>,
+vi.mock('./FieldPositioner', () => ({
+  default: () => <div data-testid="field-positioner-mock" />
 }));
 
 describe('ImageStep', () => {
-  let defaultProps;
+    const mockSetPageState = vi.fn();
+    const mockSetBackgroundElement = vi.fn();
+    const mockSetElements = vi.fn();
+    const mockSetCurrentPreviewIndex = vi.fn();
 
-  beforeEach(() => {
-    defaultProps = {
-      aspectRatio: '16:9',
-      steps: [],
-      isDraggingOverImage: false,
-      handleImageDrop: vi.fn(),
-      handleImageDragOver: vi.fn(),
-      handleImageDragEnter: vi.fn(),
-      handleImageDragLeave: vi.fn(),
-      imageInputRef: { current: null },
-      handleImageUpload: vi.fn(),
-      onChangeBackgroundImage: vi.fn(),
-      csvHeaders: ['header1', 'header2'],
-      fieldPositions: { header1: { x: 0, y: 0, width: 10, height: 10, visible: true } },
-      setFieldPositions: vi.fn(),
-      fieldStyles: { header1: { color: 'red' } },
-      initialFieldStyles: {},
-      setFieldStyles: vi.fn(),
-      csvData: [{ header1: 'data1', header2: 'data2' }, { header1: 'data3', header2: 'data4' }],
-      onImageDisplayedSizeChange: vi.fn(),
-      colorPalette: [],
-      standardsColors: [],
-      onCsvDataUpdate: vi.fn(),
-      originalImageSize: { width: 800, height: 600 },
-      brandElements: [],
-      setBrandElements: vi.fn(),
-      backgroundElement: {},
-      setBackgroundElement: vi.fn(),
-      pageState: { backgroundColor: '#FFFFFF' },
-      setPageState: vi.fn(),
-      onZIndexChange: vi.fn(),
-      isMobile: false,
-      selectedField: null,
-      setSelectedField: vi.fn(),
-      onDeselectField: vi.fn(),
-      onOpenHtmlEditor: vi.fn(),
-      isHtmlField: () => false,
-      currentPreviewIndex: 0,
-      setCurrentPreviewIndex: vi.fn(),
-      templateFieldStyles: {},
-      activeStep: 3,
+    const defaultProps = {
+        pageState: { backgroundColor: '#ffffff' },
+        setPageState: mockSetPageState,
+        backgroundElement: null,
+        setBackgroundElement: mockSetBackgroundElement,
+        elements: [],
+        setElements: mockSetElements,
+        csvData: [], // Default to no CSV data
+        currentPreviewIndex: 0,
+        setCurrentPreviewIndex: mockSetCurrentPreviewIndex,
+        isMobile: false, // Default to desktop view
     };
-  });
 
-  it('should render the title, editor, and navigation in a flex column layout on desktop', () => {
-    render(<ImageStep {...defaultProps} />);
+    beforeEach(() => {
+        // Clear mocks before each test
+        vi.clearAllMocks();
+    });
 
-    const title = screen.getByText('Editor de Página');
+    it('renders correctly on desktop without CSV data', () => {
+        render(<ImageStep {...defaultProps} />);
 
-    // The Grid item is the flex container
-    const flexContainer = title.parentElement;
+        expect(screen.getByText('Editor de Página')).toBeInTheDocument();
+        expect(screen.getByTestId('field-positioner-mock')).toBeInTheDocument();
+        expect(screen.getByTestId('formatting-panel-mock')).toBeInTheDocument();
 
-    expect(flexContainer).toHaveStyle('display: flex');
-    expect(flexContainer).toHaveStyle('flex-direction: column');
-  });
+        // The record navigation should NOT be present
+        expect(screen.queryByText(/Registro:/)).not.toBeInTheDocument();
+    });
 
-  it('should not render the navigation controls if csvData has less than 2 items', () => {
-    render(<ImageStep {...defaultProps} csvData={[{ header1: 'data1' }]} />);
-    const navigation = screen.queryByText(/Registro:/i);
-    expect(navigation).not.toBeInTheDocument();
-  });
+    it('renders CSV record navigation when csvData is present', () => {
+        const propsWithCsv = {
+            ...defaultProps,
+            csvData: [{ name: 'John' }, { name: 'Jane' }], // Provide 2 records
+        };
+        render(<ImageStep {...propsWithCsv} />);
+
+        // The record navigation SHOULD be present
+        expect(screen.getByText(/Registro: 1 \/ 2/)).toBeInTheDocument();
+        // The Tooltip component renders an aria-label on a span
+        expect(screen.getByLabelText('Registro Anterior')).toBeInTheDocument();
+        expect(screen.getByLabelText('Próximo Registro')).toBeInTheDocument();
+    });
+
+    it('renders the upload and gallery buttons on desktop', () => {
+        render(<ImageStep {...defaultProps} isMobile={false} />);
+        expect(screen.getByRole('button', { name: /carregar/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /galeria/i })).toBeInTheDocument();
+    });
+
+    it('renders a FAB on mobile instead of the formatting panel', () => {
+        render(<ImageStep {...defaultProps} isMobile={true} />);
+
+        // The full panel shouldn't be visible
+        expect(screen.queryByTestId('formatting-panel-mock')).not.toBeInTheDocument();
+
+        // A floating action button should be visible instead
+        expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
+    });
 });
