@@ -167,7 +167,7 @@ function HomePage() {
   const [initialFieldStyles, setInitialFieldStyles] = useState({});
   const [templateFieldStyles, setTemplateFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
-  const [originalImageSize, setOriginalImageSize] = useState({ width: 1080, height: 1080 });
+  const [originalImageSize, setOriginalImageSize] = useState({ width: 1920, height: 1080 });
   const [generatedPagesData, setGeneratedPagesData] = useState([]);
   const [generatedAudioData, setGeneratedAudioData] = useState([]);
   const [generatedVideosData, setGeneratedVideosData] = useState([]);
