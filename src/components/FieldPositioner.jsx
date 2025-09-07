@@ -428,14 +428,12 @@ const FieldPositioner = ({
 
   return (
     <Box>
-      <Box
-        ref={containerRef}
-        className="text-container"
+      <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: 2 }}>
+        <Box
+          ref={containerRef}
+          className="text-container"
               sx={{
-                position: 'relative',
                 border: '2px solid #ddd',
-                borderRadius: 2,
-                overflow: 'hidden',
                 ...getBackgroundStyle(backgroundElement), // Apply dynamic background here
                 cursor: 'default',
                 touchAction: 'pan-x pan-y',
@@ -511,6 +509,7 @@ const FieldPositioner = ({
                 </>
               )}
             </Box>
+        </Box>
 
             {colorPalette && colorPalette.length > 0 && (
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
