@@ -87,127 +87,131 @@ const ImageStep = ({
   };
 
   return (
-    <Stack direction={{ xs: 'column', md: 'row' }} spacing={4}>
-      {/* Main Content Area */}
-      <Stack item xs={12} md={8} spacing={2} sx={{ flexGrow: 1 }}>
-        <Typography variant="h6">Editor de Página</Typography>
-        <FieldPositioner
-          aspectRatio={aspectRatio}
-          csvHeaders={csvHeaders}
-          fieldPositions={fieldPositions}
-          setFieldPositions={setFieldPositions}
-          fieldStyles={fieldStyles}
-          setFieldStyles={setFieldStyles}
-          csvData={csvData}
-          onImageDisplayedSizeChange={onImageDisplayedSizeChange}
-          colorPalette={colorPalette}
-          standardsColors={standardsColors}
-          onCsvDataUpdate={onCsvDataUpdate}
-          selectedField={selectedField}
-          setSelectedField={setSelectedField}
-          originalImageSize={originalImageSize}
-          brandElements={brandElements}
-          setBrandElements={setBrandElements}
-          backgroundElement={backgroundElement}
-          setBackgroundElement={setBackgroundElement}
-          onZIndexChange={onZIndexChange}
-          onOpenHtmlEditor={onOpenHtmlEditor}
-          currentPreviewIndex={currentPreviewIndex}
-          setCurrentPreviewIndex={setCurrentPreviewIndex}
-          onFontScaleChange={setFontScale}
-          isCropping={isCropping}
-          setIsCropping={setIsCropping}
-        />
-        {csvData && csvData.length > 1 && (
-          <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ mt: 2 }} flexWrap="wrap">
-            <Tooltip title="Primeiro Registro"><span><IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small"><SkipPrevious /></IconButton></span></Tooltip>
-            <Tooltip title="Registro Anterior"><span><IconButton onClick={handlePreviousPreview} disabled={currentPreviewIndex === 0} size="small"><ArrowLeft /></IconButton></span></Tooltip>
-            <Typography variant="body2" sx={{ minWidth: '100px', textAlign: 'center' }}>Registro: {currentPreviewIndex + 1} / {csvData.length}</Typography>
-            <Tooltip title="Próximo Registro"><span><IconButton onClick={handleNextPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><ArrowRight /></IconButton></span></Tooltip>
-            <Tooltip title="Último Registro"><span><IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><SkipNext /></IconButton></span></Tooltip>
-          </Stack>
-        )}
-      </Stack>
-
-      {/* Sidebar/Drawer Area */}
-      {!isMobile ? (
-        <Stack item xs={12} md={4} spacing={2} sx={{ width: { md: '320px' }, flexShrink: 0 }}>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant="contained"
-              component="label"
-              startIcon={<ImageIcon />}
-              fullWidth
-            >
-              Carregar
-              <input type="file" accept=".png,.jpg,.jpeg" hidden ref={imageInputRef} onChange={handleImageUpload} />
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={onChangeBackgroundImage}
-              fullWidth
-            >
-              Galeria
-            </Button>
-          </Box>
-          <FormattingPanel
-            selectedField={selectedField}
+    <Box>
+      <Grid container spacing={isMobile ? 2 : 4}>
+        <Grid item xs={12} md={8}>
+          <Stack spacing={2}>
+            <Typography variant="h6">Editor de Página</Typography>
+            <FieldPositioner
+              aspectRatio={aspectRatio}
+              csvHeaders={csvHeaders}
+              fieldPositions={fieldPositions}
+              setFieldPositions={setFieldPositions}
               fieldStyles={fieldStyles}
-            initialFieldStyles={initialFieldStyles}
               setFieldStyles={setFieldStyles}
-            fieldPositions={fieldPositions}
-            setFieldPositions={setFieldPositions}
-            csvHeaders={csvHeaders}
-            brandElements={brandElements}
-            setBrandElements={setBrandElements}
-            backgroundElement={backgroundElement}
-            setBackgroundElement={setBackgroundElement}
-            onZIndexChange={onZIndexChange}
-            onDeselectField={onDeselectField}
-            onOpenHtmlEditor={onOpenHtmlEditor}
+              csvData={csvData}
+              onImageDisplayedSizeChange={onImageDisplayedSizeChange}
+              colorPalette={colorPalette}
               standardsColors={standardsColors}
-            fontScale={fontScale}
-            templateFieldStyles={templateFieldStyles}
-            activeStep={activeStep}
-            isCropping={isCropping}
-            setIsCropping={setIsCropping}
-          />
-        </Stack>
-      ) : (
-        <>
-          <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 1300 }} onClick={() => {
-            if (!selectedField) {
-              setSelectedField('__background__');
-            }
-            setIsDrawerOpen(true);
-          }}><EditIcon /></Fab>
-          <FormattingDrawer
-            open={isDrawerOpen}
-            onClose={() => setIsDrawerOpen(false)}
+              onCsvDataUpdate={onCsvDataUpdate}
               selectedField={selectedField}
-            fieldStyles={fieldStyles}
-            initialFieldStyles={initialFieldStyles}
-            setFieldStyles={setFieldStyles}
-            fieldPositions={fieldPositions}
-            setFieldPositions={setFieldPositions}
-            csvHeaders={csvHeaders}
+              setSelectedField={setSelectedField}
+              originalImageSize={originalImageSize}
               brandElements={brandElements}
               setBrandElements={setBrandElements}
               backgroundElement={backgroundElement}
               setBackgroundElement={setBackgroundElement}
               onZIndexChange={onZIndexChange}
-            onDeselectField={onDeselectField}
               onOpenHtmlEditor={onOpenHtmlEditor}
-            standardsColors={standardsColors}
-            fontScale={fontScale}
-            templateFieldStyles={templateFieldStyles}
-            activeStep={activeStep}
+              currentPreviewIndex={currentPreviewIndex}
+              setCurrentPreviewIndex={setCurrentPreviewIndex}
+              onFontScaleChange={setFontScale}
               isCropping={isCropping}
               setIsCropping={setIsCropping}
             />
-        </>
-      )}
-    </Stack>
+            {csvData && csvData.length > 1 && (
+              <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ mt: 2 }} flexWrap="wrap">
+                <Tooltip title="Primeiro Registro"><span><IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small"><SkipPrevious /></IconButton></span></Tooltip>
+                <Tooltip title="Registro Anterior"><span><IconButton onClick={handlePreviousPreview} disabled={currentPreviewIndex === 0} size="small"><ArrowLeft /></IconButton></span></Tooltip>
+                <Typography variant="body2" sx={{ minWidth: '100px', textAlign: 'center' }}>Registro: {currentPreviewIndex + 1} / {csvData.length}</Typography>
+                <Tooltip title="Próximo Registro"><span><IconButton onClick={handleNextPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><ArrowRight /></IconButton></span></Tooltip>
+                <Tooltip title="Último Registro"><span><IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><SkipNext /></IconButton></span></Tooltip>
+              </Stack>
+            )}
+          </Stack>
+        </Grid>
+
+        {!isMobile ? (
+          <Grid item xs={12} md={4}>
+            <Stack spacing={2}>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button
+                  variant="contained"
+                  component="label"
+                  startIcon={<ImageIcon />}
+                  fullWidth
+                >
+                  Carregar
+                  <input type="file" accept=".png,.jpg,.jpeg" hidden ref={imageInputRef} onChange={handleImageUpload} />
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={onChangeBackgroundImage}
+                  fullWidth
+                >
+                  Galeria
+                </Button>
+              </Box>
+              <FormattingPanel
+                selectedField={selectedField}
+                fieldStyles={fieldStyles}
+                initialFieldStyles={initialFieldStyles}
+                setFieldStyles={setFieldStyles}
+                fieldPositions={fieldPositions}
+                setFieldPositions={setFieldPositions}
+                csvHeaders={csvHeaders}
+                brandElements={brandElements}
+                setBrandElements={setBrandElements}
+                backgroundElement={backgroundElement}
+                setBackgroundElement={setBackgroundElement}
+                onZIndexChange={onZIndexChange}
+                onDeselectField={onDeselectField}
+                onOpenHtmlEditor={onOpenHtmlEditor}
+                standardsColors={standardsColors}
+                fontScale={fontScale}
+                templateFieldStyles={templateFieldStyles}
+                activeStep={activeStep}
+                isCropping={isCropping}
+                setIsCropping={setIsCropping}
+              />
+            </Stack>
+          </Grid>
+        ) : (
+          <>
+            <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 1300 }} onClick={() => {
+              if (!selectedField) {
+                setSelectedField('__background__');
+              }
+              setIsDrawerOpen(true);
+            }}><EditIcon /></Fab>
+            <FormattingDrawer
+              open={isDrawerOpen}
+              onClose={() => setIsDrawerOpen(false)}
+              selectedField={selectedField}
+              fieldStyles={fieldStyles}
+              initialFieldStyles={initialFieldStyles}
+              setFieldStyles={setFieldStyles}
+              fieldPositions={fieldPositions}
+              setFieldPositions={setFieldPositions}
+              csvHeaders={csvHeaders}
+              brandElements={brandElements}
+              setBrandElements={setBrandElements}
+              backgroundElement={backgroundElement}
+              setBackgroundElement={setBackgroundElement}
+              onZIndexChange={onZIndexChange}
+              onDeselectField={onDeselectField}
+              onOpenHtmlEditor={onOpenHtmlEditor}
+              standardsColors={standardsColors}
+              fontScale={fontScale}
+              templateFieldStyles={templateFieldStyles}
+              activeStep={activeStep}
+              isCropping={isCropping}
+              setIsCropping={setIsCropping}
+            />
+          </>
+        )}
+      </Grid>
+    </Box>
   );
 };
 
