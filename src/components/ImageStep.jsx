@@ -207,7 +207,7 @@ const ImageStep = ({
             />
         </>
       )}
-    </Box>
+    </Stack>
   );
 };
 
