@@ -82,6 +82,8 @@ const FormattingPanel = ({
   csvHeaders,
   brandElements,
   setBrandElements,
+  backgroundElement,
+  setBackgroundElement,
   onZIndexChange,
   onDeselectField,
   onOpenHtmlEditor,
@@ -155,13 +157,31 @@ const FormattingPanel = ({
   };
 
   const updateBrandElementFilter = (elementId, filterProperty, value) => {
-    setBrandElements(prev =>
-      prev.map(el =>
-        el.id === elementId
-          ? { ...el, filters: { ...el.filters, [filterProperty]: value } }
-          : el
-      )
-    );
+    if (elementId === '__background__') {
+      setBackgroundElement(prev => ({
+        ...prev,
+        filters: { ...prev.filters, [filterProperty]: value },
+      }));
+    } else {
+      setBrandElements(prev =>
+        prev.map(el =>
+          el.id === elementId
+            ? { ...el, filters: { ...el.filters, [filterProperty]: value } }
+            : el
+        )
+      );
+    }
+  };
+
+  const updateBackgroundElement = (property, value) => {
+    setBackgroundElement(prev => ({ ...prev, [property]: value }));
+  };
+
+  const updateBackgroundFilter = (filter, value) => {
+    setBackgroundElement(prev => ({
+      ...prev,
+      filters: { ...prev.filters, [filter]: value },
+    }));
   };
 
   const [isTextField, setIsTextField] = React.useState(false);
@@ -173,41 +193,49 @@ const FormattingPanel = ({
   };
 
   React.useEffect(() => {
+    // Handles selection of any element, including the background
     if (selectedField) {
-      const brandEl = brandElements?.find(el => el.id === selectedField);
-      if (brandEl) {
-        // Defensively add filters if they are missing
-        const elementWithFilters = {
-          ...brandEl,
-          filters: brandEl.filters || {
-            brightness: 100,
-            contrast: 100,
-            saturate: 100,
-            blur: 0,
-            opacity: 100,
-          },
-        };
-        setCurrentElement(elementWithFilters);
+      if (selectedField === '__background__') {
+        setCurrentElement(backgroundElement);
         setIsTextField(false);
-      } else if (fieldPositions[selectedField]) {
-        setCurrentElement({
-          ...fieldPositions[selectedField],
-          style: fieldStyles[selectedField] || {},
-        });
-        setIsTextField(true);
       } else {
-        setCurrentElement(null);
+        const brandEl = brandElements?.find(el => el.id === selectedField);
+        if (brandEl) {
+          // Defensively add filters if they are missing
+          const elementWithFilters = {
+            ...brandEl,
+            filters: brandEl.filters || {
+              brightness: 100,
+              contrast: 100,
+              saturate: 100,
+              blur: 0,
+              opacity: 100,
+            },
+          };
+          setCurrentElement(elementWithFilters);
+          setIsTextField(false);
+        } else if (fieldPositions[selectedField]) {
+          setCurrentElement({
+            ...fieldPositions[selectedField],
+            style: fieldStyles[selectedField] || {},
+          });
+          setIsTextField(true);
+        } else {
+          setCurrentElement(null);
+        }
       }
     } else {
       setCurrentElement(null);
     }
-  }, [selectedField, fieldPositions, fieldStyles, brandElements]);
+  }, [selectedField, fieldPositions, fieldStyles, brandElements, backgroundElement]);
 
   const handlePositionPropertyChange = (property, value) => {
     const numericValue = parseFloat(value);
     if (isNaN(numericValue)) return;
 
-    if (isTextField) {
+    if (selectedField === '__background__') {
+      setBackgroundElement(prev => ({ ...prev, [property]: numericValue }));
+    } else if (isTextField) {
       updateFieldPosition(selectedField, property, numericValue);
     } else {
       setBrandElements(prev =>
@@ -579,52 +607,95 @@ const FormattingPanel = ({
                 </Grid>
               </>
             ) : (
-              <>
-                {/* Filtros da Imagem */}
-                <Accordion expanded={expandedPanel === 'imageFilters'} onChange={handleAccordionChange('imageFilters')}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1">🖼️ Filtros da Imagem</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <Typography gutterBottom>Brilho: {currentElement.filters.brightness}%</Typography>
-                    <Slider value={currentElement.filters.brightness} onChange={(e, v) => updateBrandElementFilter(selectedField, 'brightness', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Contraste: {currentElement.filters.contrast}%</Typography>
-                    <Slider value={currentElement.filters.contrast} onChange={(e, v) => updateBrandElementFilter(selectedField, 'contrast', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Saturação: {currentElement.filters.saturate}%</Typography>
-                    <Slider value={currentElement.filters.saturate} onChange={(e, v) => updateBrandElementFilter(selectedField, 'saturate', v)} min={0} max={200} step={1} />
-                    <Typography gutterBottom>Desfoque: {currentElement.filters.blur}px</Typography>
-                    <Slider value={currentElement.filters.blur} onChange={(e, v) => updateBrandElementFilter(selectedField, 'blur', v)} min={0} max={20} step={1} />
-                    <Typography gutterBottom>Opacidade: {currentElement.filters.opacity}%</Typography>
-                    <Slider value={currentElement.filters.opacity} onChange={(e, v) => updateBrandElementFilter(selectedField, 'opacity', v)} min={0} max={100} step={1} />
-                  </AccordionDetails>
-                </Accordion>
-
-                {/* Sombra da Imagem */}
-                <Accordion expanded={expandedPanel === 'imageShadow'} onChange={handleAccordionChange('imageShadow')}>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Typography variant="subtitle1">🎨 Sombra da Imagem</Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <FormControlLabel
-                      control={<Switch checked={currentElement.shadow || false} onChange={(e) => setBrandElements(prev => prev.map(el => el.id === selectedField ? { ...el, shadow: e.target.checked } : el))} size="small" />}
-                      label="Sombra na Imagem"
-                    />
-                    {currentElement.shadow && (
-                      <Grid container spacing={2} sx={{ mt: 1 }}>
-                        <Grid item xs={6}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.shadowColor || '#000000')} onChange={(e) => setBrandElements(prev => prev.map(el => el.id === selectedField ? { ...el, shadowColor: e.target.value } : el))} fullWidth size="small" /></Grid>
-                        <Grid item xs={6}><Typography gutterBottom>Desfoque: {currentElement.shadowBlur || 4}px</Typography><Slider value={currentElement.shadowBlur || 4} onChange={(e, v) => setBrandElements(prev => prev.map(el => el.id === selectedField ? { ...el, shadowBlur: v } : el))} min={0} max={50} size="small" /></Grid>
-                        <Grid item xs={6}><Typography gutterBottom>Offset X: {currentElement.shadowOffsetX || 2}px</Typography><Slider value={currentElement.shadowOffsetX || 2} onChange={(e, v) => setBrandElements(prev => prev.map(el => el.id === selectedField ? { ...el, shadowOffsetX: v } : el))} min={-50} max={50} size="small" /></Grid>
-                        <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.shadowOffsetY || 2}px</Typography><Slider value={currentElement.shadowOffsetY || 2} onChange={(e, v) => setBrandElements(prev => prev.map(el => el.id === selectedField ? { ...el, shadowOffsetY: v } : el))} min={-50} max={50} size="small" /></Grid>
-                      </Grid>
-                    )}
-                  </AccordionDetails>
-                </Accordion>
-
-                <Button variant="outlined" color="error" size="small" onClick={() => handleDeleteBrandElement(selectedField)} sx={{ mt: 2 }} fullWidth>
-                  Excluir Elemento
-                </Button>
-              </>
+              <Box>
+                {/* Brand Element specific controls will go here, if any, in the future */}
+                {selectedField !== '__background__' && (
+                  <Button variant="outlined" color="error" size="small" onClick={() => handleDeleteBrandElement(selectedField)} sx={{ mt: 2 }} fullWidth>
+                    Excluir Elemento
+                  </Button>
+                )}
+              </Box>
             )}
+
+            {/* Background Specific Controls */}
+            {selectedField === '__background__' && currentElement && (() => {
+              const filters = currentElement.filters || { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100, highlightColor: '#FFFFFF', highlightAmount: 0 };
+              return (
+                <>
+                  {/* Cor de Fundo e Gradiente (Sempre visível para o fundo) */}
+                  <Accordion expanded={expandedPanel === 'backgroundColor'} onChange={handleAccordionChange('backgroundColor')}>
+                    <AccordionSummary expandIcon={<ExpandMore />}>
+                      <Typography variant="subtitle1">🎨 Cor de Fundo da Página</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <BackgroundColorEditor
+                        backgroundElement={currentElement}
+                        onUpdate={setBackgroundElement}
+                        pageState={pageState}
+                        onPageStateUpdate={setPageState}
+                      />
+                    </AccordionDetails>
+                  </Accordion>
+
+                  {/* Controles que só aparecem se houver uma imagem de fundo */}
+                  {currentElement.src && (
+                    <>
+                      {/* Filtros da Imagem de Fundo */}
+                      <Accordion expanded={expandedPanel === 'backgroundFilters'} onChange={handleAccordionChange('backgroundFilters')}>
+                        <AccordionSummary expandIcon={<ExpandMore />}>
+                          <Typography variant="subtitle1">🖼️ Filtros da Imagem</Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <Typography gutterBottom>Brilho: {filters.brightness}%</Typography>
+                          <Slider value={filters.brightness} onChange={(e, v) => updateBackgroundFilter('brightness', v)} min={0} max={200} step={1} />
+                          <Typography gutterBottom>Contraste: {filters.contrast}%</Typography>
+                          <Slider value={filters.contrast} onChange={(e, v) => updateBackgroundFilter('contrast', v)} min={0} max={200} step={1} />
+                          <Typography gutterBottom>Saturação: {filters.saturate}%</Typography>
+                          <Slider value={filters.saturate} onChange={(e, v) => updateBackgroundFilter('saturate', v)} min={0} max={200} step={1} />
+                          <Typography gutterBottom>Desfoque: {filters.blur}px</Typography>
+                          <Slider value={filters.blur} onChange={(e, v) => updateBackgroundFilter('blur', v)} min={0} max={20} step={1} />
+                          <Typography gutterBottom>Opacidade: {filters.opacity}%</Typography>
+                          <Slider value={filters.opacity} onChange={(e, v) => updateBackgroundFilter('opacity', v)} min={0} max={100} step={1} />
+                        </AccordionDetails>
+                      </Accordion>
+
+                      {/* Sombra da Imagem de Fundo */}
+                      <Accordion expanded={expandedPanel === 'backgroundShadow'} onChange={handleAccordionChange('backgroundShadow')}>
+                        <AccordionSummary expandIcon={<ExpandMore />}>
+                          <Typography variant="subtitle1">🎨 Sombra da Imagem</Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <FormControlLabel
+                            control={<Switch checked={currentElement.shadow || false} onChange={(e) => updateBackgroundElement('shadow', e.target.checked)} size="small" />}
+                            label="Sombra na Imagem"
+                          />
+                          {currentElement.shadow && (
+                            <Grid container spacing={2} sx={{ mt: 1 }}>
+                              <Grid item xs={6}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.shadowColor || '#000000')} onChange={(e) => updateBackgroundElement('shadowColor', e.target.value)} fullWidth size="small" /></Grid>
+                              <Grid item xs={6}><Typography gutterBottom>Desfoque: {currentElement.shadowBlur || 4}px</Typography><Slider value={currentElement.shadowBlur || 4} onChange={(e, v) => updateBackgroundElement('shadowBlur', v)} min={0} max={50} size="small" /></Grid>
+                              <Grid item xs={6}><Typography gutterBottom>Offset X: {currentElement.shadowOffsetX || 2}px</Typography><Slider value={currentElement.shadowOffsetX || 2} onChange={(e, v) => updateBackgroundElement('shadowOffsetX', v)} min={-50} max={50} size="small" /></Grid>
+                              <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.shadowOffsetY || 2}px</Typography><Slider value={currentElement.shadowOffsetY || 2} onChange={(e, v) => updateBackgroundElement('shadowOffsetY', v)} min={-50} max={50} size="small" /></Grid>
+                            </Grid>
+                          )}
+                        </AccordionDetails>
+                      </Accordion>
+
+                      {/* Cortar Imagem */}
+                      <Box sx={{ mt: 2 }}>
+                        <Button
+                          variant={isCropping ? "contained" : "outlined"}
+                          color="primary"
+                          onClick={() => setIsCropping(!isCropping)}
+                          fullWidth
+                        >
+                          {isCropping ? 'Salvar Corte' : 'Cortar Imagem'}
+                        </Button>
+                      </Box>
+                    </>
+                  )}
+                </>
+              );
+            })()}
 
             {/* Common Controls for all elements */}
             <Accordion expanded={expandedPanel === 'positionSize'} onChange={handleAccordionChange('positionSize')}>
@@ -751,19 +822,6 @@ const FormattingPanel = ({
         )}
 
         <Divider sx={{ my: 2 }} />
-
-        {/* Page Background Controls - Always visible */}
-        <Accordion expanded={expandedPanel === 'pageBackground'} onChange={handleAccordionChange('pageBackground')}>
-          <AccordionSummary expandIcon={<ExpandMore />}>
-            <Typography variant="subtitle1">🎨 Fundo da Página</Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <BackgroundColorEditor
-              pageState={pageState}
-              onPageStateUpdate={setPageState}
-            />
-          </AccordionDetails>
-        </Accordion>
 
         {/* Brand Elements */}
         <Accordion expanded={expandedPanel === 'brandElements'} onChange={handleAccordionChange('brandElements')}>

@@ -74,6 +74,37 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
   return hex.length === 1 ? '0' + hex : hex;
 }).join('');
 
+const defaultBackgroundElement = {
+  id: '__background__',
+  type: 'background',
+  src: null,
+  visible: true,
+  rotation: 0,
+  x: 0,
+  y: 0,
+  width: 100,
+  height: 100,
+  crop: null,
+  // Background-specific properties
+  backgroundType: 'color', // 'color', 'gradient', or 'image'
+  backgroundColor: '#FFFFFF',
+  gradient: null, // Initialized as null, created on-demand
+  // Filters
+  filters: {
+    brightness: 100,
+    contrast: 100,
+    saturate: 100,
+    blur: 0,
+    opacity: 100
+  },
+  // Shadow
+  shadow: false,
+  shadowColor: '#000000',
+  shadowBlur: 10,
+  shadowOffsetX: 5,
+  shadowOffsetY: 5,
+};
+
 function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
@@ -143,6 +174,7 @@ function HomePage() {
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [selectedField, setSelectedField] = useState(null);
   const [brandElements, setBrandElements] = useState([]);
+  const [backgroundElement, setBackgroundElement] = useState(defaultBackgroundElement);
   const [pageState, setPageState] = useState({ backgroundColor: '#FFFFFF' });
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
@@ -224,49 +256,45 @@ function HomePage() {
         : []
     );
     setGeneratedVideosData(Array.isArray(state.generatedVideosData) ? state.generatedVideosData : []);
-    const loadedBrandElements = Array.isArray(state.brandElements) ? state.brandElements : [];
-    let backgroundAsBrandElement = null;
+    setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
 
-    // Convert legacy backgroundElement to a brandElement
-    if (state.backgroundElement && state.backgroundElement.src) {
-      const be = state.backgroundElement;
-      backgroundAsBrandElement = {
-        id: be.id || `brand_${Date.now()}`,
-        type: 'image',
-        url: be.src,
-        name: 'background-image',
-        visible: be.visible !== undefined ? be.visible : true,
-        x: be.x || 0,
-        y: be.y || 0,
-        width: be.width || 100,
-        height: be.height || 100,
-        rotation: be.rotation || 0,
-        zIndex: be.zIndex || 0,
-        filters: be.filters || { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
-        shadow: be.shadow || false,
-        shadowColor: be.shadowColor || '#000000',
-        shadowBlur: be.shadowBlur || 10,
-        shadowOffsetX: be.shadowOffsetX || 5,
-        shadowOffsetY: be.shadowOffsetY || 5,
-      };
-    }
-    // Convert even older backgroundImage to a brandElement
-    else if (state.backgroundImage) {
-      backgroundAsBrandElement = {
-        id: `brand_${Date.now()}`,
-        type: 'image',
-        url: state.backgroundImage,
-        name: 'background-image',
-        visible: true, x: 0, y: 0, width: 100, height: 100, rotation: 0, zIndex: 0,
-        filters: { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
-        shadow: false, shadowColor: '#000000', shadowBlur: 10, shadowOffsetX: 5, shadowOffsetY: 5,
-      };
-    }
+    // Logic to load background image and its associated element state correctly.
+    const loadedBackground = state.backgroundElement;
 
-    const finalBrandElements = backgroundAsBrandElement
-      ? [...loadedBrandElements, backgroundAsBrandElement]
-      : loadedBrandElements;
-    setBrandElements(finalBrandElements);
+    if (loadedBackground) {
+      // Merge loaded data with defaults to ensure all properties exist
+      const mergedBackground = {
+        ...defaultBackgroundElement,
+        ...loadedBackground,
+        filters: {
+          ...defaultBackgroundElement.filters,
+          ...(loadedBackground.filters || {}),
+        },
+        gradient: loadedBackground.gradient ? {
+          ...defaultBackgroundElement.gradient,
+          ...loadedBackground.gradient,
+        } : defaultBackgroundElement.gradient,
+      };
+
+      // Handle legacy campaigns that only had `backgroundImage`
+      if (!mergedBackground.src && state.backgroundImage) {
+        mergedBackground.src = state.backgroundImage;
+      }
+
+      // If there's a src, let updateImageAndPalette handle setting the state
+      // as it needs to load the image to get dimensions, etc.
+      if (mergedBackground.src) {
+        updateImageAndPalette(mergedBackground.src, mergedBackground);
+      } else {
+        setBackgroundElement(mergedBackground);
+      }
+    } else if (state.backgroundImage) {
+      // Legacy case: only backgroundImage is present
+      updateImageAndPalette(state.backgroundImage, { ...defaultBackgroundElement, src: state.backgroundImage });
+    } else {
+      // No background info in the loaded state, reset to the default
+      setBackgroundElement(defaultBackgroundElement);
+    }
 
     setProblema(state.problema ?? '');
     setSolucao(state.solucao ?? '');
@@ -346,6 +374,7 @@ function HomePage() {
       fieldStyles,
       templateFieldStyles,
       brandElements,
+      backgroundElement,
       generatedPageUrl,
       generatedPagesData,
       generatedAudioData,
@@ -504,6 +533,10 @@ function HomePage() {
   }, [darkMode]);
 
   useEffect(() => {
+    console.log('[HomePage] backgroundElement state changed:', backgroundElement);
+  }, [backgroundElement]);
+
+  useEffect(() => {
     if (isMobile) setSidebarOpen(false);
   }, [isMobile]);
 
@@ -602,36 +635,39 @@ function HomePage() {
   const handleCSVUpload = (event) => { const file = event.target.files[0]; parseCsvFile(file); };
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
-  const addImageAsBrandElement = useCallback((imageUrl) => {
+  const updateImageAndPalette = useCallback((imageUrl, existingBackgroundElement = null) => {
+    console.log('[HomePage] updateImageAndPalette called.', {
+      hasImageUrl: !!imageUrl,
+      hasExistingBackgroundElement: !!existingBackgroundElement
+    });
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
-      // Set originalImageSize if it's the first image, might be useful
-      if (brandElements.length === 0) {
-        setOriginalImageSize({ width: img.width, height: img.height });
+      setOriginalImageSize({ width: img.width, height: img.height });
+      if (existingBackgroundElement) {
+        // Ensure the new imageUrl is always set, even on an existing element
+        setBackgroundElement({ ...existingBackgroundElement, src: imageUrl });
+      } else {
+        // FIX: The src property was missing, causing the image not to appear
+        setBackgroundElement({
+          id: '__background__',
+          type: 'background',
+          src: imageUrl,
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 100,
+          rotation: 0,
+          visible: true,
+          filters: { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
+          shadow: false,
+          shadowColor: '#000000',
+          shadowBlur: 10,
+          shadowOffsetX: 5,
+          shadowOffsetY: 5,
+          crop: null,
+        });
       }
-
-      const newImageElement = {
-        id: `brand_${Date.now()}`,
-        type: 'image',
-        url: imageUrl,
-        name: 'background-image', // for identification
-        visible: true,
-        x: 0,
-        y: 0,
-        width: 100,
-        height: 100,
-        rotation: 0,
-        zIndex: 0, // Base layer for brand elements
-        filters: { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
-        shadow: false,
-        shadowColor: '#000000',
-        shadowBlur: 10,
-        shadowOffsetX: 5,
-        shadowOffsetY: 5,
-      };
-      setBrandElements(prev => [...prev, newImageElement]);
-
       try {
         const colorThief = new ColorThief();
         const palette = colorThief.getPalette(img, 5);
@@ -642,11 +678,12 @@ function HomePage() {
       }
     };
     img.onerror = (err) => {
-      console.error("Error loading image:", err);
-      toast.error("Houve um erro ao carregar a imagem.");
+      console.error("Error loading image to extract colors:", err);
+      setColorPalette([]);
+      setBackgroundElement(null);
     };
     img.src = imageUrl;
-  }, [brandElements]);
+  }, []);
   const parseImageFile = (file) => {
     if (!file) return;
     handleBackgroundImageUpload(file);
@@ -687,12 +724,60 @@ function HomePage() {
 
         const resizedDataUrl = canvas.toDataURL(file.type);
 
-        // Add the uploaded image as a new brand element
-        addImageAsBrandElement(resizedDataUrl);
+        updateImageAndPalette(resizedDataUrl, null);
       };
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
+
+    // TODO: Move the Google Drive upload to a separate, user-initiated action
+    // to avoid unconditional uploads. For now, the logic is disabled.
+    /*
+    const toastId = toast.loading("Salvando imagem na sua biblioteca do Google Drive (opcional)...");
+    try {
+      if (!googleAccessToken) {
+        toast.info("Conecte sua conta Google para salvar a imagem na sua biblioteca.", { id: toastId });
+        return;
+      }
+
+      let midiatorFolder = await findFolderByName('midiator');
+      if (!midiatorFolder) {
+        midiatorFolder = await createFolder('midiator');
+      }
+
+      let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id);
+      if (!backgroundsFolder) {
+        backgroundsFolder = await createFolder('backgrounds', midiatorFolder.id);
+      }
+
+      let uploadedFile;
+      const existingFile = await findFileByNameInFolder(file.name, backgroundsFolder.id);
+      if (existingFile) {
+        toast.info(`Imagem "${file.name}" já existe na sua biblioteca do Google Drive.`, { id: toastId });
+        uploadedFile = existingFile;
+      } else {
+        uploadedFile = await uploadFile(file, file.name, backgroundsFolder.id);
+        toast.success(`Imagem "${file.name}" salva na sua biblioteca do Google Drive!`, { id: toastId });
+      }
+
+      if (!uploadedFile || !uploadedFile.id) {
+        throw new Error("O upload do arquivo para o Drive falhou.");
+      }
+
+      const permanentUrl = `https://lh3.googleusercontent.com/d/${uploadedFile.id}`;
+      setBackgroundImage(permanentUrl);
+      setBackgroundElement(prev => {
+        if (prev) {
+          return { ...prev, src: permanentUrl };
+        }
+        return null; // Should not happen if onload has fired
+      });
+
+    } catch (err) {
+      console.error("Failed to upload and set background image to Google Drive:", err);
+      toast.error(`Falha ao salvar no Google Drive: ${err.message}`, { id: toastId });
+    }
+    */
   };
 
   const handleNext = () => {
@@ -846,7 +931,7 @@ function HomePage() {
       const imageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
       console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Setting generatedPageUrl. Value starts with:', String(imageUrl).substring(0, 100));
       setGeneratedPageUrl(imageUrl);
-      addImageAsBrandElement(imageUrl);
+      updateImageAndPalette(imageUrl);
       return true;
     } catch (imageError) {
       toast.error(`Ocorreu um erro ao gerar a imagem da campanha: ${imageError.message}`);
@@ -856,7 +941,7 @@ function HomePage() {
     } finally {
       setIsGeneratingImage(false);
     }
-  }, [aspectRatio, addImageAsBrandElement]);
+  }, [aspectRatio, updateImageAndPalette]);
   const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
   const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
   const handleGenerateFollowupPosts = async (content = campaignContent) => {
@@ -956,11 +1041,27 @@ function HomePage() {
   const handleGenerateSinglePage = async (record, index, fontScale = 1) => {
     const imagePrompt = record.prompt_imagem_carrossel;
 
-    // The background is now part of brandElements. If a specific prompt for an image
-    // exists, we could generate a new image and add it to a temporary brandElements
-    // array for this specific page generation. For now, we'll assume composeSingleImage
-    // uses the existing brandElements which may contain a background image.
-    // The logic for per-page background generation has been simplified.
+    let composingElement = backgroundElement;
+    let pageUpdateData = {};
+
+    if (imagePrompt && imagePrompt.trim() !== '') {
+      setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
+      try {
+        const uniqueImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
+
+        const tempBackgroundElement = {
+          ...(backgroundElement || {}),
+          id: '__background__',
+          src: uniqueImageUrl,
+        };
+        composingElement = tempBackgroundElement;
+
+        pageUpdateData.customBackgroundElement = tempBackgroundElement;
+
+      } catch (error) {
+        toast.error(`Falha ao gerar imagem para o post #${index + 1}: ${error.message}`);
+      }
+    }
 
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
@@ -971,15 +1072,14 @@ function HomePage() {
         fieldPositions,
         fieldStyles,
         aspectRatio,
+        backgroundElement: composingElement,
         fontScale,
-        // pageState is now passed to provide the base background color
-        pageState,
       });
 
       setGeneratedPagesData(currentPagesData => {
         const newPagesData = [...currentPagesData];
         const existingPageData = newPagesData[index] || {};
-        newPagesData[index] = { ...existingPageData, ...finalPageData };
+        newPagesData[index] = { ...existingPageData, ...finalPageData, ...pageUpdateData };
         return newPagesData;
       });
 
@@ -1019,7 +1119,7 @@ function HomePage() {
         />
         {currentView === 'campaigns' && (
           <>
-            <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
+            <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImageSrc={backgroundElement?.src} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
             {!isMobile && <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out', backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', '&:hover': { backgroundColor: 'background.default' } }} >{sidebarOpen ? <ChevronLeft /> : <ChevronRight />}</Fab>}
           </>
         )}
@@ -1133,6 +1233,8 @@ function HomePage() {
                     originalImageSize={originalImageSize}
                     brandElements={brandElements}
                     setBrandElements={setBrandElements}
+                    backgroundElement={backgroundElement}
+                    setBackgroundElement={setBackgroundElement}
                     pageState={pageState}
                     setPageState={setPageState}
                     onZIndexChange={handleZIndexChange}
@@ -1168,7 +1270,7 @@ function HomePage() {
                     fontScale={fontScale}
                     handleGenerateSinglePage={handleGenerateSinglePage}
                     aspectRatio={aspectRatio}
-                    pageState={pageState}
+                    backgroundElement={backgroundElement}
                   />
                 )}
                 {activeStep === 5 && (

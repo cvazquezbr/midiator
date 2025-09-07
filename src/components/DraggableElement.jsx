@@ -80,6 +80,9 @@ const DraggableElementInternal = ({
   // Função para renderizar conteúdo HTML ou texto simples
   const renderContent = () => {
     // A lógica de renderização do fundo foi movida para o estilo do Box principal.
+    if (element.type === 'background') {
+      return null;
+    }
     if (element.type === 'image') {
       return (
         <img
@@ -588,6 +591,46 @@ const DraggableElementInternal = ({
     handleTouchStart(e, type, handle);
   };
 
+  const getBackgroundStyle = (style, content) => {
+    const { backgroundType, backgroundColor, gradient, src } = style;
+    const imageUrl = content || src;
+    const css = {
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+    };
+
+    switch (backgroundType) {
+        case 'color':
+            css.backgroundColor = backgroundColor;
+            css.backgroundImage = 'none';
+            break;
+        case 'gradient':
+            if (gradient && gradient.stops) {
+                const stops = gradient.stops.map(s => `${s.color} ${s.position}%`).join(', ');
+                if (gradient.type === 'linear') {
+                    css.backgroundImage = `linear-gradient(${gradient.angle || 90}deg, ${stops})`;
+                } else {
+                    css.backgroundImage = `radial-gradient(circle, ${stops})`;
+                }
+            } else {
+                 css.backgroundImage = 'none';
+            }
+            break;
+        case 'image':
+        default:
+            if (imageUrl) {
+                css.backgroundImage = `url("${imageUrl}")`;
+            } else {
+                css.backgroundImage = 'none';
+            }
+            // A cor de fundo pode ser usada como um "tint" ou fallback
+            css.backgroundColor = style.backgroundColor || 'transparent';
+            break;
+    }
+    return css;
+  };
+
   const boxSx = {
     left: `${position.x}%`,
     top: `${position.y}%`,
@@ -595,11 +638,13 @@ const DraggableElementInternal = ({
     height: `${position.height}%`,
     transform: `rotate(${rotation || 0}deg)`,
     zIndex: position.zIndex || 'auto',
-    filter: (element.type === 'image') ? getFilterString(style) : 'none',
-    boxShadow: (element.type === 'image') ? getBoxShadowString(style) : 'none',
+    filter: (element.type === 'image' || element.type === 'background') ? getFilterString(style) : 'none',
+    boxShadow: (element.type === 'image' || element.type === 'background') ? getBoxShadowString(style) : 'none',
   };
 
-  if (element.type === 'image' || element.type === 'cropbox') {
+  if (element.type === 'background') {
+    Object.assign(boxSx, getBackgroundStyle(style, content));
+  } else if (element.type === 'image' || element.type === 'cropbox') {
     boxSx.backgroundColor = 'transparent';
     boxSx.border = 'none';
     boxSx.padding = 0;

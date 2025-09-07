@@ -29,7 +29,7 @@ describe('composeSingleImage', () => {
       fieldStyles: { text: { fontSize: 16, color: '#000000' } },
       fontScale: 1,
       aspectRatio: '1:1',
-      pageState: { backgroundColor: '#FFFFFF' },
+      backgroundElement: { filters: {} },
     });
 
     expect(result).toHaveProperty('url');
@@ -66,11 +66,7 @@ describe('composeSingleImage', () => {
       fieldStyles: { text: { fontSize: 16, color: '#000000' } },
       fontScale: 1,
       aspectRatio: '1:1',
-      pageState: { backgroundColor: '#FFFFFF' },
-      brandElements: [{
-        url: dummy_background,
-        type: 'image',
-        zIndex: 0,
+      backgroundElement: {
         filters: {
           brightness: 150,
           contrast: 120,

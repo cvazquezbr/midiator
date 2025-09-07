@@ -146,8 +146,8 @@ export const composeSingleImage = async ({
     fieldPositions = {},
     fieldStyles = {},
     aspectRatio,
+    backgroundElement, // The single source of truth for the background
     fontScale = 1,
-    pageState,
 }) => {
 
     // 1. Create final canvas with fixed dimensions based on aspect ratio.
@@ -164,12 +164,77 @@ export const composeSingleImage = async ({
         finalCanvas.height = dimensions.height;
     }
 
-    // The page's base color.
-    ctx.fillStyle = pageState?.backgroundColor || 'white';
+    // Default white background in case no image is provided.
+    ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
-    // 2. The background image is now a standard brand element, so it will be drawn
-    // along with other elements in the correct z-index order.
+    // 2. Draw the single background image if it exists, applying all transformations.
+    if (backgroundElement?.src) {
+        try {
+            const bgImg = await loadImage(backgroundElement.src);
+            ctx.save();
+            const canvasWidth = finalCanvas.width;
+            const canvasHeight = finalCanvas.height;
+
+            const {
+              x = 0, y = 0, width = 100, height = 100,
+              rotation = 0,
+              filters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
+              crop,
+              shadow, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY
+            } = backgroundElement;
+
+            if (shadow) {
+              ctx.shadowColor = shadowColor || '#000000';
+              ctx.shadowBlur = shadowBlur || 10;
+              ctx.shadowOffsetX = shadowOffsetX || 5;
+              ctx.shadowOffsetY = shadowOffsetY || 5;
+            }
+
+            const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters || {};
+            ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
+
+            const dx = (x / 100) * canvasWidth;
+            const dy = (y / 100) * canvasHeight;
+            const dWidth = (width / 100) * canvasWidth;
+            const dHeight = (height / 100) * canvasHeight;
+
+            if (rotation) {
+              const centerX = dx + dWidth / 2;
+              const centerY = dy + dHeight / 2;
+              ctx.translate(centerX, centerY);
+              ctx.rotate(rotation * Math.PI / 180);
+              ctx.translate(-centerX, -centerY);
+            }
+
+            if (crop && crop.width > 0 && crop.height > 0) {
+              const sx = (crop.x / 100) * bgImg.width;
+              const sy = (crop.y / 100) * bgImg.height;
+              const sWidth = (crop.width / 100) * bgImg.width;
+              const sHeight = (crop.height / 100) * bgImg.height;
+              ctx.drawImage(bgImg, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+            } else {
+              ctx.drawImage(bgImg, dx, dy, dWidth, dHeight);
+            }
+
+            // The main filters have been applied by ctx.filter. Now, apply the custom highlight filter.
+            // We must do this before restoring the context if we want it to be contained within the rotated/scaled element.
+            // However, it's easier to apply to the whole canvas and let the drawImage contain it.
+            // So we apply it AFTER the drawing, but before restoring the main context.
+            ctx.filter = 'none'; // Reset standard filters before pixel manipulation
+            if (filters.highlightAmount && filters.highlightAmount > 0) {
+              applyColorHighlight(ctx, canvasWidth, canvasHeight, filters.highlightColor, filters.highlightAmount);
+            }
+
+            ctx.restore();
+        } catch (error) {
+            console.error('[imageComposer] Failed to draw background image:', error);
+            ctx.fillStyle = 'red';
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Erro ao carregar o fundo', finalCanvas.width / 2, finalCanvas.height / 2);
+        }
+    }
 
     // 3. Collect and sort all elements (text and brand) by zIndex
     const elementsToDraw = [];
@@ -331,5 +396,7 @@ export const composeSingleImage = async ({
         record,
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+        // Return the state of the background that was actually used for composition
+        customBackgroundElement: backgroundElement,
     };
 };
