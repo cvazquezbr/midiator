@@ -442,9 +442,10 @@ const FieldPositioner = ({
                   touchAction: 'none'
                 },
                 aspectRatio: aspectRatio,
-                maxWidth: '800px',
-                maxHeight: '85vh',
-                mx: 'auto',
+                width: '100%',
+                height: 'auto',
+                maxHeight: '100%',
+                maxWidth: '100%',
               }}
               onTouchStart={handleContainerTouchStart}
               onTouchEnd={handleContainerTouchEnd}
