@@ -428,34 +428,6 @@ const FieldPositioner = ({
 
   return (
     <Box>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1, sm: 2 }} justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-        <Typography variant="h6">
-          Editor de Campos
-        </Typography>
-        <Stack direction="row" spacing={1}>
-          <Button
-            size="small"
-            onClick={centerAllFields}
-            startIcon={<CenterFocusStrong />}
-          >
-            Centralizar
-          </Button>
-          <Button
-            size="small"
-            onClick={autoArrangeFields}
-            startIcon={<Add />}
-          >
-            Auto Organizar
-          </Button>
-        </Stack>
-      </Stack>
-
-      {csvData.length === 0 && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          Carregue um arquivo CSV para ver o preview dos dados
-        </Alert>
-      )}
-
       <Box
         ref={containerRef}
         className="text-container"
@@ -539,16 +511,6 @@ const FieldPositioner = ({
                 </>
               )}
             </Box>
-
-            {csvData && csvData.length > 1 && (
-              <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ mt: 2 }} flexWrap="wrap">
-                <Tooltip title="Primeiro Registro"><span><IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small"><SkipPrevious /></IconButton></span></Tooltip>
-                <Tooltip title="Registro Anterior"><span><IconButton onClick={handlePreviousPreview} disabled={currentPreviewIndex === 0} size="small"><ArrowLeft /></IconButton></span></Tooltip>
-                <Typography variant="body2" sx={{ minWidth: '100px', textAlign: 'center' }}>Registro: {currentPreviewIndex + 1} / {csvData.length}</Typography>
-                <Tooltip title="Próximo Registro"><span><IconButton onClick={handleNextPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><ArrowRight /></IconButton></span></Tooltip>
-                <Tooltip title="Último Registro"><span><IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><SkipNext /></IconButton></span></Tooltip>
-              </Stack>
-            )}
 
             {colorPalette && colorPalette.length > 0 && (
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
