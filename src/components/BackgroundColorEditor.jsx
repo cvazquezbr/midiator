@@ -70,7 +70,14 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageS
         fullWidth
         size="small"
         onChange={(e, newMode) => {
-          if (newMode) setColorMode(newMode);
+          if (newMode) {
+            setColorMode(newMode);
+            // When user selects a color/gradient, we remove the image src
+            // so the background image disappears.
+            if (backgroundElement?.src) {
+              onUpdate({ ...backgroundElement, src: null });
+            }
+          }
         }}
         aria-label="color mode"
       >
