@@ -88,15 +88,15 @@ const ImageStep = ({
 
   return (
     <Box>
-      <Grid container spacing={isMobile ? 2 : 4}>
-        <Grid item xs={12} md={8} sx={{ display: 'flex', flexDirection: 'column' }}>
+      <Grid container spacing={isMobile ? 2 : 4} sx={{ height: '100%' }}>
+        <Grid item xs={12} md={8} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <Typography variant="h6" sx={{ flexShrink: 0, textAlign: 'center' }}>
             Editor de Página
           </Typography>
           <Box
             sx={{
               flexGrow: 1,
-              minHeight: 0,
+              minHeight: 0, // Allow shrinking
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
