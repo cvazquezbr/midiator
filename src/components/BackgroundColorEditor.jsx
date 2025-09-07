@@ -13,23 +13,23 @@ import {
 } from '@mui/material';
 import { Add, Delete, Gradient } from '@mui/icons-material';
 
-const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageStyle, onPageStyleUpdate }) => {
+const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageStateUpdate }) => {
   // Determine the initial mode. If the backgroundElement has a gradient, default to gradient mode.
   const initialMode = backgroundElement?.gradient ? 'gradient' : 'solid';
   const [colorMode, setColorMode] = React.useState(initialMode);
 
   // When the component opens, if the mode is gradient, clear the solid page color to avoid confusion.
   React.useEffect(() => {
-    if (initialMode === 'gradient' && pageStyle?.backgroundColor) {
-       // onPageStyleUpdate({ ...pageStyle, backgroundColor: 'rgba(0,0,0,0)' });
+    if (initialMode === 'gradient' && pageState?.backgroundColor) {
+       // onPageStateUpdate({ ...pageState, backgroundColor: 'rgba(0,0,0,0)' });
     }
   }, [initialMode]);
 
 
   if (!backgroundElement) return null;
 
-  const handlePageStyleUpdate = (property, value) => {
-    onPageStyleUpdate({ ...pageStyle, [property]: value });
+  const handlePageStateUpdate = (property, value) => {
+    onPageStateUpdate({ ...pageState, [property]: value });
   };
 
   const handleGradientUpdate = (property, value) => {
@@ -87,8 +87,8 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageStyle, onPageS
           <Typography gutterBottom>Cor</Typography>
           <TextField
             type="color"
-            value={pageStyle?.backgroundColor || '#ffffff'}
-            onChange={(e) => handlePageStyleUpdate('backgroundColor', e.target.value)}
+            value={pageState?.backgroundColor || '#ffffff'}
+            onChange={(e) => handlePageStateUpdate('backgroundColor', e.target.value)}
             fullWidth
           />
         </Box>
