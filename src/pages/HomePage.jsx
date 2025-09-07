@@ -175,6 +175,7 @@ function HomePage() {
   const [selectedField, setSelectedField] = useState(null);
   const [brandElements, setBrandElements] = useState([]);
   const [backgroundElement, setBackgroundElement] = useState(defaultBackgroundElement);
+  const [pageStyle, setPageStyle] = useState({ backgroundColor: '#FFFFFF' });
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
@@ -1234,6 +1235,8 @@ function HomePage() {
                     setBrandElements={setBrandElements}
                     backgroundElement={backgroundElement}
                     setBackgroundElement={setBackgroundElement}
+                    pageStyle={pageStyle}
+                    setPageStyle={setPageStyle}
                     onZIndexChange={handleZIndexChange}
                     isMobile={isMobile}
                     selectedField={selectedField}

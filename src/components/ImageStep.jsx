@@ -53,6 +53,8 @@ const ImageStep = ({
   setBrandElements,
   backgroundElement,
   setBackgroundElement,
+  pageStyle,
+  setPageStyle,
   onZIndexChange,
   isMobile,
   selectedField,
@@ -122,6 +124,8 @@ const ImageStep = ({
               setBrandElements={setBrandElements}
               backgroundElement={backgroundElement}
               setBackgroundElement={setBackgroundElement}
+              pageStyle={pageStyle}
+              setPageStyle={setPageStyle}
               onZIndexChange={onZIndexChange}
               onOpenHtmlEditor={onOpenHtmlEditor}
               currentPreviewIndex={currentPreviewIndex}
@@ -180,6 +184,8 @@ const ImageStep = ({
                 onDeselectField={onDeselectField}
                 onOpenHtmlEditor={onOpenHtmlEditor}
                 standardsColors={standardsColors}
+                pageStyle={pageStyle}
+                setPageStyle={setPageStyle}
                 fontScale={fontScale}
                 templateFieldStyles={templateFieldStyles}
                 activeStep={activeStep}
