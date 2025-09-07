@@ -331,90 +331,88 @@ const FieldPositioner = ({
         <Box
           ref={containerRef}
           className="text-container"
-              sx={{
-                border: '2px solid #ddd',
-                backgroundColor: pageState?.backgroundColor || '#FFFFFF',
-                position: 'relative',
-                cursor: 'default',
-                width: '100%',
-                height: 0,
-                paddingTop: paddingTop,
-              }}
-              onTouchStart={handleContainerTouchStart}
-              onTouchEnd={handleContainerTouchEnd}
-            >
-                <Box
-                  className="elements-wrapper"
-                  sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                      top: 0,
-                      width: '100%',
-                      height: '100%',
-                    }}
-                    onClick={(e) => {
-                      if (e.target === e.currentTarget) {
-                        setSelectedField('__background__');
-                      }
-                    }}
-                    onTouchStart={(e) => {
-                      if (e.target === e.currentTarget) {
-                        setSelectedField('__background__');
-                      }
-                    }}
-                  >
-                    {renderableElements.map(element => (
-                      <DraggableElement
-                        key={element.id}
-                        element={element.type === 'image' || element.type === 'background' || element.type === 'cropbox' ? { ...element.position, type: element.type } : { id: element.id, type: 'text' }}
-                        position={element.position}
-                        style={element.style}
-                        content={element.content}
-                        isSelected={selectedField === element.id}
-                        onSelect={setSelectedField}
-                        onPositionChange={handlePositionChange}
-                        onSizeChange={handleSizeChange}
-                        containerSize={renderedImageMetrics}
-                        onContentChange={element.type === 'text' ? handleContentChange : undefined}
-                        onDoubleClick={() => {
-                          if (element.type === 'text' && isHtmlField(element.id)) {
-                            onOpenHtmlEditor(element.id);
-                          }
-                        }}
-                        rotation={element.rotation}
-                        originalImageSize={effectiveImageSize}
-                        fontScale={element.fontScale}
-                        enableHtmlRendering={element.enableHtmlRendering}
-                        darkMode={darkMode}
-                      />
-                    ))}
-                  </Box>
-                </>
-            </Box>
+          sx={{
+            border: '2px solid #ddd',
+            backgroundColor: pageState?.backgroundColor || '#FFFFFF',
+            position: 'relative',
+            cursor: 'default',
+            width: '100%',
+            height: 0,
+            paddingTop: paddingTop,
+          }}
+          onTouchStart={handleContainerTouchStart}
+          onTouchEnd={handleContainerTouchEnd}
+        >
+          <Box
+            className="elements-wrapper"
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setSelectedField('__background__');
+              }
+            }}
+            onTouchStart={(e) => {
+              if (e.target === e.currentTarget) {
+                setSelectedField('__background__');
+              }
+            }}
+          >
+            {renderableElements.map(element => (
+              <DraggableElement
+                key={element.id}
+                element={element.type === 'image' || element.type === 'background' || element.type === 'cropbox' ? { ...element.position, type: element.type } : { id: element.id, type: 'text' }}
+                position={element.position}
+                style={element.style}
+                content={element.content}
+                isSelected={selectedField === element.id}
+                onSelect={setSelectedField}
+                onPositionChange={handlePositionChange}
+                onSizeChange={handleSizeChange}
+                containerSize={renderedImageMetrics}
+                onContentChange={element.type === 'text' ? handleContentChange : undefined}
+                onDoubleClick={() => {
+                  if (element.type === 'text' && isHtmlField(element.id)) {
+                    onOpenHtmlEditor(element.id);
+                  }
+                }}
+                rotation={element.rotation}
+                originalImageSize={effectiveImageSize}
+                fontScale={element.fontScale}
+                enableHtmlRendering={element.enableHtmlRendering}
+                darkMode={darkMode}
+              />
+            ))}
+          </Box>
         </Box>
+      </Box>
 
-            {colorPalette && colorPalette.length > 0 && (
-              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
-                {colorPalette.map((color, index) => (
-                  <Box
-                    key={index}
-                    sx={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: '50%',
-                      backgroundColor: color,
-                      cursor: 'pointer',
-                      border: '2px solid #fff',
-                      boxShadow: '0 0 5px rgba(0,0,0,0.2)',
-                      touchAction: 'manipulation',
-                      '&:active': { transform: 'scale(0.95)' }
-                    }}
-                    onClick={() => handleColorCircleClick(color)}
-                  />
-                ))}
-              </Box>
-            )}
+      {colorPalette && colorPalette.length > 0 && (
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
+          {colorPalette.map((color, index) => (
+            <Box
+              key={index}
+              sx={{
+                width: 30,
+                height: 30,
+                borderRadius: '50%',
+                backgroundColor: color,
+                cursor: 'pointer',
+                border: '2px solid #fff',
+                boxShadow: '0 0 5px rgba(0,0,0,0.2)',
+                touchAction: 'manipulation',
+                '&:active': { transform: 'scale(0.95)' }
+              }}
+              onClick={() => handleColorCircleClick(color)}
+            />
+          ))}
+        </Box>
+      )}
     </Box>
   );
 };
