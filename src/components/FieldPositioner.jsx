@@ -84,36 +84,10 @@ const FieldPositioner = ({
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
-  const [internalImageSize, setInternalImageSize] = useState(null);
-  const [isImageLoading, setIsImageLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
 
-  useEffect(() => {
-    const src = backgroundElement?.src;
-    if (src) {
-      setIsImageLoading(true);
-      setImageError(false);
-      const img = new Image();
-      img.onload = () => {
-        setInternalImageSize({ width: img.width, height: img.height });
-        setIsImageLoading(false);
-      };
-      img.onerror = () => {
-        console.error("Error loading background image.");
-        setImageError(true);
-        setIsImageLoading(false);
-        setInternalImageSize(null); // Reset size on error
-      };
-      img.src = src;
-    } else {
-      setInternalImageSize(null);
-      setIsImageLoading(false);
-      setImageError(false);
-    }
-  }, [backgroundElement?.src]);
-
-  // Use the verified internal size for all calculations, falling back to the prop if not yet loaded.
-  const effectiveImageSize = internalImageSize || originalImageSize;
+  // The component's size is now determined by its container, not the background image.
+  // The useEffect that loaded the image to get its dimensions has been removed.
+  const effectiveImageSize = originalImageSize;
 
   // The backgroundImageSrc prop is now assumed to be the final, composed background for the editor preview.
   // No further composition is needed here.
@@ -447,15 +421,6 @@ const FieldPositioner = ({
               onTouchStart={handleContainerTouchStart}
               onTouchEnd={handleContainerTouchEnd}
             >
-              {isImageLoading ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
-                  <CircularProgress />
-                </Box>
-              ) : imageError ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
-                  <Alert severity="error">Falha ao carregar a imagem.</Alert>
-                </Box>
-              ) : (
                 <>
                   <Box
                     className="elements-wrapper"
@@ -505,7 +470,6 @@ const FieldPositioner = ({
                     ))}
                   </Box>
                 </>
-              )}
             </Box>
         </Box>
 
