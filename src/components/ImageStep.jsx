@@ -59,7 +59,7 @@ const ImageStep = ({
   templateFieldStyles,
   activeStep,
 }) => {
-  console.log('[ImageStep] props:', { backgroundElement, fieldStyles });
+  console.log('[ImageStep] props:', { fieldStyles });
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [fontScale, setFontScale] = useState(1);
   const [isCropping, setIsCropping] = useState(false);
@@ -120,8 +120,6 @@ const ImageStep = ({
             originalImageSize={originalImageSize}
             brandElements={brandElements}
             setBrandElements={setBrandElements}
-            backgroundElement={backgroundElement}
-            setBackgroundElement={setBackgroundElement}
             pageState={pageState}
             onZIndexChange={onZIndexChange}
             onOpenHtmlEditor={onOpenHtmlEditor}

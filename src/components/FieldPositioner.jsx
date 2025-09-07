@@ -77,7 +77,7 @@ const FieldPositioner = ({
   setIsCropping,
   pageState,
 }) => {
-  console.log('[FieldPositioner] props:', { backgroundElement, fieldStyles, pageState });
+  console.log('[FieldPositioner] props:', { fieldStyles, pageState });
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
@@ -290,7 +290,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     return elements;
-  }, [backgroundElement, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
+  }, [isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
   return (
     <Box>
