@@ -95,39 +95,39 @@ const ImageStep = ({
             <FieldPositioner
               aspectRatio={aspectRatio}
               csvHeaders={csvHeaders}
-            fieldPositions={fieldPositions}
-            setFieldPositions={setFieldPositions}
-            fieldStyles={fieldStyles}
-            setFieldStyles={setFieldStyles}
-            csvData={csvData}
-            onImageDisplayedSizeChange={onImageDisplayedSizeChange}
-            colorPalette={colorPalette}
-            standardsColors={standardsColors}
-            onCsvDataUpdate={onCsvDataUpdate}
-            selectedField={selectedField}
-            setSelectedField={setSelectedField}
-            originalImageSize={originalImageSize}
-            brandElements={brandElements}
-            setBrandElements={setBrandElements}
-            backgroundElement={backgroundElement}
-            setBackgroundElement={setBackgroundElement}
-            onZIndexChange={onZIndexChange}
-            onOpenHtmlEditor={onOpenHtmlEditor}
-            currentPreviewIndex={currentPreviewIndex}
-            setCurrentPreviewIndex={setCurrentPreviewIndex}
-            onFontScaleChange={setFontScale}
-            isCropping={isCropping}
-            setIsCropping={setIsCropping}
-          />
-          {csvData && csvData.length > 1 && (
-            <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ mt: 2 }} flexWrap="wrap">
-              <Tooltip title="Primeiro Registro"><span><IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small"><SkipPrevious /></IconButton></span></Tooltip>
-              <Tooltip title="Registro Anterior"><span><IconButton onClick={handlePreviousPreview} disabled={currentPreviewIndex === 0} size="small"><ArrowLeft /></IconButton></span></Tooltip>
-              <Typography variant="body2" sx={{ minWidth: '100px', textAlign: 'center' }}>Registro: {currentPreviewIndex + 1} / {csvData.length}</Typography>
-              <Tooltip title="Próximo Registro"><span><IconButton onClick={handleNextPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><ArrowRight /></IconButton></span></Tooltip>
-              <Tooltip title="Último Registro"><span><IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><SkipNext /></IconButton></span></Tooltip>
-            </Stack>
-          )}
+              fieldPositions={fieldPositions}
+              setFieldPositions={setFieldPositions}
+              fieldStyles={fieldStyles}
+              setFieldStyles={setFieldStyles}
+              csvData={csvData}
+              onImageDisplayedSizeChange={onImageDisplayedSizeChange}
+              colorPalette={colorPalette}
+              standardsColors={standardsColors}
+              onCsvDataUpdate={onCsvDataUpdate}
+              selectedField={selectedField}
+              setSelectedField={setSelectedField}
+              originalImageSize={originalImageSize}
+              brandElements={brandElements}
+              setBrandElements={setBrandElements}
+              backgroundElement={backgroundElement}
+              setBackgroundElement={setBackgroundElement}
+              onZIndexChange={onZIndexChange}
+              onOpenHtmlEditor={onOpenHtmlEditor}
+              currentPreviewIndex={currentPreviewIndex}
+              setCurrentPreviewIndex={setCurrentPreviewIndex}
+              onFontScaleChange={setFontScale}
+              isCropping={isCropping}
+              setIsCropping={setIsCropping}
+            />
+            {csvData && csvData.length > 1 && (
+              <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ mt: 2 }} flexWrap="wrap">
+                <Tooltip title="Primeiro Registro"><span><IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small"><SkipPrevious /></IconButton></span></Tooltip>
+                <Tooltip title="Registro Anterior"><span><IconButton onClick={handlePreviousPreview} disabled={currentPreviewIndex === 0} size="small"><ArrowLeft /></IconButton></span></Tooltip>
+                <Typography variant="body2" sx={{ minWidth: '100px', textAlign: 'center' }}>Registro: {currentPreviewIndex + 1} / {csvData.length}</Typography>
+                <Tooltip title="Próximo Registro"><span><IconButton onClick={handleNextPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><ArrowRight /></IconButton></span></Tooltip>
+                <Tooltip title="Último Registro"><span><IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><SkipNext /></IconButton></span></Tooltip>
+              </Stack>
+            )}
           </Stack>
         </Grid>
         {!isMobile ? (
@@ -153,8 +153,8 @@ const ImageStep = ({
               </Box>
               <FormattingPanel
                 selectedField={selectedField}
-              fieldStyles={fieldStyles}
-              initialFieldStyles={initialFieldStyles}
+                fieldStyles={fieldStyles}
+                initialFieldStyles={initialFieldStyles}
               setFieldStyles={setFieldStyles}
               fieldPositions={fieldPositions}
               setFieldPositions={setFieldPositions}
@@ -173,6 +173,7 @@ const ImageStep = ({
               isCropping={isCropping}
               setIsCropping={setIsCropping}
             />
+            </Stack>
           </Grid>
         ) : (
           <>
