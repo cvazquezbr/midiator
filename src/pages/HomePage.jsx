@@ -534,6 +534,12 @@ function HomePage() {
 
   useEffect(() => {
     console.log('[HomePage] backgroundElement state changed:', backgroundElement);
+    // When the background image is removed (src becomes null),
+    // reset the originalImageSize to the default. This prevents the editor
+    // from retaining the dimensions of the old image, which would break the layout.
+    if (backgroundElement?.src === null) {
+      setOriginalImageSize({ width: 1920, height: 1080 });
+    }
   }, [backgroundElement]);
 
   useEffect(() => {
@@ -598,8 +604,9 @@ function HomePage() {
   const handleCreateNewCampaign = () => {
     applyAppState({});
     setCurrentCampaign(null);
-    // Also explicitly reset the background element to the default state for a new campaign
+    // Also explicitly reset the background element and image size to the default state for a new campaign
     setBackgroundElement(defaultBackgroundElement);
+    setOriginalImageSize({ width: 1920, height: 1080 });
     setActiveStep(1);
   };
   const handleEditCampaign = (campaign) => {
