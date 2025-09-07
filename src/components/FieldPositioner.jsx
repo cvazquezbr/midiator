@@ -367,7 +367,7 @@ const FieldPositioner = ({
                       }
                     }}
                   >
-                    {renderedImageMetrics.width > 0 && renderableElements.map(element => (
+                    {renderableElements.map(element => (
                       <DraggableElement
                         key={element.id}
                         element={element.type === 'image' || element.type === 'background' || element.type === 'cropbox' ? { ...element.position, type: element.type } : { id: element.id, type: 'text' }}
