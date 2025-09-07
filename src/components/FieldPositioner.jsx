@@ -258,17 +258,17 @@ const FieldPositioner = ({
 
   const renderableElements = React.useMemo(() => {
     const elements = [
-      {
+      ...(backgroundElement ? [{
         id: '__background__',
         type: 'background',
         position: backgroundElement,
-        style: { ...backgroundElement?.filters, shadow: backgroundElement?.shadow, shadowColor: backgroundElement?.shadowColor, shadowBlur: backgroundElement?.shadowBlur, shadowOffsetX: backgroundElement?.shadowOffsetX, shadowOffsetY: backgroundElement?.shadowOffsetY },
-        content: backgroundElement?.src || '',
+        style: { ...backgroundElement.filters, shadow: backgroundElement.shadow, shadowColor: backgroundElement.shadowColor, shadowBlur: backgroundElement.shadowBlur, shadowOffsetX: backgroundElement.shadowOffsetX, shadowOffsetY: backgroundElement.shadowOffsetY },
+        content: backgroundElement.src,
         zIndex: -1,
-        rotation: backgroundElement?.rotation || 0,
+        rotation: backgroundElement.rotation,
         fontScale: 1,
         enableHtmlRendering: false,
-      },
+      }] : []),
       ...(isCropping && backgroundElement ? [{
         id: '__cropbox__',
         type: 'cropbox',

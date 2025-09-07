@@ -595,38 +595,23 @@ const DraggableElementInternal = ({
     const { backgroundType, backgroundColor, gradient, src } = style;
     const imageUrl = content || src;
     const css = {
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+      backgroundColor: backgroundColor || 'transparent',
     };
 
-    switch (backgroundType) {
-        case 'color':
-            css.backgroundColor = backgroundColor;
-            css.backgroundImage = 'none';
-            break;
-        case 'gradient':
-            if (gradient && gradient.stops) {
-                const stops = gradient.stops.map(s => `${s.color} ${s.position}%`).join(', ');
-                if (gradient.type === 'linear') {
-                    css.backgroundImage = `linear-gradient(${gradient.angle || 90}deg, ${stops})`;
-                } else {
-                    css.backgroundImage = `radial-gradient(circle, ${stops})`;
-                }
-            } else {
-                 css.backgroundImage = 'none';
-            }
-            break;
-        case 'image':
-        default:
-            if (imageUrl) {
-                css.backgroundImage = `url("${imageUrl}")`;
-            } else {
-                css.backgroundImage = 'none';
-            }
-            // A cor de fundo pode ser usada como um "tint" ou fallback
-            css.backgroundColor = style.backgroundColor || 'transparent';
-            break;
+    if (imageUrl) {
+      css.backgroundImage = `url("${imageUrl}")`;
+    } else if (backgroundType === 'gradient' && gradient?.stops) {
+      const stops = gradient.stops.map(s => `${s.color} ${s.position}%`).join(', ');
+      if (gradient.type === 'linear') {
+        css.backgroundImage = `linear-gradient(${gradient.angle || 90}deg, ${stops})`;
+      } else {
+        css.backgroundImage = `radial-gradient(circle, ${stops})`;
+      }
+    } else {
+      css.backgroundImage = 'none';
     }
     return css;
   };
@@ -644,6 +629,9 @@ const DraggableElementInternal = ({
 
   if (element.type === 'background') {
     Object.assign(boxSx, getBackgroundStyle(style, content));
+    // Ensure the background is always an interactive surface
+    boxSx.cursor = 'default';
+    boxSx.pointerEvents = 'auto';
   } else if (element.type === 'image' || element.type === 'cropbox') {
     boxSx.backgroundColor = 'transparent';
     boxSx.border = 'none';
