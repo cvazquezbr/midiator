@@ -77,6 +77,8 @@ const FieldPositioner = ({
   onFontScaleChange,
   isCropping,
   setIsCropping,
+  pageStyle, // new
+  setPageStyle, // new
 }) => {
   console.log('[FieldPositioner] props:', { backgroundElement, fieldStyles });
   // const [selectedField, setSelectedField] = useState(null); // REMOVED: Use parent state
@@ -258,35 +260,6 @@ const FieldPositioner = ({
 
   const aspectRatio = aspectRatioProp ? String(aspectRatioProp).replace(':', ' / ') : '16 / 9';
 
-  const getBackgroundStyle = (bgElement) => {
-    if (!bgElement) return { backgroundColor: '#FFFFFF' }; // Default white background
-
-    const style = {
-      position: 'absolute',
-      width: '100%',
-      height: '100%',
-      top: 0,
-      left: 0,
-      zIndex: -2, // Ensure it's the bottom-most layer
-    };
-
-    if (bgElement.gradient) {
-      const stops = bgElement.gradient.stops.map(s => `${s.color} ${s.position}%`).join(', ');
-      if (bgElement.gradient.type === 'radial') {
-        style.backgroundImage = `radial-gradient(circle, ${stops})`;
-      } else {
-        style.backgroundImage = `linear-gradient(${bgElement.gradient.angle || 0}deg, ${stops})`;
-      }
-    } else if (bgElement.backgroundColor) {
-      style.backgroundColor = bgElement.backgroundColor;
-    } else {
-      style.backgroundColor = '#FFFFFF'; // Fallback
-    }
-
-    return style;
-  };
-
-
   // Effect to calculate font scale based on the actual rendered image size
   useEffect(() => {
     if (renderedImageMetrics.width > 0 && effectiveImageSize?.width > 0) {
@@ -408,7 +381,7 @@ const FieldPositioner = ({
           className="text-container"
               sx={{
                 border: '2px solid #ddd',
-                ...getBackgroundStyle(backgroundElement), // Apply dynamic background here
+                backgroundColor: pageStyle?.backgroundColor || '#FFFFFF',
                 cursor: 'default',
                 touchAction: 'pan-x pan-y',
                 WebkitOverflowScrolling: 'touch',
