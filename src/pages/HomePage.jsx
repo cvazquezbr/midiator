@@ -341,7 +341,7 @@ function HomePage() {
     setInitialFieldStyles(completeStyles);
 
     setDisplayedImageSize(state.displayedImageSize ?? { width: 0, height: 0 });
-    setOriginalImageSize(state.originalImageSize ?? { width: 0, height: 0 });
+    setOriginalImageSize(state.originalImageSize ?? { width: 1920, height: 1080 });
   };
 
   const handleSaveCampaign = async (name) => {
@@ -680,7 +680,9 @@ function HomePage() {
     img.onerror = (err) => {
       console.error("Error loading image to extract colors:", err);
       setColorPalette([]);
-      setBackgroundElement(null);
+      // Reset to a functional default state on image load error
+      setBackgroundElement(defaultBackgroundElement);
+      setOriginalImageSize({ width: 1920, height: 1080 });
     };
     img.src = imageUrl;
   }, []);

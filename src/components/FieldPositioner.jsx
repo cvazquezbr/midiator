@@ -257,15 +257,26 @@ const FieldPositioner = ({
   }, [csvHeaders, fieldStyles]);
 
   const renderableElements = React.useMemo(() => {
+    // Fallback to a default object to ensure the editor is always visible,
+    // even if the parent component fails to provide a backgroundElement.
+    const effectiveBackgroundElement = backgroundElement || {
+      id: '__background__',
+      type: 'background',
+      x: 0, y: 0, width: 100, height: 100,
+      filters: {},
+      rotation: 0,
+      src: null,
+    };
+
     const elements = [
       {
         id: '__background__',
         type: 'background',
-        position: backgroundElement,
-        style: { ...backgroundElement?.filters, shadow: backgroundElement?.shadow, shadowColor: backgroundElement?.shadowColor, shadowBlur: backgroundElement?.shadowBlur, shadowOffsetX: backgroundElement?.shadowOffsetX, shadowOffsetY: backgroundElement?.shadowOffsetY },
-        content: backgroundElement?.src || '',
+        position: effectiveBackgroundElement,
+        style: { ...effectiveBackgroundElement.filters, shadow: effectiveBackgroundElement.shadow, shadowColor: effectiveBackgroundElement.shadowColor, shadowBlur: effectiveBackgroundElement.shadowBlur, shadowOffsetX: effectiveBackgroundElement.shadowOffsetX, shadowOffsetY: effectiveBackgroundElement.shadowOffsetY },
+        content: effectiveBackgroundElement.src || '',
         zIndex: -1,
-        rotation: backgroundElement?.rotation || 0,
+        rotation: effectiveBackgroundElement.rotation || 0,
         fontScale: 1,
         enableHtmlRendering: false,
       },
