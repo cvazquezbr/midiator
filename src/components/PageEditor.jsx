@@ -16,6 +16,7 @@ import FormattingPanel from './FormattingPanel';
 import FormattingDrawer from './FormattingDrawer';
 import { Fab } from '@mui/material';
 import TextEditorDialog from './TextEditorDialog';
+import { createNewImageElement } from '../utils/elementFactory';
 
 const COMPLETE_DEFAULT_STYLE = {
   fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
@@ -66,6 +67,22 @@ const PageEditor = ({
   const handleInternalFieldSelection = useCallback((fieldToSelect) => {
     setSelectedFieldInternal(fieldToSelect);
   }, []);
+
+  const handleLocalImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const imageUrl = e.target.result;
+        const newImage = createNewImageElement(imageUrl);
+        setEditedPageTemplate(prevTemplate => ({
+            ...prevTemplate,
+            images: [...(prevTemplate.images || []), newImage],
+        }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleFieldPositionerCsvDataUpdate = useCallback((updatedDataArray) => {
     if (updatedDataArray && updatedDataArray.length > 0) {
@@ -158,7 +175,7 @@ const PageEditor = ({
                 onOpenHtmlEditor={handleOpenHtmlEditor}
                 standardsColors={standardsColors || colorPalette}
                 showImageLoaders={true}
-                handleImageUpload={handleImageUpload}
+                handleImageUpload={handleLocalImageUpload}
                 onChangeBackgroundImage={onChangeBackgroundImage}
               />
             </Grid>
@@ -189,7 +206,7 @@ const PageEditor = ({
             setBrandElements={setEditedBrandElements}
             standardsColors={standardsColors || colorPalette}
             showImageLoaders={true}
-            handleImageUpload={handleImageUpload}
+            handleImageUpload={handleLocalImageUpload}
             onChangeBackgroundImage={onChangeBackgroundImage}
           />
         </>

@@ -126,14 +126,14 @@ const FieldPositioner = ({
 
   const handlePositionChange = (id, newPosition) => {
     if (id === '__cropbox__') {
-      // This logic needs to be tied to a specific image, assuming the first one for now.
-      setPageTemplate(prev => {
-        const newImages = [...prev.images];
-        if (newImages[0]) {
-          newImages[0].crop = { ...(newImages[0].crop || {}), ...newPosition };
-        }
-        return { ...prev, images: newImages };
-      });
+      setPageTemplate(prev => ({
+        ...prev,
+        images: prev.images.map(img =>
+          img.id === selectedField
+            ? { ...img, crop: { ...(img.crop || {}), ...newPosition } }
+            : img
+        )
+      }));
     } else if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
         ...prev,
@@ -161,14 +161,14 @@ const FieldPositioner = ({
 
   const handleSizeChange = (id, newSize) => {
     if (id === '__cropbox__') {
-      // This logic needs to be tied to a specific image, assuming the first one for now.
-      setPageTemplate(prev => {
-        const newImages = [...prev.images];
-        if (newImages[0]) {
-          newImages[0].crop = { ...(newImages[0].crop || {}), ...newSize };
-        }
-        return { ...prev, images: newImages };
-      });
+      setPageTemplate(prev => ({
+        ...prev,
+        images: prev.images.map(img =>
+          img.id === selectedField
+            ? { ...img, crop: { ...(img.crop || {}), ...newSize } }
+            : img
+        )
+      }));
     } else if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
         ...prev,
@@ -303,13 +303,13 @@ const FieldPositioner = ({
         });
     });
 
-    // Add cropbox if needed (for the first image for now)
-    const firstImage = pageTemplate.images?.[0];
-    if (isCropping && firstImage) {
+    // Add cropbox if needed for the selected image.
+    const selectedImage = isCropping && pageTemplate.images?.find(img => img.id === selectedField);
+    if (selectedImage) {
         elements.push({
             id: '__cropbox__',
             type: 'cropbox',
-            position: firstImage.crop || { x: 10, y: 10, width: 80, height: 80 },
+            position: selectedImage.crop || { x: 10, y: 10, width: 80, height: 80 },
             style: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
             content: '',
             zIndex: 1000, // Should be on top of everything

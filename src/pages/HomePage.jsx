@@ -74,24 +74,7 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
   return hex.length === 1 ? '0' + hex : hex;
 }).join('');
 
-const createNewImageElement = (src) => ({
-  id: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-  type: 'image',
-  src,
-  visible: true,
-  rotation: 0,
-  x: 0,
-  y: 0,
-  width: 100,
-  height: 100,
-  crop: null,
-  filters: { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
-  shadow: false,
-  shadowColor: '#000000',
-  shadowBlur: 10,
-  shadowOffsetX: 5,
-  shadowOffsetY: 5,
-});
+import { createNewImageElement } from '../utils/elementFactory.js';
 
 const defaultPageTemplate = {
     backgroundColor: '#FFFFFF',
@@ -1037,37 +1020,49 @@ function HomePage() {
 
   const handleGenerateSinglePage = async (record, index, fontScale = 1) => {
     const imagePrompt = record.prompt_imagem_carrossel;
-
-    // This function will now be more complex due to the new requirements.
-    // It needs to decide whether to create a new image or update an existing one.
     let composingTemplate = pageTemplate;
     let pageUpdateData = {};
 
     if (imagePrompt && imagePrompt.trim() !== '') {
         setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
         try {
+            // Find the style source BEFORE generating the new image.
+            let sourceStyle = null;
+            const existingPageDataForStyle = generatedPagesData.find(p => p.index === index);
+            const templateForStyle = existingPageDataForStyle?.customPageTemplate || pageTemplate;
+
+            const firstImage = templateForStyle.images?.[0];
+            if (firstImage) {
+                const { id, src, ...style } = firstImage;
+                sourceStyle = style;
+            } else {
+                const firstPageWithImage = generatedPagesData.find(p => {
+                    const tpl = p.customPageTemplate || pageTemplate;
+                    return tpl.images && tpl.images.length > 0;
+                });
+                if (firstPageWithImage) {
+                    const tpl = firstPageWithImage.customPageTemplate || pageTemplate;
+                    const { id, src, ...style } = tpl.images[0];
+                    sourceStyle = style;
+                }
+            }
+
+            if (!sourceStyle) {
+                sourceStyle = { x: 0, y: 0, width: 100, height: 100, zIndex: -1, style: { objectFit: 'cover' } };
+            }
+
             const uniqueImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
 
-            // New logic based on user requirements
+            // Create the new image and apply the determined style.
+            const newImage = { ...createNewImageElement(uniqueImageUrl), ...sourceStyle };
+
             const existingPageData = generatedPagesData.find(p => p.index === index);
             const pageImages = existingPageData?.customPageTemplate?.images || pageTemplate.images;
 
-            const newImage = createNewImageElement(uniqueImageUrl);
-            let finalImages;
+            const finalImages = pageImages.length > 0
+                ? [newImage, ...pageImages.slice(1)]
+                : [newImage];
 
-            if (pageImages.length > 0) {
-                // Replace the first image
-                finalImages = [newImage, ...pageImages.slice(1)];
-            } else {
-                // Add as the first image (and make it fullscreen)
-                newImage.x = 0;
-                newImage.y = 0;
-                newImage.width = 100;
-                newImage.height = 100;
-                finalImages = [newImage];
-            }
-
-            // This will be stored with the generated page data
             const tempPageTemplate = {
                 ...(existingPageData?.customPageTemplate || pageTemplate),
                 images: finalImages,
