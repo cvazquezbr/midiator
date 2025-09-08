@@ -266,8 +266,6 @@ const PageEditor = ({
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
             <Typography>Carregando editor...</Typography>
           </Box>
-        ) : !editedBackgroundElement?.src ? (
-          <Typography>Imagem de fundo não disponível para edição.</Typography>
         ) : (
           <Grid container spacing={2}>
             <Grid item xs={12} md={isMobile ? 12 : 8}>
