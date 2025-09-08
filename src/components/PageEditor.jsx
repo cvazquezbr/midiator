@@ -113,9 +113,9 @@ const PageEditor = ({
         Editar Página Gerada #{pageData.index + 1}
         <IconButton onClick={onClose} sx={{ position: 'absolute', right: 8, top: 8 }}><Close /></IconButton>
       </DialogTitle>
-      <DialogContent dividers sx={{ overflowY: 'auto' }}>
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={isMobile ? 12 : 8}>
+      <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Grid container spacing={2} sx={{ flexGrow: 1 }}>
+          <Grid item xs={12} md={isMobile ? 12 : 8} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <FieldPositioner
               aspectRatio={aspectRatio}
               csvHeaders={globalCsvHeaders}
