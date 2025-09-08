@@ -283,7 +283,7 @@ const FormattingPanel = ({
               <Accordion expanded={expandedPanel === 'backgroundColor'} onChange={handleAccordionChange('backgroundColor')}>
                 <AccordionSummary expandIcon={<ExpandMore />}><Typography><Gradient sx={{ mr: 1, verticalAlign: 'middle' }} />Fundo da Página</Typography></AccordionSummary>
                 <AccordionDetails>
-                  <BackgroundColorEditor pageTemplate={pageTemplate} onUpdate={(val) => setPageTemplate(val)} />
+                  <BackgroundColorEditor pageTemplate={pageTemplate} onUpdate={setPageTemplate} />
                 </AccordionDetails>
               </Accordion>
             )}
