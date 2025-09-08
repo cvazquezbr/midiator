@@ -101,7 +101,7 @@ const PageEditor = ({
       customFieldPositions: editedPositions,
       customFieldStyles: editedStyles,
       customBrandElements: editedBrandElements,
-      pageTemplate: editedPageTemplate, // Pass the edited template back
+      customPageTemplate: editedPageTemplate,
     };
     console.log('[PageEditor] handleSave called. Data being passed up:', savedData);
     onSave(savedData);
