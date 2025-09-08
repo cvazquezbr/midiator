@@ -172,6 +172,7 @@ const ImageStep = ({
             </Box>
             <FormattingPanel
               selectedField={selectedField}
+              setSelectedField={setSelectedField}
               fieldStyles={fieldStyles}
               initialFieldStyles={initialFieldStyles}
               setFieldStyles={setFieldStyles}
@@ -183,10 +184,8 @@ const ImageStep = ({
               pageTemplate={pageTemplate}
               setPageTemplate={setPageTemplate}
               onZIndexChange={onZIndexChange}
-              onDeselectField={onDeselectField}
               onOpenHtmlEditor={onOpenHtmlEditor}
               standardsColors={standardsColors}
-              fontScale={fontScale}
               templateFieldStyles={templateFieldStyles}
               activeStep={activeStep}
               isCropping={isCropping}
@@ -209,6 +208,7 @@ const ImageStep = ({
             open={isDrawerOpen}
             onClose={() => setIsDrawerOpen(false)}
             selectedField={selectedField}
+            setSelectedField={setSelectedField}
             fieldStyles={fieldStyles}
             initialFieldStyles={initialFieldStyles}
             setFieldStyles={setFieldStyles}
@@ -220,10 +220,8 @@ const ImageStep = ({
             pageTemplate={pageTemplate}
             setPageTemplate={setPageTemplate}
             onZIndexChange={onZIndexChange}
-            onDeselectField={onDeselectField}
             onOpenHtmlEditor={onOpenHtmlEditor}
             standardsColors={standardsColors}
-            fontScale={fontScale}
             templateFieldStyles={templateFieldStyles}
             activeStep={activeStep}
             isCropping={isCropping}
