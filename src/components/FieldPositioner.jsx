@@ -400,12 +400,12 @@ const FieldPositioner = ({
                     }}
                     onClick={(e) => {
                       if (e.target === e.currentTarget) {
-                        setSelectedField(null); // Deselect all
+                        setSelectedField('__page_background__');
                       }
                     }}
                     onTouchStart={(e) => {
                       if (e.target === e.currentTarget) {
-                        setSelectedField('__background__');
+                        setSelectedField('__page_background__');
                       }
                     }}
                   >
