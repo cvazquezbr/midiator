@@ -624,6 +624,8 @@ const PageGeneratorFrontendOnly = ({
           originalImageSize={originalImageSize}
           handleImageUpload={handleImageUpload}
           onChangeBackgroundImage={onChangeBackgroundImage}
+          globalFieldPositions={fieldPositions}
+          globalFieldStyles={fieldStyles}
         />
       )}
 

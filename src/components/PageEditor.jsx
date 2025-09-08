@@ -46,6 +46,8 @@ const PageEditor = ({
   aspectRatio,
   handleImageUpload,
   onChangeBackgroundImage,
+  globalFieldPositions,
+  globalFieldStyles,
 }) => {
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
@@ -73,8 +75,8 @@ const PageEditor = ({
 
   useEffect(() => {
     if (open && pageData) {
-      const initialPositions = pageData.customFieldPositions || pageData.fieldPositions || {};
-      const initialStyles = pageData.customFieldStyles || pageData.fieldStyles || {};
+      const initialPositions = pageData.customFieldPositions || globalFieldPositions || {};
+      const initialStyles = pageData.customFieldStyles || globalFieldStyles || {};
       const initialBrandElements = pageData.customBrandElements || brandElements || [];
       const initialTemplate = pageData.customPageTemplate || globalPageTemplate || defaultPageTemplate;
 
@@ -90,7 +92,7 @@ const PageEditor = ({
       setEditedStyles(newEditedStyles);
 
     }
-  }, [open, pageData, globalCsvHeaders, brandElements, globalPageTemplate]);
+  }, [open, pageData, globalCsvHeaders, brandElements, globalPageTemplate, globalFieldPositions, globalFieldStyles]);
 
   if (!pageData) return null;
 
