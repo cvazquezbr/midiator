@@ -64,7 +64,7 @@ import { parseIaResponseToCsvData } from '../utils/iaResponseParser.js';
 import { parseCsv } from '../utils/csvParser.js';
 import { lightTheme, darkTheme } from '../theme.js';
 import ColorThief from 'colorthief';
-import { composeSingleImage } from '../utils/imageComposer.js';
+import { drawAndComposeImage } from '../utils/imageComposer.js';
 import { autoArrangeFields } from '../utils/autoArrange.js';
 
 import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
@@ -1020,7 +1020,7 @@ function HomePage() {
       setGeneratedPagesData(newGeneratedPagesData);
       setInputMethod('manual');
 
-      // A geração de imagens foi movida para a etapa "Gerar Páginas" a pedido do usuário.
+      // A geração de imagens foi movida para a etapa "Edição de Páginas" a pedido do usuário.
       toast.success('Geração de posts concluída. Prossiga para a próxima etapa para gerar as imagens.');
     } catch (error) {
       toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
@@ -1078,7 +1078,7 @@ function HomePage() {
 
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
-      const finalPageData = await composeSingleImage({
+      const finalPageData = await drawAndComposeImage({
         record: record,
         index: index,
         brandElements,

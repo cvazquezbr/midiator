@@ -318,9 +318,7 @@ const FieldPositioner = ({
             enableHtmlRendering: false,
         });
     }
-
-    // Add text fields
-    (csvHeaders || [])
+      ...(csvHeaders || [])
         .map(header => {
           const position = fieldPositions[header];
           const style = completeFieldStyles[header];
@@ -329,7 +327,7 @@ const FieldPositioner = ({
           const record = csvData[currentPreviewIndex] || {};
           const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
 
-          elements.push({
+          return {
             id: header,
             type: 'text',
             position,
@@ -339,13 +337,13 @@ const FieldPositioner = ({
             rotation: position.rotation,
             fontScale: fontScale,
             enableHtmlRendering: isHtmlField(header),
-          });
-        });
-
-    // Add brand elements
-    (brandElements || []).forEach(element => {
-          if (element.visible === false) return;
-          elements.push({
+          };
+        })
+        .filter(Boolean),
+      ...(brandElements || [])
+        .map(element => {
+          if (element.visible === false) return null;
+          return {
             id: element.id,
             type: 'image',
             position: element,
@@ -355,8 +353,10 @@ const FieldPositioner = ({
             rotation: element.rotation,
             fontScale: 1,
             enableHtmlRendering: false,
-          });
-        });
+          };
+        })
+        .filter(Boolean)
+    ];
 
     elements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     return elements;
@@ -402,7 +402,7 @@ const FieldPositioner = ({
                     }}
                     onTouchStart={(e) => {
                       if (e.target === e.currentTarget) {
-                        setSelectedField(null); // Deselect all
+                        setSelectedField('__background__');
                       }
                     }}
                   >
