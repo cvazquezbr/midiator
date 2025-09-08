@@ -74,10 +74,10 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
   return hex.length === 1 ? '0' + hex : hex;
 }).join('');
 
-const defaultBackgroundElement = {
-  id: '__background__',
-  type: 'background',
-  src: null,
+const createNewImageElement = (src) => ({
+  id: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+  type: 'image',
+  src,
   visible: true,
   rotation: 0,
   x: 0,
@@ -85,24 +85,18 @@ const defaultBackgroundElement = {
   width: 100,
   height: 100,
   crop: null,
-  // Background-specific properties
-  backgroundType: 'color', // 'color', 'gradient', or 'image'
-  backgroundColor: '#FFFFFF',
-  gradient: null, // Initialized as null, created on-demand
-  // Filters
-  filters: {
-    brightness: 100,
-    contrast: 100,
-    saturate: 100,
-    blur: 0,
-    opacity: 100
-  },
-  // Shadow
+  filters: { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
   shadow: false,
   shadowColor: '#000000',
   shadowBlur: 10,
   shadowOffsetX: 5,
   shadowOffsetY: 5,
+});
+
+const defaultPageTemplate = {
+    backgroundColor: '#FFFFFF',
+    gradient: null,
+    images: [],
 };
 
 const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
@@ -176,8 +170,7 @@ function HomePage() {
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [selectedField, setSelectedField] = useState(null);
   const [brandElements, setBrandElements] = useState([]);
-  const [backgroundElement, setBackgroundElement] = useState(defaultBackgroundElement);
-  const [pageState, setPageState] = useState({ backgroundColor: '#FFFFFF' });
+  const [pageTemplate, setPageTemplate] = useState(defaultPageTemplate);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
@@ -260,42 +253,53 @@ function HomePage() {
     setGeneratedVideosData(Array.isArray(state.generatedVideosData) ? state.generatedVideosData : []);
     setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
 
-    // Logic to load background image and its associated element state correctly.
-    const loadedBackground = state.backgroundElement;
-
-    if (loadedBackground) {
-      // Merge loaded data with defaults to ensure all properties exist
-      const mergedBackground = {
-        ...defaultBackgroundElement,
-        ...loadedBackground,
-        filters: {
-          ...defaultBackgroundElement.filters,
-          ...(loadedBackground.filters || {}),
-        },
-        gradient: loadedBackground.gradient ? {
-          ...defaultBackgroundElement.gradient,
-          ...loadedBackground.gradient,
-        } : defaultBackgroundElement.gradient,
-      };
-
-      // Handle legacy campaigns that only had `backgroundImage`
-      if (!mergedBackground.src && state.backgroundImage) {
-        mergedBackground.src = state.backgroundImage;
-      }
-
-      // If there's a src, let updateImageAndPalette handle setting the state
-      // as it needs to load the image to get dimensions, etc.
-      if (mergedBackground.src) {
-        updateImageAndPalette(mergedBackground.src, mergedBackground);
-      } else {
-        setBackgroundElement(mergedBackground);
-      }
-    } else if (state.backgroundImage) {
-      // Legacy case: only backgroundImage is present
-      updateImageAndPalette(state.backgroundImage, { ...defaultBackgroundElement, src: state.backgroundImage });
+    if (state.pageTemplate) {
+        // New format: Deep merge to ensure new properties are not lost on load
+        const loadedTemplate = state.pageTemplate;
+        setPageTemplate({
+            ...defaultPageTemplate,
+            ...loadedTemplate,
+            images: (loadedTemplate.images || []).map(img => ({
+                ...createNewImageElement(null), // Get all default keys
+                ...img
+            }))
+        });
     } else {
-      // No background info in the loaded state, reset to the default
-      setBackgroundElement(defaultBackgroundElement);
+        // Legacy format, convert it
+        const newPageTemplate = { ...defaultPageTemplate };
+        const legacyBg = state.backgroundElement;
+        if (legacyBg) {
+            newPageTemplate.backgroundColor = legacyBg.backgroundColor || '#FFFFFF';
+            newPageTemplate.gradient = legacyBg.gradient || null;
+            if (legacyBg.src) {
+                const image = { ...legacyBg };
+                delete image.backgroundColor;
+                delete image.gradient;
+                delete image.backgroundType;
+                image.type = 'image';
+                if (!image.id || image.id === '__background__') {
+                    image.id = createNewImageElement(null).id;
+                }
+                newPageTemplate.images = [image];
+            }
+        } else if (state.backgroundImage) {
+            // Even older legacy format
+            newPageTemplate.images = [createNewImageElement(state.backgroundImage)];
+        }
+        setPageTemplate(newPageTemplate);
+    }
+
+    // When loading, if there's an image, we need to set the originalImageSize for the editor to work correctly
+    const firstImageSrc = state.pageTemplate?.images?.[0]?.src || state.backgroundElement?.src || state.backgroundImage;
+    if (firstImageSrc) {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+            setOriginalImageSize({ width: img.width, height: img.height });
+        };
+        img.src = firstImageSrc;
+    } else {
+        setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     }
 
     setProblema(state.problema ?? '');
@@ -376,7 +380,7 @@ function HomePage() {
       fieldStyles,
       templateFieldStyles,
       brandElements,
-      backgroundElement,
+      pageTemplate,
       generatedPageUrl,
       generatedPagesData,
       generatedAudioData,
@@ -535,14 +539,12 @@ function HomePage() {
   }, [darkMode]);
 
   useEffect(() => {
-    console.log('[HomePage] backgroundElement state changed:', backgroundElement);
-    // When the background image is removed (src becomes null),
-    // reset the originalImageSize to the default. This prevents the editor
-    // from retaining the dimensions of the old image, which would break the layout.
-    if (backgroundElement?.src === null) {
+    console.log('[HomePage] pageTemplate state changed:', pageTemplate);
+    // When the last image is removed, reset the originalImageSize.
+    if (!pageTemplate.images || pageTemplate.images.length === 0) {
       setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     }
-  }, [backgroundElement]);
+  }, [pageTemplate]);
 
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
@@ -602,12 +604,11 @@ function HomePage() {
     handleLinkedInRedirect();
   }, [settings.linkedin, updateSetting, saveSettings]);
 
-  const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Imagem e Formatação', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Gerar Páginas', description: 'Gere as páginas finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish }, { label: 'Monitorar', description: 'Acompanhe as estatísticas de suas publicações.', icon: BarChart } ];
+  const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Modelo de Página', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Edição de Páginas', description: 'Gere as páginas finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish }, { label: 'Monitorar', description: 'Acompanhe as estatísticas de suas publicações.', icon: BarChart } ];
   const handleCreateNewCampaign = () => {
-    applyAppState({});
+    applyAppState({}); // This will reset most state
     setCurrentCampaign(null);
-    // Also explicitly reset the background element and image size to the default state for a new campaign
-    setBackgroundElement(defaultBackgroundElement);
+    setPageTemplate(defaultPageTemplate); // Explicitly reset page template
     setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     setActiveStep(1);
   };
@@ -644,39 +645,25 @@ function HomePage() {
   const handleCSVUpload = (event) => { const file = event.target.files[0]; parseCsvFile(file); };
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
-  const updateImageAndPalette = useCallback((imageUrl, existingBackgroundElement = null) => {
+  const updateImageAndPalette = useCallback((imageUrl) => {
     console.log('[HomePage] updateImageAndPalette called.', {
-      hasImageUrl: !!imageUrl,
-      hasExistingBackgroundElement: !!existingBackgroundElement
+      hasImageUrl: !!imageUrl
     });
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
       setOriginalImageSize({ width: img.width, height: img.height });
-      if (existingBackgroundElement) {
-        // Ensure the new imageUrl is always set, even on an existing element
-        setBackgroundElement({ ...existingBackgroundElement, src: imageUrl });
-      } else {
-        // FIX: The src property was missing, causing the image not to appear
-        setBackgroundElement({
-          id: '__background__',
-          type: 'background',
-          src: imageUrl,
-          x: 0,
-          y: 0,
-          width: 100,
-          height: 100,
-          rotation: 0,
-          visible: true,
-          filters: { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
-          shadow: false,
-          shadowColor: '#000000',
-          shadowBlur: 10,
-          shadowOffsetX: 5,
-          shadowOffsetY: 5,
-          crop: null,
-        });
-      }
+      const newImage = createNewImageElement(imageUrl);
+
+      setPageTemplate(prevTemplate => {
+        // Add the new image to the existing images array
+        const updatedImages = [...(prevTemplate.images || []), newImage];
+        return {
+          ...prevTemplate,
+          images: updatedImages,
+        };
+      });
+
       try {
         const colorThief = new ColorThief();
         const palette = colorThief.getPalette(img, 5);
@@ -689,12 +676,10 @@ function HomePage() {
     img.onerror = (err) => {
       console.error("Error loading image to extract colors:", err);
       setColorPalette([]);
-      // Reset to a functional default state on image load error
-      setBackgroundElement(defaultBackgroundElement);
       setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     };
     img.src = imageUrl;
-  }, []);
+  }, [setPageTemplate]); // Dependency on setPageTemplate
   const parseImageFile = (file) => {
     if (!file) return;
     handleBackgroundImageUpload(file);
@@ -735,7 +720,8 @@ function HomePage() {
 
         const resizedDataUrl = canvas.toDataURL(file.type);
 
-        updateImageAndPalette(resizedDataUrl, null);
+        // Always adds a new image now
+        updateImageAndPalette(resizedDataUrl);
       };
       img.src = dataUrl;
     };
@@ -776,13 +762,8 @@ function HomePage() {
       }
 
       const permanentUrl = `https://lh3.googleusercontent.com/d/${uploadedFile.id}`;
-      setBackgroundImage(permanentUrl);
-      setBackgroundElement(prev => {
-        if (prev) {
-          return { ...prev, src: permanentUrl };
-        }
-        return null; // Should not happen if onload has fired
-      });
+      // This logic needs to be re-evaluated. For now, it adds a new image.
+      updateImageAndPalette(permanentUrl);
 
     } catch (err) {
       console.error("Failed to upload and set background image to Google Drive:", err);
@@ -1052,26 +1033,47 @@ function HomePage() {
   const handleGenerateSinglePage = async (record, index, fontScale = 1) => {
     const imagePrompt = record.prompt_imagem_carrossel;
 
-    let composingElement = backgroundElement;
+    // This function will now be more complex due to the new requirements.
+    // It needs to decide whether to create a new image or update an existing one.
+    let composingTemplate = pageTemplate;
     let pageUpdateData = {};
 
     if (imagePrompt && imagePrompt.trim() !== '') {
-      setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
-      try {
-        const uniqueImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
+        setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
+        try {
+            const uniqueImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
 
-        const tempBackgroundElement = {
-          ...(backgroundElement || {}),
-          id: '__background__',
-          src: uniqueImageUrl,
-        };
-        composingElement = tempBackgroundElement;
+            // New logic based on user requirements
+            const existingPageData = generatedPagesData.find(p => p.index === index);
+            const pageImages = existingPageData?.customPageTemplate?.images || pageTemplate.images;
 
-        pageUpdateData.customBackgroundElement = tempBackgroundElement;
+            const newImage = createNewImageElement(uniqueImageUrl);
+            let finalImages;
 
-      } catch (error) {
-        toast.error(`Falha ao gerar imagem para o post #${index + 1}: ${error.message}`);
-      }
+            if (pageImages.length > 0) {
+                // Replace the first image
+                finalImages = [newImage, ...pageImages.slice(1)];
+            } else {
+                // Add as the first image (and make it fullscreen)
+                newImage.x = 0;
+                newImage.y = 0;
+                newImage.width = 100;
+                newImage.height = 100;
+                finalImages = [newImage];
+            }
+
+            // This will be stored with the generated page data
+            const tempPageTemplate = {
+                ...(existingPageData?.customPageTemplate || pageTemplate),
+                images: finalImages,
+            };
+
+            composingTemplate = tempPageTemplate;
+            pageUpdateData.customPageTemplate = tempPageTemplate;
+
+        } catch (error) {
+            toast.error(`Falha ao gerar imagem para o post #${index + 1}: ${error.message}`);
+        }
     }
 
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
@@ -1083,7 +1085,7 @@ function HomePage() {
         fieldPositions,
         fieldStyles,
         aspectRatio,
-        backgroundElement: composingElement,
+        pageTemplate: composingTemplate,
         fontScale,
       });
 
@@ -1130,7 +1132,7 @@ function HomePage() {
         />
         {currentView === 'campaigns' && (
           <>
-            <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImageSrc={backgroundElement?.src} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
+            <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImageSrc={pageTemplate.images[0]?.src} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
             {!isMobile && <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out', backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', '&:hover': { backgroundColor: 'background.default' } }} >{sidebarOpen ? <ChevronLeft /> : <ChevronRight />}</Fab>}
           </>
         )}
@@ -1244,10 +1246,8 @@ function HomePage() {
                     originalImageSize={originalImageSize}
                     brandElements={brandElements}
                     setBrandElements={setBrandElements}
-                    backgroundElement={backgroundElement}
-                    setBackgroundElement={setBackgroundElement}
-                    pageState={pageState}
-                    setPageState={setPageState}
+                    pageTemplate={pageTemplate}
+                    setPageTemplate={setPageTemplate}
                     onZIndexChange={handleZIndexChange}
                     isMobile={isMobile}
                     selectedField={selectedField}
@@ -1281,7 +1281,8 @@ function HomePage() {
                     fontScale={fontScale}
                     handleGenerateSinglePage={handleGenerateSinglePage}
                     aspectRatio={aspectRatio}
-                    backgroundElement={backgroundElement}
+                    pageTemplate={pageTemplate}
+                    generatedPagesData={generatedPagesData}
                   />
                 )}
                 {activeStep === 5 && (

@@ -58,8 +58,9 @@ const PageGeneratorFrontendOnly = ({
   fontScale = 1,
   standardsColors,
   handleGenerateSinglePage, // Nova prop
-  backgroundElement,
+  pageTemplate,
   aspectRatio,
+  generatedPagesData,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -79,8 +80,8 @@ const PageGeneratorFrontendOnly = ({
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
   useEffect(() => {
-    console.log('[PageGeneratorFrontendOnly] PROPS RECEIVED', { fieldStyles, backgroundElement });
-  }, [fieldStyles, backgroundElement]);
+    console.log('[PageGeneratorFrontendOnly] PROPS RECEIVED', { fieldStyles, pageTemplate });
+  }, [fieldStyles, pageTemplate]);
 
   useEffect(() => {
     const loadFonts = async () => {
@@ -116,14 +117,12 @@ const PageGeneratorFrontendOnly = ({
           const stylesToUse = pageData.customFieldStyles || fieldStyles;
           const elementsToUse = pageData.customBrandElements !== undefined ? pageData.customBrandElements : brandElements;
 
-          // The source of truth for the background is the element object.
-          // It may have a custom `src` if the user replaced the background for that specific page.
-          const backgroundElementToUse = pageData.customBackgroundElement || backgroundElement;
+          const pageTemplateToUse = pageData.customPageTemplate || pageTemplate;
 
           return composeSingleImage({
             record: pageData.record,
             index: pageData.index,
-            backgroundElement: backgroundElementToUse,
+            pageTemplate: pageTemplateToUse,
             brandElements: elementsToUse,
             fieldPositions: positionsToUse,
             fieldStyles: stylesToUse,
@@ -152,7 +151,7 @@ const PageGeneratorFrontendOnly = ({
 
       regenerateMissingThumbnails();
     }
-  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, backgroundElement, brandElements, setGeneratedPagesData]);
+  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, pageTemplate, brandElements, setGeneratedPagesData]);
 
 
   const generatePages = async () => {
@@ -163,8 +162,8 @@ const PageGeneratorFrontendOnly = ({
       return;
     }
 
-    if (!backgroundElement?.src) {
-      alert('Por favor, carregue uma imagem de fundo global para a campanha.');
+    if (!pageTemplate.images || pageTemplate.images.length === 0) {
+      alert('Por favor, adicione pelo menos uma imagem ao modelo de página.');
       return;
     }
     if (csvData.length === 0) {
@@ -183,8 +182,6 @@ const PageGeneratorFrontendOnly = ({
     const pagePromises = csvData.map((record, i) => {
       if (isCancelledRef.current) return Promise.resolve(null);
 
-      // For the first generation, we only use the global background element.
-      // Per-page customizations happen in the editor.
       return composeSingleImage({
         record,
         index: i,
@@ -192,7 +189,7 @@ const PageGeneratorFrontendOnly = ({
         fieldPositions,
         fieldStyles,
         fontScale,
-        backgroundElement: backgroundElement, // Pass the global element
+        pageTemplate: pageTemplate,
         aspectRatio,
       })
       .then(pageData => {
@@ -250,22 +247,41 @@ const PageGeneratorFrontendOnly = ({
 
   const handleCancelGeneration = () => { isCancelledRef.current = true; };
 
-  const handleResetPage = (index) => {
-    const pageToReset = initialGeneratedPagesData.find(img => img.index === index);
-    if (pageToReset && backgroundElement?.src) {
-      // Use a cópia mais recente dos estilos/posições globais, não os customizados.
-      regenerateSinglePage(
-        index,
-        pageToReset.record,
-        backgroundElement, // Passa o elemento de fundo global
-        fieldPositions, // Usando as posições de campo globais
-        fieldStyles, // Usando os estilos de campo globais
-        originalImageSize,
-        brandElements,
-        fontScale
-      );
+  const handleResetPage = async (index) => {
+    const pageToUpdate = generatedPagesData.find(p => p.index === index);
+    if (!pageToUpdate) return;
+
+    const templateFirstImage = pageTemplate.images?.[0];
+    if (!templateFirstImage) {
+        alert("Não há imagem no modelo para resetar.");
+        return;
+    }
+
+    const customPageTemplate = pageToUpdate.customPageTemplate || pageTemplate;
+    let newImages = [...(customPageTemplate.images || [])];
+
+    if (newImages.length > 0) {
+        newImages[0] = { ...templateFirstImage };
     } else {
-      alert("Não foi possível resetar a página. A imagem de fundo principal não está disponível.");
+        newImages.push({ ...templateFirstImage });
+    }
+
+    const newPageTemplate = { ...customPageTemplate, images: newImages };
+
+    try {
+        const newPageImageData = await regenerateSinglePage(
+            index,
+            pageToUpdate.record,
+            newPageTemplate,
+            pageToUpdate.customFieldPositions || fieldPositions,
+            pageToUpdate.customFieldStyles || fieldStyles,
+            null,
+            pageToUpdate.customBrandElements || brandElements,
+            pageToUpdate.fontScale || 1
+        );
+        setGeneratedPagesData(prev => prev.map(p => p.index === index ? { ...p, ...newPageImageData, customPageTemplate: newPageTemplate } : p));
+    } catch (error) {
+        toast.error(`Falha ao resetar a página: ${error.message}`);
     }
   };
 
@@ -329,39 +345,25 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const handleSaveIndividualModifications = async (modifiedPageData) => {
-    const { index: pageIndex } = modifiedPageData;
+    const { index: pageIndex, customPageTemplate } = modifiedPageData;
     handleCloseGeneratedPageEditor();
 
     try {
-      const backgroundToUse = modifiedPageData.customBackgroundElement || backgroundElement;
-
-      const newPageImageData = await regenerateSinglePage(
-        pageIndex,
-        modifiedPageData.record,
-        backgroundToUse,
-        modifiedPageData.fieldPositions,
-        modifiedPageData.fieldStyles,
-        null,
-        modifiedPageData.brandElements,
-        1
-      );
+       const newPageImageData = await composeSingleImage({
+            record: modifiedPageData.record,
+            index: pageIndex,
+            pageTemplate: customPageTemplate,
+            brandElements: modifiedPageData.brandElements,
+            fieldPositions: modifiedPageData.fieldPositions,
+            fieldStyles: modifiedPageData.fieldStyles,
+            fontScale: modifiedPageData.fontScale,
+            aspectRatio,
+        });
 
       setGeneratedPagesData(currentPages =>
-        currentPages.map(page => {
-          if (page.index !== pageIndex) {
-            return page;
-          }
-          return {
-            ...page,
-            record: modifiedPageData.record,
-            customFieldPositions: modifiedPageData.fieldPositions,
-            customFieldStyles: modifiedPageData.fieldStyles,
-            customBrandElements: modifiedPageData.brandElements,
-            fontScale: modifiedPageData.fontScale,
-            customBackgroundElement: modifiedPageData.customBackgroundElement,
-            ...newPageImageData,
-          };
-        })
+        currentPages.map(page =>
+            page.index === pageIndex ? { ...page, ...modifiedPageData, ...newPageImageData } : page
+        )
       );
 
       if (onThumbnailRecordTextUpdate) {
@@ -373,16 +375,15 @@ const PageGeneratorFrontendOnly = ({
     }
   };
 
-  const regenerateSinglePage = async (index, record, backgroundElementToUse, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1) => {
-    if (!backgroundElementToUse?.src || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
-      console.error('Pré-requisitos para regeneração não atendidos. Fontes, dados ou configurações faltando.');
+  const regenerateSinglePage = async (index, record, pageTemplateToUse, positionsToUse, stylesToUse, customSize = null, elementsToUse = brandElements, fontScale = 1) => {
+    if (!pageTemplateToUse || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
+      console.error('Pré-requisitos para regeneração não atendidos.');
       throw new Error('Pré-requisitos para regeneração não atendidos.');
     }
-    // This function is now pure and returns the data, it does not set state.
     return composeSingleImage({
       record,
       index,
-      backgroundElement: backgroundElementToUse,
+      pageTemplate: pageTemplateToUse,
       brandElements: elementsToUse,
       fieldPositions: positionsToUse,
       fieldStyles: stylesToUse,
@@ -400,52 +401,46 @@ const PageGeneratorFrontendOnly = ({
 
   const handleIndividualImageUpload = (event) => {
     const file = event.target.files[0];
-    if (file && replacingImageIndex !== null) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const newBgUrl = e.target.result;
-        const pageToUpdate = initialGeneratedPagesData.find(img => img.index === replacingImageIndex);
-        if (pageToUpdate) {
-          // Clone the existing background element (custom or global) and just update the source.
-          // This preserves all other properties like filters, shadows, etc.
-          const baseElement = pageToUpdate.customBackgroundElement || backgroundElement;
-          const newBackgroundElement = {
-            ...baseElement,
-            src: newBgUrl,
-          };
+    if (!file || replacingImageIndex === null) return;
 
-          // Regenerate the page with the new background element object.
-          regenerateSinglePage(
-            replacingImageIndex,
-            pageToUpdate.record,
-            newBackgroundElement, // Pass the correct object
-            pageToUpdate.customFieldPositions || fieldPositions,
-            pageToUpdate.customFieldStyles || fieldStyles,
-            null, // Let composer determine size from new image
-            pageToUpdate.customBrandElements || brandElements,
-            fontScale
-          ).then(newlyGeneratedPage => {
-             // After regeneration, update the state
-             setGeneratedPagesData(currentPages => currentPages.map(p => {
-               if (p.index === replacingImageIndex) {
-                 // We need to merge the new URL/blob with the existing data,
-                 // and critically, store the new custom background element.
-                 return {
-                   ...p,
-                   ...newlyGeneratedPage,
-                   customBackgroundElement: newBackgroundElement,
-                 };
-               }
-               return p;
-             }));
-          }).catch(error => {
-            console.error(`Error regenerating page ${replacingImageIndex} with new background:`, error);
-            alert(`Falha ao substituir o fundo da página: ${error.message}`);
-          });
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const newImageUrl = e.target.result;
+        const pageToUpdate = generatedPagesData.find(p => p.index === replacingImageIndex);
+        if (!pageToUpdate) return;
+
+        const customPageTemplate = pageToUpdate.customPageTemplate || pageTemplate;
+        let newImages = [...(customPageTemplate.images || [])];
+        const newImageElement = { ...(pageTemplate.images[0] || {}), src: newImageUrl, id: `img_${Date.now()}` };
+
+        if (newImages.length > 0) {
+            newImages[0] = newImageElement;
+        } else {
+            newImageElement.width = 100;
+            newImageElement.height = 100;
+            newImages.push(newImageElement);
         }
-      };
-      reader.readAsDataURL(file);
-    }
+
+        const newPageTemplate = { ...customPageTemplate, images: newImages };
+
+        try {
+            const newPageImageData = await regenerateSinglePage(
+                replacingImageIndex,
+                pageToUpdate.record,
+                newPageTemplate,
+                pageToUpdate.customFieldPositions || fieldPositions,
+                pageToUpdate.customFieldStyles || fieldStyles,
+                null,
+                pageToUpdate.customBrandElements || brandElements,
+                pageToUpdate.fontScale || 1
+            );
+            setGeneratedPagesData(prev => prev.map(p => p.index === replacingImageIndex ? { ...p, ...newPageImageData, customPageTemplate: newPageTemplate } : p));
+        } catch (error) {
+            toast.error(`Falha ao substituir imagem: ${error.message}`);
+        }
+    };
+    reader.readAsDataURL(file);
+
     if (individualImageInputRef.current) {
       individualImageInputRef.current.value = "";
     }
@@ -519,11 +514,11 @@ const PageGeneratorFrontendOnly = ({
   };
 
   // Logic to determine props for the PageEditor
-  const pageToEdit = initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex);
+  const pageToEdit = generatedPagesData.find(p => p.index === editingGeneratedPageIndex);
   const editorPositions = pageToEdit?.customFieldPositions || fieldPositions;
   const editorStyles = pageToEdit?.customFieldStyles || fieldStyles;
   const editorBrandElements = pageToEdit?.customBrandElements !== undefined ? pageToEdit.customBrandElements : brandElements;
-  const editorBackgroundElement = pageToEdit?.customBackgroundElement || backgroundElement;
+  const editorPageTemplate = pageToEdit?.customPageTemplate || pageTemplate;
 
   return (
     <Box sx={{ mt: 3 }}>
@@ -785,7 +780,7 @@ const PageGeneratorFrontendOnly = ({
         </DialogActions>
       </Dialog>
 
-      {console.log('[PageGeneratorFrontendOnly] rendering PageEditor with props:', { showGeneratedPageEditor, initialGeneratedPagesData, editingGeneratedPageIndex, csvHeaders, fieldPositions, fieldStyles, brandElements, colorPalette, originalImageSize, standardsColors, backgroundElement })}
+      {console.log('[PageGeneratorFrontendOnly] rendering PageEditor with props:', { showGeneratedPageEditor, generatedPagesData, editingGeneratedPageIndex, csvHeaders, fieldPositions, fieldStyles, brandElements, colorPalette, originalImageSize, standardsColors, pageTemplate })}
       <PageEditor
         open={showGeneratedPageEditor}
         onClose={handleCloseGeneratedPageEditor}
@@ -798,7 +793,7 @@ const PageGeneratorFrontendOnly = ({
         colorPalette={colorPalette}
         originalImageSize={originalImageSize}
         standardsColors={standardsColors}
-        globalBackgroundElement={editorBackgroundElement}
+        globalPageTemplate={editorPageTemplate}
         aspectRatio={aspectRatio}
       />
 

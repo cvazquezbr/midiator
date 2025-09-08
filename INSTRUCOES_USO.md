@@ -11,7 +11,7 @@ Este componente permite transformar dados de um arquivo CSV em imagens personali
 - Separador: vírgula (,)
 - Campos com texto longo devem estar entre aspas
 
-### Imagem de Fundo
+### Imagem
 - Formatos suportados: PNG, JPG, JPEG
 - Resolução recomendada: 1080x1080px ou superior
 - Qualidade alta para melhor resultado final
@@ -30,7 +30,7 @@ Título,Mensagem,CTA,Descrição
 - Verifique se todos os campos foram detectados
 
 ### 3️⃣ Upload da Imagem
-- Clique em "Selecionar Imagem PNG/JPG"
+- Clique em "Selecionar Imagem"
 - Escolha uma imagem com boa resolução
 - Verifique o preview
 

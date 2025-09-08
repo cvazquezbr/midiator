@@ -20,16 +20,25 @@ describe('composeSingleImage', () => {
     // Mocking global.Image to use the Image class from 'canvas'
     global.Image = (await import('canvas')).Image;
 
+    const pageTemplate = {
+        backgroundColor: '#FFFFFF',
+        gradient: null,
+        images: [{
+            src: dummy_background,
+            filters: {},
+            visible: true
+        }]
+    };
+
     const result = await composeSingleImage({
       record: { text: 'Hello' },
       index: 0,
-      itemBackgroundImage: dummy_background,
       brandElements: [],
       fieldPositions: { text: { x: 10, y: 10, width: 80, height: 20, visible: true } },
       fieldStyles: { text: { fontSize: 16, color: '#000000' } },
       fontScale: 1,
       aspectRatio: '1:1',
-      backgroundElement: { filters: {} },
+      pageTemplate: pageTemplate,
     });
 
     expect(result).toHaveProperty('url');
@@ -57,24 +66,31 @@ describe('composeSingleImage', () => {
     // Mocking global.Image to use the Image class from 'canvas'
     global.Image = (await import('canvas')).Image;
 
+    const pageTemplate = {
+        backgroundColor: '#FFFFFF',
+        gradient: null,
+        images: [{
+            src: dummy_background,
+            filters: {
+                brightness: 150,
+                contrast: 120,
+                saturate: 180,
+                blur: 5,
+                opacity: 80,
+            },
+            visible: true
+        }]
+    };
+
     await composeSingleImage({
       record: { text: 'Hello' },
       index: 0,
-      itemBackgroundImage: dummy_background,
       brandElements: [],
       fieldPositions: { text: { x: 10, y: 10, width: 80, height: 20, visible: true } },
       fieldStyles: { text: { fontSize: 16, color: '#000000' } },
       fontScale: 1,
       aspectRatio: '1:1',
-      backgroundElement: {
-        filters: {
-          brightness: 150,
-          contrast: 120,
-          saturate: 180,
-          blur: 5,
-          opacity: 80,
-        },
-      },
+      pageTemplate: pageTemplate,
     });
 
     // The filter is applied before drawing the background image.

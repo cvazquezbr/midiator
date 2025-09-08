@@ -13,57 +13,45 @@ import {
 } from '@mui/material';
 import { Add, Delete, Gradient } from '@mui/icons-material';
 
-const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageStateUpdate }) => {
-  // Determine the initial mode. If the backgroundElement has a gradient, default to gradient mode.
-  const initialMode = backgroundElement?.gradient ? 'gradient' : 'solid';
+const BackgroundColorEditor = ({ pageTemplate, onUpdate }) => {
+  const initialMode = pageTemplate?.gradient ? 'gradient' : 'solid';
   const [colorMode, setColorMode] = React.useState(initialMode);
 
-  // When the component opens, if the mode is gradient, clear the solid page color to avoid confusion.
   React.useEffect(() => {
-    if (initialMode === 'gradient' && pageState?.backgroundColor) {
-       // onPageStateUpdate({ ...pageState, backgroundColor: 'rgba(0,0,0,0)' });
-    }
-  }, [initialMode]);
+    setColorMode(pageTemplate?.gradient ? 'gradient' : 'solid');
+  }, [pageTemplate?.gradient]);
 
-
-  if (!backgroundElement) return null;
-
-  const handlePageStateUpdate = (property, value) => {
-    onPageStateUpdate({ ...pageState, [property]: value });
-  };
+  if (!pageTemplate) return null;
 
   const handleGradientUpdate = (property, value) => {
-    const currentGradient = backgroundElement.gradient || {};
+    const currentGradient = pageTemplate.gradient || {};
     onUpdate({
-      ...backgroundElement,
+      ...pageTemplate,
       gradient: { ...currentGradient, [property]: value },
     });
   };
 
   const handleStopUpdate = (index, property, value) => {
-    const newStops = [...(backgroundElement.gradient?.stops || [])];
+    const newStops = [...(pageTemplate.gradient?.stops || [])];
     newStops[index] = { ...newStops[index], [property]: value };
     handleGradientUpdate('stops', newStops);
   };
 
   const addStop = () => {
     const newStops = [
-      ...(backgroundElement.gradient?.stops || []),
+      ...(pageTemplate.gradient?.stops || []),
       { color: '#ffffff', position: 100 },
     ];
     handleGradientUpdate('stops', newStops);
   };
 
   const removeStop = (index) => {
-    const newStops = (backgroundElement.gradient?.stops || []).filter((_, i) => i !== index);
+    const newStops = (pageTemplate.gradient?.stops || []).filter((_, i) => i !== index);
     handleGradientUpdate('stops', newStops);
   };
 
   return (
     <Box>
-      <Typography variant="caption" display="block" gutterBottom>
-        Cor de Fundo
-      </Typography>
       <ToggleButtonGroup
         value={colorMode}
         exclusive
@@ -72,14 +60,21 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageS
         onChange={(e, newMode) => {
           if (newMode) {
             setColorMode(newMode);
-            const newBackgroundType = newMode === 'solid' ? 'color' : 'gradient';
-            // When user selects a color/gradient, we remove the image src
-            // so the background image disappears, and set the correct type.
-            onUpdate({
-              ...backgroundElement,
-              src: null,
-              backgroundType: newBackgroundType,
-            });
+            if (newMode === 'solid') {
+                onUpdate({ ...pageTemplate, gradient: null });
+            } else {
+                onUpdate({
+                    ...pageTemplate,
+                    gradient: pageTemplate.gradient || {
+                        type: 'linear',
+                        angle: 90,
+                        stops: [
+                            { color: '#ffffff', position: 0 },
+                            { color: '#000000', position: 100 },
+                        ]
+                    }
+                });
+            }
           }
         }}
         aria-label="color mode"
@@ -97,19 +92,19 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageS
           <Typography gutterBottom>Cor</Typography>
           <TextField
             type="color"
-            value={pageState?.backgroundColor || '#ffffff'}
-            onChange={(e) => handlePageStateUpdate('backgroundColor', e.target.value)}
+            value={pageTemplate.backgroundColor || '#ffffff'}
+            onChange={(e) => onUpdate({ ...pageTemplate, backgroundColor: e.target.value })}
             fullWidth
           />
         </Box>
       )}
 
-      {colorMode === 'gradient' && (
+      {colorMode === 'gradient' && pageTemplate.gradient && (
         <Box sx={{ mt: 2 }}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
                 <ToggleButtonGroup
-                    value={backgroundElement.gradient?.type || 'linear'}
+                    value={pageTemplate.gradient.type || 'linear'}
                     exclusive
                     fullWidth
                     size="small"
@@ -126,11 +121,11 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageS
                 </ToggleButtonGroup>
             </Grid>
 
-            {backgroundElement.gradient?.type === 'linear' && (
+            {pageTemplate.gradient.type === 'linear' && (
               <Grid item xs={12}>
                 <Typography gutterBottom>Ângulo do Gradiente</Typography>
                 <Slider
-                  value={backgroundElement.gradient?.angle || 0}
+                  value={pageTemplate.gradient.angle || 0}
                   onChange={(e, value) => handleGradientUpdate('angle', value)}
                   min={0}
                   max={360}
@@ -142,7 +137,7 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageS
 
             <Grid item xs={12}>
               <Typography gutterBottom>Cores do Gradiente</Typography>
-              {backgroundElement.gradient?.stops?.map((stop, index) => (
+              {pageTemplate.gradient.stops?.map((stop, index) => (
                 <Grid container spacing={1} key={index} alignItems="center" sx={{ mb: 1 }}>
                   <Grid item xs={3}>
                     <TextField
@@ -164,7 +159,7 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageS
                     />
                   </Grid>
                   <Grid item xs={2}>
-                    <IconButton onClick={() => removeStop(index)} size="small" disabled={(backgroundElement.gradient?.stops?.length || 0) <= 2}>
+                    <IconButton onClick={() => removeStop(index)} size="small" disabled={(pageTemplate.gradient.stops?.length || 0) <= 2}>
                       <Delete />
                     </IconButton>
                   </Grid>

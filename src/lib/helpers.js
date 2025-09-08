@@ -462,8 +462,8 @@ Lembre-se: Sua resposta final deve conter APENAS o bloco \`\`\`csv ... \`\`\` co
 
     const { titulo, conteudo, cta, hashtags } = campaignContent;
     const imageHtml = backgroundImage ? `
-      <h2>Imagem de Fundo</h2>
-      <img src="${backgroundImage}" alt="Imagem de Fundo da Campanha" style="max-width: 100%; border-radius: 8px; margin-bottom: 2rem;" />
+      <h2>Imagem Principal</h2>
+      <img src="${backgroundImage}" alt="Imagem Principal da Campanha" style="max-width: 100%; border-radius: 8px; margin-bottom: 2rem;" />
     ` : '';
 
     const followupPostsHtml = followupPosts.length > 0 ? `

@@ -45,10 +45,8 @@ const ImageStep = ({
   originalImageSize,
   brandElements,
   setBrandElements,
-  backgroundElement,
-  setBackgroundElement,
-  pageState,
-  setPageState,
+  pageTemplate,
+  setPageTemplate,
   onZIndexChange,
   isMobile,
   selectedField,
@@ -61,7 +59,7 @@ const ImageStep = ({
   templateFieldStyles,
   activeStep,
 }) => {
-  console.log('[ImageStep] props:', { backgroundElement, fieldStyles });
+  console.log('[ImageStep] props:', { pageTemplate, fieldStyles });
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [fontScale, setFontScale] = useState(1);
   const [isCropping, setIsCropping] = useState(false);
@@ -122,9 +120,8 @@ const ImageStep = ({
             originalImageSize={originalImageSize}
             brandElements={brandElements}
             setBrandElements={setBrandElements}
-            backgroundElement={backgroundElement}
-            setBackgroundElement={setBackgroundElement}
-            pageState={pageState}
+            pageTemplate={pageTemplate}
+            setPageTemplate={setPageTemplate}
             onZIndexChange={onZIndexChange}
             onOpenHtmlEditor={onOpenHtmlEditor}
             currentPreviewIndex={currentPreviewIndex}
@@ -175,6 +172,7 @@ const ImageStep = ({
             </Box>
             <FormattingPanel
               selectedField={selectedField}
+              setSelectedField={setSelectedField}
               fieldStyles={fieldStyles}
               initialFieldStyles={initialFieldStyles}
               setFieldStyles={setFieldStyles}
@@ -183,14 +181,12 @@ const ImageStep = ({
               csvHeaders={csvHeaders}
               brandElements={brandElements}
               setBrandElements={setBrandElements}
-              backgroundElement={backgroundElement}
-              setBackgroundElement={setBackgroundElement}
+              pageTemplate={pageTemplate}
+              setPageTemplate={setPageTemplate}
               onZIndexChange={onZIndexChange}
               onDeselectField={onDeselectField}
               onOpenHtmlEditor={onOpenHtmlEditor}
               standardsColors={standardsColors}
-              pageState={pageState}
-              setPageState={setPageState}
               fontScale={fontScale}
               templateFieldStyles={templateFieldStyles}
               activeStep={activeStep}
@@ -206,7 +202,7 @@ const ImageStep = ({
         <>
           <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 1300 }} onClick={() => {
             if (!selectedField) {
-              setSelectedField('__background__');
+              setSelectedField(pageTemplate.images[0]?.id || '__background__');
             }
             setIsDrawerOpen(true);
           }}><EditIcon /></Fab>
@@ -214,6 +210,7 @@ const ImageStep = ({
             open={isDrawerOpen}
             onClose={() => setIsDrawerOpen(false)}
             selectedField={selectedField}
+            setSelectedField={setSelectedField}
             fieldStyles={fieldStyles}
             initialFieldStyles={initialFieldStyles}
             setFieldStyles={setFieldStyles}
@@ -222,8 +219,8 @@ const ImageStep = ({
             csvHeaders={csvHeaders}
             brandElements={brandElements}
             setBrandElements={setBrandElements}
-            backgroundElement={backgroundElement}
-            setBackgroundElement={setBackgroundElement}
+            pageTemplate={pageTemplate}
+            setPageTemplate={setPageTemplate}
             onZIndexChange={onZIndexChange}
             onDeselectField={onDeselectField}
             onOpenHtmlEditor={onOpenHtmlEditor}
