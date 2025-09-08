@@ -146,7 +146,7 @@ export const composeSingleImage = async ({
     fieldPositions = {},
     fieldStyles = {},
     aspectRatio,
-    backgroundElement, // The single source of truth for the background
+    pageTemplate,
     fontScale = 1,
 }) => {
 
@@ -164,80 +164,38 @@ export const composeSingleImage = async ({
         finalCanvas.height = dimensions.height;
     }
 
-    // Default white background in case no image is provided.
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-
-    // 2. Draw the single background image if it exists, applying all transformations.
-    if (backgroundElement?.src) {
-        try {
-            const bgImg = await loadImage(backgroundElement.src);
-            ctx.save();
-            const canvasWidth = finalCanvas.width;
-            const canvasHeight = finalCanvas.height;
-
-            const {
-              x = 0, y = 0, width = 100, height = 100,
-              rotation = 0,
-              filters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
-              crop,
-              shadow, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY
-            } = backgroundElement;
-
-            if (shadow) {
-              ctx.shadowColor = shadowColor || '#000000';
-              ctx.shadowBlur = shadowBlur || 10;
-              ctx.shadowOffsetX = shadowOffsetX || 5;
-              ctx.shadowOffsetY = shadowOffsetY || 5;
-            }
-
-            const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters || {};
-            ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
-
-            const dx = (x / 100) * canvasWidth;
-            const dy = (y / 100) * canvasHeight;
-            const dWidth = (width / 100) * canvasWidth;
-            const dHeight = (height / 100) * canvasHeight;
-
-            if (rotation) {
-              const centerX = dx + dWidth / 2;
-              const centerY = dy + dHeight / 2;
-              ctx.translate(centerX, centerY);
-              ctx.rotate(rotation * Math.PI / 180);
-              ctx.translate(-centerX, -centerY);
-            }
-
-            if (crop && crop.width > 0 && crop.height > 0) {
-              const sx = (crop.x / 100) * bgImg.width;
-              const sy = (crop.y / 100) * bgImg.height;
-              const sWidth = (crop.width / 100) * bgImg.width;
-              const sHeight = (crop.height / 100) * bgImg.height;
-              ctx.drawImage(bgImg, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
-            } else {
-              ctx.drawImage(bgImg, dx, dy, dWidth, dHeight);
-            }
-
-            // The main filters have been applied by ctx.filter. Now, apply the custom highlight filter.
-            // We must do this before restoring the context if we want it to be contained within the rotated/scaled element.
-            // However, it's easier to apply to the whole canvas and let the drawImage contain it.
-            // So we apply it AFTER the drawing, but before restoring the main context.
-            ctx.filter = 'none'; // Reset standard filters before pixel manipulation
-            if (filters.highlightAmount && filters.highlightAmount > 0) {
-              applyColorHighlight(ctx, canvasWidth, canvasHeight, filters.highlightColor, filters.highlightAmount);
-            }
-
-            ctx.restore();
-        } catch (error) {
-            console.error('[imageComposer] Failed to draw background image:', error);
-            ctx.fillStyle = 'red';
-            ctx.font = '20px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Erro ao carregar o fundo', finalCanvas.width / 2, finalCanvas.height / 2);
+    // 2. Draw background color or gradient
+    if (pageTemplate.gradient) {
+        // This is a simplified gradient handling. The editor creates a CSS string.
+        // For canvas, we'd need to parse this or use the structured object.
+        // For now, we assume a simple linear gradient object if not a string.
+        if (typeof pageTemplate.gradient === 'object' && pageTemplate.gradient.stops) {
+            const gradient = ctx.createLinearGradient(0, 0, finalCanvas.width, finalCanvas.height);
+            pageTemplate.gradient.stops.forEach(stop => {
+                gradient.addColorStop(stop.position / 100, stop.color);
+            });
+            ctx.fillStyle = gradient;
+        } else {
+            ctx.fillStyle = 'white'; // Fallback
         }
+    } else {
+        ctx.fillStyle = pageTemplate.backgroundColor || 'white';
     }
+    ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
 
     // 3. Collect and sort all elements (text and brand) by zIndex
     const elementsToDraw = [];
+
+    // Add page images to the drawing queue
+    (pageTemplate.images || []).forEach(image => {
+        if (image.src && image.visible !== false) {
+            elementsToDraw.push({
+                type: 'image',
+                ...image,
+                zIndex: image.zIndex || 0,
+            });
+        }
+    });
 
     Object.keys(record).forEach(field => {
         const position = fieldPositions[field];
@@ -257,7 +215,7 @@ export const composeSingleImage = async ({
     (brandElements || []).forEach(element => {
         if (element.url && element.visible !== false) {
             elementsToDraw.push({
-                type: 'brand',
+                type: 'image', // Treat brand elements as images
                 ...element,
                 zIndex: element.zIndex || 0,
             });
@@ -357,9 +315,9 @@ export const composeSingleImage = async ({
                 }
             }
 
-        } else if (element.type === 'brand') {
+        } else if (element.type === 'image') {
             try {
-                const elementImg = await loadImage(element.url);
+                const elementImg = await loadImage(element.src || element.url);
                 const elX = (element.x / 100) * finalCanvas.width;
                 const elY = (element.y / 100) * finalCanvas.height;
                 const elWidth = (element.width / 100) * finalCanvas.width;
@@ -378,7 +336,7 @@ export const composeSingleImage = async ({
                 }
                 ctx.drawImage(elementImg, elX, elY, elWidth, elHeight);
             } catch (error) {
-                console.error(`[composeSingleImage] Failed to load or draw brand element ${element.id}:`, error);
+                console.error(`[composeSingleImage] Failed to load or draw image element ${element.id}:`, error);
             }
         }
         ctx.restore();
@@ -396,7 +354,7 @@ export const composeSingleImage = async ({
         record,
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        // Return the state of the background that was actually used for composition
-        customBackgroundElement: backgroundElement,
+        // Return the state of the page template that was actually used for composition
+        customPageTemplate: pageTemplate,
     };
 };

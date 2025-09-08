@@ -69,17 +69,16 @@ const FieldPositioner = ({
   darkMode,
   brandElements,
   setBrandElements,
-  backgroundElement,
-  setBackgroundElement,
+  pageTemplate,
+  setPageTemplate,
   onOpenHtmlEditor,
   currentPreviewIndex,
   setCurrentPreviewIndex,
   onFontScaleChange,
   isCropping,
   setIsCropping,
-  pageState,
 }) => {
-  console.log('[FieldPositioner] props:', { backgroundElement, fieldStyles, pageState });
+  console.log('[FieldPositioner] props:', { pageTemplate, fieldStyles });
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
@@ -126,10 +125,15 @@ const FieldPositioner = ({
   }, [onImageDisplayedSizeChange]);
 
   const handlePositionChange = (id, newPosition) => {
-    if (id === '__background__') {
-      setBackgroundElement(prev => ({ ...prev, ...newPosition }));
-    } else if (id === '__cropbox__') {
-      setBackgroundElement(prev => ({ ...prev, crop: { ...prev.crop, ...newPosition } }));
+    if (id === '__cropbox__') {
+      // This logic needs to be tied to a specific image, assuming the first one for now.
+      setPageTemplate(prev => {
+        const newImages = [...prev.images];
+        if (newImages[0]) {
+          newImages[0].crop = { ...(newImages[0].crop || {}), ...newPosition };
+        }
+        return { ...prev, images: newImages };
+      });
     } else if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
         ...prev,
@@ -139,17 +143,32 @@ const FieldPositioner = ({
         }
       }));
     } else {
-      setBrandElements(prev => prev.map(el =>
-        el.id === id ? { ...el, ...newPosition } : el
-      ));
+      // Check if it's a brand element or a page image
+      const imageIndex = pageTemplate.images.findIndex(img => img.id === id);
+      if (imageIndex > -1) {
+        setPageTemplate(prev => {
+          const newImages = [...prev.images];
+          newImages[imageIndex] = { ...newImages[imageIndex], ...newPosition };
+          return { ...prev, images: newImages };
+        });
+      } else {
+        setBrandElements(prev => prev.map(el =>
+          el.id === id ? { ...el, ...newPosition } : el
+        ));
+      }
     }
   };
 
   const handleSizeChange = (id, newSize) => {
-    if (id === '__background__') {
-      setBackgroundElement(prev => ({ ...prev, ...newSize }));
-    } else if (id === '__cropbox__') {
-      setBackgroundElement(prev => ({ ...prev, crop: { ...prev.crop, ...newSize } }));
+    if (id === '__cropbox__') {
+      // This logic needs to be tied to a specific image, assuming the first one for now.
+      setPageTemplate(prev => {
+        const newImages = [...prev.images];
+        if (newImages[0]) {
+          newImages[0].crop = { ...(newImages[0].crop || {}), ...newSize };
+        }
+        return { ...prev, images: newImages };
+      });
     } else if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
         ...prev,
@@ -159,9 +178,18 @@ const FieldPositioner = ({
         }
       }));
     } else {
-      setBrandElements(prev => prev.map(el =>
-        el.id === id ? { ...el, ...newSize } : el
-      ));
+       const imageIndex = pageTemplate.images.findIndex(img => img.id === id);
+      if (imageIndex > -1) {
+        setPageTemplate(prev => {
+          const newImages = [...prev.images];
+          newImages[imageIndex] = { ...newImages[imageIndex], ...newSize };
+          return { ...prev, images: newImages };
+        });
+      } else {
+        setBrandElements(prev => prev.map(el =>
+          el.id === id ? { ...el, ...newSize } : el
+        ));
+      }
     }
   };
 
@@ -257,52 +285,42 @@ const FieldPositioner = ({
   }, [csvHeaders, fieldStyles]);
 
   const renderableElements = React.useMemo(() => {
-    // Fallback to a default object to ensure the editor is always visible,
-    // even if the parent component fails to provide a backgroundElement.
-    const effectiveBackgroundElement = backgroundElement || {
-      id: '__background__',
-      type: 'background',
-      x: 0, y: 0, width: 100, height: 100,
-      filters: {},
-      rotation: 0,
-      src: null,
-    };
+    const elements = [];
 
-    const elements = [
-      {
-        id: '__background__',
-        type: 'background',
-        position: effectiveBackgroundElement,
-        style: {
-          // Explicitly pass properties needed for styling by DraggableElement
-          backgroundType: effectiveBackgroundElement.backgroundType,
-          backgroundColor: effectiveBackgroundElement.backgroundColor,
-          gradient: effectiveBackgroundElement.gradient,
-          filters: effectiveBackgroundElement.filters,
-          shadow: effectiveBackgroundElement.shadow,
-          shadowColor: effectiveBackgroundElement.shadowColor,
-          shadowBlur: effectiveBackgroundElement.shadowBlur,
-          shadowOffsetX: effectiveBackgroundElement.shadowOffsetX,
-          shadowOffsetY: effectiveBackgroundElement.shadowOffsetY,
-        },
-        content: effectiveBackgroundElement.src || '',
-        zIndex: -1,
-        rotation: effectiveBackgroundElement.rotation || 0,
-        fontScale: 1,
-        enableHtmlRendering: false,
-      },
-      ...(isCropping && backgroundElement ? [{
-        id: '__cropbox__',
-        type: 'cropbox',
-        position: backgroundElement.crop || { x: 10, y: 10, width: 80, height: 80 },
-        style: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-        content: '',
-        zIndex: 1000,
-        rotation: 0,
-        fontScale: 1,
-        enableHtmlRendering: false,
-      }] : []),
-      ...(csvHeaders || [])
+    // Add page images
+    (pageTemplate.images || []).forEach(image => {
+        if (!image.visible) return;
+        elements.push({
+            id: image.id,
+            type: 'image',
+            position: image,
+            style: { ...image.filters, ...image },
+            content: image.src || '',
+            zIndex: image.zIndex || 0,
+            rotation: image.rotation || 0,
+            fontScale: 1,
+            enableHtmlRendering: false,
+        });
+    });
+
+    // Add cropbox if needed (for the first image for now)
+    const firstImage = pageTemplate.images?.[0];
+    if (isCropping && firstImage) {
+        elements.push({
+            id: '__cropbox__',
+            type: 'cropbox',
+            position: firstImage.crop || { x: 10, y: 10, width: 80, height: 80 },
+            style: { backgroundColor: 'rgba(0, 0, 0, 0.5)' },
+            content: '',
+            zIndex: 1000, // Should be on top of everything
+            rotation: 0,
+            fontScale: 1,
+            enableHtmlRendering: false,
+        });
+    }
+
+    // Add text fields
+    (csvHeaders || [])
         .map(header => {
           const position = fieldPositions[header];
           const style = completeFieldStyles[header];
@@ -311,7 +329,7 @@ const FieldPositioner = ({
           const record = csvData[currentPreviewIndex] || {};
           const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
 
-          return {
+          elements.push({
             id: header,
             type: 'text',
             position,
@@ -321,13 +339,13 @@ const FieldPositioner = ({
             rotation: position.rotation,
             fontScale: fontScale,
             enableHtmlRendering: isHtmlField(header),
-          };
-        })
-        .filter(Boolean),
-      ...(brandElements || [])
-        .map(element => {
-          if (element.visible === false) return null;
-          return {
+          });
+        });
+
+    // Add brand elements
+    (brandElements || []).forEach(element => {
+          if (element.visible === false) return;
+          elements.push({
             id: element.id,
             type: 'image',
             position: element,
@@ -337,14 +355,12 @@ const FieldPositioner = ({
             rotation: element.rotation,
             fontScale: 1,
             enableHtmlRendering: false,
-          };
-        })
-        .filter(Boolean)
-    ];
+          });
+        });
 
     elements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     return elements;
-  }, [backgroundElement, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
+  }, [pageTemplate, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
   return (
     <Box>
@@ -354,7 +370,7 @@ const FieldPositioner = ({
           className="text-container"
               sx={{
                 border: '2px solid #ddd',
-                backgroundColor: pageState?.backgroundColor || '#FFFFFF',
+                background: pageTemplate.gradient ? pageTemplate.gradient : pageTemplate.backgroundColor || '#FFFFFF',
                 position: 'relative', // Needed for absolute positioning of children
                 cursor: 'default',
                 touchAction: 'pan-x pan-y',
@@ -381,19 +397,19 @@ const FieldPositioner = ({
                     }}
                     onClick={(e) => {
                       if (e.target === e.currentTarget) {
-                        setSelectedField('__background__');
+                        setSelectedField(null); // Deselect all
                       }
                     }}
                     onTouchStart={(e) => {
                       if (e.target === e.currentTarget) {
-                        setSelectedField('__background__');
+                        setSelectedField(null); // Deselect all
                       }
                     }}
                   >
                     {renderableElements.map(element => (
                       <DraggableElement
                         key={element.id}
-                        element={element.type === 'image' || element.type === 'background' || element.type === 'cropbox' ? { ...element.position, type: element.type } : { id: element.id, type: 'text' }}
+                        element={{ ...element.position, type: element.type, id: element.id }}
                         position={element.position}
                         style={element.style}
                         content={element.content}

@@ -100,7 +100,7 @@ npm run dev
 ### Fluxo Completo
 
 1. **Upload CSV**: Carregue arquivo com dados
-2. **Upload Imagem de Fundo**: Defina imagem de fundo
+2. **Upload de Imagem**: Defina a imagem para a página
 3. **Configurar Campos**: Posicione e formate textos
 4. **Configurar Google Drive**:
    - Ative a integração

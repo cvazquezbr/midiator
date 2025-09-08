@@ -119,7 +119,7 @@ const BackgroundImageSelector = ({ open, onClose, onSelect, onLocalUpload }) => 
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>Selecionar Imagem de Fundo</DialogTitle>
+      <DialogTitle>Selecionar Imagem</DialogTitle>
       <DialogContent sx={{ p: 0 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={tab} onChange={(e, newValue) => setTab(newValue)} centered>

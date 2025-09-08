@@ -141,7 +141,7 @@ const Sidebar = ({
             />
             <Chip
               icon={<ImageIcon />}
-              label="Imagem de fundo"
+              label="Imagem"
               color={backgroundImageSrc ? 'success' : 'default'}
               variant={backgroundImageSrc ? 'filled' : 'outlined'}
               size="small"
