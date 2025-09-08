@@ -105,10 +105,8 @@ const FormattingPanel = ({
     setExpandedPanel(isExpanded ? panel : false);
   };
 
-  console.log(`[FormattingPanel] Rendering. Selected field prop: ${selectedField}`);
-
   React.useEffect(() => {
-    console.log(`[FormattingPanel] useEffect running. selectedField: ${selectedField}`);
+    // Reset all type flags and the current element
     setIsTextField(false);
     setIsPageImage(false);
     setIsBrandElement(false);
@@ -117,39 +115,35 @@ const FormattingPanel = ({
 
     if (selectedField) {
       if (selectedField === '__page_background__') {
-        console.log('[FormattingPanel] useEffect: Matched __page_background__');
         setIsPageBackground(true);
         setCurrentElement(pageTemplate);
+        setExpandedPanel('backgroundColor'); // Auto-expand
       } else if (fieldPositions[selectedField]) {
-        console.log('[FormattingPanel] useEffect: Matched a text field.');
         setIsTextField(true);
         setCurrentElement({
           ...fieldPositions[selectedField],
           style: fieldStyles[selectedField] || {},
         });
+        setExpandedPanel('fontStyle'); // Auto-expand
       } else {
         const pageImg = pageTemplate?.images?.find(img => img.id === selectedField);
         if (pageImg) {
-          console.log('[FormattingPanel] useEffect: Matched a page image.');
           setIsPageImage(true);
           setCurrentElement(pageImg);
+          setExpandedPanel('imageFilters'); // Auto-expand
         } else {
           const brandEl = brandElements?.find(el => el.id === selectedField);
           if (brandEl) {
-            console.log('[FormattingPanel] useEffect: Matched a brand element.');
             setIsBrandElement(true);
             setCurrentElement(brandEl);
-          } else {
-            console.log('[FormattingPanel] useEffect: selectedField has value but no element was matched.');
+            setExpandedPanel('imageFilters'); // Auto-expand
           }
         }
       }
     } else {
-        console.log('[FormattingPanel] useEffect: No selectedField.');
+      setExpandedPanel(false); // Collapse all if nothing is selected
     }
   }, [selectedField, fieldPositions, fieldStyles, brandElements, pageTemplate]);
-
-  console.log(`[FormattingPanel] State before render: isPageBackground=${isPageBackground}, currentElement is ${currentElement ? 'set' : 'null'}`);
 
   const updateFieldStyle = (property, value) => {
     if (!isTextField) return;
