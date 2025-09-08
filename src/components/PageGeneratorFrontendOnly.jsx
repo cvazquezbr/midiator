@@ -179,11 +179,9 @@ const PageGeneratorFrontendOnly = ({
       })
       .then(pageData => {
         setProgress(p => p + 1);
-        return {
-          ...pageData,
-          customFieldStyles: fieldStyles,
-          customFieldPositions: fieldPositions,
-        };
+        // Return only the essential page data.
+        // Custom styles/positions will be added only when a user edits a specific page.
+        return pageData;
       })
       .catch(error => {
         console.error(`Erro ao gerar página para o registro ${i}:`, error);
@@ -338,24 +336,24 @@ const PageGeneratorFrontendOnly = ({
       const newPageImageData = await regenerateSinglePage(
         pageIndex,
         modifiedPageData.record,
-        modifiedPageData.pageTemplate,
-        modifiedPageData.customFieldPositions, // Use the correct prop name
-        modifiedPageData.customFieldStyles, // Use the correct prop name
-        modifiedPageData.customBrandElements, // Use the correct prop name
+        modifiedPageData.customPageTemplate, // Use the correct prop name
+        modifiedPageData.customFieldPositions,
+        modifiedPageData.customFieldStyles,
+        modifiedPageData.customBrandElements,
         modifiedPageData.fontScale
       );
       setGeneratedPagesData(currentPages =>
         currentPages.map(page => {
           if (page.index !== pageIndex) return page;
+          // Persist the changes
           return {
-            ...page,
-            ...newPageImageData,
+            ...page, // Keep old data like blob, url
+            ...newPageImageData, // Overwrite with new image data
             record: modifiedPageData.record,
-            customFieldPositions: modifiedPageData.fieldPositions,
-            customFieldStyles: modifiedPageData.fieldStyles,
-            customBrandElements: modifiedPageData.brandElements,
-            customPageTemplate: modifiedPageData.pageTemplate,
-            fontScale: modifiedPageData.fontScale,
+            customFieldPositions: modifiedPageData.customFieldPositions,
+            customFieldStyles: modifiedPageData.customFieldStyles,
+            customBrandElements: modifiedPageData.customBrandElements,
+            customPageTemplate: modifiedPageData.customPageTemplate,
           };
         })
       );
