@@ -400,13 +400,11 @@ const FieldPositioner = ({
                     }}
                     onClick={(e) => {
                       if (e.target === e.currentTarget) {
-                        console.log('[FieldPositioner] Background clicked. Setting selected field to __page_background__');
                         setSelectedField('__page_background__');
                       }
                     }}
                     onTouchStart={(e) => {
                       if (e.target === e.currentTarget) {
-                        console.log('[FieldPositioner] Background touched. Setting selected field to __page_background__');
                         setSelectedField('__page_background__');
                       }
                     }}

@@ -13,57 +13,46 @@ import {
 } from '@mui/material';
 import { Add, Delete, Gradient } from '@mui/icons-material';
 
-const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageStateUpdate }) => {
-  // Determine the initial mode. If the backgroundElement has a gradient, default to gradient mode.
-  const initialMode = backgroundElement?.gradient ? 'gradient' : 'solid';
+const BackgroundColorEditor = ({ pageTemplate, onUpdate }) => {
+  if (!pageTemplate) return null;
+
+  // Determine the initial mode. If the pageTemplate has a gradient, default to gradient mode.
+  const initialMode = pageTemplate.gradient ? 'gradient' : 'solid';
   const [colorMode, setColorMode] = React.useState(initialMode);
 
-  // When the component opens, if the mode is gradient, clear the solid page color to avoid confusion.
-  React.useEffect(() => {
-    if (initialMode === 'gradient' && pageState?.backgroundColor) {
-       // onPageStateUpdate({ ...pageState, backgroundColor: 'rgba(0,0,0,0)' });
-    }
-  }, [initialMode]);
-
-
-  if (!backgroundElement) return null;
-
-  const handlePageStateUpdate = (property, value) => {
-    onPageStateUpdate({ ...pageState, [property]: value });
+  const handleUpdate = (property, value) => {
+    onUpdate({ ...pageTemplate, [property]: value });
   };
 
   const handleGradientUpdate = (property, value) => {
-    const currentGradient = backgroundElement.gradient || {};
+    const currentGradient = pageTemplate.gradient || { type: 'linear', angle: 90, colors: ['#ffffff', '#000000'] };
     onUpdate({
-      ...backgroundElement,
+      ...pageTemplate,
       gradient: { ...currentGradient, [property]: value },
     });
   };
 
-  const handleStopUpdate = (index, property, value) => {
-    const newStops = [...(backgroundElement.gradient?.stops || [])];
-    newStops[index] = { ...newStops[index], [property]: value };
-    handleGradientUpdate('stops', newStops);
+  const handleColorUpdate = (index, newColor) => {
+    const newColors = [...(pageTemplate.gradient?.colors || [])];
+    newColors[index] = newColor;
+    handleGradientUpdate('colors', newColors);
   };
 
-  const addStop = () => {
-    const newStops = [
-      ...(backgroundElement.gradient?.stops || []),
-      { color: '#ffffff', position: 100 },
+  const addColor = () => {
+    const newColors = [
+      ...(pageTemplate.gradient?.colors || []),
+      '#ffffff',
     ];
-    handleGradientUpdate('stops', newStops);
+    handleGradientUpdate('colors', newColors);
   };
 
-  const removeStop = (index) => {
-    const newStops = (backgroundElement.gradient?.stops || []).filter((_, i) => i !== index);
-    handleGradientUpdate('stops', newStops);
+  const removeColor = (index) => {
+    const newColors = (pageTemplate.gradient?.colors || []).filter((_, i) => i !== index);
+    handleGradientUpdate('colors', newColors);
   };
 
   return (
     <Box>
-      <Typography variant="caption" display="block" gutterBottom>
-        Cor de Fundo
-      </Typography>
       <ToggleButtonGroup
         value={colorMode}
         exclusive
@@ -72,14 +61,16 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageS
         onChange={(e, newMode) => {
           if (newMode) {
             setColorMode(newMode);
-            const newBackgroundType = newMode === 'solid' ? 'color' : 'gradient';
-            // When user selects a color/gradient, we remove the image src
-            // so the background image disappears, and set the correct type.
-            onUpdate({
-              ...backgroundElement,
-              src: null,
-              backgroundType: newBackgroundType,
-            });
+            // When switching modes, nullify the other to avoid conflicts
+            if (newMode === 'solid') {
+              handleUpdate('gradient', null);
+            } else {
+              handleUpdate('backgroundColor', null);
+              // Ensure a default gradient exists if switching to it
+              if (!pageTemplate.gradient) {
+                handleGradientUpdate('type', 'linear');
+              }
+            }
           }
         }}
         aria-label="color mode"
@@ -94,11 +85,11 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageS
 
       {colorMode === 'solid' && (
         <Box sx={{ mt: 2 }}>
-          <Typography gutterBottom>Cor</Typography>
+          <Typography gutterBottom>Cor de Fundo</Typography>
           <TextField
             type="color"
-            value={pageState?.backgroundColor || '#ffffff'}
-            onChange={(e) => handlePageStateUpdate('backgroundColor', e.target.value)}
+            value={pageTemplate.backgroundColor || '#ffffff'}
+            onChange={(e) => handleUpdate('backgroundColor', e.target.value)}
             fullWidth
           />
         </Box>
@@ -109,7 +100,7 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageS
           <Grid container spacing={2}>
             <Grid item xs={12}>
                 <ToggleButtonGroup
-                    value={backgroundElement.gradient?.type || 'linear'}
+                    value={pageTemplate.gradient?.type || 'linear'}
                     exclusive
                     fullWidth
                     size="small"
@@ -126,11 +117,11 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageS
                 </ToggleButtonGroup>
             </Grid>
 
-            {backgroundElement.gradient?.type === 'linear' && (
+            {pageTemplate.gradient?.type === 'linear' && (
               <Grid item xs={12}>
-                <Typography gutterBottom>Ângulo do Gradiente</Typography>
+                <Typography gutterBottom>Ângulo do Gradiente: {pageTemplate.gradient?.angle || 0}°</Typography>
                 <Slider
-                  value={backgroundElement.gradient?.angle || 0}
+                  value={pageTemplate.gradient?.angle || 0}
                   onChange={(e, value) => handleGradientUpdate('angle', value)}
                   min={0}
                   max={360}
@@ -142,35 +133,28 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageS
 
             <Grid item xs={12}>
               <Typography gutterBottom>Cores do Gradiente</Typography>
-              {backgroundElement.gradient?.stops?.map((stop, index) => (
+              {(pageTemplate.gradient?.colors || []).map((color, index) => (
                 <Grid container spacing={1} key={index} alignItems="center" sx={{ mb: 1 }}>
-                  <Grid item xs={3}>
+                  <Grid item xs={4}>
                     <TextField
                       type="color"
-                      value={stop.color}
-                      onChange={(e) => handleStopUpdate(index, 'color', e.target.value)}
+                      value={color}
+                      onChange={(e) => handleColorUpdate(index, e.target.value)}
                       fullWidth
                       size="small"
                     />
                   </Grid>
-                  <Grid item xs={7}>
-                    <Slider
-                      value={stop.position}
-                      onChange={(e, value) => handleStopUpdate(index, 'position', value)}
-                      min={0}
-                      max={100}
-                      step={1}
-                      size="small"
-                    />
-                  </Grid>
+                   <Grid item xs={6}>
+                     <Typography noWrap>{color}</Typography>
+                   </Grid>
                   <Grid item xs={2}>
-                    <IconButton onClick={() => removeStop(index)} size="small" disabled={(backgroundElement.gradient?.stops?.length || 0) <= 2}>
+                    <IconButton onClick={() => removeColor(index)} size="small" disabled={(pageTemplate.gradient?.colors?.length || 0) <= 2}>
                       <Delete />
                     </IconButton>
                   </Grid>
                 </Grid>
               ))}
-              <Button startIcon={<Add />} onClick={addStop} size="small" variant="outlined" fullWidth>
+              <Button startIcon={<Add />} onClick={addColor} size="small" variant="outlined" fullWidth>
                 Adicionar Cor
               </Button>
             </Grid>
