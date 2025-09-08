@@ -13,8 +13,8 @@ const FormattingDrawer = ({
   fieldPositions,
   setFieldPositions,
   csvHeaders,
-  imageFilters,
-  setImageFilters,
+  backgroundElement,
+  setBackgroundElement,
   brandElements,
   setBrandElements,
   onZIndexChange,
@@ -42,8 +42,8 @@ const FormattingDrawer = ({
           fieldPositions={fieldPositions}
           setFieldPositions={setFieldPositions}
           csvHeaders={csvHeaders}
-          imageFilters={imageFilters}
-          setImageFilters={setImageFilters}
+          backgroundElement={backgroundElement}
+          setBackgroundElement={setBackgroundElement}
           brandElements={brandElements}
           setBrandElements={setBrandElements}
           onZIndexChange={onZIndexChange}
