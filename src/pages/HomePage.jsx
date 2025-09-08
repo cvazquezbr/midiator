@@ -1288,6 +1288,8 @@ function HomePage() {
                     aspectRatio={aspectRatio}
                     pageTemplate={pageTemplate}
                     generatedPagesData={generatedPagesData}
+                    handleImageUpload={handleImageUpload}
+                    onChangeBackgroundImage={() => setShowBgSelector(true)}
                   />
                 )}
                 {activeStep === 5 && (

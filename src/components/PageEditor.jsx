@@ -44,6 +44,8 @@ const PageEditor = ({
   standardsColors,
   globalPageTemplate,
   aspectRatio,
+  handleImageUpload,
+  onChangeBackgroundImage,
 }) => {
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
@@ -101,6 +103,7 @@ const PageEditor = ({
       customBrandElements: editedBrandElements,
       pageTemplate: editedPageTemplate, // Pass the edited template back
     };
+    console.log('[PageEditor] handleSave called. Data being passed up:', savedData);
     onSave(savedData);
     onClose();
   };
@@ -152,6 +155,9 @@ const PageEditor = ({
                 setBrandElements={setEditedBrandElements}
                 onOpenHtmlEditor={handleOpenHtmlEditor}
                 standardsColors={standardsColors || colorPalette}
+                showImageLoaders={true}
+                handleImageUpload={handleImageUpload}
+                onChangeBackgroundImage={onChangeBackgroundImage}
               />
             </Grid>
           )}
@@ -180,6 +186,9 @@ const PageEditor = ({
             brandElements={editedBrandElements}
             setBrandElements={setEditedBrandElements}
             standardsColors={standardsColors || colorPalette}
+            showImageLoaders={true}
+            handleImageUpload={handleImageUpload}
+            onChangeBackgroundImage={onChangeBackgroundImage}
           />
         </>
       )}

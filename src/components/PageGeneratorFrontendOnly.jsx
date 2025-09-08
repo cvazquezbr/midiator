@@ -57,8 +57,10 @@ const PageGeneratorFrontendOnly = ({
   fontScale = 1,
   standardsColors,
   handleGenerateSinglePage,
-  pageTemplate, // Changed from backgroundElement
+  pageTemplate,
   aspectRatio,
+  handleImageUpload, // New prop
+  onChangeBackgroundImage, // New prop
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -74,6 +76,7 @@ const PageGeneratorFrontendOnly = ({
   const [isUploadingToDrive, setIsUploadingToDrive] = useState(false);
   const [driveResult, setDriveResult] = useState(null);
   const [replacingImageIndex, setReplacingImageIndex] = useState(null);
+  const [regeneratingIndex, setRegeneratingIndex] = useState(null);
   const individualImageInputRef = useRef(null);
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
@@ -327,6 +330,7 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const handleSaveIndividualModifications = async (modifiedPageData) => {
+    console.log('[PageGenerator] handleSaveIndividualModifications received:', modifiedPageData);
     const { index: pageIndex } = modifiedPageData;
     handleCloseGeneratedPageEditor();
     try {
@@ -334,9 +338,9 @@ const PageGeneratorFrontendOnly = ({
         pageIndex,
         modifiedPageData.record,
         modifiedPageData.pageTemplate,
-        modifiedPageData.fieldPositions,
-        modifiedPageData.fieldStyles,
-        modifiedPageData.brandElements,
+        modifiedPageData.customFieldPositions, // Use the correct prop name
+        modifiedPageData.customFieldStyles, // Use the correct prop name
+        modifiedPageData.customBrandElements, // Use the correct prop name
         modifiedPageData.fontScale
       );
       setGeneratedPagesData(currentPages =>
@@ -524,11 +528,66 @@ const PageGeneratorFrontendOnly = ({
                           <Chip label={`#${index + 1}`} size="small" color="primary" sx={{ mr: 1 }} />
                           <Typography variant="body2" noWrap sx={{ flexGrow: 1 }}>{pageData.filename}</Typography>
                         </Box>
-                        <Box sx={{ width: '100%', height: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: 'white', borderRadius: 1, mb: 1, boxShadow: 3, cursor: 'pointer', '&:hover img': { transform: 'scale(1.03)' }, '&:hover': { boxShadow: 6 }, transition: 'all 0.3s' }} onClick={() => handleOpenGeneratedPageEditor(pageData, pageData.index)}>
-                          <img src={pageData.url} alt={`Preview ${index + 1}`} style={{ maxWidth: '100%', maxHeight: '150px', objectFit: 'contain', transition: 'transform 0.3s' }} />
+                        <Box
+                          sx={{
+                            position: 'relative',
+                            width: '100%',
+                            height: 'auto',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            backgroundColor: 'white',
+                            borderRadius: 1,
+                            mb: 1,
+                            boxShadow: 3,
+                            cursor: 'pointer',
+                            '&:hover img': { transform: 'scale(1.03)' },
+                            '&:hover': { boxShadow: 6 },
+                            transition: 'all 0.3s'
+                          }}
+                          onClick={() => handleOpenGeneratedPageEditor(pageData, pageData.index)}
+                        >
+                          <img
+                            src={pageData.url}
+                            alt={`Preview ${index + 1}`}
+                            style={{
+                              maxWidth: '100%',
+                              maxHeight: '150px',
+                              objectFit: 'contain',
+                              transition: 'transform 0.3s',
+                              opacity: regeneratingIndex === index ? 0.5 : 1,
+                            }}
+                          />
+                          {regeneratingIndex === index && (
+                            <CircularProgress
+                              size={40}
+                              sx={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                marginTop: '-20px',
+                                marginLeft: '-20px',
+                              }}
+                            />
+                          )}
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-around', gap: 1 }}>
-                           <Tooltip title="Regerar com IA"><IconButton size="small" onClick={() => handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1)}><GeminiIcon /></IconButton></Tooltip>
+                           <Tooltip title="Regerar com IA">
+                                <IconButton
+                                    size="small"
+                                    onClick={async () => {
+                                        setRegeneratingIndex(index);
+                                        try {
+                                            await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1);
+                                        } finally {
+                                            setRegeneratingIndex(null);
+                                        }
+                                    }}
+                                    disabled={regeneratingIndex !== null}
+                                >
+                                    <GeminiIcon />
+                                </IconButton>
+                            </Tooltip>
                            <Tooltip title="Resetar"><IconButton size="small" onClick={() => handleResetPage(pageData.index)}><SettingsBackupRestore /></IconButton></Tooltip>
                            <Tooltip title="Editar"><IconButton size="small" onClick={() => handleOpenGeneratedPageEditor(pageData, pageData.index)}><Edit /></IconButton></Tooltip>
                            <Tooltip title="Substituir Fundo"><IconButton size="small" onClick={() => handleReplacePageClick(pageData.index)}><SwapHoriz /></IconButton></Tooltip>
@@ -564,6 +623,8 @@ const PageGeneratorFrontendOnly = ({
           globalPageTemplate={pageTemplate}
           brandElements={brandElements}
           originalImageSize={originalImageSize}
+          handleImageUpload={handleImageUpload}
+          onChangeBackgroundImage={onChangeBackgroundImage}
         />
       )}
 
