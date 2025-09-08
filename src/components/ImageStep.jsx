@@ -81,14 +81,14 @@ const ImageStep = ({
   };
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
+    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, height: { xs: 'auto', md: 'calc(100vh - 150px)' } }}>
 
       {/* Main Content: Editor Area */}
       <Box sx={{
-        flex: '1 1 auto',
+        flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 0, // Crucial for flex child to shrink
+        minHeight: 0,
         p: 1,
       }}>
         <Typography variant="h6" sx={{ flexShrink: 0, textAlign: 'center', mb: 2 }}>
