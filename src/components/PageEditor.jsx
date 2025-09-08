@@ -262,56 +262,50 @@ const PageEditor = ({
         </IconButton>
       </DialogTitle>
       <DialogContent dividers sx={{ overflowY: 'auto' }}>
-        {!stylesAreInitialized ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
-            <Typography>Carregando editor...</Typography>
-          </Box>
-        ) : (
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={isMobile ? 12 : 8}>
-              <FieldPositioner
-                aspectRatio={aspectRatio}
-                csvHeaders={editorCsvHeaders} // Headers relevantes para esta imagem
-                fieldPositions={editedPositions}
-                setFieldPositions={setEditedPositions}
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={isMobile ? 12 : 8}>
+            <FieldPositioner
+              aspectRatio={aspectRatio}
+              csvHeaders={editorCsvHeaders} // Headers relevantes para esta imagem
+              fieldPositions={editedPositions}
+              setFieldPositions={setEditedPositions}
+              fieldStyles={editedStyles}
+              setFieldStyles={setEditedStyles}
+              csvData={editorCsvData} // Dados CSV desta imagem para preview
+              colorPalette={colorPalette}
+              selectedField={selectedFieldInternal}
+              setSelectedField={handleInternalFieldSelection}
+              onCsvDataUpdate={handleFieldPositionerCsvDataUpdate}
+              originalImageSize={originalImageSize}
+              onFontScaleChange={setFontScale}
+              brandElements={editedBrandElements}
+              setBrandElements={setEditedBrandElements}
+              backgroundElement={editedBackgroundElement}
+              setBackgroundElement={setEditedBackgroundElement}
+              currentPreviewIndex={0}
+            />
+          </Grid>
+          {!isMobile && (
+            <Grid item xs={12} md={4}>
+              <FormattingPanel
+                selectedField={selectedFieldInternal} // Usar o estado interno
                 fieldStyles={editedStyles}
                 setFieldStyles={setEditedStyles}
-                csvData={editorCsvData} // Dados CSV desta imagem para preview
-                colorPalette={colorPalette}
-                selectedField={selectedFieldInternal}
-                setSelectedField={handleInternalFieldSelection}
-                onCsvDataUpdate={handleFieldPositionerCsvDataUpdate}
-                originalImageSize={originalImageSize}
-                onFontScaleChange={setFontScale}
-                brandElements={editedBrandElements}
-                setBrandElements={setEditedBrandElements}
+                fieldPositions={editedPositions}
+                setFieldPositions={setEditedPositions}
+                csvHeaders={editorCsvHeaders}
                 backgroundElement={editedBackgroundElement}
                 setBackgroundElement={setEditedBackgroundElement}
-                currentPreviewIndex={0}
+                brandElements={editedBrandElements}
+                setBrandElements={setEditedBrandElements}
+                onDeselectField={handleDeselectField}
+                onOpenHtmlEditor={handleOpenHtmlEditor}
+                fontScale={fontScale}
+                standardsColors={standardsColors || colorPalette}
               />
             </Grid>
-            {!isMobile && (
-              <Grid item xs={12} md={4}>
-                <FormattingPanel
-                  selectedField={selectedFieldInternal} // Usar o estado interno
-                  fieldStyles={editedStyles}
-                  setFieldStyles={setEditedStyles}
-                  fieldPositions={editedPositions}
-                  setFieldPositions={setEditedPositions}
-                  csvHeaders={editorCsvHeaders}
-                  backgroundElement={editedBackgroundElement}
-                  setBackgroundElement={setEditedBackgroundElement}
-                  brandElements={editedBrandElements}
-                  setBrandElements={setEditedBrandElements}
-                  onDeselectField={handleDeselectField}
-                  onOpenHtmlEditor={handleOpenHtmlEditor}
-                  fontScale={fontScale}
-                  standardsColors={standardsColors || colorPalette}
-                />
-              </Grid>
-            )}
-          </Grid>
-        )}
+          )}
+        </Grid>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>

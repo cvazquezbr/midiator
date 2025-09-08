@@ -105,6 +105,8 @@ const defaultBackgroundElement = {
   shadowOffsetY: 5,
 };
 
+const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
+
 function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
@@ -167,7 +169,7 @@ function HomePage() {
   const [initialFieldStyles, setInitialFieldStyles] = useState({});
   const [templateFieldStyles, setTemplateFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
-  const [originalImageSize, setOriginalImageSize] = useState({ width: 1920, height: 1080 });
+  const [originalImageSize, setOriginalImageSize] = useState(DEFAULT_IMAGE_SIZE);
   const [generatedPagesData, setGeneratedPagesData] = useState([]);
   const [generatedAudioData, setGeneratedAudioData] = useState([]);
   const [generatedVideosData, setGeneratedVideosData] = useState([]);
@@ -341,7 +343,7 @@ function HomePage() {
     setInitialFieldStyles(completeStyles);
 
     setDisplayedImageSize(state.displayedImageSize ?? { width: 0, height: 0 });
-    setOriginalImageSize(state.originalImageSize ?? { width: 1920, height: 1080 });
+    setOriginalImageSize(state.originalImageSize ?? DEFAULT_IMAGE_SIZE);
   };
 
   const handleSaveCampaign = async (name) => {
@@ -538,7 +540,7 @@ function HomePage() {
     // reset the originalImageSize to the default. This prevents the editor
     // from retaining the dimensions of the old image, which would break the layout.
     if (backgroundElement?.src === null) {
-      setOriginalImageSize({ width: 1920, height: 1080 });
+      setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     }
   }, [backgroundElement]);
 
@@ -606,7 +608,7 @@ function HomePage() {
     setCurrentCampaign(null);
     // Also explicitly reset the background element and image size to the default state for a new campaign
     setBackgroundElement(defaultBackgroundElement);
-    setOriginalImageSize({ width: 1920, height: 1080 });
+    setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     setActiveStep(1);
   };
   const handleEditCampaign = (campaign) => {
@@ -689,7 +691,7 @@ function HomePage() {
       setColorPalette([]);
       // Reset to a functional default state on image load error
       setBackgroundElement(defaultBackgroundElement);
-      setOriginalImageSize({ width: 1920, height: 1080 });
+      setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     };
     img.src = imageUrl;
   }, []);
