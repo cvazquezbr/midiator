@@ -108,7 +108,6 @@ const FormattingPanel = ({
     setExpandedPanel(isExpanded ? panel : false);
   };
 
-  // This effect updates the state based on the selected field and available data
   React.useEffect(() => {
     let foundElement = null;
     let elIsTextField = false;
@@ -146,24 +145,18 @@ const FormattingPanel = ({
     setIsPageImage(elIsPageImage);
     setIsBrandElement(elIsBrandElement);
     setIsPageBackground(elIsPageBackground);
-  }, [selectedField, fieldPositions, fieldStyles, brandElements, pageTemplate]);
 
-  // This separate effect handles which accordion is open, ONLY when the selection changes.
-  React.useEffect(() => {
+    // Set accordion state based on the types determined above
     if (!selectedField) {
       setExpandedPanel(false);
-      return;
-    }
-    // This logic relies on the state flags set by the other useEffect.
-    // It runs after the other effect has determined the type of the selected element.
-    if (isPageBackground) {
+    } else if (elIsPageBackground) {
       setExpandedPanel('backgroundColor');
-    } else if (isTextField) {
+    } else if (elIsTextField) {
       setExpandedPanel('fontStyle');
-    } else if (isImageElement) {
+    } else if (elIsPageImage || elIsBrandElement) {
       setExpandedPanel('imageStyle');
     }
-  }, [selectedField, isPageBackground, isTextField, isImageElement]);
+  }, [selectedField, fieldPositions, fieldStyles, brandElements, pageTemplate]);
 
   const updateFieldStyle = (property, value) => {
     if (!isTextField) return;
