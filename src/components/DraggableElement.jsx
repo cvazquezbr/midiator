@@ -638,7 +638,7 @@ const DraggableElementInternal = ({
     height: `${position.height}%`,
     transform: `rotate(${rotation || 0}deg)`,
     zIndex: position.zIndex || 'auto',
-    filter: (element.type === 'image' || element.type === 'background') ? getFilterString(style) : 'none',
+    filter: (element.type === 'image' || element.type === 'background') ? getFilterString(style.filters) : 'none',
     boxShadow: (element.type === 'image' || element.type === 'background') ? getBoxShadowString(style) : 'none',
   };
 
