@@ -318,45 +318,48 @@ const FieldPositioner = ({
             enableHtmlRendering: false,
         });
     }
-      ...(csvHeaders || [])
-        .map(header => {
-          const position = fieldPositions[header];
-          const style = completeFieldStyles[header];
-          if (!position || !position.visible) return null;
 
-          const record = csvData[currentPreviewIndex] || {};
-          const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
+    const textElements = (csvHeaders || [])
+      .map(header => {
+        const position = fieldPositions[header];
+        const style = completeFieldStyles[header];
+        if (!position || !position.visible) return null;
 
-          return {
-            id: header,
-            type: 'text',
-            position,
-            style,
-            content: sampleData,
-            zIndex: position.zIndex || 0,
-            rotation: position.rotation,
-            fontScale: fontScale,
-            enableHtmlRendering: isHtmlField(header),
-          };
-        })
-        .filter(Boolean),
-      ...(brandElements || [])
-        .map(element => {
-          if (element.visible === false) return null;
-          return {
-            id: element.id,
-            type: 'image',
-            position: element,
-            style: { ...element.filters, ...element },
-            content: element.url,
-            zIndex: element.zIndex || 0,
-            rotation: element.rotation,
-            fontScale: 1,
-            enableHtmlRendering: false,
-          };
-        })
-        .filter(Boolean)
-    ];
+        const record = csvData[currentPreviewIndex] || {};
+        const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
+
+        return {
+          id: header,
+          type: 'text',
+          position,
+          style,
+          content: sampleData,
+          zIndex: position.zIndex || 0,
+          rotation: position.rotation,
+          fontScale: fontScale,
+          enableHtmlRendering: isHtmlField(header),
+        };
+      })
+      .filter(Boolean);
+
+    const brandEls = (brandElements || [])
+      .map(element => {
+        if (element.visible === false) return null;
+        return {
+          id: element.id,
+          type: 'image',
+          position: element,
+          style: { ...element.filters, ...element },
+          content: element.url,
+          zIndex: element.zIndex || 0,
+          rotation: element.rotation,
+          fontScale: 1,
+          enableHtmlRendering: false,
+        };
+      })
+      .filter(Boolean);
+
+    elements.push(...textElements, ...brandEls);
 
     elements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     return elements;
