@@ -366,8 +366,8 @@ const FieldPositioner = ({
   }, [pageTemplate, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
   return (
-    <Box>
-      <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: 2 }}>
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: 2, width: '100%', height: '100%', maxWidth: '100%', maxHeight: '100%' }}>
         <Box
           ref={containerRef}
           className="text-container"
@@ -383,7 +383,9 @@ const FieldPositioner = ({
                 },
                 aspectRatio: aspectRatio,
                 width: '100%',
-                minHeight: 400, // Garante que o editor tenha uma altura mínima
+                height: '100%',
+                maxWidth: '100%',
+                maxHeight: '100%',
               }}
               onTouchStart={handleContainerTouchStart}
               onTouchEnd={handleContainerTouchEnd}
