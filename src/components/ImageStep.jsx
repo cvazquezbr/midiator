@@ -200,8 +200,10 @@ const ImageStep = ({
         <>
           <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 1300 }} onClick={() => {
             if (!selectedField) {
-              setSelectedField(pageTemplate.images[0]?.id || null);
+              // If nothing is selected, default to selecting the page background for editing.
+              setSelectedField('__page_background__');
             }
+            // Always open the drawer.
             setIsDrawerOpen(true);
           }}><EditIcon /></Fab>
           <FormattingDrawer
