@@ -97,59 +97,40 @@ const FormattingPanel = ({
     'Courier New',
   ];
 
-  const [isTextField, setIsTextField] = React.useState(false);
-  const [isPageImage, setIsPageImage] = React.useState(false);
-  const [isBrandElement, setIsBrandElement] = React.useState(false);
-  const [isPageBackground, setIsPageBackground] = React.useState(false);
-  const [currentElement, setCurrentElement] = React.useState(null);
   const [expandedPanel, setExpandedPanel] = React.useState(false);
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpandedPanel(isExpanded ? panel : false);
   };
 
-  // Effect 1: This effect determines the element type and its data.
-  // It runs whenever the selection or the data of any element changes.
-  React.useEffect(() => {
-    let foundElement = null;
-    let elIsTextField = false;
-    let elIsPageImage = false;
-    let elIsBrandElement = false;
-    let elIsPageBackground = false;
-
-    if (selectedField) {
-      if (selectedField === '__page_background__') {
-        elIsPageBackground = true;
-        foundElement = pageTemplate;
-      } else if (fieldPositions[selectedField]) {
-        elIsTextField = true;
-        foundElement = {
-          ...fieldPositions[selectedField],
-          style: fieldStyles[selectedField] || {},
-        };
-      } else {
-        const pageImg = pageTemplate?.images?.find(img => img.id === selectedField);
-        if (pageImg) {
-          elIsPageImage = true;
-          foundElement = pageImg;
-        } else {
-          const brandEl = brandElements?.find(el => el.id === selectedField);
-          if (brandEl) {
-            elIsBrandElement = true;
-            foundElement = brandEl;
-          }
-        }
-      }
+  // Derive element data directly from props on each render.
+  // This avoids complex useEffects and makes the component more predictable.
+  const { currentElement, isTextField, isPageImage, isBrandElement, isPageBackground } = React.useMemo(() => {
+    if (!selectedField) {
+      return { currentElement: null, isTextField: false, isPageImage: false, isBrandElement: false, isPageBackground: false };
     }
-
-    setCurrentElement(foundElement);
-    setIsTextField(elIsTextField);
-    setIsPageImage(elIsPageImage);
-    setIsBrandElement(elIsBrandElement);
-    setIsPageBackground(elIsPageBackground);
+    if (selectedField === '__page_background__') {
+      return { currentElement: pageTemplate, isTextField: false, isPageImage: false, isBrandElement: false, isPageBackground: true };
+    }
+    if (fieldPositions[selectedField]) {
+      const element = {
+        ...fieldPositions[selectedField],
+        style: fieldStyles[selectedField] || {},
+      };
+      return { currentElement: element, isTextField: true, isPageImage: false, isBrandElement: false, isPageBackground: false };
+    }
+    const pageImg = pageTemplate?.images?.find(img => img.id === selectedField);
+    if (pageImg) {
+      return { currentElement: pageImg, isTextField: false, isPageImage: true, isBrandElement: false, isPageBackground: false };
+    }
+    const brandEl = brandElements?.find(el => el.id === selectedField);
+    if (brandEl) {
+      return { currentElement: brandEl, isTextField: false, isPageImage: false, isBrandElement: true, isPageBackground: false };
+    }
+    return { currentElement: null, isTextField: false, isPageImage: false, isBrandElement: false, isPageBackground: false };
   }, [selectedField, fieldPositions, fieldStyles, brandElements, pageTemplate]);
 
-  // Effect 2: This effect ONLY handles which accordion is open, and it ONLY runs when the selection changes.
+  // This effect ONLY handles which accordion is open, and it ONLY runs when the selection changes.
   React.useEffect(() => {
     if (!selectedField) {
       setExpandedPanel(false);
@@ -245,7 +226,7 @@ const FormattingPanel = ({
                 <Button variant="contained" startIcon={<Edit />} onClick={() => onOpenHtmlEditor(selectedField)} fullWidth sx={{ mb: 2 }}>Editar Conteúdo</Button>
                 <Accordion expanded={expandedPanel === 'fontStyle'} onChange={handleAccordionChange('fontStyle')}>
                   <AccordionSummary expandIcon={<ExpandMore />}><Typography><FormatSize sx={{ mr: 1, verticalAlign: 'middle' }} />Fonte e Estilo</Typography></AccordionSummary>
-                  <AccordionDetails><Grid container spacing={2}><Grid item xs={8}><FormControl fullWidth size="small"><InputLabel>Fonte</InputLabel><Select value={currentElement.style.fontFamily || 'Arial'} label="Fonte" onChange={(e) => updateFieldStyle('fontFamily', e.target.value)}>{fonts.map(font => (<MenuItem key={font} value={font} style={{ fontFamily: font }}>{font}</MenuItem>))}</Select></FormControl></Grid><Grid item xs={4}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.style.color || '#000000')} onChange={(e) => updateFieldStyle('color', e.target.value)} fullWidth size="small" /></Grid>{standardsColors?.length > 0 && <Grid item xs={12}><Typography variant="caption">Cores da Campanha</Typography><Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>{standardsColors.map((c, i) => (<Tooltip title={c} key={i}><Box sx={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: c, cursor: 'pointer', border: '1px solid #ccc' }} onClick={() => updateFieldStyle('color', c)} /></Tooltip>))}</Box></Grid>}<Grid item xs={12}><ToggleButtonGroup size="small" fullWidth><ToggleButton value="bold" selected={currentElement.style.fontWeight === 'bold'} onClick={() => updateFieldStyle('fontWeight', currentElement.style.fontWeight === 'bold' ? 'normal' : 'bold')}><FormatBold /></ToggleButton><ToggleButton value="italic" selected={currentElement.style.fontStyle === 'italic'} onClick={() => updateFieldStyle('fontStyle', currentElement.style.fontStyle === 'italic' ? 'normal' : 'italic')}><FormatItalic /></ToggleButton><ToggleButton value="underline" selected={currentElement.style.textDecoration === 'underline'} onClick={() => updateFieldStyle('textDecoration', currentElement.style.textDecoration === 'underline' ? 'none' : 'underline')}><FormatUnderlined /></ToggleButton></ToggleButtonGroup></Grid><Grid item xs={12}><Typography variant="caption" display="block" gutterBottom>Alinhamento</Typography><ToggleButtonGroup value={currentElement.style.textAlign || 'left'} exclusive onChange={(e, v) => v && updateFieldStyle('textAlign', v)} size="small" fullWidth><ToggleButton value="left"><FormatAlignLeft /></ToggleButton><ToggleButton value="center"><FormatAlignCenter /></ToggleButton><ToggleButton value="right"><FormatAlignRight /></ToggleButton></ToggleButtonGroup></Grid><Grid item xs={12}><ToggleButtonGroup value={currentElement.style.verticalAlign || 'top'} exclusive onChange={(e, v) => v && updateFieldStyle('verticalAlign', v)} size="small" fullWidth><ToggleButton value="top"><VerticalAlignTop /></ToggleButton><ToggleButton value="middle"><VerticalAlignCenter /></ToggleButton><ToggleButton value="bottom"><VerticalAlignBottom /></ToggleButton></ToggleButtonGroup></Grid><Grid item xs={12}><Typography gutterBottom>Tamanho: {currentElement.style.fontSize || 24}px</Typography><Slider value={currentElement.style.fontSize || 24} onChange={(e, v) => updateFieldStyle('fontSize', v)} min={8} max={120} /></Grid><Grid item xs={12}><Typography gutterBottom>Espaçamento Linhas: {currentElement.style.lineHeightMultiplier || 1.2}x</Typography><Slider value={currentElement.style.lineHeightMultiplier || 1.2} onChange={(e, v) => updateFieldStyle('lineHeightMultiplier', v)} min={0.8} max={3} step={0.1} /></Grid></Grid></AccordionDetails>
+                  <AccordionDetails><Grid container spacing={2}><Grid item xs={8}><FormControl fullWidth size="small"><InputLabel>Fonte</InputLabel><Select value={currentElement.style.fontFamily || 'Arial'} label="Fonte" onChange={(e) => updateFieldStyle('fontFamily', e.target.value)} MenuProps={{ sx: { zIndex: 1500 } }}>{fonts.map(font => (<MenuItem key={font} value={font} style={{ fontFamily: font }}>{font}</MenuItem>))}</Select></FormControl></Grid><Grid item xs={4}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.style.color || '#000000')} onChange={(e) => updateFieldStyle('color', e.target.value)} fullWidth size="small" /></Grid>{standardsColors?.length > 0 && <Grid item xs={12}><Typography variant="caption">Cores da Campanha</Typography><Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>{standardsColors.map((c, i) => (<Tooltip title={c} key={i}><Box sx={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: c, cursor: 'pointer', border: '1px solid #ccc' }} onClick={() => updateFieldStyle('color', c)} /></Tooltip>))}</Box></Grid>}<Grid item xs={12}><ToggleButtonGroup size="small" fullWidth><ToggleButton value="bold" selected={currentElement.style.fontWeight === 'bold'} onClick={() => updateFieldStyle('fontWeight', currentElement.style.fontWeight === 'bold' ? 'normal' : 'bold')}><FormatBold /></ToggleButton><ToggleButton value="italic" selected={currentElement.style.fontStyle === 'italic'} onClick={() => updateFieldStyle('fontStyle', currentElement.style.fontStyle === 'italic' ? 'normal' : 'italic')}><FormatItalic /></ToggleButton><ToggleButton value="underline" selected={currentElement.style.textDecoration === 'underline'} onClick={() => updateFieldStyle('textDecoration', currentElement.style.textDecoration === 'underline' ? 'none' : 'underline')}><FormatUnderlined /></ToggleButton></ToggleButtonGroup></Grid><Grid item xs={12}><Typography variant="caption" display="block" gutterBottom>Alinhamento</Typography><ToggleButtonGroup value={currentElement.style.textAlign || 'left'} exclusive onChange={(e, v) => v && updateFieldStyle('textAlign', v)} size="small" fullWidth><ToggleButton value="left"><FormatAlignLeft /></ToggleButton><ToggleButton value="center"><FormatAlignCenter /></ToggleButton><ToggleButton value="right"><FormatAlignRight /></ToggleButton></ToggleButtonGroup></Grid><Grid item xs={12}><ToggleButtonGroup value={currentElement.style.verticalAlign || 'top'} exclusive onChange={(e, v) => v && updateFieldStyle('verticalAlign', v)} size="small" fullWidth><ToggleButton value="top"><VerticalAlignTop /></ToggleButton><ToggleButton value="middle"><VerticalAlignCenter /></ToggleButton><ToggleButton value="bottom"><VerticalAlignBottom /></ToggleButton></ToggleButtonGroup></Grid><Grid item xs={12}><Typography gutterBottom>Tamanho: {currentElement.style.fontSize || 24}px</Typography><Slider value={currentElement.style.fontSize || 24} onChange={(e, v) => updateFieldStyle('fontSize', v)} min={8} max={120} /></Grid><Grid item xs={12}><Typography gutterBottom>Espaçamento Linhas: {currentElement.style.lineHeightMultiplier || 1.2}x</Typography><Slider value={currentElement.style.lineHeightMultiplier || 1.2} onChange={(e, v) => updateFieldStyle('lineHeightMultiplier', v)} min={0.8} max={3} step={0.1} /></Grid></Grid></AccordionDetails>
                 </Accordion>
                 <Accordion expanded={expandedPanel === 'boxStyle'} onChange={handleAccordionChange('boxStyle')}>
                   <AccordionSummary expandIcon={<ExpandMore />}><Typography><CheckBoxOutlineBlank sx={{ mr: 1, verticalAlign: 'middle' }} />Caixa de Texto</Typography></AccordionSummary>
@@ -290,7 +271,16 @@ const FormattingPanel = ({
 
         <Accordion expanded={expandedPanel === 'pageImages'} onChange={handleAccordionChange('pageImages')}>
           <AccordionSummary expandIcon={<ExpandMore />}><Typography><ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />Imagens da Página</Typography></AccordionSummary>
-          <AccordionDetails><ImageManager pageTemplate={pageTemplate} setPageTemplate={setPageTemplate} setSelectedField={setSelectedField} selectedField={selectedField} /><Button sx={{mt: 2}} fullWidth variant="outlined" onClick={() => setSelectedField('__page_background__')}>Editar Fundo da Página</Button></AccordionDetails>
+          <AccordionDetails>
+            <ImageManager
+              pageTemplate={pageTemplate}
+              setPageTemplate={setPageTemplate}
+              setSelectedField={setSelectedField}
+              selectedField={selectedField}
+              onImageUpload={handleImageUpload}
+            />
+            <Button sx={{mt: 2}} fullWidth variant="outlined" onClick={() => setSelectedField('__page_background__')}>Editar Fundo da Página</Button>
+          </AccordionDetails>
         </Accordion>
 
         <Accordion expanded={expandedPanel === 'brandElements'} onChange={handleAccordionChange('brandElements')}>

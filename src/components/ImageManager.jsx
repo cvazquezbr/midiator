@@ -1,8 +1,8 @@
 import React from 'react';
-import { Box, List, ListItem, ListItemText, ListItemAvatar, Avatar, IconButton, Typography, Tooltip } from '@mui/material';
+import { Box, List, ListItem, ListItemText, ListItemAvatar, Avatar, IconButton, Typography, Tooltip, Button } from '@mui/material';
 import { Edit, Delete } from '@mui/icons-material';
 
-const ImageManager = ({ pageTemplate, setPageTemplate, setSelectedField, selectedField }) => {
+const ImageManager = ({ pageTemplate, setPageTemplate, setSelectedField, selectedField, onImageUpload }) => {
   const handleSelectImage = (imageId) => {
     setSelectedField(imageId);
   };
@@ -61,6 +61,21 @@ const ImageManager = ({ pageTemplate, setPageTemplate, setSelectedField, selecte
           </ListItem>
         ))}
       </List>
+      <Button
+        variant="contained"
+        component="label"
+        fullWidth
+        sx={{ mt: 2 }}
+        disabled={!onImageUpload}
+      >
+        Adicionar Imagem
+        <input
+          type="file"
+          accept=".png,.jpg,.jpeg"
+          hidden
+          onChange={onImageUpload}
+        />
+      </Button>
     </Box>
   );
 };
