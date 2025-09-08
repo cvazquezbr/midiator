@@ -172,7 +172,6 @@ const ImageStep = ({
             </Box>
             <FormattingPanel
               selectedField={selectedField}
-              setSelectedField={setSelectedField}
               fieldStyles={fieldStyles}
               initialFieldStyles={initialFieldStyles}
               setFieldStyles={setFieldStyles}
@@ -202,7 +201,7 @@ const ImageStep = ({
         <>
           <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 1300 }} onClick={() => {
             if (!selectedField) {
-              setSelectedField(pageTemplate.images[0]?.id || '__background__');
+              setSelectedField(pageTemplate.images[0]?.id || null);
             }
             setIsDrawerOpen(true);
           }}><EditIcon /></Fab>
@@ -210,7 +209,6 @@ const ImageStep = ({
             open={isDrawerOpen}
             onClose={() => setIsDrawerOpen(false)}
             selectedField={selectedField}
-            setSelectedField={setSelectedField}
             fieldStyles={fieldStyles}
             initialFieldStyles={initialFieldStyles}
             setFieldStyles={setFieldStyles}

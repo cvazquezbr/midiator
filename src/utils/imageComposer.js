@@ -1,7 +1,5 @@
 import { containsHtml, renderHtmlToCanvas } from './htmlRenderer';
-import { isHtmlField } from '../lib/utils';
 import { applyColorHighlight } from './filterUtils';
-
 
 // Helper functions moved from PageGeneratorFrontendOnly.jsx and adapted for utility use
 
@@ -133,13 +131,82 @@ const getDimensionsFromAspectRatio = (aspectRatio) => {
   }
 };
 
+const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight) => {
+    const src = element.src || element.url;
+    if (!src) return;
+
+    try {
+        const img = await loadImage(src);
+        ctx.save();
+
+        const {
+          x = 0, y = 0, width = 100, height = 100,
+          rotation = 0,
+          filters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
+          crop,
+          shadow, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY
+        } = element;
+
+        if (shadow) {
+          ctx.shadowColor = shadowColor || '#000000';
+          ctx.shadowBlur = shadowBlur || 10;
+          ctx.shadowOffsetX = shadowOffsetX || 5;
+          ctx.shadowOffsetY = shadowOffsetY || 5;
+        }
+
+        const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters || {};
+        ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
+
+        const dx = (x / 100) * canvasWidth;
+        const dy = (y / 100) * canvasHeight;
+        const dWidth = (width / 100) * canvasWidth;
+        const dHeight = (height / 100) * canvasHeight;
+
+        if (rotation) {
+          const centerX = dx + dWidth / 2;
+          const centerY = dy + dHeight / 2;
+          ctx.translate(centerX, centerY);
+          ctx.rotate(rotation * Math.PI / 180);
+          ctx.translate(-centerX, -centerY);
+        }
+
+        if (crop && crop.width > 0 && crop.height > 0) {
+          const sx = (crop.x / 100) * img.width;
+          const sy = (crop.y / 100) * img.height;
+          const sWidth = (crop.width / 100) * img.width;
+          const sHeight = (crop.height / 100) * img.height;
+          ctx.drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+        } else {
+          ctx.drawImage(img, dx, dy, dWidth, dHeight);
+        }
+
+        ctx.filter = 'none';
+        if (filters.highlightAmount && filters.highlightAmount > 0) {
+            applyColorHighlight(ctx, canvasWidth, canvasHeight, filters.highlightColor, filters.highlightAmount);
+        }
+
+        ctx.restore();
+    } catch (error) {
+        console.error(`[imageComposer] Failed to draw image ${src}:`, error);
+        // Optionally draw a placeholder for the failed image
+        ctx.save();
+        ctx.fillStyle = 'red';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        const x = (element.x / 100) * canvasWidth + (element.width / 100) * canvasWidth / 2;
+        const y = (element.y / 100) * canvasHeight + (element.height / 100) * canvasHeight / 2;
+        ctx.fillText('Erro Imagem', x, y);
+        ctx.restore();
+    }
+};
+
 /**
  * Creates a complete composite image with text and returns full imageData object.
- * This version uses a single main background image and applies transformations to it.
+ * This version uses a pageTemplate object that can contain multiple images and a background color/gradient.
  * @param {object} params - The parameters for composition.
  * @returns {Promise<object>} A promise that resolves with the final imageData object.
  */
-export const composeSingleImage = async ({
+export const drawAndComposeImage = async ({
     record,
     index,
     brandElements = [],
@@ -150,7 +217,6 @@ export const composeSingleImage = async ({
     fontScale = 1,
 }) => {
 
-    // 1. Create final canvas with fixed dimensions based on aspect ratio.
     const finalCanvas = document.createElement('canvas');
     const ctx = finalCanvas.getContext('2d');
     const dimensions = getDimensionsFromAspectRatio(aspectRatio);
@@ -158,41 +224,69 @@ export const composeSingleImage = async ({
     if (!dimensions) {
         finalCanvas.width = 1080;
         finalCanvas.height = 1080;
-        console.warn(`[imageComposer] Aspect ratio not provided or invalid. Falling back to 1080x1080.`);
     } else {
         finalCanvas.width = dimensions.width;
         finalCanvas.height = dimensions.height;
     }
 
-    // 2. Draw background color or gradient
-    if (pageTemplate.gradient) {
-        // This is a simplified gradient handling. The editor creates a CSS string.
-        // For canvas, we'd need to parse this or use the structured object.
-        // For now, we assume a simple linear gradient object if not a string.
-        if (typeof pageTemplate.gradient === 'object' && pageTemplate.gradient.stops) {
-            const gradient = ctx.createLinearGradient(0, 0, finalCanvas.width, finalCanvas.height);
-            pageTemplate.gradient.stops.forEach(stop => {
-                gradient.addColorStop(stop.position / 100, stop.color);
-            });
-            ctx.fillStyle = gradient;
-        } else {
-            ctx.fillStyle = 'white'; // Fallback
-        }
+    // 1. Draw background color or gradient
+    ctx.save();
+    if (pageTemplate.gradient && pageTemplate.gradient.type === 'linear') {
+        const angle = pageTemplate.gradient.angle || 0;
+        const radians = (angle - 90) * (Math.PI / 180);
+        const x0 = finalCanvas.width / 2;
+        const y0 = finalCanvas.height / 2;
+        const length = Math.sqrt(Math.pow(finalCanvas.width, 2) + Math.pow(finalCanvas.height, 2));
+        const x1 = x0 + Math.cos(radians) * length / 2;
+        const y1 = y0 + Math.sin(radians) * length / 2;
+        const x2 = x0 - Math.cos(radians) * length / 2;
+        const y2 = y0 - Math.sin(radians) * length / 2;
+
+        const gradient = ctx.createLinearGradient(x2, y2, x1, y1);
+        const colors = pageTemplate.gradient.colors || ['#FFFFFF', '#000000'];
+        colors.forEach((color, idx) => {
+            gradient.addColorStop(idx / (colors.length - 1), color);
+        });
+        ctx.fillStyle = gradient;
+
+    } else if (pageTemplate.gradient && pageTemplate.gradient.type === 'radial') {
+        const gradient = ctx.createRadialGradient(
+            finalCanvas.width / 2, finalCanvas.height / 2, 0,
+            finalCanvas.width / 2, finalCanvas.height / 2, Math.max(finalCanvas.width, finalCanvas.height) / 2
+        );
+        const colors = pageTemplate.gradient.colors || ['#FFFFFF', '#000000'];
+        colors.forEach((color, idx) => {
+            gradient.addColorStop(idx / (colors.length - 1), color);
+        });
+        ctx.fillStyle = gradient;
+    } else if (pageTemplate.backgroundColor) {
+        ctx.fillStyle = pageTemplate.backgroundColor;
     } else {
-        ctx.fillStyle = pageTemplate.backgroundColor || 'white';
+        ctx.fillStyle = 'white';
     }
     ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+    ctx.restore();
 
-    // 3. Collect and sort all elements (text and brand) by zIndex
+
+    // 2. Collect and sort all elements by zIndex
     const elementsToDraw = [];
 
-    // Add page images to the drawing queue
-    (pageTemplate.images || []).forEach(image => {
-        if (image.src && image.visible !== false) {
+    (pageTemplate.images || []).forEach(img => {
+        if (img.visible !== false) {
             elementsToDraw.push({
                 type: 'image',
-                ...image,
-                zIndex: image.zIndex || 0,
+                ...img,
+                zIndex: img.zIndex || -1, // Default to be behind other elements
+            });
+        }
+    });
+
+    (brandElements || []).forEach(element => {
+        if (element.url && element.visible !== false) {
+            elementsToDraw.push({
+                type: 'image', // Treat brand elements as generic images
+                ...element,
+                zIndex: element.zIndex || 0,
             });
         }
     });
@@ -212,23 +306,15 @@ export const composeSingleImage = async ({
         }
     });
 
-    (brandElements || []).forEach(element => {
-        if (element.url && element.visible !== false) {
-            elementsToDraw.push({
-                type: 'image', // Treat brand elements as images
-                ...element,
-                zIndex: element.zIndex || 0,
-            });
-        }
-    });
-
     elementsToDraw.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
 
-    // 4. Draw sorted elements
+    // 3. Draw sorted elements
     for (const element of elementsToDraw) {
-        ctx.save();
-        if (element.type === 'text') {
-            const { id, content, position, style } = element;
+        if (element.type === 'image') {
+            await drawImageWithEffects(ctx, element, finalCanvas.width, finalCanvas.height);
+        } else if (element.type === 'text') {
+            ctx.save();
+            const { content, position, style } = element;
             if (!content) {
                 ctx.restore();
                 continue;
@@ -249,23 +335,14 @@ export const composeSingleImage = async ({
                 ctx.translate(-centerX, -centerY);
             }
 
-            const finalStyle = {
-                ...style,
-                fontSize: (style.fontSize || 24) * fontScale,
-                strokeWidth: (style.strokeWidth || 2) * fontScale,
-                shadowBlur: (style.shadowBlur || 4) * fontScale,
-                shadowOffsetX: (style.shadowOffsetX || 2) * fontScale,
-                shadowOffsetY: (style.shadowOffsetY || 2) * fontScale,
-            };
-
+            const finalStyle = { ...style, fontSize: (style.fontSize || 24) * fontScale };
             const padding = (style.padding || 0);
             const borderRadius = (style.borderRadius || 0);
             const borderWidth = (style.borderWidth || 0);
 
             const backgroundOpacity = style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1;
-            const backgroundColorHex = style.backgroundColor || '#000000';
-            if (backgroundOpacity > 0) {
-                ctx.fillStyle = hexToRgba(backgroundColorHex, backgroundOpacity);
+            if (backgroundOpacity > 0 && style.backgroundColor) {
+                ctx.fillStyle = hexToRgba(style.backgroundColor, backgroundOpacity);
                 drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, borderRadius);
                 ctx.fill();
             }
@@ -282,22 +359,24 @@ export const composeSingleImage = async ({
             const effectiveTextHeight = Math.max(0, posPx.height - (2 * padding));
             const textContentStartX = posPx.x + padding;
             const textContentStartY = posPx.y + padding;
-
-            const lines = wrapTextInArea(ctx, content, finalStyle, effectiveTextWidth, effectiveTextHeight);
             const lineHeight = finalStyle.fontSize * (finalStyle.lineHeightMultiplier || 1.2);
-
-            let currentLineRenderY = textContentStartY;
-            if (finalStyle.verticalAlign === 'middle') {
-                const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalStyle.fontSize) : 0);
-                currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
-            } else if (finalStyle.verticalAlign === 'bottom') {
-                const totalTextBlockHeight = lines.length * lineHeight - (lines.length > 0 ? (lineHeight - finalStyle.fontSize) : 0);
-                currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
-            }
 
             if (containsHtml(content)) {
                 await renderHtmlToCanvas(ctx, content, textContentStartX, textContentStartY, effectiveTextWidth, effectiveTextHeight, finalStyle);
             } else {
+                const lines = wrapTextInArea(ctx, content, finalStyle, effectiveTextWidth, effectiveTextHeight);
+                let totalTextBlockHeight = lines.length * lineHeight;
+                if (lines.length > 0) {
+                   totalTextBlockHeight -= (lineHeight - finalStyle.fontSize); // Adjust for last line
+                }
+
+                let currentLineRenderY = textContentStartY;
+                if (finalStyle.verticalAlign === 'middle') {
+                    currentLineRenderY += (effectiveTextHeight - totalTextBlockHeight) / 2;
+                } else if (finalStyle.verticalAlign === 'bottom') {
+                    currentLineRenderY += effectiveTextHeight - totalTextBlockHeight;
+                }
+
                 for (const line of lines) {
                     let currentLineRenderX;
                     if (finalStyle.textAlign === 'center') {
@@ -314,39 +393,15 @@ export const composeSingleImage = async ({
                     ctx.fillText(line, currentLineRenderX, finalLineY);
                 }
             }
-
-        } else if (element.type === 'image') {
-            try {
-                const elementImg = await loadImage(element.src || element.url);
-                const elX = (element.x / 100) * finalCanvas.width;
-                const elY = (element.y / 100) * finalCanvas.height;
-                const elWidth = (element.width / 100) * finalCanvas.width;
-                const elHeight = (element.height / 100) * finalCanvas.height;
-
-                if (element.rotation) {
-                    const centerX = elX + elWidth / 2;
-                    const centerY = elY + elHeight / 2;
-                    ctx.translate(centerX, centerY);
-                    ctx.rotate(element.rotation * Math.PI / 180);
-                    ctx.translate(-centerX, -centerY);
-                }
-                if (element.filters) {
-                    const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = element.filters;
-                    ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
-                }
-                ctx.drawImage(elementImg, elX, elY, elWidth, elHeight);
-            } catch (error) {
-                console.error(`[composeSingleImage] Failed to load or draw image element ${element.id}:`, error);
-            }
+            ctx.restore();
         }
-        ctx.restore();
     }
 
-    // 5. Generate final data URL and blob
+    // 4. Generate final data URL and blob
     const dataUrl = finalCanvas.toDataURL('image/png', 1.0);
     const blob = dataURLtoBlob(dataUrl);
 
-    // 6. Return the complete imageData object
+    // 5. Return the complete imageData object
     return {
         url: dataUrl,
         dataUrl: dataUrl,
@@ -354,7 +409,6 @@ export const composeSingleImage = async ({
         record,
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        // Return the state of the page template that was actually used for composition
-        customPageTemplate: pageTemplate,
+        pageTemplateUsed: pageTemplate,
     };
 };

@@ -319,44 +319,47 @@ const FieldPositioner = ({
         });
     }
 
-    // Add text fields
-    (csvHeaders || [])
-        .map(header => {
-          const position = fieldPositions[header];
-          const style = completeFieldStyles[header];
-          if (!position || !position.visible) return null;
+    const textElements = (csvHeaders || [])
+      .map(header => {
+        const position = fieldPositions[header];
+        const style = completeFieldStyles[header];
+        if (!position || !position.visible) return null;
 
-          const record = csvData[currentPreviewIndex] || {};
-          const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
+        const record = csvData[currentPreviewIndex] || {};
+        const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
 
-          elements.push({
-            id: header,
-            type: 'text',
-            position,
-            style,
-            content: sampleData,
-            zIndex: position.zIndex || 0,
-            rotation: position.rotation,
-            fontScale: fontScale,
-            enableHtmlRendering: isHtmlField(header),
-          });
-        });
+        return {
+          id: header,
+          type: 'text',
+          position,
+          style,
+          content: sampleData,
+          zIndex: position.zIndex || 0,
+          rotation: position.rotation,
+          fontScale: fontScale,
+          enableHtmlRendering: isHtmlField(header),
+        };
+      })
+      .filter(Boolean);
 
-    // Add brand elements
-    (brandElements || []).forEach(element => {
-          if (element.visible === false) return;
-          elements.push({
-            id: element.id,
-            type: 'image',
-            position: element,
-            style: { ...element.filters, ...element },
-            content: element.url,
-            zIndex: element.zIndex || 0,
-            rotation: element.rotation,
-            fontScale: 1,
-            enableHtmlRendering: false,
-          });
-        });
+    const brandEls = (brandElements || [])
+      .map(element => {
+        if (element.visible === false) return null;
+        return {
+          id: element.id,
+          type: 'image',
+          position: element,
+          style: { ...element.filters, ...element },
+          content: element.url,
+          zIndex: element.zIndex || 0,
+          rotation: element.rotation,
+          fontScale: 1,
+          enableHtmlRendering: false,
+        };
+      })
+      .filter(Boolean);
+
+    elements.push(...textElements, ...brandEls);
 
     elements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     return elements;
@@ -402,7 +405,7 @@ const FieldPositioner = ({
                     }}
                     onTouchStart={(e) => {
                       if (e.target === e.currentTarget) {
-                        setSelectedField(null); // Deselect all
+                        setSelectedField('__background__');
                       }
                     }}
                   >

@@ -65,12 +65,13 @@ SW ---- S ---- SE
 
 #### **Stepper Visual**
 1. **Upload do CSV**: Carregamento e validação
-2. **Modelo de Página**: Definição do template base
-3. **Edição de Páginas**: Customização e geração final
+2. **Upload da Imagem**: Seleção do background
+3. **Posicionar e Formatar**: Editor principal
+4. **Gerar Páginas**: Processamento final
 
 #### **Indicadores de Status**
 - **Registros CSV**: Quantidade de dados carregados
-- **Imagem**: Status da imagem
+- **Imagem de fundo**: Status do background
 - **Campos visíveis**: Contagem de campos ativos
 - **Estilos configurados**: Quantidade de formatações
 
@@ -89,11 +90,12 @@ SW ---- S ---- SE
 2. Escolha arquivo com cabeçalhos na primeira linha
 3. Aguarde confirmação de carregamento
 
-### **Passo 2: Modelo de Página**
-1. **Cor de Fundo**: Defina uma cor sólida ou um gradiente para o fundo da página.
-2. **Adicionar Imagens**: Clique em "Carregar" para adicionar uma ou mais imagens ao modelo.
-3. **Gerenciar Imagens**: Selecione, posicione, redimensione, aplique filtros e organize a ordem das imagens.
-4. **Posicionar Campos de Texto**: Arraste e posicione os campos de texto (ex: Título, Mensagem) sobre o modelo.
+### **Passo 2: Upload da Imagem de Fundo**
+1. Clique em "Selecionar Imagem PNG/JPG"
+2. Escolha imagem de fundo
+3. Visualize preview da imagem de fundo
+
+### **Passo 3: Posicionar e Formatar**
 
 #### **Seleção de Campo**
 - Clique em qualquer campo de texto para selecioná-lo
@@ -120,11 +122,11 @@ SW ---- S ---- SE
 - **Resetar Estilo**: Volta configurações padrão
 - **Visibilidade**: Toggle para mostrar/ocultar campo
 
-### **Passo 3: Edição de Páginas**
-1. **Visualização**: Navegue por todas as páginas que serão geradas.
-2. **Customização Individual**: Selecione uma página para editar seu fundo, imagens ou texto de forma individual.
-3. **Geração**: Clique em "Gerar Páginas" para criar as imagens finais.
-4. **Download**: Baixe as imagens individualmente ou em lote.
+### **Passo 4: Gerar Páginas**
+1. Revise configurações no resumo
+2. Clique em "Gerar X Páginas"
+3. Aguarde processamento
+4. Faça download individual ou em lote
 
 ## 🔧 **Funcionalidades Técnicas**
 
@@ -193,7 +195,7 @@ const wrapText = (text, maxWidth) => {
 
 Após dominar estas funcionalidades, considere explorar:
 - Templates personalizados
-- Múltiplas imagens
+- Múltiplas imagens de fundo
 - Exportação em diferentes formatos
 - Integração com APIs externas
 
