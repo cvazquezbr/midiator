@@ -79,7 +79,6 @@ const FormattingPanel = ({
   pageTemplate,
   setPageTemplate,
   onZIndexChange,
-  onDeselectField,
   onOpenHtmlEditor,
   standardsColors,
   templateFieldStyles,
