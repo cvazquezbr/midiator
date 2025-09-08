@@ -365,6 +365,11 @@ function HomePage() {
       return;
     }
 
+    const sanitizedPagesData = generatedPagesData.map(page => {
+      const { url, dataUrl, blob, ...rest } = page;
+      return rest;
+    });
+
     const campaignDataToSave = {
       activeStep,
       problema,
@@ -382,7 +387,7 @@ function HomePage() {
       brandElements,
       pageTemplate,
       generatedPageUrl,
-      generatedPagesData,
+      generatedPagesData: sanitizedPagesData,
       generatedAudioData,
       generatedVideosData,
       standardsColors,
