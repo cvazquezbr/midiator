@@ -108,44 +108,62 @@ const FormattingPanel = ({
     setExpandedPanel(isExpanded ? panel : false);
   };
 
+  // This effect updates the state based on the selected field and available data
   React.useEffect(() => {
-    setIsTextField(false);
-    setIsPageImage(false);
-    setIsBrandElement(false);
-    setIsPageBackground(false);
-    setCurrentElement(null);
+    let foundElement = null;
+    let elIsTextField = false;
+    let elIsPageImage = false;
+    let elIsBrandElement = false;
+    let elIsPageBackground = false;
 
     if (selectedField) {
       if (selectedField === '__page_background__') {
-        setIsPageBackground(true);
-        setCurrentElement(pageTemplate);
-        setExpandedPanel('backgroundColor');
+        elIsPageBackground = true;
+        foundElement = pageTemplate;
       } else if (fieldPositions[selectedField]) {
-        setIsTextField(true);
-        setCurrentElement({
+        elIsTextField = true;
+        foundElement = {
           ...fieldPositions[selectedField],
           style: fieldStyles[selectedField] || {},
-        });
-        setExpandedPanel('fontStyle');
+        };
       } else {
         const pageImg = pageTemplate?.images?.find(img => img.id === selectedField);
         if (pageImg) {
-          setIsPageImage(true);
-          setCurrentElement(pageImg);
-          setExpandedPanel('imageStyle');
+          elIsPageImage = true;
+          foundElement = pageImg;
         } else {
           const brandEl = brandElements?.find(el => el.id === selectedField);
           if (brandEl) {
-            setIsBrandElement(true);
-            setCurrentElement(brandEl);
-            setExpandedPanel('imageStyle');
+            elIsBrandElement = true;
+            foundElement = brandEl;
           }
         }
       }
-    } else {
-      setExpandedPanel(false);
     }
+
+    setCurrentElement(foundElement);
+    setIsTextField(elIsTextField);
+    setIsPageImage(elIsPageImage);
+    setIsBrandElement(elIsBrandElement);
+    setIsPageBackground(elIsPageBackground);
   }, [selectedField, fieldPositions, fieldStyles, brandElements, pageTemplate]);
+
+  // This separate effect handles which accordion is open, ONLY when the selection changes.
+  React.useEffect(() => {
+    if (!selectedField) {
+      setExpandedPanel(false);
+      return;
+    }
+    // This logic relies on the state flags set by the other useEffect.
+    // It runs after the other effect has determined the type of the selected element.
+    if (isPageBackground) {
+      setExpandedPanel('backgroundColor');
+    } else if (isTextField) {
+      setExpandedPanel('fontStyle');
+    } else if (isImageElement) {
+      setExpandedPanel('imageStyle');
+    }
+  }, [selectedField, isPageBackground, isTextField, isImageElement]);
 
   const updateFieldStyle = (property, value) => {
     if (!isTextField) return;
