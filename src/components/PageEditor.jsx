@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'; // Import useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -7,68 +7,50 @@ import {
   Button,
   Box,
   Grid,
-  Typography,
   IconButton
 } from '@mui/material';
-import { Close } from '@mui/icons-material';
+import { Close, Edit } from '@mui/icons-material';
 import { useIsMobile } from '../hooks/use-mobile';
-import FieldPositioner from './FieldPositioner'; // Reutilizar o FieldPositioner
-import FormattingPanel from './FormattingPanel'; // Reutilizar o FormattingPanel
-import FormattingDrawer from './FormattingDrawer'; // Importar o FormattingDrawer
+import FieldPositioner from './FieldPositioner';
+import FormattingPanel from './FormattingPanel';
+import FormattingDrawer from './FormattingDrawer';
 import { Fab } from '@mui/material';
-import { Edit } from '@mui/icons-material';
 import TextEditorDialog from './TextEditorDialog';
 
-// Define a comprehensive default style object
 const COMPLETE_DEFAULT_STYLE = {
-  fontFamily: 'Arial',
-  fontSize: 24,
-  fontWeight: 'normal',
-  fontStyle: 'normal',
-  textDecoration: 'none',
-  color: '#000000',
-  textAlign: 'left',
-  verticalAlign: 'top',
-  lineHeightMultiplier: 1.2, // Consistent with rendering logic in ImageGeneratorFrontendOnly
-  textStroke: false,
-  strokeColor: '#ffffff',
-  strokeWidth: 2,
-  textShadow: false,
-  shadowColor: '#000000',
-  shadowBlur: 4,
-  shadowOffsetX: 2,
-  shadowOffsetY: 2,
-  // Box properties
-  backgroundColor: 'rgba(0,0,0,0)',
-  borderColor: '#000000',
-  borderWidth: 0,
-  borderRadius: 0,
-  padding: 5,
-  backgroundOpacity: 0,
+  fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
+  textDecoration: 'none', color: '#000000', textAlign: 'left', verticalAlign: 'top',
+  lineHeightMultiplier: 1.2, textStroke: false, strokeColor: '#ffffff', strokeWidth: 2,
+  textShadow: false, shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
+  backgroundColor: 'rgba(0,0,0,0)', borderColor: '#000000', borderWidth: 0,
+  borderRadius: 0, padding: 5, backgroundOpacity: 0,
+};
+
+const defaultPageTemplate = {
+  backgroundColor: '#FFFFFF',
+  gradient: null,
+  images: [],
 };
 
 const PageEditor = ({
   open,
   onClose,
-  pageData, // Contém a imagem de fundo (pageData.backgroundImageToEdit || globalBackgroundImage), csvRecord (pageData.record)
-  globalCsvHeaders, // Todos os cabeçalhos CSV possíveis (para consistência do painel de formatação)
-  initialFieldPositions, // Posições dos campos para esta página específica
-  initialFieldStyles, // Estilos dos campos para esta página específica
-  onSave, // Callback: (editedPageData) => void
-  colorPalette, // Paleta de cores global
+  pageData,
+  globalCsvHeaders,
+  onSave,
+  colorPalette,
   originalImageSize,
   brandElements,
   standardsColors,
-  globalBackgroundElement,
+  globalPageTemplate,
   aspectRatio,
 }) => {
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
   const [editedBrandElements, setEditedBrandElements] = useState([]);
-  const [editedRecord, setEditedRecord] = useState(null); // State for the CSV record being edited
-  const [fontScale, setFontScale] = useState(1);
-  const [selectedFieldInternal, setSelectedFieldInternal] = useState(null); // Estado para o campo selecionado internamente
-  const [stylesAreInitialized, setStylesAreInitialized] = useState(false); // New state for initialization tracking
+  const [editedRecord, setEditedRecord] = useState(null);
+  const [editedPageTemplate, setEditedPageTemplate] = useState(defaultPageTemplate);
+  const [selectedFieldInternal, setSelectedFieldInternal] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
   const isMobile = useIsMobile();
@@ -77,230 +59,98 @@ const PageEditor = ({
     setEditingField(fieldId);
   };
 
-  // Local state for image filters and toggles
-  const defaultFilters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 };
-  const [editedBackgroundElement, setEditedBackgroundElement] = useState(null);
-
-  // Definir um objeto de fundo padrão mais abrangente
-  const defaultBackground = {
-    id: 'background',
-    x: 0,
-    y: 0,
-    width: 100,
-    height: 100,
-    rotation: 0,
-    visible: true,
-    filters: defaultFilters,
-    crop: null,
-    shadow: false,
-    shadowColor: '#000000',
-    shadowBlur: 10,
-    shadowOffsetX: 0,
-    shadowOffsetY: 5,
-    // Novas propriedades para cor de fundo e gradiente
-    backgroundType: 'image', // 'image', 'color', 'gradient'
-    backgroundColor: 'rgba(255, 255, 255, 0)', // Cor sólida de fundo
-    gradient: {
-      type: 'linear', // 'linear' ou 'radial'
-      angle: 90,
-      stops: [
-        { color: 'rgba(255, 255, 255, 0)', position: 0 },
-        { color: 'rgba(0, 0, 0, 0)', position: 100 },
-      ],
-    },
-  };
-
   const handleInternalFieldSelection = useCallback((fieldToSelect) => {
     setSelectedFieldInternal(fieldToSelect);
-  }, []); // setSelectedFieldInternal is stable
+  }, []);
 
   const handleFieldPositionerCsvDataUpdate = useCallback((updatedDataArray) => {
     if (updatedDataArray && updatedDataArray.length > 0) {
       setEditedRecord(updatedDataArray[0]);
     }
-  }, []); // setEditedRecord is stable
-
-  const handleDeselectField = () => {
-    setSelectedFieldInternal(null);
-  };
+  }, []);
 
   useEffect(() => {
-    if (open && pageData && initialFieldPositions && initialFieldStyles) {
-      // Ensure brandElements and globalCsvHeaders are arrays before use.
-      const safeBrandElements = Array.isArray(pageData.customBrandElements)
-        ? pageData.customBrandElements
-        : (Array.isArray(brandElements) ? brandElements : []);
+    if (open && pageData) {
+      const initialPositions = pageData.customFieldPositions || pageData.fieldPositions || {};
+      const initialStyles = pageData.customFieldStyles || pageData.fieldStyles || {};
+      const initialBrandElements = pageData.customBrandElements || brandElements || [];
+      const initialTemplate = pageData.customPageTemplate || globalPageTemplate || defaultPageTemplate;
 
-      const safeGlobalCsvHeaders = Array.isArray(globalCsvHeaders) ? globalCsvHeaders : [];
-
-      const brands = JSON.parse(JSON.stringify(safeBrandElements));
-      const positions = JSON.parse(JSON.stringify(initialFieldPositions));
-
-      // Defensively add filters to brand elements
-      brands.forEach(el => {
-        if (!el.filters) {
-          el.filters = {
-            brightness: 100,
-            contrast: 100,
-            saturate: 100,
-            blur: 0,
-            opacity: 100,
-          };
-        }
-      });
-
-      // Use a set to track assigned z-indices and find the max
-      const zIndices = new Set();
-      Object.values(positions).forEach(p => { if (p.zIndex !== undefined) zIndices.add(p.zIndex); });
-      brands.forEach(b => { if (b.zIndex !== undefined) zIndices.add(b.zIndex); });
-      let zIndexCounter = zIndices.size > 0 ? Math.max(...zIndices) + 1 : 0;
-
-      // Assign zIndex to text fields if they don't have one
-      safeGlobalCsvHeaders.forEach(header => {
-        if (!positions[header]) positions[header] = {};
-        if (positions[header].zIndex === undefined) {
-          positions[header].zIndex = zIndexCounter++;
-        }
-      });
-
-      // Assign zIndex to brand elements if they don't have one
-      brands.forEach(el => {
-        if (el.zIndex === undefined) {
-          el.zIndex = zIndexCounter++;
-        }
-      });
-
-      setEditedPositions(positions);
-      setEditedBrandElements(brands);
+      setEditedPositions(JSON.parse(JSON.stringify(initialPositions)));
+      setEditedBrandElements(JSON.parse(JSON.stringify(initialBrandElements)));
       setEditedRecord(JSON.parse(JSON.stringify(pageData.record)));
+      setEditedPageTemplate(JSON.parse(JSON.stringify(initialTemplate)));
 
-      // Simplified style initialization, as props are now pre-merged
       const newEditedStyles = {};
-      safeGlobalCsvHeaders.forEach(field => {
-        newEditedStyles[field] = {
-          ...COMPLETE_DEFAULT_STYLE,
-          ...(initialFieldStyles?.[field] || {}),
-        };
+      (globalCsvHeaders || []).forEach(field => {
+        newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(initialStyles[field] || {}) };
       });
       setEditedStyles(newEditedStyles);
-      setStylesAreInitialized(true);
 
-      // Lógica de merge aprimorada para o elemento de fundo
-      const backgroundToUse = {
-        ...defaultBackground,
-        ...(globalBackgroundElement || {}),
-        ...(pageData.customBackgroundElement || {}),
-        // Garante que os objetos aninhados (filters, gradient) sejam mesclados corretamente
-        filters: {
-          ...defaultBackground.filters,
-          ...(globalBackgroundElement?.filters || {}),
-          ...(pageData.customBackgroundElement?.filters || {}),
-        },
-        gradient: {
-          ...defaultBackground.gradient,
-          ...(globalBackgroundElement?.gradient || {}),
-          ...(pageData.customBackgroundElement?.gradient || {}),
-          // Garante uma cópia profunda do array de stops para evitar mutações indesejadas
-          stops: (pageData.customBackgroundElement?.gradient?.stops || globalBackgroundElement?.gradient?.stops || defaultBackground.gradient.stops).map(stop => ({ ...stop })),
-        }
-      };
-
-      setEditedBackgroundElement(backgroundToUse);
-      setFontScale(pageData.fontScale || 1); // Initialize font scale from pageData
-    } else {
-      setStylesAreInitialized(false);
     }
-  }, [open, pageData, initialFieldPositions, initialFieldStyles, globalCsvHeaders, brandElements, globalBackgroundElement]);
+  }, [open, pageData, globalCsvHeaders, brandElements, globalPageTemplate]);
 
-  if (!pageData) {
-    return null;
-  }
+  if (!pageData) return null;
 
   const handleSave = () => {
-    // Construct a new object explicitly to avoid propagating stale props from pageData
     const savedData = {
-      // Core identifiers from the original pageData that should not change
-      index: pageData.index,
-      blob: pageData.blob,
-      url: pageData.url,
-      filename: pageData.filename,
-
-      // The state that was actually edited in this component
+      ...pageData, // Preserve other properties like index, blob, url etc.
       record: editedRecord,
-      fieldPositions: editedPositions,
-      fieldStyles: editedStyles,
-      brandElements: editedBrandElements,
-      fontScale: fontScale,
-      customBackgroundElement: editedBackgroundElement,
+      fieldPositions: editedPositions, // These are now custom
+      fieldStyles: editedStyles, // These are now custom
+      brandElements: editedBrandElements, // These are now custom
+      customPageTemplate: editedPageTemplate, // Store the edited template
     };
     onSave(savedData);
     onClose();
   };
 
-  // Os cabeçalhos CSV para este editor devem ser os da linha específica sendo editada.
-  // FieldPositioner e FormattingPanel esperam uma lista de todos os cabeçalhos para popular seletores, etc.
-  // mas o preview de dados em FieldPositioner usará o pageData.record
-  const editorCsvHeaders = globalCsvHeaders;
-  // Use editedRecord for the preview data if it's available
   const editorCsvData = editedRecord ? [editedRecord] : (pageData ? [pageData.record] : []);
-
-  // Log state before passing to FieldPositioner // LOGS REMOVED
-  // if (stylesAreInitialized && currentBackgroundImageForEditor) {
-  //   console.log("GeneratedImageEditor -- Passing to FieldPositioner -- editedPositions:", JSON.stringify(editedPositions, null, 2));
-  //   console.log("GeneratedImageEditor -- Passing to FieldPositioner -- editedStyles:", JSON.stringify(editedStyles, null, 2));
-  // }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="paper" fullScreen={isMobile}>
       <DialogTitle>
         Editar Página Gerada #{pageData.index + 1}
-        <IconButton
-          onClick={onClose}
-          sx={{ position: 'absolute', right: 8, top: 8 }}
-        >
-          <Close />
-        </IconButton>
+        <IconButton onClick={onClose} sx={{ position: 'absolute', right: 8, top: 8 }}><Close /></IconButton>
       </DialogTitle>
       <DialogContent dividers sx={{ overflowY: 'auto' }}>
         <Grid container spacing={2}>
           <Grid item xs={12} md={isMobile ? 12 : 8}>
             <FieldPositioner
               aspectRatio={aspectRatio}
-              csvHeaders={editorCsvHeaders} // Headers relevantes para esta imagem
+              csvHeaders={globalCsvHeaders}
               fieldPositions={editedPositions}
               setFieldPositions={setEditedPositions}
               fieldStyles={editedStyles}
               setFieldStyles={setEditedStyles}
-              csvData={editorCsvData} // Dados CSV desta imagem para preview
+              csvData={editorCsvData}
               colorPalette={colorPalette}
               selectedField={selectedFieldInternal}
               setSelectedField={handleInternalFieldSelection}
               onCsvDataUpdate={handleFieldPositionerCsvDataUpdate}
               originalImageSize={originalImageSize}
-              onFontScaleChange={setFontScale}
               brandElements={editedBrandElements}
               setBrandElements={setEditedBrandElements}
-              backgroundElement={editedBackgroundElement}
-              setBackgroundElement={setEditedBackgroundElement}
+              pageTemplate={editedPageTemplate}
+              setPageTemplate={setEditedPageTemplate}
               currentPreviewIndex={0}
             />
           </Grid>
           {!isMobile && (
             <Grid item xs={12} md={4}>
               <FormattingPanel
-                selectedField={selectedFieldInternal} // Usar o estado interno
+                selectedField={selectedFieldInternal}
+                setSelectedField={setSelectedFieldInternal}
                 fieldStyles={editedStyles}
                 setFieldStyles={setEditedStyles}
                 fieldPositions={editedPositions}
                 setFieldPositions={setEditedPositions}
-                csvHeaders={editorCsvHeaders}
-                backgroundElement={editedBackgroundElement}
-                setBackgroundElement={setEditedBackgroundElement}
+                csvHeaders={globalCsvHeaders}
+                pageTemplate={editedPageTemplate}
+                setPageTemplate={setEditedPageTemplate}
                 brandElements={editedBrandElements}
                 setBrandElements={setEditedBrandElements}
-                onDeselectField={handleDeselectField}
                 onOpenHtmlEditor={handleOpenHtmlEditor}
-                fontScale={fontScale}
                 standardsColors={standardsColors || colorPalette}
               />
             </Grid>
@@ -309,43 +159,33 @@ const PageEditor = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleSave} color="primary" variant="contained">
-          Salvar Alterações na Página
-        </Button>
+        <Button onClick={handleSave} color="primary" variant="contained">Salvar Alterações</Button>
       </DialogActions>
       {isMobile && (
         <>
-          <Fab
-            color="primary"
-            aria-label="edit"
-            sx={{ position: 'fixed', bottom: 16, right: 16 }}
-            onClick={() => setIsDrawerOpen(true)}
-            disabled={!selectedFieldInternal}
-          >
-            <Edit />
-          </Fab>
+          <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16 }} onClick={() => setIsDrawerOpen(true)}><Edit /></Fab>
           <FormattingDrawer
             open={isDrawerOpen}
             onClose={() => setIsDrawerOpen(false)}
             selectedField={selectedFieldInternal}
+            setSelectedField={setSelectedFieldInternal}
             fieldStyles={editedStyles}
             setFieldStyles={setEditedStyles}
             fieldPositions={editedPositions}
             setFieldPositions={setEditedPositions}
-            csvHeaders={editorCsvHeaders}
+            csvHeaders={globalCsvHeaders}
             onOpenHtmlEditor={handleOpenHtmlEditor}
-            backgroundElement={editedBackgroundElement}
-            setBackgroundElement={setEditedBackgroundElement}
+            pageTemplate={editedPageTemplate}
+            setPageTemplate={setEditedPageTemplate}
             brandElements={editedBrandElements}
             setBrandElements={setEditedBrandElements}
-            fontScale={fontScale}
             standardsColors={standardsColors || colorPalette}
           />
         </>
       )}
       <TextEditorDialog
         open={editingField !== null}
-        title={`Editar Conteúdo de "${editingField}"`}
+        title={`Editar "${editingField}"`}
         content={editedRecord && editingField ? editedRecord[editingField] : ''}
         onSave={(newContent) => {
           if (editedRecord && editingField) {

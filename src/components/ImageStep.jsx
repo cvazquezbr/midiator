@@ -199,11 +199,12 @@ const ImageStep = ({
       {isMobile && (
         <>
           <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 1300 }} onClick={() => {
+            console.log(`[ImageStep] FAB clicked. Current selectedField: ${selectedField}`);
             if (!selectedField) {
-              // If nothing is selected, default to selecting the page background for editing.
+              console.log('[ImageStep] No field selected. Setting to __page_background__');
               setSelectedField('__page_background__');
             }
-            // Always open the drawer.
+            console.log('[ImageStep] Opening drawer.');
             setIsDrawerOpen(true);
           }}><EditIcon /></Fab>
           <FormattingDrawer
