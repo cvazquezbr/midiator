@@ -85,6 +85,9 @@ const FormattingPanel = ({
   activeStep,
   isCropping,
   setIsCropping,
+  showImageLoaders = false, // Default to false
+  handleImageUpload,
+  onChangeBackgroundImage,
 }) => {
   const fonts = [
     'Arial', 'Helvetica', 'Verdana', 'Inter', 'Lato', 'Montserrat', 'Noto Sans',
@@ -99,12 +102,10 @@ const FormattingPanel = ({
   const [isBrandElement, setIsBrandElement] = React.useState(false);
   const [isPageBackground, setIsPageBackground] = React.useState(false);
   const [currentElement, setCurrentElement] = React.useState(null);
-  const [expandedPanels, setExpandedPanels] = React.useState([]);
+  const [expandedPanel, setExpandedPanel] = React.useState(false);
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
-    setExpandedPanels(prev =>
-      isExpanded ? [...prev, panel] : prev.filter(p => p !== panel)
-    );
+    setExpandedPanel(isExpanded ? panel : false);
   };
 
   React.useEffect(() => {
@@ -118,31 +119,31 @@ const FormattingPanel = ({
       if (selectedField === '__page_background__') {
         setIsPageBackground(true);
         setCurrentElement(pageTemplate);
-        setExpandedPanels(['backgroundColor', 'pageImages', 'brandElements']);
+        setExpandedPanel('backgroundColor');
       } else if (fieldPositions[selectedField]) {
         setIsTextField(true);
         setCurrentElement({
           ...fieldPositions[selectedField],
           style: fieldStyles[selectedField] || {},
         });
-        setExpandedPanels(['fontStyle', 'boxStyle', 'positionSize']);
+        setExpandedPanel('fontStyle');
       } else {
         const pageImg = pageTemplate?.images?.find(img => img.id === selectedField);
         if (pageImg) {
           setIsPageImage(true);
           setCurrentElement(pageImg);
-          setExpandedPanels(['imageStyle', 'imageFilters', 'positionSize']);
+          setExpandedPanel('imageStyle');
         } else {
           const brandEl = brandElements?.find(el => el.id === selectedField);
           if (brandEl) {
             setIsBrandElement(true);
             setCurrentElement(brandEl);
-            setExpandedPanels(['imageStyle', 'imageFilters', 'positionSize']);
+            setExpandedPanel('imageStyle');
           }
         }
       }
     } else {
-      setExpandedPanels(['pageImages', 'brandElements']);
+      setExpandedPanel(false);
     }
   }, [selectedField, fieldPositions, fieldStyles, brandElements, pageTemplate]);
 
@@ -191,6 +192,26 @@ const FormattingPanel = ({
   return (
     <Card>
       <CardContent>
+        {showImageLoaders && (
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Button
+              variant="contained"
+              component="label"
+              startIcon={<ImageIcon />}
+              fullWidth
+            >
+              Carregar
+              <input type="file" accept=".png,.jpg,.jpeg" hidden onChange={handleImageUpload} />
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={onChangeBackgroundImage}
+              fullWidth
+            >
+              Galeria
+            </Button>
+          </Box>
+        )}
         {!currentElement ? (
           <Typography variant="h6" color="textSecondary" align="center" gutterBottom sx={{ mt: 4 }}>Selecione um elemento para editar</Typography>
         ) : (
@@ -203,11 +224,11 @@ const FormattingPanel = ({
             {isTextField && (
               <>
                 <Button variant="contained" startIcon={<Edit />} onClick={() => onOpenHtmlEditor(selectedField)} fullWidth sx={{ mb: 2 }}>Editar Conteúdo</Button>
-                <Accordion expanded={expandedPanels.includes('fontStyle')} onChange={handleAccordionChange('fontStyle')}>
+                <Accordion expanded={expandedPanel === 'fontStyle'} onChange={handleAccordionChange('fontStyle')}>
                   <AccordionSummary expandIcon={<ExpandMore />}><Typography><FormatSize sx={{ mr: 1, verticalAlign: 'middle' }} />Fonte e Estilo</Typography></AccordionSummary>
                   <AccordionDetails><Grid container spacing={2}><Grid item xs={8}><FormControl fullWidth size="small"><InputLabel>Fonte</InputLabel><Select value={currentElement.style.fontFamily || 'Arial'} label="Fonte" onChange={(e) => updateFieldStyle('fontFamily', e.target.value)}>{fonts.map(font => (<MenuItem key={font} value={font} style={{ fontFamily: font }}>{font}</MenuItem>))}</Select></FormControl></Grid><Grid item xs={4}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.style.color || '#000000')} onChange={(e) => updateFieldStyle('color', e.target.value)} fullWidth size="small" /></Grid>{standardsColors?.length > 0 && <Grid item xs={12}><Typography variant="caption">Cores da Campanha</Typography><Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>{standardsColors.map((c, i) => (<Tooltip title={c} key={i}><Box sx={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: c, cursor: 'pointer', border: '1px solid #ccc' }} onClick={() => updateFieldStyle('color', c)} /></Tooltip>))}</Box></Grid>}<Grid item xs={12}><ToggleButtonGroup size="small" fullWidth><ToggleButton value="bold" selected={currentElement.style.fontWeight === 'bold'} onClick={() => updateFieldStyle('fontWeight', currentElement.style.fontWeight === 'bold' ? 'normal' : 'bold')}><FormatBold /></ToggleButton><ToggleButton value="italic" selected={currentElement.style.fontStyle === 'italic'} onClick={() => updateFieldStyle('fontStyle', currentElement.style.fontStyle === 'italic' ? 'normal' : 'italic')}><FormatItalic /></ToggleButton><ToggleButton value="underline" selected={currentElement.style.textDecoration === 'underline'} onClick={() => updateFieldStyle('textDecoration', currentElement.style.textDecoration === 'underline' ? 'none' : 'underline')}><FormatUnderlined /></ToggleButton></ToggleButtonGroup></Grid><Grid item xs={12}><Typography variant="caption" display="block" gutterBottom>Alinhamento</Typography><ToggleButtonGroup value={currentElement.style.textAlign || 'left'} exclusive onChange={(e, v) => v && updateFieldStyle('textAlign', v)} size="small" fullWidth><ToggleButton value="left"><FormatAlignLeft /></ToggleButton><ToggleButton value="center"><FormatAlignCenter /></ToggleButton><ToggleButton value="right"><FormatAlignRight /></ToggleButton></ToggleButtonGroup></Grid><Grid item xs={12}><ToggleButtonGroup value={currentElement.style.verticalAlign || 'top'} exclusive onChange={(e, v) => v && updateFieldStyle('verticalAlign', v)} size="small" fullWidth><ToggleButton value="top"><VerticalAlignTop /></ToggleButton><ToggleButton value="middle"><VerticalAlignCenter /></ToggleButton><ToggleButton value="bottom"><VerticalAlignBottom /></ToggleButton></ToggleButtonGroup></Grid><Grid item xs={12}><Typography gutterBottom>Tamanho: {currentElement.style.fontSize || 24}px</Typography><Slider value={currentElement.style.fontSize || 24} onChange={(e, v) => updateFieldStyle('fontSize', v)} min={8} max={120} /></Grid><Grid item xs={12}><Typography gutterBottom>Espaçamento Linhas: {currentElement.style.lineHeightMultiplier || 1.2}x</Typography><Slider value={currentElement.style.lineHeightMultiplier || 1.2} onChange={(e, v) => updateFieldStyle('lineHeightMultiplier', v)} min={0.8} max={3} step={0.1} /></Grid></Grid></AccordionDetails>
                 </Accordion>
-                <Accordion expanded={expandedPanels.includes('boxStyle')} onChange={handleAccordionChange('boxStyle')}>
+                <Accordion expanded={expandedPanel === 'boxStyle'} onChange={handleAccordionChange('boxStyle')}>
                   <AccordionSummary expandIcon={<ExpandMore />}><Typography><CheckBoxOutlineBlank sx={{ mr: 1, verticalAlign: 'middle' }} />Caixa de Texto</Typography></AccordionSummary>
                   <AccordionDetails><Grid container spacing={2}><Grid item xs={6}><TextField label="Cor Fundo" type="color" value={rgbStringToHex(currentElement.style.backgroundColor || '#000000')} onChange={(e) => updateFieldStyle('backgroundColor', e.target.value)} fullWidth size="small" /></Grid><Grid item xs={6}><Typography gutterBottom>Opacidade Fundo: {Math.round((currentElement.style.backgroundOpacity ?? 1) * 100)}%</Typography><Slider value={currentElement.style.backgroundOpacity ?? 1} onChange={(e, v) => updateFieldStyle('backgroundOpacity', v)} min={0} max={1} step={0.01} /></Grid><Grid item xs={6}><TextField label="Cor Borda" type="color" value={rgbStringToHex(currentElement.style.borderColor || '#000000')} onChange={(e) => updateFieldStyle('borderColor', e.target.value)} fullWidth size="small" /></Grid><Grid item xs={6}><Typography gutterBottom>Largura Borda: {currentElement.style.borderWidth || 0}px</Typography><Slider value={currentElement.style.borderWidth || 0} onChange={(e, v) => updateFieldStyle('borderWidth', v)} min={0} max={20} /></Grid><Grid item xs={6}><Typography gutterBottom>Curva: {currentElement.style.borderRadius || 0}px</Typography><Slider value={currentElement.style.borderRadius || 0} onChange={(e, v) => updateFieldStyle('borderRadius', v)} min={0} max={50} /></Grid><Grid item xs={6}><Typography gutterBottom>Padding: {currentElement.style.padding || 0}px</Typography><Slider value={currentElement.style.padding || 0} onChange={(e, v) => updateFieldStyle('padding', v)} min={0} max={50} /></Grid></Grid></AccordionDetails>
                 </Accordion>
@@ -217,11 +238,11 @@ const FormattingPanel = ({
 
             {isImageElement && (
               <>
-                <Accordion expanded={expandedPanels.includes('imageStyle')} onChange={handleAccordionChange('imageStyle')}>
+                <Accordion expanded={expandedPanel === 'imageStyle'} onChange={handleAccordionChange('imageStyle')}>
                   <AccordionSummary expandIcon={<ExpandMore />}><Typography><Palette sx={{ mr: 1, verticalAlign: 'middle' }} />Estilo da Imagem</Typography></AccordionSummary>
                   <AccordionDetails><Grid container spacing={2}><Grid item xs={12}><FormControlLabel control={<Switch checked={currentElement.shadow || false} onChange={(e) => updateElementProperty('shadow', e.target.checked)} />} label="Sombra" />{currentElement.shadow && (<Grid container spacing={2} sx={{ mt: 1 }}><Grid item xs={6}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.shadowColor || '#000000')} onChange={(e) => updateElementProperty('shadowColor', e.target.value)} fullWidth size="small" /></Grid><Grid item xs={6}><Typography gutterBottom>Desfoque</Typography><Slider value={currentElement.shadowBlur || 10} onChange={(e, v) => updateElementProperty('shadowBlur', v)} min={0} max={50} /></Grid><Grid item xs={6}><Typography gutterBottom>Offset X</Typography><Slider value={currentElement.shadowOffsetX || 5} onChange={(e, v) => updateElementProperty('shadowOffsetX', v)} min={-50} max={50} /></Grid><Grid item xs={6}><Typography gutterBottom>Offset Y</Typography><Slider value={currentElement.shadowOffsetY || 5} onChange={(e, v) => updateElementProperty('shadowOffsetY', v)} min={-50} max={50} /></Grid></Grid>)}</Grid><Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid><Grid item xs={6}><TextField label="Cor da Borda" type="color" value={rgbStringToHex(currentElement.borderColor || '#000000')} onChange={(e) => updateElementProperty('borderColor', e.target.value)} fullWidth size="small" /></Grid><Grid item xs={6}><Typography gutterBottom>Largura da Borda (px)</Typography><Slider value={currentElement.borderWidth || 0} onChange={(e, v) => updateElementProperty('borderWidth', v)} min={0} max={50} /></Grid><Grid item xs={12}><Typography gutterBottom>Cantos Arredondados (px)</Typography><Slider value={currentElement.borderRadius || 0} onChange={(e, v) => updateElementProperty('borderRadius', v)} min={0} max={100} /></Grid></Grid></AccordionDetails>
                 </Accordion>
-                <Accordion expanded={expandedPanels.includes('imageFilters')} onChange={handleAccordionChange('imageFilters')}>
+                <Accordion expanded={expandedPanel === 'imageFilters'} onChange={handleAccordionChange('imageFilters')}>
                   <AccordionSummary expandIcon={<ExpandMore />}><Typography><Tune sx={{ mr: 1, verticalAlign: 'middle' }} />Filtros</Typography></AccordionSummary>
                   <AccordionDetails><Typography gutterBottom>Brilho: {currentElement.filters?.brightness || 100}%</Typography><Slider value={currentElement.filters?.brightness || 100} onChange={(e, v) => updateElementFilter('brightness', v)} min={0} max={200} /><Typography gutterBottom>Contraste: {currentElement.filters?.contrast || 100}%</Typography><Slider value={currentElement.filters?.contrast || 100} onChange={(e, v) => updateElementFilter('contrast', v)} min={0} max={200} /><Typography gutterBottom>Saturação: {currentElement.filters?.saturate || 100}%</Typography><Slider value={currentElement.filters?.saturate || 100} onChange={(e, v) => updateElementFilter('saturate', v)} min={0} max={200} /><Typography gutterBottom>Desfoque: {currentElement.filters?.blur || 0}px</Typography><Slider value={currentElement.filters?.blur || 0} onChange={(e, v) => updateElementFilter('blur', v)} min={0} max={20} /><Typography gutterBottom>Opacidade: {currentElement.filters?.opacity || 100}%</Typography><Slider value={currentElement.filters?.opacity || 100} onChange={(e, v) => updateElementFilter('opacity', v)} min={0} max={100} /></AccordionDetails>
                 </Accordion>
@@ -231,14 +252,14 @@ const FormattingPanel = ({
             )}
 
             {isPageBackground && (
-              <Accordion expanded={expandedPanels.includes('backgroundColor')} onChange={handleAccordionChange('backgroundColor')}>
+              <Accordion expanded={expandedPanel === 'backgroundColor'} onChange={handleAccordionChange('backgroundColor')}>
                 <AccordionSummary expandIcon={<ExpandMore />}><Typography><Gradient sx={{ mr: 1, verticalAlign: 'middle' }} />Fundo da Página</Typography></AccordionSummary>
                 <AccordionDetails><BackgroundColorEditor pageTemplate={pageTemplate} onUpdate={setPageTemplate} /></AccordionDetails>
               </Accordion>
             )}
 
             {!isPageBackground && (
-              <Accordion expanded={expandedPanels.includes('positionSize')} onChange={handleAccordionChange('positionSize')}>
+              <Accordion expanded={expandedPanel === 'positionSize'} onChange={handleAccordionChange('positionSize')}>
                 <AccordionSummary expandIcon={<ExpandMore />}><Typography><AspectRatio sx={{ mr: 1, verticalAlign: 'middle' }} />Posição e Tamanho</Typography></AccordionSummary>
                 <AccordionDetails><Grid container spacing={2}><Grid item xs={6}><TextField label="X (%)" type="number" size="small" value={currentElement.x?.toFixed(1) || '0.0'} onChange={(e) => updateElementProperty('x', parseFloat(e.target.value))} fullWidth /></Grid><Grid item xs={6}><TextField label="Y (%)" type="number" size="small" value={currentElement.y?.toFixed(1) || '0.0'} onChange={(e) => updateElementProperty('y', parseFloat(e.target.value))} fullWidth /></Grid><Grid item xs={6}><TextField label="Largura (%)" type="number" size="small" value={currentElement.width?.toFixed(1) || '20.0'} onChange={(e) => updateElementProperty('width', parseFloat(e.target.value))} fullWidth /></Grid><Grid item xs={6}><TextField label="Altura (%)" type="number" size="small" value={currentElement.height?.toFixed(1) || '10.0'} onChange={(e) => updateElementProperty('height', parseFloat(e.target.value))} fullWidth /></Grid><Grid item xs={12}><Typography gutterBottom>Rotação: {currentElement.rotation?.toFixed(0) || '0'}°</Typography><Slider value={currentElement.rotation || 0} onChange={(e, v) => updateElementProperty('rotation', v)} min={0} max={360} /></Grid><Grid item xs={12}><Typography variant="caption" display="block" gutterBottom>Ordem</Typography><ToggleButtonGroup size="small" fullWidth><Tooltip title="Enviar para Trás"><ToggleButton value="back" onClick={() => onZIndexChange(selectedField, 'back')}><FlipToBack /></ToggleButton></Tooltip><Tooltip title="Recuar"><ToggleButton value="backward" onClick={() => onZIndexChange(selectedField, 'backward')}><ArrowDownward /></ToggleButton></Tooltip><Tooltip title="Avançar"><ToggleButton value="forward" onClick={() => onZIndexChange(selectedField, 'forward')}><ArrowUpward /></ToggleButton></Tooltip><Tooltip title="Trazer para Frente"><ToggleButton value="front" onClick={() => onZIndexChange(selectedField, 'front')}><FlipToFront /></ToggleButton></Tooltip></ToggleButtonGroup></Grid></Grid></AccordionDetails>
               </Accordion>
@@ -248,12 +269,12 @@ const FormattingPanel = ({
 
         <Divider sx={{ my: 2 }} />
 
-        <Accordion expanded={expandedPanels.includes('pageImages')} onChange={handleAccordionChange('pageImages')}>
+        <Accordion expanded={expandedPanel === 'pageImages'} onChange={handleAccordionChange('pageImages')}>
           <AccordionSummary expandIcon={<ExpandMore />}><Typography><ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />Imagens da Página</Typography></AccordionSummary>
           <AccordionDetails><ImageManager pageTemplate={pageTemplate} setPageTemplate={setPageTemplate} setSelectedField={setSelectedField} selectedField={selectedField} /><Button sx={{mt: 2}} fullWidth variant="outlined" onClick={() => setSelectedField('__page_background__')}>Editar Fundo da Página</Button></AccordionDetails>
         </Accordion>
 
-        <Accordion expanded={expandedPanels.includes('brandElements')} onChange={handleAccordionChange('brandElements')}>
+        <Accordion expanded={expandedPanel === 'brandElements'} onChange={handleAccordionChange('brandElements')}>
           <AccordionSummary expandIcon={<ExpandMore />}><Typography><BrandingWatermark sx={{ mr: 1, verticalAlign: 'middle' }} />Elementos da Marca</Typography></AccordionSummary>
           <AccordionDetails><BrandElementManager onElementSelect={(newElement) => setBrandElements(prev => [...prev, newElement])} /></AccordionDetails>
         </Accordion>
