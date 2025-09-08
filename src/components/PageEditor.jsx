@@ -94,12 +94,12 @@ const PageEditor = ({
 
   const handleSave = () => {
     const savedData = {
-      ...pageData, // Preserve other properties like index, blob, url etc.
+      ...pageData,
       record: editedRecord,
-      fieldPositions: editedPositions, // These are now custom
-      fieldStyles: editedStyles, // These are now custom
-      brandElements: editedBrandElements, // These are now custom
-      customPageTemplate: editedPageTemplate, // Store the edited template
+      customFieldPositions: editedPositions,
+      customFieldStyles: editedStyles,
+      customBrandElements: editedBrandElements,
+      pageTemplate: editedPageTemplate, // Pass the edited template back
     };
     onSave(savedData);
     onClose();
