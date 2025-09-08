@@ -72,11 +72,14 @@ const BackgroundColorEditor = ({ backgroundElement, onUpdate, pageState, onPageS
         onChange={(e, newMode) => {
           if (newMode) {
             setColorMode(newMode);
+            const newBackgroundType = newMode === 'solid' ? 'color' : 'gradient';
             // When user selects a color/gradient, we remove the image src
-            // so the background image disappears.
-            if (backgroundElement?.src) {
-              onUpdate({ ...backgroundElement, src: null });
-            }
+            // so the background image disappears, and set the correct type.
+            onUpdate({
+              ...backgroundElement,
+              src: null,
+              backgroundType: newBackgroundType,
+            });
           }
         }}
         aria-label="color mode"
