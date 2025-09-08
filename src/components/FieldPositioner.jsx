@@ -364,6 +364,7 @@ const FieldPositioner = ({
                 },
                 aspectRatio: aspectRatio,
                 width: '100%',
+                minHeight: 400, // Garante que o editor tenha uma altura mínima
               }}
               onTouchStart={handleContainerTouchStart}
               onTouchEnd={handleContainerTouchEnd}
