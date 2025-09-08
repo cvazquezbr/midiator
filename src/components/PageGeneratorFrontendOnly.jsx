@@ -561,6 +561,9 @@ const PageGeneratorFrontendOnly = ({
           colorPalette={colorPalette}
           standardsColors={standardsColors}
           aspectRatio={aspectRatio}
+          globalPageTemplate={pageTemplate}
+          brandElements={brandElements}
+          originalImageSize={originalImageSize}
         />
       )}
 
