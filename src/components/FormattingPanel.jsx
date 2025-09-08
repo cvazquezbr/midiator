@@ -193,7 +193,7 @@ const FormattingPanel = ({
   return (
     <Card>
       <CardContent>
-        {!selectedField ? (
+        {!currentElement ? (
           <Typography variant="h6" color="textSecondary" align="center" gutterBottom sx={{ mt: 4 }}>
             Selecione um elemento para editar
           </Typography>
