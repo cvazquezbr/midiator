@@ -7,6 +7,7 @@ const FormattingDrawer = ({
   open,
   onClose,
   selectedField,
+  setSelectedField, // <-- Add this
   fieldStyles,
   initialFieldStyles,
   setFieldStyles,
@@ -15,10 +16,9 @@ const FormattingDrawer = ({
   csvHeaders,
   brandElements,
   setBrandElements,
-  backgroundElement,
-  setBackgroundElement,
+  pageTemplate, // <-- Add this
+  setPageTemplate, // <-- Add this
   onZIndexChange,
-  onDeselectField,
   onOpenHtmlEditor,
   standardsColors,
   templateFieldStyles,
@@ -37,6 +37,7 @@ const FormattingDrawer = ({
         </Box>
         <FormattingPanel
           selectedField={selectedField}
+          setSelectedField={setSelectedField} // <-- Pass it down
           fieldStyles={fieldStyles}
           initialFieldStyles={initialFieldStyles}
           setFieldStyles={setFieldStyles}
@@ -45,10 +46,9 @@ const FormattingDrawer = ({
           csvHeaders={csvHeaders}
           brandElements={brandElements}
           setBrandElements={setBrandElements}
-          backgroundElement={backgroundElement}
-          setBackgroundElement={setBackgroundElement}
+          pageTemplate={pageTemplate} // <-- Pass it down
+          setPageTemplate={setPageTemplate} // <-- Pass it down
           onZIndexChange={onZIndexChange}
-          onDeselectField={onDeselectField}
           onOpenHtmlEditor={onOpenHtmlEditor}
           standardsColors={standardsColors}
           templateFieldStyles={templateFieldStyles}

@@ -638,17 +638,20 @@ const DraggableElementInternal = ({
     height: `${position.height}%`,
     transform: `rotate(${rotation || 0}deg)`,
     zIndex: position.zIndex || 'auto',
-    filter: (element.type === 'image' || element.type === 'background') ? getFilterString(style.filters) : 'none',
-    boxShadow: (element.type === 'image' || element.type === 'background') ? getBoxShadowString(style) : 'none',
   };
 
-  if (element.type === 'background') {
-    Object.assign(boxSx, getBackgroundStyle(style, content));
-  } else if (element.type === 'image' || element.type === 'cropbox') {
+  if (element.type === 'image') {
+    boxSx.filter = getFilterString(style.filters);
+    boxSx.boxShadow = getBoxShadowString(style);
+    boxSx.border = `${style.borderWidth || 0}px solid ${style.borderColor || '#000000'}`;
+    boxSx.borderRadius = `${style.borderRadius || 0}px`;
+    boxSx.overflow = 'hidden'; // Clip the inner image
+    boxSx.padding = 0;
+  } else if (element.type === 'cropbox') {
     boxSx.backgroundColor = 'transparent';
     boxSx.border = 'none';
     boxSx.padding = 0;
-  } else { // Text element
+  } else if (element.type === 'text') { // Text element
     boxSx.backgroundColor = hexToRgba(style.backgroundColor || '#000000', style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1);
     boxSx.border = `${(style.borderWidth || 0) * fontScale}px solid ${style.borderColor || '#000000'}`;
     boxSx.borderRadius = `${(style.borderRadius || 0) * fontScale}px`;
