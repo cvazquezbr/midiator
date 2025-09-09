@@ -43,11 +43,11 @@ const PageEditor = ({
   const { csvHeaders } = useCampaign();
   const pageDataFromHook = usePageData(pageData?.index);
 
-  const [editedPositions, setEditedPositions] = useState({});
-  const [editedStyles, setEditedStyles] = useState({});
-  const [editedBrandElements, setEditedBrandElements] = useState([]);
+  const [editedPositions, setEditedPositions] = useState(null);
+  const [editedStyles, setEditedStyles] = useState(null);
+  const [editedBrandElements, setEditedBrandElements] = useState(null);
   const [editedRecord, setEditedRecord] = useState(null);
-  const [editedPageTemplate, setEditedPageTemplate] = useState(pageDataFromHook.effectivePageTemplate);
+  const [editedPageTemplate, setEditedPageTemplate] = useState(null);
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
@@ -103,10 +103,21 @@ const PageEditor = ({
         newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(effectiveFieldStyles[field] || {}) };
       });
       setEditedStyles(newEditedStyles);
+    } else if (!open) {
+      // Reset state when dialog is closed to ensure it's fresh on next open
+      setEditedPositions(null);
+      setEditedStyles(null);
+      setEditedBrandElements(null);
+      setEditedRecord(null);
+      setEditedPageTemplate(null);
+      setSelectedFieldInternal(null);
     }
   }, [open, pageData, pageDataFromHook, csvHeaders]);
 
-  if (!pageData) return null;
+  if (!open || !pageData || !editedPageTemplate) {
+    // Render nothing or a loader until the state is initialized by the effect
+    return null;
+  }
 
   const handleSave = () => {
     const savedData = {
