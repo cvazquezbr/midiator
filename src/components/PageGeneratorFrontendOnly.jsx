@@ -151,7 +151,7 @@ const PageGeneratorFrontendOnly = ({
       handleRegenerateAll();
       return;
     }
-    if (!pageTemplate?.images?.length && !pageTemplate?.backgroundColor) {
+    if (!pageTemplate?.images?.length && !pageTemplate?.backgroundColor && !pageTemplate.gradient) {
       alert('Por favor, defina um fundo (imagem ou cor) para a campanha.');
       return;
     }
@@ -176,7 +176,7 @@ const PageGeneratorFrontendOnly = ({
         brandElements,
         fieldPositions,
         fieldStyles,
-        fontScale,
+        fontScale: 1,
         pageTemplate: pageTemplate,
         aspectRatio,
       })
@@ -538,7 +538,7 @@ const PageGeneratorFrontendOnly = ({
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
-                            backgroundColor: 'white',
+                            backgroundColor: 'background.paper',
                             borderRadius: 1,
                             mb: 1,
                             boxShadow: 3,
