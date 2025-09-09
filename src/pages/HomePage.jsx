@@ -543,15 +543,6 @@ function HomePage() {
   }, [aspectRatio]);
 
   useEffect(() => {
-    if (originalImageSize.width > 0 && displayedImageSize.width > 0) {
-      const scale = originalImageSize.width / displayedImageSize.width;
-      setFontScale(scale);
-    } else {
-      setFontScale(1);
-    }
-  }, [originalImageSize, displayedImageSize]);
-
-  useEffect(() => {
     if (activeStep === 1 && campaignContent) {
       const { titulo, conteudo, cta } = campaignContent;
       setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
