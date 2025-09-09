@@ -85,18 +85,8 @@ const DraggableElementInternal = ({
       return null;
     }
     if (element.type === 'image') {
-      return (
-        <img
-          src={content}
-          alt={element.name || 'Element'}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            pointerEvents: 'none',
-          }}
-        />
-      );
+      // The image is now rendered as the background of the main Box.
+      return null;
     }
 
     if (element.type === 'cropbox') {
@@ -642,6 +632,10 @@ const DraggableElementInternal = ({
   };
 
   if (element.type === 'image') {
+    boxSx.backgroundImage = `url("${content}")`;
+    boxSx.backgroundSize = 'cover';
+    boxSx.backgroundPosition = 'center';
+    boxSx.backgroundRepeat = 'no-repeat';
     boxSx.filter = getFilterString(style.filters);
     boxSx.boxShadow = getBoxShadowString(style);
     boxSx.border = `${style.borderWidth || 0}px solid ${style.borderColor || '#000000'}`;
