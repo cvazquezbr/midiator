@@ -17,6 +17,8 @@ import FormattingDrawer from './FormattingDrawer';
 import { Fab } from '@mui/material';
 import TextEditorDialog from './TextEditorDialog';
 import { createNewImageElement } from '../utils/elementFactory';
+import { usePageData } from '../hooks/usePageData';
+import { useCampaign } from '../context/CampaignContext';
 
 const COMPLETE_DEFAULT_STYLE = {
   fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
@@ -27,34 +29,25 @@ const COMPLETE_DEFAULT_STYLE = {
   borderRadius: 0, padding: 5, backgroundOpacity: 0,
 };
 
-const defaultPageTemplate = {
-  backgroundColor: '#FFFFFF',
-  gradient: null,
-  images: [],
-};
-
 const PageEditor = ({
   open,
   onClose,
   pageData,
-  globalCsvHeaders,
   onSave,
   colorPalette,
   originalImageSize,
-  brandElements,
   standardsColors,
-  globalPageTemplate,
   aspectRatio,
-  handleImageUpload,
   onChangeBackgroundImage,
-  globalFieldPositions,
-  globalFieldStyles,
 }) => {
+  const { csvHeaders } = useCampaign();
+  const pageDataFromHook = usePageData(pageData?.index);
+
   const [editedPositions, setEditedPositions] = useState({});
   const [editedStyles, setEditedStyles] = useState({});
   const [editedBrandElements, setEditedBrandElements] = useState([]);
   const [editedRecord, setEditedRecord] = useState(null);
-  const [editedPageTemplate, setEditedPageTemplate] = useState(defaultPageTemplate);
+  const [editedPageTemplate, setEditedPageTemplate] = useState(pageDataFromHook.effectivePageTemplate);
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
@@ -92,24 +85,26 @@ const PageEditor = ({
 
   useEffect(() => {
     if (open && pageData) {
-      const initialPositions = pageData.customFieldPositions || globalFieldPositions || {};
-      const initialStyles = pageData.customFieldStyles || globalFieldStyles || {};
-      const initialBrandElements = pageData.customBrandElements || brandElements || [];
-      const initialTemplate = pageData.customPageTemplate || globalPageTemplate || defaultPageTemplate;
+      const {
+        effectiveFieldPositions,
+        effectiveFieldStyles,
+        effectiveBrandElements,
+        effectivePageTemplate,
+        record,
+      } = pageDataFromHook;
 
-      setEditedPositions(JSON.parse(JSON.stringify(initialPositions)));
-      setEditedBrandElements(JSON.parse(JSON.stringify(initialBrandElements)));
-      setEditedRecord(JSON.parse(JSON.stringify(pageData.record)));
-      setEditedPageTemplate(JSON.parse(JSON.stringify(initialTemplate)));
+      setEditedPositions(JSON.parse(JSON.stringify(effectiveFieldPositions)));
+      setEditedBrandElements(JSON.parse(JSON.stringify(effectiveBrandElements)));
+      setEditedRecord(JSON.parse(JSON.stringify(record)));
+      setEditedPageTemplate(JSON.parse(JSON.stringify(effectivePageTemplate)));
 
       const newEditedStyles = {};
-      (globalCsvHeaders || []).forEach(field => {
-        newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(initialStyles[field] || {}) };
+      (csvHeaders || []).forEach(field => {
+        newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(effectiveFieldStyles[field] || {}) };
       });
       setEditedStyles(newEditedStyles);
-
     }
-  }, [open, pageData, globalCsvHeaders, brandElements, globalPageTemplate, globalFieldPositions, globalFieldStyles]);
+  }, [open, pageData, pageDataFromHook, csvHeaders]);
 
   if (!pageData) return null;
 

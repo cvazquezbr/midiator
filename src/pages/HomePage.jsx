@@ -16,6 +16,7 @@ import { Toaster, toast } from 'sonner';
 
 import { useUserAuth } from '../context/UserAuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { useCampaign } from '../context/CampaignContext';
 import { loadSettingsFromDb } from '../utils/credentialsManager';
 import { getCampaigns, saveCampaign, loadCampaign, updateCampaign } from '../utils/campaignState';
 import { checkAuthStatus } from '../utils/auth';
@@ -66,6 +67,7 @@ import { lightTheme, darkTheme } from '../theme.js';
 import ColorThief from 'colorthief';
 import { drawAndComposeImage } from '../utils/imageComposer.js';
 import { autoArrangeFields } from '../utils/autoArrange.js';
+import PageGenerationService from '../services/PageGenerationService.js';
 
 import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
 
@@ -76,17 +78,24 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
 
 import { createNewImageElement } from '../utils/elementFactory.js';
 
-const defaultPageTemplate = {
-    backgroundColor: '#FFFFFF',
-    gradient: null,
-    images: [],
-};
-
 const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
 
 function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
+  const {
+    csvData, setCsvData,
+    csvHeaders, setCsvHeaders,
+    fieldPositions, setFieldPositions,
+    fieldStyles, setFieldStyles,
+    brandElements, setBrandElements,
+    pageTemplate, setPageTemplate,
+    selectedField, setSelectedField,
+    currentCampaign, setCurrentCampaign,
+    generatedPagesData, setGeneratedPagesData,
+    aspectRatio, setAspectRatio,
+    defaultPageTemplate,
+  } = useCampaign();
 
   // Component State
   const [personaList, setPersonaList] = useState([]);
@@ -102,8 +111,6 @@ function HomePage() {
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const [personaDrawerOpen, setPersonaDrawerOpen] = useState(!isMobile);
   const [autorDrawerOpen, setAutorDrawerOpen] = useState(!isMobile);
-  const [csvData, setCsvData] = useState([]);
-  const [csvHeaders, setCsvHeaders] = useState([]);
   const [colorPalette, setColorPalette] = useState([]);
   const [standardsColors, setStandardsColors] = useState([]);
   const [problema, setProblema] = useState('');
@@ -118,7 +125,6 @@ function HomePage() {
   const [editingField, setEditingField] = useState(null);
   const [isHtmlField, setIsHtmlField] = useState(false);
   const [formato, setFormato] = useState('');
-  const [aspectRatio, setAspectRatio] = useState('1:1');
   const [generatedPageUrl, setGeneratedPageUrl] = useState(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
@@ -141,26 +147,19 @@ function HomePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingCampaigns, setIsFetchingCampaigns] = useState(true);
-  const [fieldPositions, setFieldPositions] = useState({});
-  const [fieldStyles, setFieldStyles] = useState({});
   const [initialFieldStyles, setInitialFieldStyles] = useState({});
   const [templateFieldStyles, setTemplateFieldStyles] = useState({});
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
   const [originalImageSize, setOriginalImageSize] = useState(DEFAULT_IMAGE_SIZE);
-  const [generatedPagesData, setGeneratedPagesData] = useState([]);
   const [generatedAudioData, setGeneratedAudioData] = useState([]);
   const [generatedVideosData, setGeneratedVideosData] = useState([]);
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
-  const [selectedField, setSelectedField] = useState(null);
-  const [brandElements, setBrandElements] = useState([]);
-  const [pageTemplate, setPageTemplate] = useState(defaultPageTemplate);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [showBgSelector, setShowBgSelector] = useState(false);
-  const [currentCampaign, setCurrentCampaign] = useState(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [fontScale, setFontScale] = useState(1);
@@ -1023,10 +1022,11 @@ function HomePage() {
     let composingTemplate = pageTemplate;
     let pageUpdateData = {};
 
+    // A lógica de geração de imagem com prompt foi mantida aqui por enquanto,
+    // pois depende de handlers de geração que ainda não foram movidos.
     if (imagePrompt && imagePrompt.trim() !== '') {
         setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
         try {
-            // Find the style source BEFORE generating the new image.
             let sourceStyle = null;
             const existingPageDataForStyle = generatedPagesData.find(p => p.index === index);
             const templateForStyle = existingPageDataForStyle?.customPageTemplate || pageTemplate;
@@ -1052,21 +1052,11 @@ function HomePage() {
             }
 
             const uniqueImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
-
-            // Create the new image and apply the determined style.
             const newImage = { ...createNewImageElement(uniqueImageUrl), ...sourceStyle };
-
             const existingPageData = generatedPagesData.find(p => p.index === index);
             const pageImages = existingPageData?.customPageTemplate?.images || pageTemplate.images;
-
-            const finalImages = pageImages.length > 0
-                ? [newImage, ...pageImages.slice(1)]
-                : [newImage];
-
-            const tempPageTemplate = {
-                ...(existingPageData?.customPageTemplate || pageTemplate),
-                images: finalImages,
-            };
+            const finalImages = pageImages.length > 0 ? [newImage, ...pageImages.slice(1)] : [newImage];
+            const tempPageTemplate = { ...(existingPageData?.customPageTemplate || pageTemplate), images: finalImages };
 
             composingTemplate = tempPageTemplate;
             pageUpdateData.customPageTemplate = tempPageTemplate;
@@ -1078,15 +1068,18 @@ function HomePage() {
 
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
-      const finalPageData = await drawAndComposeImage({
-        record: record,
-        index: index,
-        brandElements,
-        fieldPositions,
-        fieldStyles,
-        aspectRatio,
-        pageTemplate: composingTemplate,
-        fontScale,
+      // Usando o novo serviço de geração
+      const finalPageData = await PageGenerationService.generatePageImage({
+        record,
+        index,
+        campaignContext: {
+          brandElements,
+          fieldPositions,
+          fieldStyles,
+          aspectRatio,
+          pageTemplate: composingTemplate,
+          fontScale,
+        }
       });
 
       setGeneratedPagesData(currentPagesData => {
@@ -1100,7 +1093,7 @@ function HomePage() {
       return true;
     } catch (error) {
       console.error(`Error during page generation for post ${index + 1}:`, error);
-      toast.error(`Falha na geração para o post #${index + 1}: ${error.message}`);
+      toast.error(error.message); // O serviço já formata a mensagem de erro
       return false;
     } finally {
       setGenerationStatus('');
@@ -1232,26 +1225,14 @@ function HomePage() {
                     imageInputRef={imageInputRef}
                     handleImageUpload={handleImageUpload}
                     onChangeBackgroundImage={() => setShowBgSelector(true)}
-                    csvHeaders={csvHeaders}
-                    fieldPositions={fieldPositions}
-                    setFieldPositions={setFieldPositions}
-                    fieldStyles={fieldStyles}
                     initialFieldStyles={initialFieldStyles}
-                    setFieldStyles={setFieldStyles}
-                    csvData={csvData}
                     onImageDisplayedSizeChange={setDisplayedImageSize}
                     colorPalette={colorPalette}
                     standardsColors={standardsColors}
                     onCsvDataUpdate={handleCsvRecordContentUpdate}
                     originalImageSize={originalImageSize}
-                    brandElements={brandElements}
-                    setBrandElements={setBrandElements}
-                    pageTemplate={pageTemplate}
-                    setPageTemplate={setPageTemplate}
                     onZIndexChange={handleZIndexChange}
                     isMobile={isMobile}
-                    selectedField={selectedField}
-                    setSelectedField={setSelectedField}
                     onDeselectField={() => setSelectedField(null)}
                     onOpenHtmlEditor={(fieldId) => {
                       setEditingField(fieldId);
@@ -1265,23 +1246,16 @@ function HomePage() {
                 )}
                 {activeStep === 4 && (
                   <PageGeneratorFrontendOnly
-                    csvData={csvData}
-                    fieldPositions={fieldPositions}
-                    fieldStyles={fieldStyles}
                     displayedImageSize={displayedImageSize}
-                    csvHeaders={csvHeaders}
                     colorPalette={colorPalette}
                     standardsColors={standardsColors}
-                    setGeneratedPagesData={setGeneratedPagesData}
                     initialGeneratedPagesData={generatedPagesData}
                     onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
                     originalImageSize={originalImageSize}
-                    brandElements={brandElements}
                     onBrandElementsChange={setBrandElements}
                     fontScale={fontScale}
                     handleGenerateSinglePage={handleGenerateSinglePage}
                     aspectRatio={aspectRatio}
-                    pageTemplate={pageTemplate}
                     generatedPagesData={generatedPagesData}
                     handleImageUpload={handleImageUpload}
                     onChangeBackgroundImage={() => setShowBgSelector(true)}

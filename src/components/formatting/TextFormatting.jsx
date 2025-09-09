@@ -1,0 +1,82 @@
+import React from 'react';
+import {
+  Box,
+  Typography,
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Slider,
+  Button,
+  Divider,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  TextField,
+  Tooltip,
+} from '@mui/material';
+import {
+  ExpandMore,
+  FormatSize,
+  CheckBoxOutlineBlank,
+  FormatAlignLeft,
+  FormatAlignCenter,
+  FormatAlignRight,
+  VerticalAlignTop,
+  VerticalAlignCenter,
+  VerticalAlignBottom,
+  FormatBold,
+  FormatItalic,
+  FormatUnderlined,
+  Edit,
+} from '@mui/icons-material';
+import { ToggleButton, ToggleButtonGroup } from '@mui/material';
+
+const rgbStringToHex = (colorString) => {
+  if (!colorString || !colorString.startsWith('rgb')) return colorString;
+  const rgb = colorString.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+  if (!rgb) return colorString;
+  const r = parseInt(rgb[1], 10);
+  const g = parseInt(rgb[2], 10);
+  const b = parseInt(rgb[3], 10);
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+};
+
+const fonts = [
+    'Arial', 'Helvetica', 'Verdana', 'Inter', 'Lato', 'Montserrat', 'Noto Sans',
+    'Open Sans', 'Poppins', 'Raleway', 'Roboto', 'Source Sans Pro',
+    'Georgia', 'Times New Roman', 'Lora', 'Merriweather', 'Playfair Display', 'Roboto Slab',
+    'Anton', 'Bebas Neue', 'Oswald', 'Impact', 'Caveat', 'Courgette', 'Dancing Script',
+    'Courier New',
+];
+
+const TextFormatting = ({
+  currentElement,
+  updateFieldStyle,
+  resetFieldStyle,
+  onOpenHtmlEditor,
+  standardsColors,
+  expandedPanel,
+  handleAccordionChange,
+  selectedField,
+}) => {
+  if (!currentElement) return null;
+
+  return (
+    <>
+      <Button variant="contained" startIcon={<Edit />} onClick={() => onOpenHtmlEditor(selectedField)} fullWidth sx={{ mb: 2 }}>Editar Conteúdo</Button>
+      <Accordion expanded={expandedPanel === 'fontStyle'} onChange={handleAccordionChange('fontStyle')}>
+        <AccordionSummary expandIcon={<ExpandMore />}><Typography><FormatSize sx={{ mr: 1, verticalAlign: 'middle' }} />Fonte e Estilo</Typography></AccordionSummary>
+        <AccordionDetails><Grid container spacing={2}><Grid item xs={8}><FormControl fullWidth size="small"><InputLabel>Fonte</InputLabel><Select value={currentElement.style.fontFamily || 'Arial'} label="Fonte" onChange={(e) => updateFieldStyle('fontFamily', e.target.value)} MenuProps={{ sx: { zIndex: 1500 } }}>{fonts.map(font => (<MenuItem key={font} value={font} style={{ fontFamily: font }}>{font}</MenuItem>))}</Select></FormControl></Grid><Grid item xs={4}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.style.color || '#000000')} onChange={(e) => updateFieldStyle('color', e.target.value)} fullWidth size="small" /></Grid>{standardsColors?.length > 0 && <Grid item xs={12}><Typography variant="caption">Cores da Campanha</Typography><Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>{standardsColors.map((c, i) => (<Tooltip title={c} key={i}><Box sx={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: c, cursor: 'pointer', border: '1px solid #ccc' }} onClick={() => updateFieldStyle('color', c)} /></Tooltip>))}</Box></Grid>}<Grid item xs={12}><ToggleButtonGroup size="small" fullWidth><ToggleButton value="bold" selected={currentElement.style.fontWeight === 'bold'} onClick={() => updateFieldStyle('fontWeight', currentElement.style.fontWeight === 'bold' ? 'normal' : 'bold')}><FormatBold /></ToggleButton><ToggleButton value="italic" selected={currentElement.style.fontStyle === 'italic'} onClick={() => updateFieldStyle('fontStyle', currentElement.style.fontStyle === 'italic' ? 'normal' : 'italic')}><FormatItalic /></ToggleButton><ToggleButton value="underline" selected={currentElement.style.textDecoration === 'underline'} onClick={() => updateFieldStyle('textDecoration', currentElement.style.textDecoration === 'underline' ? 'none' : 'underline')}><FormatUnderlined /></ToggleButton></ToggleButtonGroup></Grid><Grid item xs={12}><Typography variant="caption" display="block" gutterBottom>Alinhamento</Typography><ToggleButtonGroup value={currentElement.style.textAlign || 'left'} exclusive onChange={(e, v) => v && updateFieldStyle('textAlign', v)} size="small" fullWidth><ToggleButton value="left"><FormatAlignLeft /></ToggleButton><ToggleButton value="center"><FormatAlignCenter /></ToggleButton><ToggleButton value="right"><FormatAlignRight /></ToggleButton></ToggleButtonGroup></Grid><Grid item xs={12}><ToggleButtonGroup value={currentElement.style.verticalAlign || 'top'} exclusive onChange={(e, v) => v && updateFieldStyle('verticalAlign', v)} size="small" fullWidth><ToggleButton value="top"><VerticalAlignTop /></ToggleButton><ToggleButton value="middle"><VerticalAlignCenter /></ToggleButton><ToggleButton value="bottom"><VerticalAlignBottom /></ToggleButton></ToggleButtonGroup></Grid><Grid item xs={12}><Typography gutterBottom>Tamanho: {currentElement.style.fontSize || 24}px</Typography><Slider value={currentElement.style.fontSize || 24} onChange={(e, v) => updateFieldStyle('fontSize', v)} min={8} max={120} /></Grid><Grid item xs={12}><Typography gutterBottom>Espaçamento Linhas: {currentElement.style.lineHeightMultiplier || 1.2}x</Typography><Slider value={currentElement.style.lineHeightMultiplier || 1.2} onChange={(e, v) => updateFieldStyle('lineHeightMultiplier', v)} min={0.8} max={3} step={0.1} /></Grid></Grid></AccordionDetails>
+      </Accordion>
+      <Accordion expanded={expandedPanel === 'boxStyle'} onChange={handleAccordionChange('boxStyle')}>
+        <AccordionSummary expandIcon={<ExpandMore />}><Typography><CheckBoxOutlineBlank sx={{ mr: 1, verticalAlign: 'middle' }} />Caixa de Texto</Typography></AccordionSummary>
+        <AccordionDetails><Grid container spacing={2}><Grid item xs={6}><TextField label="Cor Fundo" type="color" value={rgbStringToHex(currentElement.style.backgroundColor || '#000000')} onChange={(e) => updateFieldStyle('backgroundColor', e.target.value)} fullWidth size="small" /></Grid><Grid item xs={6}><Typography gutterBottom>Opacidade Fundo: {Math.round((currentElement.style.backgroundOpacity ?? 1) * 100)}%</Typography><Slider value={currentElement.style.backgroundOpacity ?? 1} onChange={(e, v) => updateFieldStyle('backgroundOpacity', v)} min={0} max={1} step={0.01} /></Grid><Grid item xs={6}><TextField label="Cor Borda" type="color" value={rgbStringToHex(currentElement.style.borderColor || '#000000')} onChange={(e) => updateFieldStyle('borderColor', e.target.value)} fullWidth size="small" /></Grid><Grid item xs={6}><Typography gutterBottom>Largura Borda: {currentElement.style.borderWidth || 0}px</Typography><Slider value={currentElement.style.borderWidth || 0} onChange={(e, v) => updateFieldStyle('borderWidth', v)} min={0} max={20} /></Grid><Grid item xs={6}><Typography gutterBottom>Curva: {currentElement.style.borderRadius || 0}px</Typography><Slider value={currentElement.style.borderRadius || 0} onChange={(e, v) => updateFieldStyle('borderRadius', v)} min={0} max={50} /></Grid><Grid item xs={6}><Typography gutterBottom>Padding: {currentElement.style.padding || 0}px</Typography><Slider value={currentElement.style.padding || 0} onChange={(e, v) => updateFieldStyle('padding', v)} min={0} max={50} /></Grid></Grid></AccordionDetails>
+      </Accordion>
+      <Divider sx={{ my: 2 }} /><Button variant="outlined" size="small" onClick={resetFieldStyle} color="secondary" fullWidth>Resetar Estilo</Button>
+    </>
+  );
+};
+
+export default TextFormatting;
