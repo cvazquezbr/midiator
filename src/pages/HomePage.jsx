@@ -917,7 +917,11 @@ function HomePage() {
       updateImageAndPalette(imageUrl);
       return true;
     } catch (imageError) {
-      toast.error(`Ocorreu um erro ao gerar a imagem da campanha: ${imageError.message}`);
+      if (imageError.message && imageError.message.includes('503')) {
+        toast.error('O serviço de geração de imagem está indisponível no momento. Tente novamente mais tarde.');
+      } else {
+        toast.error(`Ocorreu um erro ao gerar a imagem da campanha: ${imageError.message}`);
+      }
       console.log('[HomePage] DIAGNOSTIC: handleGenerateImage failed. Setting generatedPageUrl to null.');
       setGeneratedPageUrl(null);
       return false;
@@ -1062,7 +1066,11 @@ function HomePage() {
             effectivePageTemplate = tempPageTemplate; // Update for this generation pass
             pageUpdateData.customPageTemplate = tempPageTemplate; // Persist this change
         } catch (error) {
-            toast.error(`Falha ao gerar imagem para o post #${index + 1}: ${error.message}`);
+            if (error.message && error.message.includes('503')) {
+                toast.error(`O serviço de geração de imagem está indisponível no momento. Tente novamente mais tarde para o post #${index + 1}.`);
+            } else {
+                toast.error(`Falha ao gerar imagem para o post #${index + 1}: ${error.message}`);
+            }
         }
     }
 
