@@ -535,6 +535,7 @@ const PageGeneratorFrontendOnly = ({
                             position: 'relative',
                             width: '100%',
                             height: 'auto',
+                            aspectRatio: aspectRatio ? String(aspectRatio).replace(':', ' / ') : '1 / 1',
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
