@@ -287,6 +287,9 @@ const FieldPositioner = ({
   const renderableElements = React.useMemo(() => {
     const elements = [];
 
+    // DEBUG: Log the images array from pageTemplate
+    console.log('[FieldPositioner] Creating renderableElements. pageTemplate.images:', JSON.stringify(pageTemplate.images, null, 2));
+
     // Add page images
     (pageTemplate.images || []).forEach(image => {
         if (!image.visible) return;
