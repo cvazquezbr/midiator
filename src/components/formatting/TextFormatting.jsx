@@ -79,7 +79,9 @@ const TextFormatting = ({
         <AccordionSummary expandIcon={<ExpandMore />}><Typography><BlurOn sx={{ mr: 1, verticalAlign: 'middle' }} />Efeitos</Typography></AccordionSummary>
         <AccordionDetails>
           <Grid container spacing={2}>
-            <Grid item xs={12}><FormControlLabel control={<Switch checked={currentElement.style.textShadow || false} onChange={(e) => updateFieldStyle('textShadow', e.target.checked)} />} label="Sombra de Texto" /></Grid>
+            <Grid item xs={12}>
+              <FormControlLabel control={<Switch checked={currentElement.style.textShadow || false} onChange={(e) => updateFieldStyle('textShadow', e.target.checked)} />} label="Sombra de Texto" />
+            </Grid>
             {currentElement.style.textShadow && (
               <>
                 <Grid item xs={6}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.style.shadowColor || '#000000')} onChange={(e) => updateFieldStyle('shadowColor', e.target.value)} fullWidth size="small" /></Grid>
@@ -87,6 +89,16 @@ const TextFormatting = ({
                 <Grid item xs={6}><Typography gutterBottom>Offset X: {currentElement.style.shadowOffsetX || 2}px</Typography><Slider value={currentElement.style.shadowOffsetX || 2} onChange={(e, v) => updateFieldStyle('shadowOffsetX', v)} min={-50} max={50} /></Grid>
                 <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.style.shadowOffsetY || 2}px</Typography><Slider value={currentElement.style.shadowOffsetY || 2} onChange={(e, v) => updateFieldStyle('shadowOffsetY', v)} min={-50} max={50} /></Grid>
               </>
+            )}
+            <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
+            <Grid item xs={12}>
+              <FormControlLabel control={<Switch checked={currentElement.style.textStroke || false} onChange={(e) => updateFieldStyle('textStroke', e.target.checked)} />} label="Contorno de Texto" />
+            </Grid>
+            {currentElement.style.textStroke && (
+                <>
+                    <Grid item xs={6}><TextField label="Cor Contorno" type="color" value={rgbStringToHex(currentElement.style.strokeColor || '#ffffff')} onChange={(e) => updateFieldStyle('strokeColor', e.target.value)} fullWidth size="small" /></Grid>
+                    <Grid item xs={6}><Typography gutterBottom>Largura: {currentElement.style.strokeWidth || 2}px</Typography><Slider value={currentElement.style.strokeWidth || 2} onChange={(e, v) => updateFieldStyle('strokeWidth', v)} min={0} max={20} /></Grid>
+                </>
             )}
           </Grid>
         </AccordionDetails>
