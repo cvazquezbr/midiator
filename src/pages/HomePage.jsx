@@ -645,13 +645,16 @@ function HomePage() {
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
       const newImage = createNewImageElement(imageUrl);
+      newImage.zIndex = -1; // Ensure it's a background element.
 
       setPageTemplate(prevTemplate => {
-        // Add the new image to the existing images array
-        const updatedImages = [...(prevTemplate.images || []), newImage];
+        const existingImages = prevTemplate.images || [];
+        // Filter out other potential "background" images (those with zIndex < 0)
+        const foregroundImages = existingImages.filter(image => image.zIndex >= 0);
+
         return {
           ...prevTemplate,
-          images: updatedImages,
+          images: [newImage, ...foregroundImages],
         };
       });
 
