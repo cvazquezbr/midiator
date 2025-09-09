@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import DraggableElement from './DraggableElement';
 import TextEditorDialog from './TextEditorDialog';
+import { useCampaign } from '../context/CampaignContext';
 
 const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
   fontFamily: 'Arial',
@@ -52,7 +53,6 @@ import { autoArrangeFields as autoArrangeFieldsUtil } from '../utils/autoArrange
 
 
 const FieldPositioner = ({
-  aspectRatio: aspectRatioProp,
   csvHeaders,
   fieldPositions,
   setFieldPositions,
@@ -83,6 +83,7 @@ const FieldPositioner = ({
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
+  const { aspectRatio: aspectRatioFromContext } = useCampaign();
 
   const effectiveImageSize = originalImageSize;
 
@@ -243,7 +244,7 @@ const FieldPositioner = ({
     setIsInteracting(false);
   };
 
-  const aspectRatio = aspectRatioProp ? String(aspectRatioProp).replace(':', ' / ') : '16 / 9';
+  const aspectRatio = aspectRatioFromContext ? String(aspectRatioFromContext).replace(':', ' / ') : '1 / 1';
 
   useEffect(() => {
     if (renderedImageMetrics.width > 0 && effectiveImageSize?.width > 0) {
@@ -366,8 +367,8 @@ const FieldPositioner = ({
   }, [pageTemplate, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
   return (
-    <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: 2, width: '100%', height: '100%', maxWidth: '100%', maxHeight: '100%' }}>
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: 2, width: '100%', height: 'auto', maxWidth: '100%', flexShrink: 0 }}>
         <Box
           ref={containerRef}
           className="text-container"

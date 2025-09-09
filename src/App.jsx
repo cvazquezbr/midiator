@@ -2,6 +2,9 @@ import React, { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { toast } from 'sonner';
 
+// Context
+import { CampaignProvider } from './context/CampaignContext';
+
 // Pages
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
@@ -57,29 +60,31 @@ function App() {
   }, []); // Empty dependency array ensures this runs only once on mount
 
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
+    <CampaignProvider>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
 
-      {/* Protected Routes for standard users */}
-      <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<HomePage />} />
-      </Route>
+        {/* Protected Routes for standard users */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<HomePage />} />
+        </Route>
 
-      {/* Protected Routes for admin users */}
-      <Route element={<AdminRoute />}>
-        <Route path="/admin/users" element={<AdminDashboardPage />} />
-        <Route path="/admin/prompts" element={<PromptsPage />} />
-      </Route>
+        {/* Protected Routes for admin users */}
+        <Route element={<AdminRoute />}>
+          <Route path="/admin/users" element={<AdminDashboardPage />} />
+          <Route path="/admin/prompts" element={<PromptsPage />} />
+        </Route>
 
-      {/* Fallback for non-matching routes */}
-      <Route path="*" element={
-        <div style={{ padding: '2rem' }}>
-          <h1>404 - Page Not Found</h1>
-        </div>
-      } />
-    </Routes>
+        {/* Fallback for non-matching routes */}
+        <Route path="*" element={
+          <div style={{ padding: '2rem' }}>
+            <h1>404 - Page Not Found</h1>
+          </div>
+        } />
+      </Routes>
+    </CampaignProvider>
   );
 }
 

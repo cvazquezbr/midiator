@@ -42,27 +42,30 @@ import PageEditor from './PageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { drawAndComposeImage, dataURLtoBlob, wrapTextInArea, applyTextEffects, drawTextWithEffects } from '../utils/imageComposer';
 import { useUserAuth } from '../context/UserAuthContext';
+import { useCampaign } from '../context/CampaignContext';
 
 const PageGeneratorFrontendOnly = ({
-  csvData,
-  fieldPositions,
-  fieldStyles,
-  csvHeaders,
   colorPalette,
-  setGeneratedPagesData,
   initialGeneratedPagesData,
   onThumbnailRecordTextUpdate,
   originalImageSize,
-  brandElements,
   onBrandElementsChange,
   fontScale = 1,
   standardsColors,
   handleGenerateSinglePage,
-  pageTemplate,
   aspectRatio,
   handleImageUpload, // New prop
   onChangeBackgroundImage, // New prop
 }) => {
+  const {
+    csvData,
+    fieldPositions,
+    fieldStyles,
+    csvHeaders,
+    brandElements,
+    pageTemplate,
+    setGeneratedPagesData,
+  } = useCampaign();
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -614,18 +617,12 @@ const PageGeneratorFrontendOnly = ({
           open={showGeneratedPageEditor}
           onClose={handleCloseGeneratedPageEditor}
           pageData={pageToEdit}
-          globalCsvHeaders={csvHeaders}
           onSave={handleSaveIndividualModifications}
           colorPalette={colorPalette}
           standardsColors={standardsColors}
           aspectRatio={aspectRatio}
-          globalPageTemplate={pageTemplate}
-          brandElements={brandElements}
           originalImageSize={originalImageSize}
-          handleImageUpload={handleImageUpload}
           onChangeBackgroundImage={onChangeBackgroundImage}
-          globalFieldPositions={fieldPositions}
-          globalFieldStyles={fieldStyles}
         />
       )}
 
