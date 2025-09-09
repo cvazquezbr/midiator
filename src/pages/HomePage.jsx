@@ -645,7 +645,7 @@ function HomePage() {
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
       const newImage = createNewImageElement(imageUrl);
-      newImage.zIndex = -1; // Ensure it's a background element.
+      newImage.zIndex = -1; // Explicitly set zIndex for background images.
 
       setPageTemplate(prevTemplate => {
         const existingImages = prevTemplate.images || [];
@@ -683,6 +683,24 @@ function HomePage() {
   const handleImageDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
   const handleImageDragEnter = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(true); };
   const handleImageDragLeave = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(false); };
+
+  const handleForegroundImageUpload = (file) => {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const newImage = createNewImageElement(e.target.result);
+      // Ensure zIndex is positive for foreground elements
+      newImage.zIndex = (pageTemplate.images?.length || 0) + 1;
+      newImage.width = 50; // Start with a reasonable size
+      newImage.height = 50;
+      setPageTemplate(prev => ({
+          ...prev,
+          images: [...(prev.images || []), newImage]
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleBackgroundImageUpload = async (file) => {
     if (!file) return;
@@ -1233,8 +1251,8 @@ function HomePage() {
                     handleImageDragEnter={handleImageDragEnter}
                     handleImageDragLeave={handleImageDragLeave}
                     imageInputRef={imageInputRef}
-                    handleImageUpload={handleImageUpload}
-                    onChangeBackgroundImage={() => setShowBgSelector(true)}
+                    handleImageUpload={handleForegroundImageUpload} // Use new handler for foreground
+                    onChangeBackgroundImage={() => setShowBgSelector(true)} // This is for background
                     initialFieldStyles={initialFieldStyles}
                     onImageDisplayedSizeChange={setDisplayedImageSize}
                     colorPalette={colorPalette}
@@ -1252,6 +1270,17 @@ function HomePage() {
                     onFontScaleChange={setFontScale}
                     templateFieldStyles={templateFieldStyles}
                     activeStep={activeStep}
+                    // Pass all state and setters for FormattingPanel
+                    pageTemplate={pageTemplate}
+                    setPageTemplate={setPageTemplate}
+                    fieldStyles={fieldStyles}
+                    setFieldStyles={setFieldStyles}
+                    fieldPositions={fieldPositions}
+                    setFieldPositions={setFieldPositions}
+                    brandElements={brandElements}
+                    setBrandElements={setBrandElements}
+                    selectedField={selectedField}
+                    setSelectedField={setSelectedField}
                   />
                 )}
                 {activeStep === 4 && (
