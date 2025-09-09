@@ -287,9 +287,9 @@ const FieldPositioner = ({
   const renderableElements = React.useMemo(() => {
     const elements = [];
 
-    // Add page images (that are not background images)
+    // Add page images
     (pageTemplate.images || []).forEach(image => {
-        if (image.visible === false || image.zIndex < 0) return;
+        if (image.visible === false) return;
         elements.push({
             id: image.id,
             type: 'image',
@@ -381,20 +381,9 @@ const FieldPositioner = ({
     return 'none';
   };
 
-  const backgroundImage = pageTemplate.images?.find(img => img.zIndex < 0);
-
-  const backgroundValue = backgroundImage?.src
-    ? `url("${backgroundImage.src}")`
-    : pageTemplate.gradient
+  const backgroundValue = pageTemplate.gradient
     ? getGradientCss(pageTemplate.gradient)
     : pageTemplate.backgroundColor || '#FFFFFF';
-
-  const backgroundCss = {
-      background: backgroundValue,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat',
-  };
 
   return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -404,7 +393,7 @@ const FieldPositioner = ({
           className="text-container"
               sx={{
                 border: '2px solid #ddd',
-                ...backgroundCss,
+                background: backgroundValue,
                 position: 'relative', // Needed for absolute positioning of children
                 cursor: 'default',
                 touchAction: 'pan-x pan-y',

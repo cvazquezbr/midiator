@@ -645,18 +645,11 @@ function HomePage() {
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
       const newImage = createNewImageElement(imageUrl);
-      newImage.zIndex = -1; // Explicitly set zIndex for background images.
 
-      setPageTemplate(prevTemplate => {
-        const existingImages = prevTemplate.images || [];
-        // Filter out other potential "background" images (those with zIndex < 0)
-        const foregroundImages = existingImages.filter(image => image.zIndex >= 0);
-
-        return {
-          ...prevTemplate,
-          images: [newImage, ...foregroundImages],
-        };
-      });
+      setPageTemplate(prevTemplate => ({
+        ...prevTemplate,
+        images: [...(prevTemplate.images || []), newImage],
+      }));
 
       try {
         const colorThief = new ColorThief();
@@ -690,8 +683,6 @@ function HomePage() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const newImage = createNewImageElement(e.target.result);
-      // Ensure zIndex is positive for foreground elements
-      newImage.zIndex = (pageTemplate.images?.length || 0) + 1;
       newImage.width = 50; // Start with a reasonable size
       newImage.height = 50;
       setPageTemplate(prev => ({
