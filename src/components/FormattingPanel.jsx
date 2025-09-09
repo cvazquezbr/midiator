@@ -6,6 +6,7 @@ import {
   CardContent,
   TextField,
   Grid,
+  Slider,
   Switch,
   FormControlLabel,
   Button,
