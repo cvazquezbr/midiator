@@ -4,6 +4,7 @@ export const createNewImageElement = (src) => ({
   src,
   visible: true,
   rotation: 0,
+  zIndex: 1,
   x: 0,
   y: 0,
   width: 100,
