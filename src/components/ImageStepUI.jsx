@@ -148,24 +148,6 @@ const ImageStepUI = ({
           overflowY: 'auto'
         }}>
           <Stack spacing={2}>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Button
-                variant="contained"
-                component="label"
-                startIcon={<ImageIcon />}
-                fullWidth
-              >
-                Carregar
-                <input type="file" accept=".png,.jpg,.jpeg" hidden ref={imageInputRef} onChange={handleImageUpload} />
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={onChangeBackgroundImage}
-                fullWidth
-              >
-                Galeria
-              </Button>
-            </Box>
             <FormattingPanel
               showImageLoaders={true}
               handleImageUpload={handleImageUpload}
