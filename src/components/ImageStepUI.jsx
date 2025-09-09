@@ -41,7 +41,6 @@ const ImageStepUI = ({
   isMobile,
   onDeselectField,
   onOpenHtmlEditor,
-  isHtmlField,
   currentPreviewIndex,
   setCurrentPreviewIndex,
   templateFieldStyles,
@@ -50,6 +49,7 @@ const ImageStepUI = ({
   setIsDrawerOpen,
   isCropping,
   setIsCropping,
+  onFontScaleChange,
 }) => {
   const {
     csvData,
@@ -122,7 +122,7 @@ const ImageStepUI = ({
             onOpenHtmlEditor={onOpenHtmlEditor}
             currentPreviewIndex={currentPreviewIndex}
             setCurrentPreviewIndex={setCurrentPreviewIndex}
-            onFontScaleChange={setFontScale}
+            onFontScaleChange={onFontScaleChange}
             isCropping={isCropping}
             setIsCropping={setIsCropping}
           />
