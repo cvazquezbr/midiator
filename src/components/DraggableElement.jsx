@@ -36,7 +36,6 @@ const DraggableElementInternal = ({
   darkMode,
   onDoubleClick,
 }) => {
-  console.log('[DraggableElement] rendering element:', JSON.stringify(element, null, 2));
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);

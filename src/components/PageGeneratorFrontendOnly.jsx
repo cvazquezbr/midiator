@@ -41,6 +41,7 @@ import {
 import PageEditor from './PageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { drawAndComposeImage, dataURLtoBlob, wrapTextInArea, applyTextEffects, drawTextWithEffects } from '../utils/imageComposer';
+import { createNewImageElement } from '../utils/elementFactory';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useCampaign } from '../context/CampaignContext';
 
@@ -384,12 +385,8 @@ const PageGeneratorFrontendOnly = ({
         const pageToUpdate = initialGeneratedPagesData.find(img => img.index === replacingImageIndex);
         if (pageToUpdate) {
           const templateToUpdate = pageToUpdate.customPageTemplate || pageTemplate;
-          const newImageElement = {
-            id: `img_${Date.now()}`,
-            src: newImageUrl,
-            x: 0, y: 0, width: 100, height: 100,
-            zIndex: -1,
-          };
+          const newImageElement = createNewImageElement(newImageUrl);
+          newImageElement.zIndex = -1; // Keep the background zIndex
 
           const updatedTemplate = {
             ...templateToUpdate,
