@@ -118,7 +118,7 @@ const loadImage = (src) => {
   });
 };
 
-const getDimensionsFromAspectRatio = (aspectRatio) => {
+export const getDimensionsFromAspectRatio = (aspectRatio) => {
   switch (aspectRatio) {
     case '16:9':
       return { width: 1280, height: 720 };

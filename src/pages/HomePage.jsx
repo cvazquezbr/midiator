@@ -65,7 +65,7 @@ import { parseIaResponseToCsvData } from '../utils/iaResponseParser.js';
 import { parseCsv } from '../utils/csvParser.js';
 import { lightTheme, darkTheme } from '../theme.js';
 import ColorThief from 'colorthief';
-import { drawAndComposeImage } from '../utils/imageComposer.js';
+import { drawAndComposeImage, getDimensionsFromAspectRatio } from '../utils/imageComposer.js';
 import { autoArrangeFields } from '../utils/autoArrange.js';
 import PageGenerationService from '../services/PageGenerationService.js';
 
@@ -538,6 +538,11 @@ function HomePage() {
   }, [isMobile]);
 
   useEffect(() => {
+    const newSize = getDimensionsFromAspectRatio(aspectRatio) || DEFAULT_IMAGE_SIZE;
+    setOriginalImageSize(newSize);
+  }, [aspectRatio]);
+
+  useEffect(() => {
     if (activeStep === 1 && campaignContent) {
       const { titulo, conteudo, cta } = campaignContent;
       setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
@@ -639,7 +644,6 @@ function HomePage() {
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
-      setOriginalImageSize({ width: img.width, height: img.height });
       const newImage = createNewImageElement(imageUrl);
 
       setPageTemplate(prevTemplate => {
