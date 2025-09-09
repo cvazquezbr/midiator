@@ -45,13 +45,13 @@ export const parseIaResponseToCsvData = (responseText) => {
 
       const headerMap = {};
       actualHeadersFromIA.forEach(iaHeader => {
-        const iaHeaderTrimmed = iaHeader.trim();
-        const iaHeaderLower = iaHeaderTrimmed.toLowerCase();
-        if (iaHeaderLower.includes('titulo') || iaHeaderLower.includes('título')) headerMap[iaHeaderTrimmed] = "Título";
-        else if (iaHeaderLower.includes('texto_principal') || iaHeaderLower.includes('texto principal')) headerMap[iaHeaderTrimmed] = "Texto Principal";
-        else if (iaHeaderLower.includes('ponte_proximo') || iaHeaderLower.includes('ponte para o próximo')) headerMap[iaHeaderTrimmed] = "Ponte para o Próximo";
-        else if (iaHeaderLower.includes('prompt_imagem_carrossel')) headerMap[iaHeaderTrimmed] = "prompt_imagem_carrossel";
-        else if (iaHeaderLower.includes('id_elemento') || iaHeaderLower.includes('id') || iaHeaderLower.includes('num_slide') || iaHeaderLower.includes('elemento')) headerMap[iaHeaderTrimmed] = "id";
+        // We trim and lowercase for matching, but use the original header as the key
+        const iaHeaderTrimmedAndLower = (iaHeader || '').trim().toLowerCase();
+        if (iaHeaderTrimmedAndLower.includes('titulo') || iaHeaderTrimmedAndLower.includes('título')) headerMap[iaHeader] = "Título";
+        else if (iaHeaderTrimmedAndLower.includes('texto_principal') || iaHeaderTrimmedAndLower.includes('texto principal')) headerMap[iaHeader] = "Texto Principal";
+        else if (iaHeaderTrimmedAndLower.includes('ponte_proximo') || iaHeaderTrimmedAndLower.includes('ponte para o próximo')) headerMap[iaHeader] = "Ponte para o Próximo";
+        else if (iaHeaderTrimmedAndLower.includes('prompt_imagem_carrossel')) headerMap[iaHeader] = "prompt_imagem_carrossel";
+        else if (iaHeaderTrimmedAndLower.includes('id_elemento') || iaHeaderTrimmedAndLower.includes('id') || iaHeaderTrimmedAndLower.includes('num_slide') || iaHeaderTrimmedAndLower.includes('elemento')) headerMap[iaHeader] = "id";
       });
       console.log("[parseIaResponseToCsvData] Mapa de Cabeçalhos construído:", headerMap);
 
@@ -62,7 +62,13 @@ export const parseIaResponseToCsvData = (responseText) => {
           const targetAppHeader = headerMap[iaHeaderMapped];
           if (Object.prototype.hasOwnProperty.call(rawRecord, iaHeaderMapped)) {
             let value = rawRecord[iaHeaderMapped];
-            record[targetAppHeader] = value !== null && value !== undefined ? String(value).trim() : "";
+            let processedValue = value !== null && value !== undefined ? String(value).trim() : "";
+            // Remove quotes from start and end, which can be added by the AI or parsing
+            if (processedValue.startsWith('"') && processedValue.endsWith('"')) {
+              processedValue = processedValue.substring(1, processedValue.length - 1).trim();
+            }
+            record[targetAppHeader] = processedValue;
+
             if (targetAppHeader === "Título" && record[targetAppHeader]) {
               hasTitle = true;
             }
