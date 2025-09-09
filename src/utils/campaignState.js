@@ -81,8 +81,8 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
   if (Array.isArray(cleanState.brandElements)) {
     assetsToUploadCount += cleanState.brandElements.filter(el => needsUpload(el.url)).length;
   }
-  if (Array.isArray(cleanState.generatedImagesData)) {
-    assetsToUploadCount += cleanState.generatedImagesData.filter(img => needsUpload(img.backgroundImage)).length;
+  if (Array.isArray(cleanState.generatedPagesData)) {
+    assetsToUploadCount += cleanState.generatedPagesData.filter(img => needsUpload(img.url)).length;
   }
   if (Array.isArray(cleanState.generatedAudioData)) {
     assetsToUploadCount += cleanState.generatedAudioData.filter(audio => needsUpload(audio.url)).length;
@@ -140,20 +140,18 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
       }
     }
 
-    // Generated Post Images
-    if (Array.isArray(cleanState.generatedImagesData)) {
-      for (const image of cleanState.generatedImagesData) {
-        // Upload the background image if it's a data URL, and keep the property.
-        if (needsUpload(image.backgroundImage)) {
-          const filename = `background_post_${image.index}_${Date.now()}.png`;
-          console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-          const permanentUrl = await uploadAsset(image.backgroundImage, filename, campaignId, userId);
-          image.backgroundImage = permanentUrl;
-          assetsUploadedCount++;
-          onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
+    // Generated Pages (the final carousels/images)
+    if (Array.isArray(cleanState.generatedPagesData)) {
+        for (const page of cleanState.generatedPagesData) {
+            if (needsUpload(page.url)) {
+                const filename = page.filename || `page_${page.index}_${Date.now()}.png`;
+                console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
+                const permanentUrl = await uploadAsset(page.url, filename, campaignId, userId);
+                page.url = permanentUrl; // Replace temporary URL with permanent one
+                assetsUploadedCount++;
+                onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
+            }
         }
-        // The merged image 'url' is temporary and will be removed in the final cleanup.
-      }
     }
 
     // Generated Audio
@@ -193,22 +191,21 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
   }
 
   // 3. Final cleanup of any remaining temporary fields
-  const finalCleanup = (assetArray) => {
+  const finalCleanup = (assetArray, keepUrl = false) => {
     if (Array.isArray(assetArray)) {
       assetArray.forEach(asset => {
         delete asset.dataUrl;
         delete asset.blob;
-        // The `url` for generated images is a temporary merged image, don't save it.
-        // For audio/video it's the final URL, so we only delete it from images.
-        if (asset.hasOwnProperty('backgroundImage')) { // A simple way to identify an image object
+        if (!keepUrl) {
             delete asset.url;
         }
       });
     }
   };
-  finalCleanup(cleanState.generatedImagesData);
-  finalCleanup(cleanState.generatedAudioData);
-  finalCleanup(cleanState.generatedVideosData);
+  // For generatedPagesData, we keep the URL as it's now the permanent one.
+  finalCleanup(cleanState.generatedPagesData, true);
+  finalCleanup(cleanState.generatedAudioData, true);
+  finalCleanup(cleanState.generatedVideosData, true);
 
   console.log('[serializeCampaignData] All uploads and cleanup complete.');
   return cleanState;
