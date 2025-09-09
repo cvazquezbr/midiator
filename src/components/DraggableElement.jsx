@@ -36,7 +36,9 @@ const DraggableElementInternal = ({
   darkMode,
   onDoubleClick,
 }) => {
-  console.log('[DraggableElement] PROPS RECEIVED:', { element, content });
+  if (element.type === 'image') {
+    console.log(`[DraggableElement] Image element received. Type: ${element.type}, Content starts with: ${String(content).substring(0, 100)}`);
+  }
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
