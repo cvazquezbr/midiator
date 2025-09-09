@@ -22,7 +22,6 @@ import FormattingDrawer from './FormattingDrawer';
 import { useCampaign } from '../context/CampaignContext';
 
 const ImageStepUI = ({
-  aspectRatio,
   steps,
   isDraggingOverImage,
   handleImageDrop,
@@ -102,7 +101,6 @@ const ImageStepUI = ({
           }}
         >
           <FieldPositioner
-            aspectRatio={aspectRatio}
             csvHeaders={csvHeaders}
             fieldPositions={fieldPositions}
             setFieldPositions={setFieldPositions}

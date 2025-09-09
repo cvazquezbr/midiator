@@ -8,10 +8,11 @@ const ImageStep = (props) => {
   // Note: currentPreviewIndex and setCurrentPreviewIndex are still passed from HomePage
   // as they are used by other components (like the TextEditorDialog).
   // This could be further refactored into the context if needed.
+  const { aspectRatio, ...rest } = props;
 
   return (
     <ImageStepUI
-      {...props}
+      {...rest}
       isDrawerOpen={isDrawerOpen}
       setIsDrawerOpen={setIsDrawerOpen}
       isCropping={isCropping}

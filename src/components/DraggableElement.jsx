@@ -666,7 +666,10 @@ const DraggableElementInternal = ({
         sx={boxSx}
         onMouseDown={(e) => effectiveHandleMouseDown(e, 'drag')}
         onTouchStart={(e) => effectiveHandleTouchStart(e, 'drag')}
-        onClick={() => onSelect(element.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(element.id);
+        }}
         onDoubleClick={() => {
           if (element.type === 'text' && !enableHtmlRendering) {
             setIsEditing(true);

@@ -905,7 +905,7 @@ function HomePage() {
     }
     setIsGeneratingImage(true);
     try {
-      const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || autor;
+      const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
       const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor });
       const imageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
       console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Setting generatedPageUrl. Value starts with:', String(imageUrl).substring(0, 100));
@@ -936,8 +936,8 @@ function HomePage() {
 
     setIsGeneratingFollowup(true);
     try {
-      const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || persona;
-      const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || autor;
+      const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign);
+      const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
       const neededQuantity = followupPostsQuantity - followupPosts.length;
       const plan = await generateFollowupPlan({
         content,
@@ -1019,48 +1019,44 @@ function HomePage() {
 
   const handleGenerateSinglePage = async (record, index, fontScale = 1) => {
     const imagePrompt = record.prompt_imagem_carrossel;
-    let composingTemplate = pageTemplate;
     let pageUpdateData = {};
 
-    // A lógica de geração de imagem com prompt foi mantida aqui por enquanto,
-    // pois depende de handlers de geração que ainda não foram movidos.
+    // 1. Determine the effective styles and template for this specific page
+    const pageData = generatedPagesData.find(p => p.index === index);
+    const effectiveBrandElements = pageData?.customBrandElements || brandElements;
+    const effectiveFieldPositions = pageData?.customFieldPositions || fieldPositions;
+    const effectiveFieldStyles = pageData?.customFieldStyles || fieldStyles;
+    let effectivePageTemplate = pageData?.customPageTemplate || pageTemplate;
+
+    // 2. Handle image generation from prompt (if any)
     if (imagePrompt && imagePrompt.trim() !== '') {
         setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
         try {
             let sourceStyle = null;
-            const existingPageDataForStyle = generatedPagesData.find(p => p.index === index);
-            const templateForStyle = existingPageDataForStyle?.customPageTemplate || pageTemplate;
-
-            const firstImage = templateForStyle.images?.[0];
+            const firstImage = effectivePageTemplate.images?.[0];
             if (firstImage) {
                 const { id, src, ...style } = firstImage;
                 sourceStyle = style;
             } else {
-                const firstPageWithImage = generatedPagesData.find(p => {
-                    const tpl = p.customPageTemplate || pageTemplate;
-                    return tpl.images && tpl.images.length > 0;
-                });
+                const firstPageWithImage = generatedPagesData.find(p => (p.customPageTemplate || pageTemplate).images?.length > 0);
                 if (firstPageWithImage) {
                     const tpl = firstPageWithImage.customPageTemplate || pageTemplate;
                     const { id, src, ...style } = tpl.images[0];
                     sourceStyle = style;
                 }
             }
-
             if (!sourceStyle) {
                 sourceStyle = { x: 0, y: 0, width: 100, height: 100, zIndex: -1, style: { objectFit: 'cover' } };
             }
 
             const uniqueImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
             const newImage = { ...createNewImageElement(uniqueImageUrl), ...sourceStyle };
-            const existingPageData = generatedPagesData.find(p => p.index === index);
-            const pageImages = existingPageData?.customPageTemplate?.images || pageTemplate.images;
+            const pageImages = effectivePageTemplate.images || [];
             const finalImages = pageImages.length > 0 ? [newImage, ...pageImages.slice(1)] : [newImage];
-            const tempPageTemplate = { ...(existingPageData?.customPageTemplate || pageTemplate), images: finalImages };
 
-            composingTemplate = tempPageTemplate;
-            pageUpdateData.customPageTemplate = tempPageTemplate;
-
+            const tempPageTemplate = { ...effectivePageTemplate, images: finalImages };
+            effectivePageTemplate = tempPageTemplate; // Update for this generation pass
+            pageUpdateData.customPageTemplate = tempPageTemplate; // Persist this change
         } catch (error) {
             toast.error(`Falha ao gerar imagem para o post #${index + 1}: ${error.message}`);
         }
@@ -1068,16 +1064,16 @@ function HomePage() {
 
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
-      // Usando o novo serviço de geração
+      // 3. Use the new generation service with the effective styles
       const finalPageData = await PageGenerationService.generatePageImage({
         record,
         index,
         campaignContext: {
-          brandElements,
-          fieldPositions,
-          fieldStyles,
+          brandElements: effectiveBrandElements,
+          fieldPositions: effectiveFieldPositions,
+          fieldStyles: effectiveFieldStyles,
           aspectRatio,
-          pageTemplate: composingTemplate,
+          pageTemplate: effectivePageTemplate,
           fontScale,
         }
       });
@@ -1093,7 +1089,7 @@ function HomePage() {
       return true;
     } catch (error) {
       console.error(`Error during page generation for post ${index + 1}:`, error);
-      toast.error(error.message); // O serviço já formata a mensagem de erro
+      toast.error(error.message);
       return false;
     } finally {
       setGenerationStatus('');
@@ -1215,7 +1211,6 @@ function HomePage() {
                 )}
                 {activeStep === 3 && (
                   <ImageStep
-                    aspectRatio={aspectRatio}
                     steps={steps}
                     isDraggingOverImage={isDraggingOverImage}
                     handleImageDrop={handleImageDrop}
