@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 import { createNewImageElement } from '../utils/elementFactory.js';
 
 const defaultPageTemplate = {
@@ -31,7 +31,7 @@ export const CampaignProvider = ({ children }) => {
   const [aspectRatio, setAspectRatio] = useState('1:1');
 
 
-  const value = {
+  const value = useMemo(() => ({
     // State
     csvData,
     csvHeaders,
@@ -58,7 +58,18 @@ export const CampaignProvider = ({ children }) => {
 
     // Constants
     defaultPageTemplate,
-  };
+  }), [
+    csvData,
+    csvHeaders,
+    fieldPositions,
+    fieldStyles,
+    brandElements,
+    pageTemplate,
+    selectedField,
+    currentCampaign,
+    generatedPagesData,
+    aspectRatio,
+  ]);
 
   return (
     <CampaignContext.Provider value={value}>
