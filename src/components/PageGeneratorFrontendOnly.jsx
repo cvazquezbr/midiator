@@ -543,6 +543,7 @@ const PageGeneratorFrontendOnly = ({
                             mb: 1,
                             boxShadow: 3,
                             cursor: 'pointer',
+                            p: 1,
                             '&:hover img': { transform: 'scale(1.03)' },
                             '&:hover': { boxShadow: 6 },
                             transition: 'all 0.3s'
