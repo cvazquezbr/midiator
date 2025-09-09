@@ -135,7 +135,7 @@ const PageEditor = ({
           <Grid item xs={12} md={isMobile ? 12 : 8} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <FieldPositioner
               aspectRatio={aspectRatio}
-              csvHeaders={globalCsvHeaders}
+              csvHeaders={csvHeaders}
               fieldPositions={editedPositions}
               setFieldPositions={setEditedPositions}
               fieldStyles={editedStyles}
@@ -162,7 +162,7 @@ const PageEditor = ({
                 setFieldStyles={setEditedStyles}
                 fieldPositions={editedPositions}
                 setFieldPositions={setEditedPositions}
-                csvHeaders={globalCsvHeaders}
+                csvHeaders={csvHeaders}
                 pageTemplate={editedPageTemplate}
                 setPageTemplate={setEditedPageTemplate}
                 brandElements={editedBrandElements}
@@ -193,7 +193,7 @@ const PageEditor = ({
             setFieldStyles={setEditedStyles}
             fieldPositions={editedPositions}
             setFieldPositions={setEditedPositions}
-            csvHeaders={globalCsvHeaders}
+            csvHeaders={csvHeaders}
             onOpenHtmlEditor={handleOpenHtmlEditor}
             pageTemplate={editedPageTemplate}
             setPageTemplate={setEditedPageTemplate}

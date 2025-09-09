@@ -167,6 +167,9 @@ const ImageStepUI = ({
               </Button>
             </Box>
             <FormattingPanel
+              showImageLoaders={true}
+              handleImageUpload={handleImageUpload}
+              onChangeBackgroundImage={onChangeBackgroundImage}
               selectedField={selectedField}
               setSelectedField={setSelectedField}
               fieldStyles={fieldStyles}
@@ -224,6 +227,9 @@ const ImageStepUI = ({
             activeStep={activeStep}
             isCropping={isCropping}
             setIsCropping={setIsCropping}
+            showImageLoaders={true}
+            handleImageUpload={handleImageUpload}
+            onChangeBackgroundImage={onChangeBackgroundImage}
           />
         </>
       )}
