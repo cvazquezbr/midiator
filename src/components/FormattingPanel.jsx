@@ -31,7 +31,6 @@ import {
   Image as ImageIcon,
   BrandingWatermark,
 } from '@mui/icons-material';
-import { useCampaign } from '../context/CampaignContext';
 import BrandElementManager from './BrandElementManager';
 import ImageManager from './ImageManager';
 import TextFormatting from './formatting/TextFormatting';
@@ -50,18 +49,15 @@ const FormattingPanel = ({
   onChangeBackgroundImage,
   selectedField,
   setSelectedField,
+  fieldStyles,
+  setFieldStyles,
+  fieldPositions,
+  setFieldPositions,
+  brandElements,
+  setBrandElements,
+  pageTemplate,
+  setPageTemplate,
 }) => {
-  const {
-    fieldStyles,
-    setFieldStyles,
-    fieldPositions,
-    setFieldPositions,
-    brandElements,
-    setBrandElements,
-    pageTemplate,
-    setPageTemplate,
-  } = useCampaign();
-
   const [expandedPanel, setExpandedPanel] = React.useState(false);
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {

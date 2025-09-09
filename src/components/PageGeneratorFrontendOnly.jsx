@@ -177,7 +177,7 @@ const PageGeneratorFrontendOnly = ({
         brandElements,
         fieldPositions,
         fieldStyles,
-        fontScale: 1,
+        fontScale,
         pageTemplate: pageTemplate,
         aspectRatio,
       })
@@ -552,9 +552,9 @@ const PageGeneratorFrontendOnly = ({
                             src={pageData.url}
                             alt={`Preview ${index + 1}`}
                             style={{
-                              maxWidth: '100%',
-                              maxHeight: '150px',
-                              objectFit: 'contain',
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
                               transition: 'transform 0.3s',
                               opacity: regeneratingIndex === index ? 0.5 : 1,
                             }}
