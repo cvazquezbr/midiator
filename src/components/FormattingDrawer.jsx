@@ -25,6 +25,9 @@ const FormattingDrawer = ({
   activeStep,
   isCropping,
   setIsCropping,
+  showImageLoaders,
+  handleImageUpload,
+  onChangeBackgroundImage,
 }) => {
   return (
     <Drawer anchor="right" open={open} onClose={onClose} sx={{ zIndex: 1400 }}>
@@ -55,6 +58,9 @@ const FormattingDrawer = ({
           activeStep={activeStep}
           isCropping={isCropping}
           setIsCropping={setIsCropping}
+          showImageLoaders={showImageLoaders}
+          handleImageUpload={handleImageUpload}
+          onChangeBackgroundImage={onChangeBackgroundImage}
         />
       </Box>
     </Drawer>
