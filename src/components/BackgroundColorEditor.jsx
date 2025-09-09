@@ -61,16 +61,20 @@ const BackgroundColorEditor = ({ pageTemplate, onUpdate }) => {
         onChange={(e, newMode) => {
           if (newMode) {
             setColorMode(newMode);
-            // When switching modes, nullify the other to avoid conflicts
+            const newPageTemplate = { ...pageTemplate };
+
             if (newMode === 'solid') {
-              handleUpdate('gradient', null);
-            } else {
-              handleUpdate('backgroundColor', null);
-              // Ensure a default gradient exists if switching to it
-              if (!pageTemplate.gradient) {
-                handleGradientUpdate('type', 'linear');
+              newPageTemplate.gradient = null;
+              if (!newPageTemplate.backgroundColor) {
+                newPageTemplate.backgroundColor = '#FFFFFF';
+              }
+            } else { // newMode === 'gradient'
+              newPageTemplate.backgroundColor = null;
+              if (!newPageTemplate.gradient) {
+                newPageTemplate.gradient = { type: 'linear', angle: 90, colors: ['#ffffff', '#000000'] };
               }
             }
+            onUpdate(newPageTemplate);
           }
         }}
         aria-label="color mode"
