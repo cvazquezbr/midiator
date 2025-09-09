@@ -1058,7 +1058,7 @@ function HomePage() {
             }
 
             const uniqueImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
-            const newImage = { ...createNewImageElement(uniqueImageUrl), ...sourceStyle };
+            const newImage = { ...createNewImageElement(uniqueImageUrl), ...sourceStyle, visible: true };
             const pageImages = effectivePageTemplate.images || [];
             const finalImages = pageImages.length > 0 ? [newImage, ...pageImages.slice(1)] : [newImage];
 
