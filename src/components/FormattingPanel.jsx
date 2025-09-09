@@ -48,10 +48,10 @@ const FormattingPanel = ({
   showImageLoaders = false,
   handleImageUpload,
   onChangeBackgroundImage,
+  selectedField,
+  setSelectedField,
 }) => {
   const {
-    selectedField,
-    setSelectedField,
     fieldStyles,
     setFieldStyles,
     fieldPositions,
