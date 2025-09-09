@@ -125,7 +125,7 @@ const FieldPositioner = ({
     return () => observer.disconnect();
   }, [onImageDisplayedSizeChange]);
 
-  const handlePositionChange = (id, newPosition) => {
+  const handlePositionChange = useCallback((id, newPosition) => {
     if (id === '__cropbox__') {
       setPageTemplate(prev => ({
         ...prev,
@@ -144,7 +144,6 @@ const FieldPositioner = ({
         }
       }));
     } else {
-      // Check if it's a brand element or a page image
       const imageIndex = pageTemplate.images.findIndex(img => img.id === id);
       if (imageIndex > -1) {
         setPageTemplate(prev => {
@@ -158,9 +157,9 @@ const FieldPositioner = ({
         ));
       }
     }
-  };
+  }, [fieldPositions, pageTemplate, brandElements, selectedField, setPageTemplate, setFieldPositions, setBrandElements]);
 
-  const handleSizeChange = (id, newSize) => {
+  const handleSizeChange = useCallback((id, newSize) => {
     if (id === '__cropbox__') {
       setPageTemplate(prev => ({
         ...prev,
@@ -179,7 +178,7 @@ const FieldPositioner = ({
         }
       }));
     } else {
-       const imageIndex = pageTemplate.images.findIndex(img => img.id === id);
+      const imageIndex = pageTemplate.images.findIndex(img => img.id === id);
       if (imageIndex > -1) {
         setPageTemplate(prev => {
           const newImages = [...prev.images];
@@ -192,7 +191,7 @@ const FieldPositioner = ({
         ));
       }
     }
-  };
+  }, [fieldPositions, pageTemplate, brandElements, selectedField, setPageTemplate, setFieldPositions, setBrandElements]);
 
   const centerAllFields = () => {
     const newPositions = { ...fieldPositions };
@@ -366,6 +365,26 @@ const FieldPositioner = ({
     return elements;
   }, [pageTemplate, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
+  const getGradientCss = (gradient) => {
+    if (!gradient) return 'none';
+
+    const colors = gradient.colors || ['#ffffff', '#000000'];
+    const stops = colors.join(', ');
+
+    if (gradient.type === 'linear') {
+        const angle = gradient.angle || 90;
+        return `linear-gradient(${angle}deg, ${stops})`;
+    }
+    if (gradient.type === 'radial') {
+        return `radial-gradient(circle, ${stops})`;
+    }
+    return 'none';
+  };
+
+  const backgroundValue = pageTemplate.gradient
+    ? getGradientCss(pageTemplate.gradient)
+    : pageTemplate.backgroundColor || '#FFFFFF';
+
   return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
       <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: 2, width: '100%', height: 'auto', maxWidth: '100%', flexShrink: 0 }}>
@@ -374,7 +393,7 @@ const FieldPositioner = ({
           className="text-container"
               sx={{
                 border: '2px solid #ddd',
-                background: pageTemplate.gradient ? pageTemplate.gradient : pageTemplate.backgroundColor || '#FFFFFF',
+                background: backgroundValue,
                 position: 'relative', // Needed for absolute positioning of children
                 cursor: 'default',
                 touchAction: 'pan-x pan-y',
