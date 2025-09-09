@@ -36,9 +36,7 @@ const DraggableElementInternal = ({
   darkMode,
   onDoubleClick,
 }) => {
-  if (element.type === 'image') {
-    console.log(`[DraggableElement] Image element received. Type: ${element.type}, Content starts with: ${String(content).substring(0, 100)}`);
-  }
+  console.log('[DraggableElement] PROPS RECEIVED:', { element, content });
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
@@ -87,18 +85,8 @@ const DraggableElementInternal = ({
       return null;
     }
     if (element.type === 'image') {
-      return (
-        <img
-          src={content}
-          alt={element.name || 'Element'}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            pointerEvents: 'none',
-          }}
-        />
-      );
+      // The image is now rendered as the background of the inner Box.
+      return null;
     }
 
     if (element.type === 'cropbox') {
@@ -689,6 +677,9 @@ const DraggableElementInternal = ({
             justifyContent: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
             alignItems: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
             height: '100%',
+            backgroundImage: element.type === 'image' ? `url("${content}")` : 'none',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
           }}
         >
             {renderContent()}
