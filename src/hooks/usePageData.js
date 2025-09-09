@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useCampaign } from '../context/CampaignContext';
 
 /**
@@ -15,20 +16,22 @@ export const usePageData = (pageIndex) => {
     brandElements,
   } = useCampaign();
 
-  // Lógica para determinar os dados corretos (será implementada a seguir)
-  const pageData = generatedPagesData.find(p => p.index === pageIndex);
+  const pageData = useMemo(() => {
+    return generatedPagesData.find(p => p.index === pageIndex);
+  }, [generatedPagesData, pageIndex]);
 
-  const isCustom = Boolean(pageData?.customPageTemplate || pageData?.customFieldPositions || pageData?.customFieldStyles);
+  const data = useMemo(() => {
+    const isCustom = Boolean(pageData?.customPageTemplate || pageData?.customFieldPositions || pageData?.customFieldStyles);
 
-  // Por enquanto, retorna um placeholder. A lógica completa será adicionada.
-  const data = {
-    isCustom,
-    effectivePageTemplate: pageData?.customPageTemplate || pageTemplate,
-    effectiveFieldPositions: pageData?.customFieldPositions || fieldPositions,
-    effectiveFieldStyles: pageData?.customFieldStyles || fieldStyles,
-    effectiveBrandElements: pageData?.customBrandElements || brandElements,
-    record: pageData?.record,
-  };
+    return {
+      isCustom,
+      effectivePageTemplate: pageData?.customPageTemplate || pageTemplate,
+      effectiveFieldPositions: pageData?.customFieldPositions || fieldPositions,
+      effectiveFieldStyles: pageData?.customFieldStyles || fieldStyles,
+      effectiveBrandElements: pageData?.customBrandElements || brandElements,
+      record: pageData?.record,
+    };
+  }, [pageData, pageTemplate, fieldPositions, fieldStyles, brandElements]);
 
   return data;
 };
