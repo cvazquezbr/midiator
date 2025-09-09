@@ -19,7 +19,6 @@ import {
 import FieldPositioner from './FieldPositioner';
 import FormattingPanel from './FormattingPanel';
 import FormattingDrawer from './FormattingDrawer';
-import { useCampaign } from '../context/CampaignContext';
 
 const ImageStepUI = ({
   steps,
@@ -50,17 +49,20 @@ const ImageStepUI = ({
   isCropping,
   setIsCropping,
   onFontScaleChange,
+  // Props that were previously from context
+  pageTemplate,
+  setPageTemplate,
+  fieldStyles,
+  setFieldStyles,
+  fieldPositions,
+  setFieldPositions,
+  brandElements,
+  setBrandElements,
+  selectedField,
+  setSelectedField,
+  csvData,
+  csvHeaders,
 }) => {
-  const {
-    csvData,
-    csvHeaders,
-    fieldPositions, setFieldPositions,
-    fieldStyles, setFieldStyles,
-    brandElements, setBrandElements,
-    pageTemplate, setPageTemplate,
-    selectedField, setSelectedField,
-  } = useCampaign();
-
   const handleNextPreview = () => {
     setCurrentPreviewIndex(prevIndex => Math.min(prevIndex + 1, csvData.length - 1));
   };
