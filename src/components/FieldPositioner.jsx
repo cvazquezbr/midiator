@@ -250,9 +250,13 @@ const FieldPositioner = ({
       const previewScale = renderedImageMetrics.width / effectiveImageSize.width;
       setFontScale(previewScale); // Local scale for preview rendering
 
-      const finalRenderScale = effectiveImageSize.width / renderedImageMetrics.width;
+      // The font scale for the final render should be 1 unless explicitly changed by the user.
+      // The preview scaling is for display purposes only.
       if (onFontScaleChange) {
-        onFontScaleChange(finalRenderScale); // Pass up the correct scale for final rendering
+        // We are not passing any scale factor here, so it will use the default (1)
+        // which is what we want for the final render unless the user changes it via a UI control.
+        // For now, let's ensure it's always 1 from here.
+        onFontScaleChange(1);
       }
     } else {
       setFontScale(1);

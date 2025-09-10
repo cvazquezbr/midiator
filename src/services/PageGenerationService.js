@@ -13,17 +13,25 @@ const PageGenerationService = {
    * @param {object} params.campaignContext - O estado do CampaignContext.
    * @returns {Promise<object>} Uma promessa que resolve com os dados da imagem gerada.
    */
-  async generatePageImage({ record, index, campaignContext }) {
+  async generatePageImage({ record, index, campaignContext, pageData = {} }) {
     console.log(`[PageGenerationService] Generating page for index: ${index}`);
 
     const {
-      brandElements,
-      fieldPositions,
-      fieldStyles,
-      aspectRatio, // Este virá do contexto no futuro
-      pageTemplate,
-      fontScale = 1, // Este pode vir de dados da página individual
+      brandElements: globalBrandElements,
+      fieldPositions: globalFieldPositions,
+      fieldStyles: globalFieldStyles,
+      aspectRatio: globalAspectRatio,
+      pageTemplate: globalPageTemplate,
+      fontScale: globalFontScale = 1,
     } = campaignContext;
+
+    // Prioritize page-specific customizations over global campaign settings
+    const brandElements = pageData.customBrandElements !== undefined ? pageData.customBrandElements : globalBrandElements;
+    const fieldPositions = pageData.customFieldPositions || globalFieldPositions;
+    const fieldStyles = pageData.customFieldStyles || globalFieldStyles;
+    const pageTemplate = pageData.customPageTemplate || globalPageTemplate;
+    const fontScale = pageData.fontScale || globalFontScale;
+    const aspectRatio = globalAspectRatio; // Aspect ratio is likely always global for a campaign
 
     try {
       const finalPageData = await drawAndComposeImage({
