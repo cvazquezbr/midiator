@@ -393,7 +393,7 @@ const FieldPositioner = ({
 
   return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <Box sx={{ position: 'relative', overflow: 'visible', borderRadius: 2, width: '100%', height: 'auto', maxWidth: '100%', flexShrink: 0, padding: '40px' }}>
+      <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: 2, width: '100%', height: 'auto', maxWidth: '100%', flexShrink: 0 }}>
         <Box
           ref={containerRef}
           className="text-container"
