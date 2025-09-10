@@ -66,7 +66,6 @@ const PageGeneratorFrontendOnly = ({
     brandElements,
     pageTemplate,
     setGeneratedPagesData,
-    setPendingAssets,
   } = useCampaign();
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -381,45 +380,46 @@ const PageGeneratorFrontendOnly = ({
     }
   };
 
-  const handleIndividualImageUpload = async (event) => {
+  const handleIndividualImageUpload = (event) => {
     const file = event.target.files[0];
-    if (!file || replacingImageIndex === null) return;
+    if (file && replacingImageIndex !== null) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const newImageUrl = e.target.result;
+        const pageToUpdate = initialGeneratedPagesData.find(img => img.index === replacingImageIndex);
+        if (pageToUpdate) {
+          const templateToUpdate = pageToUpdate.customPageTemplate || pageTemplate;
+          const newImageElement = createNewImageElement(newImageUrl);
+          newImageElement.zIndex = -1; // Keep the background zIndex
 
-    const tempUrl = URL.createObjectURL(file);
-    setPendingAssets(prev => ({ ...prev, [tempUrl]: file }));
+          const updatedTemplate = {
+            ...templateToUpdate,
+            images: [newImageElement, ...templateToUpdate.images.slice(1)],
+          };
 
-    const pageToUpdate = initialGeneratedPagesData.find(img => img.index === replacingImageIndex);
-    if (pageToUpdate) {
-      const templateToUpdate = pageToUpdate.customPageTemplate || pageTemplate;
-      const newImageElement = createNewImageElement(tempUrl);
-      newImageElement.zIndex = -1;
-
-      const updatedTemplate = {
-        ...templateToUpdate,
-        images: [newImageElement, ...templateToUpdate.images.slice(1)],
+          try {
+            const newPageData = await regenerateSinglePage(
+              replacingImageIndex,
+              pageToUpdate.record,
+              updatedTemplate,
+              pageToUpdate.customFieldPositions || fieldPositions,
+              pageToUpdate.customFieldStyles || fieldStyles,
+              pageToUpdate.customBrandElements || brandElements,
+              pageToUpdate.fontScale || 1
+            );
+            setGeneratedPagesData(currentPages => currentPages.map(p => {
+              if (p.index === replacingImageIndex) {
+                return { ...p, ...newPageData, customPageTemplate: updatedTemplate };
+              }
+              return p;
+            }));
+          } catch (error) {
+            alert(`Falha ao substituir o fundo da página: ${error.message}`);
+          }
+        }
       };
-
-      try {
-        setRegeneratingIndex(replacingImageIndex);
-        const newPageData = await regenerateSinglePage(
-          replacingImageIndex,
-          pageToUpdate.record,
-          updatedTemplate,
-          pageToUpdate.customFieldPositions || fieldPositions,
-          pageToUpdate.customFieldStyles || fieldStyles,
-          pageToUpdate.customBrandElements || brandElements,
-          pageToUpdate.fontScale || 1
-        );
-        setGeneratedPagesData(currentPages => currentPages.map(p =>
-          p.index === replacingImageIndex ? { ...p, ...newPageData, customPageTemplate: updatedTemplate } : p
-        ));
-      } catch (error) {
-        alert(`Falha ao substituir o fundo da página: ${error.message}`);
-      } finally {
-        setRegeneratingIndex(null);
-      }
+      reader.readAsDataURL(file);
     }
-
     if (individualImageInputRef.current) {
       individualImageInputRef.current.value = "";
     }

@@ -407,20 +407,18 @@ export const drawAndComposeImage = async ({
         }
     }
 
-    // 4. Generate final blob asynchronously
-    const blob = await new Promise(resolve => finalCanvas.toBlob(resolve, 'image/png', 1.0));
+    // 4. Generate final data URL and blob
+    const dataUrl = finalCanvas.toDataURL('image/png', 1.0);
+    const blob = dataURLtoBlob(dataUrl);
 
-    // 5. Return the thumbnail data object.
-    // The `url` here is a temporary object URL for the generated thumbnail blob.
-    // It is crucial that this does NOT return the `pageTemplateUsed` object, as the
-    // `url` property within that object (the high-res blob: url) would be
-    // overwritten by the thumbnail's data URL in the calling component,
-    // which was the source of the upload bug.
+    // 5. Return the complete imageData object
     return {
-        url: URL.createObjectURL(blob),
+        url: dataUrl,
+        dataUrl: dataUrl,
         blob,
         record,
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+        pageTemplateUsed: pageTemplate,
     };
 };

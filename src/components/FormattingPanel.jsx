@@ -159,66 +159,52 @@ const FormattingPanel = ({
   const handleZIndexChange = (elementId, action) => {
     if (!elementId) return;
 
-    // Create a unified list of all draggable elements
+    // Gather all element types into one array
     let allElements = [
-      ...Object.entries(fieldPositions).map(([id, pos]) => ({ id, zIndex: pos.zIndex, type: 'field' })),
-      ...brandElements.map(el => ({ id: el.id, zIndex: el.zIndex, type: 'brand' })),
-      ...(pageTemplate.images || []).map(img => ({ id: img.id, zIndex: img.zIndex, type: 'image' })),
+        ...Object.entries(fieldPositions).map(([id, pos]) => ({ id, zIndex: pos.zIndex, type: 'text' })),
+        ...brandElements.map(el => ({ id: el.id, zIndex: el.zIndex, type: 'brand' })),
+        ...(pageTemplate.images || []).map(img => ({ id: img.id, zIndex: img.zIndex, type: 'pageImage' })),
     ];
 
-    // Sort elements by their current zIndex to establish a clear order
     allElements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
 
     const currentIndex = allElements.findIndex(el => el.id === elementId);
-    if (currentIndex === -1) return; // Element not found
+    if (currentIndex === -1) return;
 
-    // Remove the element to re-insert it
     const [currentElement] = allElements.splice(currentIndex, 1);
-
-    // Re-insert the element based on the action
     switch (action) {
-      case 'front':
-        allElements.push(currentElement);
-        break;
-      case 'back':
-        allElements.unshift(currentElement);
-        break;
-      case 'forward':
-        allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement);
-        break;
-      case 'backward':
-        allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement);
-        break;
-      default:
-        allElements.splice(currentIndex, 0, currentElement); // Should not happen
-        return;
+        case 'front': allElements.push(currentElement); break;
+        case 'back': allElements.unshift(currentElement); break;
+        case 'forward': allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement); break;
+        case 'backward': allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement); break;
+        default: allElements.splice(currentIndex, 0, currentElement); return;
     }
 
-    // Create copies of state to modify
+    // Create copies of the state to modify
     const newPositions = { ...fieldPositions };
     const newBrandElements = [...brandElements];
-    const newPageImages = [...(pageTemplate.images || [])];
+    const newImages = [...(pageTemplate.images || [])];
 
-    // Update zIndex for all elements based on their new order
+    // Re-assign z-index based on the new order
     allElements.forEach((el, index) => {
-      el.zIndex = index; // Assign the new zIndex
-
-      if (el.type === 'field') {
-        const field = newPositions[el.id];
-        if (field) field.zIndex = index;
-      } else if (el.type === 'brand') {
-        const brandEl = newBrandElements.find(b => b.id === el.id);
-        if (brandEl) brandEl.zIndex = index;
-      } else if (el.type === 'image') {
-        const imageEl = newPageImages.find(img => img.id === el.id);
-        if (imageEl) imageEl.zIndex = index;
-      }
+        el.zIndex = index;
+        if (el.type === 'text') {
+            if (newPositions[el.id]) {
+                newPositions[el.id].zIndex = index;
+            }
+        } else if (el.type === 'brand') {
+            const brandEl = newBrandElements.find(b => b.id === el.id);
+            if (brandEl) brandEl.zIndex = index;
+        } else if (el.type === 'pageImage') {
+            const imgEl = newImages.find(i => i.id === el.id);
+            if (imgEl) imgEl.zIndex = index;
+        }
     });
 
-    // Update the states
+    // Update the state
     setFieldPositions(newPositions);
     setBrandElements(newBrandElements);
-    setPageTemplate(prev => ({ ...prev, images: newPageImages }));
+    setPageTemplate(prev => ({ ...prev, images: newImages }));
   };
 
   const isImageElement = isPageImage || isBrandElement;

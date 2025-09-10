@@ -29,7 +29,7 @@ export const CampaignProvider = ({ children }) => {
   const [currentCampaign, setCurrentCampaign] = useState(null);
   const [generatedPagesData, setGeneratedPagesData] = useState([]);
   const [aspectRatio, setAspectRatio] = useState('1:1');
-  const [pendingAssets, setPendingAssets] = useState({}); // Stores { 'blob:...' : File/Blob }
+  const [pendingAssets, setPendingAssets] = useState({});
 
 
   const value = useMemo(() => ({

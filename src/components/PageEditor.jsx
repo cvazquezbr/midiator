@@ -42,7 +42,7 @@ const PageEditor = ({
   editedPageTemplate,
   setEditedPageTemplate,
 }) => {
-  const { csvHeaders, setPendingAssets } = useCampaign();
+  const { csvHeaders } = useCampaign();
   const pageDataFromHook = usePageData(pageData?.index);
 
   const [editedPositions, setEditedPositions] = useState(null);
@@ -67,20 +67,16 @@ const PageEditor = ({
     const file = event.target.files[0];
     if (!file) return;
 
-    const tempUrl = URL.createObjectURL(file);
-
-    // Store the pending asset for later upload
-    setPendingAssets(prev => ({ ...prev, [tempUrl]: file }));
-
-    const newImage = createNewImageElement(tempUrl);
-    setEditedPageTemplate(prevTemplate => ({
-        ...prevTemplate,
-        images: [...(prevTemplate.images || []), newImage],
-    }));
-
-    // Clean up the object URL when the component unmounts or the image is removed
-    // Note: A more robust solution would track this and revoke when the image is deleted from the editor.
-    // This is a simplified approach for now.
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const imageUrl = e.target.result;
+        const newImage = createNewImageElement(imageUrl);
+        setEditedPageTemplate(prevTemplate => ({
+            ...prevTemplate,
+            images: [...(prevTemplate.images || []), newImage],
+        }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleFieldPositionerCsvDataUpdate = useCallback((updatedDataArray) => {
@@ -145,7 +141,7 @@ const PageEditor = ({
         Editar Página Gerada #{pageData.index + 1}
         <IconButton onClick={onClose} sx={{ position: 'absolute', right: 8, top: 8 }}><Close /></IconButton>
       </DialogTitle>
-      <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', overflow: 'visible' }}>
+      <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column' }}>
         <Grid container spacing={2} sx={{ flexGrow: 1 }}>
           <Grid item xs={12} md={isMobile ? 12 : 8} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <FieldPositioner

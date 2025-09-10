@@ -1,4 +1,3 @@
-import { dataURLtoBlob } from './imageComposer.js';
 import { getCampaignPrompt } from './campaignPrompt.js';
 import geminiAPI from './geminiAPI.js';
 import { getGeminiApiKey } from './geminiCredentials.js';
@@ -214,14 +213,7 @@ export const generateCampaignImage = async ({ prompt, aspectRatio }) => {
   }
 
   const base64Image = await geminiAPI.generateImage(finalImagePrompt, 'Geração de Imagem de Campanha');
-  const dataUrl = `data:image/png;base64,${base64Image}`;
-  const blob = dataURLtoBlob(dataUrl);
-  if (!blob) {
-    throw new Error('Failed to convert AI generated image to Blob.');
-  }
-  const tempUrl = URL.createObjectURL(blob);
-
-  return { tempUrl, blob };
+  return `data:image/png;base64,${base64Image}`;
 };
 
 

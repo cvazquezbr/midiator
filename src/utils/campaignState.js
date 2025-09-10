@@ -3,201 +3,100 @@ import { upload } from '@vercel/blob/client';
 import fetchWithAuth from './fetchWithAuth';
 
 /**
- * Handles the Vercel Blob upload process using the official client SDK.
- * This version includes hyper-granular logging and explicit catch handlers.
+ * Uploads a single Blob to Vercel's Blob store.
+ * @param {Blob} blob The file blob to upload.
+ * @param {string} filename The desired filename for the asset.
+ * @param {string} campaignId The ID of the campaign for pathing.
+ * @param {string} userId The ID of the user for pathing.
+ * @returns {Promise<string>} The permanent URL of the uploaded asset.
  */
-export const uploadAsset = async (dataUrl, pendingAssets, filename, campaignId, userId) => {
+export const uploadAsset = async (blob, filename, campaignId, userId) => {
   console.log(`[uploadAsset] Preparing to upload: ${filename}.`);
-
-  if (!dataUrl || (!dataUrl.startsWith('data:') && !dataUrl.startsWith('blob:'))) {
-    console.error('[uploadAsset] Invalid dataUrl provided (must be a data: or blob: URL).', { filename });
-    throw new Error(`Asset "${filename}" is not a valid data URL.`);
-  }
-  if (!userId) {
-    throw new Error("User ID is required for upload.");
-  }
+  if (!blob) throw new Error(`Asset "${filename}" is not a valid Blob.`);
+  if (!userId) throw new Error("User ID is required for upload.");
 
   const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
 
   try {
-    let blobToUpload;
-    if (dataUrl.startsWith('blob:')) {
-      console.log('[uploadAsset] Found blob: URL. Looking up in pendingAssets.');
-      blobToUpload = pendingAssets[dataUrl];
-      if (!blobToUpload) {
-        throw new Error(`Asset with blob URL ${dataUrl} not found in pending assets.`);
-      }
-    } else {
-      console.log('[uploadAsset] Found data: URL. Fetching to convert to blob.');
-      const response = await fetch(dataUrl).catch(e => {
-        console.error('[uploadAsset] FATAL: The `fetch(dataUrl)` promise rejected.', e);
-        throw e;
-      });
-      blobToUpload = await response.blob().catch(e => {
-        console.error('[uploadAsset] FATAL: The `response.blob()` promise rejected.', e);
-        throw e;
-      });
-    }
-    console.log('[uploadAsset] Blob ready for upload. Size:', blobToUpload.size);
-
-    console.log('[uploadAsset] Step 3: Calling Vercel upload SDK...');
     const newBlob = await upload(fullPath, blob, {
       access: 'public',
       handleUploadUrl: '/api/upload',
-      clientPayload: JSON.stringify({ campaignId }),
-    }).catch(e => {
-      console.error('[uploadAsset] FATAL: The Vercel `upload()` promise rejected.', e);
-      throw e;
     });
-    console.log('[uploadAsset] Step 3 COMPLETE. Vercel SDK returned.');
-
     console.log(`[uploadAsset] Successfully uploaded ${filename}. URL: ${newBlob.url}`);
     return newBlob.url;
-
   } catch (error) {
-    console.error(`[uploadAsset] A critical error occurred in the upload chain for ${filename}:`, error);
-    throw new Error(`Failed to upload ${filename}. An operation failed silently. Check the logs above for a FATAL message.`);
+    console.error(`[uploadAsset] A critical error occurred during Vercel upload for ${filename}:`, error);
+    throw new Error(`Failed to upload ${filename}.`);
   }
 };
 
 
 /**
- * Prepares campaign data for saving by uploading all local media assets sequentially
- * and replacing their data URLs with permanent cloud URLs.
+ * Recursively traverses the campaign state, finds 'blob:' URLs,
+ * uploads the corresponding assets from the pendingAssets map, and replaces
+ * the 'blob:' URLs with the permanent URLs returned by the server.
  */
 export const serializeCampaignData = async (state, pendingAssets, userId, campaignId = null, onProgress = () => {}) => {
   console.log('[serializeCampaignData] Starting serialization and upload...');
+  const cleanState = JSON.parse(JSON.stringify(state)); // Deep copy to avoid mutation
+  const uploadPromises = [];
+  const assetsToUpload = [];
 
-  const cleanState = JSON.parse(JSON.stringify(state));
-  let assetsToUploadCount = 0;
-  let assetsUploadedCount = 0;
-
-  // 1. Count all assets that need uploading for the progress bar.
-  const needsUpload = (url) => url && (url.startsWith('data:') || url.startsWith('blob:'));
-
-  if (cleanState.pageTemplate?.images) {
-    assetsToUploadCount += cleanState.pageTemplate.images.filter(img => needsUpload(img.src)).length;
-  }
-  if (Array.isArray(cleanState.brandElements)) {
-    assetsToUploadCount += cleanState.brandElements.filter(el => needsUpload(el.url)).length;
-  }
-  if (Array.isArray(cleanState.generatedPagesData)) {
-    assetsToUploadCount += cleanState.generatedPagesData.filter(img => needsUpload(img.url)).length;
-  }
-  if (Array.isArray(cleanState.generatedAudioData)) {
-    assetsToUploadCount += cleanState.generatedAudioData.filter(audio => needsUpload(audio.url)).length;
-  }
-  if (Array.isArray(cleanState.generatedVideosData)) {
-    assetsToUploadCount += cleanState.generatedVideosData.filter(video => needsUpload(video.url)).length;
-  }
-
-  console.log(`[serializeCampaignData] Found ${assetsToUploadCount} assets to upload.`);
-  onProgress({ current: 0, total: assetsToUploadCount });
-
-  // 2. Process each asset type sequentially.
-  try {
-    // Page Template Images (new)
-    if (cleanState.pageTemplate?.images) {
-      for (const image of cleanState.pageTemplate.images) {
-        if (needsUpload(image.src)) {
-          const filename = `template-image_${Date.now()}.png`;
-          console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-          const permanentUrl = await uploadAsset(image.src, pendingAssets, filename, campaignId, userId);
-          image.src = permanentUrl;
-          assetsUploadedCount++;
-          onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
-        }
+  // 1. Recursively find all assets that need uploading.
+  const findAssets = (obj) => {
+    if (!obj) return;
+    if (Array.isArray(obj)) {
+      obj.forEach(findAssets);
+    } else if (typeof obj === 'object') {
+      if (obj.src && typeof obj.src === 'string' && obj.src.startsWith('blob:')) {
+        assetsToUpload.push(obj);
       }
-    }
-
-    // Brand Elements
-    if (Array.isArray(cleanState.brandElements)) {
-      for (const [index, element] of cleanState.brandElements.entries()) {
-        if (needsUpload(element.url)) {
-          const filename = `brand_${element.name || index}_${Date.now()}.png`;
-          console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-          const permanentUrl = await uploadAsset(element.url, pendingAssets, filename, campaignId, userId);
-          element.url = permanentUrl;
-          assetsUploadedCount++;
-          onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
-        }
+      if (obj.url && typeof obj.url === 'string' && obj.url.startsWith('blob:')) {
+        assetsToUpload.push(obj);
       }
-    }
-
-    // Generated Pages (the final carousels/images)
-    if (Array.isArray(cleanState.generatedPagesData)) {
-        for (const page of cleanState.generatedPagesData) {
-            if (needsUpload(page.url)) {
-                const filename = page.filename || `page_${page.index}_${Date.now()}.png`;
-                console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-                const permanentUrl = await uploadAsset(page.url, filename, campaignId, userId);
-                page.url = permanentUrl; // Replace temporary URL with permanent one
-                assetsUploadedCount++;
-                onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
-            }
-        }
-    }
-
-    // Generated Audio
-    if (Array.isArray(cleanState.generatedAudioData)) {
-      for (const audio of cleanState.generatedAudioData) {
-        if (needsUpload(audio.url)) {
-          const filename = audio.filename || `audio_${audio.index}_${Date.now()}.mp3`;
-          console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-          const dataUrlToUpload = audio.url;
-          const permanentUrl = await uploadAsset(dataUrlToUpload, filename, campaignId, userId);
-          audio.url = permanentUrl;
-          assetsUploadedCount++;
-          onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
-        }
-      }
-    }
-
-    // Generated Videos
-    if (Array.isArray(cleanState.generatedVideosData)) {
-      for (const video of cleanState.generatedVideosData) {
-        if (needsUpload(video.url)) {
-          const filename = video.filename || `video_${video.index}_${Date.now()}.mp4`;
-          console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-          const dataUrlToUpload = video.url;
-          const permanentUrl = await uploadAsset(dataUrlToUpload, filename, campaignId, userId);
-          video.url = permanentUrl;
-          assetsUploadedCount++;
-          onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
-        }
-      }
-    }
-
-  } catch (error) {
-    console.error(`[serializeCampaignData] A failure occurred during sequential upload.`, error);
-    toast.error(`Upload failed: ${error.message}`);
-    throw error;
-  }
-
-  // 3. Final cleanup of any remaining temporary fields
-  const finalCleanup = (assetArray, keepUrl = false) => {
-    if (Array.isArray(assetArray)) {
-      assetArray.forEach(asset => {
-        delete asset.dataUrl;
-        delete asset.blob;
-        if (!keepUrl) {
-            delete asset.url;
-        }
-      });
+      Object.values(obj).forEach(findAssets);
     }
   };
-  // For generatedPagesData, we keep the URL as it's now the permanent one.
-  finalCleanup(cleanState.generatedPagesData, true);
-  finalCleanup(cleanState.generatedAudioData, true);
-  finalCleanup(cleanState.generatedVideosData, true);
 
-  console.log('[serializeCampaignData] All uploads and cleanup complete.');
+  findAssets(cleanState);
+  console.log(`[serializeCampaignData] Found ${assetsToUpload.length} assets to upload.`);
+  onProgress({ current: 0, total: assetsToUpload.length });
+
+  // 2. Create an array of upload promises.
+  let assetsUploadedCount = 0;
+  for (const asset of assetsToUpload) {
+    const tempUrl = asset.src || asset.url;
+    const blob = pendingAssets[tempUrl];
+    if (blob) {
+      const fileExtension = blob.type.split('/')[1] || 'png';
+      const filename = asset.id ? `${asset.id}.${fileExtension}` : `asset_${Date.now()}.${fileExtension}`;
+
+      const promise = uploadAsset(blob, filename, campaignId, userId)
+        .then(permanentUrl => {
+          if (asset.src) asset.src = permanentUrl;
+          if (asset.url) asset.url = permanentUrl;
+          assetsUploadedCount++;
+          onProgress({ current: assetsUploadedCount, total: assetsToUpload.length });
+        })
+        .catch(error => {
+          console.error(`Failed to upload asset ${filename}`, error);
+          toast.error(`Upload failed for ${filename}: ${error.message}`);
+          // We throw to stop the whole save process if one asset fails.
+          throw error;
+        });
+      uploadPromises.push(promise);
+    }
+  }
+
+  // 3. Execute all uploads in parallel and wait for them to complete.
+  await Promise.all(uploadPromises);
+
+  console.log('[serializeCampaignData] All uploads and serialization complete.');
   return cleanState;
 };
 
+
 export const deserializeCampaignData = async (loadedState) => {
-  // For now, this function is a placeholder. In the future, it could
-  // be used to pre-fetch or transform URLs if needed.
   return loadedState;
 };
 
@@ -256,7 +155,6 @@ export const saveCampaign = async (name, campaignData, pendingAssets, setProgres
     return result;
   } catch (error) {
       console.error('[campaignState] An error occurred during the save process:', error);
-      // Toast is now handled in serializeCampaignData, but keep one here for other errors.
       toast.error(`Save failed: ${error.message}`);
       throw error;
   }
