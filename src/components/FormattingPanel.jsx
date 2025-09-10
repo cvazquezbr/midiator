@@ -18,6 +18,7 @@ import {
   Tooltip,
   ToggleButton,
   ToggleButtonGroup,
+  CircularProgress,
 } from '@mui/material';
 import {
   ExpandMore,
@@ -47,6 +48,7 @@ const FormattingPanel = ({
   setIsCropping,
   showImageLoaders = false,
   handleImageUpload,
+  isUploading,
   onChangeBackgroundImage,
   // Props for controlled state (from PageEditor)
   fieldStyles: fieldStylesProp,
@@ -158,36 +160,67 @@ const FormattingPanel = ({
 
   const handleZIndexChange = (elementId, action) => {
     if (!elementId) return;
+
+    // Create a unified list of all draggable elements
     let allElements = [
-        ...Object.entries(fieldPositions).map(([id, pos]) => ({ id, zIndex: pos.zIndex, isBrand: false })),
-        ...brandElements.map(el => ({ id: el.id, zIndex: el.zIndex, isBrand: true })),
+      ...Object.entries(fieldPositions).map(([id, pos]) => ({ id, zIndex: pos.zIndex, type: 'field' })),
+      ...brandElements.map(el => ({ id: el.id, zIndex: el.zIndex, type: 'brand' })),
+      ...(pageTemplate.images || []).map(img => ({ id: img.id, zIndex: img.zIndex, type: 'image' })),
     ];
+
+    // Sort elements by their current zIndex to establish a clear order
     allElements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
     const currentIndex = allElements.findIndex(el => el.id === elementId);
-    if (currentIndex === -1) return;
+    if (currentIndex === -1) return; // Element not found
+
+    // Remove the element to re-insert it
     const [currentElement] = allElements.splice(currentIndex, 1);
+
+    // Re-insert the element based on the action
     switch (action) {
-        case 'front': allElements.push(currentElement); break;
-        case 'back': allElements.unshift(currentElement); break;
-        case 'forward': allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement); break;
-        case 'backward': allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement); break;
-        default: allElements.splice(currentIndex, 0, currentElement); return;
+      case 'front':
+        allElements.push(currentElement);
+        break;
+      case 'back':
+        allElements.unshift(currentElement);
+        break;
+      case 'forward':
+        allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement);
+        break;
+      case 'backward':
+        allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement);
+        break;
+      default:
+        allElements.splice(currentIndex, 0, currentElement); // Should not happen
+        return;
     }
+
+    // Create copies of state to modify
     const newPositions = { ...fieldPositions };
     const newBrandElements = [...brandElements];
+    const newPageImages = [...(pageTemplate.images || [])];
+
+    // Update zIndex for all elements based on their new order
     allElements.forEach((el, index) => {
-        el.zIndex = index;
-        if (el.isBrand) {
-            const brandEl = newBrandElements.find(b => b.id === el.id);
-            if (brandEl) brandEl.zIndex = index;
-        } else {
-            if (newPositions[el.id]) {
-                newPositions[el.id].zIndex = index;
-            }
-        }
+      el.zIndex = index; // Assign the new zIndex
+
+      if (el.type === 'field') {
+        const field = newPositions[el.id];
+        if (field) field.zIndex = index;
+      } else if (el.type === 'brand') {
+        const brandEl = newBrandElements.find(b => b.id === el.id);
+        if (brandEl) brandEl.zIndex = index;
+      } else if (el.type === 'image') {
+        const imageEl = newPageImages.find(img => img.id === el.id);
+        if (imageEl) imageEl.zIndex = index;
+      }
     });
+
+    // Update the states
     setFieldPositions(newPositions);
     setBrandElements(newBrandElements);
+    setPageTemplate(prev => ({ ...prev, images: newPageImages }));
   };
 
   const isImageElement = isPageImage || isBrandElement;
@@ -197,10 +230,19 @@ const FormattingPanel = ({
       <CardContent>
         {showImageLoaders && (
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <Button variant="contained" component="label" startIcon={<ImageIcon />} fullWidth>
-              Carregar <input type="file" accept=".png,.jpg,.jpeg" hidden onChange={handleImageUpload} />
+            <Button
+              variant="contained"
+              component="label"
+              startIcon={isUploading ? <CircularProgress size={20} color="inherit" /> : <ImageIcon />}
+              fullWidth
+              disabled={isUploading}
+            >
+              {isUploading ? 'Enviando...' : 'Carregar'}
+              <input type="file" accept=".png,.jpg,.jpeg" hidden onChange={handleImageUpload} disabled={isUploading} />
             </Button>
-            <Button variant="outlined" onClick={onChangeBackgroundImage} fullWidth> Galeria </Button>
+            <Button variant="outlined" onClick={onChangeBackgroundImage} fullWidth disabled={isUploading}>
+              Galeria
+            </Button>
           </Box>
         )}
         {!currentElement ? (

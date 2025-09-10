@@ -27,6 +27,7 @@ const FormattingDrawer = ({
   setIsCropping,
   showImageLoaders,
   handleImageUpload,
+  isUploading,
   onChangeBackgroundImage,
 }) => {
   return (
@@ -60,6 +61,7 @@ const FormattingDrawer = ({
           setIsCropping={setIsCropping}
           showImageLoaders={showImageLoaders}
           handleImageUpload={handleImageUpload}
+          isUploading={isUploading}
           onChangeBackgroundImage={onChangeBackgroundImage}
         />
       </Box>
