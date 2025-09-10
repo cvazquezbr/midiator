@@ -16,7 +16,6 @@ import FormattingPanel from './FormattingPanel';
 import FormattingDrawer from './FormattingDrawer';
 import { Fab } from '@mui/material';
 import TextEditorDialog from './TextEditorDialog';
-import { upload } from '@vercel/blob/client';
 import { createNewImageElement } from '../utils/elementFactory';
 import { usePageData } from '../hooks/usePageData';
 import { useCampaign } from '../context/CampaignContext';
@@ -43,7 +42,7 @@ const PageEditor = ({
   editedPageTemplate,
   setEditedPageTemplate,
 }) => {
-  const { csvHeaders } = useCampaign();
+  const { csvHeaders, setPendingAssets } = useCampaign();
   const pageDataFromHook = usePageData(pageData?.index);
 
   const [editedPositions, setEditedPositions] = useState(null);
@@ -54,7 +53,6 @@ const PageEditor = ({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
   const [modalFontScale, setModalFontScale] = useState(1);
-  const [isUploading, setIsUploading] = useState(false);
   const isMobile = useIsMobile();
 
   const handleOpenHtmlEditor = (fieldId) => {
@@ -65,28 +63,24 @@ const PageEditor = ({
     setSelectedFieldInternal(fieldToSelect);
   }, []);
 
-  const handleLocalImageUpload = async (event) => {
+  const handleLocalImageUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    setIsUploading(true);
-    try {
-      const newBlob = await upload(file.name, file, {
-        access: 'public',
-        handleUploadUrl: '/api/upload',
-      });
+    const tempUrl = URL.createObjectURL(file);
 
-      const newImage = createNewImageElement(newBlob.url);
-      setEditedPageTemplate(prevTemplate => ({
+    // Store the pending asset for later upload
+    setPendingAssets(prev => ({ ...prev, [tempUrl]: file }));
+
+    const newImage = createNewImageElement(tempUrl);
+    setEditedPageTemplate(prevTemplate => ({
         ...prevTemplate,
         images: [...(prevTemplate.images || []), newImage],
-      }));
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      // TODO: Show a proper error message to the user
-    } finally {
-      setIsUploading(false);
-    }
+    }));
+
+    // Clean up the object URL when the component unmounts or the image is removed
+    // Note: A more robust solution would track this and revoke when the image is deleted from the editor.
+    // This is a simplified approach for now.
   };
 
   const handleFieldPositionerCsvDataUpdate = useCallback((updatedDataArray) => {
@@ -193,7 +187,6 @@ const PageEditor = ({
                 standardsColors={standardsColors || colorPalette}
                 showImageLoaders={true}
                 handleImageUpload={handleLocalImageUpload}
-                isUploading={isUploading}
                 onChangeBackgroundImage={onChangeBackgroundImage}
               />
             </Grid>
@@ -225,7 +218,6 @@ const PageEditor = ({
             standardsColors={standardsColors || colorPalette}
             showImageLoaders={true}
             handleImageUpload={handleLocalImageUpload}
-            isUploading={isUploading}
             onChangeBackgroundImage={onChangeBackgroundImage}
           />
         </>

@@ -6,7 +6,7 @@ import fetchWithAuth from './fetchWithAuth';
  * Handles the Vercel Blob upload process using the official client SDK.
  * This version includes hyper-granular logging and explicit catch handlers.
  */
-export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
+export const uploadAsset = async (dataUrl, pendingAssets, filename, campaignId, userId) => {
   console.log(`[uploadAsset] Preparing to upload: ${filename}.`);
 
   if (!dataUrl || (!dataUrl.startsWith('data:') && !dataUrl.startsWith('blob:'))) {
@@ -20,19 +20,25 @@ export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
   const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
 
   try {
-    console.log('[uploadAsset] Step 1: Fetching data URL...');
-    const response = await fetch(dataUrl).catch(e => {
-      console.error('[uploadAsset] FATAL: The `fetch(dataUrl)` promise rejected.', e);
-      throw e;
-    });
-    console.log('[uploadAsset] Step 1 COMPLETE. Fetch status:', response.status);
-
-    console.log('[uploadAsset] Step 2: Converting response to blob...');
-    const blob = await response.blob().catch(e => {
-      console.error('[uploadAsset] FATAL: The `response.blob()` promise rejected.', e);
-      throw e;
-    });
-    console.log('[uploadAsset] Step 2 COMPLETE. Blob size:', blob.size);
+    let blobToUpload;
+    if (dataUrl.startsWith('blob:')) {
+      console.log('[uploadAsset] Found blob: URL. Looking up in pendingAssets.');
+      blobToUpload = pendingAssets[dataUrl];
+      if (!blobToUpload) {
+        throw new Error(`Asset with blob URL ${dataUrl} not found in pending assets.`);
+      }
+    } else {
+      console.log('[uploadAsset] Found data: URL. Fetching to convert to blob.');
+      const response = await fetch(dataUrl).catch(e => {
+        console.error('[uploadAsset] FATAL: The `fetch(dataUrl)` promise rejected.', e);
+        throw e;
+      });
+      blobToUpload = await response.blob().catch(e => {
+        console.error('[uploadAsset] FATAL: The `response.blob()` promise rejected.', e);
+        throw e;
+      });
+    }
+    console.log('[uploadAsset] Blob ready for upload. Size:', blobToUpload.size);
 
     console.log('[uploadAsset] Step 3: Calling Vercel upload SDK...');
     const newBlob = await upload(fullPath, blob, {
@@ -59,7 +65,7 @@ export const uploadAsset = async (dataUrl, filename, campaignId, userId) => {
  * Prepares campaign data for saving by uploading all local media assets sequentially
  * and replacing their data URLs with permanent cloud URLs.
  */
-export const serializeCampaignData = async (state, userId, campaignId = null, onProgress = () => {}) => {
+export const serializeCampaignData = async (state, pendingAssets, userId, campaignId = null, onProgress = () => {}) => {
   console.log('[serializeCampaignData] Starting serialization and upload...');
 
   const cleanState = JSON.parse(JSON.stringify(state));
@@ -69,14 +75,8 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
   // 1. Count all assets that need uploading for the progress bar.
   const needsUpload = (url) => url && (url.startsWith('data:') || url.startsWith('blob:'));
 
-  if (needsUpload(cleanState.backgroundElement?.src)) {
-    assetsToUploadCount++;
-  }
-  if (needsUpload(cleanState.backgroundImage)) {
-    assetsToUploadCount++;
-  }
-  if (needsUpload(cleanState.generatedImageUrl)) {
-    assetsToUploadCount++;
+  if (cleanState.pageTemplate?.images) {
+    assetsToUploadCount += cleanState.pageTemplate.images.filter(img => needsUpload(img.src)).length;
   }
   if (Array.isArray(cleanState.brandElements)) {
     assetsToUploadCount += cleanState.brandElements.filter(el => needsUpload(el.url)).length;
@@ -96,34 +96,18 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
 
   // 2. Process each asset type sequentially.
   try {
-    // Background Element (from the new editor)
-    if (needsUpload(cleanState.backgroundElement?.src)) {
-        const filename = `bg-element_${Date.now()}.png`;
-        console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-        const permanentUrl = await uploadAsset(cleanState.backgroundElement.src, filename, campaignId, userId);
-        cleanState.backgroundElement.src = permanentUrl;
-        assetsUploadedCount++;
-        onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
-    }
-
-    // Background Image (legacy)
-    if (needsUpload(cleanState.backgroundImage)) {
-      const filename = `background_${Date.now()}.png`;
-      console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-      const permanentUrl = await uploadAsset(cleanState.backgroundImage, filename, campaignId, userId);
-      cleanState.backgroundImage = permanentUrl;
-      assetsUploadedCount++;
-      onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
-    }
-
-    // Main Campaign Image
-    if (needsUpload(cleanState.generatedImageUrl)) {
-      const filename = `campaign_image_${Date.now()}.png`;
-      console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-      const permanentUrl = await uploadAsset(cleanState.generatedImageUrl, filename, campaignId, userId);
-      cleanState.generatedImageUrl = permanentUrl;
-      assetsUploadedCount++;
-      onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
+    // Page Template Images (new)
+    if (cleanState.pageTemplate?.images) {
+      for (const image of cleanState.pageTemplate.images) {
+        if (needsUpload(image.src)) {
+          const filename = `template-image_${Date.now()}.png`;
+          console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
+          const permanentUrl = await uploadAsset(image.src, pendingAssets, filename, campaignId, userId);
+          image.src = permanentUrl;
+          assetsUploadedCount++;
+          onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
+        }
+      }
     }
 
     // Brand Elements
@@ -132,7 +116,7 @@ export const serializeCampaignData = async (state, userId, campaignId = null, on
         if (needsUpload(element.url)) {
           const filename = `brand_${element.name || index}_${Date.now()}.png`;
           console.log(`[serializeCampaignData] Uploading asset ${assetsUploadedCount + 1}/${assetsToUploadCount}: ${filename}`);
-          const permanentUrl = await uploadAsset(element.url, filename, campaignId, userId);
+          const permanentUrl = await uploadAsset(element.url, pendingAssets, filename, campaignId, userId);
           element.url = permanentUrl;
           assetsUploadedCount++;
           onProgress({ current: assetsUploadedCount, total: assetsToUploadCount });
@@ -240,11 +224,11 @@ export const loadCampaign = async (id) => {
   return campaign;
 };
 
-export const saveCampaign = async (name, campaignData, setProgress, userId, autorId, personaId) => {
+export const saveCampaign = async (name, campaignData, pendingAssets, setProgress, userId, autorId, personaId) => {
   console.log('[campaignState] Starting saveCampaign process...');
   try {
     console.log('[campaignState] Step 1: Serializing and uploading assets...');
-    const stateToSave = await serializeCampaignData(campaignData, userId, null, setProgress);
+    const stateToSave = await serializeCampaignData(campaignData, pendingAssets, userId, null, setProgress);
     console.log('[campaignState] Step 1 COMPLETE.');
 
     console.log('[campaignState] Step 2: Sending campaign data to server...');
@@ -278,11 +262,11 @@ export const saveCampaign = async (name, campaignData, setProgress, userId, auto
   }
 };
 
-export const updateCampaign = async (id, name, campaignData, setProgress, userId, autorId, personaId) => {
+export const updateCampaign = async (id, name, campaignData, pendingAssets, setProgress, userId, autorId, personaId) => {
     console.log(`[campaignState] Starting updateCampaign process for ID: ${id}...`);
     try {
         console.log('[campaignState] Step 1: Serializing and uploading assets...');
-        const stateToSave = await serializeCampaignData(campaignData, userId, id, setProgress);
+        const stateToSave = await serializeCampaignData(campaignData, pendingAssets, userId, id, setProgress);
         console.log('[campaignState] Step 1 COMPLETE.');
 
         console.log('[campaignState] Step 2: Sending updated campaign data to server...');

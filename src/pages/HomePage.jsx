@@ -94,6 +94,7 @@ function HomePage() {
     currentCampaign, setCurrentCampaign,
     generatedPagesData, setGeneratedPagesData,
     aspectRatio, setAspectRatio,
+    pendingAssets, setPendingAssets,
     defaultPageTemplate,
   } = useCampaign();
 
@@ -384,12 +385,12 @@ function HomePage() {
     try {
       if (currentCampaign) {
         console.log(`[HomePage] Updating existing campaign, ID: ${currentCampaign.id}`);
-        const updated = await updateCampaign(currentCampaign.id, name, campaignDataToSave, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign);
+        const updated = await updateCampaign(currentCampaign.id, name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign);
         toast.success(`Campaign "${name}" updated.`);
         setCurrentCampaign(updated);
       } else {
         console.log(`[HomePage] Saving new campaign.`);
-        const newCampaign = await saveCampaign(name, campaignDataToSave, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign);
+        const newCampaign = await saveCampaign(name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign);
         toast.success(`Campaign "${name}" saved.`);
         setCurrentCampaign(newCampaign);
       }
@@ -924,10 +925,13 @@ function HomePage() {
     try {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
       const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor });
-      const imageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
-      console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Setting generatedPageUrl. Value starts with:', String(imageUrl).substring(0, 100));
-      setGeneratedPageUrl(imageUrl);
-      updateImageAndPalette(imageUrl);
+      const { tempUrl, blob } = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
+
+      setPendingAssets(prev => ({ ...prev, [tempUrl]: blob }));
+
+      console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Setting generatedPageUrl. Value starts with:', String(tempUrl).substring(0, 100));
+      setGeneratedPageUrl(tempUrl);
+      updateImageAndPalette(tempUrl);
       return true;
     } catch (imageError) {
       if (imageError.message && imageError.message.includes('503')) {
@@ -941,7 +945,7 @@ function HomePage() {
     } finally {
       setIsGeneratingImage(false);
     }
-  }, [aspectRatio, updateImageAndPalette]);
+  }, [aspectRatio, updateImageAndPalette, setPendingAssets, selectedAutorForCampaign, autorList]);
   const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
   const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
   const handleGenerateFollowupPosts = async (content = campaignContent) => {
@@ -1070,8 +1074,9 @@ function HomePage() {
                 sourceStyle = { x: 0, y: 0, width: 100, height: 100, zIndex: -1, style: { objectFit: 'cover' } };
             }
 
-            const uniqueImageUrl = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
-            const newImage = { ...createNewImageElement(uniqueImageUrl), ...sourceStyle, visible: true };
+            const { tempUrl, blob } = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
+            setPendingAssets(prev => ({ ...prev, [tempUrl]: blob }));
+            const newImage = { ...createNewImageElement(tempUrl), ...sourceStyle, visible: true };
             const pageImages = effectivePageTemplate.images || [];
             const finalImages = pageImages.length > 0 ? [newImage, ...pageImages.slice(1)] : [newImage];
 

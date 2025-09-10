@@ -29,6 +29,7 @@ export const CampaignProvider = ({ children }) => {
   const [currentCampaign, setCurrentCampaign] = useState(null);
   const [generatedPagesData, setGeneratedPagesData] = useState([]);
   const [aspectRatio, setAspectRatio] = useState('1:1');
+  const [pendingAssets, setPendingAssets] = useState({}); // Stores { 'blob:...' : File/Blob }
 
 
   const value = useMemo(() => ({
@@ -43,6 +44,7 @@ export const CampaignProvider = ({ children }) => {
     currentCampaign,
     generatedPagesData,
     aspectRatio,
+    pendingAssets,
 
     // Setters
     setCsvData,
@@ -55,6 +57,7 @@ export const CampaignProvider = ({ children }) => {
     setCurrentCampaign,
     setGeneratedPagesData,
     setAspectRatio,
+    setPendingAssets,
 
     // Constants
     defaultPageTemplate,
@@ -69,6 +72,7 @@ export const CampaignProvider = ({ children }) => {
     currentCampaign,
     generatedPagesData,
     aspectRatio,
+    pendingAssets,
   ]);
 
   return (

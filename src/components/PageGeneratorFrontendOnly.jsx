@@ -40,7 +40,6 @@ import {
 } from '@mui/icons-material';
 import PageEditor from './PageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
-import { upload } from '@vercel/blob/client';
 import { drawAndComposeImage, dataURLtoBlob, wrapTextInArea, applyTextEffects, drawTextWithEffects } from '../utils/imageComposer';
 import { createNewImageElement } from '../utils/elementFactory';
 import { useUserAuth } from '../context/UserAuthContext';
@@ -67,6 +66,7 @@ const PageGeneratorFrontendOnly = ({
     brandElements,
     pageTemplate,
     setGeneratedPagesData,
+    setPendingAssets,
   } = useCampaign();
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -83,7 +83,6 @@ const PageGeneratorFrontendOnly = ({
   const [isUploadingToDrive, setIsUploadingToDrive] = useState(false);
   const [driveResult, setDriveResult] = useState(null);
   const [replacingImageIndex, setReplacingImageIndex] = useState(null);
-  const [isReplacingImage, setIsReplacingImage] = useState(false);
   const [regeneratingIndex, setRegeneratingIndex] = useState(null);
   const individualImageInputRef = useRef(null);
   const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -384,35 +383,26 @@ const PageGeneratorFrontendOnly = ({
 
   const handleIndividualImageUpload = async (event) => {
     const file = event.target.files[0];
-    if (!file || replacingImageIndex === null) {
-      if (individualImageInputRef.current) individualImageInputRef.current.value = "";
-      setReplacingImageIndex(null);
-      return;
-    }
+    if (!file || replacingImageIndex === null) return;
 
-    setIsReplacingImage(true);
-    const currentIndex = replacingImageIndex; // Capture index before resetting
-    setRegeneratingIndex(currentIndex); // Use existing state to show loading on the specific card
+    const tempUrl = URL.createObjectURL(file);
+    setPendingAssets(prev => ({ ...prev, [tempUrl]: file }));
 
-    try {
-      const newBlob = await upload(file.name, file, {
-        access: 'public',
-        handleUploadUrl: '/api/upload',
-      });
+    const pageToUpdate = initialGeneratedPagesData.find(img => img.index === replacingImageIndex);
+    if (pageToUpdate) {
+      const templateToUpdate = pageToUpdate.customPageTemplate || pageTemplate;
+      const newImageElement = createNewImageElement(tempUrl);
+      newImageElement.zIndex = -1;
 
-      const pageToUpdate = initialGeneratedPagesData.find(img => img.index === currentIndex);
-      if (pageToUpdate) {
-        const templateToUpdate = pageToUpdate.customPageTemplate || pageTemplate;
-        const newImageElement = createNewImageElement(newBlob.url);
-        newImageElement.zIndex = -1;
+      const updatedTemplate = {
+        ...templateToUpdate,
+        images: [newImageElement, ...templateToUpdate.images.slice(1)],
+      };
 
-        const updatedTemplate = {
-          ...templateToUpdate,
-          images: [newImageElement, ...templateToUpdate.images.slice(1)],
-        };
-
+      try {
+        setRegeneratingIndex(replacingImageIndex);
         const newPageData = await regenerateSinglePage(
-          currentIndex,
+          replacingImageIndex,
           pageToUpdate.record,
           updatedTemplate,
           pageToUpdate.customFieldPositions || fieldPositions,
@@ -420,21 +410,20 @@ const PageGeneratorFrontendOnly = ({
           pageToUpdate.customBrandElements || brandElements,
           pageToUpdate.fontScale || 1
         );
-
         setGeneratedPagesData(currentPages => currentPages.map(p =>
-          p.index === currentIndex
-            ? { ...p, ...newPageData, customPageTemplate: updatedTemplate }
-            : p
+          p.index === replacingImageIndex ? { ...p, ...newPageData, customPageTemplate: updatedTemplate } : p
         ));
+      } catch (error) {
+        alert(`Falha ao substituir o fundo da página: ${error.message}`);
+      } finally {
+        setRegeneratingIndex(null);
       }
-    } catch (error) {
-      alert(`Falha ao substituir o fundo da página: ${error.message}`);
-    } finally {
-      if (individualImageInputRef.current) individualImageInputRef.current.value = "";
-      setReplacingImageIndex(null);
-      setIsReplacingImage(false);
-      setRegeneratingIndex(null); // Stop loading indicator
     }
+
+    if (individualImageInputRef.current) {
+      individualImageInputRef.current.value = "";
+    }
+    setReplacingImageIndex(null);
   };
 
   const uploadToGoogleDrive = async () => {
