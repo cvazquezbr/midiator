@@ -639,19 +639,54 @@ function HomePage() {
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
   const updateImageAndPalette = useCallback((imageUrl) => {
-    console.log('[HomePage] updateImageAndPalette called.', {
-      hasImageUrl: !!imageUrl
-    });
+    console.log('[HomePage] updateImageAndPalette called for step:', activeStep);
+    const newImage = createNewImageElement(imageUrl);
+
+    // This is the core fix: check which step we are on.
+    if (activeStep === 4) {
+      // We are on the "Page Editing" step, so apply to a single page.
+      setGeneratedPagesData(prevPages => {
+        const newPages = [...prevPages];
+        const pageIndex = currentPreviewIndex;
+
+        // Safety check
+        if (pageIndex < 0 || pageIndex >= newPages.length) {
+          console.error("Invalid page index for custom template update:", pageIndex);
+          return prevPages;
+        }
+
+        const pageToUpdate = { ...newPages[pageIndex] };
+
+        // Get the current page's template or fall back to the global one.
+        const baseTemplate = pageToUpdate.customPageTemplate || pageTemplate;
+
+        // Create the new custom template with the new background image.
+        // This replaces the first image (considered the background) and keeps any others.
+        const newCustomTemplate = {
+          ...baseTemplate,
+          images: [newImage, ...(baseTemplate.images?.slice(1) || [])],
+        };
+
+        pageToUpdate.customPageTemplate = newCustomTemplate;
+        newPages[pageIndex] = pageToUpdate;
+
+        toast.success(`Fundo da página ${pageIndex + 1} foi atualizado.`);
+        return newPages;
+      });
+
+    } else {
+      // We are on another step (likely Step 3), so update the global template.
+      setPageTemplate(prevTemplate => ({
+        ...prevTemplate,
+        images: [newImage, ...(prevTemplate.images?.slice(1) || [])],
+      }));
+      toast.success('Imagem de fundo do modelo foi atualizada.');
+    }
+
+    // The color palette logic can remain global as it's a UI hint.
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
-      const newImage = createNewImageElement(imageUrl);
-
-      setPageTemplate(prevTemplate => ({
-        ...prevTemplate,
-        images: [...(prevTemplate.images || []), newImage],
-      }));
-
       try {
         const colorThief = new ColorThief();
         const palette = colorThief.getPalette(img, 5);
@@ -664,10 +699,9 @@ function HomePage() {
     img.onerror = (err) => {
       console.error("Error loading image to extract colors:", err);
       setColorPalette([]);
-      setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     };
     img.src = imageUrl;
-  }, [setPageTemplate]); // Dependency on setPageTemplate
+  }, [activeStep, currentPreviewIndex, pageTemplate, setPageTemplate, setGeneratedPagesData, setColorPalette]);
   const parseImageFile = (file) => {
     if (!file) return;
     handleBackgroundImageUpload(file);
