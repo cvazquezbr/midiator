@@ -677,7 +677,8 @@ function HomePage() {
   const handleImageDragEnter = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(true); };
   const handleImageDragLeave = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(false); };
 
-  const handleForegroundImageUpload = (file) => {
+  const handleForegroundImageUpload = useCallback((event) => {
+    const file = event.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
@@ -691,7 +692,7 @@ function HomePage() {
       }));
     };
     reader.readAsDataURL(file);
-  };
+  }, [setPageTemplate]);
 
   const handleBackgroundImageUpload = async (file) => {
     if (!file) return;
