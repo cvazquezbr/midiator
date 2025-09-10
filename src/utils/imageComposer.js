@@ -25,25 +25,35 @@ export const wrapTextInArea = (ctx, text, style, maxWidth, maxHeight) => {
     const lineHeight = fontSize * (style.lineHeightMultiplier || 1.2);
     const maxLines = Math.floor(maxHeight / lineHeight);
     ctx.font = `${style.fontWeight || 'normal'} ${style.fontStyle || 'normal'} ${fontSize}px ${style.fontFamily || 'Arial'}`;
-    const words = text.toString().split(' ');
-    const lines = [];
-    let currentLine = words[0] || '';
-    for (let i = 1; i < words.length; i++) {
-        const word = words[i];
-        const testLine = currentLine + ' ' + word;
-        const metrics = ctx.measureText(testLine);
-        if (metrics.width > maxWidth && currentLine !== '') {
-            lines.push(currentLine);
-            if (lines.length >= maxLines) break;
-            currentLine = word;
-        } else {
-            currentLine = testLine;
+
+    const allLines = [];
+    const paragraphs = text.toString().split('\n');
+
+    for (const paragraph of paragraphs) {
+        if (allLines.length >= maxLines) break;
+
+        const words = paragraph.split(' ');
+        let currentLine = words[0] || '';
+
+        for (let i = 1; i < words.length; i++) {
+            const word = words[i];
+            const testLine = currentLine + ' ' + word;
+            const metrics = ctx.measureText(testLine);
+
+            if (metrics.width > maxWidth && currentLine !== '') {
+                allLines.push(currentLine);
+                if (allLines.length >= maxLines) break;
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        if (allLines.length < maxLines && currentLine) {
+            allLines.push(currentLine);
         }
     }
-    if (lines.length < maxLines && currentLine) {
-        lines.push(currentLine);
-    }
-    return lines;
+
+    return allLines;
 };
 
 export const applyTextEffects = (ctx, style) => {
