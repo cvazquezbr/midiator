@@ -85,8 +85,7 @@ const DraggableElementInternal = ({
       return null;
     }
     if (element.type === 'image') {
-      // The image is now rendered as the background of the inner Box.
-      return null;
+      return <img src={content} alt="Elemento de imagem" />;
     }
 
     if (element.type === 'cropbox') {
@@ -677,9 +676,6 @@ const DraggableElementInternal = ({
             justifyContent: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
             alignItems: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
             height: '100%',
-            backgroundImage: element.type === 'image' ? `url("${content}")` : 'none',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
           }}
         >
             {renderContent()}
