@@ -80,6 +80,22 @@ import { createNewImageElement } from '../utils/elementFactory.js';
 
 const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
 
+const dataURLtoBlob = (dataurl) => {
+    if (!dataurl) return null;
+    const arr = dataurl.split(',');
+    if (arr.length < 2) return null;
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) return null;
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1].split(';base64,').pop());
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while(n--){
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], {type:mime});
+};
+
 function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
@@ -227,6 +243,7 @@ function HomePage() {
     setStandardsColors(Array.isArray(state.standardsColors) ? state.standardsColors : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
     setGeneratedPagesData(Array.isArray(state.generatedPagesData) ? state.generatedPagesData : []);
+    setPendingAssets({}); // Clear pending assets on load
     // FIX: Filter out invalid audio data on load to prevent crashes
     setGeneratedAudioData(
       Array.isArray(state.generatedAudioData)
@@ -394,6 +411,7 @@ function HomePage() {
         toast.success(`Campaign "${name}" saved.`);
         setCurrentCampaign(newCampaign);
       }
+      setPendingAssets({}); // Clear pending assets after successful save/update
       console.log("[HomePage] Save/Update operation completed successfully.");
     } catch (err) {
       console.error("[HomePage] Error during save/update campaign:", err);
@@ -638,8 +656,9 @@ function HomePage() {
   const handleCSVUpload = (event) => { const file = event.target.files[0]; parseCsvFile(file); };
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
-  const updateImageAndPalette = useCallback((imageUrl) => {
-    console.log('[HomePage] updateImageAndPalette called for step:', activeStep);
+
+  const addNewImageToCanvas = useCallback((imageUrl) => {
+    console.log('[HomePage] addNewImageToCanvas called for step:', activeStep);
     const newImage = createNewImageElement(imageUrl);
 
     // This is the core fix: check which step we are on.
@@ -649,28 +668,24 @@ function HomePage() {
         const newPages = [...prevPages];
         const pageIndex = currentPreviewIndex;
 
-        // Safety check
         if (pageIndex < 0 || pageIndex >= newPages.length) {
           console.error("Invalid page index for custom template update:", pageIndex);
           return prevPages;
         }
 
         const pageToUpdate = { ...newPages[pageIndex] };
-
-        // Get the current page's template or fall back to the global one.
         const baseTemplate = pageToUpdate.customPageTemplate || pageTemplate;
 
-        // Create the new custom template with the new background image.
-        // This replaces the first image (considered the background) and keeps any others.
+        // Append the new image instead of replacing it.
         const newCustomTemplate = {
           ...baseTemplate,
-          images: [newImage, ...(baseTemplate.images?.slice(1) || [])],
+          images: [...(baseTemplate.images || []), newImage],
         };
 
         pageToUpdate.customPageTemplate = newCustomTemplate;
         newPages[pageIndex] = pageToUpdate;
 
-        toast.success(`Fundo da página ${pageIndex + 1} foi atualizado.`);
+        toast.success(`Imagem adicionada à página ${pageIndex + 1}.`);
         return newPages;
       });
 
@@ -678,9 +693,9 @@ function HomePage() {
       // We are on another step (likely Step 3), so update the global template.
       setPageTemplate(prevTemplate => ({
         ...prevTemplate,
-        images: [newImage, ...(prevTemplate.images?.slice(1) || [])],
+        images: [...(prevTemplate.images || []), newImage],
       }));
-      toast.success('Imagem de fundo do modelo foi atualizada.');
+      toast.success('Imagem adicionada ao modelo.');
     }
 
     // The color palette logic can remain global as it's a UI hint.
@@ -702,9 +717,10 @@ function HomePage() {
     };
     img.src = imageUrl;
   }, [activeStep, currentPreviewIndex, pageTemplate, setPageTemplate, setGeneratedPagesData, setColorPalette]);
+
   const parseImageFile = (file) => {
     if (!file) return;
-    handleBackgroundImageUpload(file);
+    handleImageSelected(file);
   };
   const handleImageUpload = (event) => { const file = event.target.files[0]; parseImageFile(file); };
   const handleImageDrop = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(false); const file = event.dataTransfer.files[0]; parseImageFile(file); };
@@ -716,20 +732,13 @@ function HomePage() {
     const file = event.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const newImage = createNewImageElement(e.target.result);
-      newImage.width = 50; // Start with a reasonable size
-      newImage.height = 50;
-      setPageTemplate(prev => ({
-          ...prev,
-          images: [...(prev.images || []), newImage]
-      }));
-    };
-    reader.readAsDataURL(file);
-  }, [setPageTemplate]);
+    const tempUrl = URL.createObjectURL(file);
+    setPendingAssets(prev => ({ ...prev, [tempUrl]: file }));
+    addNewImageToCanvas(tempUrl);
 
-  const handleBackgroundImageUpload = async (file) => {
+  }, [addNewImageToCanvas, setPendingAssets]);
+
+  const handleImageSelected = async (file) => {
     if (!file) return;
 
     const tempUrl = URL.createObjectURL(file);
@@ -762,7 +771,7 @@ function HomePage() {
         if (blob) {
           const resizedTempUrl = URL.createObjectURL(blob);
           setPendingAssets(prev => ({ ...prev, [resizedTempUrl]: blob }));
-          updateImageAndPalette(resizedTempUrl);
+          addNewImageToCanvas(resizedTempUrl);
         } else {
           toast.error("Houve um erro ao processar a imagem.");
         }
@@ -925,14 +934,28 @@ function HomePage() {
     try {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
       const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor });
-      const { tempUrl, blob } = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
 
+      // 1. Get the raw base64 data from the generation service
+      const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
+
+      // 2. Convert base64 to a Blob
+      const blob = dataURLtoBlob(base64Data);
+      if (!blob) {
+        throw new Error("Failed to convert generated image data to a Blob.");
+      }
+
+      // 3. Create a temporary blob: URL
+      const tempUrl = URL.createObjectURL(blob);
+
+      // 4. Add the asset to the pending uploads queue
       setPendingAssets(prev => ({ ...prev, [tempUrl]: blob }));
 
-      console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Setting generatedPageUrl. Value starts with:', String(tempUrl).substring(0, 100));
+      // 5. Update the UI and state using the clean blob: URL
+      console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Using temporary blob URL:', tempUrl);
       setGeneratedPageUrl(tempUrl);
-      updateImageAndPalette(tempUrl);
+      addNewImageToCanvas(tempUrl);
       return true;
+
     } catch (imageError) {
       if (imageError.message && imageError.message.includes('503')) {
         toast.error('O serviço de geração de imagem está indisponível no momento. Tente novamente mais tarde.');
@@ -945,7 +968,7 @@ function HomePage() {
     } finally {
       setIsGeneratingImage(false);
     }
-  }, [aspectRatio, updateImageAndPalette, setPendingAssets, selectedAutorForCampaign, autorList]);
+  }, [aspectRatio, addNewImageToCanvas, setPendingAssets, autorList, selectedAutorForCampaign]);
   const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
   const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
   const handleGenerateFollowupPosts = async (content = campaignContent) => {
@@ -1074,11 +1097,19 @@ function HomePage() {
                 sourceStyle = { x: 0, y: 0, width: 100, height: 100, zIndex: -1, style: { objectFit: 'cover' } };
             }
 
-            const { tempUrl, blob } = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
+            // This entire block is now wrapped in the blob conversion logic
+            const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
+            const blob = dataURLtoBlob(base64Data);
+            if (!blob) {
+              throw new Error("Failed to convert generated image for page to a Blob.");
+            }
+            const tempUrl = URL.createObjectURL(blob);
             setPendingAssets(prev => ({ ...prev, [tempUrl]: blob }));
+
             const newImage = { ...createNewImageElement(tempUrl), ...sourceStyle, visible: true };
             const pageImages = effectivePageTemplate.images || [];
-            const finalImages = pageImages.length > 0 ? [newImage, ...pageImages.slice(1)] : [newImage];
+            // This now APPENDS the new image instead of replacing it.
+            const finalImages = [...pageImages, newImage];
 
             const tempPageTemplate = { ...effectivePageTemplate, images: finalImages };
             effectivePageTemplate = tempPageTemplate; // Update for this generation pass
@@ -1111,20 +1142,7 @@ function HomePage() {
       setGeneratedPagesData(currentPagesData => {
         const newPagesData = [...currentPagesData];
         const existingPageData = newPagesData[index] || {};
-
-        // Create the new page data but preserve the customPageTemplate if it exists
-        // from a previous step (like AI image generation).
-        const newPageDataObject = {
-          ...existingPageData,
-          ...finalPageData, // This has the new thumbnail url and blob
-          ...pageUpdateData, // This has the latest customPageTemplate with the blob: url
-        };
-
-        // Explicitly delete the template from the thumbnail generation result
-        // to avoid overwriting our blob: url template.
-        delete newPageDataObject.pageTemplateUsed;
-
-        newPagesData[index] = newPageDataObject;
+        newPagesData[index] = { ...existingPageData, ...finalPageData, ...pageUpdateData };
         return newPagesData;
       });
 
@@ -1359,7 +1377,7 @@ function HomePage() {
       <BackgroundImageSelector
         open={showBgSelector}
         onClose={() => setShowBgSelector(false)}
-        onSelect={handleBackgroundImageUpload}
+        onSelect={handleImageSelected}
         onLocalUpload={parseImageFile}
       />
       <LoadingDialog
