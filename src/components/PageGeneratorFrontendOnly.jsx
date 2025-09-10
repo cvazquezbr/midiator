@@ -75,6 +75,7 @@ const PageGeneratorFrontendOnly = ({
   const [selectedPreview, setSelectedPreview] = useState(null);
   const [editingGeneratedPageIndex, setEditingGeneratedPageIndex] = useState(null);
   const [showGeneratedPageEditor, setShowGeneratedPageEditor] = useState(false);
+  const [pageTemplateForEditor, setPageTemplateForEditor] = useState(null);
   const { googleAccessToken } = useUserAuth();
   const isGoogleDriveConnected = !!googleAccessToken;
   const [projectName, setProjectName] = useState('');
@@ -323,6 +324,8 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const handleOpenGeneratedPageEditor = (pageFromClosure, index) => {
+    const template = pageFromClosure.customPageTemplate || pageTemplate;
+    setPageTemplateForEditor(JSON.parse(JSON.stringify(template)));
     setEditingGeneratedPageIndex(index);
     setShowGeneratedPageEditor(true);
   };
@@ -330,6 +333,7 @@ const PageGeneratorFrontendOnly = ({
   const handleCloseGeneratedPageEditor = () => {
     setShowGeneratedPageEditor(false);
     setEditingGeneratedPageIndex(null);
+    setPageTemplateForEditor(null);
   };
 
   const handleSaveIndividualModifications = async (modifiedPageData) => {
@@ -622,6 +626,8 @@ const PageGeneratorFrontendOnly = ({
           aspectRatio={aspectRatio}
           originalImageSize={originalImageSize}
           onChangeBackgroundImage={onChangeBackgroundImage}
+          editedPageTemplate={pageTemplateForEditor}
+          setEditedPageTemplate={setPageTemplateForEditor}
         />
       )}
 
