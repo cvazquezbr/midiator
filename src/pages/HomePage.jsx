@@ -1272,6 +1272,10 @@ function HomePage() {
                     setBrandElements={setBrandElements}
                     selectedField={selectedField}
                     setSelectedField={setSelectedField}
+                    // No longer need to pass these, ImageStepUI gets them from context now
+                    // csvData={csvData}
+                    // csvHeaders={csvHeaders}
+                    // fieldPositions={fieldPositions}
                   />
                 )}
                 {activeStep === 4 && (

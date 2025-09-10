@@ -19,6 +19,7 @@ import {
 import FieldPositioner from './FieldPositioner';
 import FormattingPanel from './FormattingPanel';
 import FormattingDrawer from './FormattingDrawer';
+import { useCampaign } from '../context/CampaignContext';
 
 const ImageStepUI = ({
   steps,
@@ -54,15 +55,17 @@ const ImageStepUI = ({
   setPageTemplate,
   fieldStyles,
   setFieldStyles,
-  fieldPositions,
+  // fieldPositions, <-- Now from context
   setFieldPositions,
   brandElements,
   setBrandElements,
   selectedField,
   setSelectedField,
-  csvData,
-  csvHeaders,
+  // csvData,      <-- Now from context
+  // csvHeaders,   <-- Now from context
 }) => {
+  const { csvData, csvHeaders, fieldPositions } = useCampaign();
+
   const handleNextPreview = () => {
     setCurrentPreviewIndex(prevIndex => Math.min(prevIndex + 1, csvData.length - 1));
   };
