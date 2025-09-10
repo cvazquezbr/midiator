@@ -34,7 +34,7 @@
   border-radius: 4px;
   background-color: transparent;
   box-sizing: border-box;
-  overflow: hidden;
+  /* overflow: hidden; */ /* This was clipping the rotation handle */
   display: flex;
   touch-action: none;
   -webkit-touch-callout: none;
@@ -46,7 +46,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* overflow: hidden; */ /* This was clipping the rotation handle */
+  overflow: hidden; /* This is now safe, as the parent has overflow: visible */
   padding: 0 !important;
 }
 

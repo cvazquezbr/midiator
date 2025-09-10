@@ -635,7 +635,7 @@ const DraggableElementInternal = ({
     boxSx.boxShadow = getBoxShadowString(style);
     boxSx.border = `${style.borderWidth || 0}px solid ${style.borderColor || '#000000'}`;
     boxSx.borderRadius = `${style.borderRadius || 0}px`;
-    boxSx.overflow = 'hidden'; // Clip the inner image
+    boxSx.overflow = 'visible'; // Allow handles to be visible
     boxSx.padding = 0;
   } else if (element.type === 'cropbox') {
     boxSx.backgroundColor = 'transparent';
