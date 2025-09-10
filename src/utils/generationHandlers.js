@@ -1,3 +1,5 @@
+import { upload } from '@vercel/blob/client';
+import { dataURLtoBlob } from './imageComposer.js';
 import { getCampaignPrompt } from './campaignPrompt.js';
 import geminiAPI from './geminiAPI.js';
 import { getGeminiApiKey } from './geminiCredentials.js';
@@ -207,13 +209,32 @@ export const generateCampaignImage = async ({ prompt, aspectRatio }) => {
       aspectRatio: aspectRatio,
   });
 
-  // Ensure aspect ratio is in the prompt, even if the template is missing it.
   if (!finalImagePrompt.includes('--ar')) {
     finalImagePrompt = `${finalImagePrompt.trim()} --ar ${aspectRatio}`;
   }
 
   const base64Image = await geminiAPI.generateImage(finalImagePrompt, 'Geração de Imagem de Campanha');
-  return `data:image/png;base64,${base64Image}`;
+  const dataUrl = `data:image/png;base64,${base64Image}`;
+
+  try {
+    const blob = dataURLtoBlob(dataUrl);
+    if (!blob) {
+      throw new Error("Failed to convert generated image data to a Blob.");
+    }
+    const filename = `generated-image-${Date.now()}.png`;
+    const newBlob = await upload(filename, blob, {
+      access: 'public',
+      handleUploadUrl: '/api/upload',
+    });
+    // Return the URL from Vercel Blob storage
+    return newBlob.url;
+  } catch (error) {
+    console.error("Failed to upload generated image to blob store:", error);
+    // As a fallback, return the base64 URL so the app doesn't crash,
+    // but log the error. The user will still face issues on save.
+    // A better solution might be to throw and let the caller handle it.
+    throw new Error(`A imagem foi gerada, mas falhou ao ser salva no servidor. Por favor, tente novamente. Detalhes: ${error.message}`);
+  }
 };
 
 
