@@ -137,7 +137,7 @@
   border-radius: 50%;
   cursor: grab;
   pointer-events: auto;
-  z-index: 11;
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
