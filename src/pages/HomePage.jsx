@@ -1261,21 +1261,6 @@ function HomePage() {
                     onFontScaleChange={setFontScale}
                     templateFieldStyles={templateFieldStyles}
                     activeStep={activeStep}
-                    // Pass all state and setters for FormattingPanel
-                    pageTemplate={pageTemplate}
-                    setPageTemplate={setPageTemplate}
-                    fieldStyles={fieldStyles}
-                    setFieldStyles={setFieldStyles}
-                    fieldPositions={fieldPositions}
-                    setFieldPositions={setFieldPositions}
-                    brandElements={brandElements}
-                    setBrandElements={setBrandElements}
-                    selectedField={selectedField}
-                    setSelectedField={setSelectedField}
-                    // No longer need to pass these, ImageStepUI gets them from context now
-                    // csvData={csvData}
-                    // csvHeaders={csvHeaders}
-                    // fieldPositions={fieldPositions}
                   />
                 )}
                 {activeStep === 4 && (

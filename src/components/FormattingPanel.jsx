@@ -31,6 +31,7 @@ import {
   Image as ImageIcon,
   BrandingWatermark,
 } from '@mui/icons-material';
+import { useCampaign } from '../context/CampaignContext';
 import BrandElementManager from './BrandElementManager';
 import ImageManager from './ImageManager';
 import TextFormatting from './formatting/TextFormatting';
@@ -47,17 +48,32 @@ const FormattingPanel = ({
   showImageLoaders = false,
   handleImageUpload,
   onChangeBackgroundImage,
-  selectedField,
-  setSelectedField,
-  fieldStyles,
-  setFieldStyles,
-  fieldPositions,
-  setFieldPositions,
-  brandElements,
-  setBrandElements,
-  pageTemplate,
-  setPageTemplate,
+  // Props for controlled state (from PageEditor)
+  fieldStyles: fieldStylesProp,
+  setFieldStyles: setFieldStylesProp,
+  fieldPositions: fieldPositionsProp,
+  setFieldPositions: setFieldPositionsProp,
+  brandElements: brandElementsProp,
+  setBrandElements: setBrandElementsProp,
+  pageTemplate: pageTemplateProp,
+  setPageTemplate: setPageTemplateProp,
+  selectedField: selectedFieldProp,
+  setSelectedField: setSelectedFieldProp,
 }) => {
+  const context = useCampaign();
+
+  // Use props if provided (controlled mode), otherwise use context (standalone mode)
+  const fieldStyles = fieldStylesProp ?? context.fieldStyles;
+  const setFieldStyles = setFieldStylesProp ?? context.setFieldStyles;
+  const fieldPositions = fieldPositionsProp ?? context.fieldPositions;
+  const setFieldPositions = setFieldPositionsProp ?? context.setFieldPositions;
+  const brandElements = brandElementsProp ?? context.brandElements;
+  const setBrandElements = setBrandElementsProp ?? context.setBrandElements;
+  const pageTemplate = pageTemplateProp ?? context.pageTemplate;
+  const setPageTemplate = setPageTemplateProp ?? context.setPageTemplate;
+  const selectedField = selectedFieldProp ?? context.selectedField;
+  const setSelectedField = setSelectedFieldProp ?? context.setSelectedField;
+
   const [expandedPanel, setExpandedPanel] = React.useState(false);
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {

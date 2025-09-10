@@ -50,21 +50,16 @@ const ImageStepUI = ({
   isCropping,
   setIsCropping,
   onFontScaleChange,
-  // Props that were previously from context
-  pageTemplate,
-  setPageTemplate,
-  fieldStyles,
-  setFieldStyles,
-  // fieldPositions, <-- Now from context
-  setFieldPositions,
-  brandElements,
-  setBrandElements,
-  selectedField,
-  setSelectedField,
-  // csvData,      <-- Now from context
-  // csvHeaders,   <-- Now from context
 }) => {
-  const { csvData, csvHeaders, fieldPositions } = useCampaign();
+  const {
+    csvData,
+    csvHeaders,
+    fieldPositions, setFieldPositions,
+    fieldStyles, setFieldStyles,
+    brandElements, setBrandElements,
+    pageTemplate, setPageTemplate,
+    selectedField, setSelectedField,
+  } = useCampaign();
 
   const handleNextPreview = () => {
     setCurrentPreviewIndex(prevIndex => Math.min(prevIndex + 1, csvData.length - 1));
