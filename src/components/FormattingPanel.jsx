@@ -48,13 +48,6 @@ const FormattingPanel = ({
   showImageLoaders = false,
   handleImageUpload,
   onChangeBackgroundImage,
-  selectedField,
-  setSelectedField,
-  fieldStyles,
-  setFieldStyles,
-  fieldPositions,
-  setFieldPositions,
-  brandElements,
   // Props for controlled state (from PageEditor)
   fieldStyles: fieldStylesProp,
   setFieldStyles: setFieldStylesProp,
