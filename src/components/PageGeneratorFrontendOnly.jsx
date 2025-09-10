@@ -40,6 +40,7 @@ import {
 } from '@mui/icons-material';
 import PageEditor from './PageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
+import { upload } from '@vercel/blob/client';
 import { drawAndComposeImage, dataURLtoBlob, wrapTextInArea, applyTextEffects, drawTextWithEffects } from '../utils/imageComposer';
 import { createNewImageElement } from '../utils/elementFactory';
 import { useUserAuth } from '../context/UserAuthContext';
@@ -82,6 +83,7 @@ const PageGeneratorFrontendOnly = ({
   const [isUploadingToDrive, setIsUploadingToDrive] = useState(false);
   const [driveResult, setDriveResult] = useState(null);
   const [replacingImageIndex, setReplacingImageIndex] = useState(null);
+  const [isReplacingImage, setIsReplacingImage] = useState(false);
   const [regeneratingIndex, setRegeneratingIndex] = useState(null);
   const individualImageInputRef = useRef(null);
   const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -380,50 +382,59 @@ const PageGeneratorFrontendOnly = ({
     }
   };
 
-  const handleIndividualImageUpload = (event) => {
+  const handleIndividualImageUpload = async (event) => {
     const file = event.target.files[0];
-    if (file && replacingImageIndex !== null) {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const newImageUrl = e.target.result;
-        const pageToUpdate = initialGeneratedPagesData.find(img => img.index === replacingImageIndex);
-        if (pageToUpdate) {
-          const templateToUpdate = pageToUpdate.customPageTemplate || pageTemplate;
-          const newImageElement = createNewImageElement(newImageUrl);
-          newImageElement.zIndex = -1; // Keep the background zIndex
-
-          const updatedTemplate = {
-            ...templateToUpdate,
-            images: [newImageElement, ...templateToUpdate.images.slice(1)],
-          };
-
-          try {
-            const newPageData = await regenerateSinglePage(
-              replacingImageIndex,
-              pageToUpdate.record,
-              updatedTemplate,
-              pageToUpdate.customFieldPositions || fieldPositions,
-              pageToUpdate.customFieldStyles || fieldStyles,
-              pageToUpdate.customBrandElements || brandElements,
-              pageToUpdate.fontScale || 1
-            );
-            setGeneratedPagesData(currentPages => currentPages.map(p => {
-              if (p.index === replacingImageIndex) {
-                return { ...p, ...newPageData, customPageTemplate: updatedTemplate };
-              }
-              return p;
-            }));
-          } catch (error) {
-            alert(`Falha ao substituir o fundo da página: ${error.message}`);
-          }
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file || replacingImageIndex === null) {
+      if (individualImageInputRef.current) individualImageInputRef.current.value = "";
+      setReplacingImageIndex(null);
+      return;
     }
-    if (individualImageInputRef.current) {
-      individualImageInputRef.current.value = "";
+
+    setIsReplacingImage(true);
+    const currentIndex = replacingImageIndex; // Capture index before resetting
+    setRegeneratingIndex(currentIndex); // Use existing state to show loading on the specific card
+
+    try {
+      const newBlob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+      });
+
+      const pageToUpdate = initialGeneratedPagesData.find(img => img.index === currentIndex);
+      if (pageToUpdate) {
+        const templateToUpdate = pageToUpdate.customPageTemplate || pageTemplate;
+        const newImageElement = createNewImageElement(newBlob.url);
+        newImageElement.zIndex = -1;
+
+        const updatedTemplate = {
+          ...templateToUpdate,
+          images: [newImageElement, ...templateToUpdate.images.slice(1)],
+        };
+
+        const newPageData = await regenerateSinglePage(
+          currentIndex,
+          pageToUpdate.record,
+          updatedTemplate,
+          pageToUpdate.customFieldPositions || fieldPositions,
+          pageToUpdate.customFieldStyles || fieldStyles,
+          pageToUpdate.customBrandElements || brandElements,
+          pageToUpdate.fontScale || 1
+        );
+
+        setGeneratedPagesData(currentPages => currentPages.map(p =>
+          p.index === currentIndex
+            ? { ...p, ...newPageData, customPageTemplate: updatedTemplate }
+            : p
+        ));
+      }
+    } catch (error) {
+      alert(`Falha ao substituir o fundo da página: ${error.message}`);
+    } finally {
+      if (individualImageInputRef.current) individualImageInputRef.current.value = "";
+      setReplacingImageIndex(null);
+      setIsReplacingImage(false);
+      setRegeneratingIndex(null); // Stop loading indicator
     }
-    setReplacingImageIndex(null);
   };
 
   const uploadToGoogleDrive = async () => {
