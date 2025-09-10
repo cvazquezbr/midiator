@@ -18,6 +18,7 @@ import {
   Tooltip,
   ToggleButton,
   ToggleButtonGroup,
+  CircularProgress,
 } from '@mui/material';
 import {
   ExpandMore,
@@ -47,6 +48,7 @@ const FormattingPanel = ({
   setIsCropping,
   showImageLoaders = false,
   handleImageUpload,
+  isUploading,
   onChangeBackgroundImage,
   // Props for controlled state (from PageEditor)
   fieldStyles: fieldStylesProp,
@@ -228,10 +230,19 @@ const FormattingPanel = ({
       <CardContent>
         {showImageLoaders && (
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <Button variant="contained" component="label" startIcon={<ImageIcon />} fullWidth>
-              Carregar <input type="file" accept=".png,.jpg,.jpeg" hidden onChange={handleImageUpload} />
+            <Button
+              variant="contained"
+              component="label"
+              startIcon={isUploading ? <CircularProgress size={20} color="inherit" /> : <ImageIcon />}
+              fullWidth
+              disabled={isUploading}
+            >
+              {isUploading ? 'Enviando...' : 'Carregar'}
+              <input type="file" accept=".png,.jpg,.jpeg" hidden onChange={handleImageUpload} disabled={isUploading} />
             </Button>
-            <Button variant="outlined" onClick={onChangeBackgroundImage} fullWidth> Galeria </Button>
+            <Button variant="outlined" onClick={onChangeBackgroundImage} fullWidth disabled={isUploading}>
+              Galeria
+            </Button>
           </Box>
         )}
         {!currentElement ? (

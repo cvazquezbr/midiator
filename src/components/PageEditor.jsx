@@ -16,6 +16,7 @@ import FormattingPanel from './FormattingPanel';
 import FormattingDrawer from './FormattingDrawer';
 import { Fab } from '@mui/material';
 import TextEditorDialog from './TextEditorDialog';
+import { upload } from '@vercel/blob/client';
 import { createNewImageElement } from '../utils/elementFactory';
 import { usePageData } from '../hooks/usePageData';
 import { useCampaign } from '../context/CampaignContext';
@@ -53,6 +54,7 @@ const PageEditor = ({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
   const [modalFontScale, setModalFontScale] = useState(1);
+  const [isUploading, setIsUploading] = useState(false);
   const isMobile = useIsMobile();
 
   const handleOpenHtmlEditor = (fieldId) => {
@@ -63,20 +65,28 @@ const PageEditor = ({
     setSelectedFieldInternal(fieldToSelect);
   }, []);
 
-  const handleLocalImageUpload = (event) => {
+  const handleLocalImageUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const imageUrl = e.target.result;
-        const newImage = createNewImageElement(imageUrl);
-        setEditedPageTemplate(prevTemplate => ({
-            ...prevTemplate,
-            images: [...(prevTemplate.images || []), newImage],
-        }));
-    };
-    reader.readAsDataURL(file);
+    setIsUploading(true);
+    try {
+      const newBlob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+      });
+
+      const newImage = createNewImageElement(newBlob.url);
+      setEditedPageTemplate(prevTemplate => ({
+        ...prevTemplate,
+        images: [...(prevTemplate.images || []), newImage],
+      }));
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      // TODO: Show a proper error message to the user
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleFieldPositionerCsvDataUpdate = useCallback((updatedDataArray) => {
@@ -183,6 +193,7 @@ const PageEditor = ({
                 standardsColors={standardsColors || colorPalette}
                 showImageLoaders={true}
                 handleImageUpload={handleLocalImageUpload}
+                isUploading={isUploading}
                 onChangeBackgroundImage={onChangeBackgroundImage}
               />
             </Grid>
@@ -214,6 +225,7 @@ const PageEditor = ({
             standardsColors={standardsColors || colorPalette}
             showImageLoaders={true}
             handleImageUpload={handleLocalImageUpload}
+            isUploading={isUploading}
             onChangeBackgroundImage={onChangeBackgroundImage}
           />
         </>
