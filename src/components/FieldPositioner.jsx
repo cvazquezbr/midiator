@@ -289,7 +289,7 @@ const FieldPositioner = ({
 
     // Add page images
     (pageTemplate.images || []).forEach(image => {
-        if (image.visible === false) return;
+        if (image.visible === false || !image.src) return;
         elements.push({
             id: image.id,
             type: 'image',
@@ -344,7 +344,7 @@ const FieldPositioner = ({
 
     const brandEls = (brandElements || [])
       .map(element => {
-        if (element.visible === false) return null;
+        if (element.visible === false || !element.url) return null;
         return {
           id: element.id,
           type: 'image',
