@@ -1111,7 +1111,20 @@ function HomePage() {
       setGeneratedPagesData(currentPagesData => {
         const newPagesData = [...currentPagesData];
         const existingPageData = newPagesData[index] || {};
-        newPagesData[index] = { ...existingPageData, ...finalPageData, ...pageUpdateData };
+
+        // Create the new page data but preserve the customPageTemplate if it exists
+        // from a previous step (like AI image generation).
+        const newPageDataObject = {
+          ...existingPageData,
+          ...finalPageData, // This has the new thumbnail url and blob
+          ...pageUpdateData, // This has the latest customPageTemplate with the blob: url
+        };
+
+        // Explicitly delete the template from the thumbnail generation result
+        // to avoid overwriting our blob: url template.
+        delete newPageDataObject.pageTemplateUsed;
+
+        newPagesData[index] = newPageDataObject;
         return newPagesData;
       });
 
