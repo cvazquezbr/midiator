@@ -698,83 +698,49 @@ function HomePage() {
   const handleBackgroundImageUpload = async (file) => {
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target.result;
+    const tempUrl = URL.createObjectURL(file);
+    const img = new Image();
 
-      const img = new Image();
-      img.onload = () => {
-        const MAX_DIMENSION = 720;
-        let { width, height } = img;
+    img.onload = () => {
+      const MAX_DIMENSION = 720;
+      let { width, height } = img;
 
-        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-          if (width > height) {
-            height = Math.round(height * (MAX_DIMENSION / width));
-            width = MAX_DIMENSION;
-          } else {
-            width = Math.round(width * (MAX_DIMENSION / height));
-            height = MAX_DIMENSION;
-          }
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        if (width > height) {
+          height = Math.round(height * (MAX_DIMENSION / width));
+          width = MAX_DIMENSION;
+        } else {
+          width = Math.round(width * (MAX_DIMENSION / height));
+          height = MAX_DIMENSION;
         }
+      }
 
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
 
-        const resizedDataUrl = canvas.toDataURL(file.type);
+      // Revoke the initial object URL as it's no longer needed
+      URL.revokeObjectURL(tempUrl);
 
-        // Always adds a new image now
-        updateImageAndPalette(resizedDataUrl);
-      };
-      img.src = dataUrl;
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const resizedTempUrl = URL.createObjectURL(blob);
+          setPendingAssets(prev => ({ ...prev, [resizedTempUrl]: blob }));
+          updateImageAndPalette(resizedTempUrl);
+        } else {
+          toast.error("Houve um erro ao processar a imagem.");
+        }
+      }, file.type);
     };
-    reader.readAsDataURL(file);
 
-    // TODO: Move the Google Drive upload to a separate, user-initiated action
-    // to avoid unconditional uploads. For now, the logic is disabled.
-    /*
-    const toastId = toast.loading("Salvando imagem na sua biblioteca do Google Drive (opcional)...");
-    try {
-      if (!googleAccessToken) {
-        toast.info("Conecte sua conta Google para salvar a imagem na sua biblioteca.", { id: toastId });
-        return;
-      }
+    img.onerror = () => {
+      URL.revokeObjectURL(tempUrl);
+      toast.error("Não foi possível carregar o arquivo de imagem selecionado.");
+    };
 
-      let midiatorFolder = await findFolderByName('midiator');
-      if (!midiatorFolder) {
-        midiatorFolder = await createFolder('midiator');
-      }
-
-      let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id);
-      if (!backgroundsFolder) {
-        backgroundsFolder = await createFolder('backgrounds', midiatorFolder.id);
-      }
-
-      let uploadedFile;
-      const existingFile = await findFileByNameInFolder(file.name, backgroundsFolder.id);
-      if (existingFile) {
-        toast.info(`Imagem "${file.name}" já existe na sua biblioteca do Google Drive.`, { id: toastId });
-        uploadedFile = existingFile;
-      } else {
-        uploadedFile = await uploadFile(file, file.name, backgroundsFolder.id);
-        toast.success(`Imagem "${file.name}" salva na sua biblioteca do Google Drive!`, { id: toastId });
-      }
-
-      if (!uploadedFile || !uploadedFile.id) {
-        throw new Error("O upload do arquivo para o Drive falhou.");
-      }
-
-      const permanentUrl = `https://lh3.googleusercontent.com/d/${uploadedFile.id}`;
-      // This logic needs to be re-evaluated. For now, it adds a new image.
-      updateImageAndPalette(permanentUrl);
-
-    } catch (err) {
-      console.error("Failed to upload and set background image to Google Drive:", err);
-      toast.error(`Falha ao salvar no Google Drive: ${err.message}`, { id: toastId });
-    }
-    */
+    img.src = tempUrl;
   };
 
   const handleNext = () => {

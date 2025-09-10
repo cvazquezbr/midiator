@@ -46,7 +46,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  /* overflow: hidden; */ /* This was clipping the rotation handle */
   padding: 0 !important;
 }
 
