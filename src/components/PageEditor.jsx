@@ -51,6 +51,7 @@ const PageEditor = ({
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
+  const [modalFontScale, setModalFontScale] = useState(1);
   const isMobile = useIsMobile();
 
   const handleOpenHtmlEditor = (fieldId) => {
@@ -127,6 +128,7 @@ const PageEditor = ({
       customFieldStyles: editedStyles,
       customBrandElements: editedBrandElements,
       customPageTemplate: editedPageTemplate,
+      fontScale: modalFontScale, // Pass the correct font scale on save
     };
     console.log('[PageEditor] handleSave called. Data being passed up:', savedData);
     onSave(savedData);
@@ -162,6 +164,7 @@ const PageEditor = ({
               pageTemplate={editedPageTemplate}
               setPageTemplate={setEditedPageTemplate}
               currentPreviewIndex={0}
+              onFontScaleChange={setModalFontScale} // Capture the scale from the preview
             />
           </Grid>
           {!isMobile && (

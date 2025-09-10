@@ -247,10 +247,12 @@ const FieldPositioner = ({
 
   useEffect(() => {
     if (renderedImageMetrics.width > 0 && effectiveImageSize?.width > 0) {
-      const scale = renderedImageMetrics.width / effectiveImageSize.width;
-      setFontScale(scale);
+      const previewScale = renderedImageMetrics.width / effectiveImageSize.width;
+      setFontScale(previewScale); // Local scale for preview rendering
+
+      const finalRenderScale = effectiveImageSize.width / renderedImageMetrics.width;
       if (onFontScaleChange) {
-        onFontScaleChange(scale);
+        onFontScaleChange(finalRenderScale); // Pass up the correct scale for final rendering
       }
     } else {
       setFontScale(1);
