@@ -39,6 +39,8 @@ const PageEditor = ({
   standardsColors,
   aspectRatio,
   onChangeBackgroundImage,
+  editedPageTemplate,
+  setEditedPageTemplate,
 }) => {
   const { csvHeaders } = useCampaign();
   const pageDataFromHook = usePageData(pageData?.index);
@@ -47,7 +49,6 @@ const PageEditor = ({
   const [editedStyles, setEditedStyles] = useState(null);
   const [editedBrandElements, setEditedBrandElements] = useState(null);
   const [editedRecord, setEditedRecord] = useState(null);
-  const [editedPageTemplate, setEditedPageTemplate] = useState(null);
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
@@ -89,14 +90,12 @@ const PageEditor = ({
         effectiveFieldPositions,
         effectiveFieldStyles,
         effectiveBrandElements,
-        effectivePageTemplate,
         record,
       } = pageDataFromHook;
 
       setEditedPositions(JSON.parse(JSON.stringify(effectiveFieldPositions)));
       setEditedBrandElements(JSON.parse(JSON.stringify(effectiveBrandElements)));
       setEditedRecord(JSON.parse(JSON.stringify(record)));
-      setEditedPageTemplate(JSON.parse(JSON.stringify(effectivePageTemplate)));
 
       const newEditedStyles = {};
       (csvHeaders || []).forEach(field => {
@@ -109,7 +108,6 @@ const PageEditor = ({
       setEditedStyles(null);
       setEditedBrandElements(null);
       setEditedRecord(null);
-      setEditedPageTemplate(null);
       setSelectedFieldInternal(null);
     }
   }, [open, pageData, pageDataFromHook, csvHeaders]);
