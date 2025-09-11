@@ -345,10 +345,10 @@ async function handleRefreshTokenInternal(fetch, userId) {
     const data = await linkedinResponse.json();
 
     if (linkedinResponse.ok) {
-        const { access_token, expires_in } = data;
+        const { access_token, expires_in, refresh_token } = data;
         await query(
-            'UPDATE users SET linkedin_access_token = $1, linkedin_access_token_expiry = $2 WHERE id = $3',
-            [access_token, new Date(Date.now() + expires_in * 1000), userId]
+            'UPDATE users SET linkedin_access_token = $1, linkedin_access_token_expiry = $2, linkedin_refresh_token = $3 WHERE id = $4',
+            [access_token, new Date(Date.now() + expires_in * 1000), refresh_token || rows[0].linkedin_refresh_token, userId]
         );
         return { success: true, accessToken: access_token };
     } else {
