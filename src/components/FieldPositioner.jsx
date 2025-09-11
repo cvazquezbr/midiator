@@ -295,7 +295,8 @@ const FieldPositioner = ({
 
     // Add page images
     (pageTemplate.images || []).forEach(image => {
-        if (image.visible === false || !image.src) return;
+        const imageUrl = image.src || image.imageUrl; // Prioriza 'src', fallback para 'imageUrl'
+        if (image.visible === false || !imageUrl) return; // Verifica se há alguma URL válida
         // Normalize legacy 'background' type to 'image'
         const elementType = image.type === 'background' ? 'image' : image.type;
 
@@ -304,7 +305,7 @@ const FieldPositioner = ({
             type: elementType,
             position: image,
             style: { ...image.filters, ...image },
-            content: image.src || '',
+            content: imageUrl, // Usa a URL encontrada
             zIndex: image.zIndex || 0,
             rotation: image.rotation || 0,
             fontScale: 1,
