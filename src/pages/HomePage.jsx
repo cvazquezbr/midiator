@@ -1207,6 +1207,8 @@ function HomePage() {
                     onLoadCampaign={handleLoadCampaign}
                     onEditCampaign={handleEditCampaign}
                     onCreateNew={handleCreateNewCampaign}
+                    autorList={autorList}
+                    personaList={personaList}
                   />
                 )}
                 {activeStep === 1 && (

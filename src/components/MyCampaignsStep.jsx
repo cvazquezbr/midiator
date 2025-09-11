@@ -24,7 +24,7 @@ import { getCampaigns, deleteCampaign, loadCampaign } from '../utils/campaignSta
 import { toast } from 'sonner';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
 
-const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew }) => {
+const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorList, personaList }) => {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -66,7 +66,14 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew }) => {
   const handleShowMemorial = async (campaignId) => {
     try {
       const campaignData = await loadCampaign(campaignId);
-      setSelectedCampaignData(campaignData.campaign_data);
+      const autor = autorList.find(a => a.id === campaignData.autor_id);
+      const persona = personaList.find(p => p.id === campaignData.persona_id);
+      const fullCampaignData = {
+        ...campaignData.campaign_data,
+        autor: autor,
+        persona: persona,
+      };
+      setSelectedCampaignData(fullCampaignData);
       setShowMemorialModal(true);
     } catch (err) {
       toast.error(`Failed to load campaign data: ${err.message}`);
