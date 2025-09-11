@@ -30,7 +30,7 @@ const ImageStepUI = ({
   handleImageDragLeave,
   imageInputRef,
   handleImageUpload,
-  onChangeBackgroundImage,
+  onOpenImageGallery,
   initialFieldStyles,
   onImageDisplayedSizeChange,
   colorPalette,
@@ -151,7 +151,7 @@ const ImageStepUI = ({
             <FormattingPanel
               showImageLoaders={true}
               handleImageUpload={handleImageUpload}
-              onChangeBackgroundImage={onChangeBackgroundImage}
+              onOpenImageGallery={onOpenImageGallery}
               selectedField={selectedField}
               setSelectedField={setSelectedField}
               fieldStyles={fieldStyles}
@@ -211,7 +211,7 @@ const ImageStepUI = ({
             setIsCropping={setIsCropping}
             showImageLoaders={true}
             handleImageUpload={handleImageUpload}
-            onChangeBackgroundImage={onChangeBackgroundImage}
+            onOpenImageGallery={onOpenImageGallery}
           />
         </>
       )}

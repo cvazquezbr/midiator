@@ -56,7 +56,7 @@ const PageGeneratorFrontendOnly = ({
   handleGenerateSinglePage,
   aspectRatio,
   handleImageUpload, // New prop
-  onChangeBackgroundImage, // New prop
+  onOpenImageGallery,
 }) => {
   const {
     csvData,
@@ -625,7 +625,7 @@ const PageGeneratorFrontendOnly = ({
           standardsColors={standardsColors}
           aspectRatio={aspectRatio}
           originalImageSize={originalImageSize}
-          onChangeBackgroundImage={onChangeBackgroundImage}
+          onOpenImageGallery={() => onOpenImageGallery(editingGeneratedPageIndex)}
           editedPageTemplate={pageTemplateForEditor}
           setEditedPageTemplate={setPageTemplateForEditor}
         />

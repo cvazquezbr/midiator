@@ -38,7 +38,7 @@ const PageEditor = ({
   originalImageSize,
   standardsColors,
   aspectRatio,
-  onChangeBackgroundImage,
+  onOpenImageGallery,
   editedPageTemplate,
   setEditedPageTemplate,
 }) => {
@@ -183,7 +183,7 @@ const PageEditor = ({
                 standardsColors={standardsColors || colorPalette}
                 showImageLoaders={true}
                 handleImageUpload={handleLocalImageUpload}
-                onChangeBackgroundImage={onChangeBackgroundImage}
+                onOpenImageGallery={onOpenImageGallery}
               />
             </Grid>
           )}
@@ -214,7 +214,7 @@ const PageEditor = ({
             standardsColors={standardsColors || colorPalette}
             showImageLoaders={true}
             handleImageUpload={handleLocalImageUpload}
-            onChangeBackgroundImage={onChangeBackgroundImage}
+            onOpenImageGallery={onOpenImageGallery}
           />
         </>
       )}

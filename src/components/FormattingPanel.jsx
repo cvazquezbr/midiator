@@ -47,7 +47,7 @@ const FormattingPanel = ({
   setIsCropping,
   showImageLoaders = false,
   handleImageUpload,
-  onChangeBackgroundImage,
+  onOpenImageGallery,
   // Props for controlled state (from PageEditor)
   fieldStyles: fieldStylesProp,
   setFieldStyles: setFieldStylesProp,
@@ -217,7 +217,7 @@ const FormattingPanel = ({
             <Button variant="contained" component="label" startIcon={<ImageIcon />} fullWidth>
               Carregar <input type="file" accept=".png,.jpg,.jpeg" hidden onChange={handleImageUpload} />
             </Button>
-            <Button variant="outlined" onClick={onChangeBackgroundImage} fullWidth> Galeria </Button>
+            <Button variant="outlined" onClick={onOpenImageGallery} fullWidth> Galeria </Button>
           </Box>
         )}
         {!currentElement ? (

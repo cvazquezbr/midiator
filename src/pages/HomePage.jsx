@@ -42,7 +42,7 @@ import SetupModal from '../components/SetupModal';
 import CampaignStandardsModal from '../components/CampaignStandardsModal';
 import SaveCampaignModal from '../components/SaveCampaignModal';
 import LoadCampaignModal from '../components/LoadCampaignModal';
-import BackgroundImageSelector from '../components/BackgroundImageSelector';
+import ImageGallerySelector from '../components/ImageGallerySelector';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 
 
@@ -176,7 +176,8 @@ function HomePage() {
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
-  const [showBgSelector, setShowBgSelector] = useState(false);
+  const [showImageGallery, setShowImageGallery] = useState(false);
+  const [imageGalleryTargetIndex, setImageGalleryTargetIndex] = useState(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [fontScale, setFontScale] = useState(1);
@@ -657,26 +658,36 @@ function HomePage() {
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
 
+  const handleOpenImageGallery = (index = null) => {
+    console.log(`[HomePage] Opening image gallery for index: ${index}`);
+    setImageGalleryTargetIndex(index);
+    setShowImageGallery(true);
+  };
+
+  const handleCloseImageGallery = () => {
+    setShowImageGallery(false);
+    setImageGalleryTargetIndex(null);
+  };
+
   const addNewImageToCanvas = useCallback((imageUrl) => {
-    console.log('[HomePage] addNewImageToCanvas called for step:', activeStep);
+    console.log(`[HomePage] addNewImageToCanvas called. Target index: ${imageGalleryTargetIndex}`);
     const newImage = createNewImageElement(imageUrl);
 
-    // This is the core fix: check which step we are on.
-    if (activeStep === 4) {
-      // We are on the "Page Editing" step, so apply to a single page.
+    // If target index is a number, we are on the "Page Editing" step for a specific page.
+    if (typeof imageGalleryTargetIndex === 'number') {
       setGeneratedPagesData(prevPages => {
         const newPages = [...prevPages];
-        const pageIndex = currentPreviewIndex;
+        const pageIndex = imageGalleryTargetIndex;
 
         if (pageIndex < 0 || pageIndex >= newPages.length) {
           console.error("Invalid page index for custom template update:", pageIndex);
+          toast.error(`Falha ao adicionar imagem: índice de página inválido (${pageIndex}).`);
           return prevPages;
         }
 
         const pageToUpdate = { ...newPages[pageIndex] };
         const baseTemplate = pageToUpdate.customPageTemplate || pageTemplate;
 
-        // Append the new image instead of replacing it.
         const newCustomTemplate = {
           ...baseTemplate,
           images: [...(baseTemplate.images || []), newImage],
@@ -685,16 +696,17 @@ function HomePage() {
         pageToUpdate.customPageTemplate = newCustomTemplate;
         newPages[pageIndex] = pageToUpdate;
 
+        console.log(`[HomePage] Image added to specific page index: ${pageIndex}`);
         toast.success(`Imagem adicionada à página ${pageIndex + 1}.`);
         return newPages;
       });
-
     } else {
-      // We are on another step (likely Step 3), so update the global template.
+      // Otherwise, update the global template (likely on Step 3).
       setPageTemplate(prevTemplate => ({
         ...prevTemplate,
         images: [...(prevTemplate.images || []), newImage],
       }));
+      console.log('[HomePage] Image added to global page template.');
       toast.success('Imagem adicionada ao modelo.');
     }
 
@@ -716,7 +728,7 @@ function HomePage() {
       setColorPalette([]);
     };
     img.src = imageUrl;
-  }, [activeStep, currentPreviewIndex, pageTemplate, setPageTemplate, setGeneratedPagesData, setColorPalette]);
+  }, [imageGalleryTargetIndex, pageTemplate, setPageTemplate, setGeneratedPagesData, setColorPalette]);
 
   const parseImageFile = (file) => {
     if (!file) return;
@@ -1280,7 +1292,7 @@ function HomePage() {
                     handleImageDragLeave={handleImageDragLeave}
                     imageInputRef={imageInputRef}
                     handleImageUpload={handleForegroundImageUpload} // Use new handler for foreground
-                    onChangeBackgroundImage={() => setShowBgSelector(true)} // This is for background
+                    onOpenImageGallery={handleOpenImageGallery}
                     initialFieldStyles={initialFieldStyles}
                     onImageDisplayedSizeChange={setDisplayedImageSize}
                     colorPalette={colorPalette}
@@ -1314,7 +1326,7 @@ function HomePage() {
                     aspectRatio={aspectRatio}
                     generatedPagesData={generatedPagesData}
                     handleImageUpload={handleImageUpload}
-                    onChangeBackgroundImage={() => setShowBgSelector(true)}
+                    onOpenImageGallery={handleOpenImageGallery}
                   />
                 )}
                 {activeStep === 5 && (
@@ -1374,9 +1386,9 @@ function HomePage() {
       <LoadCampaignModal open={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadCampaign} onEdit={(campaign) => { setCurrentCampaign(campaign); setShowSaveModal(true); }} />
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
       <CampaignStandardsModal open={showCampaignStandardsModal} onClose={() => { setShowCampaignStandardsModal(false); loadCampaignStandards(); }} onGeneratePalette={async (briefing) => { try { const palette = await generateColorPalette(briefing); return palette; } catch (error) { toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores."); throw error; } }} />
-      <BackgroundImageSelector
-        open={showBgSelector}
-        onClose={() => setShowBgSelector(false)}
+      <ImageGallerySelector
+        open={showImageGallery}
+        onClose={handleCloseImageGallery}
         onSelect={handleImageSelected}
         onLocalUpload={parseImageFile}
       />
