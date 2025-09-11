@@ -66,12 +66,12 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorLis
   const handleShowMemorial = async (campaignId) => {
     try {
       const campaignData = await loadCampaign(campaignId);
-      const autor = autorList.find(a => a.id === campaignData.autor_id);
-      const persona = personaList.find(p => p.id === campaignData.persona_id);
+      const autorFromDb = autorList.find(a => a.id === campaignData.autor_id);
+      const personaFromDb = personaList.find(p => p.id === campaignData.persona_id);
       const fullCampaignData = {
         ...campaignData.campaign_data,
-        autor: autor,
-        persona: persona,
+        autor: autorFromDb ? autorFromDb.autor_data : null,
+        persona: personaFromDb ? personaFromDb.persona_data : null,
       };
       setSelectedCampaignData(fullCampaignData);
       setShowMemorialModal(true);
