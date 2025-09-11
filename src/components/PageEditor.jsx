@@ -92,7 +92,13 @@ const PageEditor = ({
         effectiveFieldStyles,
         effectiveBrandElements,
         record,
+        effectivePageTemplate,
       } = pageDataFromHook;
+
+      // Sincronizar o template do editor com o template efetivo do hook
+      if (setEditedPageTemplate) {
+        setEditedPageTemplate(effectivePageTemplate);
+      }
 
       setEditedPositions(JSON.parse(JSON.stringify(effectiveFieldPositions)));
       setEditedBrandElements(JSON.parse(JSON.stringify(effectiveBrandElements)));
@@ -111,7 +117,7 @@ const PageEditor = ({
       setEditedRecord(null);
       setSelectedFieldInternal(null);
     }
-  }, [open, pageData, pageDataFromHook, csvHeaders]);
+  }, [open, pageData, pageDataFromHook, csvHeaders, setEditedPageTemplate]);
 
   if (!open || !pageData || !editedPageTemplate) {
     // Render nothing or a loader until the state is initialized by the effect
