@@ -35,6 +35,13 @@ const DetailItem = ({ title, value, isHtml = false }) => {
         </List>
       );
     }
+    if (typeof value === 'object' && value !== null) {
+      return (
+        <pre style={{ fontFamily: 'inherit', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {JSON.stringify(value, null, 2)}
+        </pre>
+      );
+    }
     return <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{value}</Typography>;
   };
 

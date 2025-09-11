@@ -4,6 +4,21 @@ import parse from 'html-react-parser';
 
 const DetailItem = ({ title, value, isHtml = false }) => {
   if (!value) return null;
+
+  const renderContent = () => {
+    if (isHtml && typeof value === 'string') {
+      return <Typography component="div" variant="body1">{parse(value)}</Typography>;
+    }
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      return (
+        <pre style={{ fontFamily: 'inherit', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {JSON.stringify(value, null, 2)}
+        </pre>
+      );
+    }
+    return <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{value}</Typography>;
+  };
+
   return (
     <Box sx={{ mb: 3 }}>
       <Typography variant="h6" component="h4" color="primary.main" sx={{ mb: 1 }}>
@@ -16,7 +31,7 @@ const DetailItem = ({ title, value, isHtml = false }) => {
         '& p, & li': { mb: 1.5 },
         '& ul, & ol': { pl: 2.5 },
       }}>
-        {isHtml && typeof value === 'string' ? <Typography component="div" variant="body1">{parse(value)}</Typography> : <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{value}</Typography>}
+        {renderContent()}
       </Box>
     </Box>
   );
