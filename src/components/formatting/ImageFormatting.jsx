@@ -12,6 +12,8 @@ import {
   AccordionDetails,
   TextField,
   Typography,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import {
   ExpandMore,
@@ -45,7 +47,30 @@ const ImageFormatting = ({
     <>
       <Accordion expanded={expandedPanel === 'imageStyle'} onChange={handleAccordionChange('imageStyle')}>
         <AccordionSummary expandIcon={<ExpandMore />}><Typography><Palette sx={{ mr: 1, verticalAlign: 'middle' }} />Estilo da Imagem</Typography></AccordionSummary>
-        <AccordionDetails><Grid container spacing={2}><Grid item xs={12}><FormControlLabel control={<Switch checked={currentElement.shadow || false} onChange={(e) => updateElementProperty('shadow', e.target.checked)} />} label="Sombra" />{currentElement.shadow && (<Grid container spacing={2} sx={{ mt: 1 }}><Grid item xs={6}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.shadowColor || '#000000')} onChange={(e) => updateElementProperty('shadowColor', e.target.value)} fullWidth size="small" /></Grid><Grid item xs={6}><Typography gutterBottom>Desfoque</Typography><Slider value={currentElement.shadowBlur || 10} onChange={(e, v) => updateElementProperty('shadowBlur', v)} min={0} max={50} /></Grid><Grid item xs={6}><Typography gutterBottom>Offset X</Typography><Slider value={currentElement.shadowOffsetX || 5} onChange={(e, v) => updateElementProperty('shadowOffsetX', v)} min={-50} max={50} /></Grid><Grid item xs={6}><Typography gutterBottom>Offset Y</Typography><Slider value={currentElement.shadowOffsetY || 5} onChange={(e, v) => updateElementProperty('shadowOffsetY', v)} min={-50} max={50} /></Grid></Grid>)}</Grid><Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid><Grid item xs={6}><TextField label="Cor da Borda" type="color" value={rgbStringToHex(currentElement.borderColor || '#000000')} onChange={(e) => updateElementProperty('borderColor', e.target.value)} fullWidth size="small" /></Grid><Grid item xs={6}><Typography gutterBottom>Largura da Borda (px)</Typography><Slider value={currentElement.borderWidth || 0} onChange={(e, v) => updateElementProperty('borderWidth', v)} min={0} max={50} /></Grid><Grid item xs={12}><Typography gutterBottom>Cantos Arredondados (px)</Typography><Slider value={currentElement.borderRadius || 0} onChange={(e, v) => updateElementProperty('borderRadius', v)} min={0} max={100} /></Grid></Grid></AccordionDetails>
+        <AccordionDetails>
+            <Grid container spacing={2}>
+                <Grid item xs={12}>
+                    <Typography gutterBottom>Ajuste da Imagem</Typography>
+                    <ToggleButtonGroup
+                        value={currentElement.objectFit || 'fill'}
+                        exclusive
+                        fullWidth
+                        size="small"
+                        onChange={(e, newFit) => { if (newFit) updateElementProperty('objectFit', newFit); }}
+                    >
+                        <ToggleButton value="fill">Preencher</ToggleButton>
+                        <ToggleButton value="contain">Conter</ToggleButton>
+                        <ToggleButton value="cover">Cobrir</ToggleButton>
+                    </ToggleButtonGroup>
+                </Grid>
+                <Grid item xs={12}><FormControlLabel control={<Switch checked={currentElement.shadow || false} onChange={(e) => updateElementProperty('shadow', e.target.checked)} />} label="Sombra" /></Grid>
+                {currentElement.shadow && (<Grid item xs={12}><Grid container spacing={2}><Grid item xs={6}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.shadowColor || '#000000')} onChange={(e) => updateElementProperty('shadowColor', e.target.value)} fullWidth size="small" /></Grid><Grid item xs={6}><Typography gutterBottom>Desfoque</Typography><Slider value={currentElement.shadowBlur || 10} onChange={(e, v) => updateElementProperty('shadowBlur', v)} min={0} max={50} /></Grid><Grid item xs={6}><Typography gutterBottom>Offset X</Typography><Slider value={currentElement.shadowOffsetX || 5} onChange={(e, v) => updateElementProperty('shadowOffsetX', v)} min={-50} max={50} /></Grid><Grid item xs={6}><Typography gutterBottom>Offset Y</Typography><Slider value={currentElement.shadowOffsetY || 5} onChange={(e, v) => updateElementProperty('shadowOffsetY', v)} min={-50} max={50} /></Grid></Grid></Grid>)}
+                <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
+                <Grid item xs={6}><TextField label="Cor da Borda" type="color" value={rgbStringToHex(currentElement.borderColor || '#000000')} onChange={(e) => updateElementProperty('borderColor', e.target.value)} fullWidth size="small" /></Grid>
+                <Grid item xs={6}><Typography gutterBottom>Largura da Borda (px)</Typography><Slider value={currentElement.borderWidth || 0} onChange={(e, v) => updateElementProperty('borderWidth', v)} min={0} max={50} /></Grid>
+                <Grid item xs={12}><Typography gutterBottom>Cantos Arredondados (px)</Typography><Slider value={currentElement.borderRadius || 0} onChange={(e, v) => updateElementProperty('borderRadius', v)} min={0} max={100} /></Grid>
+            </Grid>
+        </AccordionDetails>
       </Accordion>
       <Accordion expanded={expandedPanel === 'imageFilters'} onChange={handleAccordionChange('imageFilters')}>
         <AccordionSummary expandIcon={<ExpandMore />}><Typography><Tune sx={{ mr: 1, verticalAlign: 'middle' }} />Filtros</Typography></AccordionSummary>
