@@ -156,6 +156,8 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight) => 
           crop,
           shadow, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY,
           borderRadius = 0,
+          borderWidth = 0,
+          borderColor,
           objectFit = 'fill',
         } = element;
 
@@ -164,22 +166,30 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight) => 
         const dWidth = (width / 100) * canvasWidth;
         const dHeight = (height / 100) * canvasHeight;
 
-        // Apply clipping path for rounded corners BEFORE any drawing
-        if (borderRadius > 0) {
-            drawRoundedRect(ctx, dx, dy, dWidth, dHeight, borderRadius);
-            ctx.clip();
-        }
-
+        // Draw shadow first, so it's behind the image and not clipped
         if (shadow) {
-          ctx.shadowColor = shadowColor || '#000000';
-          ctx.shadowBlur = shadowBlur || 10;
-          ctx.shadowOffsetX = shadowOffsetX || 5;
-          ctx.shadowOffsetY = shadowOffsetY || 5;
+            ctx.save();
+            if (rotation) {
+                const centerX = dx + dWidth / 2;
+                const centerY = dy + dHeight / 2;
+                ctx.translate(centerX, centerY);
+                ctx.rotate(rotation * Math.PI / 180);
+                ctx.translate(-centerX, -centerY);
+            }
+            ctx.shadowColor = shadowColor || '#000000';
+            ctx.shadowBlur = shadowBlur || 10;
+            ctx.shadowOffsetX = shadowOffsetX || 5;
+            ctx.shadowOffsetY = shadowOffsetY || 5;
+            // We need to fill a shape for the shadow to appear, so we'll fill the rounded rect.
+            // The actual image will be drawn over this.
+            drawRoundedRect(ctx, dx, dy, dWidth, dHeight, borderRadius);
+            ctx.fillStyle = 'rgba(0,0,0,0.01)'; // Use a near-transparent fill
+            ctx.fill();
+            ctx.restore();
         }
 
-        const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters || {};
-        ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
-
+        // Now, draw the main image with clipping and border
+        ctx.save();
         if (rotation) {
           const centerX = dx + dWidth / 2;
           const centerY = dy + dHeight / 2;
@@ -188,6 +198,15 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight) => 
           ctx.translate(-centerX, -centerY);
         }
 
+        // Apply clipping path for rounded corners
+        drawRoundedRect(ctx, dx, dy, dWidth, dHeight, borderRadius);
+        ctx.clip();
+
+        // Set filters
+        const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters || {};
+        ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
+
+        // Draw the image with object-fit logic
         if (crop && crop.width > 0 && crop.height > 0) {
           const sx = (crop.x / 100) * img.width;
           const sy = (crop.y / 100) * img.height;
@@ -233,11 +252,21 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight) => 
         }
 
         ctx.filter = 'none';
+
+        // Apply highlight if needed (it's drawn on top of the image, within the clip)
         if (filters.highlightAmount && filters.highlightAmount > 0) {
             applyColorHighlight(ctx, canvasWidth, canvasHeight, filters.highlightColor, filters.highlightAmount);
         }
 
-        ctx.restore();
+        // Draw border on top, within the same clipped and rotated context
+        if (borderWidth > 0) {
+            ctx.strokeStyle = borderColor || '#000000';
+            ctx.lineWidth = borderWidth;
+            drawRoundedRect(ctx, dx, dy, dWidth, dHeight, borderRadius);
+            ctx.stroke();
+        }
+
+        ctx.restore(); // Restore from clipping, rotation, and filters
     } catch (error) {
         console.error(`[imageComposer] Failed to draw image ${src}:`, error);
         // Optionally draw a placeholder for the failed image
