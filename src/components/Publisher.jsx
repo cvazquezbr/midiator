@@ -338,6 +338,7 @@ const Publisher = ({
   }
 
   useEffect(() => {
+    console.log('generatedImagesData in Publisher:', generatedImagesData);
     const images = (generatedImagesData || []).map((img, index) => ({ ...img, type: 'image', mediaId: `image-${index}`, fileSize: img.blob ? formatBytes(img.blob.size) : 'N/A', fileType: img.blob ? img.blob.type : 'N/A' }));
     const videos = (generatedVideosData || []).map((vid, index) => ({ ...vid, type: 'video', mediaId: `video-${index}`, fileSize: vid.blob ? formatBytes(vid.blob.size) : 'N/A', fileType: vid.blob ? vid.blob.type : 'N/A' }));
     const allMedia = [...images, ...videos];

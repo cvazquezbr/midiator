@@ -367,7 +367,8 @@ function HomePage() {
     }
 
     const sanitizedPagesData = generatedPagesData.map(page => {
-      const { url, dataUrl, blob, ...rest } = page;
+      // Keep the permanent URL, but remove temporary client-side data
+      const { dataUrl, blob, ...rest } = page;
       return rest;
     });
 
@@ -1151,10 +1152,24 @@ function HomePage() {
         }
       });
 
+      const { blob } = finalPageData;
+      const tempUrl = URL.createObjectURL(blob);
+      setPendingAssets(prev => ({ ...prev, [tempUrl]: blob }));
+
       setGeneratedPagesData(currentPagesData => {
         const newPagesData = [...currentPagesData];
         const existingPageData = newPagesData[index] || {};
-        newPagesData[index] = { ...existingPageData, ...finalPageData, ...pageUpdateData };
+
+        const newPageDataObject = {
+          ...existingPageData,
+          ...finalPageData,
+          ...pageUpdateData,
+          url: tempUrl,
+          dataUrl: null,
+        };
+        delete newPageDataObject.blob;
+
+        newPagesData[index] = newPageDataObject;
         return newPagesData;
       });
 
