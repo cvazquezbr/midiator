@@ -85,7 +85,7 @@ const DraggableElementInternal = ({
       return null;
     }
     if (element.type === 'image') {
-      return <img src={content} alt="Elemento de imagem" />;
+      return <img src={content} alt="Elemento de imagem" style={{ objectFit: style.objectFit || 'fill' }} />;
     }
 
     if (element.type === 'cropbox') {

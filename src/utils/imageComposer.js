@@ -156,6 +156,7 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight) => 
           crop,
           shadow, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY,
           borderRadius = 0,
+          objectFit = 'fill',
         } = element;
 
         const dx = (x / 100) * canvasWidth;
@@ -194,7 +195,41 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight) => 
           const sHeight = (crop.height / 100) * img.height;
           ctx.drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
         } else {
-          ctx.drawImage(img, dx, dy, dWidth, dHeight);
+            let finalDestX = dx;
+            let finalDestY = dy;
+            let finalDestWidth = dWidth;
+            let finalDestHeight = dHeight;
+            let finalSrcX = 0;
+            let finalSrcY = 0;
+            let finalSrcWidth = img.width;
+            let finalSrcHeight = img.height;
+
+            const imgRatio = img.width / img.height;
+            const containerRatio = dWidth / dHeight;
+
+            if (objectFit === 'contain') {
+                if (imgRatio > containerRatio) { // Image is wider than container
+                    finalDestWidth = dWidth;
+                    finalDestHeight = dWidth / imgRatio;
+                    finalDestY = dy + (dHeight - finalDestHeight) / 2;
+                } else { // Image is taller or same aspect ratio
+                    finalDestHeight = dHeight;
+                    finalDestWidth = dHeight * imgRatio;
+                    finalDestX = dx + (dWidth - finalDestWidth) / 2;
+                }
+            } else if (objectFit === 'cover') {
+                if (imgRatio > containerRatio) { // Image is wider, so height is the limiting dimension for covering
+                    finalSrcHeight = img.height;
+                    finalSrcWidth = img.height * containerRatio;
+                    finalSrcX = (img.width - finalSrcWidth) / 2;
+                } else { // Image is taller, so width is the limiting dimension
+                    finalSrcWidth = img.width;
+                    finalSrcHeight = img.width / containerRatio;
+                    finalSrcY = (img.height - finalSrcHeight) / 2;
+                }
+            }
+            // For 'fill', we use the default values which stretch the image.
+            ctx.drawImage(img, finalSrcX, finalSrcY, finalSrcWidth, finalSrcHeight, finalDestX, finalDestY, finalDestWidth, finalDestHeight);
         }
 
         ctx.filter = 'none';
