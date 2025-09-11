@@ -2,6 +2,8 @@ import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 import { markdownToLinkedinText } from './utils.js';
 
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 // Helper function to create a schedule
 async function handleCreateSchedule(request, response) {
     try {
@@ -288,7 +290,9 @@ export async function handleRunScheduler(request, response) {
                     if (refreshResponse.ok) {
                         const { accessToken: newAccessToken } = await refreshResponse.json();
                         accessToken = newAccessToken; // Update token
-                        console.log(`Token refreshed successfully for user ${post.user_id}. Retrying post.`);
+                        console.log(`Token refreshed successfully for user ${post.user_id}. Waiting 2s before retry...`);
+
+                        await delay(2000);
 
                         // Second attempt to publish with the new token
                         proxyResponse = await publishPost(fetch, post, accessToken);
@@ -302,7 +306,8 @@ export async function handleRunScheduler(request, response) {
                 // Check the result of the final publish attempt
                 if (!proxyResponse.ok) {
                     const errorData = await proxyResponse.json();
-                    throw new Error(`LinkedIn API Error after potential refresh: ${errorData.message || `Status code ${proxyResponse.status}`}`);
+                    console.error('[Scheduler] Full error data from proxy:', errorData);
+                    throw new Error(`LinkedIn API Error after potential refresh: ${JSON.stringify(errorData)}`);
                 }
 
                 const result = await proxyResponse.json();
