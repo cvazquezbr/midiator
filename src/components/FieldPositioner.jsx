@@ -290,12 +290,26 @@ const FieldPositioner = ({
     return styles;
   }, [csvHeaders, fieldStyles]);
 
+  const { backgroundLayer, foregroundImages } = React.useMemo(() => {
+    const sortedImages = (pageTemplate.images || [])
+      .filter(img => img.visible !== false && img.src)
+      .sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+    // The background is the first image only if it has a negative zIndex
+    const background = sortedImages.length > 0 && (sortedImages[0].zIndex || 0) < 0
+      ? sortedImages[0]
+      : null;
+
+    const foreground = background ? sortedImages.slice(1) : sortedImages;
+
+    return { backgroundLayer: background, foregroundImages: foreground };
+  }, [pageTemplate.images]);
+
   const renderableElements = React.useMemo(() => {
     const elements = [];
 
-    // Add page images
-    (pageTemplate.images || []).forEach(image => {
-        if (image.visible === false || !image.src) return;
+    // Add page images (foreground only)
+    foregroundImages.forEach(image => {
         elements.push({
             id: image.id,
             type: 'image',
@@ -369,7 +383,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     return elements;
-  }, [pageTemplate, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
+  }, [foregroundImages, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale, selectedField, pageTemplate.images]);
 
   const getGradientCss = (gradient) => {
     if (!gradient) return 'none';
@@ -417,6 +431,30 @@ const FieldPositioner = ({
               onTouchEnd={handleContainerTouchEnd}
             >
                 <>
+                  {backgroundLayer && (
+                    <img
+                      src={backgroundLayer.src}
+                      alt="Fundo da página"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: backgroundLayer.objectFit || 'cover',
+                        filter: `
+                          brightness(${backgroundLayer.filters?.brightness || 100}%)
+                          contrast(${backgroundLayer.filters?.contrast || 100}%)
+                          saturate(${backgroundLayer.filters?.saturate || 100}%)
+                          blur(${backgroundLayer.filters?.blur || 0}px)
+                          opacity(${backgroundLayer.filters?.opacity || 100}%)
+                        `,
+                        zIndex: -1,
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => setSelectedField(backgroundLayer.id)}
+                    />
+                  )}
                   <Box
                     className="elements-wrapper"
                     sx={{
