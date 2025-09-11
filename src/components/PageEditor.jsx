@@ -133,7 +133,7 @@ const PageEditor = ({
     onClose();
   };
 
-  const editorCsvData = editedRecord ? [editedRecord] : (pageData ? [pageData.record] : []);
+  const editorCsvData = editedRecord ? [editedRecord] : (pageData && pageData.record ? [pageData.record] : []);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="paper" fullScreen={isMobile}>

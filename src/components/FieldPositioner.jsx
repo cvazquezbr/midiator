@@ -335,8 +335,8 @@ const FieldPositioner = ({
         const style = completeFieldStyles[header];
         if (!position || !position.visible) return null;
 
-        const record = csvData[currentPreviewIndex] || {};
-        const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
+        const record = csvData?.[currentPreviewIndex] ?? {};
+        const sampleData = record?.[header] !== undefined ? record[header] : `[${header}]`;
 
         return {
           id: header,
