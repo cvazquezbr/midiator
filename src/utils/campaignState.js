@@ -97,7 +97,75 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
 
 
 export const deserializeCampaignData = async (loadedState) => {
-  return loadedState;
+  console.log('[deserializeCampaignData] Starting deserialization and asset download...');
+  // Deep copy to avoid mutating the original state object received.
+  const state = JSON.parse(JSON.stringify(loadedState));
+  const newlyCreatedAssets = {};
+  const downloadPromises = [];
+
+  // Helper to check if a URL is a Vercel blob storage URL.
+  const isVercelUrl = (url) => typeof url === 'string' && url.includes('blob.vercel-storage.com');
+
+  // Recursively traverses the state object to find and convert asset URLs.
+  const findAndConvertUrls = (obj) => {
+    if (!obj) return;
+
+    if (Array.isArray(obj)) {
+      // If it's an array, recurse into each item.
+      obj.forEach(findAndConvertUrls);
+    } else if (typeof obj === 'object') {
+      // If it's an object, check for properties that might contain asset URLs.
+      const urlFields = ['src', 'url'];
+
+      for (const field of urlFields) {
+        if (obj[field] && isVercelUrl(obj[field])) {
+          // This is a URL that needs to be converted.
+          const downloadUrl = obj[field];
+
+          const promise = fetch(downloadUrl)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error(`HTTP error ${response.status} fetching ${downloadUrl}`);
+              }
+              return response.blob();
+            })
+            .then(blob => {
+              // Create a local blob URL that the browser can render immediately.
+              const tempUrl = URL.createObjectURL(blob);
+              // Add the new blob to our map of assets.
+              newlyCreatedAssets[tempUrl] = blob;
+              // Replace the permanent URL with the temporary local blob URL in the state.
+              obj[field] = tempUrl;
+            })
+            .catch(error => {
+              console.error(`[deserializeCampaignData] Failed to download or process asset: ${downloadUrl}`, error);
+              toast.error(`Não foi possível carregar o recurso: ${error.message}`);
+              // If download fails, we leave the original URL in place.
+            });
+
+          downloadPromises.push(promise);
+        }
+      }
+
+      // After checking the known URL fields, recurse into all other properties of the object.
+      for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key) && !urlFields.includes(key)) {
+          findAndConvertUrls(obj[key]);
+        }
+      }
+    }
+  };
+
+  // Start the recursive conversion process.
+  findAndConvertUrls(state);
+
+  // Wait for all download and conversion promises to complete.
+  await Promise.all(downloadPromises);
+
+  console.log(`[deserializeCampaignData] Deserialization complete. ${Object.keys(newlyCreatedAssets).length} assets downloaded and converted.`);
+
+  // Return both the modified state and the map of newly created assets.
+  return { finalState: state, newlyCreatedAssets };
 };
 
 // --- API Functions ---
@@ -117,9 +185,21 @@ export const loadCampaign = async (id) => {
     throw new Error(err.error || 'Failed to load campaign.');
   }
   const campaign = await res.json();
+
   if (campaign.campaign_data) {
-    campaign.campaign_data = await deserializeCampaignData(campaign.campaign_data);
+    // The deserialize function now returns an object containing the modified state
+    // and a map of any newly created local assets (blobs).
+    const { finalState, newlyCreatedAssets } = await deserializeCampaignData(campaign.campaign_data);
+
+    // Replace the campaign data with the state that has local blob URLs.
+    campaign.campaign_data = finalState;
+    // Attach the newly created assets so the UI can update its pendingAssets state.
+    campaign.pendingAssets = newlyCreatedAssets;
+  } else {
+    // Ensure pendingAssets is initialized even if there's no campaign data.
+    campaign.pendingAssets = {};
   }
+
   return campaign;
 };
 
