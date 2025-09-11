@@ -296,13 +296,16 @@ const FieldPositioner = ({
     // Add page images
     (pageTemplate.images || []).forEach(image => {
         if (image.visible === false || !image.src) return;
+        // Normalize legacy 'background' type to 'image'
+        const elementType = image.type === 'background' ? 'image' : image.type;
+
         elements.push({
             id: image.id,
-            type: 'image',
+            type: elementType,
             position: image,
             style: { ...image.filters, ...image },
             content: image.src || '',
-            zIndex: image.zIndex !== undefined ? image.zIndex : -1,
+            zIndex: image.zIndex || 0,
             rotation: image.rotation || 0,
             fontScale: 1,
             enableHtmlRendering: false,
