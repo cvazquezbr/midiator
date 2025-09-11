@@ -325,7 +325,12 @@ const PageGeneratorFrontendOnly = ({
 
   const handleOpenGeneratedPageEditor = (pageFromClosure, index) => {
     const template = pageFromClosure.customPageTemplate || pageTemplate;
-    setPageTemplateForEditor(JSON.parse(JSON.stringify(template)));
+    // Use a shallow copy to prevent deep copy from breaking blob URLs
+    const templateCopy = {
+      ...template,
+      images: template.images ? [...template.images] : []
+    };
+    setPageTemplateForEditor(templateCopy);
     setEditingGeneratedPageIndex(index);
     setShowGeneratedPageEditor(true);
   };
