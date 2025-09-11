@@ -166,7 +166,7 @@ async function publishPost(fetch, post, accessToken) {
         (postContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' ')
     ].join('\n');
 
-    const images = post.campaign_data?.images || [];
+    const images = post.post_content?.images || [];
     const imageUrns = [];
 
     if (images.length > 0) {

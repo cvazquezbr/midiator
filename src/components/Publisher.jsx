@@ -417,6 +417,9 @@ const Publisher = ({
       const [mainHours, mainMinutes] = getScheduledTime(mainPostDate).split(':');
       mainPostDate.setHours(parseInt(mainHours, 10), parseInt(mainMinutes, 10), 0, 0);
       const mainPostUtcDate = fromZonedTime(mainPostDate, userTimezone);
+      const selectedImageIndexes = Object.keys(selectedImages).filter(index => selectedImages[index]);
+      const selectedImageUrls = selectedImageIndexes.map(index => unifiedMedia[parseInt(index)].url);
+
       const mainPostPayload = {
         campaign_id: selectedCampaignId || null,
         scheduled_at: mainPostUtcDate.toISOString(),
@@ -426,6 +429,7 @@ const Publisher = ({
             conteudo: campaignContent?.conteudo || '',
             cta: campaignContent?.cta || '',
             hashtags: campaignContent?.hashtags || [],
+            images: selectedImageUrls,
         },
       };
       await createSchedule(mainPostPayload);
@@ -633,9 +637,9 @@ const Publisher = ({
               <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
                 Selecionar Mídia
               </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                Regra do LinkedIn: Você pode selecionar várias imagens ou apenas um vídeo por post.
-              </Typography>
+              <Alert severity="info" sx={{ mb: 1 }}>
+                <strong>Regra do LinkedIn:</strong> Você pode selecionar <strong>várias imagens OU apenas um vídeo</strong> por post. Não é possível misturar os dois tipos de mídia.
+              </Alert>
               <Grid container spacing={2} sx={{ mt: 1 }}>
                 <Grid item xs={12} md={4}>
                   <Paper sx={{ height: 400, overflow: 'auto', p: 1 }}>
@@ -654,12 +658,10 @@ const Publisher = ({
                               onChange={(e) => {
                                 const isChecked = e.target.checked;
                                 if (media.type === 'image') {
-                                  if (isChecked) setSelectedVideos({});
                                   setSelectedImages(prev => ({ ...prev, [index]: isChecked }));
                                 } else {
                                   const videoIndex = index - generatedImagesData.length;
                                   if (isChecked) {
-                                    setSelectedImages({});
                                     setSelectedVideos({ [videoIndex]: true });
                                   } else {
                                     setSelectedVideos({ [videoIndex]: false });
