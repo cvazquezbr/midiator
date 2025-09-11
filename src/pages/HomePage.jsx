@@ -244,7 +244,7 @@ function HomePage() {
     setStandardsColors(Array.isArray(state.standardsColors) ? state.standardsColors : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
     setGeneratedPagesData(Array.isArray(state.generatedPagesData) ? state.generatedPagesData : []);
-    setPendingAssets({}); // Clear pending assets on load
+
     // FIX: Filter out invalid audio data on load to prevent crashes
     setGeneratedAudioData(
       Array.isArray(state.generatedAudioData)
@@ -435,7 +435,13 @@ function HomePage() {
       const loadedCampaign = await loadCampaign(id);
       console.log("Loaded campaign data from DB:", loadedCampaign);
 
-      // Apply the general state from campaign_data
+      // When a campaign is loaded, it now comes with a 'pendingAssets' map
+      // containing the blobs for any images that were downloaded.
+      if (loadedCampaign.pendingAssets) {
+        setPendingAssets(loadedCampaign.pendingAssets);
+      }
+
+      // Apply the rest of the general state from campaign_data
       applyAppState(loadedCampaign.campaign_data);
 
       // Explicitly set the author and persona IDs from the top-level of the loaded campaign
