@@ -45,6 +45,8 @@ const MainAppBar = ({
   onPersonaMenuClick,
   onAutorMenuClick,
   isDrawerOpen,
+  onShowMemorial,
+  isCampaignOpen,
 }) => {
   const { user, logout } = useUserAuth();
   const navigate = useNavigate();
@@ -118,6 +120,18 @@ const MainAppBar = ({
           <IconButton color="inherit" onClick={onLoadCampaign}>
             <FolderOpenIcon />
           </IconButton>
+        </Tooltip>
+
+        <Tooltip title="Ver Memorial Descritivo">
+          <span>
+            <IconButton
+              color="inherit"
+              onClick={onShowMemorial}
+              disabled={!isCampaignOpen}
+            >
+              <ArticleIcon />
+            </IconButton>
+          </span>
         </Tooltip>
 
         <Tooltip title={darkMode ? 'Modo Claro' : 'Modo Escuro'}>

@@ -1175,7 +1175,7 @@ function HomePage() {
     }
   };
   const currentTheme = darkMode ? darkTheme : lightTheme;
-  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, formato, aspectRatio, followupPosts, colors: standardsColors, };
+  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, formato, aspectRatio, followupPosts, colors: standardsColors, generatedPagesData, };
 
   return (
     <ThemeProvider theme={currentTheme}>
@@ -1197,6 +1197,8 @@ function HomePage() {
             onPersonaMenuClick={() => setPersonaDrawerOpen(!personaDrawerOpen)}
             onAutorMenuClick={() => setAutorDrawerOpen(!autorDrawerOpen)}
             isDrawerOpen={currentView === 'personas' ? personaDrawerOpen : currentView === 'autores' ? autorDrawerOpen : sidebarOpen}
+            onShowMemorial={() => setShowMemorialDescritivoModal(true)}
+            isCampaignOpen={currentCampaign !== null}
         />
         {currentView === 'campaigns' && (
           <>

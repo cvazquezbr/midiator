@@ -18,18 +18,15 @@ import {
   CardActions,
   Fab,
 } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon, Article as ArticleIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon } from '@mui/icons-material';
 import { useIsMobile } from '../hooks/use-mobile';
 import { getCampaigns, deleteCampaign, loadCampaign } from '../utils/campaignState';
 import { toast } from 'sonner';
-import MemorialDescritivoModal from './MemorialDescritivoModal';
 
 const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorList, personaList }) => {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showMemorialModal, setShowMemorialModal] = useState(false);
-  const [selectedCampaignData, setSelectedCampaignData] = useState(null);
   const isMobile = useIsMobile();
 
   const fetchCampaigns = () => {
@@ -60,23 +57,6 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorLis
       } catch (err) {
         toast.error(err.message);
       }
-    }
-  };
-
-  const handleShowMemorial = async (campaignId) => {
-    try {
-      const campaignData = await loadCampaign(campaignId);
-      const autorFromDb = autorList.find(a => a.id === campaignData.autor_id);
-      const personaFromDb = personaList.find(p => p.id === campaignData.persona_id);
-      const fullCampaignData = {
-        ...campaignData.campaign_data,
-        autor: autorFromDb ? autorFromDb.autor_data : null,
-        persona: personaFromDb ? personaFromDb.persona_data : null,
-      };
-      setSelectedCampaignData(fullCampaignData);
-      setShowMemorialModal(true);
-    } catch (err) {
-      toast.error(`Failed to load campaign data: ${err.message}`);
     }
   };
 
@@ -125,9 +105,6 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorLis
                     </CardContent>
                   </ListItemButton>
                   <CardActions sx={{ justifyContent: 'flex-end' }}>
-                    <IconButton aria-label="view memorial" onClick={() => handleShowMemorial(campaign.id)}>
-                      <ArticleIcon />
-                    </IconButton>
                     <IconButton aria-label="edit" onClick={() => onEditCampaign(campaign)}>
                       <EditIcon />
                     </IconButton>
@@ -155,13 +132,6 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorLis
           </Fab>
         )}
       </Paper>
-      {selectedCampaignData && (
-        <MemorialDescritivoModal
-          open={showMemorialModal}
-          onClose={() => setShowMemorialModal(false)}
-          campaignData={selectedCampaignData}
-        />
-      )}
     </Container>
   );
 };
