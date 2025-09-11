@@ -154,8 +154,20 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight) => 
           rotation = 0,
           filters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
           crop,
-          shadow, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY
+          shadow, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY,
+          borderRadius = 0,
         } = element;
+
+        const dx = (x / 100) * canvasWidth;
+        const dy = (y / 100) * canvasHeight;
+        const dWidth = (width / 100) * canvasWidth;
+        const dHeight = (height / 100) * canvasHeight;
+
+        // Apply clipping path for rounded corners BEFORE any drawing
+        if (borderRadius > 0) {
+            drawRoundedRect(ctx, dx, dy, dWidth, dHeight, borderRadius);
+            ctx.clip();
+        }
 
         if (shadow) {
           ctx.shadowColor = shadowColor || '#000000';
@@ -166,11 +178,6 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight) => 
 
         const { brightness = 100, contrast = 100, saturate = 100, blur = 0, opacity = 100 } = filters || {};
         ctx.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
-
-        const dx = (x / 100) * canvasWidth;
-        const dy = (y / 100) * canvasHeight;
-        const dWidth = (width / 100) * canvasWidth;
-        const dHeight = (height / 100) * canvasHeight;
 
         if (rotation) {
           const centerX = dx + dWidth / 2;
