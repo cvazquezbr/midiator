@@ -6,6 +6,7 @@ import AuthorSection from './AuthorSection';
 import ContentSection from './ContentSection';
 import InstructionsSection from './InstructionsSection';
 import ColorPalette from './ColorPalette';
+import GeneratedPagesSection from './GeneratedPagesSection';
 
 const MemorialDescritivo = ({ campaignData }) => {
   if (!campaignData) {
@@ -23,6 +24,7 @@ const MemorialDescritivo = ({ campaignData }) => {
     aspectRatio,
     followupPosts,
     colors,
+    generatedPagesData,
   } = campaignData;
 
   // In the new structure, `colors` is the primary array of color objects.
@@ -74,6 +76,12 @@ const MemorialDescritivo = ({ campaignData }) => {
 
       <Box sx={{ my: 4 }}>
         <ColorPalette colors={uniqueColors} />
+      </Box>
+
+      <Divider sx={{ my: 6 }} />
+
+      <Box sx={{ my: 4 }}>
+        <GeneratedPagesSection pages={generatedPagesData} />
       </Box>
 
       <Divider sx={{ my: 6 }} />
