@@ -1,4 +1,4 @@
-import { handleUpload } from '@vercel/blob/server';
+import { put } from '@vercel/blob';
 import { withAuth } from './middleware/auth.js';
 
 export const config = {
@@ -8,49 +8,48 @@ export const config = {
 };
 
 const handler = async (req, res) => {
-  console.log('[API /upload] Received request (server handler)');
+  console.log('[API /upload] Received request (server-side upload handler)');
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!req.user || !req.user.uuid) {
+    return res.status(401).json({ error: 'Authentication is required.' });
+  }
+
+  const userId = req.user.uuid;
+  const { searchParams } = new URL(req.url, `http://${req.headers.host}`);
+  const filename = searchParams.get('filename');
+
+  if (!filename) {
+    return res.status(400).json({ error: 'Filename query parameter is required' });
+  }
+
+  // Sanitize the filename and create the full path
+  const sanitizedFilename = filename.replace(/[^\/\w\-_\.]/g, '');
+  const blobPath = `${userId}/${sanitizedFilename}`;
+
+  console.log(`[API /upload] Attempting to upload to path: ${blobPath}`);
 
   try {
-    const jsonResponse = await handleUpload({
-      request: req,
-      onBeforeGenerateToken: async (pathname, clientPayload) => {
-        console.log(`[API /upload] onBeforeGenerateToken: Pathname: ${pathname}`);
-
-        if (!req.user || !req.user.uuid) {
-          throw new Error('Authentication is required to upload files.');
-        }
-        const userId = req.user.uuid;
-
-        const sanitizedPathname = pathname.replace(/^\/|\/$/g, '').replace(/\.\./g, '');
-        if (!sanitizedPathname.startsWith(userId)) {
-          throw new Error('User is not allowed to upload to this path.');
-        }
-
-        return {
-          addRandomSuffix: true,
-          allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'audio/mpeg', 'video/webm', 'audio/webm', 'audio/wav', 'audio/mp3'],
-          maximumSizeInBytes: 524288000, // 500MB
-          tokenPayload: JSON.stringify({ userId }),
-          pathname: sanitizedPathname,
-        };
-      },
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
-        const { userId } = JSON.parse(tokenPayload);
-        console.log(`[API /upload] onUploadCompleted: Blob upload finished for user ${userId}.`);
-        console.log('[API /upload] Blob details:', { url: blob.url, pathname: blob.pathname, contentType: blob.contentType, contentLength: blob.contentLength });
-      },
+    const blob = await put(blobPath, req, {
+      access: 'public',
+      addRandomSuffix: true,
+      // The server-side `put` does not have the same content-type/size validation
+      // as the client-side token generation. We would need to add manual checks
+      // on the stream if we wanted to enforce them here before uploading.
+      // For now, we trust the client-side logic to send correct files.
     });
 
-    // The 'server' handler doesn't return the same kind of response to the API route itself,
-    // but the client-side `upload` function will receive the result directly from Vercel.
-    // We still need to send a response to finish the serverless function.
-    return res.status(200).json({ message: 'Upload handled.' });
+    console.log('[API /upload] Upload successful:', blob);
+    return res.status(200).json(blob);
 
-  } catch (error) {
-    console.error('[API /upload] An unhandled error occurred in the upload handler:', error);
+  } catch (uploadError) {
+    console.error('[API /upload] Vercel Blob upload error:', uploadError);
     return res.status(500).json({
-      error: 'An internal server error occurred during the upload.',
-      details: error.message,
+      error: 'Failed to upload file to storage.',
+      details: uploadError.message
     });
   }
 };
