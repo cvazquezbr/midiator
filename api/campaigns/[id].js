@@ -37,9 +37,14 @@ const handler = async (req, res) => {
       if (!name || !campaign_data) {
         return res.status(400).json({ error: 'Campaign name and data are required.' });
       }
+
+      // Ensure empty strings for foreign keys are converted to null
+      const finalAutorId = autor_id === '' ? null : autor_id;
+      const finalPersonaId = persona_id === '' ? null : persona_id;
+
       const { rows } = await query(
         'UPDATE campaigns SET name = $1, campaign_data = $2, autor_id = $3, persona_id = $4, updated_at = NOW() WHERE id = $5 AND user_id = $6 RETURNING id, name, updated_at',
-        [name, campaign_data, autor_id, persona_id, id, userId]
+        [name, campaign_data, finalAutorId, finalPersonaId, id, userId]
       );
       if (rows.length === 0) {
         return res.status(404).json({ error: 'Campaign not found or access denied.' });
