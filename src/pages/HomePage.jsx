@@ -243,7 +243,15 @@ function HomePage() {
     setColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
     setStandardsColors(Array.isArray(state.standardsColors) ? state.standardsColors : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
-    setGeneratedPagesData(Array.isArray(state.generatedPagesData) ? state.generatedPagesData : []);
+    const sanitizedPagesData = (Array.isArray(state.generatedPagesData) ? state.generatedPagesData : [])
+      .filter(page => {
+        if (!page || page.record === null || page.record === undefined) {
+          console.warn('Filtering out invalid page data on load:', page);
+          return false;
+        }
+        return true;
+      });
+    setGeneratedPagesData(sanitizedPagesData);
 
     // FIX: Filter out invalid audio data on load to prevent crashes
     setGeneratedAudioData(
