@@ -186,13 +186,23 @@ async function handleCreatePost(fetch, request, response) {
 
         console.log('[DEBUG] Entering handleCreatePost with received payload:', JSON.stringify(payload, null, 2));
 
-        const { targetId, targetType, content, images, video, title } = payload;
-        if (!targetId || !targetType || !content) {
-            console.error('[DEBUG] Validation failed in handleCreatePost:', { targetId, targetType, contentExists: !!content });
-            return response.status(400).json({ error: 'Missing targetId, targetType, or content for creating post.' });
+        // Make the function more flexible by handling both formats from the UI and the scheduler.
+        let { targetId, targetType, content, images, video, title, author } = payload;
+        let authorUrn;
+
+        if (author) {
+            // Format sent by the scheduler, which already has the full URN.
+            authorUrn = author;
+        } else if (targetId && targetType) {
+            // Format sent by the user-facing UI.
+            authorUrn = `urn:li:${targetType === 'organization' ? 'organization' : 'person'}:${targetId}`;
         }
 
-        const authorUrn = `urn:li:${targetType === 'organization' ? 'organization' : 'person'}:${targetId}`;
+        // Validate that we have the necessary information to proceed.
+        if (!authorUrn || !content) {
+             console.error('[DEBUG] Validation failed in handleCreatePost:', { authorUrn, contentExists: !!content });
+             return response.status(400).json({ error: 'Missing author information or content for creating post.' });
+        }
 
         // Base structure for the new Posts API
         const postData = {
