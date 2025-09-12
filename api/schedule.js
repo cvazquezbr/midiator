@@ -157,6 +157,12 @@ async function publishPost(fetch, post, accessToken) {
     const authorUrn = postContent.authorUrn;
     const proxyApiBaseUrl = process.env.VITE_API_BASE_URL || 'http://localhost:5173';
 
+    // Define common headers for internal API calls to the proxy
+    const internalApiHeaders = {
+        'Content-Type': 'application/json',
+        'x-internal-secret': process.env.INTERNAL_API_SECRET,
+    };
+
     const postText = [
         postContent.titulo.toUpperCase(),
         '',
@@ -182,7 +188,7 @@ async function publishPost(fetch, post, accessToken) {
 
             const registerResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: internalApiHeaders,
                 body: JSON.stringify({
                     action: 'registerUpload',
                     accessToken,
@@ -209,7 +215,7 @@ async function publishPost(fetch, post, accessToken) {
 
             const uploadResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: internalApiHeaders,
                 body: JSON.stringify({ action: 'uploadImage', accessToken, uploadUrl, imageBase64, imageType })
             });
 
@@ -234,7 +240,7 @@ async function publishPost(fetch, post, accessToken) {
 
     return fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: internalApiHeaders,
         body: JSON.stringify({ action: 'createPost', accessToken, payload }),
     });
 }

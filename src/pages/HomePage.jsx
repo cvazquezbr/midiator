@@ -537,7 +537,7 @@ function HomePage() {
       setGoogleApiToken(googleAccessToken);
       setGoogleApiTokenSetter(setGoogleAccessToken);
     }
-  }, [googleAccessToken]);
+  }, [googleAccessToken, setGoogleAccessToken]);
 
   useEffect(() => {
     const loadInitialSettings = async () => {
