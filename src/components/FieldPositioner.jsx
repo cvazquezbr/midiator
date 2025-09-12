@@ -295,8 +295,7 @@ const FieldPositioner = ({
 
     // Add page images
     (pageTemplate.images || []).forEach(image => {
-        const imageUrl = image.src || image.imageUrl; // Prioriza 'src', fallback para 'imageUrl'
-        if (image.visible === false || !imageUrl) return; // Verifica se há alguma URL válida
+        if (image.visible === false || !image.src) return;
         // Normalize legacy 'background' type to 'image'
         const elementType = image.type === 'background' ? 'image' : image.type;
 
@@ -305,8 +304,8 @@ const FieldPositioner = ({
             type: elementType,
             position: image,
             style: { ...image.filters, ...image },
-            content: imageUrl, // Usa a URL encontrada
-            zIndex: image.zIndex || 0,
+            content: image.src || '',
+            zIndex: Math.max(image.zIndex || 0, 0), // Garante que o zIndex não seja negativo
             rotation: image.rotation || 0,
             fontScale: 1,
             enableHtmlRendering: false,
@@ -335,14 +334,7 @@ const FieldPositioner = ({
         const style = completeFieldStyles[header];
         if (!position || !position.visible) return null;
 
-        const record = csvData?.[currentPreviewIndex];
-
-        // Explicitly guard against a null or undefined record.
-        // This is the most direct way to prevent the "Cannot read properties of null" error.
-        if (!record) {
-          return null;
-        }
-
+        const record = csvData[currentPreviewIndex] || {};
         const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
 
         return {
@@ -368,7 +360,7 @@ const FieldPositioner = ({
           position: element,
           style: { ...element.filters, ...element },
           content: element.url,
-          zIndex: element.zIndex || 0,
+          zIndex: Math.max(element.zIndex || 0, 0), // Garante que o zIndex não seja negativo
           rotation: element.rotation,
           fontScale: 1,
           enableHtmlRendering: false,
@@ -404,78 +396,79 @@ const FieldPositioner = ({
 
   return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <Box
-        ref={containerRef}
-        className="text-container"
-        sx={{
-          position: 'relative',
-          overflow: 'hidden',
-          borderRadius: 2,
-          width: '100%',
-          flexShrink: 0,
-          border: '2px solid #ddd',
-          background: backgroundValue,
-          cursor: 'default',
-          touchAction: 'pan-x pan-y',
-          WebkitOverflowScrolling: 'touch',
-          '&.interacting': {
-            touchAction: 'none'
-          },
-          aspectRatio: aspectRatio,
-          maxWidth: '100%',
-        }}
-        onTouchStart={handleContainerTouchStart}
-        onTouchEnd={handleContainerTouchEnd}
-      >
-        <>
-          <Box
-            className="elements-wrapper"
-            sx={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              width: '100%',
-              height: '100%',
-            }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setSelectedField('__page_background__');
-              }
-            }}
-            onTouchStart={(e) => {
-              if (e.target === e.currentTarget) {
-                setSelectedField('__page_background__');
-              }
-            }}
-          >
-            {renderableElements.map(element => (
-              <DraggableElement
-                key={element.id}
-                element={{ ...element.position, type: element.type, id: element.id }}
-                position={element.position}
-                style={element.style}
-                content={element.content}
-                isSelected={selectedField === element.id}
-                onSelect={setSelectedField}
-                onPositionChange={handlePositionChange}
-                onSizeChange={handleSizeChange}
-                containerSize={renderedImageMetrics}
-                onContentChange={element.type === 'text' ? handleContentChange : undefined}
-                onDoubleClick={() => {
-                  if (element.type === 'text' && isHtmlField(element.id)) {
-                    onOpenHtmlEditor(element.id);
-                  }
-                }}
-                rotation={element.rotation}
-                originalImageSize={effectiveImageSize}
-                fontScale={element.fontScale}
-                enableHtmlRendering={element.enableHtmlRendering}
-                darkMode={darkMode}
-              />
-            ))}
-          </Box>
-        </>
-      </Box>
+      <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: 2, width: '100%', height: 'auto', maxWidth: '100%', flexShrink: 0 }}>
+        <Box
+          ref={containerRef}
+          className="text-container"
+              sx={{
+                border: '2px solid #ddd',
+                background: backgroundValue,
+                position: 'relative', // Needed for absolute positioning of children
+                cursor: 'default',
+                touchAction: 'pan-x pan-y',
+                WebkitOverflowScrolling: 'touch',
+                '&.interacting': {
+                  touchAction: 'none'
+                },
+                aspectRatio: aspectRatio,
+                width: '100%',
+                height: '100%',
+                maxWidth: '100%',
+                maxHeight: '100%',
+              }}
+              onTouchStart={handleContainerTouchStart}
+              onTouchEnd={handleContainerTouchEnd}
+            >
+                <>
+                  <Box
+                    className="elements-wrapper"
+                    sx={{
+                      position: 'absolute',
+                      left: 0,
+                      top: 0,
+                      width: '100%',
+                      height: '100%',
+                    }}
+                    onClick={(e) => {
+                      if (e.target === e.currentTarget) {
+                        setSelectedField('__page_background__');
+                      }
+                    }}
+                    onTouchStart={(e) => {
+                      if (e.target === e.currentTarget) {
+                        setSelectedField('__page_background__');
+                      }
+                    }}
+                  >
+                    {renderableElements.map(element => (
+                      <DraggableElement
+                        key={element.id}
+                        element={{ ...element.position, type: element.type, id: element.id }}
+                        position={element.position}
+                        style={element.style}
+                        content={element.content}
+                        isSelected={selectedField === element.id}
+                        onSelect={setSelectedField}
+                        onPositionChange={handlePositionChange}
+                        onSizeChange={handleSizeChange}
+                        containerSize={renderedImageMetrics}
+                        onContentChange={element.type === 'text' ? handleContentChange : undefined}
+                        onDoubleClick={() => {
+                          if (element.type === 'text' && isHtmlField(element.id)) {
+                            onOpenHtmlEditor(element.id);
+                          }
+                        }}
+                        rotation={element.rotation}
+                        originalImageSize={effectiveImageSize}
+                        fontScale={element.fontScale}
+                        enableHtmlRendering={element.enableHtmlRendering}
+                        darkMode={darkMode}
+                      />
+                    ))}
+                  </Box>
+                </>
+            </Box>
+        </Box>
 
             {colorPalette && colorPalette.length > 0 && (
               <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
