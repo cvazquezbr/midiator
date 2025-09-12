@@ -83,7 +83,7 @@ function TabPanel(props) {
 const Publisher = ({
   settings,
   campaignContent,
-  generatedImagesData = [],
+  generatedPagesData = [],
   generatedVideosData = [],
   followupPosts = [],
   isScheduled,
@@ -338,8 +338,8 @@ const Publisher = ({
   }
 
   useEffect(() => {
-    console.log('generatedImagesData in Publisher:', generatedImagesData);
-    const images = (generatedImagesData || []).map((img, index) => ({ ...img, type: 'image', mediaId: `image-${index}`, fileSize: img.blob ? formatBytes(img.blob.size) : 'N/A', fileType: img.blob ? img.blob.type : 'N/A' }));
+    console.log('generatedPagesData in Publisher:', generatedPagesData);
+    const images = (generatedPagesData || []).map((img, index) => ({ ...img, type: 'image', mediaId: `image-${index}`, fileSize: img.blob ? formatBytes(img.blob.size) : 'N/A', fileType: img.blob ? img.blob.type : 'N/A' }));
     const videos = (generatedVideosData || []).map((vid, index) => ({ ...vid, type: 'video', mediaId: `video-${index}`, fileSize: vid.blob ? formatBytes(vid.blob.size) : 'N/A', fileType: vid.blob ? vid.blob.type : 'N/A' }));
     const allMedia = [...images, ...videos];
     setUnifiedMedia(allMedia);
@@ -348,13 +348,13 @@ const Publisher = ({
     } else {
       setPreviewedMedia(null);
     }
-  }, [generatedImagesData, generatedVideosData]);
+  }, [generatedPagesData, generatedVideosData]);
 
   useEffect(() => {
-    if (!generatedImagesData || generatedImagesData.length === 0) {
+    if (!generatedPagesData || generatedPagesData.length === 0) {
       setSelectedImages({});
     }
-  }, [generatedImagesData, setSelectedImages]);
+  }, [generatedPagesData, setSelectedImages]);
 
   useEffect(() => {
     if (!generatedVideosData || generatedVideosData.length === 0) {
@@ -370,11 +370,11 @@ const Publisher = ({
       if (!settings.wordpress || !settings.wordpress.wordpressUrl || !settings.wordpress.username || !settings.wordpress.password || !settings.wordpress.tagsUrl || !settings.wordpress.mediaUrl || !settings.wordpress.postsUrl) {
         throw new Error('Configuração do WordPress não encontrada ou incompleta. Por favor, configure-a primeiro.');
       }
-      if (!campaignContent || !campaignContent.conteudoFormatado || !generatedImagesData || generatedImagesData.length === 0) {
+      if (!campaignContent || !campaignContent.conteudoFormatado || !generatedPagesData || generatedPagesData.length === 0) {
         throw new Error('Dados da campanha ou imagens não estão disponíveis.');
       }
 
-      const firstImage = { ...generatedImagesData[0] }; // Make a copy to avoid state mutation
+      const firstImage = { ...generatedPagesData[0] }; // Make a copy to avoid state mutation
 
       // If blob is missing but URL (dataUrl) exists, regenerate the blob
       if (!firstImage.blob && firstImage.url) {
@@ -655,13 +655,13 @@ const Publisher = ({
                           <ListItemIcon>
                             <Checkbox
                               edge="start"
-                              checked={media.type === 'image' ? !!selectedImages[index] : !!selectedVideos[index - generatedImagesData.length]}
+                              checked={media.type === 'image' ? !!selectedImages[index] : !!selectedVideos[index - generatedPagesData.length]}
                               onChange={(e) => {
                                 const isChecked = e.target.checked;
                                 if (media.type === 'image') {
                                   setSelectedImages(prev => ({ ...prev, [index]: isChecked }));
                                 } else {
-                                  const videoIndex = index - generatedImagesData.length;
+                                  const videoIndex = index - generatedPagesData.length;
                                   if (isChecked) {
                                     setSelectedVideos({ [videoIndex]: true });
                                   } else {
@@ -671,7 +671,7 @@ const Publisher = ({
                               }}
                             />
                           </ListItemIcon>
-                          <ListItemText primary={`${media.type === 'image' ? 'Imagem' : 'Vídeo'} ${media.type === 'image' ? index + 1 : index - generatedImagesData.length + 1}`} />
+                          <ListItemText primary={`${media.type === 'image' ? 'Imagem' : 'Vídeo'} ${media.type === 'image' ? index + 1 : index - generatedPagesData.length + 1}`} />
                           {media.type === 'image' ? (
                             <Box component="img" src={media.url} sx={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 1 }} />
                           ) : (
@@ -855,7 +855,7 @@ const Publisher = ({
                 size="large"
                 color="secondary"
                 onClick={handlePublishWordPress}
-                disabled={isPublishingWp || isPublishingLi || generatedImagesData.length === 0 || !generatedImagesData.every(img => img.blob)}
+                disabled={isPublishingWp || isPublishingLi || generatedPagesData.length === 0 || !generatedPagesData.every(img => img.blob)}
               >
                 {isPublishingWp ? 'Publicando...' : 'Publicar no WordPress'}
               </Button>
