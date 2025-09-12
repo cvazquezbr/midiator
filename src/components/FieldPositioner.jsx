@@ -370,7 +370,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     return elements;
-  }, [pageTemplate, isCropping, csvHeaders, fieldPositions, fieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
+  }, [pageTemplate, isCropping, csvHeaders, fieldPositions, completeFieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
 
   const getGradientCss = (gradient) => {
     if (!gradient) return 'none';
