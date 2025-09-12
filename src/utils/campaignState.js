@@ -1,9 +1,8 @@
 import { toast } from 'sonner';
-import { upload } from '@vercel/blob/client';
 import fetchWithAuth from './fetchWithAuth';
 
 /**
- * Uploads a single Blob to Vercel's Blob store.
+ * Uploads a single Blob by sending it to our server-side upload handler.
  * @param {Blob} blob The file blob to upload.
  * @param {string} filename The desired filename for the asset.
  * @param {string} campaignId The ID of the campaign for pathing.
@@ -11,22 +10,36 @@ import fetchWithAuth from './fetchWithAuth';
  * @returns {Promise<string>} The permanent URL of the uploaded asset.
  */
 export const uploadAsset = async (blob, filename, campaignId, userId) => {
-  console.log(`[uploadAsset] Preparing to upload: ${filename}.`);
+  console.log(`[uploadAsset] Preparing to upload: ${filename} via server-side handler.`);
   if (!blob) throw new Error(`Asset "${filename}" is not a valid Blob.`);
-  if (!userId) throw new Error("User ID is required for upload.");
 
-  const fullPath = campaignId ? `${userId}/${campaignId}/${filename}` : `${userId}/${filename}`;
+  // The userId is now read from the authenticated session on the server,
+  // but we still construct the path here to pass as a query param.
+  const fullPath = campaignId ? `${campaignId}/${filename}` : filename;
 
   try {
-    const newBlob = await upload(fullPath, blob, {
-      access: 'public',
-      handleUploadUrl: '/api/upload',
-    });
+    const response = await fetchWithAuth(
+      `/api/upload?filename=${encodeURIComponent(fullPath)}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': blob.type,
+        },
+        body: blob,
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: response.statusText }));
+      throw new Error(errorData.error || `Server responded with ${response.status}`);
+    }
+
+    const newBlob = await response.json();
     console.log(`[uploadAsset] Successfully uploaded ${filename}. URL: ${newBlob.url}`);
     return newBlob.url;
   } catch (error) {
-    console.error(`[uploadAsset] A critical error occurred during Vercel upload for ${filename}:`, error);
-    throw new Error(`Failed to upload ${filename}.`);
+    console.error(`[uploadAsset] A critical error occurred during server-side upload for ${filename}:`, error);
+    throw new Error(`Failed to upload ${filename}: ${error.message}`);
   }
 };
 
