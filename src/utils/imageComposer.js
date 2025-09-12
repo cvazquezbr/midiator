@@ -19,6 +19,20 @@ export const dataURLtoBlob = (dataurl) => {
     return new Blob([u8arr], {type:mime});
 };
 
+export const urlToBlob = async (url) => {
+  try {
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    return blob;
+  } catch (error) {
+    console.error(`[urlToBlob] Error fetching URL ${url}:`, error);
+    throw error;
+  }
+};
+
 export const wrapTextInArea = (ctx, text, style, maxWidth, maxHeight) => {
     if (!text) return [];
     const fontSize = style.fontSize || 24;
