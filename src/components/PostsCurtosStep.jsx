@@ -50,6 +50,7 @@ const PostsCurtosStep = ({
   exportCsv,
   aspectRatio,
   setAspectRatio,
+  sidebarOpen,
 }) => {
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
   const [isGeminiKeyConfigured, setIsGeminiKeyConfigured] = useState(true);
@@ -234,10 +235,41 @@ const PostsCurtosStep = ({
                 </Button>
             </Box>
             <RecordManager
-              registrosIniciais={csvData}
-              colunasIniciais={csvHeaders}
-              onDadosAlterados={onDadosAlterados}
+              registros={csvData}
+              colunas={csvHeaders}
+              onDadosAlterados={(action) => {
+                  let novosRegistros = [...csvData];
+                  let novasColunas = [...csvHeaders];
+                  let proximoId = (csvData.length > 0 ? Math.max(...csvData.map(r => parseInt(String(r.id).replace('reg-', ''), 10) || 0)) : 0) + 1;
+
+                  switch (action.type) {
+                      case 'ADD_RECORD':
+                          novosRegistros.push({ ...action.payload.data, id: `reg-${proximoId}` });
+                          break;
+                      case 'UPDATE_RECORD':
+                          novosRegistros = novosRegistros.map(reg =>
+                              String(reg.id) === String(action.payload.id) ? { ...reg, ...action.payload.data } : reg
+                          );
+                          break;
+                      case 'DELETE_RECORD':
+                          novosRegistros = novosRegistros.filter(reg => String(reg.id) !== String(action.payload.id));
+                          break;
+                      case 'UPDATE_FIELD':
+                          novosRegistros = novosRegistros.map(reg => {
+                              if (String(reg.id) === String(action.payload.id)) {
+                                  return { ...reg, [action.payload.fieldName]: action.payload.newContent };
+                              }
+                              return reg;
+                          });
+                          break;
+                      default:
+                          // Ação desconhecida, não faz nada
+                          return;
+                  }
+                  onDadosAlterados(novosRegistros, novasColunas);
+              }}
               darkMode={darkMode}
+              sidebarOpen={sidebarOpen}
             />
           </Box>
         )}

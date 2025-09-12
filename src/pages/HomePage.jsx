@@ -1309,6 +1309,7 @@ function HomePage() {
                     exportCsv={exportCsv}
                     aspectRatio={aspectRatio}
                     setAspectRatio={setAspectRatio}
+                    sidebarOpen={sidebarOpen}
                   />
                 )}
                 {activeStep === 3 && (

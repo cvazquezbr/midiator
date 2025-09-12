@@ -51,74 +51,24 @@ import TextEditorDialog from '../../components/TextEditorDialog';
  * @param {boolean} [props.darkMode=false] - Flag para habilitar o modo escuro.
  */
 const RecordManager = ({
-    registrosIniciais = [],
-    colunasIniciais = [],
+    registros: registrosIniciais = [], // Renomeado para clareza, mas usado como registros
+    colunas: colunasIniciais = [],   // Renomeado para clareza, mas usado como colunas
     onDadosAlterados,
     darkMode = false,
     sidebarOpen = false,
 }) => {
-    const [registros, setRegistros] = useState([]);
-    const [colunas, setColunas] = useState([]);
+    // O estado local foi removido para tornar este um componente controlado.
+    // O componente pai agora é a única fonte da verdade para 'registros' e 'colunas'.
     const [modalAberto, setModalAberto] = useState(null); // null, 'ADICIONAR', 'EDITAR', 'EXCLUIR'
     const [registroSelecionado, setRegistroSelecionado] = useState(null); // Para edição ou exclusão
-    const [proximoId, setProximoId] = useState(1);
     const [editingFieldInfo, setEditingFieldInfo] = useState(null); // { recordId, fieldName, content }
 
-    // Renomeado para indicar que é para um único novo registro.
-    const gerarIdParaNovoRegistroSingular = useCallback(() => {
-        const novoIdValor = proximoId;
-        setProximoId(prevId => prevId + 1);
-        return `reg-${novoIdValor}`;
-    }, [proximoId]);
+    // Simplificação: IDs agora são gerenciados pelo componente pai.
+    // A lógica de geração de ID foi removida. O pai é responsável por garantir IDs únicos.
 
-    // Inicialização e sincronização com props externas
-    useEffect(() => {
-        // Garante que os registros de entrada sejam sempre um array para evitar erros.
-        const safeRegistrosIniciais = Array.isArray(registrosIniciais) ? registrosIniciais : [];
-
-        let maxIdCalculado = 0;
-        safeRegistrosIniciais.forEach(reg => {
-            if (reg.id !== undefined && reg.id !== null) {
-                const numIdMatch = String(reg.id).match(/\d+$/);
-                if (numIdMatch) {
-                    const numId = parseInt(numIdMatch[0], 10);
-                    if (numId > maxIdCalculado) {
-                        maxIdCalculado = numId;
-                    }
-                }
-            }
-        });
-
-        let idCounterParaLote = maxIdCalculado + 1;
-
-        const dadosProcessados = safeRegistrosIniciais.map(reg => {
-            const idOriginal = reg.id;
-            let idFinal;
-            if (idOriginal !== undefined && idOriginal !== null) {
-                idFinal = String(idOriginal);
-            } else {
-                idFinal = `reg-${idCounterParaLote}`;
-                idCounterParaLote++;
-            }
-            return { ...reg, id: idFinal };
-        });
-
-        setRegistros(dadosProcessados);
-        setProximoId(idCounterParaLote);
-
-        // Garante que as colunas de entrada sejam sempre um array e as processa.
-        const safeColunasIniciais = Array.isArray(colunasIniciais) ? colunasIniciais : [];
-        let currentCols;
-        if (safeColunasIniciais.length > 0) {
-            currentCols = [...new Set(safeColunasIniciais)];
-        } else if (dadosProcessados.length > 0 && dadosProcessados[0]) {
-            currentCols = Object.keys(dadosProcessados[0]).filter(k => k !== 'id');
-        } else {
-            currentCols = [];
-        }
-        setColunas(currentCols);
-    }, [registrosIniciais, colunasIniciais]); // A dependência de proximoId foi removida para evitar re-execuções desnecessárias.
-                                             // O efeito deve ser executado apenas quando os dados de entrada mudam, não quando o ID interno é atualizado.
+    // O useEffect foi removido. O componente agora renderiza diretamente as props recebidas.
+    const registros = registrosIniciais;
+    const colunas = colunasIniciais;
 
     // Handlers para abrir modais
     const handleAbrirModalAdicionar = () => {
@@ -143,62 +93,33 @@ const RecordManager = ({
 
     // Handlers para CRUD
     const handleSalvarRegistro = (dadosFormulario, idRegistroExistente) => {
-        let novosRegistros;
-        let novasColunas = colunas; // Preserva as colunas atuais por padrão
-
-        if (idRegistroExistente !== null && idRegistroExistente !== undefined) {
-            novosRegistros = registros.map(reg =>
-                String(reg.id) === String(idRegistroExistente) ? { ...reg, ...dadosFormulario } : reg
-            );
-            setRegistros(novosRegistros);
-        } else {
-            if (dadosFormulario._novasColunas) {
-                const { _novasColunas, ...primeiroRegistroData } = dadosFormulario;
-                novasColunas = [...new Set(_novasColunas.filter(Boolean))];
-                setColunas(novasColunas);
-                novosRegistros = [{ id: gerarIdParaNovoRegistroSingular(), ...primeiroRegistroData }];
-                setRegistros(novosRegistros);
-            } else {
-                novosRegistros = [
-                    ...registros,
-                    { id: gerarIdParaNovoRegistroSingular(), ...dadosFormulario },
-                ];
-                setRegistros(novosRegistros);
-            }
-        }
-
         if (onDadosAlterados) {
-            onDadosAlterados(JSON.parse(JSON.stringify(novosRegistros)), [...novasColunas]);
+            if (idRegistroExistente !== null && idRegistroExistente !== undefined) {
+                // Ação para ATUALIZAR um registro existente
+                onDadosAlterados({
+                    type: 'UPDATE_RECORD',
+                    payload: { id: idRegistroExistente, data: dadosFormulario }
+                });
+            } else {
+                // Ação para ADICIONAR um novo registro
+                onDadosAlterados({
+                    type: 'ADD_RECORD',
+                    payload: { data: dadosFormulario }
+                });
+            }
         }
         handleFecharModal();
     };
 
     const handleConfirmarExclusao = () => {
-        // console.log('[GR] handleConfirmarExclusao - Início. Registro Selecionado:', JSON.parse(JSON.stringify(registroSelecionado)));
-        // console.log('[GR] handleConfirmarExclusao - Todos os Registros ANTES:', JSON.parse(JSON.stringify(registros)));
-
         if (registroSelecionado && registroSelecionado.id !== undefined) {
-            const idParaExcluir = String(registroSelecionado.id);
-            // console.log('[GR] ID para excluir:', idParaExcluir);
-
-            const registrosAposExclusao = registros.filter(reg => {
-                const idAtual = String(reg.id);
-                return idAtual !== idParaExcluir;
-            });
-
-            // console.log('[GR] Registros APÓS filtrar:', JSON.parse(JSON.stringify(registrosAposExclusao)));
-
-            setRegistros(registrosAposExclusao);
-
             if (onDadosAlterados) {
-                // console.log('[GR] Chamando onDadosAlterados com Registros:', JSON.parse(JSON.stringify(registrosAposExclusao)), 'Colunas:', [...colunas]);
-                onDadosAlterados(
-                    JSON.parse(JSON.stringify(registrosAposExclusao)),
-                    [...colunas]
-                );
+                // Ação para EXCLUIR um registro
+                onDadosAlterados({
+                    type: 'DELETE_RECORD',
+                    payload: { id: registroSelecionado.id }
+                });
             }
-        } else {
-            // console.warn('[GR] Tentativa de exclusão sem registro selecionado ou ID indefinido.');
         }
         handleFecharModal();
     };
@@ -230,16 +151,12 @@ const RecordManager = ({
 
         const { recordId, fieldName } = editingFieldInfo;
 
-        const novosRegistros = registros.map(reg => {
-            if (String(reg.id) === String(recordId)) {
-                return { ...reg, [fieldName]: newContent };
-            }
-            return reg;
-        });
-
-        setRegistros(novosRegistros);
         if (onDadosAlterados) {
-            onDadosAlterados(JSON.parse(JSON.stringify(novosRegistros)), [...colunas]);
+            // Ação para ATUALIZAR um campo específico de um registro
+            onDadosAlterados({
+                type: 'UPDATE_FIELD',
+                payload: { id: recordId, fieldName, newContent }
+            });
         }
         setEditingFieldInfo(null);
     };
@@ -302,6 +219,7 @@ const RecordManager = ({
                     content={editingFieldInfo.content}
                     html={true}
                     variant="simple"
+                    sidebarOpen={sidebarOpen}
                 />
             )}
 
