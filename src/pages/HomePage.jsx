@@ -822,38 +822,18 @@ function HomePage() {
       setActiveStep((prevActiveStep) => prevActiveStep + 1);
     });
   };
-
-  const handleNextClick = () => {
-    if (canProceedToStep(activeStep + 1)) {
-      handleNext();
-    }
-  };
-
   const handleBack = () => {
     handleNavigation(() => setActiveStep((prevActiveStep) => prevActiveStep - 1));
   };
-  const checkCanProceed = (step) => {
+  const canProceedToStep = (step) => {
     switch (step) {
       case 1: return true;
       case 2: return campaignContent !== null;
       case 3: return csvData.length > 0;
       case 4: return true; // Always allow proceeding to formatting step
-      case 5:
-        // To proceed, all pages must have a generated URL.
-        return generatedPagesData.length > 0 && generatedPagesData.every(img => img.url);
+      case 5: if (generatedPagesData.length === 0 || !generatedPagesData.every(img => img.blob)) { toast.error("Por favor, gere todas as páginas na etapa 4 antes de prosseguir."); return false; } return true;
       default: return true;
     }
-  };
-
-  const canProceedToStep = (step) => {
-    const can = checkCanProceed(step);
-    if (!can) {
-      if (step === 5) {
-        toast.error("Por favor, gere todas as páginas na etapa 4 antes de prosseguir.");
-      }
-      // Add other step-specific error messages here if needed.
-    }
-    return can;
   };
   const getFieldStats = () => { const visibleFields = Object.values(fieldPositions).filter(pos => pos.visible).length; const totalFields = csvHeaders.length; const styledFields = Object.keys(fieldStyles).length; return { visibleFields, totalFields, styledFields }; };
   const { visibleFields, totalFields, styledFields } = getFieldStats();
@@ -1127,21 +1107,14 @@ function HomePage() {
     if (imagePrompt && imagePrompt.trim() !== '') {
         setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
         try {
-            let sourceStyle = null;
+            // Use a simple default style for the new image.
+            // The complex logic of finding another page's image style was brittle.
+            let sourceStyle = { x: 0, y: 0, width: 100, height: 100, zIndex: -1, objectFit: 'cover' };
             const firstImage = effectivePageTemplate.images?.[0];
             if (firstImage) {
+                // If the current page template already has an image, use its style.
                 const { id, src, ...style } = firstImage;
                 sourceStyle = style;
-            } else {
-                const firstPageWithImage = generatedPagesData.find(p => (p.customPageTemplate || pageTemplate).images?.length > 0);
-                if (firstPageWithImage) {
-                    const tpl = firstPageWithImage.customPageTemplate || pageTemplate;
-                    const { id, src, ...style } = tpl.images[0];
-                    sourceStyle = style;
-                }
-            }
-            if (!sourceStyle) {
-                sourceStyle = { x: 0, y: 0, width: 100, height: 100, zIndex: -1, style: { objectFit: 'cover' } };
             }
 
             // This entire block is now wrapped in the blob conversion logic
@@ -1421,7 +1394,7 @@ function HomePage() {
                 )}
                 {activeStep === 8 && <Monitor currentCampaign={currentCampaign} />}
 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} ><Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button><Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box><Button onClick={handleNextClick} disabled={isGenerating || activeStep === steps.length - 1 || !checkCanProceed(activeStep + 1)} variant="contained" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Próximo</Button></Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} ><Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button><Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box><Button onClick={handleNext} disabled={isGenerating || activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)} variant="contained" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Próximo</Button></Box>
               </>
             )}
             {currentView === 'personas' && <PersonasPage personaDrawerOpen={personaDrawerOpen} setPersonaDrawerOpen={setPersonaDrawerOpen} onNoPersonaSelected={() => setPersonaDrawerOpen(true)} onUpdate={fetchPersonasForCampaign} />}
