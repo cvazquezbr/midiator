@@ -493,19 +493,24 @@ const protectedHandler = async (request, response) => {
   }
 };
 
-const mainHandler = async (request, response) => {
+const SCHEDULER_ACTIONS = new Set([
+  'refreshTokenInternal',
+  'createPost',
+  'registerUpload',
+  'uploadImage',
+  'initializeVideoUpload',
+  'uploadVideo',
+  'finalizeVideoUpload',
+  'checkVideoStatus'
+]);
+
+// This handler is for requests that are authenticated via a shared secret.
+const internalRequestHandler = async (request, response) => {
     const { action, userId } = request.body;
     const fetch = (await import('node-fetch')).default;
 
-    // Server-to-server action, not requiring a user session, but needs to be secure.
     if (action === 'refreshTokenInternal') {
         try {
-            // This is a simplified security check. In a real-world scenario,
-            // you'd want a more robust secret or IP check.
-            const internalSecret = request.headers['x-internal-secret'];
-            if (internalSecret !== process.env.INTERNAL_API_SECRET) {
-                return response.status(401).json({ error: 'Unauthorized internal request.' });
-            }
             const result = await handleRefreshTokenInternal(fetch, userId);
             return response.status(200).json(result);
         } catch (error) {
@@ -514,7 +519,24 @@ const mainHandler = async (request, response) => {
         }
     }
 
-    // All other actions are protected and require a valid user session.
+    // Other scheduler actions can be handled by the protectedHandler, which we call directly, bypassing withAuth.
+    // The protectedHandler will get the accessToken from the request body, which is what the scheduler provides.
+    return protectedHandler(request, response);
+}
+
+
+const mainHandler = async (request, response) => {
+    const { action } = request.body;
+
+    // Check for internal, server-to-server requests from the scheduler
+    const internalSecret = request.headers['x-internal-secret'] || request.headers['X-Internal-Secret'];
+    if (SCHEDULER_ACTIONS.has(action) && internalSecret && internalSecret === process.env.INTERNAL_API_SECRET) {
+        console.log(`[Proxy] Executing internal action via secret: ${action}`);
+        return internalRequestHandler(request, response);
+    }
+
+    // Default to the standard, user-facing authentication flow which requires a JWT cookie
+    console.log(`[Proxy] Executing user-facing action: ${action}`);
     return withAuth(protectedHandler)(request, response);
 };
 
