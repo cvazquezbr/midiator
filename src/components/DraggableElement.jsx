@@ -673,8 +673,8 @@ const DraggableElementInternal = ({
           sx={{
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: element.type === 'image' ? 'center' : (style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end'),
-            alignItems: element.type === 'image' ? 'center' : (style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end'),
+            justifyContent: style.verticalAlign === 'top' ? 'flex-start' : style.verticalAlign === 'middle' ? 'center' : 'flex-end',
+            alignItems: style.textAlign === 'left' ? 'flex-start' : style.textAlign === 'center' ? 'center' : 'flex-end',
             height: '100%',
           }}
         >
