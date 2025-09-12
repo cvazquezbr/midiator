@@ -54,7 +54,7 @@ import { toast } from 'sonner';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getTimezone } from '../utils/timezone';
 import { publishToWordPress } from '../utils/wordpressAPI';
-import { dataURLtoBlob } from '../utils/imageComposer';
+import { dataURLtoBlob, urlToBlob } from '../utils/imageComposer';
 import { getLinkedInProfiles, publishToLinkedIn, uploadImagesForLinkedIn } from '../utils/linkedinAPI';
 import { useUserAuth } from '../context/UserAuthContext';
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
@@ -374,15 +374,30 @@ const Publisher = ({
         throw new Error('Dados da campanha ou imagens não estão disponíveis.');
       }
 
-      const firstImage = { ...generatedImagesData[0] }; // Make a copy to avoid state mutation
+      if (!generatedImagesData || generatedImagesData.length === 0) {
+        throw new Error('Nenhuma imagem gerada para publicar.');
+      }
+      let firstImage = { ...generatedImagesData[0] };
 
-      // If blob is missing but URL (dataUrl) exists, regenerate the blob
+      // If blob is missing, try to get it.
       if (!firstImage.blob && firstImage.url) {
-        firstImage.blob = dataURLtoBlob(firstImage.url);
+        setPublishingStatusWp('Preparando imagem para upload...');
+        toast.info("Preparando imagem para upload...");
+        // Check if it's a data URL
+        if (firstImage.url.startsWith('data:')) {
+            firstImage.blob = dataURLtoBlob(firstImage.url);
+        } else {
+            // Assume it's a remote URL that needs fetching
+            try {
+              firstImage.blob = await urlToBlob(firstImage.url);
+            } catch(e) {
+              throw new Error(`Falha ao baixar a imagem da URL: ${firstImage.url}. ${e.message}`);
+            }
+        }
       }
 
       if (!firstImage || !firstImage.blob) {
-        throw new Error('A primeira imagem gerada não contém um blob válido.');
+        throw new Error('A primeira imagem gerada não contém um blob válido ou não pôde ser baixada.');
       }
 
       const campaignData = {
@@ -488,7 +503,36 @@ const Publisher = ({
       const selectedImageIndexes = Object.keys(selectedImages).filter(index => selectedImages[index]);
 
       if (selectedImageIndexes.length > 0) {
-        const imageBlobsToUpload = selectedImageIndexes.map(index => unifiedMedia[parseInt(index)].blob);
+        setPublishingStatusLi('Preparando imagens para upload...');
+        const toastId = toast.loading("Preparando imagens para o upload...");
+
+        const imageBlobsToUpload = await Promise.all(
+          selectedImageIndexes.map(async (index, i) => {
+            const media = unifiedMedia[parseInt(index)];
+            if (media.blob) {
+              return media.blob;
+            }
+            toast.info(`Baixando imagem ${i + 1}/${selectedImageIndexes.length}...`);
+            try {
+              const blob = await urlToBlob(media.url);
+              // We might want to update the state here, but it can be complex.
+              // For now, just return the blob for the upload process.
+              return blob;
+            } catch (e) {
+              toast.error(`Falha ao baixar a imagem ${i + 1}.`);
+              console.error(`Failed to fetch blob for ${media.url}`, e);
+              return null; // Return null on failure
+            }
+          })
+        );
+
+        toast.dismiss(toastId);
+
+        // Check if all blobs were fetched successfully
+        if (imageBlobsToUpload.some(blob => !blob)) {
+            throw new Error("Falha ao baixar uma ou mais imagens. Verifique o console para detalhes e tente novamente.");
+        }
+
         const authorUrn = `urn:li:${selectedTarget.type === 'organization' ? 'organization' : 'person'}:${selectedTarget.id}`;
 
         imageUrns = await uploadImagesForLinkedIn(settings?.linkedin, imageBlobsToUpload, authorUrn, setPublishingStatusLi);
