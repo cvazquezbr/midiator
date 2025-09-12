@@ -106,9 +106,8 @@ class GoogleCloudTTSAPI {
         name: voice,
       },
       audioConfig: {
-        audioEncoding: 'LINEAR16',
+        audioEncoding: 'MP3',
         speakingRate: rate,
-        sampleRateHertz: 24000
       },
     };
 

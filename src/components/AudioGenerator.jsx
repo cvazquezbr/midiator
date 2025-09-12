@@ -157,7 +157,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
     
     // A velocidade é passada para o método synthesize
     const audioContent = await googleCloudTTSAPI.synthesize(cleanText, voice, rate);
-    const blob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/wav' });
+    const blob = new Blob([Uint8Array.from(atob(audioContent), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
 
     // Convert blob to a data URL for serialization
     const dataURL = await blobToDataURL(blob);
@@ -194,11 +194,11 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
         if (audioMode.startsWith('google-tts')) {
           audio = await generateAudioGoogleTTS(textToSpeak, voice, speechRate);
           audio.index = i;
-          audio.filename = `audio_${String(i + 1).padStart(3, '0')}.wav`;
+          audio.filename = `audio_${String(i + 1).padStart(3, '0')}.mp3`;
         } else {
           audio = await generateAudioBrowser(textToSpeak, speechRate);
           audio.index = i;
-          audio.filename = `audio_${String(i + 1).padStart(3, '0')}.wav`;
+          audio.filename = `audio_${String(i + 1).padStart(3, '0')}.mp3`;
         }
         generatedAudios.push(audio);
       } catch (error) {
@@ -304,7 +304,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
       const url = URL.createObjectURL(audio.blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `audio_${index + 1}.wav`;
+      a.download = `audio_${index + 1}.mp3`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -317,7 +317,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
         const url = URL.createObjectURL(audio.blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `audio_${index + 1}.wav`;
+        a.download = `audio_${index + 1}.mp3`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

@@ -1,46 +1,30 @@
-import { handleUpload } from '@vercel/blob/client';
+import { handleUpload } from '@vercel/blob/server';
 import { withAuth } from './middleware/auth.js';
 
-// By removing the `config` export, we re-enable the default Next.js body parser.
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
 
 const handler = async (req, res) => {
-  console.log('[API /upload] Received request');
-
-  if (req.method !== 'POST') {
-    console.warn(`[API /upload] Method not allowed: ${req.method}`);
-    res.setHeader('Allow', ['POST']);
-    return res.status(405).json({ error: 'Method Not Allowed' });
-  }
-
-  // The body is now automatically parsed by Next.js and available on `req.body`.
-  const body = req.body;
+  console.log('[API /upload] Received request (server handler)');
 
   try {
     const jsonResponse = await handleUpload({
-      body, // Pass the parsed body object.
-      request: req, // Pass the original request for other properties.
+      request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         console.log(`[API /upload] onBeforeGenerateToken: Pathname: ${pathname}`);
 
-        // Authentication check
         if (!req.user || !req.user.uuid) {
-          console.error('[API /upload] Auth error: User not found in request.');
           throw new Error('Authentication is required to upload files.');
         }
         const userId = req.user.uuid;
-        console.log(`[API /upload] Authenticated user: ${userId}`);
 
-        const payload = clientPayload ? JSON.parse(clientPayload) : {};
-        console.log('[API /upload] Client payload parsed:', payload);
-
-        // Path sanitization and validation
         const sanitizedPathname = pathname.replace(/^\/|\/$/g, '').replace(/\.\./g, '');
         if (!sanitizedPathname.startsWith(userId)) {
-          console.error(`[API /upload] AuthZ error: User ${userId} tried to upload to forbidden path ${sanitizedPathname}.`);
           throw new Error('User is not allowed to upload to this path.');
         }
-
-        console.log(`[API /upload] Path authorized: ${sanitizedPathname}`);
 
         return {
           addRandomSuffix: true,
@@ -57,8 +41,10 @@ const handler = async (req, res) => {
       },
     });
 
-    console.log('[API /upload] handleUpload completed successfully. Sending response to client.');
-    return res.status(200).json(jsonResponse);
+    // The 'server' handler doesn't return the same kind of response to the API route itself,
+    // but the client-side `upload` function will receive the result directly from Vercel.
+    // We still need to send a response to finish the serverless function.
+    return res.status(200).json({ message: 'Upload handled.' });
 
   } catch (error) {
     console.error('[API /upload] An unhandled error occurred in the upload handler:', error);
