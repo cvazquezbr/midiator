@@ -295,18 +295,16 @@ const FieldPositioner = ({
 
     // Add page images
     (pageTemplate.images || []).forEach(image => {
-        const imageUrl = image.src || image.imageUrl; // Prioriza 'src', fallback para 'imageUrl'
-        if (image.visible === false || !imageUrl) return; // Verifica se há alguma URL válida
-        // Normalize legacy 'background' type to 'image'
+        const imageUrl = image.src || image.imageUrl;
+        if (image.visible === false || !imageUrl) return;
         const elementType = image.type === 'background' ? 'image' : image.type;
 
         elements.push({
             id: image.id,
             type: elementType,
-            position: image,
+            position: { ...image, zIndex: Math.max(image.zIndex || 0, 0) },
             style: { ...image.filters, ...image },
-            content: imageUrl, // Usa a URL encontrada
-            zIndex: Math.max(image.zIndex || 0, 0), // Garante que o zIndex não seja negativo
+            content: imageUrl,
             rotation: image.rotation || 0,
             fontScale: 1,
             enableHtmlRendering: false,
@@ -358,10 +356,9 @@ const FieldPositioner = ({
         return {
           id: element.id,
           type: 'image',
-          position: element,
+          position: { ...element, zIndex: Math.max(element.zIndex || 0, 0) },
           style: { ...element.filters, ...element },
           content: element.url,
-          zIndex: Math.max(element.zIndex || 0, 0), // Garante que o zIndex não seja negativo
           rotation: element.rotation,
           fontScale: 1,
           enableHtmlRendering: false,
