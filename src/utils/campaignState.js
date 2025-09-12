@@ -57,6 +57,7 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
       if (typeof value === 'string' && value.startsWith('data:')) {
         try {
           const blob = await fetch(value).then(res => res.blob());
+          console.log('[serializeCampaignData] Converted data URI to blob with type:', blob.type);
           const blobUrl = URL.createObjectURL(blob);
           allPendingAssets[blobUrl] = blob; // Add the new blob to our asset map
           currentObj[key] = blobUrl; // Replace the data: URI with a blob: URI
