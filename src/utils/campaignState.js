@@ -40,48 +40,71 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
   console.log('[serializeCampaignData] Starting serialization and upload...');
   const cleanState = JSON.parse(JSON.stringify(state)); // Deep copy to avoid mutation
   const uploadPromises = [];
-  const assetsToUpload = [];
+  const assetsToUpload = []; // Will store { obj, key, url }
 
   // 1. Recursively find all assets that need uploading.
-  const findAssets = (obj) => {
-    if (!obj) return;
-    if (Array.isArray(obj)) {
-      obj.forEach(findAssets);
-    } else if (typeof obj === 'object') {
-      if (obj.src && typeof obj.src === 'string' && obj.src.startsWith('blob:')) {
-        assetsToUpload.push(obj);
+  const findAssets = (currentObj) => {
+    if (!currentObj || typeof currentObj !== 'object') {
+      return;
+    }
+
+    if (Array.isArray(currentObj)) {
+      currentObj.forEach(findAssets);
+      return;
+    }
+
+    for (const key in currentObj) {
+      if (Object.prototype.hasOwnProperty.call(currentObj, key)) {
+        const value = currentObj[key];
+        if (typeof value === 'string' && value.startsWith('blob:')) {
+          // Found a blob URL, store its context.
+          assetsToUpload.push({ obj: currentObj, key, url: value });
+        } else {
+          // Recurse into nested objects/arrays.
+          findAssets(value);
+        }
       }
-      if (obj.url && typeof obj.url === 'string' && obj.url.startsWith('blob:')) {
-        assetsToUpload.push(obj);
-      }
-      Object.values(obj).forEach(findAssets);
     }
   };
 
   findAssets(cleanState);
   console.log(`[serializeCampaignData] Found ${assetsToUpload.length} assets to upload.`);
-  onProgress({ current: 0, total: assetsToUpload.length });
 
-  // 2. Create an array of upload promises.
-  let assetsUploadedCount = 0;
+  // 2. Create an array of upload promises for unique blob URLs.
+  const uniqueUrlsToUpload = new Map();
   for (const asset of assetsToUpload) {
-    const tempUrl = asset.src || asset.url;
-    const blob = pendingAssets[tempUrl];
+    if (!uniqueUrlsToUpload.has(asset.url)) {
+      uniqueUrlsToUpload.set(asset.url, {
+        blob: pendingAssets[asset.url],
+        targets: [],
+      });
+    }
+    uniqueUrlsToUpload.get(asset.url).targets.push({ obj: asset.obj, key: asset.key });
+  }
+
+  onProgress({ current: 0, total: uniqueUrlsToUpload.size });
+
+  let assetsUploadedCount = 0;
+  for (const [tempUrl, { blob, targets }] of uniqueUrlsToUpload.entries()) {
     if (blob) {
-      const fileExtension = blob.type.split('/')[1] || 'png';
-      const filename = asset.id ? `${asset.id}.${fileExtension}` : `asset_${Date.now()}.${fileExtension}`;
+      const targetWithId = targets.find(t => t.obj.id);
+      const fileExtension = blob.type.split('/')[1] || 'bin';
+      const randomSuffix = Math.random().toString(36).substring(2, 9);
+      const filename = targetWithId
+        ? `${targetWithId.obj.id}.${fileExtension}`
+        : `asset_${Date.now()}_${randomSuffix}.${fileExtension}`;
 
       const promise = uploadAsset(blob, filename, campaignId, userId)
         .then(permanentUrl => {
-          if (asset.src) asset.src = permanentUrl;
-          if (asset.url) asset.url = permanentUrl;
+          targets.forEach(target => {
+            target.obj[target.key] = permanentUrl;
+          });
           assetsUploadedCount++;
-          onProgress({ current: assetsUploadedCount, total: assetsToUpload.length });
+          onProgress({ current: assetsUploadedCount, total: uniqueUrlsToUpload.size });
         })
         .catch(error => {
-          console.error(`Failed to upload asset ${filename}`, error);
-          toast.error(`Upload failed for ${filename}: ${error.message}`);
-          // We throw to stop the whole save process if one asset fails.
+          console.error(`Failed to upload asset from ${tempUrl}`, error);
+          toast.error(`Upload failed for asset ${filename}: ${error.message}`);
           throw error;
         });
       uploadPromises.push(promise);
@@ -98,73 +121,71 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
 
 export const deserializeCampaignData = async (loadedState) => {
   console.log('[deserializeCampaignData] Starting deserialization and asset download...');
-  // Deep copy to avoid mutating the original state object received.
-  const state = JSON.parse(JSON.stringify(loadedState));
+  const state = JSON.parse(JSON.stringify(loadedState)); // Deep copy
   const newlyCreatedAssets = {};
   const downloadPromises = [];
+  const uniqueUrlsToDownload = new Map();
 
-  // Helper to check if a URL is a Vercel blob storage URL.
   const isVercelUrl = (url) => typeof url === 'string' && url.includes('blob.vercel-storage.com');
 
-  // Recursively traverses the state object to find and convert asset URLs.
-  const findAndConvertUrls = (obj) => {
-    if (!obj) return;
+  // 1. Recursively find all Vercel URLs to download.
+  const findUrls = (currentObj) => {
+    if (!currentObj || typeof currentObj !== 'object') {
+      return;
+    }
 
-    if (Array.isArray(obj)) {
-      // If it's an array, recurse into each item.
-      obj.forEach(findAndConvertUrls);
-    } else if (typeof obj === 'object') {
-      // If it's an object, check for properties that might contain asset URLs.
-      const urlFields = ['src', 'url'];
+    if (Array.isArray(currentObj)) {
+      currentObj.forEach(findUrls);
+      return;
+    }
 
-      for (const field of urlFields) {
-        if (obj[field] && isVercelUrl(obj[field])) {
-          // This is a URL that needs to be converted.
-          const downloadUrl = obj[field];
-
-          const promise = fetch(downloadUrl)
-            .then(response => {
-              if (!response.ok) {
-                throw new Error(`HTTP error ${response.status} fetching ${downloadUrl}`);
-              }
-              return response.blob();
-            })
-            .then(blob => {
-              // Create a local blob URL that the browser can render immediately.
-              const tempUrl = URL.createObjectURL(blob);
-              // Add the new blob to our map of assets.
-              newlyCreatedAssets[tempUrl] = blob;
-              // Replace the permanent URL with the temporary local blob URL in the state.
-              obj[field] = tempUrl;
-            })
-            .catch(error => {
-              console.error(`[deserializeCampaignData] Failed to download or process asset: ${downloadUrl}`, error);
-              toast.error(`Não foi possível carregar o recurso: ${error.message}`);
-              // If download fails, we leave the original URL in place.
-            });
-
-          downloadPromises.push(promise);
-        }
-      }
-
-      // After checking the known URL fields, recurse into all other properties of the object.
-      for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key) && !urlFields.includes(key)) {
-          findAndConvertUrls(obj[key]);
+    for (const key in currentObj) {
+      if (Object.prototype.hasOwnProperty.call(currentObj, key)) {
+        const value = currentObj[key];
+        if (isVercelUrl(value)) {
+          // Found a Vercel URL, store it for download.
+          if (!uniqueUrlsToDownload.has(value)) {
+            uniqueUrlsToDownload.set(value, { targets: [] });
+          }
+          uniqueUrlsToDownload.get(value).targets.push({ obj: currentObj, key });
+        } else {
+          // Recurse into nested objects/arrays.
+          findUrls(value);
         }
       }
     }
   };
 
-  // Start the recursive conversion process.
-  findAndConvertUrls(state);
+  findUrls(state);
 
-  // Wait for all download and conversion promises to complete.
+  // 2. Create download promises for all unique URLs.
+  for (const [downloadUrl, { targets }] of uniqueUrlsToDownload.entries()) {
+    const promise = fetch(downloadUrl)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error ${response.status} fetching ${downloadUrl}`);
+        }
+        return response.blob();
+      })
+      .then(blob => {
+        const tempUrl = URL.createObjectURL(blob);
+        newlyCreatedAssets[tempUrl] = blob;
+        // Update all occurrences of this URL with the new local blob URL.
+        targets.forEach(target => {
+          target.obj[target.key] = tempUrl;
+        });
+      })
+      .catch(error => {
+        console.error(`[deserializeCampaignData] Failed to download or process asset: ${downloadUrl}`, error);
+        toast.error(`Não foi possível carregar o recurso: ${error.message}`);
+      });
+    downloadPromises.push(promise);
+  }
+
+  // 3. Wait for all downloads to complete.
   await Promise.all(downloadPromises);
 
   console.log(`[deserializeCampaignData] Deserialization complete. ${Object.keys(newlyCreatedAssets).length} assets downloaded and converted.`);
-
-  // Return both the modified state and the map of newly created assets.
   return { finalState: state, newlyCreatedAssets };
 };
 
