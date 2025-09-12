@@ -33,7 +33,9 @@ import {
 } from '@mui/icons-material';
 import googleCloudTTSAPI from '../utils/googleCloudTTSAPI';
 import { useSettings } from '../context/SettingsContext';
+import { useCampaign } from '../context/CampaignContext';
 import ProgressModal from './ProgressModal';
+import { toast } from 'sonner';
 
 // Helper function to convert a Blob to a base64 data URL
 const blobToDataURL = (blob) => {
@@ -55,6 +57,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const { settings } = useSettings();
+  const { pendingAssets } = useCampaign();
   const currentTrackIndexRef = useRef(0);
   const audioRef = useRef(null);
   const isCancelledRef = useRef(false);
@@ -218,69 +221,87 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
     isCancelledRef.current = true;
   };
 
+  const getPlayableBlob = (audio) => {
+    // Priority 1: The blob property on the audio object itself (for newly generated audio)
+    if (audio.blob instanceof Blob) {
+      return audio.blob;
+    }
+    // Priority 2: Look in pendingAssets using the audio's URL (for loaded audio)
+    if (audio.url && audio.url.startsWith('blob:') && pendingAssets[audio.url] instanceof Blob) {
+      return pendingAssets[audio.url];
+    }
+    return null;
+  };
+
   const handlePlayPause = (index) => {
     if (currentlyPlaying === index) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      if (audioRef.current) audioRef.current.pause();
       speechSynthesis.cancel();
       setCurrentlyPlaying(null);
-    } else {
-      speechSynthesis.cancel();
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-      
-      const audio = audioData[index];
-      if (audio.source === 'google-tts' && audio.blob) {
-        const url = URL.createObjectURL(audio.blob);
-        audioRef.current = new Audio(url);
-        // Para áudios do Google TTS, a velocidade já está aplicada no áudio
-        audioRef.current.onended = () => {
-          setCurrentlyPlaying(null);
-        };
-        audioRef.current.play();
-      } else {
-        // Para áudios do browser, usar a velocidade original ou recriar com nova velocidade
-        const utterance = new SpeechSynthesisUtterance(audio.text);
-        utterance.lang = 'pt-BR';
-        utterance.rate = speechRate;
-        utterance.onended = () => {
-          setCurrentlyPlaying(null);
-        };
-        speechSynthesis.speak(utterance);
-      }
-      setCurrentlyPlaying(index);
+      return;
     }
+
+    speechSynthesis.cancel();
+    if (audioRef.current) audioRef.current.pause();
+
+    const audio = audioData[index];
+    const blobToPlay = getPlayableBlob(audio);
+
+    if (audio.source === 'google-tts' && blobToPlay) {
+      const url = URL.createObjectURL(blobToPlay);
+      audioRef.current = new Audio(url);
+      audioRef.current.onended = () => setCurrentlyPlaying(null);
+      audioRef.current.play();
+    } else if (audio.source === 'browser') {
+      const utterance = new SpeechSynthesisUtterance(audio.text);
+      utterance.lang = 'pt-BR';
+      utterance.rate = speechRate;
+      utterance.onended = () => setCurrentlyPlaying(null);
+      speechSynthesis.speak(utterance);
+    } else {
+      toast.error("Não foi possível encontrar os dados de áudio para reprodução.");
+      console.error("Failed to find playable blob for audio:", audio);
+      return;
+    }
+    setCurrentlyPlaying(index);
   };
 
   const playNextTrack = () => {
-    if (currentTrackIndexRef.current < audioData.length) {
-      const audio = audioData[currentTrackIndexRef.current];
-      if (audio.source === 'google-tts' && audio.blob) {
-        const url = URL.createObjectURL(audio.blob);
-        audioRef.current = new Audio(url);
-        audioRef.current.onended = () => {
-          setCurrentlyPlaying(null);
-          currentTrackIndexRef.current += 1;
-          playNextTrack();
-        };
-        audioRef.current.play();
-      } else {
-        const utterance = new SpeechSynthesisUtterance(audio.text);
-        utterance.lang = 'pt-BR';
-        utterance.rate = speechRate;
-        utterance.onend = () => {
-          setCurrentlyPlaying(null);
-          currentTrackIndexRef.current += 1;
-          playNextTrack();
-        };
-        speechSynthesis.speak(utterance);
-      }
-      setCurrentlyPlaying(currentTrackIndexRef.current);
-    } else {
+    if (currentTrackIndexRef.current >= audioData.length) {
       setIsPlayingAll(false);
+      setCurrentlyPlaying(null);
+      return;
     }
+
+    const audio = audioData[currentTrackIndexRef.current];
+    const blobToPlay = getPlayableBlob(audio);
+
+    if (audio.source === 'google-tts' && blobToPlay) {
+      const url = URL.createObjectURL(blobToPlay);
+      audioRef.current = new Audio(url);
+      audioRef.current.onended = () => {
+        currentTrackIndexRef.current += 1;
+        playNextTrack();
+      };
+      audioRef.current.play();
+    } else if (audio.source === 'browser') {
+      const utterance = new SpeechSynthesisUtterance(audio.text);
+      utterance.lang = 'pt-BR';
+      utterance.rate = speechRate;
+      utterance.onended = () => {
+        currentTrackIndexRef.current += 1;
+        playNextTrack();
+      };
+      speechSynthesis.speak(utterance);
+    } else {
+        // Skip unplayable track
+        console.warn("Skipping unplayable track:", audio);
+        currentTrackIndexRef.current += 1;
+        playNextTrack();
+        return;
+    }
+
+    setCurrentlyPlaying(currentTrackIndexRef.current);
   };
 
   const handlePlayAll = () => {
