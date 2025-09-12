@@ -45,6 +45,7 @@ const handler = async (req, res) => {
         return {
           addRandomSuffix: true,
           allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'audio/mpeg', 'video/webm', 'audio/webm', 'audio/wav'],
+          maximumFileSize: 524288000, // 500MB
           tokenPayload: JSON.stringify({ userId }),
           pathname: sanitizedPathname,
         };
