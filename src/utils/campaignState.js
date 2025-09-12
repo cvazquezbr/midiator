@@ -39,28 +39,57 @@ export const uploadAsset = async (blob, filename, campaignId, userId) => {
 export const serializeCampaignData = async (state, pendingAssets, userId, campaignId = null, onProgress = () => {}) => {
   console.log('[serializeCampaignData] Starting serialization and upload...');
   const cleanState = JSON.parse(JSON.stringify(state)); // Deep copy to avoid mutation
-  const uploadPromises = [];
-  const assetsToUpload = []; // Will store { obj, key, url }
+  const allPendingAssets = { ...pendingAssets }; // Use a mutable copy
 
-  // 1. Recursively find all assets that need uploading.
-  const findAssets = (currentObj) => {
+  // --- Step 1: Convert all `data:` URIs to `blob:` URIs ---
+  console.log('[serializeCampaignData] Step 1a: Converting data URIs to blobs...');
+  const convertDataUris = async (currentObj) => {
     if (!currentObj || typeof currentObj !== 'object') {
       return;
     }
+    if (Array.isArray(currentObj)) {
+      await Promise.all(currentObj.map(item => convertDataUris(item)));
+      return;
+    }
 
+    const promises = Object.keys(currentObj).map(async (key) => {
+      const value = currentObj[key];
+      if (typeof value === 'string' && value.startsWith('data:')) {
+        try {
+          const blob = await fetch(value).then(res => res.blob());
+          const blobUrl = URL.createObjectURL(blob);
+          allPendingAssets[blobUrl] = blob; // Add the new blob to our asset map
+          currentObj[key] = blobUrl; // Replace the data: URI with a blob: URI
+        } catch (error) {
+          console.error(`[serializeCampaignData] Failed to convert data URI to blob for key "${key}":`, error);
+          // Decide if you want to throw or just log the error
+        }
+      } else {
+        await convertDataUris(value); // Recurse
+      }
+    });
+    await Promise.all(promises);
+  };
+
+  await convertDataUris(cleanState);
+  console.log('[serializeCampaignData] Step 1a COMPLETE.');
+
+  // --- Step 2: Find all `blob:` URIs that need to be uploaded ---
+  const uploadPromises = [];
+  const assetsToUpload = []; // Will store { obj, key, url }
+
+  const findAssets = (currentObj) => {
+    if (!currentObj || typeof currentObj !== 'object') return;
     if (Array.isArray(currentObj)) {
       currentObj.forEach(findAssets);
       return;
     }
-
     for (const key in currentObj) {
       if (Object.prototype.hasOwnProperty.call(currentObj, key)) {
         const value = currentObj[key];
         if (typeof value === 'string' && value.startsWith('blob:')) {
-          // Found a blob URL, store its context.
           assetsToUpload.push({ obj: currentObj, key, url: value });
         } else {
-          // Recurse into nested objects/arrays.
           findAssets(value);
         }
       }
@@ -70,16 +99,21 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
   findAssets(cleanState);
   console.log(`[serializeCampaignData] Found ${assetsToUpload.length} assets to upload.`);
 
-  // 2. Create an array of upload promises for unique blob URLs.
+  // --- Step 3: Upload all unique blob URLs ---
   const uniqueUrlsToUpload = new Map();
   for (const asset of assetsToUpload) {
-    if (!uniqueUrlsToUpload.has(asset.url)) {
-      uniqueUrlsToUpload.set(asset.url, {
-        blob: pendingAssets[asset.url],
-        targets: [],
-      });
+    // Only upload if the blob actually exists in our map.
+    // This prevents trying to re-upload an already-persisted asset
+    // whose blob data is not in pendingAssets.
+    if (allPendingAssets[asset.url]) {
+      if (!uniqueUrlsToUpload.has(asset.url)) {
+        uniqueUrlsToUpload.set(asset.url, {
+          blob: allPendingAssets[asset.url],
+          targets: [],
+        });
+      }
+      uniqueUrlsToUpload.get(asset.url).targets.push({ obj: asset.obj, key: asset.key });
     }
-    uniqueUrlsToUpload.get(asset.url).targets.push({ obj: asset.obj, key: asset.key });
   }
 
   onProgress({ current: 0, total: uniqueUrlsToUpload.size });
@@ -111,7 +145,6 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
     }
   }
 
-  // 3. Execute all uploads in parallel and wait for them to complete.
   await Promise.all(uploadPromises);
 
   console.log('[serializeCampaignData] All uploads and serialization complete.');
