@@ -335,8 +335,15 @@ const FieldPositioner = ({
         const style = completeFieldStyles[header];
         if (!position || !position.visible) return null;
 
-        const record = csvData?.[currentPreviewIndex] ?? {};
-        const sampleData = record?.[header] !== undefined ? record[header] : `[${header}]`;
+        const record = csvData?.[currentPreviewIndex];
+
+        // Explicitly guard against a null or undefined record.
+        // This is the most direct way to prevent the "Cannot read properties of null" error.
+        if (!record) {
+          return null;
+        }
+
+        const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
 
         return {
           id: header,
