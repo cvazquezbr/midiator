@@ -294,36 +294,17 @@ INSTRUÇÕES DE FORMATAÇÃO DA SAÍDA (MUITO IMPORTANTE):
 A SUA RESPOSTA DEVE CONTER *APENAS E SOMENTE* UM BLOCO DE TEXTO FORMATADO COMO CSV, SEM NENHUM TEXTO ADICIONAL ANTES OU DEPOIS DO BLOCO CSV.
 O BLOCO CSV DEVE SER DELIMITADO EXATAMENTE POR TRÊS CRASE SEGUIDAS E A PALAVRA "csv" (```csv) NO INÍCIO, E TRÊS CRASE SEGUIDAS (```) NO FINAL.
 DENTRO DO BLOCO CSV:
-- CADA CAMPO EM CADA LINHA DEVE SER OBRIGATORIAMENTE ENVOLVIDO POR ASPAS DUPLAS ("").
-- A primeira linha DEVE SER o cabeçalho, com cada cabeçalho envolvido por aspas duplas: "Titulo";"Texto Principal";"Ponte para o Próximo";"prompt_imagem_carrossel"
-- As linhas subsequentes DEVERÃO ser os dados de cada elemento, com os campos separados por PONTO E VÍRGULA (;) e cada campo envolvido por aspas duplas.
-- NÃO inclua números de elemento ou qualquer outra coluna além das 4 especificadas.
-- NÃO inclua explicações, introduções, ou qualquer texto fora do bloco ```csv ... ```.
+- O delimitador de campo DEVE ser PONTO E VÍRGULA (;).
+- CADA CAMPO, incluindo o cabeçalho, DEVE ser OBRIGATORIAMENTE envolvido por ASPAS DUPLAS ("").
+- A primeira linha DEVE ser o cabeçalho: "Titulo";"Texto Principal";"Ponte para o Próximo";"prompt_imagem_carrossel"
+- TODAS as {promptNumRecords} linhas de dados subsequentes DEVEM seguir a mesma estrutura de 4 colunas.
+- NÃO inclua explicações ou qualquer texto fora do bloco ```csv ... ```.
 
 REQUISITOS PARA O CONTEÚDO DE CADA ELEMENTO (LINHA DO CSV):
-1. **Titulo** (Coluna 1):
-   - Máximo de 4 palavras.
-   - Precisa ser curto e impactante.
-   - Exemplo: "Segredo Revelado"
-2. **Texto Principal** (Coluna 2):
-   - Entre 120 e 180 caracteres.
-   - Adaptado do TEXTO BASE, com linguagem conversacional e direta.
-   - Deve conter 1 pergunta retórica para engajamento.
-   - Exemplo: "Sabia que 80% dos negócios falham nisso? Descubra como evitar esse erro..."
-3. **Ponte para o Próximo** (Coluna 3):
-   - Máximo de 40 caracteres.
-   - Criar curiosidade para o próximo elemento.
-   - Usar fórmula: Emoji + Chamada + Dica do próximo.
-   - No último elemento, substitua por uma Chamada para Ação (CTA) final.
-   - Exemplos:
-     → "Próximo: O passo que muda tudo!"
-     → "Siga para o segredo nº3 👇"
-4. **prompt_imagem_carrossel** (Coluna 4):
-   - Um prompt de texto detalhado para um modelo de geração de imagem (como DALL-E ou Midjourney).
-   - O prompt deve descrever uma imagem de fundo visualmente atraente e conceitual para um post de carrossel, sobre a qual os campos de texto seriam sobrepostos.
-   - A imagem descrita NÃO DEVE CONTER TEXTO.
-   - O prompt deve ser em inglês, para compatibilidade com os modelos de imagem.
-   - Exemplo: "A vibrant, abstract background with swirling gradients of blue and gold, representing the flow of data and innovation, with a soft, clean area for text overlay."
+1. **"Titulo"** (Coluna 1): Máximo de 4 palavras, curtas e impactantes.
+2. **"Texto Principal"** (Coluna 2): Entre 120-180 caracteres, adaptado do TEXTO BASE, com uma pergunta retórica.
+3. **"Ponte para o Próximo"** (Coluna 3): Máximo de 40 caracteres. Crie curiosidade para o próximo elemento. Para o último elemento, use este campo para uma Chamada para Ação (CTA) final, como "Gostou? Salve para mais!".
+4. **"prompt_imagem_carrossel"** (Coluna 4): Um prompt detalhado EM INGLÊS para um modelo de IA de imagem (DALL-E, Midjourney). A imagem NÃO PODE CONTER TEXTO. O prompt deve descrever uma imagem de fundo conceitual e visualmente atraente.
 
 ESTRUTURA NARRATIVA SUGERIDA:
 - Elemento 1: Dado impactante ou pergunta instigante extraída do início do TEXTO BASE.
@@ -335,13 +316,7 @@ TOM DE VOZ:
 - Urgência controlada ("Agora você pode...").
 - Toque de storytelling.
 
-Exemplo de como o BLOCO CSV deve se parecer na sua resposta (não inclua este exemplo na sua resposta final, apenas o bloco gerado):
-```csv
-"Titulo";"Texto Principal";"Ponte para o Próximo";"prompt_imagem_carrossel"
-"✨ Grande Novidade";"Descubra algo incrível que vai mudar seu dia! Você está pronto para a surpresa?";"➡️ Veja o próximo!";"A vibrant, abstract background with swirling gradients of blue and gold."
-"🎉 Outra Dica";"Continuando nossa jornada com mais um segredo; já se perguntou como isso é possível?";"CTA Final Aqui!";"An image of a brain with glowing neural pathways; symbolizing new knowledge."
-```
-Lembre-se: Sua resposta final deve conter APENAS o bloco ```csv ... ``` com os dados.'
+LEMBRE-SE: A estrutura do CSV é rígida. TODAS as {promptNumRecords} linhas devem ter exatamente 4 campos separados por ponto e vírgula e envoltos em aspas duas. Sua resposta final deve conter APENAS o bloco ```csv ... ``` com os dados.'
 )
 ON CONFLICT (name)
 DO UPDATE SET

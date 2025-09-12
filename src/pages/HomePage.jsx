@@ -1128,8 +1128,11 @@ function HomePage() {
 
             const newImage = { ...createNewImageElement(tempUrl), ...sourceStyle, visible: true };
             const pageImages = effectivePageTemplate.images || [];
-            // This now APPENDS the new image instead of replacing it.
-            const finalImages = [...pageImages, newImage];
+
+            // Se houver imagens, substitui a primeira. Caso contrário, adiciona a nova imagem.
+            const finalImages = pageImages.length > 0
+                ? [newImage, ...pageImages.slice(1)]
+                : [newImage];
 
             const tempPageTemplate = { ...effectivePageTemplate, images: finalImages };
             effectivePageTemplate = tempPageTemplate; // Update for this generation pass
