@@ -223,6 +223,32 @@ const Publisher = ({
   const [publishingStatusLi, setPublishingStatusLi] = useState('');
   const [publishedPostUrlLi, setPublishedPostUrlLi] = useState(null);
 
+  const handleVideoError = (e) => {
+    const error = e.target.error;
+    let errorMessage = 'Ocorreu um erro desconhecido no player de vídeo.';
+    if (error) {
+        switch (error.code) {
+            case error.MEDIA_ERR_ABORTED:
+                errorMessage = 'A pré-visualização do vídeo foi abortada.';
+                break;
+            case error.MEDIA_ERR_NETWORK:
+                errorMessage = 'Ocorreu um erro de rede ao carregar a pré-visualização do vídeo.';
+                break;
+            case error.MEDIA_ERR_DECODE:
+                errorMessage = 'Ocorreu um erro ao decodificar o vídeo para a pré-visualização. O arquivo pode estar corrompido.';
+                break;
+            case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                errorMessage = 'O formato do vídeo não é suportado para pré-visualização neste navegador.';
+                break;
+            default:
+                errorMessage = `Erro na pré-visualização do vídeo: ${error.message} (Código: ${error.code})`;
+                break;
+        }
+    }
+    console.error('Video Preview Error:', errorMessage, e);
+    toast.error(errorMessage);
+  };
+
     useEffect(() => {
         if (campaignContent) {
             const postText = [
@@ -739,7 +765,14 @@ const Publisher = ({
                           {previewedMedia.type === 'image' ? (
                             <img src={previewedMedia.url} alt="Preview" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
                           ) : (
-                            <video src={previewedMedia.url} controls style={{ maxHeight: '100%', maxWidth: '100%' }} />
+                            <video
+                              src={previewedMedia.url}
+                              controls
+                              style={{ maxHeight: '100%', maxWidth: '100%' }}
+                              onError={handleVideoError}
+                              onStalled={handleVideoError}
+                              onSuspend={handleVideoError}
+                            />
                           )}
                         </Box>
                       </>
