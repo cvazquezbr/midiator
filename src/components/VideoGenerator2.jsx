@@ -371,9 +371,18 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       if (hasAudio) {
         await Promise.all(
           generatedAudioData.map(async (audio, i) => {
+            let audioSource = null;
             if (audio.blob) {
-              const audioData = await fetchFile(URL.createObjectURL(audio.blob));
-              await ffmpeg.writeFile(`audio${i}.mp3`, audioData);
+              audioSource = await fetchFile(URL.createObjectURL(audio.blob));
+            } else if (audio.url) {
+              try {
+                audioSource = await fetchFile(audio.url);
+              } catch (e) {
+                console.warn(`Failed to fetch audio from URL for slide ${i}: ${audio.url}`, e);
+              }
+            }
+            if (audioSource) {
+              await ffmpeg.writeFile(`audio${i}.mp3`, audioSource);
             }
           })
         );
@@ -638,9 +647,20 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
     const inputs = ["-loop", "1", "-t", duration.toString(), "-i", imgFile];
     if (hasAudio) {
-      const audioBlob = await fetchFile(URL.createObjectURL(audioData[0].blob));
-      await ffmpeg.writeFile(audioFile, audioBlob);
-      inputs.push("-i", audioFile);
+      let audioSource = null;
+      if (audioData[0].blob) {
+        audioSource = await fetchFile(URL.createObjectURL(audioData[0].blob));
+      } else if (audioData[0].url) {
+        try {
+          audioSource = await fetchFile(audioData[0].url);
+        } catch (e) {
+          console.warn(`Failed to fetch single audio from URL: ${audioData[0].url}`, e);
+        }
+      }
+      if (audioSource) {
+        await ffmpeg.writeFile(audioFile, audioSource);
+        inputs.push("-i", audioFile);
+      }
     }
 
     const firstImage = new Image();
