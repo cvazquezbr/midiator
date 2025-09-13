@@ -253,11 +253,11 @@ function HomePage() {
       });
     setGeneratedPagesData(sanitizedPagesData);
 
-    // FIX: Filter out invalid audio data on load to prevent crashes
+    // Mantém o áudio carregado se ele tiver uma URL, a duração será calculada depois.
     setGeneratedAudioData(
-      Array.isArray(state.generatedAudioData)
-        ? state.generatedAudioData.filter(a => a && typeof a.duration === 'number')
-        : []
+        Array.isArray(state.generatedAudioData)
+            ? state.generatedAudioData.filter(a => a && a.url)
+            : []
     );
     setGeneratedVideosData(Array.isArray(state.generatedVideosData) ? state.generatedVideosData : []);
     setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
@@ -689,6 +689,49 @@ function HomePage() {
 
     processVideos();
   }, [generatedVideosData]);
+
+  useEffect(() => {
+    const processAudios = async () => {
+      const audiosToProcess = generatedAudioData.filter(a => a.url && !a.duration);
+      if (audiosToProcess.length === 0) return;
+
+      const promises = audiosToProcess.map(audioData => {
+        return new Promise((resolve) => {
+          const audioElement = document.createElement('audio');
+          audioElement.preload = 'metadata';
+
+          audioElement.onloadedmetadata = () => {
+            resolve({
+              ...audioData,
+              duration: audioElement.duration
+            });
+          };
+
+          audioElement.onerror = (e) => {
+            console.error('Error loading audio metadata for', audioData.url, e);
+            resolve(audioData); // Resolve with original data so we don't lose the audio
+          };
+
+          audioElement.src = audioData.url;
+        });
+      });
+
+      const processedAudios = await Promise.all(promises);
+
+      setGeneratedAudioData(currentAudios => {
+        const newCurrentAudios = [...currentAudios];
+        processedAudios.forEach(processedAudio => {
+            const index = newCurrentAudios.findIndex(a => a.url === processedAudio.url);
+            if (index !== -1) {
+                newCurrentAudios[index] = processedAudio;
+            }
+        });
+        return newCurrentAudios;
+      });
+    };
+
+    processAudios();
+  }, [generatedAudioData, setGeneratedAudioData]);
 
   const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Modelo de Página', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Edição de Páginas', description: 'Gere as páginas finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish }, { label: 'Monitorar', description: 'Acompanhe as estatísticas de suas publicações.', icon: BarChart } ];
   const handleCreateNewCampaign = () => {
