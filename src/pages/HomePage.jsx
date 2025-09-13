@@ -967,6 +967,11 @@ function HomePage() {
     });
   }, []);
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => { setCsvData(prevCsvData => { if (recordIndex < 0 || recordIndex >= prevCsvData.length) { return prevCsvData; } return prevCsvData.map((row, idx) => { if (idx === recordIndex) { return updatedRecord; } return row; }); }); }, [setCsvData]);
+
+  const addAssetToPendingQueue = (url, blob) => {
+    setPendingAssets(prev => ({ ...prev, [url]: blob }));
+  };
+
   const handleGenerateCampaignContent = async (regenerate = false) => {
     setIsGeneratingCampaign(true);
     setCampaignGenerationFailed(false);
@@ -1431,6 +1436,7 @@ function HomePage() {
                     generatedPages={generatedPagesData}
                     generatedAudioData={generatedAudioData}
                     onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)}
+                    onNewAsset={addAssetToPendingQueue}
                   />
                 )}
                 {activeStep === 7 && (
