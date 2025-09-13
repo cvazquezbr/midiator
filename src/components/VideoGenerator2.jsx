@@ -929,6 +929,33 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     setSnackbarOpen(false);
   };
 
+  const handleVideoError = (e) => {
+    const error = e.target.error;
+    let errorMessage = 'Ocorreu um erro desconhecido no player de vídeo.';
+    if (error) {
+        switch (error.code) {
+            case error.MEDIA_ERR_ABORTED:
+                errorMessage = 'A reprodução do vídeo foi abortada.';
+                break;
+            case error.MEDIA_ERR_NETWORK:
+                errorMessage = 'Ocorreu um erro de rede ao carregar o vídeo.';
+                break;
+            case error.MEDIA_ERR_DECODE:
+                errorMessage = 'Ocorreu um erro ao decodificar o vídeo. O arquivo pode estar corrompido.';
+                break;
+            case error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                errorMessage = 'O formato do vídeo não é suportado por este navegador.';
+                break;
+            default:
+                errorMessage = `Erro no player de vídeo: ${error.message} (Código: ${error.code})`;
+                break;
+        }
+    }
+    console.error('Video Player Error:', errorMessage, e);
+    setError(errorMessage);
+    setSnackbarOpen(true);
+  };
+
   const handleReload = () => {
     window.location.reload();
   };
@@ -1330,6 +1357,9 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
                   autoPlay
                   loop
                   controls
+                  onError={handleVideoError}
+                  onStalled={handleVideoError}
+                  onSuspend={handleVideoError}
                   style={{
                     width: '100%',
                     height: '100%',
