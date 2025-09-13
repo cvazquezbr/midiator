@@ -374,11 +374,26 @@ function HomePage() {
       return;
     }
 
+    const sanitizeMediaArray = (arr) => {
+      if (!Array.isArray(arr)) return [];
+      return arr.map(item => {
+        const { blob, file, ...rest } = item;
+        return rest;
+      });
+    };
+
     const sanitizedPagesData = generatedPagesData.map(page => {
-      // Keep the permanent URL, but remove temporary client-side data
       const { dataUrl, blob, ...rest } = page;
       return rest;
     });
+
+    const sanitizedBrandElements = sanitizeMediaArray(brandElements);
+    const sanitizedAudioData = sanitizeMediaArray(generatedAudioData);
+    const sanitizedVideosData = sanitizeMediaArray(generatedVideosData);
+    const sanitizedPageTemplate = {
+      ...pageTemplate,
+      images: sanitizeMediaArray(pageTemplate.images),
+    };
 
     const campaignDataToSave = {
       activeStep,
@@ -394,12 +409,12 @@ function HomePage() {
       fieldPositions,
       fieldStyles,
       templateFieldStyles,
-      brandElements,
-      pageTemplate,
+      brandElements: sanitizedBrandElements,
+      pageTemplate: sanitizedPageTemplate,
       generatedPageUrl,
       generatedPagesData: sanitizedPagesData,
-      generatedAudioData,
-      generatedVideosData,
+      generatedAudioData: sanitizedAudioData,
+      generatedVideosData: sanitizedVideosData,
       standardsColors,
       csvData,
       csvHeaders,
