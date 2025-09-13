@@ -3,6 +3,20 @@ import { applyColorHighlight } from './filterUtils';
 
 // Helper functions moved from PageGeneratorFrontendOnly.jsx and adapted for utility use
 
+export const urlToBlob = async (url) => {
+  try {
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    return blob;
+  } catch (error) {
+    console.error(`[urlToBlob] Error fetching URL ${url}:`, error);
+    throw error;
+  }
+};
+
 export const dataURLtoBlob = (dataurl) => {
     if (!dataurl) return null;
     const arr = dataurl.split(',');
