@@ -18,7 +18,7 @@ import NarrationSettings from './VideoGenerator/NarrationSettings';
 import Preview from './VideoGenerator/Preview';
 import SlidesSettings from './VideoGenerator/SlidesSettings';
 
-const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, onVideoGenerated }) => {
+const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, onVideoGenerated, onNewAsset }) => {
   const [video, setVideo] = useState(null);
   const [videos, setVideos] = useState([]);
   const [error, setError] = useState(null);
@@ -580,7 +580,11 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       const url = URL.createObjectURL(blob);
       setVideo(url);
       if (onVideoGenerated) {
-        onVideoGenerated([{ blob, url: url, name: `video-${Date.now()}.mp4` }]);
+        const videoData = { blob, url: url, name: `video-${Date.now()}.mp4` };
+        onVideoGenerated([videoData]);
+        if (onNewAsset) {
+          onNewAsset(url, blob);
+        }
       }
     } catch (err) {
       console.error("Erro na geração do vídeo:", err);
@@ -614,8 +618,10 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       try {
         const videoBlob = await generateSingleVideo(imageData, audioData, i);
         const videoUrl = URL.createObjectURL(videoBlob);
-        const dataUrl = await blobToDataURL(videoBlob);
-        const newVideoData = { blob: videoBlob, url: dataUrl, name: `video_${i + 1}.mp4` };
+        if (onNewAsset) {
+          onNewAsset(videoUrl, videoBlob);
+        }
+        const newVideoData = { blob: videoBlob, url: videoUrl, name: `video_${i + 1}.mp4` };
         allGeneratedVideos.push(newVideoData);
         setVideos(prev => [...prev, { url: videoUrl, name: `video_${i + 1}.mp4` }]);
       } catch (err) {
@@ -888,8 +894,11 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       const url = URL.createObjectURL(blob);
       setVideo(url);
       if (onVideoGenerated) {
-        const dataUrl = await blobToDataURL(blob);
-        onVideoGenerated([{ blob, url: dataUrl, name: `video-narrado-${Date.now()}.mp4` }]);
+        const videoData = { blob, url: url, name: `video-narrado-${Date.now()}.mp4` };
+        onVideoGenerated([videoData]);
+        if (onNewAsset) {
+          onNewAsset(url, blob);
+        }
       }
 
     } catch (err) {
