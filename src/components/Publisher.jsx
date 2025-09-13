@@ -655,7 +655,7 @@ const Publisher = ({
                           <ListItemIcon>
                             <Checkbox
                               edge="start"
-                              checked={media.type === 'image' ? !!selectedImages[index] : !!selectedVideos[index - generatedImagesData.length]}
+                              checked={media.type === 'image' ? !!selectedImages[index] : !!selectedVideos[index - generatedPagesData.length]}
                               onChange={(e) => {
                                 const isChecked = e.target.checked;
                                 if (media.type === 'image') {
