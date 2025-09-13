@@ -324,13 +324,16 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const handleOpenGeneratedPageEditor = (pageFromClosure, index) => {
-    const template = pageFromClosure.customPageTemplate || pageTemplate;
-    // Use a shallow copy to prevent deep copy from breaking blob URLs
-    const templateCopy = {
-      ...template,
-      images: template.images ? [...template.images] : []
+    // Merge the base template with the custom page template to get the final version
+    const finalTemplate = {
+      ...pageTemplate, // Start with the global template
+      ...(pageFromClosure.customPageTemplate || {}), // Override with custom properties
     };
-    setPageTemplateForEditor(templateCopy);
+
+    // Ensure the 'images' property is always a shallow-copied array
+    finalTemplate.images = [...(finalTemplate.images || [])];
+
+    setPageTemplateForEditor(finalTemplate);
     setEditingGeneratedPageIndex(index);
     setShowGeneratedPageEditor(true);
   };
