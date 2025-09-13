@@ -13,6 +13,7 @@ import ProgressModal from './ProgressModal';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
 
+import { blobToDataURL } from '../utils/fileUtils';
 import NarrationSettings from './VideoGenerator/NarrationSettings';
 import Preview from './VideoGenerator/Preview';
 import SlidesSettings from './VideoGenerator/SlidesSettings';
@@ -570,7 +571,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       const url = URL.createObjectURL(blob);
       setVideo(url);
       if (onVideoGenerated) {
-        onVideoGenerated([{ blob, url, name: `video-${Date.now()}.mp4` }]);
+        const dataUrl = await blobToDataURL(blob);
+        onVideoGenerated([{ blob, url: dataUrl, name: `video-${Date.now()}.mp4` }]);
       }
     } catch (err) {
       console.error("Erro na geração do vídeo:", err);
@@ -604,7 +606,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       try {
         const videoBlob = await generateSingleVideo(imageData, audioData, i);
         const videoUrl = URL.createObjectURL(videoBlob);
-        const newVideoData = { blob: videoBlob, url: videoUrl, name: `video_${i + 1}.mp4` };
+        const dataUrl = await blobToDataURL(videoBlob);
+        const newVideoData = { blob: videoBlob, url: dataUrl, name: `video_${i + 1}.mp4` };
         allGeneratedVideos.push(newVideoData);
         setVideos(prev => [...prev, { url: videoUrl, name: `video_${i + 1}.mp4` }]);
       } catch (err) {
@@ -717,12 +720,13 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       const chunks = [];
 
       recorder.ondataavailable = (e) => chunks.push(e.data);
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         const blob = new Blob(chunks, { type: 'video/webm' });
         const videoUrl = URL.createObjectURL(blob);
         setVideo(videoUrl);
         if (onVideoGenerated) {
-          onVideoGenerated([{ blob, url: videoUrl, name: `video-compat-${Date.now()}.webm` }]);
+          const dataUrl = await blobToDataURL(blob);
+          onVideoGenerated([{ blob, url: dataUrl, name: `video-compat-${Date.now()}.webm` }]);
         }
       };
 
@@ -865,7 +869,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       const url = URL.createObjectURL(blob);
       setVideo(url);
       if (onVideoGenerated) {
-        onVideoGenerated([{ blob, url, name: `video-narrado-${Date.now()}.mp4` }]);
+        const dataUrl = await blobToDataURL(blob);
+        onVideoGenerated([{ blob, url: dataUrl, name: `video-narrado-${Date.now()}.mp4` }]);
       }
 
     } catch (err) {

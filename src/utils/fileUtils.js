@@ -1,4 +1,18 @@
 /**
+ * Converts a Blob object to a Base64 Data URL.
+ * @param {Blob} blob The blob to convert.
+ * @returns {Promise<string>} A promise that resolves with the data URL.
+ */
+export const blobToDataURL = (blob) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+/**
  * Fetches the example CSV file from the public folder and triggers a download.
  */
 export const downloadExampleCsv = async () => {
