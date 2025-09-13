@@ -321,8 +321,9 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
 
   const handleDownload = (index) => {
     const audio = audioData[index];
-    if (audio.blob) {
-      const url = URL.createObjectURL(audio.blob);
+    const blob = getPlayableBlob(audio);
+    if (blob) {
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `audio_${index + 1}.mp3`;
@@ -334,8 +335,9 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
 
   const handleDownloadAll = () => {
     audioData.forEach((audio, index) => {
-      if (audio.blob) {
-        const url = URL.createObjectURL(audio.blob);
+      const blob = getPlayableBlob(audio);
+      if (blob) {
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `audio_${index + 1}.mp3`;
@@ -445,7 +447,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
                   <Button
                     variant="outlined"
                     onClick={handleDownloadAll}
-                    disabled={isGenerating || audioData.some(a => !a.blob)}
+                    disabled={isGenerating || audioData.some(a => !getPlayableBlob(a))}
                     startIcon={<CloudDownload />}
                     sx={{ ml: 2 }}
                   >
@@ -527,7 +529,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
                         </IconButton>
                         <Tooltip title="Baixar áudio (somente Google TTS)">
                           <span>
-                            <IconButton onClick={() => handleDownload(index)} disabled={!audio.blob} size="small">
+                            <IconButton onClick={() => handleDownload(index)} disabled={!getPlayableBlob(audio)} size="small">
                               <SaveAlt />
                             </IconButton>
                           </span>
