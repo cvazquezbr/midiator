@@ -494,52 +494,64 @@ const Publisher = ({
     setPublishedPostUrlLi(null);
 
     try {
-      let imageUrns = [];
-      const selectedImageIndexes = Object.keys(selectedImages).filter(index => selectedImages[index]);
+        const authorUrn = `urn:li:${selectedTarget.type === 'organization' ? 'organization' : 'person'}:${selectedTarget.id}`;
+        let videoUrn = null;
+        let imageUrns = [];
 
-      if (selectedImageIndexes.length > 0) {
-        setPublishingStatusLi('Preparando imagens para upload...');
-        const toastId = toast.loading("Preparando imagens para o upload...");
+        const selectedVideoIndexes = Object.keys(selectedVideos).filter(index => selectedVideos[index]);
+        const selectedImageIndexes = Object.keys(selectedImages).filter(index => selectedImages[index]);
 
-        const imageBlobsToUpload = await Promise.all(
-          selectedImageIndexes.map(async (index, i) => {
-            const media = unifiedMedia[parseInt(index)];
-            if (media.blob) {
-              return media.blob;
+        if (selectedVideoIndexes.length > 0) {
+            const videoIndex = parseInt(selectedVideoIndexes[0]);
+            const videoData = generatedVideosData[videoIndex];
+
+            if (!videoData || !videoData.blob) {
+                throw new Error("Os dados do vídeo selecionado (blob) não foram encontrados. Tente gerar o vídeo novamente.");
             }
-            toast.info(`Baixando imagem ${i + 1}/${selectedImageIndexes.length}...`);
-            try {
-              const blob = await urlToBlob(media.url);
-              return blob;
-            } catch (e) {
-              toast.error(`Falha ao baixar a imagem ${i + 1}.`);
-              console.error(`Failed to fetch blob for ${media.url}`, e);
-              return null; // Return null on failure
+            if (videoData.blob.size > 200 * 1024 * 1024) { // 200 MB limit
+                throw new Error(`O vídeo é muito grande (${formatBytes(videoData.blob.size)}). O limite do LinkedIn é 200MB.`);
             }
-          })
-        );
 
-        toast.dismiss(toastId);
+            videoUrn = await uploadVideoForLinkedIn(settings?.linkedin, videoData.blob, authorUrn, setPublishingStatusLi);
+        } else if (selectedImageIndexes.length > 0) {
+            setPublishingStatusLi('Preparando imagens para upload...');
+            const toastId = toast.loading("Preparando imagens para o upload...");
 
-        // Check if all blobs were fetched successfully
-        if (imageBlobsToUpload.some(blob => !blob)) {
-            throw new Error("Falha ao baixar uma ou mais imagens. Verifique o console para detalhes e tente novamente.");
+            const imageBlobsToUpload = await Promise.all(
+              selectedImageIndexes.map(async (index, i) => {
+                const media = unifiedMedia[parseInt(index)];
+                if (media.blob) return media.blob;
+
+                toast.info(`Baixando imagem ${i + 1}/${selectedImageIndexes.length}...`);
+                try {
+                  const blob = await urlToBlob(media.url);
+                  return blob;
+                } catch (e) {
+                  toast.error(`Falha ao baixar a imagem ${i + 1}.`);
+                  console.error(`Failed to fetch blob for ${media.url}`, e);
+                  return null;
+                }
+              })
+            );
+            toast.dismiss(toastId);
+
+            if (imageBlobsToUpload.some(blob => !blob)) {
+                throw new Error("Falha ao baixar uma ou mais imagens. Verifique o console e tente novamente.");
+            }
+            imageUrns = await uploadImagesForLinkedIn(settings?.linkedin, imageBlobsToUpload, authorUrn, setPublishingStatusLi);
         }
 
-        const authorUrn = `urn:li:${selectedTarget.type === 'organization' ? 'organization' : 'person'}:${selectedTarget.id}`;
+        setPublishingStatusLi('Criando a publicação...');
+        const campaignData = {
+            content: content.trim(),
+            targetId: selectedTarget.id,
+            targetType: selectedTarget.type,
+            images: imageUrns,
+            video: videoUrn, // Pass the video URN here
+            title: campaignContent?.titulo || 'Vídeo'
+        };
 
-        imageUrns = await uploadImagesForLinkedIn(settings?.linkedin, imageBlobsToUpload, authorUrn, setPublishingStatusLi);
-      }
-
-      setPublishingStatusLi('Criando a publicação...');
-      const campaignData = {
-        content: content.trim(),
-        targetId: selectedTarget.id,
-        targetType: selectedTarget.type,
-        images: imageUrns,
-      };
-
-      const result = await publishToLinkedIn(campaignData, settings?.linkedin);
+        const result = await publishToLinkedIn(campaignData, settings?.linkedin);
       const postLink = result.id ? `https://www.linkedin.com/feed/update/${result.id}/` : null;
 
       setPublishingStatusLi('Publicado com sucesso!');

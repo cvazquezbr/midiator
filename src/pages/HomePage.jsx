@@ -646,6 +646,50 @@ function HomePage() {
     handleLinkedInRedirect();
   }, [settings.linkedin, updateSetting, saveSettings]);
 
+  useEffect(() => {
+    const processVideos = async () => {
+      const videosToProcess = generatedVideosData.filter(v => v.url && !v.duration);
+      if (videosToProcess.length === 0) return;
+
+      const promises = videosToProcess.map(videoData => {
+        return new Promise((resolve) => {
+          const videoElement = document.createElement('video');
+          videoElement.preload = 'metadata';
+
+          videoElement.onloadedmetadata = () => {
+            resolve({
+              ...videoData,
+              duration: videoElement.duration
+            });
+          };
+
+          videoElement.onerror = (e) => {
+            console.error('Error loading video metadata for', videoData.url, e);
+            // Resolve with original data so we don't lose the video
+            resolve(videoData);
+          };
+
+          videoElement.src = videoData.url;
+        });
+      });
+
+      const processedVideos = await Promise.all(promises);
+
+      setGeneratedVideosData(currentVideos => {
+        const newCurrentVideos = [...currentVideos];
+        processedVideos.forEach(processedVideo => {
+            const index = newCurrentVideos.findIndex(v => v.url === processedVideo.url);
+            if (index !== -1) {
+                newCurrentVideos[index] = processedVideo;
+            }
+        });
+        return newCurrentVideos;
+      });
+    };
+
+    processVideos();
+  }, [generatedVideosData]);
+
   const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Modelo de Página', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Edição de Páginas', description: 'Gere as páginas finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish }, { label: 'Monitorar', description: 'Acompanhe as estatísticas de suas publicações.', icon: BarChart } ];
   const handleCreateNewCampaign = () => {
     applyAppState({}); // This will reset most state

@@ -150,6 +150,81 @@ export const publishToLinkedIn = async (campaignData, linkedinConfig) => {
 // If media uploads are still a feature, the proxy and this client will need to be updated.
 // For now, focusing on the core task: fixing profile listing and text publishing.
 
+const blobToBase64 = (blob) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+};
+
+export const uploadVideoForLinkedIn = async (linkedinConfig, videoBlob, authorUrn, setStatus) => {
+    if (!linkedinConfig || !linkedinConfig.accessToken) {
+        throw new Error('LinkedIn configuration or Access Token not found.');
+    }
+    if (!videoBlob) {
+        throw new Error('Video blob is required.');
+    }
+
+    const api = new LinkedInAPI(linkedinConfig.accessToken);
+
+    // Step 1: Initialize Upload
+    setStatus('Iniciando upload de vídeo...');
+    const initializeResponse = await api._proxyFetch('initializeVideoUpload', {
+        payload: { "initializeUploadRequest": { "owner": authorUrn, "fileSizeBytes": videoBlob.size, "videoPlayStats": { "autoPlay": true } } }
+    });
+    const { video: videoUrn, uploadInstructions, mediaArtifact } = initializeResponse;
+    if (!videoUrn || !uploadInstructions || uploadInstructions.length === 0) {
+        throw new Error('A resposta de inicialização do upload de vídeo é inválida.');
+    }
+
+    // Step 2: Upload Parts
+    const etags = [];
+    for (const instruction of uploadInstructions) {
+        const { uploadUrl, firstByte, lastByte } = instruction;
+        const partSize = lastByte - firstByte + 1;
+        setStatus(`Fazendo upload da parte ${etags.length + 1}/${uploadInstructions.length} do vídeo...`);
+
+        const videoPartBlob = videoBlob.slice(firstByte, lastByte + 1);
+        const videoPartBase64 = await blobToBase64(videoPartBlob);
+
+        const uploadResponse = await api._proxyFetch('uploadVideo', {
+            uploadUrl,
+            videoBase64: videoPartBase64,
+            videoContentType: videoBlob.type
+        });
+        etags.push(uploadResponse.eTag);
+    }
+
+    // Step 3: Finalize Upload
+    setStatus('Finalizando upload do vídeo...');
+    await api._proxyFetch('finalizeVideoUpload', {
+        payload: { "finalizeUploadRequest": { "video": videoUrn, "uploadToken": "", "uploadedPartIds": etags } }
+    });
+
+    // Step 4: Wait for Processing
+    setStatus('Aguardando processamento do vídeo pelo LinkedIn...');
+    let videoStatus = '';
+    let attempts = 0;
+    const maxAttempts = 20; // Poll for 2 minutes max (20 * 6s = 120s)
+    while (videoStatus !== 'AVAILABLE' && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 6000)); // Wait 6 seconds
+        const statusResponse = await api._proxyFetch('checkVideoStatus', { videoUrn });
+        videoStatus = statusResponse.status;
+        attempts++;
+        setStatus(`Verificando status do vídeo... (${videoStatus})`);
+    }
+
+    if (videoStatus !== 'AVAILABLE') {
+        throw new Error(`O vídeo não ficou disponível a tempo. Status final: ${videoStatus}`);
+    }
+
+    setStatus('Vídeo pronto para publicação!');
+    return videoUrn;
+};
+
+
 export const uploadImagesForLinkedIn = async (linkedinConfig, imageBlobs, authorUrn, setStatus) => {
   if (!linkedinConfig || !linkedinConfig.accessToken) {
     throw new Error('LinkedIn configuration or Access Token not found.');
