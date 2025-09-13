@@ -625,6 +625,7 @@ const PageGeneratorFrontendOnly = ({
 
       {pageToEdit && (
         <PageEditor
+          key={editingGeneratedPageIndex}
           open={showGeneratedPageEditor}
           onClose={handleCloseGeneratedPageEditor}
           pageData={pageToEdit}
