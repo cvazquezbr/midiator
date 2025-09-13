@@ -831,7 +831,7 @@ function HomePage() {
       case 2: return campaignContent !== null;
       case 3: return csvData.length > 0;
       case 4: return true; // Always allow proceeding to formatting step
-      case 5: if (generatedPagesData.length === 0 || !generatedPagesData.every(img => img.blob)) { toast.error("Por favor, gere todas as páginas na etapa 4 antes de prosseguir."); return false; } return true;
+      case 5: if (generatedPagesData.length === 0 || !generatedPagesData.every(img => img.blob || img.url)) { toast.error("Por favor, gere todas as páginas na etapa 4 antes de prosseguir."); return false; } return true;
       default: return true;
     }
   };
