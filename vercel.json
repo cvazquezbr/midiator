@@ -6,7 +6,14 @@
     }
   ],
   "functions": {
+    "api/campaigns/**": {
+      "maxDuration": 45,
+      "memory": 1024,
+      "bodyLimit": "4.5mb"
+    },
     "api/upload.js": {
+      "maxDuration": 45,
+      "memory": 1024,
       "includeFiles": "api/node_modules/@vercel/blob/**"
     }
   }
