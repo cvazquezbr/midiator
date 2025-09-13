@@ -580,8 +580,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       const url = URL.createObjectURL(blob);
       setVideo(url);
       if (onVideoGenerated) {
-        const dataUrl = await blobToDataURL(blob);
-        onVideoGenerated([{ blob, url: dataUrl, name: `video-${Date.now()}.mp4` }]);
+        onVideoGenerated([{ blob, url: url, name: `video-${Date.now()}.mp4` }]);
       }
     } catch (err) {
       console.error("Erro na geração do vídeo:", err);
