@@ -44,6 +44,7 @@ import { drawAndComposeImage, dataURLtoBlob, wrapTextInArea, applyTextEffects, d
 import { createNewImageElement } from '../utils/elementFactory';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useCampaign } from '../context/CampaignContext';
+import { safeDeepClone } from '../lib/utils';
 
 const PageGeneratorFrontendOnly = ({
   colorPalette,
@@ -628,7 +629,7 @@ const PageGeneratorFrontendOnly = ({
           key={editingGeneratedPageIndex}
           open={showGeneratedPageEditor}
           onClose={handleCloseGeneratedPageEditor}
-          pageData={pageToEdit}
+          pageData={safeDeepClone(pageToEdit)}
           onSave={handleSaveIndividualModifications}
           colorPalette={colorPalette}
           standardsColors={standardsColors}
