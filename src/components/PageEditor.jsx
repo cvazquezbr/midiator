@@ -19,6 +19,7 @@ import TextEditorDialog from './TextEditorDialog';
 import { createNewImageElement } from '../utils/elementFactory';
 import { usePageData } from '../hooks/usePageData';
 import { useCampaign } from '../context/CampaignContext';
+import { safeDeepClone } from '../lib/utils';
 
 const COMPLETE_DEFAULT_STYLE = {
   fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
@@ -95,7 +96,7 @@ const PageEditor = ({
       } = pageDataFromHook;
 
       setEditedPositions(JSON.parse(JSON.stringify(effectiveFieldPositions)));
-      setEditedBrandElements(JSON.parse(JSON.stringify(effectiveBrandElements)));
+      setEditedBrandElements(safeDeepClone(effectiveBrandElements));
       setEditedRecord(JSON.parse(JSON.stringify(record)));
 
       const newEditedStyles = {};
