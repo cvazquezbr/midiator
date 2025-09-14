@@ -172,7 +172,7 @@ export const uploadVideoForLinkedIn = async (linkedinConfig, videoBlob, authorUr
     // Step 1: Initialize Upload
     setStatus('Iniciando upload de vídeo...');
     const initializeResponse = await api._proxyFetch('initializeVideoUpload', {
-        payload: { "initializeUploadRequest": { "owner": authorUrn, "fileSizeBytes": videoBlob.size, "videoPlayStats": { "autoPlay": true } } }
+        payload: { "initializeUploadRequest": { "owner": authorUrn, "fileSizeBytes": videoBlob.size } }
     });
     const { video: videoUrn, uploadInstructions, mediaArtifact } = initializeResponse;
     if (!videoUrn || !uploadInstructions || uploadInstructions.length === 0) {
@@ -183,18 +183,32 @@ export const uploadVideoForLinkedIn = async (linkedinConfig, videoBlob, authorUr
     const etags = [];
     for (const instruction of uploadInstructions) {
         const { uploadUrl, firstByte, lastByte } = instruction;
-        const partSize = lastByte - firstByte + 1;
         setStatus(`Fazendo upload da parte ${etags.length + 1}/${uploadInstructions.length} do vídeo...`);
 
         const videoPartBlob = videoBlob.slice(firstByte, lastByte + 1);
-        const videoPartBase64 = await blobToBase64(videoPartBlob);
 
-        const uploadResponse = await api._proxyFetch('uploadVideo', {
-            uploadUrl,
-            videoBase64: videoPartBase64,
-            videoContentType: videoBlob.type
+        // Use a direct fetch PUT request to the URL from LinkedIn
+        const uploadResponse = await fetch(uploadUrl, {
+            method: 'PUT',
+            body: videoPartBlob,
+            headers: {
+                'Content-Type': videoBlob.type,
+            },
         });
-        etags.push(uploadResponse.eTag);
+
+        if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text();
+            console.error("LinkedIn Video Part Upload Error Body:", errorText);
+            throw new Error(`Falha no upload da parte do vídeo. Status: ${uploadResponse.status} ${uploadResponse.statusText}`);
+        }
+
+        const etag = uploadResponse.headers.get('ETag');
+        if (!etag) {
+            throw new Error('ETag não encontrado na resposta do upload da parte do vídeo.');
+        }
+
+        // The ETag must be stripped of quotes
+        etags.push(etag.replace(/"/g, ''));
     }
 
     // Step 3: Finalize Upload
