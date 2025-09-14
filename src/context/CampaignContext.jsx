@@ -28,6 +28,7 @@ export const CampaignProvider = ({ children }) => {
   const [selectedField, setSelectedField] = useState(null);
   const [currentCampaign, setCurrentCampaign] = useState(null);
   const [generatedPagesData, setGeneratedPagesData] = useState([]);
+  const [generatedVideos, setGeneratedVideos] = useState([]);
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [pendingAssets, setPendingAssets] = useState({});
 
@@ -43,6 +44,7 @@ export const CampaignProvider = ({ children }) => {
     selectedField,
     currentCampaign,
     generatedPagesData,
+    generatedVideos,
     aspectRatio,
     pendingAssets,
 
@@ -56,6 +58,7 @@ export const CampaignProvider = ({ children }) => {
     setSelectedField,
     setCurrentCampaign,
     setGeneratedPagesData,
+    setGeneratedVideos,
     setAspectRatio,
     setPendingAssets,
 
@@ -71,6 +74,7 @@ export const CampaignProvider = ({ children }) => {
     selectedField,
     currentCampaign,
     generatedPagesData,
+    generatedVideos,
     aspectRatio,
     pendingAssets,
   ]);

@@ -109,6 +109,7 @@ function HomePage() {
     selectedField, setSelectedField,
     currentCampaign, setCurrentCampaign,
     generatedPagesData, setGeneratedPagesData,
+    generatedVideos, setGeneratedVideos,
     aspectRatio, setAspectRatio,
     pendingAssets, setPendingAssets,
     defaultPageTemplate,
@@ -169,7 +170,6 @@ function HomePage() {
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
   const [originalImageSize, setOriginalImageSize] = useState(DEFAULT_IMAGE_SIZE);
   const [generatedAudioData, setGeneratedAudioData] = useState([]);
-  const [generatedVideosData, setGeneratedVideosData] = useState([]);
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
@@ -259,7 +259,7 @@ function HomePage() {
             ? state.generatedAudioData.filter(a => a && a.url)
             : []
     );
-    setGeneratedVideosData(Array.isArray(state.generatedVideosData) ? state.generatedVideosData : []);
+    setGeneratedVideos(Array.isArray(state.generatedVideos) ? state.generatedVideos : []);
     setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
 
     if (state.pageTemplate) {
@@ -389,7 +389,7 @@ function HomePage() {
 
     const sanitizedBrandElements = sanitizeMediaArray(brandElements);
     const sanitizedAudioData = sanitizeMediaArray(generatedAudioData);
-    const sanitizedVideosData = sanitizeMediaArray(generatedVideosData);
+    const sanitizedVideos = sanitizeMediaArray(generatedVideos);
     const sanitizedPageTemplate = {
       ...pageTemplate,
       images: sanitizeMediaArray(pageTemplate.images),
@@ -414,7 +414,7 @@ function HomePage() {
       generatedPageUrl,
       generatedPagesData: sanitizedPagesData,
       generatedAudioData: sanitizedAudioData,
-      generatedVideosData: sanitizedVideosData,
+      generatedVideos: sanitizedVideos,
       standardsColors,
       csvData,
       csvHeaders,
@@ -425,17 +425,26 @@ function HomePage() {
     setIsSaving(true);
     setUploadProgress({ current: 0, total: 0 });
     try {
+      let result;
       if (currentCampaign) {
         console.log(`[HomePage] Updating existing campaign, ID: ${currentCampaign.id}`);
-        const updated = await updateCampaign(currentCampaign.id, name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign);
+        result = await updateCampaign(currentCampaign.id, name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign);
         toast.success(`Campaign "${name}" updated.`);
-        setCurrentCampaign(updated);
+        setCurrentCampaign(result.campaign);
       } else {
         console.log(`[HomePage] Saving new campaign.`);
-        const newCampaign = await saveCampaign(name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign);
+        result = await saveCampaign(name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign);
         toast.success(`Campaign "${name}" saved.`);
-        setCurrentCampaign(newCampaign);
+        setCurrentCampaign(result.campaign);
       }
+
+      // After saving, re-apply the state that was just saved to sync permanent URLs
+      // This solves the issue of the UI still holding blob: URLs after a save.
+      if (result.finalState) {
+        console.log("[HomePage] Syncing local state with saved state containing permanent URLs.");
+        applyAppState(result.finalState);
+      }
+
       setPendingAssets({}); // Clear pending assets after successful save/update
       console.log("[HomePage] Save/Update operation completed successfully.");
     } catch (err) {
@@ -648,7 +657,7 @@ function HomePage() {
 
   useEffect(() => {
     const processVideos = async () => {
-      const videosToProcess = generatedVideosData.filter(v => v.url && !v.duration);
+      const videosToProcess = generatedVideos.filter(v => v.url && !v.duration);
       if (videosToProcess.length === 0) return;
 
       const promises = videosToProcess.map(videoData => {
@@ -675,7 +684,7 @@ function HomePage() {
 
       const processedVideos = await Promise.all(promises);
 
-      setGeneratedVideosData(currentVideos => {
+      setGeneratedVideos(currentVideos => {
         const newCurrentVideos = [...currentVideos];
         processedVideos.forEach(processedVideo => {
             const index = newCurrentVideos.findIndex(v => v.url === processedVideo.url);
@@ -688,7 +697,7 @@ function HomePage() {
     };
 
     processVideos();
-  }, [generatedVideosData]);
+  }, [generatedVideos, setGeneratedVideos]);
 
   useEffect(() => {
     const processAudios = async () => {
@@ -1478,7 +1487,24 @@ function HomePage() {
                   <VideoGenerator2
                     generatedPages={generatedPagesData}
                     generatedAudioData={generatedAudioData}
-                    onVideoGenerated={(videoData) => setGeneratedVideosData(videoData)}
+                    generatedVideos={generatedVideos}
+                    onVideoGenerated={(newVideoAssets) => {
+                      // newVideoAssets is an array of video asset objects
+                      setGeneratedVideos(prev => [...prev, ...newVideoAssets]);
+
+                      const newPendingAssets = {};
+                      newVideoAssets.forEach(asset => {
+                        // Add main video blob
+                        if (asset.blob && asset.url) {
+                          newPendingAssets[asset.url] = asset.blob;
+                        }
+                        // Add thumbnail blob if it exists
+                        if (asset.thumbnailBlob && asset.thumbnailUrl) {
+                          newPendingAssets[asset.thumbnailUrl] = asset.thumbnailBlob;
+                        }
+                      });
+                      setPendingAssets(prev => ({ ...prev, ...newPendingAssets }));
+                    }}
                     onNewAsset={addAssetToPendingQueue}
                   />
                 )}
@@ -1487,7 +1513,7 @@ function HomePage() {
                     settings={settings}
                     campaignContent={campaignContent}
                     generatedPagesData={generatedPagesData}
-                    generatedVideosData={generatedVideosData}
+                    generatedVideosData={generatedVideos}
                     followupPosts={followupPosts}
                     isScheduled={isScheduled}
                     setIsScheduled={setIsScheduled}

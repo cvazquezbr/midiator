@@ -35,8 +35,8 @@ export const uploadAsset = async (blob, filename, campaignId, userId) => {
     }
 
     const newBlob = await response.json();
-    console.log(`[uploadAsset] Successfully uploaded ${filename}. URL: ${newBlob.url}`);
-    return newBlob.url;
+    console.log(`[uploadAsset] Successfully uploaded ${filename}. Full response:`, newBlob);
+    return newBlob; // Return the full blob object from Vercel
   } catch (error) {
     console.error(`[uploadAsset] A critical error occurred during server-side upload for ${filename}:`, error);
     throw new Error(`Failed to upload ${filename}: ${error.message}`);
@@ -90,7 +90,7 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
 
   // --- Step 2: Find all `blob:` URIs that need to be uploaded ---
   const uploadPromises = [];
-  const assetsToUpload = []; // Will store { obj, key, url }
+  const assetsToUpload = []; // Will store { obj, key, url, assetType }
 
   const findAssets = (currentObj) => {
     if (!currentObj || typeof currentObj !== 'object') return;
@@ -98,11 +98,27 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
       currentObj.forEach(findAssets);
       return;
     }
+
+    // Special handling for video objects
+    if (currentObj.type === 'video') {
+      // Check for the main video file
+      if (typeof currentObj.vercelBlobUrl === 'string' && currentObj.vercelBlobUrl.startsWith('blob:')) {
+        assetsToUpload.push({ obj: currentObj, key: 'vercelBlobUrl', url: currentObj.vercelBlobUrl, assetType: 'video' });
+      }
+      // Check for the thumbnail file
+      if (typeof currentObj.thumbnailUrl === 'string' && currentObj.thumbnailUrl.startsWith('blob:')) {
+        assetsToUpload.push({ obj: currentObj, key: 'thumbnailUrl', url: currentObj.thumbnailUrl, assetType: 'thumbnail' });
+      }
+      // Stop recursion here for video objects to avoid finding the URLs again
+      return;
+    }
+
+    // Generic handling for other properties
     for (const key in currentObj) {
       if (Object.prototype.hasOwnProperty.call(currentObj, key)) {
         const value = currentObj[key];
         if (typeof value === 'string' && value.startsWith('blob:')) {
-          assetsToUpload.push({ obj: currentObj, key, url: value });
+          assetsToUpload.push({ obj: currentObj, key, url: value, assetType: 'simple' });
         } else {
           findAssets(value);
         }
@@ -116,9 +132,6 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
   // --- Step 3: Upload all unique blob URLs ---
   const uniqueUrlsToUpload = new Map();
   for (const asset of assetsToUpload) {
-    // Only upload if the blob actually exists in our map.
-    // This prevents trying to re-upload an already-persisted asset
-    // whose blob data is not in pendingAssets.
     if (allPendingAssets[asset.url]) {
       if (!uniqueUrlsToUpload.has(asset.url)) {
         uniqueUrlsToUpload.set(asset.url, {
@@ -126,7 +139,7 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
           targets: [],
         });
       }
-      uniqueUrlsToUpload.get(asset.url).targets.push({ obj: asset.obj, key: asset.key });
+      uniqueUrlsToUpload.get(asset.url).targets.push({ obj: asset.obj, key: asset.key, assetType: asset.assetType });
     }
   }
 
@@ -143,9 +156,19 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
         : `asset_${Date.now()}_${randomSuffix}.${fileExtension}`;
 
       const promise = uploadAsset(blob, filename, campaignId, userId)
-        .then(permanentUrl => {
+        .then(vercelBlobResponse => {
           targets.forEach(target => {
-            target.obj[target.key] = permanentUrl;
+            if (target.assetType === 'video') {
+              // This is the main video file, update the whole object
+              target.obj.vercelBlobUrl = vercelBlobResponse.url;
+              target.obj.url = vercelBlobResponse.url; // Also update the playback url
+              target.obj.vercelBlobId = vercelBlobResponse.pathname;
+              target.obj.mimeType = vercelBlobResponse.contentType;
+              target.obj.size = vercelBlobResponse.size;
+            } else {
+              // This is a simple asset or a thumbnail, just replace the URL
+              target.obj[target.key] = vercelBlobResponse.url;
+            }
           });
           assetsUploadedCount++;
           onProgress({ current: assetsUploadedCount, total: uniqueUrlsToUpload.size });
@@ -300,7 +323,7 @@ export const saveCampaign = async (name, campaignData, pendingAssets, setProgres
 
     const result = await createRes.json();
     console.log('[campaignState] Campaign created successfully:', result);
-    return result;
+    return { campaign: result, finalState: stateToSave };
   } catch (error) {
       console.error('[campaignState] An error occurred during the save process:', error);
       toast.error(`Save failed: ${error.message}`);
@@ -337,7 +360,7 @@ export const updateCampaign = async (id, name, campaignData, pendingAssets, setP
 
         const result = await res.json();
         console.log(`[campaignState] Campaign ${id} updated successfully:`, result);
-        return result;
+        return { campaign: result, finalState: stateToSave };
     } catch (error) {
         console.error(`[campaignState] An error occurred during the update process for campaign ${id}:`, error);
         toast.error(`Update failed: ${error.message}`);
