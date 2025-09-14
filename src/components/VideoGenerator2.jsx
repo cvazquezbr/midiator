@@ -758,8 +758,11 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
         const videoUrl = URL.createObjectURL(blob);
         setVideo(videoUrl);
         if (onVideoGenerated) {
-          const dataUrl = await blobToDataURL(blob);
-          onVideoGenerated([{ blob, url: dataUrl, name: `video-compat-${Date.now()}.webm` }]);
+          const videoData = { blob, url: videoUrl, name: `video-compat-${Date.now()}.webm` };
+          onVideoGenerated([videoData]);
+          if (onNewAsset) {
+            onNewAsset(videoUrl, blob);
+          }
         }
       };
 
