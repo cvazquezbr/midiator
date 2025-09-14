@@ -1284,8 +1284,7 @@ function HomePage() {
           url: tempUrl,
           dataUrl: null,
         };
-        // Mantenha o blob no estado para que possa ser usado para regenerar URLs.
-        // delete newPageDataObject.blob;
+        delete newPageDataObject.blob;
 
         newPagesData[index] = newPageDataObject;
         return newPagesData;
