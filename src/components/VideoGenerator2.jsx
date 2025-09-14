@@ -359,10 +359,16 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     if (generationMode === 'narration') {
       await generateNarrationVideo();
     } else if (generatePerRecord) {
-      // Pre-calculate totalFrames for the first video to avoid NaN in progress bar
       if (generatedImages.length > 0) {
         const firstDuration = (generatedAudioData && generatedAudioData[0]) ? generatedAudioData[0].duration : slideDuration;
-        setTotalFrames(Math.floor(firstDuration * fps));
+        const firstTotalFrames = Math.floor(firstDuration * fps);
+        if (firstTotalFrames <= 0) {
+            setError("A duração do primeiro slide é zero ou inválida, impossível gerar vídeos por registro. Verifique seus dados de áudio ou a duração do slide.");
+            setSnackbarOpen(true);
+            setShowProgressModal(false);
+            return;
+        }
+        setTotalFrames(firstTotalFrames);
       }
       await generateVideoPerRecord();
     } else {
@@ -370,6 +376,14 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
         const duration = (generatedAudioData && generatedAudioData[i]) ? generatedAudioData[i].duration : slideDuration;
         return acc + Math.floor(duration * fps);
       }, 0);
+
+      if (totalVideoFrames <= 0) {
+        setError("A duração total do vídeo é zero ou inválida. Verifique a duração dos seus áudios ou a configuração de duração dos slides.");
+        setSnackbarOpen(true);
+        setShowProgressModal(false);
+        return;
+      }
+
       setTotalFrames(totalVideoFrames);
 
       if (compatibilityMode || !ffmpegLoaded) {
