@@ -359,6 +359,11 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     if (generationMode === 'narration') {
       await generateNarrationVideo();
     } else if (generatePerRecord) {
+      // Pre-calculate totalFrames for the first video to avoid NaN in progress bar
+      if (generatedImages.length > 0) {
+        const firstDuration = (generatedAudioData && generatedAudioData[0]) ? generatedAudioData[0].duration : slideDuration;
+        setTotalFrames(Math.floor(firstDuration * fps));
+      }
       await generateVideoPerRecord();
     } else {
       const totalVideoFrames = generatedImages.reduce((acc, _, i) => {
