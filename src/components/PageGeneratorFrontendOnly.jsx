@@ -86,7 +86,6 @@ const PageGeneratorFrontendOnly = ({
   const [regeneratingIndex, setRegeneratingIndex] = useState(null);
   const individualImageInputRef = useRef(null);
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const [displayablePages, setDisplayablePages] = useState([]);
 
   useEffect(() => {
     const loadFonts = async () => {
@@ -104,32 +103,50 @@ const PageGeneratorFrontendOnly = ({
   }, []);
 
   useEffect(() => {
-    // This effect creates fresh, temporary object URLs every time the component receives new page data.
-    // This makes the component resilient to URL revocations that might happen outside of its control.
-    const newDisplayablePages = initialGeneratedPagesData.map(page => {
-      // If the page already has a valid blob, create a new URL for it.
-      if (page.blob instanceof Blob) {
-        return { ...page, displayUrl: URL.createObjectURL(page.blob) };
-      }
-      // If it's an old page that only has a URL (from a previous session), use that.
-      if (typeof page.url === 'string') {
-        return { ...page, displayUrl: page.url };
-      }
-      // If there's no blob or URL, there's nothing to display.
-      return { ...page, displayUrl: null };
-    });
+    if (initialGeneratedPagesData && initialGeneratedPagesData.length > 0 && fontsLoaded) {
+      const regenerateMissingThumbnails = async () => {
+        const pagesToRegenerate = initialGeneratedPagesData.filter(img => img.record && !img.url);
+        if (pagesToRegenerate.length === 0) return;
 
-    setDisplayablePages(newDisplayablePages);
+        const pagePromises = initialGeneratedPagesData.map(pageData => {
+          if (pageData.url || !pagesToRegenerate.some(r => r.index === pageData.index)) {
+            return Promise.resolve(pageData);
+          }
 
-    // Cleanup function to revoke the URLs when the component unmounts or the data changes.
-    return () => {
-      newDisplayablePages.forEach(page => {
-        if (page.displayUrl && page.displayUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(page.displayUrl);
+          const positionsToUse = pageData.customFieldPositions || fieldPositions;
+          const stylesToUse = pageData.customFieldStyles || fieldStyles;
+          const elementsToUse = pageData.customBrandElements !== undefined ? pageData.customBrandElements : brandElements;
+          const pageTemplateToUse = pageData.customPageTemplate || pageTemplate;
+
+          return drawAndComposeImage({
+            record: pageData.record,
+            index: pageData.index,
+            pageTemplate: pageTemplateToUse,
+            brandElements: elementsToUse,
+            fieldPositions: positionsToUse,
+            fieldStyles: stylesToUse,
+            fontScale: pageData.fontScale || 1,
+            aspectRatio,
+          }).catch(error => {
+            console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${pageData.index}:`, error);
+            return pageData;
+          });
+        });
+
+        const regeneratedPages = await Promise.all(pagePromises.map(async (promise, index) => {
+          const newPageData = await promise;
+          const originalPageData = initialGeneratedPagesData[index];
+          if (newPageData === originalPageData) return originalPageData;
+          return { ...originalPageData, ...newPageData };
+        }));
+
+        if (JSON.stringify(regeneratedPages) !== JSON.stringify(initialGeneratedPagesData)) {
+          setGeneratedPagesData(regeneratedPages);
         }
-      });
-    };
-  }, [initialGeneratedPagesData]);
+      };
+      regenerateMissingThumbnails();
+    }
+  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, pageTemplate, brandElements, setGeneratedPagesData, aspectRatio]);
 
   const generatePages = async () => {
     if (isGenerating) return;
@@ -510,13 +527,13 @@ const PageGeneratorFrontendOnly = ({
             </Box>
           )}
 
-          {displayablePages.length > 0 && (
+          {initialGeneratedPagesData.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} />
-              <Typography variant="h6" gutterBottom>Páginas Geradas ({displayablePages.length})</Typography>
+              <Typography variant="h6" gutterBottom>Páginas Geradas ({initialGeneratedPagesData.length})</Typography>
               <Grid container spacing={2}>
-                {displayablePages.map((pageData, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={pageData.index || index}>
+                {initialGeneratedPagesData.map((pageData, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={index}>
                     <Card variant="outlined">
                       <CardContent>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -544,21 +561,17 @@ const PageGeneratorFrontendOnly = ({
                           }}
                           onClick={() => handleOpenGeneratedPageEditor(pageData, pageData.index)}
                         >
-                          {pageData.displayUrl ? (
-                            <img
-                              src={pageData.displayUrl}
-                              alt={`Preview ${index + 1}`}
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                                transition: 'transform 0.3s',
-                                opacity: regeneratingIndex === index ? 0.5 : 1,
-                              }}
-                            />
-                          ) : (
-                            <Box sx={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column'}}><Typography variant="caption">Preview indisponível</Typography></Box>
-                          )}
+                          <img
+                            src={pageData.url}
+                            alt={`Preview ${index + 1}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              transition: 'transform 0.3s',
+                              opacity: regeneratingIndex === index ? 0.5 : 1,
+                            }}
+                          />
                           {regeneratingIndex === index && (
                             <CircularProgress
                               size={40}
