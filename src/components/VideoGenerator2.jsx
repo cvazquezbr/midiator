@@ -18,9 +18,8 @@ import NarrationSettings from './VideoGenerator/NarrationSettings';
 import Preview from './VideoGenerator/Preview';
 import SlidesSettings from './VideoGenerator/SlidesSettings';
 
-const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, onVideoGenerated, onNewAsset }) => {
+const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, generatedVideos = [], onVideoGenerated, onNewAsset }) => {
   const [video, setVideo] = useState(null);
-  const [videos, setVideos] = useState([]);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
   const [slideDuration, setSlideDuration] = useState(3);
@@ -294,6 +293,49 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     }
 
     return filter;
+  };
+
+  const generateThumbnail = async (videoBlob) => {
+    if (!ffmpegRef.current || !ffmpegRef.current.loaded) {
+      console.warn('FFmpeg not loaded, skipping thumbnail generation.');
+      return null;
+    }
+
+    const ffmpeg = ffmpegRef.current;
+    const inputFilename = `thumb-input-${Date.now()}.mp4`;
+    const outputFilename = `thumb-output-${Date.now()}.jpg`;
+
+    try {
+      await ffmpeg.writeFile(inputFilename, await fetchFile(videoBlob));
+
+      // Extract the first frame of the video
+      const cmd = [
+        '-i', inputFilename,
+        '-ss', '00:00:00.1', // Seek to 0.1s to avoid potential black frames at the start
+        '-vframes', '1',
+        '-q:v', '2', // Quality level for JPG (2-5 is good)
+        '-f', 'image2',
+        outputFilename,
+      ];
+
+      console.log("⚙️ FFmpeg thumbnail cmd:", cmd.join(" "));
+      await ffmpeg.exec(cmd);
+
+      const data = await ffmpeg.readFile(outputFilename);
+      const thumbnailBlob = new Blob([data.buffer], { type: 'image/jpeg' });
+
+      // Cleanup files
+      await ffmpeg.deleteFile(inputFilename);
+      await ffmpeg.deleteFile(outputFilename);
+
+      return thumbnailBlob;
+    } catch (err) {
+      console.error('Error generating thumbnail:', err);
+      // Cleanup in case of error
+      await ffmpeg.deleteFile(inputFilename).catch(() => {});
+      await ffmpeg.deleteFile(outputFilename).catch(() => {});
+      return null;
+    }
   };
 
   const handleGenerateFinalVideo = async () => {
@@ -579,11 +621,34 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       const blob = new Blob([data.buffer], { type: 'video/mp4' });
       const url = URL.createObjectURL(blob);
       setVideo(url);
+
+      // --- Thumbnail Generation ---
+      const thumbnailBlob = await generateThumbnail(blob);
+      const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
+      // --------------------------
+
       if (onVideoGenerated) {
-        const videoData = { blob, url: url, name: `video-${Date.now()}.mp4` };
-        onVideoGenerated([videoData]);
+        const videoAsset = {
+          type: 'video',
+          url: url,
+          blob: blob,
+          name: `video-${Date.now()}.mp4`,
+          vercelBlobId: null,
+          vercelBlobUrl: url,
+          mimeType: blob.type,
+          size: blob.size,
+          linkedinVideoUrn: null,
+          thumbnailUrl: thumbnailUrl,
+          thumbnailBlob: thumbnailBlob, // Pass the blob up to be added to pendingAssets
+        };
+
+        onVideoGenerated([videoAsset]);
+
         if (onNewAsset) {
           onNewAsset(url, blob);
+          if (thumbnailUrl && thumbnailBlob) {
+            onNewAsset(thumbnailUrl, thumbnailBlob);
+          }
         }
       }
     } catch (err) {
@@ -605,7 +670,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     setVideos([]);
     startTimeRef.current = Date.now();
 
-    const allGeneratedVideos = [];
+    const allGeneratedVideoAssets = [];
     for (let i = 0; i < generatedImages.length; i++) {
       if (isCancelledRef.current) {
         console.log('Video generation cancelled by user.');
@@ -618,19 +683,40 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       try {
         const videoBlob = await generateSingleVideo(imageData, audioData, i);
         const videoUrl = URL.createObjectURL(videoBlob);
+
+        const thumbnailBlob = await generateThumbnail(videoBlob);
+        const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
+
+        const videoAsset = {
+          type: 'video',
+          url: videoUrl,
+          blob: videoBlob,
+          name: `video_${i + 1}.mp4`,
+          vercelBlobId: null,
+          vercelBlobUrl: videoUrl,
+          mimeType: videoBlob.type,
+          size: videoBlob.size,
+          linkedinVideoUrn: null,
+          thumbnailUrl: thumbnailUrl,
+          thumbnailBlob: thumbnailBlob,
+        };
+
+        allGeneratedVideoAssets.push(videoAsset);
+
         if (onNewAsset) {
           onNewAsset(videoUrl, videoBlob);
+          if (thumbnailUrl && thumbnailBlob) {
+            onNewAsset(thumbnailUrl, thumbnailBlob);
+          }
         }
-        const newVideoData = { blob: videoBlob, url: videoUrl, name: `video_${i + 1}.mp4` };
-        allGeneratedVideos.push(newVideoData);
-        setVideos(prev => [...prev, { url: videoUrl, name: `video_${i + 1}.mp4` }]);
+
       } catch (err) {
         setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message}`);
         setSnackbarOpen(true);
       }
     }
-    if (onVideoGenerated && allGeneratedVideos.length > 0) {
-      onVideoGenerated(allGeneratedVideos);
+    if (onVideoGenerated && allGeneratedVideoAssets.length > 0) {
+      onVideoGenerated(allGeneratedVideoAssets);
     }
 
     setIsLoading(false);
@@ -896,11 +982,30 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       const blob = new Blob([data.buffer], { type: 'video/mp4' });
       const url = URL.createObjectURL(blob);
       setVideo(url);
+
+      const thumbnailBlob = await generateThumbnail(blob);
+      const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
+
       if (onVideoGenerated) {
-        const videoData = { blob, url: url, name: `video-narrado-${Date.now()}.mp4` };
-        onVideoGenerated([videoData]);
+        const videoAsset = {
+          type: 'video',
+          url: url,
+          blob: blob,
+          name: `video-narrado-${Date.now()}.mp4`,
+          vercelBlobId: null,
+          vercelBlobUrl: url,
+          mimeType: blob.type,
+          size: blob.size,
+          linkedinVideoUrn: null,
+          thumbnailUrl: thumbnailUrl,
+          thumbnailBlob: thumbnailBlob,
+        };
+        onVideoGenerated([videoAsset]);
         if (onNewAsset) {
           onNewAsset(url, blob);
+          if (thumbnailUrl && thumbnailBlob) {
+            onNewAsset(thumbnailUrl, thumbnailBlob);
+          }
         }
       }
 
@@ -974,18 +1079,6 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
   const handleCancel = () => {
     isCancelledRef.current = true;
-  };
-
-  const handleDownloadAll = async () => {
-    const zip = new JSZip();
-    for (const video of videos) {
-      const response = await fetch(video.url);
-      const blob = await response.blob();
-      zip.file(video.name, blob);
-    }
-    zip.generateAsync({ type: 'blob' }).then((content) => {
-      saveAs(content, 'videos.zip');
-    });
   };
 
   const handleNarrationVideoUpload = (event) => {
@@ -1382,42 +1475,44 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
             </Box>
           )}
 
-          {videos.length > 0 && (
+          {generatedVideos.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Typography variant="h6" sx={{ mb: 1, color: 'text.primary' }}>
                 Vídeos Gerados
               </Typography>
-              {videos.map((v, index) => (
-                <Paper
-                  key={index}
-                  elevation={1}
-                  sx={{
-                    p: 2,
-                    mb: 2,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    backgroundColor: 'background.paper',
-                    borderRadius: 2,
-                    border: 1,
-                    borderColor: 'divider'
-                  }}
-                >
-                  <Typography sx={{ color: 'text.primary' }}>{v.name}</Typography>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    startIcon={<Download />}
-                    onClick={() => {
-                      const a = document.createElement('a');
-                      a.href = v.url;
-                      a.download = v.name;
-                      a.click();
-                    }}
-                  >
-                    Baixar
-                  </Button>
-                </Paper>
+              {generatedVideos.map((video, index) => (
+                <Card key={index} sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+                  {video.thumbnailUrl && (
+                    <Box sx={{ width: 150, height: 84, flexShrink: 0 }}>
+                      <img
+                        src={video.thumbnailUrl}
+                        alt={`Thumbnail for ${video.name}`}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </Box>
+                  )}
+                  <CardContent sx={{ flexGrow: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                      <Typography variant="body1" sx={{ color: 'text.primary' }}>{video.name}</Typography>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        {video.size ? `${(video.size / 1024 / 1024).toFixed(2)} MB` : 'Tamanho desconhecido'}
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      startIcon={<Download />}
+                      onClick={() => {
+                        const a = document.createElement('a');
+                        a.href = video.url || video.vercelBlobUrl;
+                        a.download = video.name;
+                        a.click();
+                      }}
+                    >
+                      Baixar
+                    </Button>
+                  </CardContent>
+                </Card>
               ))}
             </Box>
           )}
@@ -1452,23 +1547,6 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
             >
               Exportar Vídeo
             </Button>
-
-            {videos.length > 0 && (
-              <Button
-                variant="contained"
-                onClick={handleDownloadAll}
-                disabled={isLoading}
-                startIcon={<Download />}
-                sx={{
-                  flex: 1,
-                  minWidth: 200,
-                  fontWeight: 'bold'
-                }}
-                color="success"
-              >
-                Baixar Todos
-              </Button>
-            )}
           </Box>
         </CardContent>
       </Card>
