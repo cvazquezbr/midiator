@@ -101,6 +101,56 @@ export const applySettings = (settings) => {
 
 
 /**
+ * Saves a single setting to localStorage.
+ * This allows for granular updates to localStorage without clearing other keys.
+ * @param {string} key - The key of the setting to save.
+ * @param {*} value - The value of the setting.
+ */
+export const saveSetting = (key, value) => {
+  // Use the CREDENTIAL_KEYS to decide which specific save function to use
+  switch (key) {
+    case CREDENTIAL_KEYS.GEMINI:
+      saveGeminiApiKey(value);
+      break;
+    case CREDENTIAL_KEYS.GOOGLE_DRIVE_API_KEY:
+      localStorage.setItem(CREDENTIAL_KEYS.GOOGLE_DRIVE_API_KEY, value);
+      break;
+    case CREDENTIAL_KEYS.GOOGLE_DRIVE_CLIENT_ID:
+      localStorage.setItem(CREDENTIAL_KEYS.GOOGLE_DRIVE_CLIENT_ID, value);
+      break;
+    case CREDENTIAL_KEYS.GOOGLE_TTS:
+      saveGoogleCloudTTSCredentials(value);
+      break;
+    case CREDENTIAL_KEYS.WORDPRESS:
+      saveWordpressConfig(value);
+      break;
+    case CREDENTIAL_KEYS.TIMEZONE:
+      saveTimezone(value);
+      break;
+    case CREDENTIAL_KEYS.GEMINI_MODEL:
+      saveGeminiModel(value);
+      break;
+    case CREDENTIAL_KEYS.GEMINI_IMAGE_MODEL:
+      saveGeminiImageModel(value);
+      break;
+    default:
+      // Fallback for settings not in CREDENTIAL_KEYS.
+      // This might happen with new or temporary settings.
+      console.warn(`Attempted to save setting with unknown key: "${key}". Saving directly to localStorage.`);
+      try {
+        if (typeof value === 'object' && value !== null) {
+          localStorage.setItem(key, JSON.stringify(value));
+        } else {
+          localStorage.setItem(key, value);
+        }
+      } catch (error) {
+        console.error(`Failed to save setting "${key}" to localStorage:`, error);
+      }
+      break;
+  }
+};
+
+/**
  * Saves the current credentials from localStorage to the database via the API.
  */
 export const saveSettingsToDb = async (settings) => {
