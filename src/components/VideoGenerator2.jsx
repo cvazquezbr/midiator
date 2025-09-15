@@ -295,13 +295,13 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     return filter;
   };
 
-  const generateThumbnail = async (videoBlob) => {
-    if (!ffmpegRef.current || !ffmpegRef.current.loaded) {
-      console.warn('FFmpeg not loaded, skipping thumbnail generation.');
+  const generateThumbnail = async (ffmpegInstance, videoBlob) => {
+    if (!ffmpegInstance || !ffmpegInstance.loaded) {
+      console.warn('FFmpeg instance not provided or not loaded, skipping thumbnail generation.');
       return null;
     }
 
-    const ffmpeg = ffmpegRef.current;
+    const ffmpeg = ffmpegInstance;
     const inputFilename = `thumb-input-${Date.now()}.mp4`;
     const outputFilename = `thumb-output-${Date.now()}.jpg`;
 
@@ -680,7 +680,6 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     }
 
     setTotalFrames(totalFramesAllVideos);
-    setVideosForGeneration(generatedImages.length);
     setProgress(0);
     setShowProgressModal(true);
 
@@ -702,21 +701,16 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
           setProgress(Math.min(totalFramesAllVideos, currentTotalProgress));
         };
 
+        const ffmpeg = new FFmpeg();
         try {
-          // Create a new FFmpeg instance for each video
-          const ffmpeg = new FFmpeg();
           await ffmpeg.load();
-
           const videoBlob = await generateSingleVideo(ffmpeg, imageData, audioData, i, pendingAssets, handleSubProgress);
-
-          await ffmpeg.terminate(); // Terminate the instance after use
+          const thumbnailBlob = await generateThumbnail(ffmpeg, videoBlob);
 
           framesCompletedSoFar += framesForThisVideo;
           setProgress(framesCompletedSoFar);
 
           const videoUrl = URL.createObjectURL(videoBlob);
-          // Re-use the main ffmpeg instance for thumbnails as it's a simpler operation
-          const thumbnailBlob = await generateThumbnail(videoBlob);
           const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
 
           const videoAsset = {
@@ -746,6 +740,10 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
           setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message || 'Erro desconhecido'}`);
           setSnackbarOpen(true);
           break;
+        } finally {
+          if (ffmpeg.loaded) {
+            await ffmpeg.terminate();
+          }
         }
       }
       if (onVideoGenerated && allGeneratedVideoAssets.length > 0) {
