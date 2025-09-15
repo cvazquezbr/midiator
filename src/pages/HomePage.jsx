@@ -388,11 +388,7 @@ function HomePage() {
       });
     };
 
-    const sanitizedPagesData = generatedPagesData.map(page => {
-      const { dataUrl, blob, ...rest } = page;
-      return rest;
-    });
-
+    const sanitizedPagesData = sanitizeMediaArray(generatedPagesData);
     const sanitizedBrandElements = sanitizeMediaArray(brandElements);
     const sanitizedAudioData = sanitizeMediaArray(generatedAudioData);
     const sanitizedVideos = sanitizeMediaArray(generatedVideos);
