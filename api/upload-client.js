@@ -14,15 +14,15 @@ const handler = async (req, res) => {
   }
 
   const userId = req.user.uuid;
-  const { searchParams } = new URL(req.url, `http://${req.headers.host}`);
-  const filename = searchParams.get('filename');
+  // The filename is sent in the body by the client library
+  const { pathname } = req.body;
 
-  if (!filename) {
-    return res.status(400).json({ error: 'Filename query parameter is required' });
+  if (!pathname) {
+    return res.status(400).json({ error: '`pathname` is required in the request body.' });
   }
 
   // Sanitize the filename and create the full path
-  const sanitizedFilename = filename.replace(/[^\/\w\-_\.]/g, '');
+  const sanitizedFilename = pathname.replace(/[^\/\w\-_\.]/g, '');
   const blobPath = `${userId}/${sanitizedFilename}`;
 
   try {
