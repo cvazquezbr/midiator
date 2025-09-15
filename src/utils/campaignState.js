@@ -209,6 +209,29 @@ export const deserializeCampaignData = async (loadedState) => {
       return;
     }
 
+    // Special handling for video objects to find their URLs
+    if (currentObj.type === 'video') {
+      // Check for the main video file URL
+      if (isVercelUrl(currentObj.vercelBlobUrl)) {
+        if (!uniqueUrlsToDownload.has(currentObj.vercelBlobUrl)) {
+          uniqueUrlsToDownload.set(currentObj.vercelBlobUrl, { targets: [] });
+        }
+        // Target the object and the specific keys to be updated
+        uniqueUrlsToDownload.get(currentObj.vercelBlobUrl).targets.push({ obj: currentObj, key: 'vercelBlobUrl' });
+        uniqueUrlsToDownload.get(currentObj.vercelBlobUrl).targets.push({ obj: currentObj, key: 'url' });
+      }
+      // Check for the thumbnail file URL
+      if (isVercelUrl(currentObj.thumbnailUrl)) {
+        if (!uniqueUrlsToDownload.has(currentObj.thumbnailUrl)) {
+          uniqueUrlsToDownload.set(currentObj.thumbnailUrl, { targets: [] });
+        }
+        uniqueUrlsToDownload.get(currentObj.thumbnailUrl).targets.push({ obj: currentObj, key: 'thumbnailUrl' });
+      }
+      // Do not recurse further into video objects
+      return;
+    }
+
+    // Generic handling for other properties
     for (const key in currentObj) {
       if (Object.prototype.hasOwnProperty.call(currentObj, key)) {
         const value = currentObj[key];
