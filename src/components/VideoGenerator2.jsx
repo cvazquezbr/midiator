@@ -352,51 +352,40 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       return;
     }
 
-    setShowProgressModal(true);
     isCancelledRef.current = false;
     setVideo(null);
-    setProgress(0); // Reset progress before starting
+    setProgress(0);
 
     if (generationMode === 'narration') {
       await generateNarrationVideo();
     } else if (generatePerRecord) {
-      if (generatedImages.length > 0) {
-        const firstDuration = (generatedAudioData && generatedAudioData[0]) ? generatedAudioData[0].duration : slideDuration;
-        const firstTotalFrames = Math.floor(firstDuration * fps);
-        if (firstTotalFrames <= 0) {
-            setError("A duração do primeiro slide é zero ou inválida, impossível gerar vídeos por registro. Verifique seus dados de áudio ou a duração do slide.");
-            setSnackbarOpen(true);
-            setShowProgressModal(false);
-            return;
-        }
-        setTotalFrames(firstTotalFrames);
-      }
       await generateVideoPerRecord();
     } else {
-      const totalVideoFrames = generatedImages.reduce((acc, _, i) => {
-        const duration = (generatedAudioData && generatedAudioData[i]) ? generatedAudioData[i].duration : slideDuration;
-        return acc + Math.floor(duration * fps);
-      }, 0);
-
-      if (totalVideoFrames <= 0) {
-        setError("A duração total do vídeo é zero ou inválida. Verifique a duração dos seus áudios ou a configuração de duração dos slides.");
-        setSnackbarOpen(true);
-        setShowProgressModal(false);
-        return;
-      }
-
-      setTotalFrames(totalVideoFrames);
-
-      if (compatibilityMode || !ffmpegLoaded) {
-        await generateVideoWithCompatibilityMode();
-      } else {
-        await generateVideoWithFFmpeg();
-      }
+      await generateVideoWithFFmpeg();
     }
-    setShowProgressModal(false);
   };
 
   const generateVideoWithFFmpeg = async () => {
+    const totalVideoFrames = generatedImages.reduce((acc, _, i) => {
+      const duration = (generatedAudioData && generatedAudioData[i]) ? generatedAudioData[i].duration : slideDuration;
+      return acc + Math.floor(duration * fps);
+    }, 0);
+
+    if (totalVideoFrames <= 0) {
+      setError("A duração total do vídeo é zero ou inválida. Verifique a duração dos seus áudios ou a configuração de duração dos slides.");
+      setSnackbarOpen(true);
+      return;
+    }
+
+    setTotalFrames(totalVideoFrames);
+    setIsLoading(true);
+    setError(null);
+    setVideo(null);
+    setProgress(0);
+    setShowProgressModal(true);
+    startTimeRef.current = Date.now();
+    clearInterval(progressIntervalRef.current);
+
     const fadeSeconds = (typeof transition === "number" && transition > 0)
       ? transition
       : 1;
@@ -407,13 +396,6 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
     const outW = firstImage.width;
     const outH = firstImage.height;
-
-    setIsLoading(true);
-    setError(null);
-    setVideo(null);
-    setProgress(0);
-    startTimeRef.current = Date.now();
-    clearInterval(progressIntervalRef.current);
 
     const ffmpeg = ffmpegRef.current;
     try {
@@ -684,7 +666,6 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     setVideo(null);
     startTimeRef.current = Date.now();
 
-    // 1. Calculate total frames for all videos for a granular progress bar
     const totalDurationAllVideos = generatedImages.reduce((acc, _, i) => {
       const audio = generatedAudioData[i];
       const duration = audio ? audio.duration : slideDuration;
@@ -692,8 +673,17 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     }, 0);
 
     const totalFramesAllVideos = Math.floor(totalDurationAllVideos * fps);
+    if (totalFramesAllVideos <= 0) {
+      setError("A duração total para os vídeos é zero. Verifique os dados de áudio ou a duração do slide.");
+      setSnackbarOpen(true);
+      setIsLoading(false);
+      return;
+    }
+
     setTotalFrames(totalFramesAllVideos);
+    setVideosForGeneration(generatedImages.length);
     setProgress(0);
+    setShowProgressModal(true);
 
     let framesCompletedSoFar = 0;
     const allGeneratedVideoAssets = [];
@@ -708,18 +698,15 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       const audioData = generatedAudioData[i] ? [generatedAudioData[i]] : null;
       const framesForThisVideo = Math.floor((audioData?.[0]?.duration || slideDuration) * fps);
 
-      // 2. Define the onProgress callback for this specific video
       const handleSubProgress = ({ frame }) => {
-        const currentTotalProgress = framesCompletedSoFar + frame;
+        const currentTotalProgress = framesCompletedSoFar + (frame || 0);
         setProgress(Math.min(totalFramesAllVideos, currentTotalProgress));
       };
 
       try {
-        // 3. Pass pendingAssets and the progress handler to the generation function
         const videoBlob = await generateSingleVideo(imageData, audioData, i, pendingAssets, handleSubProgress);
 
         framesCompletedSoFar += framesForThisVideo;
-        // Ensure progress is exactly where it should be after a video is done
         setProgress(framesCompletedSoFar);
 
         const videoUrl = URL.createObjectURL(videoBlob);
@@ -752,24 +739,24 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       } catch (err) {
         setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message}`);
         setSnackbarOpen(true);
-        // Stop the process if one video fails
         break;
       }
     }
     if (onVideoGenerated && allGeneratedVideoAssets.length > 0) {
       onVideoGenerated(allGeneratedVideoAssets);
     }
-
+  } finally {
     setIsLoading(false);
     clearInterval(progressIntervalRef.current);
     startTimeRef.current = null;
     setShowProgressModal(false);
-  };
+  }
+};
 
   const generateSingleVideo = async (imageData, audioData, index, pendingAssets, onProgress) => {
     const ffmpeg = ffmpegRef.current;
     const audioObject = audioData && audioData.length > 0 ? audioData[0] : null;
-    const audioBlob = getPlayableBlob(audioObject, pendingAssets); // <-- FIX: Pass pendingAssets
+    const audioBlob = getPlayableBlob(audioObject, pendingAssets);
     const hasAudio = !!audioBlob;
     const outputFilename = `output_${index}.mp4`;
 
@@ -806,9 +793,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     if (hasAudio) {
       cmd.push("-map", "1:a");
       cmd.push("-c:a", "aac");
-      cmd.push("-shortest"); // End video when the shortest input (audio) ends
+      cmd.push("-shortest");
     } else {
-      // If no audio, we must specify a duration
       cmd.push("-t", slideDuration.toString());
     }
 
@@ -820,16 +806,12 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       outputFilename
     );
 
-    // Re-enable progress reporting with the passed callback
     if (onProgress) {
       ffmpeg.on('progress', onProgress);
     }
 
     console.log(`⚙️ FFmpeg cmd for video ${index}:`, cmd.join(" "));
     await ffmpeg.exec(cmd);
-
-    // Detach the progress handler after execution to avoid conflicts
-    ffmpeg.on('progress', () => {});
 
     const data = await ffmpeg.readFile(outputFilename);
     return new Blob([data.buffer], { type: "video/mp4" });
@@ -1228,11 +1210,9 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
         onCancel={handleCancel}
         title="Gerando Vídeo"
         progressText={
-          generatePerRecord
-            ? `Gerando vídeo ${progress} de ${videosForGeneration}...`
-            : generationMode === 'narration'
-              ? `Processando... ${Math.round(progress)}%`
-              : `Progresso: ${progress} de ${totalFrames} frames processados.`
+          generationMode === 'narration'
+            ? `Processando... ${Math.round(progress)}%`
+            : `Progresso: ${progress} de ${totalFrames} frames processados.`
         }
       />
       <iframe
