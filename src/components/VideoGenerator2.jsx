@@ -39,7 +39,6 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
   const [totalFrames, setTotalFrames] = useState(0);
   const [generatePerRecord, setGeneratePerRecord] = useState(false);
   const [generationMode, setGenerationMode] = useState('slides'); // 'slides' or 'narration'
-  const [videosForGeneration, setVideosForGeneration] = useState(0);
   
   // Parâmetros de chromakey expandidos
   const [useChromaKey, setUseChromaKey] = useState(false);
@@ -703,14 +702,20 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
           setProgress(Math.min(totalFramesAllVideos, currentTotalProgress));
         };
 
-        // Inner try-catch for individual video errors
         try {
-          const videoBlob = await generateSingleVideo(imageData, audioData, i, pendingAssets, handleSubProgress);
+          // Create a new FFmpeg instance for each video
+          const ffmpeg = new FFmpeg();
+          await ffmpeg.load();
+
+          const videoBlob = await generateSingleVideo(ffmpeg, imageData, audioData, i, pendingAssets, handleSubProgress);
+
+          await ffmpeg.terminate(); // Terminate the instance after use
 
           framesCompletedSoFar += framesForThisVideo;
           setProgress(framesCompletedSoFar);
 
           const videoUrl = URL.createObjectURL(videoBlob);
+          // Re-use the main ffmpeg instance for thumbnails as it's a simpler operation
           const thumbnailBlob = await generateThumbnail(videoBlob);
           const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
 
@@ -738,9 +743,9 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
           }
 
         } catch (err) {
-          setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message}`);
+          setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message || 'Erro desconhecido'}`);
           setSnackbarOpen(true);
-          break; // Exit the loop on error
+          break;
         }
       }
       if (onVideoGenerated && allGeneratedVideoAssets.length > 0) {
@@ -754,8 +759,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     }
   };
 
-  const generateSingleVideo = async (imageData, audioData, index, pendingAssets, onProgress) => {
-    const ffmpeg = ffmpegRef.current;
+  const generateSingleVideo = async (ffmpeg, imageData, audioData, index, pendingAssets, onProgress) => {
     const audioObject = audioData && audioData.length > 0 ? audioData[0] : null;
     const audioBlob = getPlayableBlob(audioObject, pendingAssets);
     const hasAudio = !!audioBlob;
@@ -1210,7 +1214,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
         open={showProgressModal}
         progress={
           generatePerRecord
-            ? (progress / videosForGeneration) * 100
+            ? (progress / (totalFrames || 1)) * 100
             : generationMode === 'narration'
               ? Math.min(100, Math.max(0, progress || 0))
               : totalFrames > 0
