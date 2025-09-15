@@ -685,73 +685,74 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     setProgress(0);
     setShowProgressModal(true);
 
-    let framesCompletedSoFar = 0;
     const allGeneratedVideoAssets = [];
-
-    for (let i = 0; i < generatedImages.length; i++) {
-      if (isCancelledRef.current) {
-        console.log('Video generation cancelled by user.');
-        break;
-      }
-
-      const imageData = [generatedImages[i]];
-      const audioData = generatedAudioData[i] ? [generatedAudioData[i]] : null;
-      const framesForThisVideo = Math.floor((audioData?.[0]?.duration || slideDuration) * fps);
-
-      const handleSubProgress = ({ frame }) => {
-        const currentTotalProgress = framesCompletedSoFar + (frame || 0);
-        setProgress(Math.min(totalFramesAllVideos, currentTotalProgress));
-      };
-
-      try {
-        const videoBlob = await generateSingleVideo(imageData, audioData, i, pendingAssets, handleSubProgress);
-
-        framesCompletedSoFar += framesForThisVideo;
-        setProgress(framesCompletedSoFar);
-
-        const videoUrl = URL.createObjectURL(videoBlob);
-        const thumbnailBlob = await generateThumbnail(videoBlob);
-        const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
-
-        const videoAsset = {
-          type: 'video',
-          url: videoUrl,
-          blob: videoBlob,
-          name: `video_${i + 1}.mp4`,
-          vercelBlobId: null,
-          vercelBlobUrl: videoUrl,
-          mimeType: videoBlob.type,
-          size: videoBlob.size,
-          linkedinVideoUrn: null,
-          thumbnailUrl: thumbnailUrl,
-          thumbnailBlob: thumbnailBlob,
-        };
-
-        allGeneratedVideoAssets.push(videoAsset);
-
-        if (onNewAsset) {
-          onNewAsset(videoUrl, videoBlob);
-          if (thumbnailUrl && thumbnailBlob) {
-            onNewAsset(thumbnailUrl, thumbnailBlob);
-          }
+    try {
+      let framesCompletedSoFar = 0;
+      for (let i = 0; i < generatedImages.length; i++) {
+        if (isCancelledRef.current) {
+          console.log('Video generation cancelled by user.');
+          break;
         }
 
-      } catch (err) {
-        setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message}`);
-        setSnackbarOpen(true);
-        break;
+        const imageData = [generatedImages[i]];
+        const audioData = generatedAudioData[i] ? [generatedAudioData[i]] : null;
+        const framesForThisVideo = Math.floor((audioData?.[0]?.duration || slideDuration) * fps);
+
+        const handleSubProgress = ({ frame }) => {
+          const currentTotalProgress = framesCompletedSoFar + (frame || 0);
+          setProgress(Math.min(totalFramesAllVideos, currentTotalProgress));
+        };
+
+        // Inner try-catch for individual video errors
+        try {
+          const videoBlob = await generateSingleVideo(imageData, audioData, i, pendingAssets, handleSubProgress);
+
+          framesCompletedSoFar += framesForThisVideo;
+          setProgress(framesCompletedSoFar);
+
+          const videoUrl = URL.createObjectURL(videoBlob);
+          const thumbnailBlob = await generateThumbnail(videoBlob);
+          const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
+
+          const videoAsset = {
+            type: 'video',
+            url: videoUrl,
+            blob: videoBlob,
+            name: `video_${i + 1}.mp4`,
+            vercelBlobId: null,
+            vercelBlobUrl: videoUrl,
+            mimeType: videoBlob.type,
+            size: videoBlob.size,
+            linkedinVideoUrn: null,
+            thumbnailUrl: thumbnailUrl,
+            thumbnailBlob: thumbnailBlob,
+          };
+
+          allGeneratedVideoAssets.push(videoAsset);
+
+          if (onNewAsset) {
+            onNewAsset(videoUrl, videoBlob);
+            if (thumbnailUrl && thumbnailBlob) {
+              onNewAsset(thumbnailUrl, thumbnailBlob);
+            }
+          }
+
+        } catch (err) {
+          setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message}`);
+          setSnackbarOpen(true);
+          break; // Exit the loop on error
+        }
       }
+      if (onVideoGenerated && allGeneratedVideoAssets.length > 0) {
+        onVideoGenerated(allGeneratedVideoAssets);
+      }
+    } finally {
+      setIsLoading(false);
+      clearInterval(progressIntervalRef.current);
+      startTimeRef.current = null;
+      setShowProgressModal(false);
     }
-    if (onVideoGenerated && allGeneratedVideoAssets.length > 0) {
-      onVideoGenerated(allGeneratedVideoAssets);
-    }
-  } finally {
-    setIsLoading(false);
-    clearInterval(progressIntervalRef.current);
-    startTimeRef.current = null;
-    setShowProgressModal(false);
-  }
-};
+  };
 
   const generateSingleVideo = async (imageData, audioData, index, pendingAssets, onProgress) => {
     const ffmpeg = ffmpegRef.current;
