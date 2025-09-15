@@ -6,7 +6,7 @@
     }
   ],
   "functions": {
-    "api/upload.js": {
+    "api/upload-client.js": {
       "includeFiles": "api/node_modules/@vercel/blob/**"
     }
   }
