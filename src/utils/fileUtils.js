@@ -41,3 +41,23 @@ export const downloadExampleCsv = async () => {
     alert("Não foi possível baixar o arquivo CSV de exemplo. Verifique o console para mais detalhes.");
   }
 };
+
+/**
+ * Finds a playable Blob for a given media asset.
+ * It prioritizes a blob directly on the asset object, then checks the pendingAssets map.
+ * @param {object} asset The asset object (e.g., an audio or video object).
+ * @param {object} pendingAssets The map of pending assets (blobUrl -> Blob).
+ * @returns {Blob|null} The found Blob object or null.
+ */
+export const getPlayableBlob = (asset, pendingAssets = {}) => {
+  if (!asset) return null;
+  // Priority 1: The blob property on the asset object itself (for newly generated assets)
+  if (asset.blob instanceof Blob) {
+    return asset.blob;
+  }
+  // Priority 2: Look in pendingAssets using the asset's URL (for loaded assets)
+  if (asset.url && asset.url.startsWith('blob:') && pendingAssets[asset.url] instanceof Blob) {
+    return pendingAssets[asset.url];
+  }
+  return null;
+};
