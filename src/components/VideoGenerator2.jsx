@@ -13,7 +13,7 @@ import ProgressModal from './ProgressModal';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
 
-import { blobToDataURL } from '../utils/fileUtils';
+import { getPlayableBlob } from '../utils/fileUtils';
 import NarrationSettings from './VideoGenerator/NarrationSettings';
 import Preview from './VideoGenerator/Preview';
 import SlidesSettings from './VideoGenerator/SlidesSettings';
@@ -433,18 +433,12 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       if (hasAudio) {
         await Promise.all(
           generatedAudioData.map(async (audio, i) => {
-            let audioSource = null;
-            if (audio.blob) {
-              audioSource = await fetchFile(URL.createObjectURL(audio.blob));
-            } else if (audio.url) {
-              try {
-                audioSource = await fetchFile(audio.url);
-              } catch (e) {
-                console.warn(`Failed to fetch audio from URL for slide ${i}: ${audio.url}`, e);
-              }
-            }
-            if (audioSource) {
+            const audioBlob = getPlayableBlob(audio, pendingAssets);
+            if (audioBlob) {
+              const audioSource = await fetchFile(URL.createObjectURL(audioBlob));
               await ffmpeg.writeFile(`audio${i}.mp3`, audioSource);
+            } else {
+               console.warn(`Could not find a playable blob for audio slide ${i}. It will be silent.`);
             }
           })
         );
@@ -473,8 +467,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
             inputs.push("-i", "transition.mp3");
           }
         }
-        generatedAudioData.forEach((_, i) => {
-          if (generatedAudioData[i].blob) {
+        generatedAudioData.forEach((audio, i) => {
+          if (getPlayableBlob(audio, pendingAssets)) {
             inputs.push("-i", `audio${i}.mp3`);
           }
         });
@@ -532,7 +526,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
         // followed by its transition sound (or silence).
         for (let i = 0; i < generatedImages.length; i++) {
           const audioData = generatedAudioData[i];
-          const hasNarration = audioData && audioData.blob;
+          const hasNarration = !!getPlayableBlob(audioData, pendingAssets);
           const isLastSlide = i === generatedImages.length - 1;
 
           let slideContentAudio;
@@ -744,17 +738,6 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     setShowProgressModal(false);
   };
 
-  const getPlayableBlob = (audio) => {
-    if (!audio) return null;
-    if (audio.blob instanceof Blob) {
-      return audio.blob;
-    }
-    if (audio.url && audio.url.startsWith('blob:') && pendingAssets[audio.url] instanceof Blob) {
-      return pendingAssets[audio.url];
-    }
-    return null;
-  };
-
   const generateSingleVideo = async (imageData, audioData, index) => {
     const ffmpeg = ffmpegRef.current;
     const audioObject = audioData && audioData.length > 0 ? audioData[0] : null;
@@ -773,7 +756,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
     const inputs = ["-loop", "1", "-t", duration.toString(), "-i", imgFile];
     if (hasAudio) {
-      const audioSource = await fetchFile(audioBlob);
+      // Wrapping the blob in createObjectURL for consistency with the other generation function.
+      const audioSource = await fetchFile(URL.createObjectURL(audioBlob));
       await ffmpeg.writeFile(audioFile, audioSource);
       inputs.push("-i", audioFile);
     }
