@@ -958,7 +958,22 @@ function HomePage() {
       case 2: return campaignContent !== null;
       case 3: return csvData.length > 0;
       case 4: return true; // Always allow proceeding to formatting step
-      case 5: if (generatedPagesData.length === 0 || !generatedPagesData.every(img => img.blob || img.url)) { toast.error("Por favor, gere todas as páginas na etapa 4 antes de prosseguir."); return false; } return true;
+      case 5:
+        if (generatedPagesData.length === 0 || !generatedPagesData.every(img => img.blob || img.url)) {
+          toast.error("Por favor, gere todas as páginas na etapa 4 antes de prosseguir.");
+          return false;
+        }
+        return true;
+      case 6: // From Audio to Video
+        if (generatedAudioData.length === 0 && csvData.length > 0) {
+            toast.error("Por favor, gere os áudios na etapa 5 antes de prosseguir.");
+            return false;
+        }
+        if (generatedAudioData.some(audio => !audio.duration || audio.duration <= 0)) {
+            toast.error("Aguarde o cálculo da duração de todos os áudios antes de prosseguir.");
+            return false;
+        }
+        return true;
       default: return true;
     }
   };
@@ -1551,11 +1566,22 @@ function HomePage() {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} >
                   <Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button>
                   <Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box>
-                  <Tooltip title={activeStep === 5 && isProcessingAudio ? "Processando durações de áudio, por favor aguarde..." : ""}>
+                  <Tooltip title={
+                      activeStep === 5 && isProcessingAudio
+                      ? "Processando durações de áudio, por favor aguarde..."
+                      : activeStep === 5 && generatedAudioData.some(a => !a.duration || a.duration <= 0)
+                      ? "Aguardando o cálculo da duração de todos os áudios antes de prosseguir."
+                      : ""
+                    }>
                     <span>
                       <Button
                         onClick={handleNext}
-                        disabled={isGenerating || activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1) || (activeStep === 5 && isProcessingAudio)}
+                        disabled={
+                          isGenerating ||
+                          activeStep === steps.length - 1 ||
+                          !canProceedToStep(activeStep + 1) ||
+                          (activeStep === 5 && isProcessingAudio)
+                        }
                         variant="contained"
                         sx={{ borderRadius: 2, px: 3, py: 1.5 }}
                       >
