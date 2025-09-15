@@ -39,7 +39,6 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
   const [totalFrames, setTotalFrames] = useState(0);
   const [generatePerRecord, setGeneratePerRecord] = useState(false);
   const [generationMode, setGenerationMode] = useState('slides'); // 'slides' or 'narration'
-  const [videosForGeneration, setVideosForGeneration] = useState(0);
   
   // Parâmetros de chromakey expandidos
   const [useChromaKey, setUseChromaKey] = useState(false);
@@ -296,13 +295,13 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     return filter;
   };
 
-  const generateThumbnail = async (videoBlob) => {
-    if (!ffmpegRef.current || !ffmpegRef.current.loaded) {
-      console.warn('FFmpeg not loaded, skipping thumbnail generation.');
+  const generateThumbnail = async (ffmpegInstance, videoBlob) => {
+    if (!ffmpegInstance || !ffmpegInstance.loaded) {
+      console.warn('FFmpeg instance not provided or not loaded, skipping thumbnail generation.');
       return null;
     }
 
-    const ffmpeg = ffmpegRef.current;
+    const ffmpeg = ffmpegInstance;
     const inputFilename = `thumb-input-${Date.now()}.mp4`;
     const outputFilename = `thumb-output-${Date.now()}.jpg`;
 
@@ -681,7 +680,6 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     }
 
     setTotalFrames(totalFramesAllVideos);
-    setVideosForGeneration(generatedImages.length);
     setProgress(0);
     setShowProgressModal(true);
 
@@ -703,15 +701,16 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
           setProgress(Math.min(totalFramesAllVideos, currentTotalProgress));
         };
 
-        // Inner try-catch for individual video errors
+        const ffmpeg = new FFmpeg();
         try {
-          const videoBlob = await generateSingleVideo(imageData, audioData, i, pendingAssets, handleSubProgress);
+          await ffmpeg.load();
+          const videoBlob = await generateSingleVideo(ffmpeg, imageData, audioData, i, pendingAssets, handleSubProgress);
+          const thumbnailBlob = await generateThumbnail(ffmpeg, videoBlob);
 
           framesCompletedSoFar += framesForThisVideo;
           setProgress(framesCompletedSoFar);
 
           const videoUrl = URL.createObjectURL(videoBlob);
-          const thumbnailBlob = await generateThumbnail(videoBlob);
           const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
 
           const videoAsset = {
@@ -738,9 +737,13 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
           }
 
         } catch (err) {
-          setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message}`);
+          setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message || 'Erro desconhecido'}`);
           setSnackbarOpen(true);
-          break; // Exit the loop on error
+          break;
+        } finally {
+          if (ffmpeg.loaded) {
+            await ffmpeg.terminate();
+          }
         }
       }
       if (onVideoGenerated && allGeneratedVideoAssets.length > 0) {
@@ -754,8 +757,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     }
   };
 
-  const generateSingleVideo = async (imageData, audioData, index, pendingAssets, onProgress) => {
-    const ffmpeg = ffmpegRef.current;
+  const generateSingleVideo = async (ffmpeg, imageData, audioData, index, pendingAssets, onProgress) => {
     const audioObject = audioData && audioData.length > 0 ? audioData[0] : null;
     const audioBlob = getPlayableBlob(audioObject, pendingAssets);
     const hasAudio = !!audioBlob;
@@ -1210,7 +1212,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
         open={showProgressModal}
         progress={
           generatePerRecord
-            ? (progress / videosForGeneration) * 100
+            ? (progress / (totalFrames || 1)) * 100
             : generationMode === 'narration'
               ? Math.min(100, Math.max(0, progress || 0))
               : totalFrames > 0
