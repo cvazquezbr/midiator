@@ -1519,6 +1519,7 @@ function HomePage() {
                     generatedPages={generatedPagesData}
                     generatedAudioData={generatedAudioData}
                     generatedVideos={generatedVideos}
+                    pendingAssets={pendingAssets}
                     onVideoGenerated={(newVideoAssets) => {
                       // newVideoAssets is an array of video asset objects
                       setGeneratedVideos(prev => [...prev, ...newVideoAssets]);
