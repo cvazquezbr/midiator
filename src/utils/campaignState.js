@@ -253,8 +253,14 @@ export const deserializeCampaignData = async (loadedState) => {
         return response.blob();
       })
       .then(blob => {
-        const tempUrl = URL.createObjectURL(blob);
-        newlyCreatedAssets[tempUrl] = blob;
+        // Extract a filename from the URL, e.g., "asset_123.png" from ".../asset_123.png?..."
+        const filename = downloadUrl.split('/').pop().split('?')[0] || `downloaded_asset_${Date.now()}`;
+        // Convert the downloaded blob into a File object, which the Vercel client library handles more robustly.
+        const file = new File([blob], filename, { type: blob.type });
+
+        const tempUrl = URL.createObjectURL(file);
+        newlyCreatedAssets[tempUrl] = file; // Store a File object instead of a raw Blob
+
         // Update all occurrences of this URL with the new local blob URL.
         targets.forEach(target => {
           target.obj[target.key] = tempUrl;
