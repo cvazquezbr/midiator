@@ -25,6 +25,7 @@ export const uploadAsset = async (blob, filename, campaignId, userId) => {
       access: 'public',
       handleUploadUrl: '/api/upload-client',
       multipart: true,
+      allowOverwrite: true,
     });
 
     console.log(`[uploadAsset] Successfully uploaded ${filename} via client-side method. Full response:`, newBlob);
