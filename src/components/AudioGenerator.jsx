@@ -66,65 +66,6 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
     setAudioData(initialAudioData || []);
   }, [initialAudioData]);
 
-  // When the component loads or receives new audio data, process any items
-  // that have a URL but are missing a duration.
-  useEffect(() => {
-    const processMissingDurations = async () => {
-      const audiosToProcess = audioData.filter(a => a && a.url && !a.duration);
-      if (audiosToProcess.length === 0) {
-        return; // Nothing to do
-      }
-
-      console.log(`[AudioGenerator] Found ${audiosToProcess.length} audios missing duration. Processing...`);
-
-      const promises = audiosToProcess.map(audioToProcess => {
-        return new Promise((resolve) => {
-          const audioElement = document.createElement('audio');
-          audioElement.preload = 'metadata';
-
-          audioElement.onloadedmetadata = () => {
-            resolve({ ...audioToProcess, duration: audioElement.duration });
-          };
-
-          audioElement.onerror = (e) => {
-            console.error('Error loading audio metadata for', audioToProcess.url, e);
-            resolve(audioToProcess); // Resolve with original data on error
-          };
-
-          const blob = getPlayableBlob(audioToProcess);
-          if (blob) {
-            audioElement.src = URL.createObjectURL(blob);
-          } else if (audioToProcess.url) {
-            // Fallback for URLs that might not be in pendingAssets (e.g., direct vercel urls)
-             audioElement.src = audioToProcess.url;
-          } else {
-             console.error('Could not find a source for audio to calculate duration', audioToProcess);
-             resolve(audioToProcess);
-          }
-        });
-      });
-
-      const processedAudios = await Promise.all(promises);
-
-      // Create a map of the processed audios for efficient lookup
-      const processedMap = new Map(processedAudios.map(a => [a.url, a]));
-
-      // Update the main audioData array
-      const finalAudioData = audioData.map(originalAudio =>
-        processedMap.get(originalAudio.url) || originalAudio
-      );
-
-      console.log('[AudioGenerator] Durations processed. Updating parent state.');
-      setAudioData(finalAudioData);
-      onAudiosGenerated(finalAudioData);
-    };
-
-    processMissingDurations();
-    // We run this effect when audioData state changes, but it has a built-in guard
-    // to prevent infinite loops.
-  }, [audioData, onAudiosGenerated]);
-
-
   // Initialize the Google Cloud TTS API when the component mounts or mode changes
   useEffect(() => {
     if (audioMode.startsWith('google-tts')) {

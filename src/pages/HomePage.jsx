@@ -170,6 +170,7 @@ function HomePage() {
   const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
   const [originalImageSize, setOriginalImageSize] = useState(DEFAULT_IMAGE_SIZE);
   const [generatedAudioData, setGeneratedAudioData] = useState([]);
+  const [isProcessingAudio, setIsProcessingAudio] = useState(false);
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
@@ -699,10 +700,18 @@ function HomePage() {
     processVideos();
   }, [generatedVideos, setGeneratedVideos]);
 
+  // Processes audio files that are loaded or generated to calculate their duration,
+  // which is needed for video generation. Disables the UI while processing.
   useEffect(() => {
     const processAudios = async () => {
-      const audiosToProcess = generatedAudioData.filter(a => a.url && !a.duration);
-      if (audiosToProcess.length === 0) return;
+      const audiosToProcess = generatedAudioData.filter(a => a && a.url && !a.duration);
+      if (audiosToProcess.length === 0) {
+        setIsProcessingAudio(false);
+        return;
+      }
+
+      setIsProcessingAudio(true);
+      toast.info(`Processando ${audiosToProcess.length} áudio(s) para calcular a duração...`);
 
       const promises = audiosToProcess.map(audioData => {
         return new Promise((resolve) => {
@@ -710,37 +719,44 @@ function HomePage() {
           audioElement.preload = 'metadata';
 
           audioElement.onloadedmetadata = () => {
-            resolve({
-              ...audioData,
-              duration: audioElement.duration
-            });
+            resolve({ ...audioData, duration: audioElement.duration });
           };
 
           audioElement.onerror = (e) => {
             console.error('Error loading audio metadata for', audioData.url, e);
-            resolve(audioData); // Resolve with original data so we don't lose the audio
+            resolve(audioData); // Resolve with original data on error
           };
 
-          audioElement.src = audioData.url;
+          // Use the blob from pendingAssets if available, otherwise use the URL
+          const blob = pendingAssets[audioData.url];
+          if (blob) {
+            audioElement.src = URL.createObjectURL(blob);
+          } else {
+            audioElement.src = audioData.url;
+          }
         });
       });
 
-      const processedAudios = await Promise.all(promises);
+      try {
+        const processedAudios = await Promise.all(promises);
 
-      setGeneratedAudioData(currentAudios => {
-        const newCurrentAudios = [...currentAudios];
-        processedAudios.forEach(processedAudio => {
-            const index = newCurrentAudios.findIndex(a => a.url === processedAudio.url);
-            if (index !== -1) {
-                newCurrentAudios[index] = processedAudio;
-            }
+        const updatedAudios = generatedAudioData.map(originalAudio => {
+          const processed = processedAudios.find(p => p.url === originalAudio.url);
+          return processed || originalAudio;
         });
-        return newCurrentAudios;
-      });
+
+        setGeneratedAudioData(updatedAudios);
+        toast.success("Durações de áudio calculadas com sucesso!");
+      } catch (error) {
+        toast.error("Ocorreu um erro ao processar os áudios.");
+        console.error("Audio processing failed:", error);
+      } finally {
+        setIsProcessingAudio(false);
+      }
     };
 
     processAudios();
-  }, [generatedAudioData, setGeneratedAudioData]);
+  }, [generatedAudioData]);
 
   const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Modelo de Página', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Edição de Páginas', description: 'Gere as páginas finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish }, { label: 'Monitorar', description: 'Acompanhe as estatísticas de suas publicações.', icon: BarChart } ];
   const handleCreateNewCampaign = () => {
@@ -1532,7 +1548,22 @@ function HomePage() {
                 )}
                 {activeStep === 8 && <Monitor currentCampaign={currentCampaign} />}
 
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} ><Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button><Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box><Button onClick={handleNext} disabled={isGenerating || activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1)} variant="contained" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Próximo</Button></Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} >
+                  <Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button>
+                  <Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box>
+                  <Tooltip title={activeStep === 5 && isProcessingAudio ? "Processando durações de áudio, por favor aguarde..." : ""}>
+                    <span>
+                      <Button
+                        onClick={handleNext}
+                        disabled={isGenerating || activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1) || (activeStep === 5 && isProcessingAudio)}
+                        variant="contained"
+                        sx={{ borderRadius: 2, px: 3, py: 1.5 }}
+                      >
+                        Próximo
+                      </Button>
+                    </span>
+                  </Tooltip>
+                </Box>
               </>
             )}
             {currentView === 'personas' && <PersonasPage personaDrawerOpen={personaDrawerOpen} setPersonaDrawerOpen={setPersonaDrawerOpen} onNoPersonaSelected={() => setPersonaDrawerOpen(true)} onUpdate={fetchPersonasForCampaign} />}
