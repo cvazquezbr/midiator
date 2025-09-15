@@ -378,8 +378,13 @@ function HomePage() {
     const sanitizeMediaArray = (arr) => {
       if (!Array.isArray(arr)) return [];
       return arr.map(item => {
-        const { blob, file, ...rest } = item;
-        return rest;
+        // Create a shallow copy to avoid mutating the original state object directly
+        const sanitizedItem = { ...item };
+        // Explicitly delete large binary data properties
+        delete sanitizedItem.blob;
+        delete sanitizedItem.file;
+        delete sanitizedItem.thumbnailBlob;
+        return sanitizedItem;
       });
     };
 
