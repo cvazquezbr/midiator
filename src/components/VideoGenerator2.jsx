@@ -754,7 +754,9 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     const fileData = await fetchFile(imageData[0].url);
     await ffmpeg.writeFile(imgFile, fileData);
 
-    const inputs = ["-loop", "1", "-t", duration.toString(), "-i", imgFile];
+    // For a single image, -loop 1 is enough to make it an infinite stream.
+    // The -shortest flag will then cut it off when the audio ends.
+    const inputs = ["-loop", "1", "-i", imgFile];
     if (hasAudio) {
       // Wrapping the blob in createObjectURL for consistency with the other generation function.
       const audioSource = await fetchFile(URL.createObjectURL(audioBlob));
@@ -790,7 +792,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       "-c:v", "libx264",
       "-r", fps.toString(),
       "-pix_fmt", "yuv420p",
-      "-t", duration.toString(),
+      // The -t flag is removed from output; -shortest will handle the duration.
       "-preset", "ultrafast",
       outputFilename
     );
