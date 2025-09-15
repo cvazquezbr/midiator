@@ -1,8 +1,11 @@
 import { toast } from 'sonner';
+import { upload } from '@vercel/blob/client';
 import fetchWithAuth from './fetchWithAuth';
 
 /**
- * Uploads a single Blob by sending it to our server-side upload handler.
+ * Uploads a single Blob using the client-side upload method.
+ * It first asks our server for a secure token, then uploads the file directly
+ * to Vercel's Blob storage from the browser.
  * @param {Blob} blob The file blob to upload.
  * @param {string} filename The desired filename for the asset.
  * @param {string} campaignId The ID of the campaign for pathing.
@@ -18,27 +21,16 @@ export const uploadAsset = async (blob, filename, campaignId, userId) => {
   const fullPath = campaignId ? `${campaignId}/${filename}` : filename;
 
   try {
-    const response = await fetchWithAuth(
-      `/api/upload?filename=${encodeURIComponent(fullPath)}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': blob.type,
-        },
-        body: blob,
-      }
-    );
+    const newBlob = await upload(fullPath, blob, {
+      access: 'public',
+      handleUploadUrl: '/api/upload-client',
+      multipart: true,
+    });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error(errorData.error || `Server responded with ${response.status}`);
-    }
-
-    const newBlob = await response.json();
-    console.log(`[uploadAsset] Successfully uploaded ${filename}. Full response:`, newBlob);
-    return newBlob; // Return the full blob object from Vercel
+    console.log(`[uploadAsset] Successfully uploaded ${filename} via client-side method. Full response:`, newBlob);
+    return newBlob;
   } catch (error) {
-    console.error(`[uploadAsset] A critical error occurred during server-side upload for ${filename}:`, error);
+    console.error(`[uploadAsset] A critical error occurred during client-side upload for ${filename}:`, error);
     throw new Error(`Failed to upload ${filename}: ${error.message}`);
   }
 };
@@ -321,13 +313,14 @@ export const saveCampaign = async (name, campaignData, pendingAssets, setProgres
   console.log('[campaignState] Starting saveCampaign process...');
   try {
     console.log('[campaignState] Step 1: Serializing and uploading assets...');
-    const stateToSave = await serializeCampaignData(campaignData, pendingAssets, userId, null, setProgress);
+    // The state returned from serializeCampaignData has the permanent URLs
+    const serializedState = await serializeCampaignData(campaignData, pendingAssets, userId, null, setProgress);
     console.log('[campaignState] Step 1 COMPLETE.');
 
     console.log('[campaignState] Step 2: Sending campaign data to server...');
     const requestBody = JSON.stringify({
       name,
-      campaign_data: stateToSave,
+      campaign_data: serializedState, // Use the state with permanent URLs
       autor_id: autorId,
       persona_id: personaId
     });
@@ -346,7 +339,8 @@ export const saveCampaign = async (name, campaignData, pendingAssets, setProgres
 
     const result = await createRes.json();
     console.log('[campaignState] Campaign created successfully:', result);
-    return { campaign: result, finalState: stateToSave };
+    // Return both the campaign result from the DB and the final state with permanent URLs
+    return { campaign: result, finalState: serializedState };
   } catch (error) {
       console.error('[campaignState] An error occurred during the save process:', error);
       toast.error(`Save failed: ${error.message}`);
@@ -358,13 +352,13 @@ export const updateCampaign = async (id, name, campaignData, pendingAssets, setP
     console.log(`[campaignState] Starting updateCampaign process for ID: ${id}...`);
     try {
         console.log('[campaignState] Step 1: Serializing and uploading assets...');
-        const stateToSave = await serializeCampaignData(campaignData, pendingAssets, userId, id, setProgress);
+        const serializedState = await serializeCampaignData(campaignData, pendingAssets, userId, id, setProgress);
         console.log('[campaignState] Step 1 COMPLETE.');
 
         console.log('[campaignState] Step 2: Sending updated campaign data to server...');
         const requestBody = JSON.stringify({
           name,
-          campaign_data: stateToSave,
+          campaign_data: serializedState, // Use the state with permanent URLs
           autor_id: autorId,
           persona_id: personaId
         });
@@ -383,7 +377,7 @@ export const updateCampaign = async (id, name, campaignData, pendingAssets, setP
 
         const result = await res.json();
         console.log(`[campaignState] Campaign ${id} updated successfully:`, result);
-        return { campaign: result, finalState: stateToSave };
+        return { campaign: result, finalState: serializedState };
     } catch (error) {
         console.error(`[campaignState] An error occurred during the update process for campaign ${id}:`, error);
         toast.error(`Update failed: ${error.message}`);
