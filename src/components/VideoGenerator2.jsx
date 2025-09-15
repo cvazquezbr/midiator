@@ -39,6 +39,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
   const [totalFrames, setTotalFrames] = useState(0);
   const [generatePerRecord, setGeneratePerRecord] = useState(false);
   const [generationMode, setGenerationMode] = useState('slides'); // 'slides' or 'narration'
+  const [videosForGeneration, setVideosForGeneration] = useState(0);
   
   // Parâmetros de chromakey expandidos
   const [useChromaKey, setUseChromaKey] = useState(false);
@@ -680,8 +681,13 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
   const generateVideoPerRecord = async () => {
     setIsLoading(true);
     setError(null);
-    setVideos([]);
+    // setVideos([]); // This state doesn't exist, assuming it's a typo for setVideo(null)
+    setVideo(null);
     startTimeRef.current = Date.now();
+
+    const totalVideos = generatedImages.length;
+    setVideosForGeneration(totalVideos); // Set total for progress text
+    setProgress(0); // Reset progress
 
     const allGeneratedVideoAssets = [];
     for (let i = 0; i < generatedImages.length; i++) {
@@ -689,14 +695,19 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
         console.log('Video generation cancelled by user.');
         break;
       }
-      setTotalFrames(Math.floor((generatedAudioData[i]?.duration || slideDuration) * fps));
+
       const imageData = [generatedImages[i]];
       const audioData = generatedAudioData[i] ? [generatedAudioData[i]] : null;
 
       try {
+        // This function will now handle its own micro-progress if needed,
+        // but we update the macro progress here.
         const videoBlob = await generateSingleVideo(imageData, audioData, i);
-        const videoUrl = URL.createObjectURL(videoBlob);
 
+        // Update overall progress after each video is done
+        setProgress(i + 1);
+
+        const videoUrl = URL.createObjectURL(videoBlob);
         const thumbnailBlob = await generateThumbnail(videoBlob);
         const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
 
@@ -736,6 +747,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     clearInterval(progressIntervalRef.current);
     startTimeRef.current = null;
     setShowProgressModal(false);
+    setVideosForGeneration(0); // Reset after completion
   };
 
   const generateSingleVideo = async (imageData, audioData, index) => {
@@ -797,10 +809,12 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       outputFilename
     );
 
-    ffmpeg.on('progress', ({ time, frame }) => {
-      const framesProcessed = frame || Math.round((time || 0) / 1000000 * fps) || 0;
-      setProgress(Math.max(0, framesProcessed));
-    });
+    // This progress reporting was conflicting with the overall progress.
+    // It can be re-added later with a more complex state management if needed.
+    // ffmpeg.on('progress', ({ time, frame }) => {
+    //   const framesProcessed = frame || Math.round((time || 0) / 1000000 * fps) || 0;
+    //   setProgress(Math.max(0, framesProcessed));
+    // });
 
     console.log(`⚙️ FFmpeg cmd for video ${index}:`, cmd.join(" "));
     await ffmpeg.exec(cmd);
@@ -1190,19 +1204,23 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       <ProgressModal
         open={showProgressModal}
         progress={
-          generationMode === 'narration'
-            ? Math.min(100, Math.max(0, progress || 0))
-            : totalFrames > 0
-              ? Math.min(100, Math.max(0, ((progress || 0) / totalFrames) * 100))
-              : 0 // Show 0% if totalFrames is not ready, preventing NaN
+          generatePerRecord
+            ? (progress / videosForGeneration) * 100
+            : generationMode === 'narration'
+              ? Math.min(100, Math.max(0, progress || 0))
+              : totalFrames > 0
+                ? Math.min(100, Math.max(0, ((progress || 0) / totalFrames) * 100))
+                : 0
         }
         total={100}
         onCancel={handleCancel}
         title="Gerando Vídeo"
         progressText={
-          generationMode === 'narration'
-            ? `Processando... ${Math.round(progress)}%`
-            : `Progresso: ${progress} de ${totalFrames} frames processados.`
+          generatePerRecord
+            ? `Gerando vídeo ${progress} de ${videosForGeneration}...`
+            : generationMode === 'narration'
+              ? `Processando... ${Math.round(progress)}%`
+              : `Progresso: ${progress} de ${totalFrames} frames processados.`
         }
       />
       <iframe
@@ -1449,6 +1467,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
                 chromaKeyYuv={chromaKeyYuv}
                 chromaKeyColorspace={chromaKeyColorspace}
                 displayedImageSize={displayedImageSize}
+                onVideoError={handleVideoError}
               />
             </Grid>
           </Grid>

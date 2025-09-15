@@ -1,9 +1,6 @@
-import { handleUpload, vercelBlobStoreId } from '@vercel/blob/client';
+import { handleUpload } from '@vercel/blob/client';
 import { withAuth } from './middleware/auth.js';
 
-// This endpoint is for client-side uploads to Vercel Blob.
-// It does not handle the file body itself, but rather generates a secure token
-// that the client can use to upload the file directly.
 const handler = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -13,38 +10,57 @@ const handler = async (req, res) => {
     return res.status(401).json({ error: 'Authentication is required.' });
   }
 
-  const userId = req.user.uuid;
-  // The filename is sent in the body by the client library
-  const { pathname } = req.body;
-
-  if (!pathname) {
-    return res.status(400).json({ error: '`pathname` is required in the request body.' });
-  }
-
-  // Sanitize the filename and create the full path
-  const sanitizedFilename = pathname.replace(/[^\/\w\-_\.]/g, '');
-  const blobPath = `${userId}/${sanitizedFilename}`;
+  // The body will be a JSON object with the file's metadata.
+  // The actual file is not sent to this endpoint.
+  const body = await req.json();
 
   try {
     const jsonResponse = await handleUpload({
-      body: req.body, // The client sends a JSON body with the file's metadata
+      body,
       request: req,
-      // The full pathname of the blob
-      pathname: blobPath,
-      // The 'public' access level allows the blob to be served publicly
-      access: 'public',
-      // The client-side upload must specify the Vercel Blob store ID
-      storeId: vercelBlobStoreId,
-      // Multipart uploads are automatically enabled for files larger than 4.5MB
-      multipart: true,
+      onBeforeGenerateToken: async (pathname /*, clientPayload */) => {
+        // This is the server-side logic to authorize the upload.
+        // We can use the authenticated user's ID to create a secure path.
+        const userId = req.user.uuid;
+        const blobPath = `${userId}/${pathname}`;
+
+        // Here you can add more validation if needed, e.g., based on clientPayload.
+        return {
+          // The pathname now includes the user's ID.
+          pathname: blobPath,
+          // By default, the token is valid for 5 minutes.
+          // You can customize this if needed.
+          allowedContentTypes: [
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            'video/mp4',
+            'video/mpeg',
+            'audio/mpeg',
+            'audio/mp3',
+          ],
+          // You can also add a tokenPayload that will be sent back to your
+          // `onUploadCompleted` callback.
+          tokenPayload: JSON.stringify({
+            userId: userId,
+          }),
+        };
+      },
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
+        // This callback is triggered after the file has been successfully uploaded to Vercel Blob.
+        // You can use this to update your database with the blob's URL.
+        console.log('[API /upload-client] Blob upload completed!', blob, tokenPayload);
+        // Example: await db.updateUser(JSON.parse(tokenPayload).userId, { avatar: blob.url });
+      },
     });
 
-    // The response from `handleUpload` is a JSON object that contains the upload token
-    // and other necessary information for the client to perform the upload.
+    // The response contains the client token and other details for the client-side upload.
     return res.status(200).json(jsonResponse);
   } catch (error) {
     console.error('[API /upload-client] Error generating upload token:', error);
-    return res.status(500).json({ error: 'Failed to generate upload token.', details: error.message });
+    // The webhook will retry 5 times waiting for a 200 status code.
+    return res.status(400).json({ error: error.message });
   }
 };
 

@@ -26,6 +26,7 @@ const Preview = ({
   chromaKeyEdgeSmoothing,
   chromaKeyYuv,
   chromaKeyColorspace,
+  onVideoError,
 }) => {
   const [bgImageDims, setBgImageDims] = useState({ 
     width: 0, 
@@ -546,6 +547,7 @@ const Preview = ({
               muted
               style={videoStyle}
               onLoadedMetadata={handleVideoLoadedMetadata}
+              onError={onVideoError}
             />
             <canvas
               ref={canvasRef}
