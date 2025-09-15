@@ -353,8 +353,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
     setShowProgressModal(true);
     isCancelledRef.current = false;
-    setVideos([]);
     setVideo(null);
+    setProgress(0); // Reset progress before starting
 
     if (generationMode === 'narration') {
       await generateNarrationVideo();
@@ -628,9 +628,9 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
         "output.mp4"
       );
 
-      ffmpeg.on('progress', ({ time }) => {
-        const framesProcessed = Math.round(time / 1000000 * fps);
-        setProgress(framesProcessed);
+      ffmpeg.on('progress', ({ time, frame }) => {
+        const framesProcessed = frame || Math.round((time || 0) / 1000000 * fps) || 0;
+        setProgress(Math.max(0, framesProcessed));
       });
 
       console.log("⚙️ FFmpeg cmd:", cmd.join(" "));
@@ -805,9 +805,9 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       outputFilename
     );
 
-    ffmpeg.on('progress', ({ time }) => {
-      const framesProcessed = Math.round(time / 1000000 * fps);
-      setProgress(framesProcessed);
+    ffmpeg.on('progress', ({ time, frame }) => {
+      const framesProcessed = frame || Math.round((time || 0) / 1000000 * fps) || 0;
+      setProgress(Math.max(0, framesProcessed));
     });
 
     console.log(`⚙️ FFmpeg cmd for video ${index}:`, cmd.join(" "));
@@ -1197,7 +1197,13 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     <Box sx={{ mt: 3 }}>
       <ProgressModal
         open={showProgressModal}
-        progress={generationMode === 'narration' ? progress : (progress / totalFrames) * 100}
+        progress={
+          generationMode === 'narration'
+            ? Math.min(100, Math.max(0, progress || 0))
+            : totalFrames > 0
+              ? Math.min(100, Math.max(0, ((progress || 0) / totalFrames) * 100))
+              : 0 // Show 0% if totalFrames is not ready, preventing NaN
+        }
         total={100}
         onCancel={handleCancel}
         title="Gerando Vídeo"
