@@ -18,7 +18,7 @@ import NarrationSettings from './VideoGenerator/NarrationSettings';
 import Preview from './VideoGenerator/Preview';
 import SlidesSettings from './VideoGenerator/SlidesSettings';
 
-const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, generatedVideos = [], onVideoGenerated, onNewAsset }) => {
+const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, generatedVideos = [], pendingAssets = {}, onVideoGenerated, onNewAsset }) => {
   const [video, setVideo] = useState(null);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -744,13 +744,26 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     setShowProgressModal(false);
   };
 
+  const getPlayableBlob = (audio) => {
+    if (!audio) return null;
+    if (audio.blob instanceof Blob) {
+      return audio.blob;
+    }
+    if (audio.url && audio.url.startsWith('blob:') && pendingAssets[audio.url] instanceof Blob) {
+      return pendingAssets[audio.url];
+    }
+    return null;
+  };
+
   const generateSingleVideo = async (imageData, audioData, index) => {
     const ffmpeg = ffmpegRef.current;
-    const hasAudio = audioData && audioData.length > 0 && audioData[0].blob;
-    const duration = hasAudio ? audioData[0].duration : slideDuration;
+    const audioObject = audioData && audioData.length > 0 ? audioData[0] : null;
+    const audioBlob = getPlayableBlob(audioObject);
+    const hasAudio = !!audioBlob;
+    const duration = hasAudio && audioObject.duration ? audioObject.duration : slideDuration;
     const outputFilename = `output_${index}.mp4`;
 
-    await ffmpeg.deleteFile(outputFilename).catch(() => { });
+    await ffmpeg.deleteFile(outputFilename).catch(() => {});
 
     const imgFile = `img_${index}.png`;
     const audioFile = `audio_${index}.mp3`;
@@ -760,20 +773,9 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
     const inputs = ["-loop", "1", "-t", duration.toString(), "-i", imgFile];
     if (hasAudio) {
-      let audioSource = null;
-      if (audioData[0].blob) {
-        audioSource = await fetchFile(URL.createObjectURL(audioData[0].blob));
-      } else if (audioData[0].url) {
-        try {
-          audioSource = await fetchFile(audioData[0].url);
-        } catch (e) {
-          console.warn(`Failed to fetch single audio from URL: ${audioData[0].url}`, e);
-        }
-      }
-      if (audioSource) {
-        await ffmpeg.writeFile(audioFile, audioSource);
-        inputs.push("-i", audioFile);
-      }
+      const audioSource = await fetchFile(audioBlob);
+      await ffmpeg.writeFile(audioFile, audioSource);
+      inputs.push("-i", audioFile);
     }
 
     const firstImage = new Image();
@@ -794,6 +796,10 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     if (hasAudio) {
       cmd.push("-map", "1:a");
       cmd.push("-c:a", "aac");
+    }
+
+    if (hasAudio) {
+      cmd.push("-shortest");
     }
 
     cmd.push(
