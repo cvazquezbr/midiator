@@ -681,15 +681,23 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
   const generateVideoPerRecord = async () => {
     setIsLoading(true);
     setError(null);
-    // setVideos([]); // This state doesn't exist, assuming it's a typo for setVideo(null)
     setVideo(null);
     startTimeRef.current = Date.now();
 
-    const totalVideos = generatedImages.length;
-    setVideosForGeneration(totalVideos); // Set total for progress text
-    setProgress(0); // Reset progress
+    // 1. Calculate total frames for all videos for a granular progress bar
+    const totalDurationAllVideos = generatedImages.reduce((acc, _, i) => {
+      const audio = generatedAudioData[i];
+      const duration = audio ? audio.duration : slideDuration;
+      return acc + duration;
+    }, 0);
 
+    const totalFramesAllVideos = Math.floor(totalDurationAllVideos * fps);
+    setTotalFrames(totalFramesAllVideos);
+    setProgress(0);
+
+    let framesCompletedSoFar = 0;
     const allGeneratedVideoAssets = [];
+
     for (let i = 0; i < generatedImages.length; i++) {
       if (isCancelledRef.current) {
         console.log('Video generation cancelled by user.');
@@ -698,14 +706,21 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
       const imageData = [generatedImages[i]];
       const audioData = generatedAudioData[i] ? [generatedAudioData[i]] : null;
+      const framesForThisVideo = Math.floor((audioData?.[0]?.duration || slideDuration) * fps);
+
+      // 2. Define the onProgress callback for this specific video
+      const handleSubProgress = ({ frame }) => {
+        const currentTotalProgress = framesCompletedSoFar + frame;
+        setProgress(Math.min(totalFramesAllVideos, currentTotalProgress));
+      };
 
       try {
-        // This function will now handle its own micro-progress if needed,
-        // but we update the macro progress here.
-        const videoBlob = await generateSingleVideo(imageData, audioData, i);
+        // 3. Pass pendingAssets and the progress handler to the generation function
+        const videoBlob = await generateSingleVideo(imageData, audioData, i, pendingAssets, handleSubProgress);
 
-        // Update overall progress after each video is done
-        setProgress(i + 1);
+        framesCompletedSoFar += framesForThisVideo;
+        // Ensure progress is exactly where it should be after a video is done
+        setProgress(framesCompletedSoFar);
 
         const videoUrl = URL.createObjectURL(videoBlob);
         const thumbnailBlob = await generateThumbnail(videoBlob);
@@ -737,6 +752,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       } catch (err) {
         setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message}`);
         setSnackbarOpen(true);
+        // Stop the process if one video fails
+        break;
       }
     }
     if (onVideoGenerated && allGeneratedVideoAssets.length > 0) {
@@ -747,15 +764,13 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     clearInterval(progressIntervalRef.current);
     startTimeRef.current = null;
     setShowProgressModal(false);
-    setVideosForGeneration(0); // Reset after completion
   };
 
-  const generateSingleVideo = async (imageData, audioData, index) => {
+  const generateSingleVideo = async (imageData, audioData, index, pendingAssets, onProgress) => {
     const ffmpeg = ffmpegRef.current;
     const audioObject = audioData && audioData.length > 0 ? audioData[0] : null;
-    const audioBlob = getPlayableBlob(audioObject);
+    const audioBlob = getPlayableBlob(audioObject, pendingAssets); // <-- FIX: Pass pendingAssets
     const hasAudio = !!audioBlob;
-    const duration = hasAudio && audioObject.duration ? audioObject.duration : slideDuration;
     const outputFilename = `output_${index}.mp4`;
 
     await ffmpeg.deleteFile(outputFilename).catch(() => {});
@@ -766,11 +781,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     const fileData = await fetchFile(imageData[0].url);
     await ffmpeg.writeFile(imgFile, fileData);
 
-    // For a single image, -loop 1 is enough to make it an infinite stream.
-    // The -shortest flag will then cut it off when the audio ends.
     const inputs = ["-loop", "1", "-i", imgFile];
     if (hasAudio) {
-      // Wrapping the blob in createObjectURL for consistency with the other generation function.
       const audioSource = await fetchFile(URL.createObjectURL(audioBlob));
       await ffmpeg.writeFile(audioFile, audioSource);
       inputs.push("-i", audioFile);
@@ -794,30 +806,30 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     if (hasAudio) {
       cmd.push("-map", "1:a");
       cmd.push("-c:a", "aac");
-    }
-
-    if (hasAudio) {
-      cmd.push("-shortest");
+      cmd.push("-shortest"); // End video when the shortest input (audio) ends
+    } else {
+      // If no audio, we must specify a duration
+      cmd.push("-t", slideDuration.toString());
     }
 
     cmd.push(
       "-c:v", "libx264",
       "-r", fps.toString(),
       "-pix_fmt", "yuv420p",
-      // The -t flag is removed from output; -shortest will handle the duration.
       "-preset", "ultrafast",
       outputFilename
     );
 
-    // This progress reporting was conflicting with the overall progress.
-    // It can be re-added later with a more complex state management if needed.
-    // ffmpeg.on('progress', ({ time, frame }) => {
-    //   const framesProcessed = frame || Math.round((time || 0) / 1000000 * fps) || 0;
-    //   setProgress(Math.max(0, framesProcessed));
-    // });
+    // Re-enable progress reporting with the passed callback
+    if (onProgress) {
+      ffmpeg.on('progress', onProgress);
+    }
 
     console.log(`⚙️ FFmpeg cmd for video ${index}:`, cmd.join(" "));
     await ffmpeg.exec(cmd);
+
+    // Detach the progress handler after execution to avoid conflicts
+    ffmpeg.on('progress', () => {});
 
     const data = await ffmpeg.readFile(outputFilename);
     return new Blob([data.buffer], { type: "video/mp4" });
