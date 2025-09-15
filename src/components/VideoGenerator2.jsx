@@ -815,6 +815,16 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     await ffmpeg.exec(cmd);
 
     const data = await ffmpeg.readFile(outputFilename);
+
+    // Cleanup
+    ffmpeg.on('progress', () => {}); // Detach listener
+    await ffmpeg.deleteFile(imgFile);
+    if (hasAudio) {
+      await ffmpeg.deleteFile(audioFile);
+    }
+    // Don't delete the output file yet, it's needed to create the blob
+    // await ffmpeg.deleteFile(outputFilename);
+
     return new Blob([data.buffer], { type: "video/mp4" });
   };
 
