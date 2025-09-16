@@ -1,75 +1,66 @@
+import { handleRunScheduler } from '../api/cron/linkedin.js';
 import { query } from '../api/db.js';
-import { handleRunScheduler } from '../api/schedule.js';
 import { describe, it, expect, vi } from 'vitest';
 
-// Mock the publishPost function
-vi.mock('../api/schedule.js', async () => {
-  const originalModule = await vi.importActual('../api/schedule.js');
-  return {
-    ...originalModule,
-    publishPost: vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ id: 'urn:li:share:12345' }),
-    }),
-  };
-});
+// Mock dependencies
+vi.mock('../api/db.js', () => ({
+    query: vi.fn(),
+}));
+
+// Mock node-fetch
+vi.mock('node-fetch', () => ({
+    default: vi.fn(),
+}));
 
 const createMockResponse = () => {
-    let res = {};
-    res.status = (code) => { res.statusCode = code; return res; };
-    res.json = (data) => { res.body = data; return res; };
-    res.end = () => {};
+    const res = {};
+    res.status = vi.fn().mockReturnValue(res);
+    res.json = vi.fn().mockReturnValue(res);
     return res;
 };
 
-const createMockRequest = (headers = {}) => ({
+const createMockRequest = () => ({
     method: 'GET',
-    headers: {
-        'x-vercel-cron-secret': process.env.VERCEL_CRON_SECRET,
-        ...headers,
-    },
+    headers: {},
 });
 
+import fetch from 'node-fetch';
+
 describe('Scheduler Success Test', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
     it('should publish a scheduled post successfully', async () => {
-        // Create a test user
-        const { rows: users } = await query(
-            "INSERT INTO users (email, password, name) VALUES ($1, $2, $3) RETURNING *",
-            ['test@example.com', 'password', 'Test User']
-        );
-        const testUser = users[0];
+        const testUser = { id: 1, linkedin_access_token: 'test_token' };
+        const testSchedule = {
+            id: 101,
+            user_id: testUser.id,
+            post_content: { titulo: 'Test Post', conteudo: 'Test Content', cta: '#test', hashtags: [] },
+            linkedin_access_token: testUser.linkedin_access_token,
+        };
 
-        // Create a test campaign
-        const { rows: campaigns } = await query(
-            "INSERT INTO campaigns (user_id, name, campaign_data) VALUES ($1, $2, $3) RETURNING *",
-            [testUser.id, 'Test Campaign', { images: [] }]
-        );
-        const testCampaign = campaigns[0];
+        // Mock database responses
+        query.mockResolvedValue({ rows: [testSchedule] });
 
-        // Create a scheduled post
-        const scheduled_at = new Date(Date.now() - 60000).toISOString();
-        const { rows: schedules } = await query(
-            `INSERT INTO linkedin_schedules (user_id, campaign_id, scheduled_at, post_content, status)
-             VALUES ($1, $2, $3, $4, 'scheduled') RETURNING *`,
-            [testUser.id, testCampaign.id, scheduled_at, { titulo: 'Test Post', conteudo: 'Test Content', cta: '#test', hashtags: [] }]
-        );
-        const testSchedule = schedules[0];
+        // Mock fetch response for createPost
+        fetch.mockResolvedValue({
+            ok: true,
+            json: () => Promise.resolve({ id: 'urn:li:share:12345' }),
+        });
 
-        // Add linkedin access token to user
-        await query(
-            "UPDATE users SET linkedin_access_token = $1 WHERE id = $2",
-            ['test_token', testUser.id]
-        );
         const req = createMockRequest();
         const res = createMockResponse();
 
         await handleRunScheduler(req, res);
 
-        expect(res.statusCode).toBe(200);
-        expect(res.body.message).toContain('Published: 1');
+        expect(fetch).toHaveBeenCalled();
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.json).toHaveBeenCalledWith({ message: expect.stringContaining('Published: 1') });
 
-        // Verify the post status in the database
-        const { rows } = await query("SELECT status FROM linkedin_schedules WHERE id = $1", [testSchedule.id]);
-        expect(rows[0].status).toBe('published');
+        // Verify that the status was updated to 'published'
+        const updateQuery = query.mock.calls.find(call => call[0].includes('UPDATE linkedin_schedules'));
+        expect(updateQuery).toBeDefined();
+        expect(updateQuery[0]).toContain("status = 'published'");
     });
 });
