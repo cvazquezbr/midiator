@@ -21,7 +21,7 @@ import SlidesSettings from './VideoGenerator/SlidesSettings';
 import EditableTypography from './EditableTypography';
 import { toast } from 'sonner';
 
-const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, generatedVideos = [], pendingAssets = {}, onVideoGenerated, onNewAsset }) => {
+const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, generatedVideos = [], pendingAssets = {}, onVideoGenerated, onUpdateVideos, onNewAsset }) => {
   const [video, setVideo] = useState(null);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -121,7 +121,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
   const handleRenameVideo = (index, newName) => {
     const updatedVideos = [...generatedVideos];
     updatedVideos[index].name = newName;
-    onVideoGenerated(updatedVideos);
+    onUpdateVideos(updatedVideos);
   };
 
   const handleDeleteVideo = async (index) => {
@@ -140,7 +140,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
       // Then, remove from the local state
       const updatedVideos = generatedVideos.filter((_, i) => i !== index);
-      onVideoGenerated(updatedVideos);
+      onUpdateVideos(updatedVideos);
 
       toast.success(`Vídeo "${videoToDelete.name}" excluído com sucesso.`);
 

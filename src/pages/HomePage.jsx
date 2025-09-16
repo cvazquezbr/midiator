@@ -1537,6 +1537,7 @@ function HomePage() {
                       });
                       setPendingAssets(prev => ({ ...prev, ...newPendingAssets }));
                     }}
+                    onUpdateVideos={setGeneratedVideos}
                     onNewAsset={addAssetToPendingQueue}
                   />
                 )}
