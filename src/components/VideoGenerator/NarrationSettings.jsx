@@ -6,6 +6,7 @@ import {
   Switch,
   Slider
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { UploadFile } from '@mui/icons-material';
 
 const NarrationSettings = ({
@@ -22,9 +23,11 @@ const NarrationSettings = ({
   useChromaKey,
   setUseChromaKey,
 }) => {
+  const theme = useTheme();
+
   return (
-    <Paper elevation={0} sx={{ p: 2, mt: 2, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
-      <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>
+    <Paper elevation={0} sx={{ p: 2, mt: 2, backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderRadius: 1 }}>
+      <Typography variant="h6" sx={{ mb: 2, color: 'text.primary' }}>
         Configurações da Narração
       </Typography>
       <Grid container spacing={2}>
@@ -34,7 +37,7 @@ const NarrationSettings = ({
             component="label"
             fullWidth
             startIcon={<UploadFile />}
-            sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.5)' }}
+            sx={{ color: 'text.primary', borderColor: 'divider' }}
           >
             Carregar Vídeo de Narração
             <input
@@ -45,7 +48,7 @@ const NarrationSettings = ({
             />
           </Button>
           {narrationVideoData.file && (
-            <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
+            <Typography variant="caption" sx={{ mt: 1, display: 'block', color: 'text.secondary' }}>
               Arquivo: {narrationVideoData.file.name}
             </Typography>
           )}
