@@ -708,7 +708,9 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
           const thumbnailBlob = await generateThumbnail(ffmpeg, videoBlob);
 
           framesCompletedSoFar += framesForThisVideo;
-          setProgress(framesCompletedSoFar);
+          // This line was causing the progress to "jump" at the end of each video.
+          // The granular handleSubProgress is now solely responsible for updates.
+          // setProgress(framesCompletedSoFar);
 
           const videoUrl = URL.createObjectURL(videoBlob);
           const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
