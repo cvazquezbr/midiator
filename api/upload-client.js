@@ -61,6 +61,7 @@ const handler = async (req, res) => {
           tokenPayload: JSON.stringify({
             userId: userId,
           }),
+          allowOverwrite: true,
         };
       },
       onUploadCompleted: async ({ blob, tokenPayload }) => {
