@@ -236,7 +236,6 @@ function HomePage() {
     console.log("Applying loaded state:", state);
 
     setActiveStep(state.activeStep ?? 0);
-    setDarkMode(state.darkMode ?? false);
     setSidebarOpen(state.sidebarOpen ?? !isMobile);
 
     setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
