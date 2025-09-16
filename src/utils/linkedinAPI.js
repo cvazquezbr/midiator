@@ -187,28 +187,28 @@ export const uploadVideoForLinkedIn = async (linkedinConfig, videoBlob, authorUr
 
         const videoPartBlob = videoBlob.slice(firstByte, lastByte + 1);
 
-        // Use a direct fetch PUT request to the URL from LinkedIn
-        const uploadResponse = await fetch(uploadUrl, {
-            method: 'PUT',
-            body: videoPartBlob,
+        // Use the new streaming proxy endpoint
+        const proxyResponse = await fetch('/api/linkedin-video-upload', {
+            method: 'POST', // POST to our proxy
             headers: {
                 'Content-Type': videoBlob.type,
+                'X-Upload-URL': encodeURIComponent(uploadUrl),
+                // The withAuth middleware uses the Authorization header from the cookie, so we don't need to set it manually
             },
+            body: videoPartBlob,
         });
 
-        if (!uploadResponse.ok) {
-            const errorText = await uploadResponse.text();
-            console.error("LinkedIn Video Part Upload Error Body:", errorText);
-            throw new Error(`Falha no upload da parte do vídeo. Status: ${uploadResponse.status} ${uploadResponse.statusText}`);
+        if (!proxyResponse.ok) {
+            const errorData = await proxyResponse.json();
+            throw new Error(`Falha no upload da parte do vídeo através do proxy: ${errorData.message || proxyResponse.statusText}`);
         }
 
-        const etag = uploadResponse.headers.get('ETag');
-        if (!etag) {
-            throw new Error('ETag não encontrado na resposta do upload da parte do vídeo.');
+        const { eTag } = await proxyResponse.json();
+        if (!eTag) {
+            throw new Error('ETag não encontrado na resposta do proxy de upload.');
         }
 
-        // The ETag must be stripped of quotes
-        etags.push(etag.replace(/"/g, ''));
+        etags.push(eTag);
     }
 
     // Step 3: Finalize Upload
