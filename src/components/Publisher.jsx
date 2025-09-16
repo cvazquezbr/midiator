@@ -273,7 +273,7 @@ const Publisher = ({
         const personalTarget = {
             id: linkedinProfiles.personal.id,
             name: `${linkedinProfiles.personal.name} (Perfil Pessoal)`,
-            type: 'personal'
+            type: 'person'
         };
         targets.push(personalTarget);
         addedIds.add(personalTarget.id);
@@ -317,7 +317,7 @@ const Publisher = ({
             setSelectedTarget({
                 id: profiles.personal.id,
                 name: `${profiles.personal.name} (Perfil Pessoal)`,
-                type: 'personal'
+                type: 'person'
             });
         }
     } catch (error) {
