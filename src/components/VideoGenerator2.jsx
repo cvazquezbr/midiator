@@ -696,8 +696,9 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
         const audioData = generatedAudioData[i] ? [generatedAudioData[i]] : null;
         const framesForThisVideo = Math.floor((audioData?.[0]?.duration || slideDuration) * fps);
 
-        const handleSubProgress = ({ frame }) => {
-          const currentTotalProgress = framesCompletedSoFar + (frame || 0);
+        const handleSubProgress = ({ time, frame }) => {
+          const framesProcessed = frame || Math.round((time || 0) / 1000000 * fps) || 0;
+          const currentTotalProgress = framesCompletedSoFar + framesProcessed;
           setProgress(Math.min(totalFramesAllVideos, currentTotalProgress));
         };
 
