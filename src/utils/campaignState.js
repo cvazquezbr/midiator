@@ -157,7 +157,10 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
               target.obj.vercelBlobId = vercelBlobResponse.pathname;
               target.obj.mimeType = vercelBlobResponse.contentType;
               target.obj.size = vercelBlobResponse.size;
-            } else {
+            } else if (target.assetType === 'thumbnail') {
+                target.obj[target.key] = vercelBlobResponse.url;
+            }
+            else {
               // This is a simple asset or a thumbnail, just replace the URL
               target.obj[target.key] = vercelBlobResponse.url;
             }
@@ -263,7 +266,11 @@ export const deserializeCampaignData = async (loadedState) => {
 
         // Update all occurrences of this URL with the new local blob URL.
         targets.forEach(target => {
-          target.obj[target.key] = tempUrl;
+            target.obj[target.key] = tempUrl;
+            // If we are updating a video object, let's also ensure its size is set from the downloaded blob.
+            if (target.obj.type === 'video' && target.key === 'vercelBlobUrl') {
+                target.obj.size = file.size;
+            }
         });
       })
       .catch(error => {
