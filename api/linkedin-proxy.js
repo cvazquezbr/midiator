@@ -263,7 +263,7 @@ async function handleGetProfiles(fetch, request, response) {
     ]);
     if (!personalResponse.ok) throw new Error(`Failed to fetch personal profile: ${personalResponse.status}`);
     const personalData = await personalResponse.json();
-    const personal = { id: personalData.id, name: `${personalData.firstName.localized.pt_BR || personalData.firstName.localized.en_US} ${personalData.lastName.localized.pt_BR || personalData.lastName.localized.en_US}`, type: 'personal', profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier };
+    const personal = { id: personalData.id, name: `${personalData.firstName.localized.pt_BR || personalData.firstName.localized.en_US} ${personalData.lastName.localized.pt_BR || personalData.lastName.localized.en_US}`, type: 'person', profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier };
     let organizations = [];
     if (orgAclsResponse.ok) {
       const orgAclsData = await orgAclsResponse.json();

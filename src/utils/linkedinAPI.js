@@ -51,7 +51,7 @@ class LinkedInAPI {
     return personal;
   }
 
-  async publishPost(content, targetId, targetType = 'personal', images = [], video = null) {
+  async publishPost(content, targetId, targetType = 'person', images = [], video = null) {
     return this._proxyFetch('createPost', {
       payload: {
         content,
