@@ -4,19 +4,22 @@ import {
   Alert,
   Paper,
   Snackbar, CircularProgress, Tooltip, FormControlLabel,
-  Switch, Slider, Select, MenuItem, FormControl, InputLabel
+  Switch, Slider, Select, MenuItem, FormControl, InputLabel,
+  IconButton
 } from '@mui/material';
-import { Movie, GetApp, Info, ErrorOutline, Refresh, Download, Palette } from '@mui/icons-material';
+import { Movie, GetApp, Info, ErrorOutline, Refresh, Download, Palette, Delete } from '@mui/icons-material';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import ProgressModal from './ProgressModal';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
 
-import { getPlayableBlob } from '../utils/fileUtils';
+import { getPlayableBlob, deleteBlob } from '../utils/fileUtils';
 import NarrationSettings from './VideoGenerator/NarrationSettings';
 import Preview from './VideoGenerator/Preview';
 import SlidesSettings from './VideoGenerator/SlidesSettings';
+import EditableTypography from './EditableTypography';
+import { toast } from 'sonner';
 
 const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, generatedVideos = [], pendingAssets = {}, onVideoGenerated, onNewAsset }) => {
   const [video, setVideo] = useState(null);
@@ -112,6 +115,38 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       spillSuppress: 0.0,
       edgeSmoothing: 0.0,
       yuv: false
+    }
+  };
+
+  const handleRenameVideo = (index, newName) => {
+    const updatedVideos = [...generatedVideos];
+    updatedVideos[index].name = newName;
+    onVideoGenerated(updatedVideos);
+  };
+
+  const handleDeleteVideo = async (index) => {
+    const videoToDelete = generatedVideos[index];
+    if (!videoToDelete) return;
+
+    if (!window.confirm(`Tem certeza que deseja excluir o vídeo "${videoToDelete.name}"? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+
+    try {
+      // First, delete from blob storage if the URL is a vercel blob url
+      if (videoToDelete.vercelBlobUrl && videoToDelete.vercelBlobUrl.includes('blob.vercel-storage.com')) {
+        await deleteBlob(videoToDelete.vercelBlobUrl);
+      }
+
+      // Then, remove from the local state
+      const updatedVideos = generatedVideos.filter((_, i) => i !== index);
+      onVideoGenerated(updatedVideos);
+
+      toast.success(`Vídeo "${videoToDelete.name}" excluído com sucesso.`);
+
+    } catch (error) {
+      console.error('Falha ao excluir o vídeo:', error);
+      toast.error(`Falha ao excluir o vídeo: ${error.message}`);
     }
   };
 
@@ -1536,24 +1571,36 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
                   )}
                   <CardContent sx={{ flexGrow: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
-                      <Typography variant="body1" sx={{ color: 'text.primary' }}>{video.name}</Typography>
+                      <EditableTypography
+                        initialValue={video.name}
+                        onSave={(newName) => handleRenameVideo(index, newName)}
+                      />
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                         {video.size ? `${(video.size / 1024 / 1024).toFixed(2)} MB` : 'Tamanho desconhecido'}
                       </Typography>
                     </Box>
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      startIcon={<Download />}
-                      onClick={() => {
-                        const a = document.createElement('a');
-                        a.href = video.url || video.vercelBlobUrl;
-                        a.download = video.name;
-                        a.click();
-                      }}
-                    >
-                      Baixar
-                    </Button>
+                    <Box>
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        startIcon={<Download />}
+                        onClick={() => {
+                          const a = document.createElement('a');
+                          a.href = video.url || video.vercelBlobUrl;
+                          a.download = video.name;
+                          a.click();
+                        }}
+                      >
+                        Baixar
+                      </Button>
+                      <IconButton
+                        aria-label="delete"
+                        onClick={() => handleDeleteVideo(index)}
+                        sx={{ ml: 1 }}
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Box>
                   </CardContent>
                 </Card>
               ))}
