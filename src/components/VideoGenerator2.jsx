@@ -118,14 +118,15 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     }
   };
 
-  const handleRenameVideo = (index, newName) => {
-    const updatedVideos = [...generatedVideos];
-    updatedVideos[index].name = newName;
+  const handleRenameVideo = (id, newName) => {
+    const updatedVideos = generatedVideos.map(video =>
+      (video.id === id || video.url === id) ? { ...video, name: newName } : video
+    );
     onUpdateVideos(updatedVideos);
   };
 
-  const handleDeleteVideo = async (index) => {
-    const videoToDelete = generatedVideos[index];
+  const handleDeleteVideo = async (id) => {
+    const videoToDelete = generatedVideos.find(video => video.id === id || video.url === id);
     if (!videoToDelete) return;
 
     if (!window.confirm(`Tem certeza que deseja excluir o vídeo "${videoToDelete.name}"? Esta ação não pode ser desfeita.`)) {
@@ -139,7 +140,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       }
 
       // Then, remove from the local state
-      const updatedVideos = generatedVideos.filter((_, i) => i !== index);
+      const updatedVideos = generatedVideos.filter(video => video.id !== id && video.url !== id);
       onUpdateVideos(updatedVideos);
 
       toast.success(`Vídeo "${videoToDelete.name}" excluído com sucesso.`);
@@ -659,6 +660,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
       if (onVideoGenerated) {
         const videoAsset = {
+          id: crypto.randomUUID(),
           type: 'video',
           url: url,
           blob: blob,
@@ -751,6 +753,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
           const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
 
           const videoAsset = {
+            id: crypto.randomUUID(),
             type: 'video',
             url: videoUrl,
             blob: videoBlob,
@@ -1057,6 +1060,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
       if (onVideoGenerated) {
         const videoAsset = {
+          id: crypto.randomUUID(),
           type: 'video',
           url: url,
           blob: blob,
@@ -1558,8 +1562,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
               <Typography variant="h6" sx={{ mb: 1, color: 'text.primary' }}>
                 Vídeos Gerados
               </Typography>
-              {generatedVideos.map((video, index) => (
-                <Card key={index} sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+              {generatedVideos.map((video) => (
+                <Card key={video.id || video.url} sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
                   {video.thumbnailUrl && (
                     <Box sx={{ width: 150, height: 84, flexShrink: 0 }}>
                       <img
@@ -1573,7 +1577,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
                     <Box>
                       <EditableTypography
                         initialValue={video.name}
-                        onSave={(newName) => handleRenameVideo(index, newName)}
+                        onSave={(newName) => handleRenameVideo(video.id || video.url, newName)}
                       />
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                         {video.size ? `${(video.size / 1024 / 1024).toFixed(2)} MB` : 'Tamanho desconhecido'}
@@ -1595,7 +1599,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
                       </Button>
                       <IconButton
                         aria-label="delete"
-                        onClick={() => handleDeleteVideo(index)}
+                        onClick={() => handleDeleteVideo(video.id || video.url)}
                         sx={{ ml: 1 }}
                       >
                         <Delete />
