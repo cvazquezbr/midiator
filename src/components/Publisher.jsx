@@ -97,6 +97,7 @@ const Publisher = ({
   selectedVideos,
   setSelectedVideos,
   currentCampaign,
+  pendingAssets,
 }) => {
   const [tabValue, setTabValue] = React.useState(0);
   const [mySchedules, setMySchedules] = useState([]);
@@ -530,15 +531,21 @@ const Publisher = ({
         if (selectedVideoIndexes.length > 0) {
             const videoIndex = parseInt(selectedVideoIndexes[0]);
             const videoData = generatedVideosData[videoIndex];
+            let videoBlob = videoData.blob;
 
-            if (!videoData || !videoData.blob) {
+            // If blob is not directly on the object, try to find it in the pendingAssets map.
+            if (!videoBlob && videoData.url && pendingAssets) {
+              videoBlob = pendingAssets[videoData.url];
+            }
+
+            if (!videoBlob) {
                 throw new Error("Os dados do vídeo selecionado (blob) não foram encontrados. Tente gerar o vídeo novamente.");
             }
-            if (videoData.blob.size > 200 * 1024 * 1024) { // 200 MB limit
-                throw new Error(`O vídeo é muito grande (${formatBytes(videoData.blob.size)}). O limite do LinkedIn é 200MB.`);
+            if (videoBlob.size > 200 * 1024 * 1024) { // 200 MB limit
+                throw new Error(`O vídeo é muito grande (${formatBytes(videoBlob.size)}). O limite do LinkedIn é 200MB.`);
             }
 
-            videoUrn = await uploadVideoForLinkedIn(settings?.linkedin, videoData.blob, authorUrn, setPublishingStatusLi);
+            videoUrn = await uploadVideoForLinkedIn(settings?.linkedin, videoBlob, authorUrn, setPublishingStatusLi);
         } else if (selectedImageIndexes.length > 0) {
             setPublishingStatusLi('Preparando imagens para upload...');
             const toastId = toast.loading("Preparando imagens para o upload...");
