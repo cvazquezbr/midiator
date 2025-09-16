@@ -61,3 +61,33 @@ export const getPlayableBlob = (asset, pendingAssets = {}) => {
   }
   return null;
 };
+
+/**
+ * Deletes a blob from Vercel Blob Storage.
+ * @param {string} url The URL of the blob to delete.
+ * @returns {Promise<void>}
+ */
+export const deleteBlob = async (url) => {
+  if (!url || !url.includes('blob.vercel-storage.com')) {
+    console.warn('Invalid or non-Vercel blob URL provided for deletion:', url);
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/blob/delete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete blob');
+    }
+  } catch (error) {
+    console.error('Error deleting blob:', error);
+    throw error;
+  }
+};
