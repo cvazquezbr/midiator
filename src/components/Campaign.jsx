@@ -539,6 +539,8 @@ const Campaign = ({
                                     onChange={(e) => setCampaignContent({ ...campaignContent, titulo: e.target.value })}
                                     variant="outlined"
                                     fullWidth
+                                    multiline
+                                    rows={2}
                                 />
                             </Grid>
                             <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
