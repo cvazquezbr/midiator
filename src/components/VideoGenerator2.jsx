@@ -709,7 +709,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
           framesCompletedSoFar += framesForThisVideo;
           // This line was causing the progress to "jump". The handleSubProgress is now solely responsible for updates.
-          setProgress(framesCompletedSoFar);
+          // setProgress(framesCompletedSoFar); // This line is now removed to allow for smooth progress.
 
           const videoUrl = URL.createObjectURL(videoBlob);
           const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
