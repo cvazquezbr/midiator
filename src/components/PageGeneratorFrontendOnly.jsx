@@ -371,6 +371,7 @@ const PageGeneratorFrontendOnly = ({
             customFieldStyles: modifiedPageData.customFieldStyles,
             customBrandElements: modifiedPageData.customBrandElements,
             customPageTemplate: modifiedPageData.customPageTemplate,
+            fontScale: modifiedPageData.fontScale,
           };
         })
       );
