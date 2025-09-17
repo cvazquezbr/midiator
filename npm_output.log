@@ -1,0 +1,10 @@
+
+> midiator-google-drive-frontend@0.0.0 dev /app
+> vite
+
+Port 5173 is in use, trying another one...
+
+  VITE v5.4.20  ready in 778 ms
+
+  ➜  Local:   http://localhost:5174/
+  ➜  Network: use --host to expose
