@@ -93,8 +93,10 @@ const PageEditor = ({
         effectiveFieldStyles,
         effectiveBrandElements,
         record,
+        effectiveFontScale,
       } = pageDataFromHook;
 
+      setModalFontScale(effectiveFontScale);
       setEditedPositions(JSON.parse(JSON.stringify(effectiveFieldPositions)));
       setEditedBrandElements(safeDeepClone(effectiveBrandElements));
       setEditedRecord(JSON.parse(JSON.stringify(record)));
