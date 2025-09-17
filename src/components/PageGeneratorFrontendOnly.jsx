@@ -273,7 +273,7 @@ const PageGeneratorFrontendOnly = ({
               customFieldStyles: null,
               customBrandElements: null,
               customPageTemplate: null,
-              fontScale: 1,
+              fontScale,
             };
           }
           return p;
