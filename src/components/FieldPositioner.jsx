@@ -248,23 +248,14 @@ const FieldPositioner = ({
   useEffect(() => {
     if (renderedImageMetrics.width > 0 && effectiveImageSize?.width > 0) {
       const previewScale = renderedImageMetrics.width / effectiveImageSize.width;
-      setFontScale(previewScale); // Local scale for preview rendering
-
-      // The font scale for the final render should be 1 unless explicitly changed by the user.
-      // The preview scaling is for display purposes only.
-      if (onFontScaleChange) {
-        // We are not passing any scale factor here, so it will use the default (1)
-        // which is what we want for the final render unless the user changes it via a UI control.
-        // For now, let's ensure it's always 1 from here.
-        onFontScaleChange(1);
-      }
+      setFontScale(previewScale); // This is the local scale for rendering the preview correctly.
     } else {
       setFontScale(1);
-      if (onFontScaleChange) {
-        onFontScaleChange(1);
-      }
     }
-  }, [renderedImageMetrics, effectiveImageSize, onFontScaleChange]);
+    // The onFontScaleChange prop is used to bubble up a *user-defined* scale,
+    // not the preview scale. We should not be calling it here as it was causing a bug
+    // where the saved scale was being overwritten with 1.
+  }, [renderedImageMetrics, effectiveImageSize]);
 
   useEffect(() => {
     if (isInteracting) {
