@@ -347,31 +347,45 @@ const PageGeneratorFrontendOnly = ({
 
   const handleSaveIndividualModifications = async (modifiedPageData) => {
     console.log('[PageGenerator] handleSaveIndividualModifications received:', modifiedPageData);
-    const { index: pageIndex } = modifiedPageData;
+    const { index: pageIndex, fontScale: pageFontScale } = modifiedPageData;
+
+    // Normalize font sizes before saving and regenerating
+    const normalizedStyles = safeDeepClone(modifiedPageData.customFieldStyles);
+    if (pageFontScale && pageFontScale !== 1) {
+      for (const fieldId in normalizedStyles) {
+        if (Object.hasOwnProperty.call(normalizedStyles, fieldId)) {
+          const style = normalizedStyles[fieldId];
+          if (style && style.fontSize) {
+            style.fontSize /= pageFontScale;
+          }
+        }
+      }
+    }
+
     handleCloseGeneratedPageEditor();
     try {
       const newPageImageData = await regenerateSinglePage(
         pageIndex,
         modifiedPageData.record,
-        modifiedPageData.customPageTemplate, // Use the correct prop name
+        modifiedPageData.customPageTemplate,
         modifiedPageData.customFieldPositions,
-        modifiedPageData.customFieldStyles,
+        normalizedStyles, // Use normalized styles for regeneration
         modifiedPageData.customBrandElements,
-        modifiedPageData.fontScale
+        pageFontScale
       );
       setGeneratedPagesData(currentPages =>
         currentPages.map(page => {
           if (page.index !== pageIndex) return page;
           // Persist the changes
           return {
-            ...page, // Keep old data like blob, url
-            ...newPageImageData, // Overwrite with new image data
+            ...page,
+            ...newPageImageData,
             record: modifiedPageData.record,
             customFieldPositions: modifiedPageData.customFieldPositions,
-            customFieldStyles: modifiedPageData.customFieldStyles,
+            customFieldStyles: normalizedStyles, // Use normalized styles for saving
             customBrandElements: modifiedPageData.customBrandElements,
             customPageTemplate: modifiedPageData.customPageTemplate,
-            fontScale: modifiedPageData.fontScale,
+            fontScale: pageFontScale,
           };
         })
       );
