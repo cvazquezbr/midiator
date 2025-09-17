@@ -325,6 +325,12 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const handleOpenGeneratedPageEditor = (pageFromClosure, index) => {
+    if (!pageFromClosure || !pageFromClosure.record) {
+      console.error("Attempted to edit a page with no record data:", pageFromClosure);
+      alert("Não é possível editar esta página pois seus dados estão ausentes ou corrompidos.");
+      return;
+    }
+
     // Merge the base template with the custom page template to get the final version
     const finalTemplate = {
       ...pageTemplate, // Start with the global template
@@ -347,62 +353,38 @@ const PageGeneratorFrontendOnly = ({
 
   const handleSaveIndividualModifications = async (modifiedPageData) => {
     console.log('[PageGenerator] handleSaveIndividualModifications received:', modifiedPageData);
-    const {
-      index: pageIndex,
-      fontScale: pageFontScale,
-      customFieldStyles,
-    } = modifiedPageData;
-
-    // Assumption based on user feedback: customFieldStyles arriving here have a scaled fontSize.
-    // We must therefore do two things:
-    // 1. Regenerate the image using the scaled font sizes, but with a scale factor of 1 to prevent double-scaling.
-    // 2. Normalize the font sizes back to their base value before saving them to the state.
-
+    const { index: pageIndex } = modifiedPageData;
+    handleCloseGeneratedPageEditor();
     try {
-        const newPageImageData = await regenerateSinglePage(
-            pageIndex,
-            modifiedPageData.record,
-            modifiedPageData.customPageTemplate,
-            modifiedPageData.customFieldPositions,
-            customFieldStyles, // Pass the already-scaled styles
-            modifiedPageData.customBrandElements,
-            1 // Use a scale of 1 because the font size is already scaled
-        );
-
-        const normalizedStyles = safeDeepClone(customFieldStyles);
-        if (pageFontScale && pageFontScale !== 1) {
-            for (const fieldId in normalizedStyles) {
-                if (Object.hasOwnProperty.call(normalizedStyles, fieldId)) {
-                    const style = normalizedStyles[fieldId];
-                    if (style && style.fontSize) {
-                        style.fontSize /= pageFontScale;
-                    }
-                }
-            }
-        }
-
-        setGeneratedPagesData(currentPages =>
-            currentPages.map(page => {
-                if (page.index !== pageIndex) return page;
-                return {
-                    ...page,
-                    ...newPageImageData,
-                    record: modifiedPageData.record,
-                    customFieldPositions: modifiedPageData.customFieldPositions,
-                    customFieldStyles: normalizedStyles, // Save the normalized (base) styles
-                    customBrandElements: modifiedPageData.customBrandElements,
-                    customPageTemplate: modifiedPageData.customPageTemplate,
-                    fontScale: pageFontScale, // Persist the scale that was used
-                };
-            })
-        );
-
-        if (onThumbnailRecordTextUpdate) {
-            onThumbnailRecordTextUpdate(pageIndex, modifiedPageData.record);
-        }
-        handleCloseGeneratedPageEditor();
+      const newPageImageData = await regenerateSinglePage(
+        pageIndex,
+        modifiedPageData.record,
+        modifiedPageData.customPageTemplate, // Use the correct prop name
+        modifiedPageData.customFieldPositions,
+        modifiedPageData.customFieldStyles,
+        modifiedPageData.customBrandElements,
+        modifiedPageData.fontScale
+      );
+      setGeneratedPagesData(currentPages =>
+        currentPages.map(page => {
+          if (page.index !== pageIndex) return page;
+          // Persist the changes
+          return {
+            ...page, // Keep old data like blob, url
+            ...newPageImageData, // Overwrite with new image data
+            record: modifiedPageData.record,
+            customFieldPositions: modifiedPageData.customFieldPositions,
+            customFieldStyles: modifiedPageData.customFieldStyles,
+            customBrandElements: modifiedPageData.customBrandElements,
+            customPageTemplate: modifiedPageData.customPageTemplate,
+          };
+        })
+      );
+      if (onThumbnailRecordTextUpdate) {
+        onThumbnailRecordTextUpdate(pageIndex, modifiedPageData.record);
+      }
     } catch (error) {
-        alert(`Falha ao regenerar a página: ${error.message}`);
+      alert(`Falha ao regenerar a página: ${error.message}`);
     }
   };
 

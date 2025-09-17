@@ -276,10 +276,17 @@ const FieldPositioner = ({
   const completeFieldStyles = React.useMemo(() => {
     const safeHeaders = Array.isArray(csvHeaders) ? csvHeaders : [];
     const styles = {};
+    if (!fieldStyles) {
+        // If fieldStyles is null, just return default styles for all headers
+        safeHeaders.forEach(header => {
+            styles[header] = { ...COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER };
+        });
+        return styles;
+    }
     safeHeaders.forEach(header => {
       styles[header] = {
         ...COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER,
-        ...(fieldStyles?.[header] || {}),
+        ...(fieldStyles[header] || {}),
       };
     });
     return styles;
