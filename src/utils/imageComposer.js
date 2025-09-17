@@ -505,5 +505,6 @@ export const drawAndComposeImage = async ({
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
         pageTemplateUsed: pageTemplate,
+        fontScale, // Ensure the scale used is saved with the page data
     };
 };
