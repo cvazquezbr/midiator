@@ -30,6 +30,7 @@ export const usePageData = (pageIndex) => {
       effectiveFieldStyles: pageData?.customFieldStyles || fieldStyles,
       effectiveBrandElements: pageData?.customBrandElements || brandElements,
       record: pageData?.record,
+      effectiveFontScale: pageData?.fontScale || 1,
     };
   }, [pageData, pageTemplate, fieldPositions, fieldStyles, brandElements]);
 
