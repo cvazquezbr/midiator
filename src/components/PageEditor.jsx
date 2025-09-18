@@ -7,9 +7,10 @@ import {
   Button,
   Box,
   Grid,
-  IconButton
+  IconButton,
+  Tooltip,
 } from '@mui/material';
-import { Close, Edit } from '@mui/icons-material';
+import { Close, Edit, ContentCopy, ContentPaste } from '@mui/icons-material';
 import { useIsMobile } from '../hooks/use-mobile';
 import FieldPositioner from './FieldPositioner';
 import FormattingPanel from './FormattingPanel';
@@ -58,6 +59,52 @@ const PageEditor = ({
 
   const handleOpenHtmlEditor = (fieldId) => {
     setEditingField(fieldId);
+  };
+
+  const handleCopyStyle = () => {
+    const styleData = {
+      styles: editedStyles,
+      positions: editedPositions,
+      brandElements: editedBrandElements,
+      pageTemplate: editedPageTemplate,
+    };
+
+    navigator.clipboard.writeText(JSON.stringify(styleData, null, 2))
+      .then(() => {
+        alert('Estilo copiado para a área de transferência!');
+      })
+      .catch(err => {
+        console.error('Erro ao copiar estilo: ', err);
+        alert('Erro ao copiar estilo. Verifique o console para mais detalhes.');
+      });
+  };
+
+  const handlePasteStyle = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const pastedData = JSON.parse(text);
+
+      // Basic validation
+      if (pastedData && pastedData.styles && pastedData.positions) {
+        setEditedStyles(pastedData.styles);
+        setEditedPositions(pastedData.positions);
+
+        if (pastedData.brandElements) {
+          setEditedBrandElements(pastedData.brandElements);
+        }
+
+        if (pastedData.pageTemplate) {
+          setEditedPageTemplate(pastedData.pageTemplate);
+        }
+
+        alert('Estilo colado com sucesso!');
+      } else {
+        alert('Os dados da área de transferência não parecem ser um estilo válido.');
+      }
+    } catch (err) {
+      console.error('Erro ao colar estilo: ', err);
+      alert('Erro ao colar estilo. Verifique o console para mais detalhes.');
+    }
   };
 
   const handleInternalFieldSelection = useCallback((fieldToSelect) => {
@@ -141,8 +188,24 @@ const PageEditor = ({
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="paper" fullScreen={isMobile}>
       <DialogTitle>
-        Editar Página Gerada #{pageData.index + 1}
-        <IconButton onClick={onClose} sx={{ position: 'absolute', right: 8, top: 8 }}><Close /></IconButton>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Editar Página Gerada #{pageData.index + 1}</span>
+          <Box>
+            <Tooltip title="Copiar estilo">
+              <IconButton onClick={handleCopyStyle}>
+                <ContentCopy />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Colar estilo">
+              <IconButton onClick={handlePasteStyle}>
+                <ContentPaste />
+              </IconButton>
+            </Tooltip>
+            <IconButton onClick={onClose} sx={{ ml: 2 }}>
+              <Close />
+            </IconButton>
+          </Box>
+        </Box>
       </DialogTitle>
       <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column' }}>
         <Grid container spacing={2} sx={{ flexGrow: 1 }}>
