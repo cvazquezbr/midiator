@@ -160,6 +160,7 @@ const PageEditor = ({
       setEditedBrandElements(null);
       setEditedRecord(null);
       setSelectedFieldInternal(null);
+      setModalFontScale(1); // Reset font scale on close
     }
   }, [open, pageData, pageDataFromHook, csvHeaders]);
 
