@@ -264,9 +264,10 @@ const Publisher = ({
                 (campaignContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' '),
             ].join('\n');
 
-            // Replace all newlines with spaces to create a single-line string,
-            // as a workaround for a suspected API issue with multi-line text in multi-image posts.
-            postText = postText.replace(/(\r\n|\n|\r)/gm, ' ').trim();
+            // The replacement of newlines was a workaround for a suspected API issue
+            // that is no longer valid or was incorrect. Removing the replacement
+            // allows for multi-line posts as intended.
+            // postText = postText.replace(/(\r\n|\n|\r)/gm, ' ').trim();
 
             setContent(postText);
         }
