@@ -16,6 +16,17 @@ export async function publishPost(fetch, post, accessToken) {
         'x-internal-secret': process.env.INTERNAL_API_SECRET,
     };
 
+    const postText = [
+        (postContent.titulo || '').toUpperCase().replace(/[()]/g, ''),
+        '',
+        markdownToLinkedinText(postContent.conteudo),
+        '',
+        '----',
+        postContent.cta,
+        '----',
+        (postContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' ')
+    ].join('\n');
+
     const images = post.post_content?.images || [];
     const imageUrns = [];
 
@@ -74,14 +85,10 @@ export async function publishPost(fetch, post, accessToken) {
     const videoUrn = post.post_content?.video;
     const payload = {
         author: authorUrn,
+        content: postText,
         images: imageUrns,
         video: videoUrn,
-        title: post.post_content?.titulo || 'Video Post', // Kept for video posts
-        // Pass content parts separately for the proxy to handle intelligently
-        titulo: post.post_content?.titulo,
-        conteudo: post.post_content?.conteudo,
-        cta: post.post_content?.cta,
-        hashtags: post.post_content?.hashtags,
+        title: post.post_content?.titulo || 'Video Post'
     };
 
     return fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {

@@ -187,85 +187,61 @@ async function handleCreatePost(fetch, request, response) {
 
         console.log('[DEBUG] Entering handleCreatePost with received payload:', JSON.stringify(payload, null, 2));
 
-        // Destructure all possible fields from the payload
-        let { targetId, targetType, content, images, video, title, author, titulo, conteudo, cta, hashtags } = payload;
+        // Make the function more flexible by handling both formats from the UI and the scheduler.
+        let { targetId, targetType, content, images, video, title, author } = payload;
         let authorUrn;
 
         if (author) {
-            authorUrn = author; // Sent by scheduler
+            // Format sent by the scheduler, which already has the full URN.
+            authorUrn = author;
         } else if (targetId && targetType) {
-            authorUrn = `urn:li:${targetType === 'organization' ? 'organization' : 'person'}:${targetId}`; // Sent by UI
+            // Format sent by the user-facing UI.
+            authorUrn = `urn:li:${targetType === 'organization' ? 'organization' : 'person'}:${targetId}`;
         }
 
-        if (!authorUrn) {
-             return response.status(400).json({ error: 'Missing author information for creating post.' });
+        // Validate that we have the necessary information to proceed.
+        if (!authorUrn || !content) {
+             console.error('[DEBUG] Validation failed in handleCreatePost:', { authorUrn, contentExists: !!content });
+             return response.status(400).json({ error: 'Missing author information or content for creating post.' });
         }
 
+        // Base structure for the new Posts API
         const postData = {
             author: authorUrn,
+            commentary: content,
             visibility: "PUBLIC",
-            distribution: { feedDistribution: "MAIN_FEED", targetEntities: [], thirdPartyDistributionChannels: [] },
+            distribution: {
+                feedDistribution: "MAIN_FEED",
+                targetEntities: [],
+                thirdPartyDistributionChannels: []
+            },
             lifecycleState: "PUBLISHED",
             isReshareDisabledByAuthor: false
         };
 
-        // This is the new intelligent post construction logic
-        if (images && images.length > 1) {
-            // **Multi-image post logic**
-            // The title goes into the main commentary.
-            postData.commentary = (titulo || '').toUpperCase();
-
-            // The rest of the content is combined and used as alt-text for the *first* image.
-            // This is a workaround for the API's apparent truncation of 'commentary' on multi-image posts.
-            const fullContentForAltText = [
-                markdownToLinkedinText(conteudo || ''),
-                '',
-                '----',
-                cta || '',
-                '----',
-                (hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' ')
-            ].join('\n').trim();
-
+        if (video) {
             postData.content = {
-                multiImage: {
-                    images: images.map((urn, index) => {
-                        if (index === 0) {
-                            return { id: urn, altText: fullContentForAltText };
-                        }
-                        return { id: urn };
-                    })
+                media: {
+                    id: video,
+                    title: title || 'Video Post'
                 }
             };
-        } else {
-            // **Default logic for single image, video, or text-only posts**
-            let commentaryText;
-            if (content) {
-                // For posts from the UI, which send a single 'content' block
-                commentaryText = content;
+        } else if (images && images.length > 0) {
+            if (images.length === 1) {
+                // Single image post
+                postData.content = {
+                    media: {
+                        id: images[0]
+                    }
+                };
             } else {
-                // For posts from the scheduler, reconstruct the full text.
-                commentaryText = [
-                    (titulo || '').toUpperCase(),
-                    '',
-                    markdownToLinkedinText(conteudo || ''),
-                    '',
-                    '----',
-                    cta || '',
-                    '----',
-                    (hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' ')
-                ].join('\n');
+                // Multi-image post
+                postData.content = {
+                    multiImage: {
+                        images: images.map(urn => ({ id: urn }))
+                    }
+                };
             }
-            postData.commentary = commentaryText;
-
-            if (video) {
-                postData.content = { media: { id: video, title: title || 'Video Post' } };
-            } else if (images && images.length === 1) {
-                postData.content = { media: { id: images[0] } };
-            }
-        }
-
-        if (!postData.commentary && !postData.content) {
-            return response.status(400).json({ error: 'Post content cannot be empty.' });
         }
 
         console.log('[DEBUG] Calling handleGenericPost with new Posts API payload:', JSON.stringify(postData, null, 2));
