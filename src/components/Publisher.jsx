@@ -266,11 +266,13 @@ const Publisher = ({
 
             // Replace all newlines with spaces to create a single-line string,
             // as a workaround for a suspected API issue with multi-line text in multi-image posts.
-            postText = postText.replace(/(\r\n|\n|\r)/gm, ' ').trim();
+            if (Object.values(selectedImages).filter(Boolean).length > 1) {
+                postText = postText.replace(/(\r\n|\n|\r)/gm, ' ').trim();
+            }
 
             setContent(postText);
         }
-    }, [campaignContent]);
+    }, [campaignContent, selectedImages]);
 
   const getPublishingTargets = () => {
     const targets = [];
