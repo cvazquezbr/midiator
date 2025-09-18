@@ -1,7 +1,6 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 import { kv } from './kv.js';
-import { markdownToLinkedinText } from './utils.js';
 
 const LINKEDIN_API_VERSION = '202411';
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -259,14 +258,12 @@ async function handleGetProfiles(fetch, request, response) {
   const headers = { 'Authorization': `Bearer ${accessToken}`, 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION };
   try {
     const [personalResponse, orgAclsResponse] = await Promise.all([
-      fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,localizedFirstName,localizedLastName,profilePicture(displayImage~:playableStreams))', { headers }),
+      fetch('https://api.linkedin.com/v2/me?projection=(id,firstName,lastName,profilePicture(displayImage~:playableStreams))', { headers }),
       fetch('https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&state=APPROVED', { headers })
     ]);
     if (!personalResponse.ok) throw new Error(`Failed to fetch personal profile: ${personalResponse.status}`);
     const personalData = await personalResponse.json();
-    const firstName = personalData.localizedFirstName || Object.values(personalData.firstName?.localized || {})[0];
-    const lastName = personalData.localizedLastName || Object.values(personalData.lastName?.localized || {})[0];
-    const personal = { id: personalData.id, name: `${firstName || ''} ${lastName || ''}`.trim(), type: 'person', profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier };
+    const personal = { id: personalData.id, name: `${personalData.firstName.localized.pt_BR || personalData.firstName.localized.en_US} ${personalData.lastName.localized.pt_BR || personalData.lastName.localized.en_US}`, type: 'person', profilePicture: personalData.profilePicture?.['displayImage~']?.elements?.[0]?.identifiers?.[0]?.identifier };
     let organizations = [];
     if (orgAclsResponse.ok) {
       const orgAclsData = await orgAclsResponse.json();
