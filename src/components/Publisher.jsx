@@ -253,7 +253,7 @@ const Publisher = ({
 
     useEffect(() => {
         if (campaignContent) {
-            const postText = [
+            let postText = [
                 campaignContent.titulo?.toUpperCase(),
                 '',
                 markdownToLinkedinText(campaignContent.conteudo),
@@ -263,6 +263,11 @@ const Publisher = ({
                 '----',
                 (campaignContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' '),
             ].join('\n');
+
+            // Replace all newlines with spaces to create a single-line string,
+            // as a workaround for a suspected API issue with multi-line text in multi-image posts.
+            postText = postText.replace(/(\r\n|\n|\r)/gm, ' ').trim();
+
             setContent(postText);
         }
     }, [campaignContent]);
