@@ -70,3 +70,16 @@ export const safeDeepClone = (obj) => {
   }
   return objCopy;
 };
+
+export const markdownToLinkedinText = (markdown) => {
+    if (!markdown) return '';
+    let text = markdown;
+    text = text.replace(/<[^>]*>/g, ''); // strip html tags
+    text = text.replace(/\*\*(.*?)\*\*|\*(.*?)\*/g, '$1$2'); // strip bold/italic
+    text = text.replace(/^#+\s/gm, ''); // strip headers
+    text = text.replace(/^>\s/gm, ''); // strip blockquotes
+    text = text.replace(/\[(.*?)\]\((.*?)\)/g, '$1 ($2)'); // convert links
+    text = text.replace(/^\s*[-*]\s/gm, ''); // strip list items
+    text = text.trim().replace(/\n{3,}/g, '\n\n'); // collapse multiple newlines to just two
+    return text;
+};
