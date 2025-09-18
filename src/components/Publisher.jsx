@@ -55,6 +55,7 @@ import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getTimezone } from '../utils/timezone';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { dataURLtoBlob, urlToBlob } from '../utils/imageComposer';
+import { markdownToLinkedinText } from '../lib/utils';
 import { getLinkedInProfiles, publishToLinkedIn, uploadImagesForLinkedIn, uploadVideoForLinkedIn } from '../utils/linkedinAPI';
 import { useUserAuth } from '../context/UserAuthContext';
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
@@ -255,7 +256,7 @@ const Publisher = ({
             const postText = [
                 campaignContent.titulo?.toUpperCase(),
                 '',
-                campaignContent.conteudo,
+                markdownToLinkedinText(campaignContent.conteudo),
                 '',
                 '----',
                 campaignContent.cta,
