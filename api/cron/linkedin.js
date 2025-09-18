@@ -16,8 +16,8 @@ export async function publishPost(fetch, post, accessToken) {
         'x-internal-secret': process.env.INTERNAL_API_SECRET,
     };
 
-    const postText = [
-        (postContent.titulo || '').toUpperCase().replace(/[()]/g, ''),
+    let postText = [
+        (postContent.titulo || '').toUpperCase(),
         '',
         markdownToLinkedinText(postContent.conteudo),
         '',
@@ -26,6 +26,10 @@ export async function publishPost(fetch, post, accessToken) {
         '----',
         (postContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' ')
     ].join('\n');
+
+    // Replace all newlines with spaces to create a single-line string,
+    // as a workaround for a suspected API issue with multi-line text in multi-image posts.
+    postText = postText.replace(/\n/g, ' ').trim();
 
     const images = post.post_content?.images || [];
     const imageUrns = [];
