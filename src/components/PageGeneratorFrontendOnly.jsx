@@ -363,7 +363,7 @@ const PageGeneratorFrontendOnly = ({
         modifiedPageData.customFieldPositions,
         modifiedPageData.customFieldStyles,
         modifiedPageData.customBrandElements,
-        modifiedPageData.fontScale
+        1 // Always use a scale of 1 for the final render, as per user feedback.
       );
       setGeneratedPagesData(currentPages =>
         currentPages.map(page => {
@@ -377,6 +377,7 @@ const PageGeneratorFrontendOnly = ({
             customFieldStyles: modifiedPageData.customFieldStyles,
             customBrandElements: modifiedPageData.customBrandElements,
             customPageTemplate: modifiedPageData.customPageTemplate,
+            fontScale: 1, // Always save the scale as 1 for consistency.
           };
         })
       );
