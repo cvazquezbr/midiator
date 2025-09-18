@@ -1,7 +1,7 @@
 import { withAuth } from './middleware/auth.js';
 import { query } from './db.js';
 import { kv } from './kv.js';
-import { markdownToLinkedinText } from '../utils.js';
+import { markdownToLinkedinText } from './utils.js';
 
 const LINKEDIN_API_VERSION = '202411';
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
