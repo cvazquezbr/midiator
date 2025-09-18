@@ -51,17 +51,18 @@ class LinkedInAPI {
     return personal;
   }
 
-  async publishPost(content, targetId, targetType = 'person', images = [], video = null) {
+  async publishPost(content, targetId, targetType = 'person', images = [], video = null, title = '') {
     return this._proxyFetch('createPost', {
-      payload: {
-        content,
-        targetId,
-        targetType,
-        images,
-        video,
-      }
+        payload: {
+            content,
+            targetId,
+            targetType,
+            images,
+            video,
+            title,
+        }
     });
-  }
+}
 
   async registerUpload(authorUrn) {
     return this._proxyFetch('registerUpload', {
@@ -127,8 +128,6 @@ export const getLinkedInProfiles = async (linkedinConfig, forceRefresh = false) 
     return profiles;
 };
 
-// The main publishing function that components will call.
-// It abstracts away the class instantiation.
 export const publishToLinkedIn = async (campaignData, linkedinConfig) => {
     if (!linkedinConfig || !linkedinConfig.accessToken) {
         throw new Error('LinkedIn configuration or Access Token not found.');
@@ -137,12 +136,12 @@ export const publishToLinkedIn = async (campaignData, linkedinConfig) => {
         throw new Error('Campaign data, content, and targetId are required for publishing.');
     }
 
-    const { content, targetId, targetType, images, video } = campaignData;
+    const { content, targetId, targetType, images, video, title } = campaignData;
     const api = new LinkedInAPI(linkedinConfig.accessToken);
-    const result = await api.publishPost(content, targetId, targetType, images, video);
+    const result = await api.publishPost(content, targetId, targetType, images, video, title);
 
     console.log('Post created successfully on LinkedIn!', result);
-    return result; // The proxy should return the final post object with an ID or link.
+    return result;
 };
 
 // Note: The complex video/image upload logic from the old file is being removed for now
