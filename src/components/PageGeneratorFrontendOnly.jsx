@@ -37,6 +37,7 @@ import {
   Share,
   AutoAwesomeOutlined as GeminiIcon,
   SettingsBackupRestore,
+  Delete,
 } from '@mui/icons-material';
 import PageEditor from './PageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
@@ -86,6 +87,7 @@ const PageGeneratorFrontendOnly = ({
   const [regeneratingIndex, setRegeneratingIndex] = useState(null);
   const individualImageInputRef = useRef(null);
   const [fontsLoaded, setFontsLoaded] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const loadFonts = async () => {
@@ -495,21 +497,46 @@ const PageGeneratorFrontendOnly = ({
           <Typography variant="h5" gutterBottom><ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />Geração de Páginas</Typography>
           {!fontsLoaded && <Alert severity="info" sx={{ mb: 2 }}>Carregando fontes...</Alert>}
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} sm={initialGeneratedPagesData.some(img => img.url) ? 4 : 12}>
               <Button variant="contained" color="primary" onClick={generatePages} disabled={isGenerating || !fontsLoaded} startIcon={<ImageIcon />} fullWidth>
                 {initialGeneratedPagesData.some(img => img.url) ? 'Regerar páginas' : 'Gerar Páginas'}
               </Button>
             </Grid>
             {initialGeneratedPagesData.some(img => img.url) && (
-              <Grid item xs={12} md={6}>
-                <Button variant="outlined" onClick={downloadAllPages} startIcon={<Download />} fullWidth>
-                  Download Todas ({initialGeneratedPagesData.filter(img => img.url).length})
-                </Button>
-              </Grid>
+              <>
+                <Grid item xs={12} sm={4}>
+                  <Button variant="outlined" onClick={downloadAllPages} startIcon={<Download />} fullWidth>
+                    Download Todas ({initialGeneratedPagesData.filter(img => img.url).length})
+                  </Button>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Button variant="outlined" color="error" onClick={() => setShowDeleteConfirm(true)} startIcon={<Delete />} fullWidth>
+                    Excluir Todas
+                  </Button>
+                </Grid>
+              </>
             )}
           </Grid>
 
           {isGenerating && <Box sx={{ mt: 2 }}><LinearProgress /><Typography variant="body2" sx={{ mt: 1 }}>Gerando páginas...</Typography></Box>}
+
+          <Dialog open={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)}>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogContent>
+              <Typography>
+                Tem certeza que deseja excluir todas as páginas geradas? Esta ação não pode ser desfeita.
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setShowDeleteConfirm(false)}>Cancelar</Button>
+              <Button onClick={() => {
+                setGeneratedPagesData([]);
+                setShowDeleteConfirm(false);
+              }} color="error">
+                Excluir
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           {initialGeneratedPagesData.length > 0 && (
             <Box sx={{ mt: 3 }}>
