@@ -22,7 +22,6 @@ const PageGenerationService = {
       fieldStyles: globalFieldStyles,
       aspectRatio: globalAspectRatio,
       pageTemplate: globalPageTemplate,
-      fontScale: globalFontScale = 1,
     } = campaignContext;
 
     // Prioritize page-specific customizations over global campaign settings
@@ -30,7 +29,6 @@ const PageGenerationService = {
     const fieldPositions = pageData.customFieldPositions || globalFieldPositions;
     const fieldStyles = pageData.customFieldStyles || globalFieldStyles;
     const pageTemplate = pageData.customPageTemplate || globalPageTemplate;
-    const fontScale = pageData.fontScale || globalFontScale;
     const aspectRatio = globalAspectRatio; // Aspect ratio is likely always global for a campaign
 
     try {
@@ -42,7 +40,6 @@ const PageGenerationService = {
         fieldStyles,
         aspectRatio: aspectRatio || '1:1', // Fallback
         pageTemplate,
-        fontScale,
       });
       return finalPageData;
     } catch (error) {

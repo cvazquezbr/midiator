@@ -309,7 +309,6 @@ export const drawAndComposeImage = async ({
     fieldStyles = {},
     aspectRatio,
     pageTemplate,
-    fontScale = 1,
 }) => {
 
     const finalCanvas = document.createElement('canvas');
@@ -430,7 +429,7 @@ export const drawAndComposeImage = async ({
                 ctx.translate(-centerX, -centerY);
             }
 
-            const finalStyle = { ...style, fontSize: (style.fontSize || 24) * fontScale };
+            const finalStyle = { ...style, fontSize: (style.fontSize || 24) };
             const padding = (style.padding || 0);
             const borderRadius = (style.borderRadius || 0);
             const borderWidth = (style.borderWidth || 0);
@@ -505,6 +504,5 @@ export const drawAndComposeImage = async ({
         index,
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
         pageTemplateUsed: pageTemplate,
-        fontScale, // Ensure the scale used is saved with the page data
     };
 };
