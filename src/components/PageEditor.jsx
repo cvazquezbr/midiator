@@ -85,8 +85,26 @@ const PageEditor = ({
 
       // Basic validation
       if (pastedData && pastedData.styles && pastedData.positions) {
-        setEditedStyles(pastedData.styles);
-        setEditedPositions(pastedData.positions);
+        // Merge styles and positions field by field
+        setEditedStyles(prevStyles => {
+          const newStyles = { ...prevStyles };
+          for (const field in pastedData.styles) {
+            if (Object.prototype.hasOwnProperty.call(newStyles, field)) {
+              newStyles[field] = pastedData.styles[field];
+            }
+          }
+          return newStyles;
+        });
+
+        setEditedPositions(prevPositions => {
+          const newPositions = { ...prevPositions };
+          for (const field in pastedData.positions) {
+            if (Object.prototype.hasOwnProperty.call(newPositions, field)) {
+              newPositions[field] = pastedData.positions[field];
+            }
+          }
+          return newPositions;
+        });
 
         if (pastedData.brandElements) {
           setEditedBrandElements(pastedData.brandElements);
