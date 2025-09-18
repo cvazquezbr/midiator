@@ -264,9 +264,9 @@ const Publisher = ({
                 (campaignContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' '),
             ].join('\n');
 
-            // The replacement of newlines was a workaround for a suspected API issue
-            // that is no longer valid or was incorrect. Removing the replacement
-            // allows for multi-line posts as intended.
+            // The conversion to a single-line string was a workaround for a suspected
+            // API issue that proved to be incorrect. The API handles multi-line text
+            // correctly. This line is removed to allow for full, formatted posts.
             // postText = postText.replace(/(\r\n|\n|\r)/gm, ' ').trim();
 
             setContent(postText);
@@ -587,8 +587,8 @@ const Publisher = ({
             targetId: selectedTarget.id,
             targetType: selectedTarget.type,
             images: imageUrns,
-            video: videoUrn,
-            title: campaignContent?.titulo || 'Post'
+            video: videoUrn, // Pass the video URN here
+            title: campaignContent?.titulo || 'Vídeo'
         };
 
         const result = await publishToLinkedIn(campaignData, settings?.linkedin);
