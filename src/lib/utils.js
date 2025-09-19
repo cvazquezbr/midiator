@@ -73,10 +73,13 @@ export const safeDeepClone = (obj) => {
 
 export const markdownToLinkedinText = (markdown) => {
     if (!markdown) return '';
-    // A simple and safe version that only strips bold and HTML tags,
-    // which were the main requirements, without risking complex regex side effects.
-    let text = markdown
-        .replace(/<[^>]*>/g, '') // strip html tags
-        .replace(/\*\*(.*?)\*\*/g, '$1'); // strip bold formatting only
+    let text = markdown;
+    text = text.replace(/<[^>]*>/g, ''); // strip html tags
+    text = text.replace(/\*\*(.*?)\*\*|\*(.*?)\*/g, '$1$2'); // strip bold/italic
+    text = text.replace(/^#+\s/gm, ''); // strip headers
+    text = text.replace(/^>\s/gm, ''); // strip blockquotes
+    text = text.replace(/\[(.*?)\]\((.*?)\)/g, '$1 ($2)'); // convert links
+    text = text.replace(/^\s*[-*]\s/gm, ''); // strip list items
+    text = text.trim().replace(/\n{3,}/g, '\n\n'); // collapse multiple newlines to just two
     return text;
 };
