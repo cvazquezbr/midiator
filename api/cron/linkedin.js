@@ -16,9 +16,7 @@ export async function publishPost(fetch, post, accessToken) {
         'x-internal-secret': process.env.INTERNAL_API_SECRET,
     };
 
-    // This logic now correctly concatenates the post parts into a single
-    // multi-line string, which is what the LinkedIn API expects.
-    const postText = [
+    let originalPostText = [
         postContent.titulo,
         postContent.conteudo,
         '----',
@@ -26,6 +24,18 @@ export async function publishPost(fetch, post, accessToken) {
         '----',
         (postContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' ')
     ].filter(Boolean).join('\n\n').trim();
+
+    if (post.parent_id) {
+        const { rows: parentRows } = await query(
+            'SELECT linkedin_post_url FROM linkedin_schedules WHERE id = $1',
+            [post.parent_id]
+        );
+        if (parentRows.length > 0 && parentRows[0].linkedin_post_url) {
+            originalPostText += `\n\nPost original: ${parentRows[0].linkedin_post_url}`;
+        }
+    }
+
+    const postText = originalPostText;
 
     const images = post.post_content?.images || [];
     const imageUrns = [];
@@ -115,7 +125,8 @@ export async function handleRunScheduler(request, response) {
              LEFT JOIN campaigns c ON ls.campaign_id = c.id
              WHERE ls.scheduled_at <= ($1 AT TIME ZONE 'UTC')
                AND ls.status = 'scheduled'
-               AND u.linkedin_access_token IS NOT NULL`,
+               AND u.linkedin_access_token IS NOT NULL
+             ORDER BY ls.parent_id ASC NULLS FIRST, ls.scheduled_at ASC`,
             [now.toISOString()]
         );
 
