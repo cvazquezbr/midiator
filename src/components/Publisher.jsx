@@ -256,7 +256,7 @@ const Publisher = ({
             let postText = [
                 campaignContent.titulo?.toUpperCase(),
                 '',
-                markdownToLinkedinText(campaignContent.conteudo),
+                campaignContent.conteudo,
                 '',
                 '----',
                 campaignContent.cta,
