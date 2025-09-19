@@ -123,6 +123,7 @@ const Publisher = ({
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
 
+
   useEffect(() => {
     if (currentCampaign) {
       setSelectedCampaignId(currentCampaign.id);
@@ -362,23 +363,6 @@ const Publisher = ({
         setIsLoadingProfiles(false);
     }
   };
-
-  useEffect(() => {
-    // Start with the highest possible limit (personal profile default)
-    let limit = 3000;
-
-    // Check for the most restrictive limit based on profile type
-    if (selectedTarget && selectedTarget.type === 'organization') {
-      limit = 700;
-    }
-
-    // If the content size is 'medio', check if its limit is even more restrictive
-    if (contentSize === 'medio') {
-      limit = Math.min(limit, 1000);
-    }
-
-    setCharacterLimit(limit);
-  }, [selectedTarget, contentSize]);
 
   useEffect(() => {
     if (!followupPosts || followupPosts.length === 0) {
