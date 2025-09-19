@@ -586,8 +586,7 @@ const Publisher = ({
             targetId: selectedTarget.id,
             targetType: selectedTarget.type,
             images: imageUrns,
-            video: videoUrn, // Pass the video URN here
-            title: campaignContent?.titulo || 'Vídeo'
+            video: videoUrn,
         };
 
         const result = await publishToLinkedIn(campaignData, settings?.linkedin);
