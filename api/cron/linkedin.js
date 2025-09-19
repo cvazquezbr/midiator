@@ -69,7 +69,11 @@ export async function publishPost(fetch, post, accessToken) {
                 throw new Error(`Failed to register image upload: ${errorData.message || 'Unknown error'}`);
             }
 
-            const { uploadUrl, assetUrn } = await registerResponse.json();
+            const { uploadUrl, image: assetUrn } = await registerResponse.json();
+
+            if (!uploadUrl || !assetUrn) {
+                throw new Error(`Failed to get uploadUrl or assetUrn from register response. Response: ${JSON.stringify(await registerResponse.json())}`);
+            }
 
             const uploadResponse = await fetch(`${proxyApiBaseUrl}/api/linkedin-proxy`, {
                 method: 'POST',
