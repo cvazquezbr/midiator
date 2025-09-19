@@ -184,7 +184,15 @@ async function handleCreatePost(fetch, request, response) {
             return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
         }
 
-        console.log('[DEBUG] Entering handleCreatePost with received payload:', JSON.stringify(payload, null, 2));
+        // Detailed logging to debug content issues
+        console.log("--- LinkedIn Proxy: handleCreatePost ---");
+        console.log("Timestamp:", new Date().toISOString());
+        console.log("Received Payload:", JSON.stringify(payload, null, 2));
+        console.log("Type of content:", typeof payload.content);
+        if (typeof payload.content === 'string') {
+            console.log("Content Length:", payload.content.length);
+        }
+        console.log("-----------------------------------------");
 
         // Make the function more flexible by handling both formats from the UI and the scheduler.
         let { targetId, targetType, content, images, video, title, author } = payload;
