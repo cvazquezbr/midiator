@@ -125,7 +125,7 @@ export const generateCampaignContent = async ({ problema, solucao, objetivo, tom
     }
   }
 
-  const { titulo, title, conteudo, body, cta } = parsedContent;
+  const { titulo, title, conteudo, body, cta, "Texto Principal": textoPrincipal } = parsedContent;
 
   if (!titulo && !title) {
     console.error("Content generation response missing title:", parsedContent);
@@ -134,19 +134,17 @@ export const generateCampaignContent = async ({ problema, solucao, objetivo, tom
 
   let hashtags = [];
   if (Array.isArray(parsedContent.hashtags)) {
-    // If it's already an array, just trim and remove the '#' if present
     hashtags = parsedContent.hashtags.map(h => h.trim().replace(/^#/, ''));
   } else if (typeof parsedContent.hashtags === 'string') {
-    // Split by space or comma, filter out empty strings, and remove '#'
     hashtags = parsedContent.hashtags
-      .split(/[\s,]+/) // Split by one or more spaces or commas
-      .filter(h => h && h.length > 0) // Remove empty strings that might result from multiple separators
-      .map(h => h.trim().replace(/^#/, '')); // Trim and remove leading '#'
+      .split(/[\s,]+/)
+      .filter(h => h && h.length > 0)
+      .map(h => h.trim().replace(/^#/, ''));
   }
 
   return {
     titulo: titulo || title,
-    conteudo: conteudo || body || '',
+    conteudo: conteudo || body || textoPrincipal || '',
     cta: cta || '',
     hashtags: hashtags,
   };
