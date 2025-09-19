@@ -63,6 +63,7 @@ import { useUserAuth } from '../context/UserAuthContext';
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
 import { getCampaigns } from '../utils/campaignState.js';
 import ConfirmationModal from './ui/ConfirmationModal/ConfirmationModal';
+import { upload } from '@vercel/blob/client';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -123,6 +124,50 @@ const Publisher = ({
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
 
+  const uploadPendingAssets = async (imageUrls) => {
+    const urlMap = {};
+    const uploadsToProcess = [];
+
+    // Find which of the selected URLs are blob URLs that need uploading.
+    for (const url of imageUrls) {
+      if (url.startsWith('blob:') && pendingAssets[url]) {
+        uploadsToProcess.push({
+          url,
+          blob: pendingAssets[url],
+          filename: `scheduled-post-${Date.now()}`,
+        });
+      } else {
+        // If it's not a blob URL, it's already a permanent URL.
+        urlMap[url] = url;
+      }
+    }
+
+    if (uploadsToProcess.length === 0) {
+      return urlMap;
+    }
+
+    const toastId = toast.loading(`Fazendo upload de ${uploadsToProcess.length} imagem(ns) para o agendamento...`);
+
+    try {
+      await Promise.all(
+        uploadsToProcess.map(async (uploadData) => {
+          const newBlob = await upload(uploadData.filename, uploadData.blob, {
+            access: 'public',
+            handleUploadUrl: '/api/upload-client',
+          });
+          // Map the original blob: URL to the new permanent URL
+          urlMap[uploadData.url] = newBlob.url;
+        })
+      );
+      toast.success('Upload de imagens concluído!', { id: toastId });
+      return urlMap;
+    } catch (error) {
+      console.error('Error uploading assets for schedule:', error);
+      toast.error(`Falha no upload de imagens: ${error.message}`, { id: toastId });
+      // If upload fails, throw the error to stop the scheduling process
+      throw new Error('Image upload failed, scheduling aborted.');
+    }
+  };
 
   useEffect(() => {
     if (currentCampaign) {
@@ -489,7 +534,11 @@ const Publisher = ({
       mainPostDate.setHours(parseInt(mainHours, 10), parseInt(mainMinutes, 10), 0, 0);
       const mainPostUtcDate = fromZonedTime(mainPostDate, userTimezone);
       const selectedImageIndexes = Object.keys(selectedImages).filter(index => selectedImages[index]);
-      const selectedImageUrls = selectedImageIndexes.map(index => unifiedMedia[parseInt(index)].url);
+      const blobImageUrls = selectedImageIndexes.map(index => unifiedMedia[parseInt(index)].url);
+
+      // Upload images with blob URLs and get their permanent URLs
+      const urlMap = await uploadPendingAssets(blobImageUrls);
+      const permanentImageUrls = blobImageUrls.map(url => urlMap[url] || url);
 
       const mainPostPayload = {
         campaign_id: selectedCampaignId || null,
@@ -500,7 +549,7 @@ const Publisher = ({
             conteudo: campaignContent?.conteudo || '',
             cta: campaignContent?.cta || '',
             hashtags: campaignContent?.hashtags || [],
-            images: selectedImageUrls,
+            images: permanentImageUrls,
         },
       };
       const mainPostSchedule = await createSchedule(mainPostPayload);
