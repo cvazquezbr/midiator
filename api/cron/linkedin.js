@@ -35,7 +35,13 @@ export async function publishPost(fetch, post, accessToken) {
         }
     }
 
-    const postText = originalPostText;
+    let postText = originalPostText;
+    const characterLimit = 3000;
+    if (postText.length > characterLimit) {
+        const lastSpace = postText.substring(0, characterLimit - 3).lastIndexOf(' ');
+        const cutoff = lastSpace > 0 ? lastSpace : characterLimit - 3;
+        postText = postText.substring(0, cutoff) + '...';
+    }
 
     const images = post.post_content?.images || [];
     const imageUrns = [];
