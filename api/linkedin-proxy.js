@@ -69,22 +69,13 @@ function stripEmojis(text) {
     return text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
 }
 
-function escapeLinkedInText(text) {
-    if (!text) return text;
-    // Escape characters reserved in LinkedIn's "little text" syntax.
-    // The characters are: | { } @ [ ] ( ) < > # \ * _ ~
-    // The backslash `\` and other special regex characters must be escaped in the regex pattern.
-    return text.replace(/([|{}@\[\]()<>#\\*_~])/g, '\\$1');
-}
-
 async function handleGenericPost(fetch, request, response, url) {
     const { accessToken, payload } = request.body;
     if (!accessToken || !payload) return response.status(400).json({ error: 'Missing accessToken or payload.' });
     try {
         // Ensure commentary is clean before sending
         if (payload.commentary) {
-            let commentary = stripEmojis(payload.commentary);
-            payload.commentary = escapeLinkedInText(commentary);
+            payload.commentary = stripEmojis(payload.commentary);
         }
 
         const linkedinResponse = await fetchWithRetry(fetch, url, {
