@@ -1,5 +1,5 @@
 import { withAdminAuth } from '../middleware/auth.js';
-import { handleRunScheduler } from '../schedule.js';
+import { handleRunScheduler } from '../cron/linkedin.js';
 
 /**
  * API handler for manually triggering the scheduler by an admin.
