@@ -57,12 +57,7 @@ export async function publishPost(fetch, post, accessToken) {
                     accessToken,
                     payload: {
                         initializeUploadRequest: {
-                            owner: authorUrn,
-                            recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
-                            serviceRelationships: [{
-                                relationshipType: 'OWNER',
-                                identifier: 'urn:li:userGeneratedContent'
-                            }]
+                            owner: authorUrn
                         }
                     }
                 })
