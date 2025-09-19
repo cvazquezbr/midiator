@@ -256,7 +256,7 @@ const Publisher = ({
             let postText = [
                 campaignContent.titulo?.toUpperCase(),
                 '',
-                campaignContent.conteudo,
+                markdownToLinkedinText(campaignContent.conteudo),
                 '',
                 '----',
                 campaignContent.cta,
@@ -264,10 +264,9 @@ const Publisher = ({
                 (campaignContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' '),
             ].join('\n');
 
-            // The conversion to a single-line string was a workaround for a suspected
-            // API issue that proved to be incorrect. The API handles multi-line text
-            // correctly. This line is removed to allow for full, formatted posts.
-            // postText = postText.replace(/(\r\n|\n|\r)/gm, ' ').trim();
+            // Replace all newlines with spaces to create a single-line string,
+            // as a workaround for a suspected API issue with multi-line text in multi-image posts.
+            postText = postText.replace(/(\r\n|\n|\r)/gm, ' ').trim();
 
             setContent(postText);
         }
