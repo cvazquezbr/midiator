@@ -364,15 +364,20 @@ const Publisher = ({
   };
 
   useEffect(() => {
-    if (contentSize === 'medio') {
-      setCharacterLimit(1000);
-    } else if (selectedTarget) {
-      const newLimit = selectedTarget.type === 'organization' ? 700 : 3000;
-      setCharacterLimit(newLimit);
-    } else {
-      // Default limit when no target is selected and size is not 'medio'
-      setCharacterLimit(3000);
+    // Start with the highest possible limit (personal profile default)
+    let limit = 3000;
+
+    // Check for the most restrictive limit based on profile type
+    if (selectedTarget && selectedTarget.type === 'organization') {
+      limit = 700;
     }
+
+    // If the content size is 'medio', check if its limit is even more restrictive
+    if (contentSize === 'medio') {
+      limit = Math.min(limit, 1000);
+    }
+
+    setCharacterLimit(limit);
   }, [selectedTarget, contentSize]);
 
   useEffect(() => {
