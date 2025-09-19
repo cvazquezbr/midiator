@@ -63,13 +63,24 @@ async function handleTokenExchange(fetch, request, response) {
   }
 }
 
+function stripEmojis(text) {
+    if (!text) return text;
+    // This regex removes most common emojis and symbols.
+    return text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
+}
+
 async function handleGenericPost(fetch, request, response, url) {
     const { accessToken, payload } = request.body;
     if (!accessToken || !payload) return response.status(400).json({ error: 'Missing accessToken or payload.' });
     try {
+        // Ensure commentary is clean before sending
+        if (payload.commentary) {
+            payload.commentary = stripEmojis(payload.commentary);
+        }
+
         const linkedinResponse = await fetchWithRetry(fetch, url, {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION },
+            headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json; charset=UTF-8', 'X-Restli-Protocol-Version': '2.0.0', 'LinkedIn-Version': LINKEDIN_API_VERSION },
             body: JSON.stringify(payload),
         });
 
@@ -184,15 +195,7 @@ async function handleCreatePost(fetch, request, response) {
             return response.status(400).json({ error: 'Missing accessToken or payload for creating post.' });
         }
 
-        // Detailed logging to debug content issues
-        console.log("--- LinkedIn Proxy: handleCreatePost ---");
-        console.log("Timestamp:", new Date().toISOString());
-        console.log("Received Payload:", JSON.stringify(payload, null, 2));
-        console.log("Type of content:", typeof payload.content);
-        if (typeof payload.content === 'string') {
-            console.log("Content Length:", payload.content.length);
-        }
-        console.log("-----------------------------------------");
+        console.log('[DEBUG] Entering handleCreatePost with received payload:', JSON.stringify(payload, null, 2));
 
         // Make the function more flexible by handling both formats from the UI and the scheduler.
         let { targetId, targetType, content, images, video, title, author } = payload;
