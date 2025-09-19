@@ -263,8 +263,7 @@ const Publisher = ({
                     sourceContent = campaignContent.conteudoPequeno || '';
                     break;
                 case 'medio':
-                    // Limita o conteúdo médio a 1000 caracteres na fonte
-                    sourceContent = (campaignContent.conteudoMedio || '').substring(0, 1000);
+                    sourceContent = campaignContent.conteudoMedio || '';
                     break;
                 case 'grande':
                 default:
@@ -364,28 +363,17 @@ const Publisher = ({
     }
   };
 
-  const LIMITS = {
-    textOnly: 3000,
-    singleImage: 3000,
-    multiImage: 1300,
-    video: 2600
-  };
-
   useEffect(() => {
-    const selectedImageCount = Object.values(selectedImages).filter(Boolean).length;
-    const selectedVideoCount = Object.values(selectedVideos).filter(Boolean).length;
-
-    let newLimit = LIMITS.textOnly;
-    if (selectedVideoCount > 0) {
-      newLimit = LIMITS.video;
-    } else if (selectedImageCount > 1) {
-      newLimit = LIMITS.multiImage;
-    } else if (selectedImageCount === 1) {
-      newLimit = LIMITS.singleImage;
+    if (contentSize === 'medio') {
+      setCharacterLimit(1000);
+    } else if (selectedTarget) {
+      const newLimit = selectedTarget.type === 'organization' ? 700 : 3000;
+      setCharacterLimit(newLimit);
+    } else {
+      // Default limit when no target is selected and size is not 'medio'
+      setCharacterLimit(3000);
     }
-
-    setCharacterLimit(newLimit);
-  }, [selectedImages, selectedVideos]);
+  }, [selectedTarget, contentSize]);
 
   useEffect(() => {
     if (!followupPosts || followupPosts.length === 0) {
