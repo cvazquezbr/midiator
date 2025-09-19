@@ -519,7 +519,7 @@ const Publisher = ({
             images: selectedImageUrls,
         },
       };
-      await createSchedule(mainPostPayload);
+      const mainPostSchedule = await createSchedule(mainPostPayload);
       setPublishingStatusLi('Post principal agendado. Agendando follow-ups...');
 
       if (followupPosts && followupPosts.length > 0) {
@@ -542,6 +542,7 @@ const Publisher = ({
           const followupUtcDate = fromZonedTime(followupDate, userTimezone);
           const followupPayload = {
             campaign_id: selectedCampaignId || null,
+            parent_id: mainPostSchedule.id,
             scheduled_at: followupUtcDate.toISOString(),
             authorUrn: `urn:li:${selectedTarget.type}:${selectedTarget.id}`,
             content: {
