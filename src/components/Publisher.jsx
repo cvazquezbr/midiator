@@ -1108,6 +1108,11 @@ const Publisher = ({
                                         </TableCell>
                                         <TableCell component="th" scope="row">
                                             {row.post_content.titulo}
+                                            {row.parent_id && row.parent_post_url && (
+                                                <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                                    Follow-up de: <MuiLink href={row.parent_post_url} target="_blank" rel="noopener">Post Principal</MuiLink>
+                                                </Typography>
+                                            )}
                                         </TableCell>
                                         <TableCell align="right">
                                             {formatInTimeZone(new Date(row.scheduled_at), getTimezone() || 'UTC', 'dd/MM/yyyy HH:mm:ss zzz', { locale: ptBR })}
