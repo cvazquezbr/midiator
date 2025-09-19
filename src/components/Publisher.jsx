@@ -113,6 +113,8 @@ const Publisher = ({
   const [selectedTarget, setSelectedTarget] = useState(null);
   const [publishResults, setPublishResults] = useState([]);
   const [content, setContent] = useState('');
+  const [contentSize, setContentSize] = useState('grande');
+  const [characterLimit, setCharacterLimit] = useState(3000);
   const [unifiedMedia, setUnifiedMedia] = useState([]);
   const [previewedMedia, setPreviewedMedia] = useState(null);
   const [schedulePreview, setSchedulePreview] = useState([]);
@@ -253,10 +255,25 @@ const Publisher = ({
 
     useEffect(() => {
         if (campaignContent) {
+            let sourceContent = '';
+            switch (contentSize) {
+                case 'pequeno':
+                    sourceContent = campaignContent.conteudoPequeno || '';
+                    break;
+                case 'medio':
+                    // Limita o conteúdo médio a 1000 caracteres na fonte
+                    sourceContent = (campaignContent.conteudoMedio || '').substring(0, 1000);
+                    break;
+                case 'grande':
+                default:
+                    sourceContent = campaignContent.conteudo || '';
+                    break;
+            }
+
             let postText = [
                 campaignContent.titulo?.toUpperCase(),
                 '',
-                markdownToLinkedinText(campaignContent.conteudo),
+                markdownToLinkedinText(sourceContent),
                 '',
                 '----',
                 campaignContent.cta,
@@ -264,13 +281,21 @@ const Publisher = ({
                 (campaignContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' '),
             ].join('\n');
 
-            // Replace all newlines with spaces to create a single-line string,
-            // as a workaround for a suspected API issue with multi-line text in multi-image posts.
-            postText = postText.replace(/(\r\n|\n|\r)/gm, ' ').trim();
+            // A remoção de nova linha foi desativada para permitir posts formatados.
+            // A lógica de limite de caracteres agora cuida das restrições da API.
+            // postText = postText.replace(/(\r\n|\n|\r)/gm, ' ').trim();
+
+            // Trunca o conteúdo final com base no limite dinâmico
+            if (postText.length > characterLimit) {
+                // Encontra o último espaço antes do limite para não cortar palavras ao meio
+                const lastSpace = postText.substring(0, characterLimit).lastIndexOf(' ');
+                const cutoff = lastSpace > 0 ? lastSpace : characterLimit;
+                postText = postText.substring(0, cutoff) + '...';
+            }
 
             setContent(postText);
         }
-    }, [campaignContent]);
+    }, [campaignContent, contentSize, characterLimit]);
 
   const getPublishingTargets = () => {
     const targets = [];
@@ -336,6 +361,29 @@ const Publisher = ({
         setIsLoadingProfiles(false);
     }
   };
+
+  const LIMITS = {
+    textOnly: 3000,
+    singleImage: 3000,
+    multiImage: 1300,
+    video: 2600
+  };
+
+  useEffect(() => {
+    const selectedImageCount = Object.values(selectedImages).filter(Boolean).length;
+    const selectedVideoCount = Object.values(selectedVideos).filter(Boolean).length;
+
+    let newLimit = LIMITS.textOnly;
+    if (selectedVideoCount > 0) {
+      newLimit = LIMITS.video;
+    } else if (selectedImageCount > 1) {
+      newLimit = LIMITS.multiImage;
+    } else if (selectedImageCount === 1) {
+      newLimit = LIMITS.singleImage;
+    }
+
+    setCharacterLimit(newLimit);
+  }, [selectedImages, selectedVideos]);
 
   useEffect(() => {
     if (!followupPosts || followupPosts.length === 0) {
@@ -700,6 +748,23 @@ const Publisher = ({
                         {profileError}
                     </Alert>
                 )}
+
+                <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                  <ToggleButtonGroup
+                    color="primary"
+                    value={contentSize}
+                    exclusive
+                    onChange={(e, newSize) => {
+                      if (newSize) setContentSize(newSize);
+                    }}
+                    aria-label="Tamanho do conteúdo"
+                  >
+                    <ToggleButton value="pequeno">Pequeno</ToggleButton>
+                    <ToggleButton value="medio">Médio</ToggleButton>
+                    <ToggleButton value="grande">Grande</ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+
                 <TextField
                     label="Conteúdo da Publicação"
                     multiline
@@ -710,17 +775,19 @@ const Publisher = ({
                     variant="outlined"
                     sx={{ my: 2 }}
                     placeholder="O que você gostaria de compartilhar?"
-                    inputProps={{ maxLength: 3000 }}
+                    inputProps={{ maxLength: characterLimit }}
+                    error={content.length > characterLimit}
+                    helperText={content.length > characterLimit ? `Conteúdo excede o limite de ${characterLimit} caracteres.` : ''}
                 />
                 <Typography
                     variant="caption"
                     sx={{
                         textAlign: 'right',
                         display: 'block',
-                        color: content.length > 3000 ? 'error.main' : 'text.secondary'
+                        color: content.length > characterLimit ? 'error.main' : 'text.secondary'
                     }}
                 >
-                    {content.length} / 3000
+                    {content.length} / {characterLimit}
                 </Typography>
               <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
                 Selecionar Mídia
@@ -877,7 +944,7 @@ const Publisher = ({
                 size="large"
                 color="primary"
                 onClick={handlePublishLinkedIn}
-                disabled={isPublishingLi || (isScheduled) || !selectedTarget || !content.trim() || content.length > 3000}
+                disabled={isPublishingLi || (isScheduled) || !selectedTarget || !content.trim() || content.length > characterLimit}
               >
                 {isPublishingLi ? 'Publicando...' : 'Publicar Agora no LinkedIn'}
               </Button>
