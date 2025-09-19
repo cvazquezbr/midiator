@@ -73,13 +73,18 @@ export const safeDeepClone = (obj) => {
 
 export const markdownToLinkedinText = (markdown) => {
     if (!markdown) return '';
-    let text = markdown;
-    text = text.replace(/<[^>]*>/g, ''); // strip html tags
-    text = text.replace(/\*\*(.*?)\*\*|\*(.*?)\*/g, '$1$2'); // strip bold/italic
-    text = text.replace(/^#+\s/gm, ''); // strip headers
-    text = text.replace(/^>\s/gm, ''); // strip blockquotes
-    text = text.replace(/\[(.*?)\]\((.*?)\)/g, '$1 ($2)'); // convert links
-    text = text.replace(/^\s*[-*]\s/gm, ''); // strip list items
-    text = text.trim().replace(/\n{3,}/g, '\n\n'); // collapse multiple newlines to just two
+
+    // First, strip any HTML tags that might be present
+    let text = stripHtml(markdown);
+
+    // Escape reserved characters for LinkedIn as per user request
+    // The characters to escape are: | { } @ [ ] ( ) < > # \ * _ ~
+    // The backslash is escaped in the regex itself.
+    const reservedCharsRegex = /([|{}@[\]()<>#\\*_~])/g;
+    text = text.replace(reservedCharsRegex, '\\$1');
+
+    // Collapse multiple newlines to just two for cleaner formatting
+    text = text.trim().replace(/\n{3,}/g, '\n\n');
+
     return text;
 };
