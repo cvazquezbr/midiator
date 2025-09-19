@@ -61,7 +61,7 @@ import { markdownToLinkedinText } from '../lib/utils';
 import { getLinkedInProfiles, publishToLinkedIn, uploadImagesForLinkedIn, uploadVideoForLinkedIn } from '../utils/linkedinAPI';
 import { useUserAuth } from '../context/UserAuthContext';
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
-import { getCampaigns, uploadAsset } from '../utils/campaignState.js';
+import { getCampaigns } from '../utils/campaignState.js';
 import ConfirmationModal from './ui/ConfirmationModal/ConfirmationModal';
 
 function TabPanel(props) {
@@ -122,7 +122,6 @@ const Publisher = ({
   const [schedulePreview, setSchedulePreview] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
-  const { user } = useUserAuth();
 
   useEffect(() => {
     if (currentCampaign) {
@@ -505,42 +504,8 @@ const Publisher = ({
       const [mainHours, mainMinutes] = getScheduledTime(mainPostDate).split(':');
       mainPostDate.setHours(parseInt(mainHours, 10), parseInt(mainMinutes, 10), 0, 0);
       const mainPostUtcDate = fromZonedTime(mainPostDate, userTimezone);
-
-      setPublishingStatusLi('Fazendo upload das imagens para o agendamento...');
       const selectedImageIndexes = Object.keys(selectedImages).filter(index => selectedImages[index]);
-
-      const uploadedImageUrls = await Promise.all(
-        selectedImageIndexes.map(async (index) => {
-          const media = unifiedMedia[parseInt(index)];
-          let imageBlob = media.blob;
-
-          if (!imageBlob && media.url) {
-            try {
-              const response = await fetch(media.url);
-              imageBlob = await response.blob();
-            } catch (e) {
-              toast.error(`Falha ao carregar a imagem ${parseInt(index) + 1} para o upload.`);
-              throw new Error(`Could not fetch image ${parseInt(index) + 1} for upload.`);
-            }
-          }
-
-          if (imageBlob) {
-            const fileExtension = imageBlob.type.split('/')[1] || 'png';
-            const filename = `scheduled-post-${Date.now()}-${index}.${fileExtension}`;
-            const vercelBlobResult = await uploadAsset(imageBlob, filename, selectedCampaignId, user.uuid);
-            return vercelBlobResult.url;
-          }
-          return null;
-        })
-      );
-
-      const finalImageUrls = uploadedImageUrls.filter(Boolean);
-
-      if (finalImageUrls.length !== selectedImageIndexes.length) {
-        throw new Error('Falha no upload de uma ou mais imagens. Não foi possível criar o agendamento.');
-      }
-
-      setPublishingStatusLi('Agendando post principal...');
+      const selectedImageUrls = selectedImageIndexes.map(index => unifiedMedia[parseInt(index)].url);
 
       const mainPostPayload = {
         campaign_id: selectedCampaignId || null,
@@ -551,10 +516,10 @@ const Publisher = ({
             conteudo: campaignContent?.conteudo || '',
             cta: campaignContent?.cta || '',
             hashtags: campaignContent?.hashtags || [],
-            images: finalImageUrls,
+            images: selectedImageUrls,
         },
       };
-      await createSchedule(mainPostPayload);
+      const mainPostSchedule = await createSchedule(mainPostPayload);
       setPublishingStatusLi('Post principal agendado. Agendando follow-ups...');
 
       if (followupPosts && followupPosts.length > 0) {
@@ -577,6 +542,7 @@ const Publisher = ({
           const followupUtcDate = fromZonedTime(followupDate, userTimezone);
           const followupPayload = {
             campaign_id: selectedCampaignId || null,
+            parent_id: mainPostSchedule.id,
             scheduled_at: followupUtcDate.toISOString(),
             authorUrn: `urn:li:${selectedTarget.type}:${selectedTarget.id}`,
             content: {
