@@ -55,10 +55,15 @@ async function handleGetSchedules(request, response) {
         const userId = request.user.sub;
         // Also get campaign data to have access to images
         const { rows } = await query(
-            `SELECT ls.*, c.campaign_data
+            `SELECT
+                ls.*,
+                c.campaign_data,
+                ps.linkedin_post_url AS parent_post_url
              FROM linkedin_schedules ls
              LEFT JOIN campaigns c ON ls.campaign_id = c.id
-             WHERE ls.user_id = $1 ORDER BY ls.scheduled_at DESC`,
+             LEFT JOIN linkedin_schedules ps ON ls.parent_id = ps.id
+             WHERE ls.user_id = $1
+             ORDER BY ls.scheduled_at DESC`,
             [userId]
         );
         return response.status(200).json(rows);
