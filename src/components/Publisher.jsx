@@ -445,10 +445,22 @@ const Publisher = ({
       };
       await createSchedule(mainPostPayload);
       setPublishingStatusLi('Post principal agendado. Agendando follow-ups...');
+
       if (followupPosts && followupPosts.length > 0) {
-        for (const [index, post] of followupPosts.entries()) {
+        // Defensive check against AI duplicating the main post as the first follow-up.
+        const mainPostContent = (campaignContent?.conteudo || '').trim();
+        const firstFollowupContent = (followupPosts[0]?.conteudo || '').trim();
+        const postsToSchedule = mainPostContent === firstFollowupContent ? followupPosts.slice(1) : followupPosts;
+
+        if (postsToSchedule.length < followupPosts.length) {
+          toast.info("Primeiro post de follow-up era um duplicado e foi ignorado.");
+        }
+
+        for (const post of postsToSchedule) {
+          // Find the original index to maintain correct date progression
+          const originalIndex = followupPosts.findIndex(p => p === post);
           const followupDate = new Date(scheduleDate);
-          followupDate.setDate(scheduleDate.getDate() + index + 1);
+          followupDate.setDate(scheduleDate.getDate() + originalIndex + 1);
           const [fHours, fMinutes] = getScheduledTime(followupDate).split(':');
           followupDate.setHours(parseInt(fHours, 10), parseInt(fMinutes, 10), 0, 0);
           const followupUtcDate = fromZonedTime(followupDate, userTimezone);
