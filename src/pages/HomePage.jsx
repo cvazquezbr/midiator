@@ -128,7 +128,6 @@ function HomePage() {
   const [personaDrawerOpen, setPersonaDrawerOpen] = useState(!isMobile);
   const [autorDrawerOpen, setAutorDrawerOpen] = useState(!isMobile);
   const [colorPalette, setColorPalette] = useState([]);
-  const [standardsColors, setStandardsColors] = useState([]);
   const [problema, setProblema] = useState('');
   const [solucao, setSolucao] = useState('');
   const [objetivo, setObjetivo] = useState('');
@@ -488,17 +487,6 @@ function HomePage() {
     }
   };
 
-  const loadCampaignStandards = useCallback(() => {
-    const { formato: formatoData, colors: colorsData } = getCampaignPrompt();
-    setFormato(formatoData || '');
-    setStandardsColors(colorsData || []);
-  }, []);
-
-  useEffect(() => {
-    loadCampaignStandards();
-    // A inicialização da API Gemini agora é tratada em um useEffect separado que depende das configurações.
-  }, [loadCampaignStandards]);
-
   const fetchPersonasForCampaign = useCallback(() => {
     return getPersonas()
       .then(setPersonaList)
@@ -789,7 +777,7 @@ function HomePage() {
           fieldStyles: {},
           csvData: newCsvData,
           effectiveImageSize: originalImageSize,
-          standardsColors,
+          standardsColors: colors,
         });
 
         setFieldPositions(newPositions);
@@ -1210,7 +1198,7 @@ function HomePage() {
         fieldStyles: {},
         csvData: csvDataResult,
         effectiveImageSize: originalImageSize,
-        standardsColors,
+        standardsColors: colors,
       });
 
       const newGeneratedPagesData = csvDataResult.map((record, index) => ({
@@ -1346,7 +1334,7 @@ function HomePage() {
     }
   };
   const currentTheme = darkMode ? darkTheme : lightTheme;
-  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, formato, aspectRatio, followupPosts, colors: standardsColors, generatedPagesData, };
+  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, formato, aspectRatio, followupPosts, colors, generatedPagesData, };
 
   return (
     <ThemeProvider theme={currentTheme}>
@@ -1482,7 +1470,6 @@ function HomePage() {
                     initialFieldStyles={initialFieldStyles}
                     onImageDisplayedSizeChange={setDisplayedImageSize}
                     colorPalette={colorPalette}
-                    standardsColors={standardsColors}
                     onCsvDataUpdate={handleCsvRecordContentUpdate}
                     originalImageSize={originalImageSize}
                     onZIndexChange={handleZIndexChange}
