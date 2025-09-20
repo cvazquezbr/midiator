@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useIsMobile } from '../hooks/use-mobile.js';
-import isEqual from 'lodash.isequal';
 import {
   Dialog,
   DialogTitle,
@@ -37,7 +36,6 @@ import GeminiAuthSetup from './GeminiAuthSetup';
 import GoogleCloudTTSAuth from './GoogleCloudTTSAuth';
 import WordpressAuthSetup from './WordpressAuthSetup';
 import LinkedinAuthSetup from './LinkedinAuthSetup';
-import UnsavedChangesDialog from './UnsavedChangesDialog';
 
 // The old file-based manager is replaced with the new DB-based one.
 import { useSettings } from '../context/SettingsContext';
@@ -103,22 +101,7 @@ const GeneralSettings = () => {
 const SetupModal = ({ open, onClose }) => {
   const isMobile = useIsMobile();
   const [value, setValue] = useState(0);
-  const { settings, saveSettings, isLoading } = useSettings();
-  const [initialSettings, setInitialSettings] = useState(null);
-
-  useEffect(() => {
-    if (open) {
-      // Create a deep copy of the settings when the modal opens.
-      setInitialSettings(JSON.parse(JSON.stringify(settings)));
-    } else {
-      // Reset when modal closes
-      setInitialSettings(null);
-    }
-  }, [open]);
-
-  const isDirty = !isEqual(initialSettings, settings);
-  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
-  const [redirectAction, setRedirectAction] = useState(null);
+  const { saveSettings, isLoading } = useSettings();
 
   const handleChange = (event, newValue) => {
     setValue(newValue);
@@ -127,42 +110,10 @@ const SetupModal = ({ open, onClose }) => {
   const handleSave = async () => {
     try {
       await saveSettings();
-      // After saving, the state is no longer dirty relative to the new baseline
-      setInitialSettings(JSON.parse(JSON.stringify(settings)));
-      return true; // Indicate success
+      onClose();
     } catch (error) {
       // Error is already toasted in the context
-      return false; // Indicate failure
     }
-  };
-
-  const handleConnectWithLinkedIn = (connectFn) => {
-    if (isDirty) {
-      setRedirectAction(() => connectFn);
-      setShowUnsavedDialog(true);
-    } else {
-      connectFn();
-    }
-  };
-
-  const handleCloseConfirmation = () => {
-    setShowUnsavedDialog(false);
-    setRedirectAction(null);
-  };
-
-  const handleConfirmDiscard = () => {
-    if (redirectAction) {
-      redirectAction();
-    }
-    handleCloseConfirmation();
-  };
-
-  const handleConfirmSave = async () => {
-    const success = await handleSave();
-    if (success && redirectAction) {
-      redirectAction();
-    }
-    handleCloseConfirmation();
   };
 
   const a11yProps = (index) => {
@@ -211,32 +162,20 @@ const SetupModal = ({ open, onClose }) => {
           <WordpressAuthSetup />
         </TabPanel>
         <TabPanel value={value} index={4}>
-          <LinkedinAuthSetup onConnect={handleConnectWithLinkedIn} />
+          <LinkedinAuthSetup onBeforeRedirect={handleSave} />
         </TabPanel>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Fechar</Button>
         <Button
           variant="contained"
-          onClick={async () => {
-            const success = await handleSave();
-            if (success) {
-              toast.success("Configurações salvas!");
-              onClose();
-            }
-          }}
-          disabled={isLoading || !isDirty}
+          onClick={handleSave}
+          disabled={isLoading}
           startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
         >
           {isLoading ? 'Salvando...' : 'Salvar na Nuvem'}
         </Button>
       </DialogActions>
-      <UnsavedChangesDialog
-        open={showUnsavedDialog}
-        onClose={handleCloseConfirmation}
-        onConfirmDiscard={handleConfirmDiscard}
-        onConfirmSave={handleConfirmSave}
-      />
     </Dialog>
   );
 };

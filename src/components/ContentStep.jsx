@@ -18,7 +18,6 @@ import {
   InsertDriveFileOutlined,
 } from '@mui/icons-material';
 import CsvInfobox from './CsvInfobox';
-import { useSettings } from '../context/SettingsContext';
 
 const ContentStep = ({
   steps,
@@ -30,6 +29,7 @@ const ContentStep = ({
   handleCSVUpload,
   downloadExampleCsv,
   setActiveStep,
+  getGeminiApiKey,
   setShowSetupModal,
   promptNumRecords,
   setPromptNumRecords,
@@ -41,8 +41,6 @@ const ContentStep = ({
   csvHeaders,
 }) => {
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
-  const { settings } = useSettings();
-  const isGeminiKeyConfigured = !!settings?.gemini_api_key;
 
   const handleDragEnter = (event) => {
     event.preventDefault();
@@ -187,7 +185,7 @@ const ContentStep = ({
 
         {inputMethod === 'ia' && (
           <Box sx={{ maxWidth: 600, mx: 'auto' }}>
-            {!isGeminiKeyConfigured && (
+            {!getGeminiApiKey() && (
               <Alert severity="warning" sx={{ mb: 2, width: '100%', maxWidth: '500px' }}>
                 Chave da API Gemini não configurada.
                 <MuiLink component="button" variant="body2" onClick={() => setShowSetupModal(true)} sx={{ ml: 1 }}>
@@ -227,7 +225,7 @@ const ContentStep = ({
               disabled={
                 isGenerating ||
                 !promptText.trim() ||
-                !isGeminiKeyConfigured
+                !getGeminiApiKey()
               } sx={{
                 py: 1.5,
                 borderRadius: 2,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -21,7 +21,7 @@ import GoogleDriveFolderPicker from './GoogleDriveFolderPicker';
 import { useUserAuth } from '../context/UserAuthContext';
 import LinkedinInfobox from './LinkedinInfobox';
 
-const LinkedinAuthSetup = ({ onConnect }) => {
+const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
   const { settings, updateSetting } = useSettings();
   const { googleAccessToken, setGoogleAccessToken } = useUserAuth();
 
@@ -79,19 +79,17 @@ const LinkedinAuthSetup = ({ onConnect }) => {
     }
   }, [linkedinConfig.accessToken]);
 
-  const handleFolderIdChange = useCallback((e) => {
+  const handleFolderIdChange = (e) => {
     const { value } = e.target;
-    const currentConfig = settings.linkedin || {};
-    const newLinkedinConfig = { ...currentConfig, folderId: value };
+    const newLinkedinConfig = { ...linkedinConfig, folderId: value };
     updateSetting('linkedin', newLinkedinConfig);
-  }, [settings.linkedin, updateSetting]);
+  };
 
-  const handleSelectFolder = useCallback((folder) => {
-    const currentConfig = settings.linkedin || {};
-    const newLinkedinConfig = { ...currentConfig, folderId: folder.id };
+  const handleSelectFolder = (folder) => {
+    const newLinkedinConfig = { ...linkedinConfig, folderId: folder.id };
     updateSetting('linkedin', newLinkedinConfig);
     setPickerOpen(false);
-  }, [settings.linkedin, updateSetting]);
+  };
 
   const handleBrowseDrive = () => {
     if (!googleAccessToken) {
@@ -101,16 +99,14 @@ const LinkedinAuthSetup = ({ onConnect }) => {
     setPickerOpen(true);
   };
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     if (clientId) {
-      const performRedirect = () => {
-        const redirectUri = window.location.origin;
-        const scope = encodeURIComponent('r_basicprofile r_organization_social w_member_social w_organization_social rw_organization_admin');
-        const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&prompt=select_account`;
-        window.location.href = authUrl;
-      };
-      // Delegate the connection logic (including dirty check) to the parent modal
-      onConnect(performRedirect);
+      if (onBeforeRedirect) await onBeforeRedirect();
+
+      const redirectUri = window.location.origin;
+      const scope = encodeURIComponent('r_basicprofile r_organization_social w_member_social w_organization_social rw_organization_admin');
+      const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}&prompt=select_account`;
+      window.location.href = authUrl;
     } else {
       setError('O Client ID do LinkedIn não está configurado no servidor.');
     }

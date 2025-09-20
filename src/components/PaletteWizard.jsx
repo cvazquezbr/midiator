@@ -18,12 +18,14 @@ import {
   Select,
   MenuItem,
   CircularProgress,
+  Alert,
 } from '@mui/material';
-import PaletteEditor from './PaletteEditor'; // Use the new editor
+import PaletteEditor from './PaletteEditor';
+import generationHandlers from '../utils/generationHandlers';
 
 const steps = [
   'Definir Briefing',
-  'Ajustar e Salvar', // Changed step name
+  'Ajustar e Salvar',
 ];
 
 const briefingOptions = {
@@ -40,11 +42,13 @@ const briefingLabels = {
     atmosfera: 'Atmosfera',
 };
 
-const PaletteWizard = ({ open, onClose, onSave, onGenerate, isGenerating }) => {
+const PaletteWizard = ({ open, onClose, onSave }) => {
   const isMobile = useIsMobile();
   const [activeStep, setActiveStep] = useState(0);
   const [briefing, setBriefing] = useState({});
   const [editablePalette, setEditablePalette] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState(null);
 
   useEffect(() => {
     if (open) {
@@ -56,34 +60,43 @@ const PaletteWizard = ({ open, onClose, onSave, onGenerate, isGenerating }) => {
         details: '',
       });
       setEditablePalette(null);
+      setGenerationError(null);
       setActiveStep(0);
     }
   }, [open]);
 
-  const handleNext = () => {
-    if (activeStep === 0) {
-      const fullBriefing = `
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    setGenerationError(null);
+    const fullBriefing = `
 - Objetivo: ${briefing.objetivo}
 - Público-alvo: ${briefing.publicoAlvo}
 - Mensagem principal: ${briefing.mensagemPrincipal}
 - Atmosfera desejada: ${briefing.atmosfera}
-- Detalhes adicionais: ${briefing.details}
-      `;
-      onGenerate(fullBriefing.trim(), (generatedData) => {
-        // The AI result should contain palette_name and palette_colors
-        setEditablePalette({
-          name: generatedData.palette_name || 'Nova Paleta',
-          colors: generatedData.palette_colors || [],
-        });
-        setActiveStep(1);
+- Detalhes adicionais: ${briefing.details || 'Nenhum.'}
+    `;
+    try {
+      const generatedData = await generationHandlers.generateColorPalette(fullBriefing.trim());
+      setEditablePalette({
+        name: generatedData.palette_name || 'Nova Paleta Gerada',
+        colors: generatedData.palette_colors || [],
       });
-    } else {
-      onSave(editablePalette);
-      onClose();
+    } catch (error) {
+      setGenerationError(error.message || 'Ocorreu um erro desconhecido durante a geração.');
+      setEditablePalette(null);
+    } finally {
+      setIsGenerating(false);
+      setActiveStep(1);
     }
   };
 
+  const handleSave = () => {
+    onSave(editablePalette);
+    onClose();
+  };
+
   const handleBack = () => {
+    setGenerationError(null);
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
   };
 
@@ -97,21 +110,16 @@ const PaletteWizard = ({ open, onClose, onSave, onGenerate, isGenerating }) => {
       case 0:
         return (
           <Box>
-            <Typography variant="h6" gutterBottom>Gerar Paleta com IA</Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+              Descreva a paleta que você precisa e a IA irá gerar uma sugestão para você ajustar.
+            </Typography>
             <Grid container spacing={2}>
               {Object.keys(briefingOptions).map(key => (
                 <Grid item xs={12} sm={6} key={key}>
                   <FormControl fullWidth>
                     <InputLabel>{briefingLabels[key]}</InputLabel>
-                    <Select
-                      name={key}
-                      value={briefing[key] || ''}
-                      label={briefingLabels[key]}
-                      onChange={handleChange}
-                    >
-                      {briefingOptions[key].map(option => (
-                        <MenuItem key={option} value={option}>{option}</MenuItem>
-                      ))}
+                    <Select name={key} value={briefing[key] || ''} label={briefingLabels[key]} onChange={handleChange}>
+                      {briefingOptions[key].map(option => <MenuItem key={option} value={option}>{option}</MenuItem>)}
                     </Select>
                   </FormControl>
                 </Grid>
@@ -119,13 +127,13 @@ const PaletteWizard = ({ open, onClose, onSave, onGenerate, isGenerating }) => {
             </Grid>
             <TextField
               name="details"
-              label="Detalhes Adicionais do Briefing"
+              label="Detalhes Adicionais"
               multiline
               rows={4}
               value={briefing.details || ''}
               onChange={handleChange}
               fullWidth
-              placeholder="INCLUINDO:&#10;- Quaisquer cores proibidas ou obrigatórias"
+              placeholder="Ex: 'Evitar tons de vermelho', 'Incluir um dourado metálico', etc."
               margin="normal"
             />
           </Box>
@@ -133,14 +141,18 @@ const PaletteWizard = ({ open, onClose, onSave, onGenerate, isGenerating }) => {
       case 1:
         return (
           <Box>
-            <Typography variant="h6" gutterBottom>Resultado da Geração</Typography>
+            {generationError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                <strong>Falha na Geração:</strong> {generationError}
+              </Alert>
+            )}
             {editablePalette ? (
               <PaletteEditor
                 paletteData={editablePalette}
                 onPaletteDataChange={setEditablePalette}
               />
             ) : (
-              <Typography>A paleta gerada será exibida aqui para edição.</Typography>
+              !generationError && <Typography>A paleta gerada será exibida aqui para edição.</Typography>
             )}
           </Box>
         );
@@ -150,49 +162,41 @@ const PaletteWizard = ({ open, onClose, onSave, onGenerate, isGenerating }) => {
   };
 
   const isNextDisabled = () => {
-      if (activeStep === 0) {
-          return isGenerating || !briefing.objetivo || !briefing.publicoAlvo || !briefing.mensagemPrincipal || !briefing.atmosfera;
-      }
-      if (activeStep === 1) {
-          return !editablePalette || !editablePalette.name.trim() || editablePalette.colors.length === 0;
-      }
-      return false;
-  }
+    if (activeStep === 0) {
+      return isGenerating || !briefing.objetivo || !briefing.publicoAlvo || !briefing.mensagemPrincipal || !briefing.atmosfera;
+    }
+    if (activeStep === 1) {
+      return !editablePalette || !editablePalette.name?.trim() || editablePalette.colors?.length === 0;
+    }
+    return false;
+  };
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
-      <DialogTitle>
-        Assistente de Geração de Paleta de Cores
-        <Typography variant="body2">Passo {activeStep + 1} de {steps.length}</Typography>
-      </DialogTitle>
+      <DialogTitle>Assistente de Paleta de Cores</DialogTitle>
       <DialogContent sx={{ minHeight: '50vh' }}>
         <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
+          {steps.map((label) => <Step key={label}><StepLabel>{label}</StepLabel></Step>)}
         </Stepper>
         {isGenerating && activeStep === 0 ? (
-            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%'}}>
-                <CircularProgress />
-                <Typography sx={{ml: 2}}>Gerando paleta...</Typography>
-            </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+            <CircularProgress />
+            <Typography sx={{ ml: 2 }}>Gerando paleta...</Typography>
+          </Box>
         ) : getStepContent(activeStep)}
       </DialogContent>
       <DialogActions sx={{ p: 3 }}>
-        <Button onClick={onClose}>Cancelar</Button>
+        <Button onClick={onClose} color="secondary">Cancelar</Button>
         <Box sx={{ flex: '1 1 auto' }} />
-        <Button onClick={handleBack} disabled={activeStep === 0 || isGenerating}>
-          Voltar
-        </Button>
-        <Button
-            onClick={handleNext}
-            variant="contained"
-            disabled={isNextDisabled()}
-        >
-          {activeStep === 0 ? 'Gerar Paleta' : 'Salvar Paleta'}
-        </Button>
+        {activeStep > 0 && (
+          <Button onClick={handleBack} disabled={isGenerating}>Voltar</Button>
+        )}
+        {activeStep === 0 && (
+          <Button onClick={handleGenerate} variant="contained" disabled={isNextDisabled()}>Gerar Paleta</Button>
+        )}
+        {activeStep === 1 && (
+          <Button onClick={handleSave} variant="contained" disabled={isNextDisabled()}>Salvar Paleta</Button>
+        )}
       </DialogActions>
     </Dialog>
   );

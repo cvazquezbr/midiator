@@ -47,6 +47,8 @@ import ImageGallerySelector from '../components/ImageGallerySelector';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 
 
+import { getGeminiApiKey } from '../utils/geminiCredentials';
+import { getCampaignPrompt } from '../utils/campaignPrompt';
 import geminiAPI from '../utils/geminiAPI';
 import { stripHtml } from '../lib/utils';
 import '../App.css';
@@ -55,7 +57,9 @@ import TextEditorDialog from '../components/TextEditorDialog';
 import Campaign from '../components/Campaign';
 import ImageStep from '../components/ImageStep';
 import MemorialDescritivoModal from '../components/MemorialDescritivoModal';
-import generationHandlers from '../utils/generationHandlers.js';
+import {
+  generateCampaignContent, generateCampaignImage, generateFormattedContent, generateFollowupPlan, generateFollowupPosts, generateIAContent, generateColorPalette, generateCampaignImagePrompt,
+} from '../utils/generationHandlers.js';
 import { exportCsv, exportHtml } from '../utils/exportUtils.js';
 import { downloadExampleCsv } from '../utils/fileUtils.js';
 import { parseIaResponseToCsvData } from '../utils/iaResponseParser.js';
@@ -110,9 +114,6 @@ function HomePage() {
     aspectRatio, setAspectRatio,
     pendingAssets, setPendingAssets,
     defaultPageTemplate,
-    formato, setFormato,
-    colors, setColors,
-    paletteId, setPaletteId,
   } = useCampaign();
 
   // Component State
@@ -131,6 +132,7 @@ function HomePage() {
   const [autorDrawerOpen, setAutorDrawerOpen] = useState(!isMobile);
   const [paletteDrawerOpen, setPaletteDrawerOpen] = useState(!isMobile);
   const [colorPalette, setColorPalette] = useState([]);
+  const [standardsColors, setStandardsColors] = useState([]);
   const [problema, setProblema] = useState('');
   const [solucao, setSolucao] = useState('');
   const [objetivo, setObjetivo] = useState('');
@@ -142,6 +144,7 @@ function HomePage() {
   const [generationError, setGenerationError] = useState('');
   const [editingField, setEditingField] = useState(null);
   const [isHtmlField, setIsHtmlField] = useState(false);
+  const [formato, setFormato] = useState('');
   const [generatedPageUrl, setGeneratedPageUrl] = useState(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
@@ -240,6 +243,7 @@ function HomePage() {
     setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
     setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
     setColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
+    setStandardsColors(Array.isArray(state.standardsColors) ? state.standardsColors : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
     const sanitizedPagesData = (Array.isArray(state.generatedPagesData) ? state.generatedPagesData : [])
       .filter(page => {
@@ -414,7 +418,7 @@ function HomePage() {
       generatedPagesData: sanitizedPagesData,
       generatedAudioData: sanitizedAudioData,
       generatedVideos: sanitizedVideos,
-      paletteId,
+      standardsColors,
       csvData,
       csvHeaders,
     };
@@ -479,7 +483,6 @@ function HomePage() {
       // Explicitly set the author and persona IDs from the top-level of the loaded campaign
       setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
       setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
-      setPaletteId(loadedCampaign.palette_id || null);
 
       setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
       toast.success(`Campaign "${loadedCampaign.name}" loaded successfully!`);
@@ -489,6 +492,18 @@ function HomePage() {
       setIsLoading(false);
     }
   };
+
+  const loadCampaignStandards = useCallback(() => {
+    const { formato: formatoData, colors: colorsData } = getCampaignPrompt();
+    setFormato(formatoData || '');
+    setStandardsColors(colorsData || []);
+  }, []);
+
+  useEffect(() => {
+    loadCampaignStandards();
+    const apiKey = getGeminiApiKey();
+    if (apiKey) geminiAPI.initialize(apiKey);
+  }, [loadCampaignStandards]);
 
   const fetchPersonasForCampaign = useCallback(() => {
     return getPersonas()
@@ -552,11 +567,12 @@ function HomePage() {
   }, [googleAccessToken, setGoogleAccessToken]);
 
   useEffect(() => {
-    // Este useEffect agora apenas carrega as configurações.
     const loadInitialSettings = async () => {
         if (user) {
             try {
                 await loadSettingsFromDb();
+                const apiKey = getGeminiApiKey();
+                if (apiKey) geminiAPI.initialize(apiKey);
                 toast.info("Your cloud settings have been loaded.");
             } catch (error) {
                 toast.error(`Could not load your settings: ${error.message}`);
@@ -565,14 +581,6 @@ function HomePage() {
     };
     loadInitialSettings();
   }, [user?.uuid]);
-
-  // Novo useEffect para inicializar os handlers de geração quando as configurações estiverem disponíveis.
-  useEffect(() => {
-    if (settings && Object.keys(settings).length > 0) {
-      console.log("Settings available, initializing generation handlers.", settings);
-      generationHandlers.initialize(settings);
-    }
-  }, [settings]);
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
@@ -633,10 +641,8 @@ function HomePage() {
               accessToken: data.access_token,
               expiry: Date.now() + data.expires_in * 1000,
             };
-            // Construct the entire new settings object to avoid race conditions
-            const newSettings = { ...settings, linkedin: newConfig };
-            // Pass the new object directly to saveSettings
-            await saveSettings(newSettings);
+            updateSetting('linkedin', newConfig);
+            await saveSettings();
             toast.success('Conexão com o LinkedIn estabelecida com sucesso!');
             setShowSetupModal(true);
           } else {
@@ -780,7 +786,7 @@ function HomePage() {
           fieldStyles: {},
           csvData: newCsvData,
           effectiveImageSize: originalImageSize,
-          standardsColors: colors,
+          standardsColors,
         });
 
         setFieldPositions(newPositions);
@@ -1051,7 +1057,7 @@ function HomePage() {
     setPendingAssets(prev => ({ ...prev, [url]: blob }));
   };
 
-  const handleGenerateCampaignContent = async ({ regenerate = false, formato }) => {
+  const handleGenerateCampaignContent = async (regenerate = false) => {
     setIsGeneratingCampaign(true);
     setCampaignGenerationFailed(false);
     setGenerationError('');
@@ -1062,7 +1068,7 @@ function HomePage() {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
 
       setGenerationStatus('Criando o conteúdo geral da campanha...');
-      const normalizedContent = await generationHandlers.generateCampaignContent({ problema, solucao, objetivo, tomDeVoz, formato, persona: finalPersona, autor: finalAutor });
+      const normalizedContent = await generateCampaignContent({ problema, solucao, objetivo, tomDeVoz, persona: finalPersona, autor: finalAutor });
       if (!normalizedContent) {
         throw new Error("A geração do conteúdo principal falhou e não retornou dados.");
       }
@@ -1103,10 +1109,10 @@ function HomePage() {
     setIsGeneratingImage(true);
     try {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
-      const imagePrompt = await generationHandlers.generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor });
+      const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor });
 
       // 1. Get the raw base64 data from the generation service
-      const base64Data = await generationHandlers.generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors });
+      const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
 
       // 2. Convert base64 to a Blob
       const blob = dataURLtoBlob(base64Data);
@@ -1139,8 +1145,8 @@ function HomePage() {
       setIsGeneratingImage(false);
     }
   }, [aspectRatio, addNewImageToCanvas, setPendingAssets, autorList, selectedAutorForCampaign]);
-  const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { alert('A API Gemini não foi inicializada. Verifique suas configurações.'); setLoading(false); return; } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
-  const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generationHandlers.generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
+  const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
+  const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
   const handleGenerateFollowupPosts = async (content = campaignContent) => {
     if (!content?.conteudo) {
       toast.error("Por favor, gere o conteúdo principal primeiro.");
@@ -1157,14 +1163,14 @@ function HomePage() {
       const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign);
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
       const neededQuantity = followupPostsQuantity - followupPosts.length;
-      const plan = await generationHandlers.generateFollowupPlan({
+      const plan = await generateFollowupPlan({
         content,
         neededQuantity,
         existingPosts: followupPosts,
         persona: finalPersona,
         autor: finalAutor,
       });
-      const newPosts = await generationHandlers.generateFollowupPosts({ content, plan, persona: finalPersona, autor: finalAutor });
+      const newPosts = await generateFollowupPosts({ content, plan, persona: finalPersona, autor: finalAutor });
       setFollowupPosts(prevPosts => [...prevPosts, ...newPosts]);
     } catch (error) {
       toast.error(`Ocorreu um erro ao gerar os posts de follow-up: ${error.message}`);
@@ -1185,7 +1191,7 @@ function HomePage() {
     setIsGenerating(true);
     setGenerationStatus('Gerando texto para os posts...');
     try {
-      const iaResponseText = await generationHandlers.generateIAContent({ promptText, promptNumRecords });
+      const iaResponseText = await generateIAContent({ promptText, promptNumRecords });
       const parsedResult = parseIaResponseToCsvData(iaResponseText);
 
       if (!parsedResult || !parsedResult.data || !parsedResult.data.length > 0) {
@@ -1201,7 +1207,7 @@ function HomePage() {
         fieldStyles: {},
         csvData: csvDataResult,
         effectiveImageSize: originalImageSize,
-        standardsColors: colors,
+        standardsColors,
       });
 
       const newGeneratedPagesData = csvDataResult.map((record, index) => ({
@@ -1337,7 +1343,7 @@ function HomePage() {
     }
   };
   const currentTheme = darkMode ? darkTheme : lightTheme;
-  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, formato, aspectRatio, followupPosts, colors, generatedPagesData, };
+  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, formato, aspectRatio, followupPosts, colors: standardsColors, generatedPagesData, };
 
   return (
     <ThemeProvider theme={currentTheme}>
@@ -1360,7 +1366,12 @@ function HomePage() {
             onPersonaMenuClick={() => setPersonaDrawerOpen(!personaDrawerOpen)}
             onAutorMenuClick={() => setAutorDrawerOpen(!autorDrawerOpen)}
             onPaletteMenuClick={() => setPaletteDrawerOpen(!paletteDrawerOpen)}
-            isDrawerOpen={currentView === 'personas' ? personaDrawerOpen : currentView === 'autores' ? autorDrawerOpen : currentView === 'palettes' ? paletteDrawerOpen : sidebarOpen}
+            isDrawerOpen={
+              currentView === 'personas' ? personaDrawerOpen :
+              currentView === 'autores' ? autorDrawerOpen :
+              currentView === 'palettes' ? paletteDrawerOpen :
+              sidebarOpen
+            }
             onShowMemorial={() => setShowMemorialDescritivoModal(true)}
             isCampaignOpen={currentCampaign !== null}
         />
@@ -1427,8 +1438,6 @@ function HomePage() {
                       personaList={personaList}
                       selectedPersonaForCampaign={selectedPersonaForCampaign}
                       setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
-                      formato={formato}
-                      setFormato={setFormato}
                     />
                   </Container>
                 )}
@@ -1473,6 +1482,7 @@ function HomePage() {
                     initialFieldStyles={initialFieldStyles}
                     onImageDisplayedSizeChange={setDisplayedImageSize}
                     colorPalette={colorPalette}
+                    standardsColors={standardsColors}
                     onCsvDataUpdate={handleCsvRecordContentUpdate}
                     originalImageSize={originalImageSize}
                     onZIndexChange={handleZIndexChange}
@@ -1596,7 +1606,7 @@ function HomePage() {
             )}
             {currentView === 'personas' && <PersonasPage personaDrawerOpen={personaDrawerOpen} setPersonaDrawerOpen={setPersonaDrawerOpen} onNoPersonaSelected={() => setPersonaDrawerOpen(true)} onUpdate={fetchPersonasForCampaign} />}
             {currentView === 'autores' && <AutoresPage autorDrawerOpen={autorDrawerOpen} setAutorDrawerOpen={setAutorDrawerOpen} onNoAutorSelected={() => setAutorDrawerOpen(true)} onUpdate={fetchAutoresForCampaign} />}
-            {currentView === 'palettes' && <PalettesPage paletteDrawerOpen={paletteDrawerOpen} setPaletteDrawerOpen={setPaletteDrawerOpen} onNoPaletteSelected={() => setPaletteDrawerOpen(true)} onUpdate={() => {}} />}
+            {currentView === 'palettes' && <PalettesPage paletteDrawerOpen={paletteDrawerOpen} setPaletteDrawerOpen={setPaletteDrawerOpen} />}
         </Box>
       </Box>
       <UnsavedChangesDialog
@@ -1609,7 +1619,7 @@ function HomePage() {
       <SaveCampaignModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={handleSaveCampaign} campaignToEdit={currentCampaign} isSaving={isSaving} />
       <LoadCampaignModal open={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadCampaign} onEdit={(campaign) => { setCurrentCampaign(campaign); setShowSaveModal(true); }} />
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
-      <CampaignStandardsModal open={showCampaignStandardsModal} onClose={() => { setShowCampaignStandardsModal(false); loadCampaignStandards(); }} onGeneratePalette={async (briefing) => { try { const palette = await generationHandlers.generateColorPalette(briefing); return palette; } catch (error) { toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores."); throw error; } }} />
+      <CampaignStandardsModal open={showCampaignStandardsModal} onClose={() => { setShowCampaignStandardsModal(false); loadCampaignStandards(); }} onGeneratePalette={async (briefing) => { try { const palette = await generateColorPalette(briefing); return palette; } catch (error) { toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores."); throw error; } }} />
       <ImageGallerySelector
         open={showImageGallery}
         onClose={handleCloseImageGallery}

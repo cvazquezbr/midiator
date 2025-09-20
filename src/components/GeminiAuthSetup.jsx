@@ -45,13 +45,7 @@ const GeminiAuthSetup = () => {
     }
     setIsTesting(true);
     try {
-      // Construct a temporary settings object for the test
-      const testSettings = {
-        gemini_api_key: trimmedApiKey,
-        gemini_model: selectedModel,
-        gemini_image_model: selectedImageModel,
-      };
-      geminiAPI.initialize(testSettings);
+      geminiAPI.initialize(trimmedApiKey);
       await geminiAPI.generateContent('Diga "Olá, mundo!" em português.');
       setTestResult({ severity: 'success', message: 'Conexão com a API Gemini bem-sucedida!' });
     } catch (err) {

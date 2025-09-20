@@ -36,7 +36,6 @@ const MainAppBar = ({
   onShowPersonas,
   onShowAutores,
   onShowCampaigns,
-  onShowPalettes,
   setShowSetupModal,
   setShowCampaignStandardsModal,
   onMenuClick,
@@ -88,7 +87,7 @@ const MainAppBar = ({
       case 'autores':
         return 'Autores';
       case 'palettes':
-        return 'Paletas';
+        return 'Paletas de Cores';
       default:
         return 'Midiator';
     }

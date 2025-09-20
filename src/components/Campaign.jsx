@@ -25,7 +25,8 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import generationHandlers from '../utils/generationHandlers.js';
+import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
+import { getCampaignPrompt } from '../utils/campaignPrompt';
 import { useSettings } from '../context/SettingsContext';
 import { uploadImageToDrive, getOrCreateBackgroundsFolderId } from '../utils/googleApi';
 import {
@@ -190,12 +191,8 @@ const Campaign = ({
     personaList,
     selectedPersonaForCampaign,
     setSelectedPersonaForCampaign,
-    formato,
-    setFormato,
-    colors,
-    setColors,
 }) => {
-    const { settings } = useSettings();
+    useSettings();
     const [activeTab, setActiveTab] = useState(0);
     const [isHintModalOpen, setHintModalOpen] = React.useState(false);
     const [isSolucaoHintModalOpen, setSolucaoHintModalOpen] = React.useState(false);
@@ -224,12 +221,6 @@ const Campaign = ({
     const prevCampaignContent = prevCampaignContentRef.current;
 
     useEffect(() => {
-        if (settings) {
-            generationHandlers.initialize(settings);
-        }
-    }, [settings]);
-
-    useEffect(() => {
         // Only switch to tab 1 if campaignContent just became available (was null or undefined before)
         // and the campaign is not currently being generated.
         if (campaignContent && !prevCampaignContent && !isGeneratingCampaign) {
@@ -252,7 +243,7 @@ const Campaign = ({
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const problems = await generationHandlers.generateCommonProblems({ persona: finalPersona, autor: finalAutor });
+            const problems = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
             setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
@@ -271,7 +262,7 @@ const Campaign = ({
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const problems = await generationHandlers.generateCommonProblems({ persona: finalPersona, autor: finalAutor });
+            const problems = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
             setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
@@ -297,7 +288,7 @@ const Campaign = ({
             }
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const solutions = await generationHandlers.generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
+            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
             setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
@@ -316,7 +307,7 @@ const Campaign = ({
             }
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const solutions = await generationHandlers.generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
+            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
             setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
@@ -511,7 +502,7 @@ const Campaign = ({
                             <Button
                                 variant="contained"
                                 size="large"
-                                onClick={() => handleGenerateCampaignContent({ regenerate: false, formato })}
+                                onClick={() => handleGenerateCampaignContent(false)}
                                 disabled={isGeneratingCampaign || campaignContent !== null}
                                 startIcon={<GeminiIcon />}
                             >

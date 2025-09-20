@@ -1,5 +1,7 @@
 import Papa from 'papaparse';
 import { stripHtml } from './utils';
+import { getCampaignPrompt } from '../utils/campaignPrompt';
+
 export const parseIaResponseToCsvData = (responseText) => {
     // Definição dos cabeçalhos esperados pelo GerenciadorRegistros
     const finalHeaders = ["Título", "Texto Principal", "Ponte para o Próximo"];
@@ -221,9 +223,10 @@ A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação mark
     URL.revokeObjectURL(url);
   };
 
-  export const generateCampaignContent = async (apiKey, { problema, solucao, formato, persona = null, autor = null }, callGeminiApi) => {
-    const finalPersona = persona;
-    const finalAutor = autor;
+  export const generateCampaignContent = async (apiKey, { problema, solucao, persona = null, autor = null }, callGeminiApi) => {
+    const { persona: defaultPersona, autor: defaultAutor, instrucoes, formato } = getCampaignPrompt();
+    const finalPersona = persona || defaultPersona;
+    const finalAutor = autor || defaultAutor;
 
     const promptCompleto = `
       Persona: ${stripHtml(finalPersona)}
@@ -231,6 +234,7 @@ A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação mark
       Formato: ${stripHtml(formato)}
       Problema: ${stripHtml(problema)}
       Solução: ${stripHtml(solucao)}
+      ${stripHtml(instrucoes)}
     `;
 
     const finalPrompt = `${promptCompleto}\n\nGere uma resposta JSON com os seguintes campos: "titulo" (string), "conteudo" (string), "cta" (string), e "hashtags" (string, separadas por vírgula). A resposta deve ser apenas o JSON.`;
@@ -261,8 +265,9 @@ A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação mark
     };
 }
 
-export const generateImagePrompt = (content, aspectRatio, autor = null, colors = []) => {
-    const finalAutor = autor;
+export const generateImagePrompt = (content, aspectRatio, autor = null) => {
+    const { autor: defaultAutor, colors } = getCampaignPrompt();
+    const finalAutor = autor || defaultAutor;
     const colorPalettePrompt = colors && colors.length > 0
         ? `A imagem deve usar predominantemente a seguinte paleta de cores: ${colors.join(', ')}.`
         : '';
@@ -317,7 +322,8 @@ export const generateFollowupPosts = async (apiKey, { content, followupPostsQuan
         throw new Error("Por favor, gere o conteúdo principal primeiro.");
     }
 
-    const finalPersona = persona;
+    const { persona: defaultPersona } = getCampaignPrompt();
+    const finalPersona = persona || defaultPersona;
 
     const prompt = `
         Você é um especialista em marketing de conteúdo e copywriting para líderes técnicos. Sua tarefa é criar ${followupPostsQuantity} posts "isca" baseados no conteúdo principal fornecido.

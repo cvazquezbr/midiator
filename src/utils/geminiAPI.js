@@ -1,5 +1,4 @@
-// No longer importing from here, models will be passed during initialization.
-// import { getGeminiModel, getGeminiImageModel } from './geminiCredentials';
+import { getGeminiModel, getGeminiImageModel } from './geminiCredentials';
 
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -7,25 +6,19 @@ class GeminiAPI {
   constructor() {
     this.apiKey = null;
     this.isInitialized = false;
-    this.model = 'gemini-1.5-pro'; // Default text model
-    this.imageModel = 'gemini-2.0-flash-preview-image-generation'; // Default image model
   }
 
   /**
-   * Initializes the API with the user's settings.
-   * @param {object} settings - The settings object containing the API key and models.
+   * Initializes the API with the user's API key.
+   * @param {string} apiKey - The Gemini API key.
    */
-  initialize(settings) {
-    const apiKey = settings?.gemini_api_key;
+  initialize(apiKey) {
     if (!apiKey) {
-      // console.error("GeminiAPI: API key not provided for initialization.");
+      console.error("GeminiAPI: A chave da API não foi fornecida para inicialização.");
       this.isInitialized = false;
       return;
     }
     this.apiKey = apiKey;
-    // Use saved models from settings, or fall back to defaults.
-    this.model = settings.gemini_model || this.model;
-    this.imageModel = settings.gemini_image_model || this.imageModel;
     this.isInitialized = true;
   }
 
@@ -43,7 +36,7 @@ class GeminiAPI {
       throw new Error('O prompt não pode ser vazio.');
     }
 
-    const model = this.model;
+    const model = getGeminiModel() || 'gemini-1.5-pro';
     console.log(`[${purpose}] Iniciando chamada à API Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
@@ -105,7 +98,7 @@ class GeminiAPI {
       throw new Error('O prompt não pode ser vazio.');
     }
 
-    const model = this.imageModel;
+    const model = getGeminiImageModel() || 'gemini-2.0-flash-preview-image-generation';
     console.log(`[${purpose}] Iniciando chamada à API de Imagem Gemini com o modelo ${model}.`);
     console.log(`[${purpose}] Prompt:`, promptString);
 
