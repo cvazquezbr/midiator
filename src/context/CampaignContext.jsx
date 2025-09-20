@@ -32,6 +32,7 @@ export const CampaignProvider = ({ children }) => {
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [pendingAssets, setPendingAssets] = useState({});
   const [formato, setFormato] = useState('');
+  const [paletteId, setPaletteId] = useState(null);
   const [colors, setColors] = useState([]);
 
 
@@ -50,6 +51,7 @@ export const CampaignProvider = ({ children }) => {
     aspectRatio,
     pendingAssets,
     formato,
+    paletteId,
     colors,
 
     // Setters
@@ -66,6 +68,7 @@ export const CampaignProvider = ({ children }) => {
     setAspectRatio,
     setPendingAssets,
     setFormato,
+    setPaletteId,
     setColors,
 
     // Constants
@@ -84,6 +87,7 @@ export const CampaignProvider = ({ children }) => {
     aspectRatio,
     pendingAssets,
     formato,
+    paletteId,
     colors,
   ]);
 
