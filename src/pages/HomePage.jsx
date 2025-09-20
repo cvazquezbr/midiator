@@ -46,7 +46,6 @@ import ImageGallerySelector from '../components/ImageGallerySelector';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 
 
-import { getGeminiApiKey } from '../utils/geminiCredentials';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
 import geminiAPI from '../utils/geminiAPI';
 import { stripHtml } from '../lib/utils';
@@ -499,8 +498,7 @@ function HomePage() {
 
   useEffect(() => {
     loadCampaignStandards();
-    const apiKey = getGeminiApiKey();
-    if (apiKey) geminiAPI.initialize(apiKey);
+    // A inicialização da API Gemini agora é tratada em um useEffect separado que depende das configurações.
   }, [loadCampaignStandards]);
 
   const fetchPersonasForCampaign = useCallback(() => {
@@ -565,12 +563,11 @@ function HomePage() {
   }, [googleAccessToken, setGoogleAccessToken]);
 
   useEffect(() => {
+    // Este useEffect agora apenas carrega as configurações.
     const loadInitialSettings = async () => {
         if (user) {
             try {
                 await loadSettingsFromDb();
-                const apiKey = getGeminiApiKey();
-                if (apiKey) geminiAPI.initialize(apiKey);
                 toast.info("Your cloud settings have been loaded.");
             } catch (error) {
                 toast.error(`Could not load your settings: ${error.message}`);
@@ -579,6 +576,14 @@ function HomePage() {
     };
     loadInitialSettings();
   }, [user?.uuid]);
+
+  // Novo useEffect para inicializar os handlers de geração quando as configurações estiverem disponíveis.
+  useEffect(() => {
+    if (settings && Object.keys(settings).length > 0) {
+      console.log("Settings available, initializing generation handlers.", settings);
+      initializeGenerationHandlers(settings);
+    }
+  }, [settings]);
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
@@ -1143,7 +1148,7 @@ function HomePage() {
       setIsGeneratingImage(false);
     }
   }, [aspectRatio, addNewImageToCanvas, setPendingAssets, autorList, selectedAutorForCampaign]);
-  const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
+  const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { alert('A API Gemini não foi inicializada. Verifique suas configurações.'); setLoading(false); return; } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
   const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
   const handleGenerateFollowupPosts = async (content = campaignContent) => {
     if (!content?.conteudo) {

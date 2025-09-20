@@ -1,8 +1,15 @@
 import { getCampaignPrompt } from './campaignPrompt.js';
 import geminiAPI from './geminiAPI.js';
-import { getGeminiApiKey } from './geminiCredentials.js';
 import { stripHtml } from '../lib/utils.js';
 import fetchWithAuth from './fetchWithAuth.js';
+
+/**
+ * Initializes the generation handlers by passing settings to the Gemini API.
+ * @param {object} settings - The application settings object.
+ */
+export const initializeGenerationHandlers = (settings) => {
+    geminiAPI.initialize(settings);
+};
 
 // --- Prompt Fetching and Caching ---
 const promptCache = new Map();
@@ -76,11 +83,9 @@ const formatObjectForPrompt = (obj, excludeKeys = [], indentation = '') => {
  * Generates the main campaign content using an AI API.
  */
 export const generateCampaignContent = async ({ problema, solucao, objetivo, tomDeVoz, persona = null, autor = null }) => {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
-    throw new Error('Chave de API Gemini não configurada.');
+  if (!geminiAPI.isInitialized) {
+    throw new Error('Gerador de conteúdo não inicializado. Chame initializeGenerationHandlers primeiro.');
   }
-  geminiAPI.initialize(apiKey);
 
   const { formato } = getCampaignPrompt();
 
@@ -157,11 +162,9 @@ export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor 
     if (!content) {
         throw new Error("O conteúdo da campanha deve ser gerado primeiro.");
     }
-    const apiKey = getGeminiApiKey();
-    if (!apiKey) {
-        throw new Error('Chave de API Gemini não configurada.');
+    if (!geminiAPI.isInitialized) {
+        throw new Error('Gerador de conteúdo não inicializado. Chame initializeGenerationHandlers primeiro.');
     }
-    geminiAPI.initialize(apiKey);
 
     const { autor: defaultAutor } = getCampaignPrompt();
     const finalAutor = autor || defaultAutor;
@@ -186,11 +189,9 @@ export const generateCampaignImage = async ({ prompt, aspectRatio }) => {
   if (!prompt) {
     throw new Error("O prompt da imagem deve ser gerado primeiro.");
   }
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
-    throw new Error('Chave de API Gemini não configurada.');
+  if (!geminiAPI.isInitialized) {
+    throw new Error('Gerador de conteúdo não inicializado. Chame initializeGenerationHandlers primeiro.');
   }
-  geminiAPI.initialize(apiKey);
 
   const { colors } = getCampaignPrompt();
 
@@ -222,11 +223,9 @@ export const generateFormattedContent = async ({ content }) => {
   if (!content?.conteudo) {
     throw new Error("Conteúdo principal deve ser gerado primeiro.");
   }
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
-    throw new Error('Chave de API Gemini não configurada.');
+  if (!geminiAPI.isInitialized) {
+    throw new Error('Gerador de conteúdo não inicializado. Chame initializeGenerationHandlers primeiro.');
   }
-  geminiAPI.initialize(apiKey);
 
   const promptTemplate = await getPrompt('generateFormattedContent');
   const prompt = fillPrompt(promptTemplate, {
@@ -248,11 +247,9 @@ export const generateFollowupPlan = async ({ content, neededQuantity, existingPo
   if (!content?.conteudo) {
     throw new Error("Conteúdo principal deve ser gerado primeiro.");
   }
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
-    throw new Error('Chave de API Gemini não configurada.');
+  if (!geminiAPI.isInitialized) {
+    throw new Error('Gerador de conteúdo não inicializado. Chame initializeGenerationHandlers primeiro.');
   }
-  geminiAPI.initialize(apiKey);
 
   const personaString = typeof persona === 'string' ? persona : (persona ? formatObjectForPrompt(persona, ['description']) : 'indisponível');
 
@@ -310,11 +307,9 @@ export const generateFollowupPosts = async ({ content, plan, persona = null, aut
     throw new Error("O plano de follow-up deve ser gerado primeiro.");
   }
 
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
-    throw new Error('Chave de API Gemini não configurada.');
+  if (!geminiAPI.isInitialized) {
+    throw new Error('Gerador de conteúdo não inicializado. Chame initializeGenerationHandlers primeiro.');
   }
-  geminiAPI.initialize(apiKey);
 
   const personaString = typeof persona === 'string' ? persona : (persona ? formatObjectForPrompt(persona, ['description']) : 'indisponível');
 
@@ -398,11 +393,9 @@ export const generateFollowupPosts = async ({ content, plan, persona = null, aut
  * Generates a list of common solutions for a given problem and persona.
  */
 export const generateCommonSolutions = async ({ problema, persona, autor }) => {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
-    throw new Error('Chave de API Gemini não configurada.');
+  if (!geminiAPI.isInitialized) {
+    throw new Error('Gerador de conteúdo não inicializado. Chame initializeGenerationHandlers primeiro.');
   }
-  geminiAPI.initialize(apiKey);
 
   if (!problema || problema.trim() === '') {
     throw new Error('Problema não definido. Por favor, descreva o problema primeiro.');
@@ -447,11 +440,9 @@ export const generateCommonSolutions = async ({ problema, persona, autor }) => {
  * Generates a list of common problems for a given persona.
  */
 export const generateCommonProblems = async ({ persona, autor }) => {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
-    throw new Error('Chave de API Gemini não configurada.');
+  if (!geminiAPI.isInitialized) {
+    throw new Error('Gerador de conteúdo não inicializado. Chame initializeGenerationHandlers primeiro.');
   }
-  geminiAPI.initialize(apiKey);
 
   if (!persona) {
     throw new Error('Persona não definida. Por favor, configure a persona primeiro.');
@@ -495,11 +486,9 @@ export const generateCommonProblems = async ({ persona, autor }) => {
  * Generates CSV data content from a text prompt using an AI API.
  */
 export const generateIAContent = async ({ promptText, promptNumRecords }) => {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
-    throw new Error('Chave de API Gemini não configurada.');
+  if (!geminiAPI.isInitialized) {
+    throw new Error('Gerador de conteúdo não inicializado. Chame initializeGenerationHandlers primeiro.');
   }
-  geminiAPI.initialize(apiKey);
   if (!promptText.trim()) {
     throw new Error('Por favor, forneça um texto descritivo para o prompt.');
   }
@@ -523,13 +512,9 @@ export const generateIAContent = async ({ promptText, promptNumRecords }) => {
  * @returns {Promise<Object>} A promise that resolves to the generated palette object.
  */
 export const generateColorPalette = async (briefing) => {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
-    // The original function used toast, but in a util file, it's better to throw.
-    // The calling component will be responsible for catching the error and showing a toast.
-    throw new Error('Por favor, configure sua chave de API Gemini primeiro.');
+  if (!geminiAPI.isInitialized) {
+    throw new Error('Gerador de conteúdo não inicializado. Chame initializeGenerationHandlers primeiro.');
   }
-  geminiAPI.initialize(apiKey);
 
   const promptTemplate = await getPrompt('generateColorPalette');
   const prompt = fillPrompt(promptTemplate, { briefing: briefing });
