@@ -46,7 +46,6 @@ import ImageGallerySelector from '../components/ImageGallerySelector';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 
 
-import { getCampaignPrompt } from '../utils/campaignPrompt';
 import geminiAPI from '../utils/geminiAPI';
 import { stripHtml } from '../lib/utils';
 import '../App.css';
@@ -110,6 +109,8 @@ function HomePage() {
     aspectRatio, setAspectRatio,
     pendingAssets, setPendingAssets,
     defaultPageTemplate,
+    formato, setFormato,
+    colors, setColors,
   } = useCampaign();
 
   // Component State
@@ -139,7 +140,6 @@ function HomePage() {
   const [generationError, setGenerationError] = useState('');
   const [editingField, setEditingField] = useState(null);
   const [isHtmlField, setIsHtmlField] = useState(false);
-  const [formato, setFormato] = useState('');
   const [generatedPageUrl, setGeneratedPageUrl] = useState(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
@@ -1060,7 +1060,7 @@ function HomePage() {
     setPendingAssets(prev => ({ ...prev, [url]: blob }));
   };
 
-  const handleGenerateCampaignContent = async (regenerate = false) => {
+  const handleGenerateCampaignContent = async ({ regenerate = false, formato }) => {
     setIsGeneratingCampaign(true);
     setCampaignGenerationFailed(false);
     setGenerationError('');
@@ -1071,7 +1071,7 @@ function HomePage() {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
 
       setGenerationStatus('Criando o conteúdo geral da campanha...');
-      const normalizedContent = await generationHandlers.generateCampaignContent({ problema, solucao, objetivo, tomDeVoz, persona: finalPersona, autor: finalAutor });
+      const normalizedContent = await generationHandlers.generateCampaignContent({ problema, solucao, objetivo, tomDeVoz, formato, persona: finalPersona, autor: finalAutor });
       if (!normalizedContent) {
         throw new Error("A geração do conteúdo principal falhou e não retornou dados.");
       }
@@ -1115,7 +1115,7 @@ function HomePage() {
       const imagePrompt = await generationHandlers.generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor });
 
       // 1. Get the raw base64 data from the generation service
-      const base64Data = await generationHandlers.generateCampaignImage({ prompt: imagePrompt, aspectRatio });
+      const base64Data = await generationHandlers.generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors });
 
       // 2. Convert base64 to a Blob
       const blob = dataURLtoBlob(base64Data);
@@ -1434,6 +1434,10 @@ function HomePage() {
                       personaList={personaList}
                       selectedPersonaForCampaign={selectedPersonaForCampaign}
                       setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
+                      formato={formato}
+                      setFormato={setFormato}
+                      colors={colors}
+                      setColors={setColors}
                     />
                   </Container>
                 )}

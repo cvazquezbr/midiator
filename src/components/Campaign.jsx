@@ -26,7 +26,6 @@ import {
   Tab,
 } from '@mui/material';
 import generationHandlers from '../utils/generationHandlers.js';
-import { getCampaignPrompt } from '../utils/campaignPrompt';
 import { useSettings } from '../context/SettingsContext';
 import { uploadImageToDrive, getOrCreateBackgroundsFolderId } from '../utils/googleApi';
 import {
@@ -191,6 +190,10 @@ const Campaign = ({
     personaList,
     selectedPersonaForCampaign,
     setSelectedPersonaForCampaign,
+    formato,
+    setFormato,
+    colors,
+    setColors,
 }) => {
     const { settings } = useSettings();
     const [activeTab, setActiveTab] = useState(0);
@@ -508,7 +511,7 @@ const Campaign = ({
                             <Button
                                 variant="contained"
                                 size="large"
-                                onClick={() => handleGenerateCampaignContent(false)}
+                                onClick={() => handleGenerateCampaignContent({ regenerate: false, formato })}
                                 disabled={isGeneratingCampaign || campaignContent !== null}
                                 startIcon={<GeminiIcon />}
                             >

@@ -31,6 +31,8 @@ export const CampaignProvider = ({ children }) => {
   const [generatedVideos, setGeneratedVideos] = useState([]);
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [pendingAssets, setPendingAssets] = useState({});
+  const [formato, setFormato] = useState('');
+  const [colors, setColors] = useState([]);
 
 
   const value = useMemo(() => ({
@@ -47,6 +49,8 @@ export const CampaignProvider = ({ children }) => {
     generatedVideos,
     aspectRatio,
     pendingAssets,
+    formato,
+    colors,
 
     // Setters
     setCsvData,
@@ -61,6 +65,8 @@ export const CampaignProvider = ({ children }) => {
     setGeneratedVideos,
     setAspectRatio,
     setPendingAssets,
+    setFormato,
+    setColors,
 
     // Constants
     defaultPageTemplate,
@@ -77,6 +83,8 @@ export const CampaignProvider = ({ children }) => {
     generatedVideos,
     aspectRatio,
     pendingAssets,
+    formato,
+    colors,
   ]);
 
   return (

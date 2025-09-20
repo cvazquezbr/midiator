@@ -47,9 +47,9 @@ import TextEditorDialog from './TextEditorDialog';
 import HtmlDisplayField from './HtmlDisplayField';
 import PaletteWizard from './PaletteWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
-import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
 import geminiAPI from '../utils/geminiAPI';
 import { useSettings } from '../context/SettingsContext';
+import { useCampaign } from '../context/CampaignContext';
 import isEqual from 'lodash.isequal';
 
 function TabPanel(props) {
@@ -76,11 +76,10 @@ function TabPanel(props) {
 const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const isMobile = useIsMobile();
   const { settings } = useSettings();
+  const { formato, setFormato, colors, setColors } = useCampaign();
   const [value, setValue] = useState(0);
 
   // Other states
-  const [formato, setFormato] = useState('');
-  const [colors, setColors] = useState([]);
   const [editingField, setEditingField] = useState(null);
   const imageInputRef = useRef(null);
   const [initialState, setInitialState] = useState(null);
@@ -93,29 +92,17 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
       // The API is now initialized in a central place (e.g., HomePage)
       // via initializeGenerationHandlers based on settings.
       // So, no need to initialize it here.
-
-      const { formato, colors: loadedColors } = getCampaignPrompt();
-
-      setFormato(formato);
-      const colorsAsObjects = (loadedColors || []).map(hex => ({ hex, name: `Cor (${hex})`, role: 'Salva', justification: '' }));
-      setColors(colorsAsObjects);
-
-      setInitialState({ formato, colors: colorsAsObjects });
     }
   }, [open]);
 
   const handleChange = (event, newValue) => setValue(newValue);
 
   const handleSave = () => {
-    const colorsToSave = colors.map(color => color.hex).filter(Boolean);
-    saveCampaignPrompt({ formato, colors: colorsToSave });
-    toast.success('Padrões de campanha salvos com sucesso!');
     onClose();
   };
 
   const handleClose = () => {
-    if (hasUnsavedChanges()) setIsConfirmCloseOpen(true);
-    else onClose();
+    onClose();
   };
 
   const handleOpenEditor = (field) => setEditingField(field);
@@ -173,22 +160,6 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
     }
   };
 
-  const hasUnsavedChanges = () => {
-    if (!initialState) return false;
-    const currentState = { formato, colors };
-    // Custom comparison for colors as it's an array of objects
-    const initialColorsHex = initialState.colors.map(c => c.hex);
-    const currentColorsHex = currentState.colors.map(c => c.hex);
-    if (!isEqual(initialColorsHex, currentColorsHex)) return true;
-
-    const stateWithoutColors = { ...currentState };
-    const initialWithoutColors = { ...initialState };
-    delete stateWithoutColors.colors;
-    delete initialWithoutColors.colors;
-
-    return !isEqual(initialWithoutColors, stateWithoutColors);
-  };
-
   const a11yProps = (index) => ({ id: `vertical-tab-${index}`, 'aria-controls': `vertical-tabpanel-${index}` });
 
   return (
@@ -240,15 +211,6 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
       </Dialog>
       <TextEditorDialog open={editingField !== null} title={getEditorTitle()} content={getCurrentContent()} onSave={handleSaveEditor} onClose={handleCloseEditor} html={true} />
       <PaletteWizard open={showPaletteWizard} onClose={() => setShowPaletteWizard(false)} onSave={(newPalette) => { setColors(newPalette); toast.success('Paleta de cores aplicada!'); }} onGenerate={async (briefing, callback) => { setIsGenerating(true); try { const result = await onGeneratePalette(briefing); callback(result); } catch (error) { toast.error('Erro ao gerar paleta.'); } finally { setIsGenerating(false); } }} isGenerating={isGenerating} />
-      <Dialog open={isConfirmCloseOpen} onClose={() => setIsConfirmCloseOpen(false)}>
-        <DialogTitle>Descartar Alterações?</DialogTitle>
-        <DialogContent><Typography>Você tem alterações não salvas.</Typography></DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsConfirmCloseOpen(false)}>Cancelar</Button>
-          <Button onClick={() => { setIsConfirmCloseOpen(false); onClose(); }}>Descartar</Button>
-          <Button onClick={() => { handleSave(); setIsConfirmCloseOpen(false); }} variant="contained">Salvar e Sair</Button>
-        </DialogActions>
-      </Dialog>
     </>
   );
 };

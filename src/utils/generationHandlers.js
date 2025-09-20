@@ -1,4 +1,3 @@
-import { getCampaignPrompt } from './campaignPrompt.js';
 import geminiAPI from './geminiAPI.js';
 import { stripHtml } from '../lib/utils.js';
 import fetchWithAuth from './fetchWithAuth.js';
@@ -85,9 +84,8 @@ class GenerationHandler {
     }
   }
 
-  async generateCampaignContent({ problema, solucao, objetivo, tomDeVoz, persona = null, autor = null }) {
+  async generateCampaignContent({ problema, solucao, objetivo, tomDeVoz, formato, persona = null, autor = null }) {
     this._ensureInitialized();
-    const { formato } = getCampaignPrompt();
     const personaString = typeof persona === 'string' ? persona : (persona ? formatObjectForPrompt(persona, ['description']) : 'indisponível');
     let autorString = typeof autor === 'string' ? autor : (autor ? formatObjectForPrompt(autor) : 'indisponível');
     const personaPromptSection = personaString && personaString !== 'indisponível'
@@ -136,9 +134,7 @@ class GenerationHandler {
   async generateCampaignImagePrompt({ content, aspectRatio, autor = null }) {
     this._ensureInitialized();
     if (!content) throw new Error("O conteúdo da campanha deve ser gerado primeiro.");
-    const { autor: defaultAutor } = getCampaignPrompt();
-    const finalAutor = autor || defaultAutor;
-    const autorString = formatObjectForPrompt(finalAutor);
+    const autorString = formatObjectForPrompt(autor);
     const promptTemplate = await getPrompt('generateCampaignImagePrompt');
     const prompt = fillPrompt(promptTemplate, {
       titulo: stripHtml(content.titulo),
@@ -150,10 +146,9 @@ class GenerationHandler {
     return imagePrompt.trim();
   }
 
-  async generateCampaignImage({ prompt, aspectRatio }) {
+  async generateCampaignImage({ prompt, aspectRatio, colors }) {
     this._ensureInitialized();
     if (!prompt) throw new Error("O prompt da imagem deve ser gerado primeiro.");
-    const { colors } = getCampaignPrompt();
     const colorPalettePrompt = colors && colors.length > 0 ? `The image should predominantly use the following color palette: ${colors.map(c => c.hex).join(', ')}.` : '';
     const promptTemplate = await getPrompt('generateCampaignImage');
     let finalImagePrompt = fillPrompt(promptTemplate, { prompt, colorPalettePrompt, aspectRatio });
@@ -182,7 +177,7 @@ class GenerationHandler {
     this._ensureInitialized();
     if (!content?.conteudo) throw new Error("Conteúdo principal deve ser gerado primeiro.");
     const personaString = typeof persona === 'string' ? persona : (persona ? formatObjectForPrompt(persona, ['description']) : 'indisponível');
-    let autorString = typeof autor === 'string' ? autor : (autor ? formatObjectForPrompt(autor) : 'indisponível');
+    const autorString = typeof autor === 'string' ? autor : (autor ? formatObjectForPrompt(autor) : 'indisponível');
     const existingPostsString = existingPosts.length > 0 ? `\nPOSTS JÁ EXISTENTES (NÃO REPITA ESTES TEMAS OU ETAPAS):\n${existingPosts.map(p => `- Título: "${p.titulo}", Etapa AIDA: ${p.etapa_aida}`).join('\n')}\n` : '';
     const promptTemplate = await getPrompt('generateFollowupPlan');
     const prompt = fillPrompt(promptTemplate, {
@@ -206,7 +201,7 @@ class GenerationHandler {
     if (!content?.conteudo) throw new Error("Conteúdo principal deve ser gerado primeiro.");
     if (!plan || plan.length === 0) throw new Error("O plano de follow-up deve ser gerado primeiro.");
     const personaString = typeof persona === 'string' ? persona : (persona ? formatObjectForPrompt(persona, ['description']) : 'indisponível');
-    let autorString = typeof autor === 'string' ? autor : (autor ? formatObjectForPrompt(autor) : 'indisponível');
+    const autorString = typeof autor === 'string' ? autor : (autor ? formatObjectForPrompt(autor) : 'indisponível');
     const generatedPosts = [];
     const promptTemplate = await getPrompt('generateFollowupPosts');
     for (const postPlan of plan) {
