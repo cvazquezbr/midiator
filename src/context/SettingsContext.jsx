@@ -5,6 +5,7 @@ import {
   loadSettingsFromDb,
   saveSettingsToDb,
 } from '../utils/credentialsManager';
+import { runSettingsMigration } from '../utils/migration';
 
 const SettingsContext = createContext(null);
 
@@ -31,6 +32,9 @@ export const SettingsProvider = ({ children }) => {
 
     setIsLoading(true);
     try {
+      // Run the one-time migration first. It will do nothing if already completed.
+      await runSettingsMigration();
+
       console.log('User is authenticated, loading settings from database...');
       const loadedSettings = await loadSettingsFromDb();
       setSettings(loadedSettings || {});
