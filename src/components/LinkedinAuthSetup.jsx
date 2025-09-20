@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -79,17 +79,19 @@ const LinkedinAuthSetup = ({ onBeforeRedirect }) => {
     }
   }, [linkedinConfig.accessToken]);
 
-  const handleFolderIdChange = (e) => {
+  const handleFolderIdChange = useCallback((e) => {
     const { value } = e.target;
-    const newLinkedinConfig = { ...linkedinConfig, folderId: value };
+    const currentConfig = settings.linkedin || {};
+    const newLinkedinConfig = { ...currentConfig, folderId: value };
     updateSetting('linkedin', newLinkedinConfig);
-  };
+  }, [settings.linkedin, updateSetting]);
 
-  const handleSelectFolder = (folder) => {
-    const newLinkedinConfig = { ...linkedinConfig, folderId: folder.id };
+  const handleSelectFolder = useCallback((folder) => {
+    const currentConfig = settings.linkedin || {};
+    const newLinkedinConfig = { ...currentConfig, folderId: folder.id };
     updateSetting('linkedin', newLinkedinConfig);
     setPickerOpen(false);
-  };
+  }, [settings.linkedin, updateSetting]);
 
   const handleBrowseDrive = () => {
     if (!googleAccessToken) {

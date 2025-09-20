@@ -54,7 +54,6 @@ import {
 import { Info } from '@mui/icons-material';
 import { toast } from 'sonner';
 import { fromZonedTime, formatInTimeZone } from 'date-fns-tz';
-import { getTimezone } from '../utils/timezone';
 import { publishToWordPress } from '../utils/wordpressAPI';
 import { dataURLtoBlob, urlToBlob } from '../utils/imageComposer';
 import { markdownToLinkedinText } from '../lib/utils';
@@ -228,7 +227,7 @@ const Publisher = ({
     if (!editingSchedule) return;
     setIsUpdating(true);
     try {
-      const userTimezone = getTimezone() || 'UTC';
+      const userTimezone = settings.user_timezone || 'UTC';
       const utcDate = fromZonedTime(editingSchedule.newScheduledAt, userTimezone);
       await updateSchedule(editingSchedule.id, utcDate.toISOString());
       toast.success("Schedule updated successfully!");
@@ -528,7 +527,7 @@ const Publisher = ({
         const dayIndex = date.getDay();
         return weeklySchedule[dayIndex] || '12:00';
       };
-      const userTimezone = getTimezone() || 'UTC';
+      const userTimezone = settings.user_timezone || 'UTC';
       const mainPostDate = new Date(scheduleDate);
       const [mainHours, mainMinutes] = getScheduledTime(mainPostDate).split(':');
       mainPostDate.setHours(parseInt(mainHours, 10), parseInt(mainMinutes, 10), 0, 0);
@@ -1116,7 +1115,7 @@ const Publisher = ({
                                             )}
                                         </TableCell>
                                         <TableCell align="right">
-                                            {formatInTimeZone(new Date(row.scheduled_at), getTimezone() || 'UTC', 'dd/MM/yyyy HH:mm:ss zzz', { locale: ptBR })}
+                                            {formatInTimeZone(new Date(row.scheduled_at), settings.user_timezone || 'UTC', 'dd/MM/yyyy HH:mm:ss zzz', { locale: ptBR })}
                                         </TableCell>
                                         <TableCell align="right">
                                             <Chip

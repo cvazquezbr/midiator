@@ -26,7 +26,7 @@ import {
 } from '@mui/icons-material';
 import CsvInfobox from './CsvInfobox';
 import RecordManager from '../features/RecordManager/RecordManager';
-import { getGeminiApiKey } from '../utils/geminiCredentials';
+import { useSettings } from '../context/SettingsContext';
 
 const PostsCurtosStep = ({
   inputMethod,
@@ -54,11 +54,11 @@ const PostsCurtosStep = ({
 }) => {
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
   const [isGeminiKeyConfigured, setIsGeminiKeyConfigured] = useState(true);
+  const { settings } = useSettings();
 
   useEffect(() => {
-    const key = getGeminiApiKey();
-    setIsGeminiKeyConfigured(!!key);
-  }, []);
+    setIsGeminiKeyConfigured(!!settings?.gemini_api_key);
+  }, [settings]);
 
   const handleDragEnter = (event) => {
     event.preventDefault();

@@ -11,7 +11,8 @@ import isEqual from 'lodash.isequal';
 import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils/personaState';
 import PersonaWizard, { emptyPersonaWizardData } from '../components/PersonaWizard';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
-import { getGeminiApiKey } from '../utils/geminiCredentials';
+import { useSettings } from '../context/SettingsContext';
+import { initializeGenerationHandlers } from '../utils/generationHandlers';
 import geminiAPI from '../utils/geminiAPI';
 
 /**
@@ -25,6 +26,7 @@ import geminiAPI from '../utils/geminiAPI';
 const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected, onUpdate }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { settings } = useSettings();
 
   // State for Persona View
   const [personaList, setPersonaList] = useState([]);
@@ -54,6 +56,12 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
   useEffect(() => {
       fetchPersonas();
   }, []);
+
+  useEffect(() => {
+    if (settings && Object.keys(settings).length > 0) {
+      initializeGenerationHandlers(settings);
+    }
+  }, [settings]);
 
   // Effect to automatically open the drawer if no persona is selected
   useEffect(() => {
@@ -139,12 +147,8 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
    */
     const handleGeneratePersonaWithAI = async (description, callback) => {
         if (!geminiAPI.isInitialized) {
-            const apiKey = getGeminiApiKey();
-            if (!apiKey) {
-                toast.error('Chave de API do Gemini não configurada.');
-                return;
-            }
-            geminiAPI.initialize(apiKey);
+            toast.error('A API Gemini não foi inicializada. Verifique suas configurações.');
+            return;
         }
         setIsGeneratingPersona(true);
         const prompt = `Crie um objeto JSON para uma persona de marketing detalhada com base na seguinte descrição: '${description}'. O JSON deve ter as seguintes chaves: 'nome' (string), 'posicaoCargo' (array de strings), 'segmentoEmpresa' (array de strings), 'responsabilidadesChave' (array de strings), 'doresEstrategicos' (array de strings), 'doresOperacionais' (array de strings), 'doresPessoas' (array de strings), 'doresRegulatorios' (array de strings), 'gatilhosCompra' (array de strings), 'barreirasAdocao' (array de strings), 'mentalidadeValores' (string), e 'contextoCultural' (string).`;

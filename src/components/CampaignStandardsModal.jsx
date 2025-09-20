@@ -49,7 +49,7 @@ import PaletteWizard from './PaletteWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
 import { getCampaignPrompt, saveCampaignPrompt } from '../utils/campaignPrompt';
 import geminiAPI from '../utils/geminiAPI';
-import { getGeminiApiKey } from '../utils/geminiCredentials';
+import { useSettings } from '../context/SettingsContext';
 import isEqual from 'lodash.isequal';
 
 function TabPanel(props) {
@@ -75,6 +75,7 @@ function TabPanel(props) {
 
 const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const isMobile = useIsMobile();
+  const { settings } = useSettings();
   const [value, setValue] = useState(0);
 
   // Other states
@@ -89,8 +90,9 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
 
   useEffect(() => {
     if (open) {
-      const apiKey = getGeminiApiKey();
-      if (apiKey && !geminiAPI.isInitialized) geminiAPI.initialize(apiKey);
+      // The API is now initialized in a central place (e.g., HomePage)
+      // via initializeGenerationHandlers based on settings.
+      // So, no need to initialize it here.
 
       const { formato, colors: loadedColors } = getCampaignPrompt();
 
