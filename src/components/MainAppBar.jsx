@@ -35,6 +35,7 @@ const MainAppBar = ({
   onShowPersonas,
   onShowAutores,
   onShowCampaigns,
+  onShowPalettes,
   setShowSetupModal,
   setShowCampaignStandardsModal,
   onMenuClick,
@@ -44,6 +45,7 @@ const MainAppBar = ({
   currentView,
   onPersonaMenuClick,
   onAutorMenuClick,
+  onPaletteMenuClick,
   isDrawerOpen,
   onShowMemorial,
   isCampaignOpen,
@@ -71,6 +73,8 @@ const MainAppBar = ({
       onPersonaMenuClick();
     } else if (currentView === 'autores') {
       onAutorMenuClick();
+    } else if (currentView === 'palettes') {
+      onPaletteMenuClick();
     } else {
       onMenuClick();
     }
@@ -82,6 +86,8 @@ const MainAppBar = ({
         return 'Personas';
       case 'autores':
         return 'Autores';
+      case 'palettes':
+        return 'Paletas';
       default:
         return 'Midiator';
     }
@@ -179,6 +185,10 @@ const MainAppBar = ({
           <MenuItem onClick={() => { handleUserMenuClose(); onShowAutores(); }}>
             <AccountCircle sx={{ mr: 1 }} />
             Autores
+          </MenuItem>
+          <MenuItem onClick={() => { handleUserMenuClose(); onShowPalettes(); }}>
+            <Palette sx={{ mr: 1 }} />
+            Paletas
           </MenuItem>
           <Divider />
           <MenuItem onClick={() => { handleUserMenuClose(); setShowSetupModal(true); }}>

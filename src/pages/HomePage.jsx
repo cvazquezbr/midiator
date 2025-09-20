@@ -26,6 +26,7 @@ import { getAutores } from '../utils/autorState';
 import MyCampaignsStep from '../components/MyCampaignsStep';
 import PersonasPage from './PersonasPage';
 import AutoresPage from './AutoresPage';
+import PalettesPage from './PalettesPage';
 import MainAppBar from '../components/MainAppBar';
 import Sidebar from '../components/Sidebar';
 import FieldPositioner from '../components/FieldPositioner';
@@ -111,6 +112,7 @@ function HomePage() {
     defaultPageTemplate,
     formato, setFormato,
     colors, setColors,
+    paletteId, setPaletteId,
   } = useCampaign();
 
   // Component State
@@ -127,6 +129,7 @@ function HomePage() {
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const [personaDrawerOpen, setPersonaDrawerOpen] = useState(!isMobile);
   const [autorDrawerOpen, setAutorDrawerOpen] = useState(!isMobile);
+  const [paletteDrawerOpen, setPaletteDrawerOpen] = useState(!isMobile);
   const [colorPalette, setColorPalette] = useState([]);
   const [problema, setProblema] = useState('');
   const [solucao, setSolucao] = useState('');
@@ -237,7 +240,6 @@ function HomePage() {
     setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
     setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
     setColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
-    setStandardsColors(Array.isArray(state.standardsColors) ? state.standardsColors : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
     const sanitizedPagesData = (Array.isArray(state.generatedPagesData) ? state.generatedPagesData : [])
       .filter(page => {
@@ -412,7 +414,7 @@ function HomePage() {
       generatedPagesData: sanitizedPagesData,
       generatedAudioData: sanitizedAudioData,
       generatedVideos: sanitizedVideos,
-      standardsColors,
+      paletteId,
       csvData,
       csvHeaders,
     };
@@ -477,6 +479,7 @@ function HomePage() {
       // Explicitly set the author and persona IDs from the top-level of the loaded campaign
       setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
       setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
+      setPaletteId(loadedCampaign.palette_id || null);
 
       setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
       toast.success(`Campaign "${loadedCampaign.name}" loaded successfully!`);
@@ -1351,11 +1354,13 @@ function HomePage() {
             onLoadCampaign={() => setShowLoadModal(true)}
             onShowPersonas={() => handleNavigation(() => setCurrentView('personas'))}
             onShowAutores={() => handleNavigation(() => setCurrentView('autores'))}
+            onShowPalettes={() => handleNavigation(() => setCurrentView('palettes'))}
             onShowCampaigns={() => handleNavigation(() => setCurrentView('campaigns'))}
             currentView={currentView}
             onPersonaMenuClick={() => setPersonaDrawerOpen(!personaDrawerOpen)}
             onAutorMenuClick={() => setAutorDrawerOpen(!autorDrawerOpen)}
-            isDrawerOpen={currentView === 'personas' ? personaDrawerOpen : currentView === 'autores' ? autorDrawerOpen : sidebarOpen}
+            onPaletteMenuClick={() => setPaletteDrawerOpen(!paletteDrawerOpen)}
+            isDrawerOpen={currentView === 'personas' ? personaDrawerOpen : currentView === 'autores' ? autorDrawerOpen : currentView === 'palettes' ? paletteDrawerOpen : sidebarOpen}
             onShowMemorial={() => setShowMemorialDescritivoModal(true)}
             isCampaignOpen={currentCampaign !== null}
         />
@@ -1424,8 +1429,6 @@ function HomePage() {
                       setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
                       formato={formato}
                       setFormato={setFormato}
-                      colors={colors}
-                      setColors={setColors}
                     />
                   </Container>
                 )}
@@ -1593,6 +1596,7 @@ function HomePage() {
             )}
             {currentView === 'personas' && <PersonasPage personaDrawerOpen={personaDrawerOpen} setPersonaDrawerOpen={setPersonaDrawerOpen} onNoPersonaSelected={() => setPersonaDrawerOpen(true)} onUpdate={fetchPersonasForCampaign} />}
             {currentView === 'autores' && <AutoresPage autorDrawerOpen={autorDrawerOpen} setAutorDrawerOpen={setAutorDrawerOpen} onNoAutorSelected={() => setAutorDrawerOpen(true)} onUpdate={fetchAutoresForCampaign} />}
+            {currentView === 'palettes' && <PalettesPage paletteDrawerOpen={paletteDrawerOpen} setPaletteDrawerOpen={setPaletteDrawerOpen} onNoPaletteSelected={() => setPaletteDrawerOpen(true)} onUpdate={() => {}} />}
         </Box>
       </Box>
       <UnsavedChangesDialog

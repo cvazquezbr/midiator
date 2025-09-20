@@ -50,6 +50,7 @@ import MemorialDescritivoModal from './MemorialDescritivoModal';
 import geminiAPI from '../utils/geminiAPI';
 import { useSettings } from '../context/SettingsContext';
 import { useCampaign } from '../context/CampaignContext';
+import { getPalettes } from '../utils/paletteState';
 import isEqual from 'lodash.isequal';
 
 function TabPanel(props) {
@@ -73,10 +74,10 @@ function TabPanel(props) {
   );
 }
 
-const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
+const CampaignStandardsModal = ({ open, onClose }) => {
   const isMobile = useIsMobile();
   const { settings } = useSettings();
-  const { formato, setFormato, colors, setColors } = useCampaign();
+  const { formato, setFormato, colors, setColors, currentCampaign, setCurrentCampaign } = useCampaign();
   const [value, setValue] = useState(0);
 
   // Other states
@@ -86,9 +87,12 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPaletteWizard, setShowPaletteWizard] = useState(false);
+  const [palettes, setPalettes] = useState([]);
+  const [selectedPalette, setSelectedPalette] = useState('');
 
   useEffect(() => {
     if (open) {
+      getPalettes().then(setPalettes).catch(err => toast.error('Failed to fetch palettes.'));
       // The API is now initialized in a central place (e.g., HomePage)
       // via initializeGenerationHandlers based on settings.
       // So, no need to initialize it here.
@@ -98,6 +102,8 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
   const handleChange = (event, newValue) => setValue(newValue);
 
   const handleSave = () => {
+    setCurrentCampaign({ ...currentCampaign, formato, palette_id: selectedPalette });
+    toast.success('Padrões de campanha salvos com sucesso!');
     onClose();
   };
 
@@ -181,8 +187,34 @@ const CampaignStandardsModal = ({ open, onClose, onGeneratePalette }) => {
               <HtmlDisplayField title="Formato" htmlContent={formato} onClick={() => handleOpenEditor('formato')} />
             </TabPanel>
             <TabPanel value={value} index={1}>
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel>Paleta de Cores</InputLabel>
+                <Select
+                  value={selectedPalette}
+                  onChange={(e) => {
+                    const paletteId = e.target.value;
+                    setSelectedPalette(paletteId);
+                    const selected = palettes.find(p => p.id === paletteId);
+                    if (selected) {
+                      setColors(selected.colors.map(hex => ({ hex, name: `Cor (${hex})`, role: 'Salva', justification: '' })));
+                    } else {
+                      setColors([]);
+                    }
+                  }}
+                  label="Paleta de Cores"
+                >
+                  <MenuItem value="">
+                    <em>Nenhuma</em>
+                  </MenuItem>
+                  {palettes.map(palette => (
+                    <MenuItem key={palette.id} value={palette.id}>
+                      {palette.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <Stack spacing={2} sx={{ mb: 3 }}>
-                <Button variant="contained" startIcon={<AutoAwesomeIcon />} onClick={() => setShowPaletteWizard(true)} disabled={!onGeneratePalette} sx={{ alignSelf: 'flex-start' }}>Assistente de Paleta</Button>
+                <Button variant="contained" startIcon={<AutoAwesomeIcon />} onClick={() => setShowPaletteWizard(true)} sx={{ alignSelf: 'flex-start' }}>Assistente de Paleta</Button>
               </Stack>
               <Divider />
               <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Cores da Campanha</Typography>
