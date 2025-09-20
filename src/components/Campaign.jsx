@@ -25,9 +25,10 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
+import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers.js';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
 import { useSettings } from '../context/SettingsContext';
+import { initializeGenerationHandlers } from '../utils/generationHandlers.js';
 import { uploadImageToDrive, getOrCreateBackgroundsFolderId } from '../utils/googleApi';
 import {
     Campaign as CampaignIcon,
@@ -192,7 +193,7 @@ const Campaign = ({
     selectedPersonaForCampaign,
     setSelectedPersonaForCampaign,
 }) => {
-    useSettings();
+    const { settings } = useSettings();
     const [activeTab, setActiveTab] = useState(0);
     const [isHintModalOpen, setHintModalOpen] = React.useState(false);
     const [isSolucaoHintModalOpen, setSolucaoHintModalOpen] = React.useState(false);
@@ -219,6 +220,12 @@ const Campaign = ({
         prevCampaignContentRef.current = campaignContent;
     });
     const prevCampaignContent = prevCampaignContentRef.current;
+
+    useEffect(() => {
+        if (settings) {
+            initializeGenerationHandlers(settings);
+        }
+    }, [settings]);
 
     useEffect(() => {
         // Only switch to tab 1 if campaignContent just became available (was null or undefined before)
