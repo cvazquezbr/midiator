@@ -12,7 +12,7 @@ import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils
 import PersonaWizard, { emptyPersonaWizardData } from '../components/PersonaWizard';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 import { useSettings } from '../context/SettingsContext';
-import { initializeGenerationHandlers } from '../utils/generationHandlers.js';
+import generationHandlers from '../utils/generationHandlers.js';
 import geminiAPI from '../utils/geminiAPI';
 
 /**
@@ -59,7 +59,7 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
 
   useEffect(() => {
     if (settings && Object.keys(settings).length > 0) {
-      initializeGenerationHandlers(settings);
+      generationHandlers.initialize(settings);
     }
   }, [settings]);
 

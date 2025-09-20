@@ -55,9 +55,7 @@ import TextEditorDialog from '../components/TextEditorDialog';
 import Campaign from '../components/Campaign';
 import ImageStep from '../components/ImageStep';
 import MemorialDescritivoModal from '../components/MemorialDescritivoModal';
-import {
-  generateCampaignContent, generateCampaignImage, generateFormattedContent, generateFollowupPlan, generateFollowupPosts, generateIAContent, generateColorPalette, generateCampaignImagePrompt,
-} from '../utils/generationHandlers.js';
+import generationHandlers from '../utils/generationHandlers.js';
 import { exportCsv, exportHtml } from '../utils/exportUtils.js';
 import { downloadExampleCsv } from '../utils/fileUtils.js';
 import { parseIaResponseToCsvData } from '../utils/iaResponseParser.js';
@@ -581,7 +579,7 @@ function HomePage() {
   useEffect(() => {
     if (settings && Object.keys(settings).length > 0) {
       console.log("Settings available, initializing generation handlers.", settings);
-      initializeGenerationHandlers(settings);
+      generationHandlers.initialize(settings);
     }
   }, [settings]);
 
@@ -1071,7 +1069,7 @@ function HomePage() {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
 
       setGenerationStatus('Criando o conteúdo geral da campanha...');
-      const normalizedContent = await generateCampaignContent({ problema, solucao, objetivo, tomDeVoz, persona: finalPersona, autor: finalAutor });
+      const normalizedContent = await generationHandlers.generateCampaignContent({ problema, solucao, objetivo, tomDeVoz, persona: finalPersona, autor: finalAutor });
       if (!normalizedContent) {
         throw new Error("A geração do conteúdo principal falhou e não retornou dados.");
       }
@@ -1112,10 +1110,10 @@ function HomePage() {
     setIsGeneratingImage(true);
     try {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
-      const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor });
+      const imagePrompt = await generationHandlers.generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor });
 
       // 1. Get the raw base64 data from the generation service
-      const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
+      const base64Data = await generationHandlers.generateCampaignImage({ prompt: imagePrompt, aspectRatio });
 
       // 2. Convert base64 to a Blob
       const blob = dataURLtoBlob(base64Data);
@@ -1149,7 +1147,7 @@ function HomePage() {
     }
   }, [aspectRatio, addNewImageToCanvas, setPendingAssets, autorList, selectedAutorForCampaign]);
   const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { alert('A API Gemini não foi inicializada. Verifique suas configurações.'); setLoading(false); return; } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
-  const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
+  const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generationHandlers.generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
   const handleGenerateFollowupPosts = async (content = campaignContent) => {
     if (!content?.conteudo) {
       toast.error("Por favor, gere o conteúdo principal primeiro.");
@@ -1166,14 +1164,14 @@ function HomePage() {
       const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign);
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
       const neededQuantity = followupPostsQuantity - followupPosts.length;
-      const plan = await generateFollowupPlan({
+      const plan = await generationHandlers.generateFollowupPlan({
         content,
         neededQuantity,
         existingPosts: followupPosts,
         persona: finalPersona,
         autor: finalAutor,
       });
-      const newPosts = await generateFollowupPosts({ content, plan, persona: finalPersona, autor: finalAutor });
+      const newPosts = await generationHandlers.generateFollowupPosts({ content, plan, persona: finalPersona, autor: finalAutor });
       setFollowupPosts(prevPosts => [...prevPosts, ...newPosts]);
     } catch (error) {
       toast.error(`Ocorreu um erro ao gerar os posts de follow-up: ${error.message}`);
@@ -1194,7 +1192,7 @@ function HomePage() {
     setIsGenerating(true);
     setGenerationStatus('Gerando texto para os posts...');
     try {
-      const iaResponseText = await generateIAContent({ promptText, promptNumRecords });
+      const iaResponseText = await generationHandlers.generateIAContent({ promptText, promptNumRecords });
       const parsedResult = parseIaResponseToCsvData(iaResponseText);
 
       if (!parsedResult || !parsedResult.data || !parsedResult.data.length > 0) {
@@ -1614,7 +1612,7 @@ function HomePage() {
       <SaveCampaignModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={handleSaveCampaign} campaignToEdit={currentCampaign} isSaving={isSaving} />
       <LoadCampaignModal open={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadCampaign} onEdit={(campaign) => { setCurrentCampaign(campaign); setShowSaveModal(true); }} />
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
-      <CampaignStandardsModal open={showCampaignStandardsModal} onClose={() => { setShowCampaignStandardsModal(false); loadCampaignStandards(); }} onGeneratePalette={async (briefing) => { try { const palette = await generateColorPalette(briefing); return palette; } catch (error) { toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores."); throw error; } }} />
+      <CampaignStandardsModal open={showCampaignStandardsModal} onClose={() => { setShowCampaignStandardsModal(false); loadCampaignStandards(); }} onGeneratePalette={async (briefing) => { try { const palette = await generationHandlers.generateColorPalette(briefing); return palette; } catch (error) { toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores."); throw error; } }} />
       <ImageGallerySelector
         open={showImageGallery}
         onClose={handleCloseImageGallery}
