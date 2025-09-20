@@ -1058,7 +1058,7 @@ const Publisher = ({
                 size="large"
                 color="secondary"
                 onClick={handlePublishWordPress}
-                disabled={isPublishingWp || isPublishingLi || generatedPagesData.length === 0 || !generatedPagesData.every(img => img.blob)}
+                disabled={isPublishingWp || isPublishingLi || generatedPagesData.length === 0}
               >
                 {isPublishingWp ? 'Publicando...' : 'Publicar no WordPress'}
               </Button>
