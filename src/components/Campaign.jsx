@@ -25,10 +25,9 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers.js';
+import generationHandlers from '../utils/generationHandlers.js';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
 import { useSettings } from '../context/SettingsContext';
-import { initializeGenerationHandlers } from '../utils/generationHandlers.js';
 import { uploadImageToDrive, getOrCreateBackgroundsFolderId } from '../utils/googleApi';
 import {
     Campaign as CampaignIcon,
@@ -223,7 +222,7 @@ const Campaign = ({
 
     useEffect(() => {
         if (settings) {
-            initializeGenerationHandlers(settings);
+            generationHandlers.initialize(settings);
         }
     }, [settings]);
 
@@ -250,7 +249,7 @@ const Campaign = ({
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const problems = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
+            const problems = await generationHandlers.generateCommonProblems({ persona: finalPersona, autor: finalAutor });
             setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
@@ -269,7 +268,7 @@ const Campaign = ({
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const problems = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
+            const problems = await generationHandlers.generateCommonProblems({ persona: finalPersona, autor: finalAutor });
             setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
@@ -295,7 +294,7 @@ const Campaign = ({
             }
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
+            const solutions = await generationHandlers.generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
             setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
@@ -314,7 +313,7 @@ const Campaign = ({
             }
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
+            const solutions = await generationHandlers.generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
             setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);

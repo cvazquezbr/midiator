@@ -12,7 +12,7 @@ import { getAutores, saveAutor, updateAutor, deleteAutor } from '../utils/autorS
 import AutorWizard, { emptyAutorWizardData } from '../components/AutorWizard';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 import { useSettings } from '../context/SettingsContext';
-import { initializeGenerationHandlers } from '../utils/generationHandlers.js';
+import generationHandlers from '../utils/generationHandlers.js';
 import geminiAPI from '../utils/geminiAPI';
 
 const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected, onUpdate }) => {
@@ -47,7 +47,7 @@ const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected, o
 
   useEffect(() => {
     if (settings && Object.keys(settings).length > 0) {
-      initializeGenerationHandlers(settings);
+      generationHandlers.initialize(settings);
     }
   }, [settings]);
 
