@@ -114,7 +114,7 @@ const SetupModal = ({ open, onClose }) => {
       // Reset when modal closes
       setInitialSettings(null);
     }
-  }, [open, settings]);
+  }, [open]);
 
   const isDirty = !isEqual(initialSettings, settings);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
