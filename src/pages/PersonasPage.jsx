@@ -12,7 +12,7 @@ import { getPersonas, savePersona, updatePersona, deletePersona } from '../utils
 import PersonaWizard, { emptyPersonaWizardData } from '../components/PersonaWizard';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 import { useSettings } from '../context/SettingsContext';
-import { initializeGenerationHandlers } from '../utils/generationHandlers';
+import { initializeGenerationHandlers } from '../utils/generationHandlers.js';
 import geminiAPI from '../utils/geminiAPI';
 
 /**
