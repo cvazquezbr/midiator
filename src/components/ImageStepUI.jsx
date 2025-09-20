@@ -34,7 +34,6 @@ const ImageStepUI = ({
   initialFieldStyles,
   onImageDisplayedSizeChange,
   colorPalette,
-  standardsColors,
   onCsvDataUpdate,
   originalImageSize,
   onZIndexChange,
@@ -59,6 +58,7 @@ const ImageStepUI = ({
     brandElements, setBrandElements,
     pageTemplate, setPageTemplate,
     selectedField, setSelectedField,
+    colors,
   } = useCampaign();
 
   const handleNextPreview = () => {
@@ -109,7 +109,7 @@ const ImageStepUI = ({
             csvData={csvData}
             onImageDisplayedSizeChange={onImageDisplayedSizeChange}
             colorPalette={colorPalette}
-            standardsColors={standardsColors}
+            standardsColors={colors}
             onCsvDataUpdate={onCsvDataUpdate}
             selectedField={selectedField}
             setSelectedField={setSelectedField}
@@ -166,7 +166,7 @@ const ImageStepUI = ({
               setPageTemplate={setPageTemplate}
               onZIndexChange={onZIndexChange}
               onOpenHtmlEditor={onOpenHtmlEditor}
-              standardsColors={standardsColors}
+              standardsColors={colors}
               templateFieldStyles={templateFieldStyles}
               activeStep={activeStep}
               isCropping={isCropping}
@@ -204,7 +204,7 @@ const ImageStepUI = ({
             setPageTemplate={setPageTemplate}
             onZIndexChange={onZIndexChange}
             onOpenHtmlEditor={onOpenHtmlEditor}
-            standardsColors={standardsColors}
+            standardsColors={colors}
             templateFieldStyles={templateFieldStyles}
             activeStep={activeStep}
             isCropping={isCropping}
