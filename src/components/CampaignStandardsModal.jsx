@@ -47,7 +47,7 @@ import TextEditorDialog from './TextEditorDialog';
 import HtmlDisplayField from './HtmlDisplayField';
 import PaletteWizard from './PaletteWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
-import geminiAPI from '../utils/geminiAPI';
+import generationHandlers from '../utils/generationHandlers';
 import { useSettings } from '../context/SettingsContext';
 import { useCampaign } from '../context/CampaignContext';
 import { getPalettes } from '../utils/paletteState';
@@ -242,7 +242,29 @@ const CampaignStandardsModal = ({ open, onClose }) => {
         </DialogActions>
       </Dialog>
       <TextEditorDialog open={editingField !== null} title={getEditorTitle()} content={getCurrentContent()} onSave={handleSaveEditor} onClose={handleCloseEditor} html={true} />
-      <PaletteWizard open={showPaletteWizard} onClose={() => setShowPaletteWizard(false)} onSave={(newPalette) => { setColors(newPalette); toast.success('Paleta de cores aplicada!'); }} onGenerate={async (briefing, callback) => { setIsGenerating(true); try { const result = await onGeneratePalette(briefing); callback(result); } catch (error) { toast.error('Erro ao gerar paleta.'); } finally { setIsGenerating(false); } }} isGenerating={isGenerating} />
+      <PaletteWizard
+        open={showPaletteWizard}
+        onClose={() => setShowPaletteWizard(false)}
+        onSave={(savedPalette) => {
+          // The wizard now returns an object { name, colors }.
+          // We only need the colors for the campaign standards.
+          const newColors = savedPalette.colors.map(hex => ({ hex, name: `Cor (${hex})`, role: 'Gerada', justification: 'Gerada via assistente de IA.' }));
+          setColors(newColors);
+          toast.success('Paleta de cores aplicada!');
+        }}
+        onGenerate={async (briefing, callback) => {
+          setIsGenerating(true);
+          try {
+            const result = await generationHandlers.generateColorPalette(briefing);
+            callback(result);
+          } catch (error) {
+            toast.error(`Erro ao gerar paleta: ${error.message}`);
+          } finally {
+            setIsGenerating(false);
+          }
+        }}
+        isGenerating={isGenerating}
+      />
     </>
   );
 };

@@ -11,6 +11,8 @@ import isEqual from 'lodash.isequal';
 import { getPalettes, savePalette, updatePalette, deletePalette } from '../utils/paletteState';
 import PaletteEditModal from '../components/PaletteEditModal';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
+import PaletteWizard from '../components/PaletteWizard';
+import generationHandlers from '../utils/generationHandlers';
 
 const PalettesPage = ({ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSelected, onUpdate }) => {
   const theme = useTheme();
@@ -26,9 +28,12 @@ const PalettesPage = ({ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSele
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [navigationTarget, setNavigationTarget] = useState(null);
 
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
   useEffect(() => {
     if (selectedPalette && paletteFormData) {
-        const isDirty = !isEqual(selectedPalette.colors, paletteFormData.colors);
+        const isDirty = selectedPalette.id && !isEqual(selectedPalette, paletteFormData);
         setIsPaletteDirty(isDirty);
     } else {
         setIsPaletteDirty(false);
@@ -65,37 +70,58 @@ const PalettesPage = ({ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSele
   };
 
   const handleNewPalette = () => {
-      const newEmptyPalette = { name: '', colors: [] };
-      setSelectedPalette(newEmptyPalette);
-      setPaletteFormData(newEmptyPalette);
-      setIsPaletteDirty(false);
-      if (isMobile) setPaletteDrawerOpen(false);
+      setIsWizardOpen(true);
   };
 
-  const handleSavePalette = async () => {
-    if (!paletteFormData) {
-        toast.error('Não há dados de paleta para salvar.');
+  const handleUpdatePalette = async () => {
+    if (!paletteFormData || !paletteFormData.id) {
+        toast.error('Não há dados de paleta para atualizar.');
         return false;
     }
-    const paletteToSave = { ...selectedPalette, ...paletteFormData };
-    if (!paletteToSave.name) {
+    if (!paletteFormData.name) {
         toast.error('O nome da paleta é obrigatório.');
         return false;
     }
     try {
-        const saved = paletteToSave.id
-            ? await updatePalette(paletteToSave.id, paletteToSave.name, paletteToSave.colors)
-            : await savePalette(paletteToSave.name, paletteToSave.colors);
-        toast.success("Paleta salva com sucesso!");
+        const saved = await updatePalette(paletteFormData.id, paletteFormData.name, paletteFormData.colors);
+        toast.success("Paleta atualizada com sucesso!");
         await fetchPalettes();
         if (onUpdate) onUpdate();
         setSelectedPalette(saved);
         setPaletteFormData(saved);
         setIsPaletteDirty(false);
-        return true; // Indicate success
+        return true;
     } catch (err) {
-        toast.error(`Falha ao salvar paleta: ${err.message}`);
-        return false; // Indicate failure
+        toast.error(`Falha ao atualizar paleta: ${err.message}`);
+        return false;
+    }
+  };
+
+  const handleWizardSave = async (paletteToSave) => {
+    if (!paletteToSave || !paletteToSave.name || !paletteToSave.colors) {
+      toast.error('A paleta precisa de um nome e cores para ser salva.');
+      return;
+    }
+    try {
+      await savePalette(paletteToSave.name, paletteToSave.colors);
+      toast.success("Nova paleta criada com sucesso!");
+      await fetchPalettes();
+      if (onUpdate) onUpdate();
+      setIsWizardOpen(false);
+    } catch (err) {
+      toast.error(`Falha ao criar paleta: ${err.message}`);
+    }
+  };
+
+  const handleGeneratePalette = async (briefing, callback) => {
+    setIsGenerating(true);
+    try {
+      const result = await generationHandlers.generateColorPalette(briefing);
+      callback(result);
+    } catch (error) {
+      toast.error(`Erro ao gerar paleta: ${error.message}`);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -123,7 +149,7 @@ const PalettesPage = ({ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSele
     };
 
     const handleDialogSaveAndNavigate = async () => {
-        const success = await handleSavePalette();
+        const success = await handleUpdatePalette();
         setShowUnsavedDialog(false);
         if (success && navigationTarget) {
             navigationTarget();
@@ -139,14 +165,11 @@ const PalettesPage = ({ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSele
       if (onUpdate) onUpdate();
       setSelectedPalette(null); // Deselect if the deleted one was selected
     } catch (error) {
-      // Error toast is handled inside deletePalette, but you could add more here if needed
       console.error(error);
     }
   };
 
   const handleDeleteClick = (palette) => {
-    // Stop propagation to prevent the ListItemButton's onClick from firing
-    // event.stopPropagation();
     if (window.confirm(`Tem certeza que deseja excluir a paleta "${palette.name}"? Esta ação não pode ser desfeita.`)) {
       handleConfirmDelete(palette.id);
     }
@@ -157,7 +180,7 @@ const PalettesPage = ({ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSele
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Paletas</Typography>
         </Box>
-        <Button variant="contained" startIcon={<Add />} onClick={handleNewPalette} fullWidth>Nova Paleta</Button>
+        <Button variant="contained" startIcon={<Add />} onClick={handleNewPalette} fullWidth>Nova Paleta com IA</Button>
         <Divider sx={{my: 2}} />
         {palettesLoading && <CircularProgress />}
         {palettesError && <Alert severity="error">{palettesError}</Alert>}
@@ -197,7 +220,7 @@ const PalettesPage = ({ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSele
                   '& .MuiDrawer-paper': {
                       width: 320,
                       boxSizing: 'border-box',
-                      position: 'absolute', // Position relative to the parent Box
+                      position: 'absolute',
                   },
               }}
           >
@@ -227,20 +250,20 @@ const PalettesPage = ({ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSele
                 {selectedPalette ? (
                   isMobile ? (
                     <PaletteEditModal
-                      key={selectedPalette.id || 'new'}
+                      key={selectedPalette.id}
                       open={Boolean(selectedPalette)}
                       onClose={() => handleNavigation(() => setSelectedPalette(null))}
-                      onSave={handleSavePalette}
+                      onSave={handleUpdatePalette}
                       paletteData={paletteFormData}
                       onPaletteDataChange={setPaletteFormData}
                     />
                   ) : (
                     <Paper elevation={2} sx={{ p: 3 }}>
                       <PaletteEditModal
-                        key={selectedPalette.id || 'new'}
+                        key={selectedPalette.id}
                         open={Boolean(selectedPalette)}
                         onClose={() => handleNavigation(() => setSelectedPalette(null))}
-                        onSave={handleSavePalette}
+                        onSave={handleUpdatePalette}
                         paletteData={paletteFormData}
                         onPaletteDataChange={setPaletteFormData}
                       />
@@ -261,6 +284,13 @@ const PalettesPage = ({ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSele
         onClose={handleDialogClose}
         onConfirmDiscard={handleDialogDiscard}
         onConfirmSave={handleDialogSaveAndNavigate}
+      />
+      <PaletteWizard
+        open={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+        onSave={handleWizardSave}
+        onGenerate={handleGeneratePalette}
+        isGenerating={isGenerating}
       />
     </>
   );
