@@ -642,8 +642,10 @@ function HomePage() {
               accessToken: data.access_token,
               expiry: Date.now() + data.expires_in * 1000,
             };
-            updateSetting('linkedin', newConfig);
-            await saveSettings();
+            // Construct the entire new settings object to avoid race conditions
+            const newSettings = { ...settings, linkedin: newConfig };
+            // Pass the new object directly to saveSettings
+            await saveSettings(newSettings);
             toast.success('Conexão com o LinkedIn estabelecida com sucesso!');
             setShowSetupModal(true);
           } else {

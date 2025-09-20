@@ -56,11 +56,15 @@ export const SettingsProvider = ({ children }) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const saveSettings = async () => {
+  const saveSettings = async (newSettings) => {
+    const settingsToSave = newSettings || settings;
     setIsLoading(true);
     try {
-      // The 'settings' object from the context state is now the single source of truth.
-      await saveSettingsToDb(settings);
+      await saveSettingsToDb(settingsToSave);
+      // Ensure the context state is in sync with what was just saved.
+      if (newSettings) {
+        setSettings(newSettings);
+      }
       toast.success('Settings saved successfully!');
     } catch (error) {
       toast.error(`Failed to save settings: ${error.message}`);
