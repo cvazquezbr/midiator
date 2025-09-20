@@ -18,13 +18,12 @@ import {
   Select,
   MenuItem,
   CircularProgress,
-  Paper,
 } from '@mui/material';
-import PaletteReport from './PaletteReport';
+import PaletteEditor from './PaletteEditor'; // Use the new editor
 
 const steps = [
   'Definir Briefing',
-  'Analisar Resultado',
+  'Ajustar e Salvar', // Changed step name
 ];
 
 const briefingOptions = {
@@ -45,7 +44,7 @@ const PaletteWizard = ({ open, onClose, onSave, onGenerate, isGenerating }) => {
   const isMobile = useIsMobile();
   const [activeStep, setActiveStep] = useState(0);
   const [briefing, setBriefing] = useState({});
-  const [generatedPalette, setGeneratedPalette] = useState(null);
+  const [editablePalette, setEditablePalette] = useState(null);
 
   useEffect(() => {
     if (open) {
@@ -56,7 +55,7 @@ const PaletteWizard = ({ open, onClose, onSave, onGenerate, isGenerating }) => {
         atmosfera: '',
         details: '',
       });
-      setGeneratedPalette(null);
+      setEditablePalette(null);
       setActiveStep(0);
     }
   }, [open]);
@@ -70,12 +69,16 @@ const PaletteWizard = ({ open, onClose, onSave, onGenerate, isGenerating }) => {
 - Atmosfera desejada: ${briefing.atmosfera}
 - Detalhes adicionais: ${briefing.details}
       `;
-      onGenerate(fullBriefing.trim(), (palette) => {
-        setGeneratedPalette(palette);
+      onGenerate(fullBriefing.trim(), (generatedData) => {
+        // The AI result should contain palette_name and palette_colors
+        setEditablePalette({
+          name: generatedData.palette_name || 'Nova Paleta',
+          colors: generatedData.palette_colors || [],
+        });
         setActiveStep(1);
       });
     } else {
-      onSave(generatedPalette.palette);
+      onSave(editablePalette);
       onClose();
     }
   };
@@ -119,11 +122,10 @@ const PaletteWizard = ({ open, onClose, onSave, onGenerate, isGenerating }) => {
               label="Detalhes Adicionais do Briefing"
               multiline
               rows={4}
-              value={briefing.details}
+              value={briefing.details || ''}
               onChange={handleChange}
               fullWidth
-              placeholder="INCLUINDO:
-- Quaisquer cores proibidas ou obrigatórias"
+              placeholder="INCLUINDO:&#10;- Quaisquer cores proibidas ou obrigatórias"
               margin="normal"
             />
           </Box>
@@ -132,10 +134,13 @@ const PaletteWizard = ({ open, onClose, onSave, onGenerate, isGenerating }) => {
         return (
           <Box>
             <Typography variant="h6" gutterBottom>Resultado da Geração</Typography>
-            {generatedPalette ? (
-              <PaletteReport paletteData={generatedPalette} briefing={briefing} />
+            {editablePalette ? (
+              <PaletteEditor
+                paletteData={editablePalette}
+                onPaletteDataChange={setEditablePalette}
+              />
             ) : (
-              <Typography>A paleta gerada será exibida aqui.</Typography>
+              <Typography>A paleta gerada será exibida aqui para edição.</Typography>
             )}
           </Box>
         );
@@ -149,7 +154,7 @@ const PaletteWizard = ({ open, onClose, onSave, onGenerate, isGenerating }) => {
           return isGenerating || !briefing.objetivo || !briefing.publicoAlvo || !briefing.mensagemPrincipal || !briefing.atmosfera;
       }
       if (activeStep === 1) {
-          return !generatedPalette;
+          return !editablePalette || !editablePalette.name.trim() || editablePalette.colors.length === 0;
       }
       return false;
   }
