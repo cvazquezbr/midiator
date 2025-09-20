@@ -16,14 +16,21 @@ export async function publishPost(fetch, post, accessToken) {
         'x-internal-secret': process.env.INTERNAL_API_SECRET,
     };
 
-    let originalPostText = [
-        postContent.titulo,
-        postContent.conteudo,
-        '----',
-        postContent.cta,
-        '----',
-        (postContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' ')
-    ].filter(Boolean).join('\n\n').trim();
+    // O texto final já vem formatado do frontend, garantindo consistência.
+    let postText = postContent.fullText;
+
+    if (!postText) {
+        // Fallback para o caso de agendamentos antigos que não têm o fullText.
+        console.warn(`Post ${post.id} is using legacy content assembly. Consider re-scheduling.`);
+        postText = [
+            postContent.titulo,
+            postContent.conteudo,
+            '----',
+            postContent.cta,
+            '----',
+            (postContent.hashtags || []).map(h => h.startsWith('#') ? h : `#${h}`).join(' ')
+        ].filter(Boolean).join('\n\n').trim();
+    }
 
     if (post.parent_id) {
         const { rows: parentRows } = await query(
@@ -31,11 +38,10 @@ export async function publishPost(fetch, post, accessToken) {
             [post.parent_id]
         );
         if (parentRows.length > 0 && parentRows[0].linkedin_post_url) {
-            originalPostText += `\n\nPost original: ${parentRows[0].linkedin_post_url}`;
+            // Adiciona o link do post original ao final do texto.
+            postText += `\n\nPost original: ${parentRows[0].linkedin_post_url}`;
         }
     }
-
-    const postText = originalPostText;
 
     const images = post.post_content?.images || [];
     const imageUrns = [];

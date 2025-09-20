@@ -545,11 +545,12 @@ const Publisher = ({
         scheduled_at: mainPostUtcDate.toISOString(),
         authorUrn: `urn:li:${selectedTarget.type}:${selectedTarget.id}`,
         content: {
-            titulo: campaignContent?.titulo || '',
-            conteudo: campaignContent?.conteudo || '',
-            cta: campaignContent?.cta || '',
-            hashtags: campaignContent?.hashtags || [],
+            // Salva o texto final, já formatado, para garantir consistência.
+            fullText: content,
+            // Mantém as imagens associadas.
             images: permanentImageUrls,
+            // Mantém o título para exibição na lista de agendamentos.
+            titulo: campaignContent?.titulo || 'Post Agendado',
         },
       };
       const mainPostSchedule = await createSchedule(mainPostPayload);
