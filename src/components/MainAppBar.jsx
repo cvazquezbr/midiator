@@ -25,6 +25,7 @@ import {
   People as PeopleIcon,
   Home as HomeIcon,
   FolderOpen as FolderOpenIcon,
+  Palette,
 } from '@mui/icons-material';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useNavigate } from 'react-router-dom';
