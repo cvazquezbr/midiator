@@ -4,8 +4,6 @@ import { useUserAuth } from './UserAuthContext';
 import {
   loadSettingsFromDb,
   saveSettingsToDb,
-  saveSetting,
-  gatherCredentials,
 } from '../utils/credentialsManager';
 
 const SettingsContext = createContext(null);
