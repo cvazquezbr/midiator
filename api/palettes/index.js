@@ -44,10 +44,9 @@ const handler = async (req, res) => {
     }
 
     try {
-      // The 'colors' array from JS will be automatically converted to a JSONB string by the pg driver.
       const { rows } = await query(
         'INSERT INTO palettes (user_id, name, colors) VALUES ($1, $2, $3) RETURNING *',
-        [userId, name, colors]
+        [userId, name, JSON.stringify(colors)]
       );
       return res.status(201).json(rows[0]);
     } catch (error) {
