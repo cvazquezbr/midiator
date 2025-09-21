@@ -38,7 +38,7 @@ const DetailItem = ({ title, value, isHtml = false }) => {
 };
 
 const AuthorSection = ({ author }) => {
-  if (!author) {
+  if (!author || !author.autor_data || Object.keys(author.autor_data).length === 0) {
     return null;
   }
 
@@ -51,7 +51,7 @@ const AuthorSection = ({ author }) => {
     dominioReferencia,
     siteExclusao,
     descricaoGeral,
-  } = author;
+  } = author.autor_data;
 
   return (
     <Box>
