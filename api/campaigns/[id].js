@@ -20,7 +20,7 @@ const handler = async (req, res) => {
   if (req.method === 'GET') {
     try {
       const { rows } = await query(
-        'SELECT id, name, campaign_data, autor_id, persona_id, updated_at FROM campaigns WHERE id = $1 AND user_id = $2',
+        'SELECT id, name, campaign_data, autor_id, persona_id, palette_id, updated_at FROM campaigns WHERE id = $1 AND user_id = $2',
         [id, userId]
       );
       if (rows.length === 0) {
@@ -33,7 +33,7 @@ const handler = async (req, res) => {
     }
   } else if (req.method === 'PUT') {
     try {
-      const { name, campaign_data, autor_id, persona_id } = await parseBody(req);
+      const { name, campaign_data, autor_id, persona_id, palette_id } = await parseBody(req);
       if (!name || !campaign_data) {
         return res.status(400).json({ error: 'Campaign name and data are required.' });
       }
@@ -41,10 +41,11 @@ const handler = async (req, res) => {
       // Ensure empty strings for foreign keys are converted to null
       const finalAutorId = autor_id === '' ? null : autor_id;
       const finalPersonaId = persona_id === '' ? null : persona_id;
+      const finalPaletteId = palette_id === '' ? null : palette_id;
 
       const { rows } = await query(
-        'UPDATE campaigns SET name = $1, campaign_data = $2, autor_id = $3, persona_id = $4, updated_at = NOW() WHERE id = $5 AND user_id = $6 RETURNING id, name, updated_at',
-        [name, campaign_data, finalAutorId, finalPersonaId, id, userId]
+        'UPDATE campaigns SET name = $1, campaign_data = $2, autor_id = $3, persona_id = $4, palette_id = $5, updated_at = NOW() WHERE id = $6 AND user_id = $7 RETURNING id, name, updated_at',
+        [name, campaign_data, finalAutorId, finalPersonaId, finalPaletteId, id, userId]
       );
       if (rows.length === 0) {
         return res.status(404).json({ error: 'Campaign not found or access denied.' });
