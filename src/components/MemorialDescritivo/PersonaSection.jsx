@@ -71,30 +71,47 @@ const PersonaSection = ({ persona }) => {
     return null;
   }
 
-  const formatTitle = (key) => {
-    const result = key.replace(/([A-Z])/g, ' $1');
-    return result.charAt(0).toUpperCase() + result.slice(1);
-  };
+  const {
+    nome,
+    posicaoCargo,
+    segmentoEmpresa,
+    responsabilidadesChave,
+    doresEstrategicos,
+    doresOperacionais,
+    doresPessoas,
+    doresRegulatorios,
+    gatilhosCompra,
+    barreirasAdocao,
+    mentalidadeValores,
+    contextoCultural,
+    description,
+  } = persona;
 
-  const htmlFields = ['mentalidadeValores', 'contextoCultural', 'dores', 'necessidades', 'motivacoes', 'crencasLimitantes', 'sonhosAspiracoes', 'jornada'];
+  const allDores = [
+    ...(doresEstrategicos || []),
+    ...(doresOperacionais || []),
+    ...(doresPessoas || []),
+    ...(doresRegulatorios || [])
+  ];
 
   return (
     <Box>
       <Typography variant="h4" component="h2" sx={{ mb: 2 }}>
-        Perfil da Persona
+        Perfil da Persona: {nome}
       </Typography>
       <Typography variant="body2" sx={{ mb: 4, color: 'text.secondary' }}>
         A persona é a representação do nosso cliente ideal. Entender profundamente seus desafios, motivações e características demográficas é o primeiro passo para criar uma comunicação que gere conexão e resultados. Tudo o que produzimos deve ser pensado para dialogar com esta pessoa.
       </Typography>
       <Grid container spacing={4}>
-        {Object.entries(persona).map(([key, value]) => (
-          <DetailItem
-            key={key}
-            title={formatTitle(key)}
-            value={value}
-            isHtml={htmlFields.includes(key)}
-          />
-        ))}
+        <DetailItem title="Posição / Cargo" value={posicaoCargo} />
+        <DetailItem title="Segmento da Empresa" value={segmentoEmpresa} />
+        <DetailItem title="Responsabilidades Chave" value={responsabilidadesChave} />
+        <DetailItem title="Dores e Desafios" value={allDores} />
+        <DetailItem title="Gatilhos de Compra" value={gatilhosCompra} />
+        <DetailItem title="Barreiras de Adoção" value={barreirasAdocao} />
+        <DetailItem title="Mentalidade e Valores" value={mentalidadeValores} isHtml={true} />
+        <DetailItem title="Contexto Cultural" value={contextoCultural} isHtml={true} />
+        {description && <DetailItem title="Descrição (gerada por IA)" value={description} />}
       </Grid>
     </Box>
   );

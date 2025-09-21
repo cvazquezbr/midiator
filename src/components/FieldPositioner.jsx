@@ -61,7 +61,6 @@ const FieldPositioner = ({
   csvData,
   onImageDisplayedSizeChange,
   colorPalette,
-  standardsColors,
   selectedField, // Use prop from parent
   setSelectedField, // Use prop from parent
   onCsvDataUpdate, // New prop to notify App.jsx of changes
@@ -214,7 +213,6 @@ const FieldPositioner = ({
       fieldStyles,
       csvData,
       effectiveImageSize,
-      standardsColors,
       currentPreviewIndex,
     });
     setFieldPositions(newPositions);

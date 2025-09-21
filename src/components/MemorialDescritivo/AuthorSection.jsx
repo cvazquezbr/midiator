@@ -50,25 +50,25 @@ const AuthorSection = ({ author }) => {
     objetivoEngajamento,
     dominioReferencia,
     siteExclusao,
+    descricaoGeral,
   } = author;
 
   return (
     <Box>
       <Typography variant="h4" component="h2" sx={{ mb: 2 }}>
-        Definições do Autor
+        Definições do Autor: {identidade}
       </Typography>
       <Typography variant="body2" sx={{ mb: 4, color: 'text.secondary' }}>
         O autor representa a voz da nossa marca. Definir quem está falando, qual o seu tom e seus objetivos é crucial para construir uma identidade consistente e gerar confiança. Esta seção estabelece a personalidade da nossa comunicação.
       </Typography>
 
-      <DetailItem title="Identidade / Quem está falando?" value={identidade} />
-      <DetailItem title="Descrição" value={descricao} isHtml={true} />
-      <DetailItem title="Tipo de Autor" value={tipo} />
+      <DetailItem title="Descrição da Empresa" value={descricao} isHtml={true} />
+      <DetailItem title="Tipo de Organização" value={tipo} />
       <DetailItem title="Objetivo Estratégico" value={objetivoEstrategico} isHtml={true} />
       <DetailItem title="Objetivo de Engajamento" value={objetivoEngajamento} isHtml={true} />
       <DetailItem title="Domínio de Referência" value={dominioReferencia} />
       <DetailItem title="Site para Exclusão de Referência" value={siteExclusao} />
-
+      {descricaoGeral && <DetailItem title="Descrição Geral (gerada por IA)" value={descricaoGeral} />}
     </Box>
   );
 };
