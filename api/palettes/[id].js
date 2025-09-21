@@ -1,14 +1,9 @@
-import { withAuth } from '@clerk/clerk-sdk-node';
-import { db } from '../../../db/index.mjs';
-import { palettes, campaigns } from '../../../db/schema.mjs';
-import { and, eq, count } from 'drizzle-orm';
+import { withAuth } from '../middleware/auth';
+import { query } from '../db';
 
 const handler = async (req, res) => {
-  if (!req.auth.userId) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const userId = req.auth.userId;
+  // withAuth middleware has already run, so req.user is available.
+  const userId = req.user.id;
   const { id } = req.query;
   const paletteId = parseInt(id, 10);
 
@@ -19,11 +14,14 @@ const handler = async (req, res) => {
   // GET: Fetch a single palette by ID
   if (req.method === 'GET') {
     try {
-      const [palette] = await db.select().from(palettes).where(and(eq(palettes.id, paletteId), eq(palettes.userId, userId)));
-      if (!palette) {
+      const { rows } = await query(
+        'SELECT * FROM palettes WHERE id = $1 AND user_id = $2',
+        [paletteId, userId]
+      );
+      if (rows.length === 0) {
         return res.status(404).json({ error: 'Palette not found or access denied.' });
       }
-      return res.status(200).json(palette);
+      return res.status(200).json(rows[0]);
     } catch (error) {
       console.error(`Error fetching palette ${paletteId}:`, error);
       return res.status(500).json({ error: 'Failed to fetch palette' });
@@ -37,15 +35,14 @@ const handler = async (req, res) => {
       return res.status(400).json({ error: 'Palette name and colors array are required.' });
     }
     try {
-      const [updatedPalette] = await db.update(palettes)
-        .set({ name, colors, updatedAt: new Date() })
-        .where(and(eq(palettes.id, paletteId), eq(palettes.userId, userId)))
-        .returning();
-
-      if (!updatedPalette) {
+      const { rows } = await query(
+        'UPDATE palettes SET name = $1, colors = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND user_id = $4 RETURNING *',
+        [name, colors, paletteId, userId]
+      );
+      if (rows.length === 0) {
         return res.status(404).json({ error: 'Palette not found or access denied.' });
       }
-      return res.status(200).json(updatedPalette);
+      return res.status(200).json(rows[0]);
     } catch (error) {
       console.error(`Error updating palette ${paletteId}:`, error);
       return res.status(500).json({ error: 'Failed to update palette' });
@@ -55,17 +52,21 @@ const handler = async (req, res) => {
   // DELETE: Delete a palette by ID
   if (req.method === 'DELETE') {
     try {
-      // Check if any campaigns are using this palette
-      const [campaignCountResult] = await db.select({ count: count() }).from(campaigns).where(eq(campaigns.paletteId, paletteId));
-      if (campaignCountResult.count > 0) {
-        return res.status(400).json({ error: `Cannot delete palette because it is being used by ${campaignCountResult.count} campaign(s).` });
+      // First, check if any campaigns are using this palette.
+      // Note: This assumes a `campaigns` table with a `palette_id` column.
+      const { rows: campaigns } = await query(
+        'SELECT id FROM campaigns WHERE palette_id = $1 AND user_id = $2',
+        [paletteId, userId]
+      );
+      if (campaigns.length > 0) {
+        return res.status(400).json({ error: `Cannot delete palette because it is being used by ${campaigns.length} campaign(s).` });
       }
 
-      const [deletedPalette] = await db.delete(palettes)
-        .where(and(eq(palettes.id, paletteId), eq(palettes.userId, userId)))
-        .returning();
-
-      if (!deletedPalette) {
+      const { rows: deletedRows } = await query(
+        'DELETE FROM palettes WHERE id = $1 AND user_id = $2 RETURNING *',
+        [paletteId, userId]
+      );
+      if (deletedRows.length === 0) {
         return res.status(404).json({ error: 'Palette not found or access denied.' });
       }
       return res.status(200).json({ message: 'Palette deleted successfully.' });

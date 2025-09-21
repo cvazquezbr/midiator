@@ -33,8 +33,6 @@ export const withAuth = (handler) => {
       const decoded = jwt.verify(token, JWT_SECRET);
 
       // Attach user information to the request object.
-      // This is a common pattern, but be aware that modifying the req object
-      // might not be standard across all serverless runtimes. It works well with Node.js runtime.
       req.user = decoded;
 
       // Proceed to the original handler
