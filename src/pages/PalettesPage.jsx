@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import { getPalettes, savePalette, updatePalette, deletePalette } from '../utils/paletteState';
 import PaletteWizard from '../components/PaletteWizard';
 
-const emptyPalette = { name: '', colors: [] };
+const emptyPalette = { name: '', colors: [], harmony: '', harmony_justification: '' };
 
 const PalettesPage = () => {
   const [palettes, setPalettes] = useState([]);
@@ -68,10 +68,12 @@ const PalettesPage = () => {
   const handleSavePalette = async () => {
     if (!paletteFormData) return;
     try {
+      const { name, colors, harmony, harmony_justification } = paletteFormData;
       const isUpdating = selectedPalette && selectedPalette.id;
+
       const promise = isUpdating
-        ? updatePalette(selectedPalette.id, paletteFormData.name, paletteFormData.colors)
-        : savePalette(paletteFormData.name, paletteFormData.colors);
+        ? updatePalette(selectedPalette.id, name, colors, harmony, harmony_justification)
+        : savePalette(name, colors, harmony, harmony_justification);
 
       await promise;
       toast.success(`Palette ${isUpdating ? 'updated' : 'saved'} successfully!`);

@@ -36,14 +36,14 @@ const handler = async (req, res) => {
 
   // PUT: Update a palette by ID
   if (req.method === 'PUT') {
-    const { name, colors } = req.body;
+    const { name, colors, harmony, harmony_justification } = req.body;
     if (!name || !Array.isArray(colors)) {
       return res.status(400).json({ error: 'Palette name and colors array are required.' });
     }
     try {
       const { rows } = await query(
-        'UPDATE palettes SET name = $1, colors = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND user_id = $4 RETURNING *',
-        [name, JSON.stringify(colors), paletteId, userId]
+        'UPDATE palettes SET name = $1, colors = $2, harmony = $3, harmony_justification = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 AND user_id = $6 RETURNING *',
+        [name, JSON.stringify(colors), harmony, harmony_justification, paletteId, userId]
       );
       if (rows.length === 0) {
         return res.status(404).json({ error: 'Palette not found or access denied.' });

@@ -38,13 +38,15 @@ export const getPaletteById = async (id) => {
  * Saves a new palette to the database.
  * @param {string} name - The name of the new palette.
  * @param {Array<object>} colors - An array of color objects, each with hex, name, role, etc.
+ * @param {string} harmony - The name of the color harmony.
+ * @param {string} harmony_justification - The justification for the harmony.
  * @returns {Promise<object>} The newly created palette object.
  */
-export const savePalette = async (name, colors) => {
+export const savePalette = async (name, colors, harmony, harmony_justification) => {
   const response = await fetchWithAuth('/api/palettes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, colors }),
+    body: JSON.stringify({ name, colors, harmony, harmony_justification }),
   });
   return handleResponse(response);
 };
@@ -54,13 +56,15 @@ export const savePalette = async (name, colors) => {
  * @param {number} id - The ID of the palette to update.
  * @param {string} name - The new name for the palette.
  * @param {Array<object>} colors - The new array of color objects.
+ * @param {string} harmony - The name of the color harmony.
+ * @param {string} harmony_justification - The justification for the harmony.
  * @returns {Promise<object>} The updated palette object.
  */
-export const updatePalette = async (id, name, colors) => {
+export const updatePalette = async (id, name, colors, harmony, harmony_justification) => {
   const response = await fetchWithAuth(`/api/palettes/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, colors }),
+    body: JSON.stringify({ name, colors, harmony, harmony_justification }),
   });
   return handleResponse(response);
 };

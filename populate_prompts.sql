@@ -359,10 +359,11 @@ A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação mark
       "rgb": "RGB(R, G, B)",
       "name": "Nome da Cor",
       "role": "Primária | Secundária | Acento | Neutro Claro | Neutro Escuro",
-      "justification": "Explicação psicológica em uma frase."
+      "justification": "Explicação detalhada (2-3 frases) sobre como esta cor específica contribui para o briefing e a psicologia das cores."
     }
   ],
-  "harmony": "Nome da Harmonia (Análoga, Complementar, Triádica, etc.)"
+  "harmony": "Nome da Harmonia (Análoga, Complementar, Triádica, etc.)",
+  "harmony_justification": "Descrição geral da paleta (2-3 frases), explicando por que essa harmonia foi escolhida e como o conjunto de cores atende ao briefing do cliente."
 }
 '
 )
