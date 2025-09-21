@@ -24,8 +24,8 @@ const DetailItem = ({ title, value, isHtml = false }) => {
 };
 
 
-const InstructionsSection = ({ formato, instrucoes }) => {
-  if (!formato && !instrucoes) {
+const InstructionsSection = ({ instrucoes }) => {
+  if (!instrucoes) {
     return null;
   }
 
@@ -37,7 +37,6 @@ const InstructionsSection = ({ formato, instrucoes }) => {
       <Typography variant="body2" sx={{ mb: 4, color: 'text.secondary' }}>
         Aqui estão as regras técnicas e de estilo para a criação do conteúdo. Seguir estas diretrizes garante que a produção seja eficiente e que o resultado final esteja alinhado com a nossa estratégia de comunicação e com os requisitos da plataforma.
       </Typography>
-      <DetailItem title="Formato do Conteúdo" value={formato} isHtml={true} />
       <DetailItem title="Instruções para a IA" value={instrucoes} isHtml={true} />
     </Box>
   );

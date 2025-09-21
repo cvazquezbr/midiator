@@ -19,7 +19,6 @@ const MemorialDescritivo = ({ campaignData }) => {
     campaignContent,
     persona,
     autor,
-    formato,
     instrucoes,
     aspectRatio,
     followupPosts,
@@ -69,7 +68,7 @@ const MemorialDescritivo = ({ campaignData }) => {
       <Divider sx={{ my: 6 }} />
 
       <Box sx={{ my: 4 }}>
-        <InstructionsSection formato={formato} instrucoes={instrucoes} />
+        <InstructionsSection instrucoes={instrucoes} />
       </Box>
 
       <Divider sx={{ my: 6 }} />

@@ -27,7 +27,6 @@ import {
   Divider,
 } from '@mui/material';
 import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
-import { getCampaignPrompt } from '../utils/campaignPrompt';
 import { useSettings } from '../context/SettingsContext';
 import { useCampaign as useCampaignContext } from '../context/CampaignContext';
 import { getPalettes, savePalette, updatePalette } from '../utils/paletteState';
