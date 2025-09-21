@@ -55,7 +55,6 @@ const PaletteWizard = ({
   initialStep = 0
 }) => {
   const isMobile = useIsMobile();
-  const isMobile = useIsMobile();
   const [activeStep, setActiveStep] = useState(initialStep);
   const [briefing, setBriefing] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
