@@ -75,8 +75,8 @@ const PaletteWizard = ({ open, onClose, onSave, paletteData, onPaletteDataChange
       const generatedData = await generationHandlers.generateColorPalette(fullBriefing.trim());
       // Instead of setting local state, we lift the result up to the parent
       onPaletteDataChange({
-        name: generatedData.palette_name || 'Nova Paleta Gerada',
-        colors: generatedData.palette_colors || [],
+        name: generatedData.palette_name || generatedData.name || 'Nova Paleta Gerada',
+        colors: generatedData.palette_colors || generatedData.colors || [],
       });
     } catch (error) {
       setGenerationError(error.message || 'Ocorreu um erro desconhecido durante a geração.');
