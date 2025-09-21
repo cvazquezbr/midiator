@@ -43,7 +43,7 @@ const handler = async (req, res) => {
     try {
       const { rows } = await query(
         'UPDATE palettes SET name = $1, colors = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND user_id = $4 RETURNING *',
-        [name, colors, paletteId, userId]
+        [name, JSON.stringify(colors), paletteId, userId]
       );
       if (rows.length === 0) {
         return res.status(404).json({ error: 'Palette not found or access denied.' });
