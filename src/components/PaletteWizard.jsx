@@ -115,10 +115,16 @@ const PaletteWizard = ({
     try {
       const generatedData = await generationHandlers.generateColorPalette(fullBriefing.trim());
 
-      // Transform the AI response (which has a `palette` array of objects)
-      // into the format expected by PaletteEditor (which needs a `colors` array of strings).
+      // The AI is returning a long descriptive text in the `harmony` field instead of a single word.
+      // We need to handle this to prevent creating a palette name that is too long for the database.
+      const harmonyText = generatedData.harmony || '';
+      // Try to extract a known harmony type from the beginning of the text.
+      const harmonyMatch = harmonyText.match(/^(Análoga|Complementar|Triádica|Tetrádica|Monocromática|Decomposta)/i);
+      const harmonyName = harmonyMatch ? harmonyMatch[0] : 'Gerada por IA';
+
+      // Transform the AI response into the format expected by the frontend UI.
       const transformedData = {
-        name: `Paleta (Harmonia: ${generatedData.harmony || 'Custom'})`,
+        name: `Paleta ${harmonyName}`, // Creates a short, safe name like "Paleta Triádica".
         colors: generatedData.palette ? generatedData.palette.map(c => c.hex) : [],
       };
 
