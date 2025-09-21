@@ -1,26 +1,21 @@
-import { withAuth } from '@clerk/clerk-sdk-node';
-import { db } from '../../db/index.mjs';
-import { palettes } from '../../db/schema.mjs';
-import { eq } from 'drizzle-orm';
+import { withAuth } from '../middleware/auth';
+import { query } from '../db';
 
 const handler = async (req, res) => {
-  if (!req.auth.userId) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const userId = req.auth.userId;
+  // withAuth middleware has already run, so req.user is available.
+  const userId = req.user.id;
 
   // GET: List all palettes for the authenticated user
   if (req.method === 'GET') {
     try {
-      const userPalettes = await db.select().from(palettes).where(eq(palettes.userId, userId));
+      const { rows: userPalettes } = await query(
+        'SELECT * FROM palettes WHERE user_id = $1 ORDER BY updated_at DESC',
+        [userId]
+      );
 
-      // Sanitize data before sending to the client
+      // Sanitize data to ensure colors is always an array
       const sanitizedPalettes = userPalettes.map(palette => {
-        // The 'colors' column is JSONB. If it was saved incorrectly as a string
-        // instead of an array, it will be returned as a string.
-        // We ensure it's always an array before sending to the client.
-        if (typeof palette.colors === 'string' || !Array.isArray(palette.colors)) {
+        if (typeof palette.colors !== 'object' || palette.colors === null || !Array.isArray(palette.colors)) {
           console.warn(`Sanitizing malformed color data for palette ID: ${palette.id}. Found:`, palette.colors);
           return { ...palette, colors: [] };
         }
@@ -43,13 +38,12 @@ const handler = async (req, res) => {
     }
 
     try {
-      const [newPalette] = await db.insert(palettes).values({
-        userId: userId,
-        name: name,
-        colors: colors,
-      }).returning();
-
-      return res.status(201).json(newPalette);
+      // The 'colors' array from JS will be automatically converted to a JSONB string by the pg driver.
+      const { rows } = await query(
+        'INSERT INTO palettes (user_id, name, colors) VALUES ($1, $2, $3) RETURNING *',
+        [userId, name, colors]
+      );
+      return res.status(201).json(rows[0]);
     } catch (error) {
       console.error('Error creating palette:', error);
       return res.status(500).json({ error: 'Failed to create palette' });
