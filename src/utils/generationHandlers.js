@@ -542,8 +542,6 @@ export const generateIAContent = async ({ promptText, promptNumRecords }) => {
 export const generateColorPalette = async (briefing) => {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
-    // The original function used toast, but in a util file, it's better to throw.
-    // The calling component will be responsible for catching the error and showing a toast.
     throw new Error('Por favor, configure sua chave de API Gemini primeiro.');
   }
   geminiAPI.initialize(apiKey);
@@ -553,11 +551,41 @@ export const generateColorPalette = async (briefing) => {
 
   try {
     const response = await geminiAPI.generateContent(prompt, 'Geração de Paleta de Cores');
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch && jsonMatch[0]) {
-      return JSON.parse(jsonMatch[0]);
+
+    // More robust JSON parsing
+    const jsonMatch = response.match(/```json\s*([\s\S]+?)\s*```/);
+    let parsedResponse;
+
+    if (jsonMatch && jsonMatch[1]) {
+      try {
+        parsedResponse = JSON.parse(jsonMatch[1]);
+      } catch (e) {
+        console.error("Falha ao analisar o JSON do bloco de markdown:", jsonMatch[1], e);
+        throw new Error("A resposta da IA continha um bloco JSON, mas não era válido.");
+      }
+    } else {
+      // Fallback: try to parse the entire response string
+      try {
+        // Attempt to find a JSON object within the string if it's not perfectly clean
+        const cleanerMatch = response.match(/\{[\s\S]*\}/);
+        if (cleanerMatch && cleanerMatch[0]) {
+          parsedResponse = JSON.parse(cleanerMatch[0]);
+        } else {
+          // If no object is found, try to parse the whole thing
+          parsedResponse = JSON.parse(response);
+        }
+      } catch (e) {
+        console.error("Falha ao analisar a resposta da IA como JSON diretamente:", response, e);
+        throw new Error("A resposta da IA não estava em um formato JSON válido.");
+      }
     }
-    throw new Error("Não foi possível extrair o JSON da resposta da IA.");
+
+    if (typeof parsedResponse !== 'object' || parsedResponse === null) {
+        throw new Error("A resposta JSON analisada não é um objeto válido.");
+    }
+
+    return parsedResponse;
+
   } catch (error) {
     console.error("Erro ao gerar paleta de cores com IA:", error);
     // Re-throw the error to be handled by the calling component

@@ -42,24 +42,65 @@ const briefingLabels = {
     atmosfera: 'Atmosfera',
 };
 
-const PaletteWizard = ({ open, onClose, onSave, paletteData, onPaletteDataChange, initialStep = 0 }) => {
+const PaletteWizard = ({
+  open,
+  onClose,
+  onSave,
+  paletteData: controlledPaletteData, // Renamed to indicate it's a prop
+  onPaletteDataChange,
+  initialStep = 0
+}) => {
   const isMobile = useIsMobile();
   const [activeStep, setActiveStep] = useState(initialStep);
   const [briefing, setBriefing] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState(null);
 
+  // --- Internal State for Uncontrolled Mode ---
+  const [internalPaletteData, setInternalPaletteData] = useState(null);
+
+  // --- Determine if the component is controlled ---
+  // A component is controlled if `paletteData` is not undefined.
+  const isControlled = controlledPaletteData !== undefined;
+
+  // Use the controlled data if available, otherwise use internal state.
+  const paletteData = isControlled ? controlledPaletteData : internalPaletteData;
+
+  // The function to update the state depends on whether it's controlled or not.
+  const setPaletteData = (data) => {
+    if (isControlled) {
+      // In controlled mode, we must call the prop function.
+      // We also check if it exists to prevent crashes.
+      if (typeof onPaletteDataChange === 'function') {
+        onPaletteDataChange(data);
+      }
+    } else {
+      // In uncontrolled mode, we set our own internal state.
+      setInternalPaletteData(data);
+    }
+  };
+
+
   useEffect(() => {
     if (open) {
       setActiveStep(initialStep);
-      // If we are editing (initialStep is 1), the paletteData is already set.
-      // If we are creating (initialStep is 0), we can clear the briefing.
+      setGenerationError(null);
+
       if (initialStep === 0) {
         setBriefing({});
+        // Clear internal data when starting a new creation in uncontrolled mode
+        if (!isControlled) {
+          setInternalPaletteData(null);
+        }
+      } else {
+        // If we are editing (initialStep is 1) in uncontrolled mode,
+        // we might need to initialize internal state from a source,
+        // but the current implementation doesn't support that.
+        // The parent must control it for editing.
       }
-      setGenerationError(null);
     }
-  }, [open, initialStep]);
+  }, [open, initialStep, isControlled]);
+
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -73,14 +114,13 @@ const PaletteWizard = ({ open, onClose, onSave, paletteData, onPaletteDataChange
     `;
     try {
       const generatedData = await generationHandlers.generateColorPalette(fullBriefing.trim());
-      // Instead of setting local state, we lift the result up to the parent
-      onPaletteDataChange({
+      setPaletteData({
         name: generatedData.palette_name || generatedData.name || 'Nova Paleta Gerada',
         colors: generatedData.palette_colors || generatedData.colors || [],
       });
     } catch (error) {
       setGenerationError(error.message || 'Ocorreu um erro desconhecido durante a geração.');
-      onPaletteDataChange(null); // Clear data on error
+      setPaletteData(null); // Clear data on error
     } finally {
       setIsGenerating(false);
       setActiveStep(1);
@@ -88,8 +128,7 @@ const PaletteWizard = ({ open, onClose, onSave, paletteData, onPaletteDataChange
   };
 
   const handleSave = () => {
-    // The parent now handles the saving logic with its own state
-    // We pass the current data back so the parent can use it.
+    // onSave should receive the current palette data, regardless of mode.
     onSave(paletteData);
     onClose();
   };
@@ -148,7 +187,7 @@ const PaletteWizard = ({ open, onClose, onSave, paletteData, onPaletteDataChange
             {paletteData ? (
               <PaletteEditor
                 paletteData={paletteData}
-                onPaletteDataChange={onPaletteDataChange}
+                onPaletteDataChange={setPaletteData} // Always use our unified setter
               />
             ) : (
               !generationError && <Typography>A paleta gerada será exibida aqui para edição.</Typography>
@@ -164,7 +203,7 @@ const PaletteWizard = ({ open, onClose, onSave, paletteData, onPaletteDataChange
     if (activeStep === 0) {
       return isGenerating || !briefing.objetivo || !briefing.publicoAlvo || !briefing.mensagemPrincipal || !briefing.atmosfera;
     }
-    return false; // The save button on step 2 will have its own logic
+    return false;
   };
 
   const isSaveDisabled = () => {
