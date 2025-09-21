@@ -37,7 +37,7 @@ export const getPaletteById = async (id) => {
 /**
  * Saves a new palette to the database.
  * @param {string} name - The name of the new palette.
- * @param {Array<string>} colors - An array of hex color strings.
+ * @param {Array<object>} colors - An array of color objects, each with hex, name, role, etc.
  * @returns {Promise<object>} The newly created palette object.
  */
 export const savePalette = async (name, colors) => {
@@ -53,7 +53,7 @@ export const savePalette = async (name, colors) => {
  * Updates an existing palette.
  * @param {number} id - The ID of the palette to update.
  * @param {string} name - The new name for the palette.
- * @param {Array<string>} colors - The new array of hex color strings.
+ * @param {Array<object>} colors - The new array of color objects.
  * @returns {Promise<object>} The updated palette object.
  */
 export const updatePalette = async (id, name, colors) => {
