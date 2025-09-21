@@ -12,21 +12,23 @@ import {
   IconButton,
   Divider,
   Paper,
+  Grid,
 } from '@mui/material';
-import { Add, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Add, Delete as DeleteIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 
 import { getPalettes, savePalette, updatePalette, deletePalette } from '../utils/paletteState';
 import PaletteWizard from '../components/PaletteWizard';
-import PaletteEditor from '../components/PaletteEditor';
+
+const emptyPalette = { name: '', colors: [] };
 
 const PalettesPage = () => {
   const [palettes, setPalettes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [selectedPalette, setSelectedPalette] = useState(null);
-  const [editedPaletteData, setEditedPaletteData] = useState(null);
+  const [paletteFormData, setPaletteFormData] = useState(null);
+  const [initialWizardStep, setInitialWizardStep] = useState(0);
 
   const fetchPalettes = useCallback(async () => {
     setIsLoading(true);
@@ -48,23 +50,36 @@ const PalettesPage = () => {
 
   const handleSelectPalette = (palette) => {
     setSelectedPalette(palette);
-    setEditedPaletteData(palette); // Copy to editable state
+    setPaletteFormData(palette);
+    setInitialWizardStep(1); // Start wizard on step 2 for editing
   };
 
-  const handleCancelEdit = () => {
+  const handleNewPalette = () => {
+    setSelectedPalette({ ...emptyPalette, id: null }); // A temporary object to signify creation
+    setPaletteFormData({ ...emptyPalette });
+    setInitialWizardStep(0); // Start wizard on step 1 for creation
+  };
+
+  const handleCloseWizard = () => {
     setSelectedPalette(null);
-    setEditedPaletteData(null);
+    setPaletteFormData(null);
   };
 
-  const handleUpdatePalette = async () => {
-    if (!editedPaletteData) return;
+  const handleSavePalette = async () => {
+    if (!paletteFormData) return;
     try {
-      await updatePalette(editedPaletteData.id, editedPaletteData.name, editedPaletteData.colors);
-      toast.success('Palette updated successfully!');
-      fetchPalettes(); // Refresh the list
-      handleCancelEdit(); // Exit editing mode
+      const isUpdating = selectedPalette && selectedPalette.id;
+      const promise = isUpdating
+        ? updatePalette(selectedPalette.id, paletteFormData.name, paletteFormData.colors)
+        : savePalette(paletteFormData.name, paletteFormData.colors);
+
+      await promise;
+      toast.success(`Palette ${isUpdating ? 'updated' : 'saved'} successfully!`);
+
+      fetchPalettes();
+      handleCloseWizard();
     } catch (err) {
-      toast.error(`Failed to update palette: ${err.message}`);
+      toast.error(`Failed to save palette: ${err.message}`);
     }
   };
 
@@ -74,26 +89,12 @@ const PalettesPage = () => {
         await deletePalette(paletteId);
         toast.success('Palette deleted successfully!');
         if (selectedPalette?.id === paletteId) {
-          handleCancelEdit();
+          handleCloseWizard();
         }
-        fetchPalettes(); // Refresh the list
+        fetchPalettes();
       } catch (err) {
-        // The error toast is already handled in the deletePalette function
+        // Error toast is handled in deletePalette
       }
-    }
-  };
-
-  const handleNewPalette = () => {
-    setIsWizardOpen(true);
-  };
-
-  const handleWizardSave = async (newPalette) => {
-    try {
-      await savePalette(newPalette.name, newPalette.colors);
-      toast.success('New palette created successfully!');
-      fetchPalettes(); // Refresh the list
-    } catch (err) {
-      toast.error(`Failed to create palette: ${err.message}`);
     }
   };
 
@@ -143,17 +144,15 @@ const PalettesPage = () => {
       <Grid item xs={12} md={8}>
         <Paper sx={{ p: 2, height: '100%' }}>
           {selectedPalette ? (
-            <Box>
-              <Typography variant="h6" sx={{ mb: 2 }}>Editing: {selectedPalette.name}</Typography>
-              <PaletteEditor
-                paletteData={editedPaletteData}
-                onPaletteDataChange={setEditedPaletteData}
-              />
-              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                <Button onClick={handleCancelEdit}>Cancel</Button>
-                <Button onClick={handleUpdatePalette} variant="contained">Save Changes</Button>
-              </Box>
-            </Box>
+            <PaletteWizard
+              key={selectedPalette.id || 'new'}
+              open={Boolean(selectedPalette)}
+              onClose={handleCloseWizard}
+              onSave={handleSavePalette}
+              paletteData={paletteFormData}
+              onPaletteDataChange={setPaletteFormData}
+              initialStep={initialWizardStep}
+            />
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
               <Typography variant="h6" color="text.secondary">
@@ -163,12 +162,6 @@ const PalettesPage = () => {
           )}
         </Paper>
       </Grid>
-
-      <PaletteWizard
-        open={isWizardOpen}
-        onClose={() => setIsWizardOpen(false)}
-        onSave={handleWizardSave}
-      />
     </Grid>
   );
 };
