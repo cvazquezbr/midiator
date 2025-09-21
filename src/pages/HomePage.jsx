@@ -41,7 +41,6 @@ import CsvInfobox from '../components/CsvInfobox';
 import Publisher from '../components/Publisher';
 import Monitor from '../components/Monitor';
 import SetupModal from '../components/SetupModal';
-import CampaignStandardsModal from '../components/CampaignStandardsModal';
 import SaveCampaignModal from '../components/SaveCampaignModal';
 import LoadCampaignModal from '../components/LoadCampaignModal';
 import ImageGallerySelector from '../components/ImageGallerySelector';
@@ -49,7 +48,6 @@ import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 
 
 import { getGeminiApiKey } from '../utils/geminiCredentials';
-import { getCampaignPrompt } from '../utils/campaignPrompt';
 import geminiAPI from '../utils/geminiAPI';
 import { stripHtml } from '../lib/utils';
 import '../App.css';
@@ -137,7 +135,6 @@ function HomePage() {
   const [autorDrawerOpen, setAutorDrawerOpen] = useState(!isMobile);
   const [paletteDrawerOpen, setPaletteDrawerOpen] = useState(!isMobile);
   const [colorPalette, setColorPalette] = useState([]);
-  const [standardsColors, setStandardsColors] = useState([]);
   const [problema, setProblema] = useState('');
   const [solucao, setSolucao] = useState('');
   const [objetivo, setObjetivo] = useState('');
@@ -149,7 +146,6 @@ function HomePage() {
   const [generationError, setGenerationError] = useState('');
   const [editingField, setEditingField] = useState(null);
   const [isHtmlField, setIsHtmlField] = useState(false);
-  const [formato, setFormato] = useState('');
   const [generatedPageUrl, setGeneratedPageUrl] = useState(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
@@ -180,7 +176,6 @@ function HomePage() {
   const [isProcessingAudio, setIsProcessingAudio] = useState(false);
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
-  const [showCampaignStandardsModal, setShowCampaignStandardsModal] = useState(false);
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
@@ -248,7 +243,6 @@ function HomePage() {
     setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
     setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
     setColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
-    setStandardsColors(Array.isArray(state.standardsColors) ? state.standardsColors : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
     const sanitizedPagesData = (Array.isArray(state.generatedPagesData) ? state.generatedPagesData : [])
       .filter(page => {
@@ -323,7 +317,6 @@ function HomePage() {
     setObjetivo(state.objetivo ?? '');
     setTomDeVoz(state.tomDeVoz ?? '');
     setCampaignContent(state.campaignContent ?? null);
-    setFormato(state.formato ?? '');
     setAspectRatio(state.aspectRatio ?? '1:1');
     setGeneratedPageUrl(state.generatedPageUrl ?? null);
     setFollowupPostsQuantity(state.followupPostsQuantity ?? 5);
@@ -410,7 +403,6 @@ function HomePage() {
       objetivo,
       tomDeVoz,
       campaignContent,
-      formato,
       aspectRatio,
       followupPosts,
       followupPostsQuantity,
@@ -423,7 +415,6 @@ function HomePage() {
       generatedPagesData: sanitizedPagesData,
       generatedAudioData: sanitizedAudioData,
       generatedVideos: sanitizedVideos,
-      standardsColors,
       csvData,
       csvHeaders,
     };
@@ -499,17 +490,10 @@ function HomePage() {
     }
   };
 
-  const loadCampaignStandards = useCallback(() => {
-    const { formato: formatoData, colors: colorsData } = getCampaignPrompt();
-    setFormato(formatoData || '');
-    setStandardsColors(colorsData || []);
-  }, []);
-
   useEffect(() => {
-    loadCampaignStandards();
     const apiKey = getGeminiApiKey();
     if (apiKey) geminiAPI.initialize(apiKey);
-  }, [loadCampaignStandards]);
+  }, []);
 
   const fetchPersonasForCampaign = useCallback(() => {
     return getPersonas()
@@ -794,7 +778,6 @@ function HomePage() {
           fieldStyles: {},
           csvData: newCsvData,
           effectiveImageSize: originalImageSize,
-          standardsColors,
         });
 
         setFieldPositions(newPositions);
@@ -1215,7 +1198,6 @@ function HomePage() {
         fieldStyles: {},
         csvData: csvDataResult,
         effectiveImageSize: originalImageSize,
-        standardsColors,
       });
 
       const newGeneratedPagesData = csvDataResult.map((record, index) => ({
@@ -1355,15 +1337,15 @@ function HomePage() {
   const memorialColors = useMemo(() => {
     if (paletteId && paletteId !== 'custom') {
       const selectedPalette = palettes.find(p => p.id === paletteId);
-      return selectedPalette ? selectedPalette.colors : standardsColors;
+      return selectedPalette ? selectedPalette.colors : [];
     }
     if (customPalette) {
       return customPalette.colors;
     }
-    return standardsColors;
-  }, [paletteId, customPalette, palettes, standardsColors]);
+    return [];
+  }, [paletteId, customPalette, palettes]);
 
-  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, formato, aspectRatio, followupPosts, colors: memorialColors, generatedPagesData, };
+  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, aspectRatio, followupPosts, colors: memorialColors, generatedPagesData, };
 
   return (
     <ThemeProvider theme={currentTheme}>
@@ -1373,7 +1355,6 @@ function HomePage() {
             darkMode={darkMode}
             setDarkMode={setDarkMode}
             setShowSetupModal={setShowSetupModal}
-            setShowCampaignStandardsModal={setShowCampaignStandardsModal}
             onMenuClick={() => setSidebarOpen(!sidebarOpen)}
             isMobile={isMobile}
             onSaveCampaign={() => setShowSaveModal(true)}
@@ -1419,7 +1400,7 @@ function HomePage() {
                     <Campaign
                       steps={steps}
                       activeStep={activeStep}
-                      {...campaignData}
+                      {...{...campaignData, formato: undefined}}
                       setProblema={setProblema}
                       setSolucao={setSolucao}
                       objetivo={objetivo}
@@ -1502,7 +1483,6 @@ function HomePage() {
                     initialFieldStyles={initialFieldStyles}
                     onImageDisplayedSizeChange={setDisplayedImageSize}
                     colorPalette={colorPalette}
-                    standardsColors={standardsColors}
                     onCsvDataUpdate={handleCsvRecordContentUpdate}
                     originalImageSize={originalImageSize}
                     onZIndexChange={handleZIndexChange}
@@ -1522,7 +1502,6 @@ function HomePage() {
                   <PageGeneratorFrontendOnly
                     displayedImageSize={displayedImageSize}
                     colorPalette={colorPalette}
-                    standardsColors={standardsColors}
                     initialGeneratedPagesData={generatedPagesData}
                     onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
                     originalImageSize={originalImageSize}
@@ -1639,7 +1618,6 @@ function HomePage() {
       <SaveCampaignModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={handleSaveCampaign} campaignToEdit={currentCampaign} isSaving={isSaving} />
       <LoadCampaignModal open={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadCampaign} onEdit={(campaign) => { setCurrentCampaign(campaign); setShowSaveModal(true); }} />
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
-      <CampaignStandardsModal open={showCampaignStandardsModal} onClose={() => { setShowCampaignStandardsModal(false); loadCampaignStandards(); }} onGeneratePalette={async (briefing) => { try { const palette = await generateColorPalette(briefing); return palette; } catch (error) { toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores."); throw error; } }} />
       <ImageGallerySelector
         open={showImageGallery}
         onClose={handleCloseImageGallery}

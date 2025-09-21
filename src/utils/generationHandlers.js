@@ -1,4 +1,3 @@
-import { getCampaignPrompt } from './campaignPrompt.js';
 import geminiAPI from './geminiAPI.js';
 import { getGeminiApiKey } from './geminiCredentials.js';
 import { stripHtml } from '../lib/utils.js';
@@ -99,8 +98,6 @@ export const generateCampaignContent = async ({ problema, solucao, objetivo, tom
   }
   geminiAPI.initialize(apiKey);
 
-  const { formato } = getCampaignPrompt();
-
   const personaString = typeof persona === 'string' ? persona : (persona ? formatObjectForPrompt(persona, ['description']) : 'indisponível');
 
   let autorString;
@@ -118,7 +115,7 @@ export const generateCampaignContent = async ({ problema, solucao, objetivo, tom
   const finalPrompt = fillPrompt(promptTemplate, {
     personaPromptSection: personaPromptSection,
     autorString: autorString,
-    formato: stripHtml(formato),
+    formato: '', // Formato was removed
     problema: stripHtml(problema),
     solucao: stripHtml(solucao),
     objetivo: stripHtml(objetivo),
@@ -180,9 +177,7 @@ export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor 
     }
     geminiAPI.initialize(apiKey);
 
-    const { autor: defaultAutor } = getCampaignPrompt();
-    const finalAutor = autor || defaultAutor;
-    const autorString = formatObjectForPrompt(finalAutor);
+    const autorString = formatObjectForPrompt(autor);
 
     const colorPalettePrompt = colors && colors.length > 0
         ? `A imagem deve usar predominantemente a seguinte paleta de cores: ${colors.map(c => `${c.name} (${c.hex})`).join(', ')}. Justificativa da paleta: ${colors[0]?.palette_justification || 'N/A'}`

@@ -38,7 +38,6 @@ const MainAppBar = ({
   onShowPalettes,
   onShowCampaigns,
   setShowSetupModal,
-  setShowCampaignStandardsModal,
   onMenuClick,
   isMobile,
   onSaveCampaign,
@@ -195,10 +194,6 @@ const MainAppBar = ({
           <MenuItem onClick={() => { handleUserMenuClose(); setShowSetupModal(true); }}>
             <Settings sx={{ mr: 1 }} />
             Configurações
-          </MenuItem>
-          <MenuItem onClick={() => { handleUserMenuClose(); setShowCampaignStandardsModal(true); }}>
-            <Edit sx={{ mr: 1 }} />
-            Padrões de Campanha
           </MenuItem>
           {user?.role === 'admin' && ([
             <MenuItem key="admin-users" onClick={() => { navigate('/admin/users'); handleUserMenuClose(); }}>
