@@ -20,7 +20,6 @@ const FormattingDrawer = ({
   setPageTemplate, // <-- Add this
   onZIndexChange,
   onOpenHtmlEditor,
-  standardsColors,
   templateFieldStyles,
   activeStep,
   isCropping,
@@ -53,7 +52,6 @@ const FormattingDrawer = ({
           setPageTemplate={setPageTemplate} // <-- Pass it down
           onZIndexChange={onZIndexChange}
           onOpenHtmlEditor={onOpenHtmlEditor}
-          standardsColors={standardsColors}
           templateFieldStyles={templateFieldStyles}
           activeStep={activeStep}
           isCropping={isCropping}

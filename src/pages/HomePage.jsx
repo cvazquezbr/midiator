@@ -1403,7 +1403,7 @@ function HomePage() {
                     <Campaign
                       steps={steps}
                       activeStep={activeStep}
-                      {...{...campaignData, formato: undefined}}
+                      {...campaignData}
                       setProblema={setProblema}
                       setSolucao={setSolucao}
                       objetivo={objetivo}
