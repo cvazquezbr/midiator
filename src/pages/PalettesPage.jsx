@@ -113,7 +113,7 @@ const PalettesPage = () => {
 
       {!isLoading && !error && (
         <List>
-          {palettes.map((palette) => (
+          {(palettes || []).map((palette) => (
             <ListItem
               key={palette.id}
               secondaryAction={
@@ -133,7 +133,7 @@ const PalettesPage = () => {
                   primary={palette.name}
                   secondary={
                     <Box component="span" sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                      {palette.colors.map((color, index) => (
+                      {(palette.colors || []).map((color, index) => (
                         <Box
                           key={index}
                           component="span"
