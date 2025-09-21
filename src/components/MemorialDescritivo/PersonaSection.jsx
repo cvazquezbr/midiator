@@ -67,7 +67,7 @@ const DetailItem = ({ title, value, isHtml = false }) => {
 
 
 const PersonaSection = ({ persona }) => {
-  if (!persona || Object.keys(persona).length === 0) {
+  if (!persona || !persona.persona_data || Object.keys(persona.persona_data).length === 0) {
     return null;
   }
 
@@ -85,7 +85,7 @@ const PersonaSection = ({ persona }) => {
     mentalidadeValores,
     contextoCultural,
     description,
-  } = persona;
+  } = persona.persona_data;
 
   const allDores = [
     ...(doresEstrategicos || []),
