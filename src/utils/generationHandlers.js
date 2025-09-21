@@ -13,11 +13,28 @@ async function getPrompt(name) {
   }
   try {
     const response = await fetchWithAuth(`/api/prompts?name=${name}`);
+    const responseText = await response.text();
+
     if (!response.ok) {
-      const errData = await response.json().catch(() => ({ error: `Prompt '${name}' not found.` }));
-      throw new Error(errData.error || `Failed to fetch prompt '${name}'. Status: ${response.status}`);
+      let errorJson = {};
+      try {
+        errorJson = JSON.parse(responseText);
+      } catch (e) {
+        // The error response wasn't valid JSON. Use the text as the error message.
+        // Limit the length to prevent massive error messages.
+        const errorSnippet = responseText.substring(0, 200);
+        throw new Error(`Server returned an error (status ${response.status}): ${errorSnippet}`);
+      }
+      throw new Error(errorJson.error || `Failed to fetch prompt '${name}'. Status: ${response.status}`);
     }
-    const promptData = await response.json();
+
+    let promptData = {};
+    try {
+      promptData = JSON.parse(responseText);
+    } catch (e) {
+      console.error("Failed to parse successful prompt response as JSON:", responseText);
+      throw new Error(`Received an invalid response from the server for prompt '${name}'.`);
+    }
 
     if (!promptData || !promptData.prompt_text) {
       throw new Error(`Prompt "${name}" found but its text is empty.`);
