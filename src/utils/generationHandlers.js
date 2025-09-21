@@ -170,7 +170,7 @@ export const generateCampaignContent = async ({ problema, solucao, objetivo, tom
 /**
  * Generates a prompt for the campaign image using an AI API.
  */
-export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor = null }) => {
+export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor = null, colors = [] }) => {
     if (!content) {
         throw new Error("O conteúdo da campanha deve ser gerado primeiro.");
     }
@@ -184,12 +184,17 @@ export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor 
     const finalAutor = autor || defaultAutor;
     const autorString = formatObjectForPrompt(finalAutor);
 
+    const colorPalettePrompt = colors && colors.length > 0
+        ? `A imagem deve usar predominantemente a seguinte paleta de cores: ${colors.map(c => `${c.name} (${c.hex})`).join(', ')}. Justificativa da paleta: ${colors[0]?.palette_justification || 'N/A'}`
+        : 'A paleta de cores é livre e deve ser escolhida pelo artista para melhor se adequar ao tema.';
+
     const promptTemplate = await getPrompt('generateCampaignImagePrompt');
     const prompt = fillPrompt(promptTemplate, {
       titulo: stripHtml(content.titulo),
       conteudo: stripHtml(content.conteudo),
       autorString: autorString,
       aspectRatio: aspectRatio,
+      colorPalettePrompt: colorPalettePrompt,
     });
 
     const imagePrompt = await geminiAPI.generateContent(prompt, 'Geração de Prompt de Imagem de Campanha');
@@ -199,7 +204,7 @@ export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor 
 /**
  * Generates an image for the campaign using an AI API.
  */
-export const generateCampaignImage = async ({ prompt, aspectRatio }) => {
+export const generateCampaignImage = async ({ prompt, aspectRatio, colors = [] }) => {
   if (!prompt) {
     throw new Error("O prompt da imagem deve ser gerado primeiro.");
   }
@@ -208,8 +213,6 @@ export const generateCampaignImage = async ({ prompt, aspectRatio }) => {
     throw new Error('Chave de API Gemini não configurada.');
   }
   geminiAPI.initialize(apiKey);
-
-  const { colors } = getCampaignPrompt();
 
   const colorPalettePrompt = colors && colors.length > 0
     ? `The image should predominantly use the following color palette: ${colors.map(c => c.hex).join(', ')}.`
