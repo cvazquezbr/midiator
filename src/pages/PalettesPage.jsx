@@ -17,16 +17,16 @@ import { Add, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material
 import { toast } from 'sonner';
 
 import { getPalettes, savePalette, updatePalette, deletePalette } from '../utils/paletteState';
-import PaletteEditModal from '../components/PaletteEditModal';
 import PaletteWizard from '../components/PaletteWizard';
+import PaletteEditor from '../components/PaletteEditor';
 
-const PalettesPage = ({ onNoPaletteSelected }) => {
+const PalettesPage = () => {
   const [palettes, setPalettes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [selectedPalette, setSelectedPalette] = useState(null);
+  const [editedPaletteData, setEditedPaletteData] = useState(null);
 
   const fetchPalettes = useCallback(async () => {
     setIsLoading(true);
@@ -46,27 +46,23 @@ const PalettesPage = ({ onNoPaletteSelected }) => {
     fetchPalettes();
   }, [fetchPalettes]);
 
-  useEffect(() => {
-    if (!selectedPalette && onNoPaletteSelected) {
-      onNoPaletteSelected();
-    }
-  }, [selectedPalette, onNoPaletteSelected]);
-
-  const handleOpenEditModal = (palette) => {
+  const handleSelectPalette = (palette) => {
     setSelectedPalette(palette);
-    setIsEditModalOpen(true);
+    setEditedPaletteData(palette); // Copy to editable state
   };
 
-  const handleCloseEditModal = () => {
+  const handleCancelEdit = () => {
     setSelectedPalette(null);
-    setIsEditModalOpen(false);
+    setEditedPaletteData(null);
   };
 
-  const handleUpdatePalette = async (editedPalette) => {
+  const handleUpdatePalette = async () => {
+    if (!editedPaletteData) return;
     try {
-      await updatePalette(editedPalette.id, editedPalette.name, editedPalette.colors);
+      await updatePalette(editedPaletteData.id, editedPaletteData.name, editedPaletteData.colors);
       toast.success('Palette updated successfully!');
       fetchPalettes(); // Refresh the list
+      handleCancelEdit(); // Exit editing mode
     } catch (err) {
       toast.error(`Failed to update palette: ${err.message}`);
     }
@@ -77,6 +73,9 @@ const PalettesPage = ({ onNoPaletteSelected }) => {
       try {
         await deletePalette(paletteId);
         toast.success('Palette deleted successfully!');
+        if (selectedPalette?.id === paletteId) {
+          handleCancelEdit();
+        }
         fetchPalettes(); // Refresh the list
       } catch (err) {
         // The error toast is already handled in the deletePalette function
@@ -99,83 +98,78 @@ const PalettesPage = ({ onNoPaletteSelected }) => {
   };
 
   return (
-    <Paper sx={{ p: 4, margin: 'auto', maxWidth: '800px' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4" component="h1">
-          My Palettes
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={handleNewPalette}
-        >
-          New Palette with AI
-        </Button>
-      </Box>
-      <Divider sx={{ mb: 2 }} />
-
-      {isLoading && <CircularProgress />}
-      {error && <Alert severity="error">{error}</Alert>}
-
-      {!isLoading && !error && (
-        <List>
-          {(palettes || []).map((palette) => (
-            <ListItem
-              key={palette.id}
-              secondaryAction={
-                <Box>
-                  <IconButton edge="end" aria-label="edit" onClick={() => handleOpenEditModal(palette)}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton edge="end" aria-label="delete" sx={{ ml: 1 }} onClick={() => handleDeletePalette(palette.id)}>
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
-              }
-              disablePadding
+    <Grid container spacing={2} sx={{ p: 2 }}>
+      <Grid item xs={12} md={4}>
+        <Paper sx={{ p: 2, height: '100%' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" component="h2">
+              My Palettes
+            </Typography>
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<Add />}
+              onClick={handleNewPalette}
             >
-              <ListItemButton onClick={() => handleOpenEditModal(palette)}>
-                <ListItemText
-                  primary={palette.name}
-                  secondary={
-                    <Box component="span" sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                      {(palette.colors || []).map((color, index) => (
-                        <Box
-                          key={index}
-                          component="span"
-                          sx={{
-                            width: 20,
-                            height: 20,
-                            backgroundColor: color,
-                            borderRadius: '50%',
-                            border: '1px solid #ccc',
-                          }}
-                        />
-                      ))}
-                    </Box>
-                  }
-                />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-      )}
+              New
+            </Button>
+          </Box>
+          <Divider sx={{ mb: 2 }} />
 
-      {isEditModalOpen && (
-        <PaletteEditModal
-          open={isEditModalOpen}
-          onClose={handleCloseEditModal}
-          onSave={handleUpdatePalette}
-          paletteData={selectedPalette}
-        />
-      )}
+          {isLoading && <CircularProgress />}
+          {error && <Alert severity="error">{error}</Alert>}
+
+          {!isLoading && !error && (
+            <List>
+              {(palettes || []).map((palette) => (
+                <ListItem
+                  key={palette.id}
+                  secondaryAction={
+                    <IconButton edge="end" aria-label="delete" onClick={() => handleDeletePalette(palette.id)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  }
+                  disablePadding
+                >
+                  <ListItemButton selected={selectedPalette?.id === palette.id} onClick={() => handleSelectPalette(palette)}>
+                    <ListItemText primary={palette.name} />
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </Paper>
+      </Grid>
+      <Grid item xs={12} md={8}>
+        <Paper sx={{ p: 2, height: '100%' }}>
+          {selectedPalette ? (
+            <Box>
+              <Typography variant="h6" sx={{ mb: 2 }}>Editing: {selectedPalette.name}</Typography>
+              <PaletteEditor
+                paletteData={editedPaletteData}
+                onPaletteDataChange={setEditedPaletteData}
+              />
+              <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                <Button onClick={handleCancelEdit}>Cancel</Button>
+                <Button onClick={handleUpdatePalette} variant="contained">Save Changes</Button>
+              </Box>
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <Typography variant="h6" color="text.secondary">
+                Select a palette to edit, or create a new one.
+              </Typography>
+            </Box>
+          )}
+        </Paper>
+      </Grid>
 
       <PaletteWizard
         open={isWizardOpen}
         onClose={() => setIsWizardOpen(false)}
         onSave={handleWizardSave}
       />
-    </Paper>
+    </Grid>
   );
 };
 
