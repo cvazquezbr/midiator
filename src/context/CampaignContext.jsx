@@ -32,6 +32,8 @@ export const CampaignProvider = ({ children }) => {
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [pendingAssets, setPendingAssets] = useState({});
   const [colors, setColors] = useState([]);
+  const [paletteId, setPaletteId] = useState(null);
+  const [customPalette, setCustomPalette] = useState(null);
 
 
   const value = useMemo(() => ({
@@ -49,6 +51,8 @@ export const CampaignProvider = ({ children }) => {
     aspectRatio,
     pendingAssets,
     colors,
+    paletteId,
+    customPalette,
 
     // Setters
     setCsvData,
@@ -64,6 +68,8 @@ export const CampaignProvider = ({ children }) => {
     setAspectRatio,
     setPendingAssets,
     setColors,
+    setPaletteId,
+    setCustomPalette,
 
     // Constants
     defaultPageTemplate,
@@ -81,6 +87,8 @@ export const CampaignProvider = ({ children }) => {
     aspectRatio,
     pendingAssets,
     colors,
+    paletteId,
+    customPalette,
   ]);
 
   return (

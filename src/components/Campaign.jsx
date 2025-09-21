@@ -24,10 +24,14 @@ import {
   CircularProgress,
   Tabs,
   Tab,
+  Divider,
 } from '@mui/material';
 import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
 import { useSettings } from '../context/SettingsContext';
+import { useCampaign as useCampaignContext } from '../context/CampaignContext';
+import { getPalettes, savePalette, updatePalette } from '../utils/paletteState';
+import PaletteWizard from './PaletteWizard';
 import { uploadImageToDrive, getOrCreateBackgroundsFolderId } from '../utils/googleApi';
 import {
     Campaign as CampaignIcon,
@@ -193,6 +197,12 @@ const Campaign = ({
     setSelectedPersonaForCampaign,
 }) => {
     useSettings();
+    const {
+        paletteId,
+        setPaletteId,
+        customPalette,
+        setCustomPalette,
+    } = useCampaignContext();
     const [activeTab, setActiveTab] = useState(0);
     const [isHintModalOpen, setHintModalOpen] = React.useState(false);
     const [isSolucaoHintModalOpen, setSolucaoHintModalOpen] = React.useState(false);
@@ -204,6 +214,8 @@ const Campaign = ({
     const [isLoadingSolutions, setIsLoadingSolutions] = React.useState(false);
     const [solutionsError, setSolutionsError] = React.useState(null);
     const [imageTabError, setImageTabError] = React.useState('');
+    const [palettes, setPalettes] = useState([]);
+    const [isPaletteWizardOpen, setPaletteWizardOpen] = useState(false);
 
     const emptyLabelStyle = {
         '& .MuiInputLabel-root:not(.Mui-focused):not(.MuiFormLabel-filled)': {
@@ -321,6 +333,19 @@ const Campaign = ({
             fetchSolutionsOnOpen();
         }
     }, [isSolucaoHintModalOpen, fetchSolutionsOnOpen]);
+
+    useEffect(() => {
+        const fetchAndSetPalettes = async () => {
+            try {
+                const fetchedPalettes = await getPalettes();
+                setPalettes(fetchedPalettes);
+            } catch (error) {
+                console.error("Failed to fetch palettes:", error);
+                // Optionally, show an error to the user
+            }
+        };
+        fetchAndSetPalettes();
+    }, []);
 
     const handleSaveToDrive = async () => {
         setIsSavingToDrive(true);
@@ -646,10 +671,37 @@ const Campaign = ({
                 <TabPanel value={activeTab} index={2}>
                     {campaignContent && (
                         <Box sx={{ mt: 2 }}>
-                             <Grid item xs={12} md={6}>
-                                <FormControl fullWidth variant="outlined" disabled={!campaignContent}>
-                                    <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
-                                    <Select
+                            <Grid container spacing={2}>
+                                <Grid item xs={12} md={6}>
+                                    <FormControl fullWidth variant="outlined" disabled={!campaignContent}>
+                                        <InputLabel id="palette-select-label">Paleta de Cores</InputLabel>
+                                        <Select
+                                            labelId="palette-select-label"
+                                            value={paletteId || 'custom'}
+                                            onChange={(e) => setPaletteId(e.target.value)}
+                                            label="Paleta de Cores"
+                                        >
+                                            <MenuItem value="custom">Paleta Customizada da Campanha</MenuItem>
+                                            <Divider />
+                                            {palettes.map((p) => (
+                                                <MenuItem key={p.id} value={p.id}>
+                                                    {p.name}
+                                                </MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                </Grid>
+                                <Grid item xs={12} md={6}>
+                                    {paletteId === 'custom' && (
+                                        <Button onClick={() => setPaletteWizardOpen(true)} variant="contained">
+                                            {customPalette ? 'Editar Paleta Customizada' : 'Criar Paleta Customizada'}
+                                        </Button>
+                                    )}
+                                </Grid>
+                                <Grid item xs={12} md={6}>
+                                    <FormControl fullWidth variant="outlined" disabled={!campaignContent}>
+                                        <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
+                                        <Select
                                         labelId="aspect-ratio-label"
                                         value={aspectRatio}
                                         onChange={(e) => setAspectRatio(e.target.value)}
@@ -670,7 +722,12 @@ const Campaign = ({
                                             <Button onClick={handleSaveToDrive} disabled={isSavingToDrive || isGeneratingImage} startIcon={<SaveIcon />}>
                                                 {isSavingToDrive ? 'Salvando...' : 'Salvar na Coleção'}
                                             </Button>
-                                            <Button onClick={() => handleGenerateImage(campaignContent)} disabled={isGeneratingImage || isSavingToDrive} startIcon={<GeminiIcon />} sx={{ ml: 1 }}>
+                                            <Button onClick={() => {
+                                                const selectedPalette = paletteId === 'custom'
+                                                    ? customPalette
+                                                    : palettes.find(p => p.id === paletteId);
+                                                handleGenerateImage(campaignContent, selectedPalette?.colors || []);
+                                            }} disabled={isGeneratingImage || isSavingToDrive} startIcon={<GeminiIcon />} sx={{ ml: 1 }}>
                                                 {isGeneratingImage ? 'Gerando...' : 'Regerar Página'}
                                             </Button>
                                         </Box>
@@ -689,7 +746,12 @@ const Campaign = ({
                                     <Button
                                         variant="contained"
                                         color="secondary"
-                                        onClick={() => handleGenerateImage(campaignContent)}
+                                        onClick={() => {
+                                            const selectedPalette = paletteId === 'custom'
+                                                ? customPalette
+                                                : palettes.find(p => p.id === paletteId);
+                                            handleGenerateImage(campaignContent, selectedPalette?.colors || []);
+                                        }}
                                         startIcon={<ImageIcon />}
                                         disabled={isGeneratingImage}
                                     >
@@ -706,7 +768,12 @@ const Campaign = ({
                                         variant="contained"
                                         color="secondary"
                                         size="large"
-                                        onClick={() => handleGenerateImage(campaignContent)}
+                                        onClick={() => {
+                                            const selectedPalette = paletteId === 'custom'
+                                                ? customPalette
+                                                : palettes.find(p => p.id === paletteId);
+                                            handleGenerateImage(campaignContent, selectedPalette?.colors || []);
+                                        }}
                                         disabled={isGeneratingImage}
                                         startIcon={<ImageIcon />}
                                     >
@@ -714,6 +781,7 @@ const Campaign = ({
                                     </Button>
                                 </Box>
                             )}
+                            </Grid>
                         </Box>
                     )}
                 </TabPanel>
@@ -975,6 +1043,20 @@ const Campaign = ({
                         <Button onClick={() => setSolucaoHintModalOpen(false)}>Fechar</Button>
                     </DialogActions>
                 </Dialog>
+                {isPaletteWizardOpen && (
+                    <PaletteWizard
+                        open={isPaletteWizardOpen}
+                        onClose={() => setPaletteWizardOpen(false)}
+                        onSave={async (paletteData) => {
+                            // For custom palettes, we just update the context state
+                            setCustomPalette(paletteData);
+                            setPaletteWizardOpen(false);
+                        }}
+                        paletteData={customPalette || { name: 'Paleta da Campanha', colors: [], harmony: '', harmony_justification: '' }}
+                        onPaletteDataChange={setCustomPalette}
+                        initialStep={0} // Always start from the beginning for the campaign's custom palette
+                    />
+                )}
             </CardContent>
         </Card>
     );

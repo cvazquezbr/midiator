@@ -1,5 +1,5 @@
 // Re-submitting the fix for the persona saving bug.
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {
@@ -22,6 +22,7 @@ import { getCampaigns, saveCampaign, loadCampaign, updateCampaign } from '../uti
 import { checkAuthStatus } from '../utils/auth';
 import { getPersonas, savePersona, updatePersona } from '../utils/personaState';
 import { getAutores } from '../utils/autorState';
+import { getPalettes } from '../utils/paletteState';
 
 import MyCampaignsStep from '../components/MyCampaignsStep';
 import PersonasPage from './PersonasPage';
@@ -114,9 +115,12 @@ function HomePage() {
     aspectRatio, setAspectRatio,
     pendingAssets, setPendingAssets,
     defaultPageTemplate,
+    paletteId,
+    customPalette,
   } = useCampaign();
 
   // Component State
+  const [palettes, setPalettes] = useState([]);
   const [personaList, setPersonaList] = useState([]);
   const [autorList, setAutorList] = useState([]);
   const [currentView, setCurrentView] = useState('campaigns');
@@ -528,6 +532,7 @@ function HomePage() {
     if (user) {
       fetchPersonasForCampaign();
       fetchAutoresForCampaign();
+      getPalettes().then(setPalettes).catch(err => toast.error("Failed to load palettes."));
     }
   }, [user, fetchPersonasForCampaign, fetchAutoresForCampaign]);
 
@@ -1100,7 +1105,7 @@ function HomePage() {
       setGenerationStatus('');
     }
   };
-  const handleGenerateImage = useCallback(async (content) => {
+  const handleGenerateImage = useCallback(async (content, colors = []) => {
     const finalContent = content || campaignContentRef.current;
     if (!finalContent) {
       toast.error("Por favor, gere o conteúdo do texto primeiro.");
@@ -1109,10 +1114,10 @@ function HomePage() {
     setIsGeneratingImage(true);
     try {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
-      const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor });
+      const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor, colors });
 
       // 1. Get the raw base64 data from the generation service
-      const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
+      const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors });
 
       // 2. Convert base64 to a Blob
       const blob = dataURLtoBlob(base64Data);
@@ -1343,7 +1348,19 @@ function HomePage() {
     }
   };
   const currentTheme = darkMode ? darkTheme : lightTheme;
-  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, formato, aspectRatio, followupPosts, colors: standardsColors, generatedPagesData, };
+
+  const memorialColors = useMemo(() => {
+    if (paletteId && paletteId !== 'custom') {
+      const selectedPalette = palettes.find(p => p.id === paletteId);
+      return selectedPalette ? selectedPalette.colors : standardsColors;
+    }
+    if (customPalette) {
+      return customPalette.colors;
+    }
+    return standardsColors;
+  }, [paletteId, customPalette, palettes, standardsColors]);
+
+  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, formato, aspectRatio, followupPosts, colors: memorialColors, generatedPagesData, };
 
   return (
     <ThemeProvider theme={currentTheme}>
