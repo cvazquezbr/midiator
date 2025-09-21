@@ -25,6 +25,7 @@ import {
   Tabs,
   Tab,
   Divider,
+  Tooltip,
 } from '@mui/material';
 import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
 import { getCampaignPrompt } from '../utils/campaignPrompt';
@@ -685,7 +686,24 @@ const Campaign = ({
                                             <Divider />
                                             {palettes.map((p) => (
                                                 <MenuItem key={p.id} value={p.id}>
-                                                    {p.name}
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                                                        <Typography sx={{ flexGrow: 1 }}>{p.name}</Typography>
+                                                        <Box sx={{ display: 'flex', gap: 0.5, ml: 2 }}>
+                                                            {(p.colors || []).slice(0, 5).map((color, index) => (
+                                                                <Tooltip title={color.name || color.hex} key={index}>
+                                                                    <Box
+                                                                        sx={{
+                                                                            width: 16,
+                                                                            height: 16,
+                                                                            backgroundColor: color.hex,
+                                                                            borderRadius: '50%',
+                                                                            border: '1px solid rgba(0,0,0,0.2)',
+                                                                        }}
+                                                                    />
+                                                                </Tooltip>
+                                                            ))}
+                                                        </Box>
+                                                    </Box>
                                                 </MenuItem>
                                             ))}
                                         </Select>
