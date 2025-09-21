@@ -336,35 +336,70 @@ VALUES (
 
 **Diretrizes de Psicologia das Cores (Cultura Ocidental):**
 - Considere estas associações-chave:
-  * **Vermelho:** Energia, paixão, urgência (comida, liquidações), perigo.
-  * **Azul:** Confiança, segurança, calma, profissionalismo (bancos, saúde, tech).
-  * **Verde:** Natureza, crescimento, sustentabilidade, saúde, tranquilidade.
-  * **Amarelo:** Otimismo, criatividade, atenção (uso moderado), cautela.
-  * **Roxo:** Luxo, criatividade, espiritualidade, realeza (beleza, artes).
-  * **Laranja:** Entusiasmo, jovialidade, acessibilidade (diversão, calls-to-action).
-  * **Rosa:** Feminilidade, ternura, compaixão (beleza, infantil).
-  * **Preto:** Sofisticação, poder, elegância (luxo, moda).
-  * **Branco:** Pureza, simplicidade, limpeza (saúde, minimalismo).
-  * **Cinza:** Neutralidade, equilíbrio, modernidade (tecnologia, corporativo).
-  * **Marrom:** Solidez, confiabilidade, natureza (orgânico, artesanal).
+  * **Vermelho:** Energia, paixão, urgência.
+  * **Azul:** Confiança, segurança, calma.
+  * **Verde:** Natureza, crescimento, saúde.
+  * **Amarelo:** Otimismo, criatividade, atenção.
+  * **Roxo:** Luxo, criatividade, realeza.
+  * **Laranja:** Entusiasmo, jovialidade, acessibilidade.
+  * **Rosa:** Feminilidade, ternura.
+  * **Preto:** Sofisticação, poder, elegância.
+  * **Branco:** Pureza, simplicidade, limpeza.
+  * **Cinza:** Neutralidade, equilíbrio, modernidade.
+  * **Marrom:** Solidez, confiabilidade.
 - Tons **pastéis** transmitem suavidade; **vibrantes** geram impacto.
-- Evite combinações culturalmente negativas (ex: vermelho+puro preto = agressão/extremismo).
 
 **Formato de Saída OBRIGATÓRIO:**
-A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação markdown (como ```json) antes ou depois. O JSON deve ter a seguinte estrutura:
+A resposta DEVE ser um único objeto JSON, sem nenhum texto ou formatação markdown (como ```json) antes ou depois.
+
+**REGRAS IMPORTANTES PARA O JSON:**
+1.  O array `palette` DEVE conter exatamente 5 objetos de cor.
+2.  Para CADA UM dos 5 objetos de cor, TODOS os campos (`hex`, `rgb`, `name`, `role`, `justification`) SÃO OBRIGATÓRIOS e devem ser preenchidos. Não deixe campos em branco.
+
+Abaixo está um exemplo da ESTRUTURA e CONTEÚDO esperados. Siga este formato rigorosamente:
+```json
 {
   "palette": [
     {
-      "hex": "#RRGGBB",
-      "rgb": "RGB(R, G, B)",
-      "name": "Nome da Cor",
-      "role": "Primária | Secundária | Acento | Neutro Claro | Neutro Escuro",
-      "justification": "Explicação detalhada (2-3 frases) sobre como esta cor específica contribui para o briefing e a psicologia das cores."
+      "hex": "#0D47A1",
+      "rgb": "RGB(13, 71, 161)",
+      "name": "Azul Corporativo Profundo",
+      "role": "Primária",
+      "justification": "Este azul escuro e saturado estabelece uma base de confiança e profissionalismo, ideal para uma marca de tecnologia B2B, alinhando-se com a mensagem de segurança do briefing."
+    },
+    {
+      "hex": "#42A5F5",
+      "rgb": "RGB(66, 165, 245)",
+      "name": "Azul Céu Inovador",
+      "role": "Secundária",
+      "justification": "Um tom de azul mais claro e vibrante que complementa a cor primária, sugerindo inovação, comunicação aberta e acessibilidade, sem perder a seriedade."
+    },
+    {
+      "hex": "#FFC107",
+      "rgb": "RGB(255, 193, 7)",
+      "name": "Âmbar Criativo",
+      "role": "Acento",
+      "justification": "Uma cor de acento quente e energética. O âmbar é usado para chamar a atenção para CTAs e pontos importantes, injetando um senso de otimismo e criatividade."
+    },
+    {
+      "hex": "#F5F5F5",
+      "rgb": "RGB(245, 245, 245)",
+      "name": "Cinza Claro Minimalista",
+      "role": "Neutro Claro",
+      "justification": "Um fundo neutro e suave que proporciona legibilidade máxima e uma sensação de espaço limpo e organizado, permitindo que as cores principais brilhem."
+    },
+    {
+      "hex": "#212121",
+      "rgb": "RGB(33, 33, 33)",
+      "name": "Grafite Sólido",
+      "role": "Neutro Escuro",
+      "justification": "Usado para texto e elementos de alto contraste. Este cinza escuro é menos severo que o preto puro, mantendo a sofisticação e garantindo excelente leitura."
     }
   ],
-  "harmony": "Nome da Harmonia (Análoga, Complementar, Triádica, etc.)",
-  "harmony_justification": "Descrição geral da paleta (2-3 frases), explicando por que essa harmonia foi escolhida e como o conjunto de cores atende ao briefing do cliente."
+  "harmony": "Complementar Decomposta",
+  "harmony_justification": "Foi escolhida uma harmonia complementar decomposta (azul, azul-claro, âmbar) para criar um forte contraste visual com a cor de acento, gerando interesse, ao mesmo tempo que mantém uma base profissional e coesa com os tons de azul. Esta combinação equilibra segurança e inovação."
 }
+```
 '
 )
 ON CONFLICT (name)
