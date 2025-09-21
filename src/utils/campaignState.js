@@ -322,7 +322,7 @@ export const loadCampaign = async (id) => {
   return campaign;
 };
 
-export const saveCampaign = async (name, campaignData, pendingAssets, setProgress, userId, autorId, personaId) => {
+export const saveCampaign = async (name, campaignData, pendingAssets, setProgress, userId, autorId, personaId, paletteId) => {
   console.log('[campaignState] Starting saveCampaign process...');
   try {
     console.log('[campaignState] Step 1: Serializing and uploading assets...');
@@ -335,7 +335,8 @@ export const saveCampaign = async (name, campaignData, pendingAssets, setProgres
       name,
       campaign_data: serializedState, // Use the state with permanent URLs
       autor_id: autorId,
-      persona_id: personaId
+      persona_id: personaId,
+      palette_id: paletteId
     });
 
     const createRes = await fetchWithAuth('/api/campaigns', {
@@ -361,7 +362,7 @@ export const saveCampaign = async (name, campaignData, pendingAssets, setProgres
   }
 };
 
-export const updateCampaign = async (id, name, campaignData, pendingAssets, setProgress, userId, autorId, personaId) => {
+export const updateCampaign = async (id, name, campaignData, pendingAssets, setProgress, userId, autorId, personaId, paletteId) => {
     console.log(`[campaignState] Starting updateCampaign process for ID: ${id}...`);
     try {
         console.log('[campaignState] Step 1: Serializing and uploading assets...');
@@ -373,7 +374,8 @@ export const updateCampaign = async (id, name, campaignData, pendingAssets, setP
           name,
           campaign_data: serializedState, // Use the state with permanent URLs
           autor_id: autorId,
-          persona_id: personaId
+          persona_id: personaId,
+          palette_id: paletteId
         });
 
         const res = await fetchWithAuth(`/api/campaigns/${id}`, {

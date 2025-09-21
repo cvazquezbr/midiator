@@ -116,6 +116,7 @@ function HomePage() {
     pendingAssets, setPendingAssets,
     defaultPageTemplate,
     paletteId,
+    setPaletteId,
     customPalette,
   } = useCampaign();
 
@@ -435,12 +436,12 @@ function HomePage() {
       let result;
       if (currentCampaign) {
         console.log(`[HomePage] Updating existing campaign, ID: ${currentCampaign.id}`);
-        result = await updateCampaign(currentCampaign.id, name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign);
+        result = await updateCampaign(currentCampaign.id, name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign, paletteId);
         toast.success(`Campaign "${name}" updated.`);
         setCurrentCampaign(result.campaign);
       } else {
         console.log(`[HomePage] Saving new campaign.`);
-        result = await saveCampaign(name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign);
+        result = await saveCampaign(name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign, paletteId);
         toast.success(`Campaign "${name}" saved.`);
         setCurrentCampaign(result.campaign);
       }
@@ -487,6 +488,7 @@ function HomePage() {
       // Explicitly set the author and persona IDs from the top-level of the loaded campaign
       setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
       setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
+      setPaletteId(loadedCampaign.palette_id || null);
 
       setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
       toast.success(`Campaign "${loadedCampaign.name}" loaded successfully!`);
@@ -771,6 +773,7 @@ function HomePage() {
     setCurrentCampaign(null);
     setPageTemplate(defaultPageTemplate); // Explicitly reset page template
     setOriginalImageSize(DEFAULT_IMAGE_SIZE);
+    setPaletteId(null); // Reset palette selection
     setActiveStep(1);
   };
   const handleEditCampaign = (campaign) => {
