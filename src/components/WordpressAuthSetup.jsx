@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -26,14 +26,12 @@ const WordpressAuthSetup = () => {
 
   const wordpressConfig = settings.wordpress || {};
 
-  const handleChange = useCallback((e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    // Use the latest settings from the context to avoid stale closures
-    const currentWordpressConfig = settings.wordpress || {};
-    const newWordpressConfig = { ...currentWordpressConfig, [name]: value };
+    const newWordpressConfig = { ...wordpressConfig, [name]: value };
     updateSetting('wordpress', newWordpressConfig);
     setTestResult(null);
-  }, [settings.wordpress, updateSetting]);
+  };
 
   const handleRemove = () => {
     updateSetting('wordpress', {});

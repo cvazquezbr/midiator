@@ -47,7 +47,7 @@ import TextEditorDialog from './TextEditorDialog';
 import HtmlDisplayField from './HtmlDisplayField';
 import PaletteWizard from './PaletteWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
-import generationHandlers from '../utils/generationHandlers';
+import * as generationHandlers from '../utils/generationHandlers';
 import { useSettings } from '../context/SettingsContext';
 import { useCampaign } from '../context/CampaignContext';
 import { getPalettes } from '../utils/paletteState';
@@ -188,7 +188,7 @@ const CampaignStandardsModal = ({ open, onClose }) => {
             </TabPanel>
             <TabPanel value={value} index={1}>
               <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Paleta de Cores</InputLabel>
+                <InputLabel>Paleta de Cores Salva</InputLabel>
                 <Select
                   value={selectedPalette}
                   onChange={(e) => {
@@ -201,7 +201,7 @@ const CampaignStandardsModal = ({ open, onClose }) => {
                       setColors([]);
                     }
                   }}
-                  label="Paleta de Cores"
+                  label="Paleta de Cores Salva"
                 >
                   <MenuItem value="">
                     <em>Nenhuma</em>
@@ -214,10 +214,10 @@ const CampaignStandardsModal = ({ open, onClose }) => {
                 </Select>
               </FormControl>
               <Stack spacing={2} sx={{ mb: 3 }}>
-                <Button variant="contained" startIcon={<AutoAwesomeIcon />} onClick={() => setShowPaletteWizard(true)} sx={{ alignSelf: 'flex-start' }}>Assistente de Paleta</Button>
+                <Button variant="contained" startIcon={<AutoAwesomeIcon />} onClick={() => setShowPaletteWizard(true)} sx={{ alignSelf: 'flex-start' }}>Gerar Paleta com IA</Button>
               </Stack>
               <Divider />
-              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Cores da Campanha</Typography>
+              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Cores da Campanha Ativa</Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, alignItems: 'center' }}>
                 {colors.map((color, index) => (
                   <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -246,24 +246,10 @@ const CampaignStandardsModal = ({ open, onClose }) => {
         open={showPaletteWizard}
         onClose={() => setShowPaletteWizard(false)}
         onSave={(savedPalette) => {
-          // The wizard now returns an object { name, colors }.
-          // We only need the colors for the campaign standards.
-          const newColors = savedPalette.colors.map(hex => ({ hex, name: `Cor (${hex})`, role: 'Gerada', justification: 'Gerada via assistente de IA.' }));
+          const newColors = (savedPalette.colors || []).map(hex => ({ hex, name: `Cor (${hex})`, role: 'Gerada', justification: 'Gerada via assistente de IA.' }));
           setColors(newColors);
           toast.success('Paleta de cores aplicada!');
         }}
-        onGenerate={async (briefing, callback) => {
-          setIsGenerating(true);
-          try {
-            const result = await generationHandlers.generateColorPalette(briefing);
-            callback(result);
-          } catch (error) {
-            toast.error(`Erro ao gerar paleta: ${error.message}`);
-          } finally {
-            setIsGenerating(false);
-          }
-        }}
-        isGenerating={isGenerating}
       />
     </>
   );

@@ -1,102 +1,82 @@
-import { withAuth } from '../middleware/auth.js';
-import { query } from '../db.js';
+import { withAuth } from '@clerk/clerk-sdk-node';
+import { db } from '../../../db/index.mjs';
+import { palettes, campaigns } from '../../../db/schema.mjs';
+import { and, eq, count } from 'drizzle-orm';
 
-const parseBody = async (req) => {
-  let body = '';
-  for await (const chunk of req) {
-    body += new TextDecoder().decode(chunk);
-  }
-  try {
-    return JSON.parse(body);
-  } catch {
-    return {};
-  }
-};
-
-/**
- * API handler for individual palette operations (GET, PUT, DELETE).
- * All routes in this handler are protected and require authentication.
- * The user can only operate on palettes they own.
- *
- * @param {object} req - The incoming request object.
- * @param {object} res - The outgoing response object.
- */
 const handler = async (req, res) => {
-  const userId = req.user.sub;
-  const { id } = req.query; // Palette ID from the URL path
+  if (!req.auth.userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
-  // Handles GET /api/palettes/:id
-  // Fetches a single palette by its ID.
+  const userId = req.auth.userId;
+  const { id } = req.query;
+  const paletteId = parseInt(id, 10);
+
+  if (isNaN(paletteId)) {
+    return res.status(400).json({ error: 'Invalid palette ID.' });
+  }
+
+  // GET: Fetch a single palette by ID
   if (req.method === 'GET') {
     try {
-      const { rows } = await query(
-        'SELECT id, name, colors, updated_at FROM palettes WHERE id = $1 AND user_id = $2',
-        [id, userId]
-      );
-      if (rows.length === 0) {
+      const [palette] = await db.select().from(palettes).where(and(eq(palettes.id, paletteId), eq(palettes.userId, userId)));
+      if (!palette) {
         return res.status(404).json({ error: 'Palette not found or access denied.' });
       }
-      return res.status(200).json(rows[0]);
+      return res.status(200).json(palette);
     } catch (error) {
-      console.error(`[GET /api/palettes/${id}] Error for user ${userId}:`, error);
-      return res.status(500).json({ error: 'Internal Server Error' });
+      console.error(`Error fetching palette ${paletteId}:`, error);
+      return res.status(500).json({ error: 'Failed to fetch palette' });
     }
-    // Handles PUT /api/palettes/:id
-    // Updates an existing palette.
-  } else if (req.method === 'PUT') {
+  }
+
+  // PUT: Update a palette by ID
+  if (req.method === 'PUT') {
+    const { name, colors } = req.body;
+    if (!name || !Array.isArray(colors)) {
+      return res.status(400).json({ error: 'Palette name and colors array are required.' });
+    }
     try {
-      const { name, colors } = await parseBody(req);
-      if (!name || !colors) {
-        return res.status(400).json({ error: 'Palette name and colors are required.' });
-      }
-      const { rows } = await query(
-        'UPDATE palettes SET name = $1, colors = $2, updated_at = NOW() WHERE id = $3 AND user_id = $4 RETURNING id, name, colors, updated_at',
-        [name, JSON.stringify(colors), id, userId]
-      );
-      if (rows.length === 0) {
+      const [updatedPalette] = await db.update(palettes)
+        .set({ name, colors, updatedAt: new Date() })
+        .where(and(eq(palettes.id, paletteId), eq(palettes.userId, userId)))
+        .returning();
+
+      if (!updatedPalette) {
         return res.status(404).json({ error: 'Palette not found or access denied.' });
       }
-      return res.status(200).json(rows[0]);
+      return res.status(200).json(updatedPalette);
     } catch (error) {
-      console.error(`[PUT /api/palettes/${id}] Error for user ${userId}:`, error);
-      return res.status(500).json({ error: 'Internal Server Error' });
+      console.error(`Error updating palette ${paletteId}:`, error);
+      return res.status(500).json({ error: 'Failed to update palette' });
     }
-    // Handles DELETE /api/palettes/:id
-    // Deletes a palette, but only if it's not associated with any campaigns.
-  } else if (req.method === 'DELETE') {
-    try {
-      // First, check if the palette is used in any campaigns for this user.
-      const campaignCheck = await query(
-        'SELECT COUNT(*) FROM campaigns WHERE user_id = $1 AND palette_id = $2',
-        [userId, id]
-      );
+  }
 
-      if (parseInt(campaignCheck.rows[0].count, 10) > 0) {
-        return res.status(409).json({
-          error: 'This palette cannot be deleted because it is associated with one or more campaigns.',
-        });
+  // DELETE: Delete a palette by ID
+  if (req.method === 'DELETE') {
+    try {
+      // Check if any campaigns are using this palette
+      const [campaignCountResult] = await db.select({ count: count() }).from(campaigns).where(eq(campaigns.paletteId, paletteId));
+      if (campaignCountResult.count > 0) {
+        return res.status(400).json({ error: `Cannot delete palette because it is being used by ${campaignCountResult.count} campaign(s).` });
       }
 
-      // If not used, proceed with deletion.
-      const { rowCount } = await query(
-        'DELETE FROM palettes WHERE id = $1 AND user_id = $2',
-        [id, userId]
-      );
+      const [deletedPalette] = await db.delete(palettes)
+        .where(and(eq(palettes.id, paletteId), eq(palettes.userId, userId)))
+        .returning();
 
-      if (rowCount === 0) {
-        // This case would be rare if the campaign check passes, but it's good practice.
+      if (!deletedPalette) {
         return res.status(404).json({ error: 'Palette not found or access denied.' });
       }
-
       return res.status(200).json({ message: 'Palette deleted successfully.' });
     } catch (error) {
-      console.error(`[DELETE /api/palettes/${id}] Error for user ${userId}:`, error);
-      return res.status(500).json({ error: 'Internal Server Error' });
+      console.error(`Error deleting palette ${paletteId}:`, error);
+      return res.status(500).json({ error: 'Failed to delete palette' });
     }
-  } else {
-    res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
   }
+
+  res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
+  res.status(405).end(`Method ${req.method} Not Allowed`);
 };
 
 export default withAuth(handler);

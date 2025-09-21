@@ -11,14 +11,12 @@ import isEqual from 'lodash.isequal';
 import { getAutores, saveAutor, updateAutor, deleteAutor } from '../utils/autorState';
 import AutorWizard, { emptyAutorWizardData } from '../components/AutorWizard';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
-import { useSettings } from '../context/SettingsContext';
-import generationHandlers from '../utils/generationHandlers.js';
+import { getGeminiApiKey } from '../utils/geminiCredentials';
 import geminiAPI from '../utils/geminiAPI';
 
 const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected, onUpdate }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { settings } = useSettings();
 
   const [autorList, setAutorList] = useState([]);
   const [selectedAutor, setSelectedAutor] = useState(null);
@@ -44,12 +42,6 @@ const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected, o
   useEffect(() => {
       fetchAutores();
   }, []);
-
-  useEffect(() => {
-    if (settings && Object.keys(settings).length > 0) {
-      generationHandlers.initialize(settings);
-    }
-  }, [settings]);
 
   useEffect(() => {
     if (!selectedAutor && onNoAutorSelected) {
@@ -115,8 +107,12 @@ const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected, o
 
     const handleGenerateAutorWithAI = async (descricaoGeral, dominioReferencia, siteExclusao, callback) => {
         if (!geminiAPI.isInitialized) {
-            toast.error('A API Gemini não foi inicializada. Verifique suas configurações.');
-            return;
+            const apiKey = getGeminiApiKey();
+            if (!apiKey) {
+                toast.error('Chave de API do Gemini não configurada.');
+                return;
+            }
+            geminiAPI.initialize(apiKey);
         }
         setIsGeneratingAutor(true);
         const prompt = `

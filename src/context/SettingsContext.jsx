@@ -4,8 +4,9 @@ import { useUserAuth } from './UserAuthContext';
 import {
   loadSettingsFromDb,
   saveSettingsToDb,
+  saveSetting,
+  gatherCredentials,
 } from '../utils/credentialsManager';
-import { runSettingsMigration } from '../utils/migration';
 
 const SettingsContext = createContext(null);
 
@@ -32,9 +33,6 @@ export const SettingsProvider = ({ children }) => {
 
     setIsLoading(true);
     try {
-      // Run the one-time migration first. It will do nothing if already completed.
-      await runSettingsMigration();
-
       console.log('User is authenticated, loading settings from database...');
       const loadedSettings = await loadSettingsFromDb();
       setSettings(loadedSettings || {});
@@ -55,20 +53,27 @@ export const SettingsProvider = ({ children }) => {
   }, [user, loadSettings]);
 
   const updateSetting = (key, value) => {
-    // Update the context's state directly.
-    // Persistence will only happen when the user explicitly saves.
+    // First, persist the change to localStorage to ensure UI consistency
+    // for components that might read directly from it.
+    saveSetting(key, value);
+
+    // Then, update the context's state.
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const saveSettings = async (newSettings) => {
-    const settingsToSave = newSettings || settings;
+  const saveSettings = async () => {
     setIsLoading(true);
     try {
+      // Gather all settings from localStorage to ensure we have the latest values,
+      // especially from parts of the app that might not use the context.
+      const settingsToSave = gatherCredentials();
+
+      // We pass the up-to-date settings object to the DB.
       await saveSettingsToDb(settingsToSave);
-      // Ensure the context state is in sync with what was just saved.
-      if (newSettings) {
-        setSettings(newSettings);
-      }
+
+      // Also, update the local context state to be in sync with what was saved.
+      setSettings(settingsToSave);
+
       toast.success('Settings saved successfully!');
     } catch (error) {
       toast.error(`Failed to save settings: ${error.message}`);
