@@ -2,8 +2,14 @@ import { withAuth } from '../middleware/auth';
 import { query } from '../db';
 
 const handler = async (req, res) => {
-  // withAuth middleware has already run, so req.user is available.
-  const userId = req.user.id;
+  // withAuth middleware has already run, so req.user is available (it's the JWT payload).
+  // We need to robustly get the user identifier. It could be in `id`, `sub`, or `userId`.
+  const userId = req.user.id || req.user.sub || req.user.userId;
+
+  if (!userId) {
+    // This should not happen if withAuth is working, but as a safeguard:
+    return res.status(401).json({ error: 'Could not determine user from token.' });
+  }
 
   // GET: List all palettes for the authenticated user
   if (req.method === 'GET') {
