@@ -37,7 +37,7 @@ const handler = async (req, res) => {
 
   // POST: Create a new palette for the authenticated user
   if (req.method === 'POST') {
-    const { name, colors } = req.body;
+    const { name, colors, harmony, harmony_justification } = req.body;
 
     if (!name || !Array.isArray(colors)) {
       return res.status(400).json({ error: 'Palette name and a colors array are required.' });
@@ -45,8 +45,8 @@ const handler = async (req, res) => {
 
     try {
       const { rows } = await query(
-        'INSERT INTO palettes (user_id, name, colors) VALUES ($1, $2, $3::jsonb) RETURNING *',
-        [userId, name, JSON.stringify(colors)]
+        'INSERT INTO palettes (user_id, name, colors, harmony, harmony_justification) VALUES ($1, $2, $3::jsonb, $4, $5) RETURNING *',
+        [userId, name, JSON.stringify(colors), harmony, harmony_justification]
       );
       return res.status(201).json(rows[0]);
     } catch (error) {

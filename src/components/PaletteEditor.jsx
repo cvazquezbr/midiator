@@ -5,10 +5,10 @@ import {
 import { Add, DeleteForever as DeleteForeverIcon } from '@mui/icons-material';
 
 const PaletteEditor = ({ paletteData, onPaletteDataChange }) => {
-  const { name = '', colors = [] } = paletteData || {};
+  const { name = '', colors = [], harmony = '', harmony_justification = '' } = paletteData || {};
 
-  const handleNameChange = (event) => {
-    onPaletteDataChange({ ...paletteData, name: event.target.value });
+  const handleFieldChange = (field, value) => {
+    onPaletteDataChange({ ...paletteData, [field]: value });
   };
 
   const handleColorFieldChange = (index, field, value) => {
@@ -47,16 +47,29 @@ const PaletteEditor = ({ paletteData, onPaletteDataChange }) => {
         fullWidth
         variant="outlined"
         value={name}
-        onChange={handleNameChange}
+        onChange={(e) => handleFieldChange('name', e.target.value)}
         required
         sx={{ mb: 2 }}
       />
+
+      <TextField
+        label="Justificativa da Harmonia"
+        multiline
+        rows={3}
+        fullWidth
+        variant="outlined"
+        value={harmony_justification}
+        onChange={(e) => handleFieldChange('harmony_justification', e.target.value)}
+        sx={{ mb: 2 }}
+        helperText={`Harmonia Aplicada: ${harmony || 'N/A'}`}
+      />
+
       <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Cores e Descrições</Typography>
       <Grid container spacing={2}>
         {colors.map((color, index) => (
           <Grid item xs={12} key={index}>
             <Paper variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
                 <input
                   type="color"
                   value={color.hex || '#000000'}
@@ -90,19 +103,19 @@ const PaletteEditor = ({ paletteData, onPaletteDataChange }) => {
                   </Grid>
                   <Grid item xs={12}>
                     <TextField
-                      label="Justificativa / Descrição"
+                      label="Justificativa / Descrição da Cor"
                       value={color.justification || ''}
                       onChange={(e) => handleColorFieldChange(index, 'justification', e.target.value)}
                       fullWidth
                       multiline
-                      rows={2}
+                      rows={3}
                       size="small"
                       variant="standard"
                     />
                   </Grid>
                 </Grid>
               </Box>
-              <IconButton onClick={() => handleRemoveColor(index)} size="small" title="Remover Cor" sx={{ alignSelf: 'center' }}>
+              <IconButton onClick={() => handleRemoveColor(index)} size="small" title="Remover Cor" sx={{ alignSelf: 'center', flexShrink: 0 }}>
                 <DeleteForeverIcon />
               </IconButton>
             </Paper>

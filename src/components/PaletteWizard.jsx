@@ -132,6 +132,8 @@ const PaletteWizard = ({
       const transformedData = {
         name: `Paleta ${harmonyName}`, // Creates a short, safe name like "Paleta Triádica".
         colors: generatedData.palette || [], // Keep the full color objects
+        harmony: generatedData.harmony || harmonyName,
+        harmony_justification: generatedData.harmony_justification || '',
       };
 
       // Handle cases where the AI might return a valid JSON structure but with no colors.
@@ -178,6 +180,8 @@ const PaletteWizard = ({
           setPaletteData({
             name: 'Paleta da Imagem',
             colors: newColors,
+            harmony: 'Extraída de Imagem',
+            harmony_justification: 'As cores foram extraídas diretamente de uma imagem de referência fornecida pelo usuário.',
           });
 
           toast.success('Cores extraídas com sucesso!');
