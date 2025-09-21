@@ -35,6 +35,7 @@ const MainAppBar = ({
   setDarkMode,
   onShowPersonas,
   onShowAutores,
+  onShowPalettes,
   onShowCampaigns,
   setShowSetupModal,
   setShowCampaignStandardsModal,
