@@ -45,8 +45,8 @@ const handler = async (req, res) => {
 
     try {
       const { rows } = await query(
-        'INSERT INTO palettes (user_id, name, colors) VALUES ($1, $2, $3) RETURNING *',
-        [userId, name, colors]
+        'INSERT INTO palettes (user_id, name, colors) VALUES ($1, $2, $3::jsonb) RETURNING *',
+        [userId, name, JSON.stringify(colors)]
       );
       return res.status(201).json(rows[0]);
     } catch (error) {
