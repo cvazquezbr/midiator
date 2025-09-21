@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useIsMobile } from '../hooks/use-mobile';
 import {
   Dialog,
@@ -19,7 +19,11 @@ import {
   MenuItem,
   CircularProgress,
   Alert,
+  Divider,
 } from '@mui/material';
+import { UploadFile as UploadFileIcon } from '@mui/icons-material';
+import { toast } from 'sonner';
+import ColorThief from 'colorthief';
 import PaletteEditor from './PaletteEditor';
 import * as generationHandlers from '../utils/generationHandlers';
 
@@ -54,7 +58,9 @@ const PaletteWizard = ({
   const [activeStep, setActiveStep] = useState(initialStep);
   const [briefing, setBriefing] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
   const [generationError, setGenerationError] = useState(null);
+  const imageInputRef = useRef(null);
 
   // --- Internal State for Uncontrolled Mode ---
   const [internalPaletteData, setInternalPaletteData] = useState(null);
@@ -125,7 +131,7 @@ const PaletteWizard = ({
       // Transform the AI response into the format expected by the frontend UI.
       const transformedData = {
         name: `Paleta ${harmonyName}`, // Creates a short, safe name like "Paleta Triádica".
-        colors: generatedData.palette ? generatedData.palette.map(c => c.hex) : [],
+        colors: generatedData.palette || [], // Keep the full color objects
       };
 
       // Handle cases where the AI might return a valid JSON structure but with no colors.
@@ -145,6 +151,60 @@ const PaletteWizard = ({
     }
   };
 
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setIsExtracting(true);
+    setGenerationError(null);
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const colorThief = new ColorThief();
+          // Extract 5 colors from the image
+          const palette = colorThief.getPalette(img, 5);
+
+          // Format the extracted colors into the required data structure
+          const newColors = palette.map((rgb, index) => ({
+            hex: `#${rgb.map(c => c.toString(16).padStart(2, '0')).join('')}`,
+            name: `Cor Extraída ${index + 1}`,
+            role: 'Extraída',
+            justification: 'Cor extraída de imagem de referência.',
+          }));
+
+          setPaletteData({
+            name: 'Paleta da Imagem',
+            colors: newColors,
+          });
+
+          toast.success('Cores extraídas com sucesso!');
+          setActiveStep(1); // Move to the next step to show the editor
+        } catch (error) {
+          console.error("Erro ao extrair paleta da imagem:", error);
+          toast.error('Não foi possível extrair as cores. Tente outra imagem.');
+          setGenerationError('Falha ao processar a imagem.');
+        } finally {
+          setIsExtracting(false);
+        }
+      };
+      img.onerror = () => {
+        toast.error('O arquivo selecionado não é uma imagem válida.');
+        setIsExtracting(false);
+      };
+      img.src = e.target.result;
+    };
+
+    reader.onerror = () => {
+      toast.error('Falha ao ler o arquivo.');
+      setIsExtracting(false);
+    };
+
+    reader.readAsDataURL(file);
+  };
+
   const handleSave = () => {
     // onSave should receive the current palette data, regardless of mode.
     onSave(paletteData);
@@ -154,6 +214,10 @@ const PaletteWizard = ({
   const handleBack = () => {
     setGenerationError(null);
     setActiveStep((prevActiveStep) => prevActiveStep - 1);
+  };
+
+  const handleNext = () => {
+    setActiveStep((prevActiveStep) => prevActiveStep + 1);
   };
 
   const handleChange = (event) => {
@@ -192,6 +256,35 @@ const PaletteWizard = ({
               placeholder="Ex: 'Evitar tons de vermelho', 'Incluir um dourado metálico', etc."
               margin="normal"
             />
+
+            <Divider sx={{ my: 3 }}>
+              <Typography variant="overline">OU</Typography>
+            </Divider>
+
+            <Box sx={{ textAlign: 'center' }}>
+              <input
+                type="file"
+                hidden
+                accept="image/*"
+                ref={imageInputRef}
+                onChange={handleImageUpload}
+                disabled={isExtracting || isGenerating}
+              />
+              <Button
+                variant="outlined"
+                startIcon={<UploadFileIcon />}
+                onClick={() => imageInputRef.current.click()}
+                disabled={isExtracting || isGenerating}
+              >
+                Extrair de Imagem
+              </Button>
+              {isExtracting && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 1 }}>
+                  <CircularProgress size={20} />
+                  <Typography sx={{ ml: 1 }} variant="body2">Extraindo cores...</Typography>
+                </Box>
+              )}
+            </Box>
           </Box>
         );
       case 1:
@@ -249,13 +342,24 @@ const PaletteWizard = ({
         <Button onClick={onClose} color="secondary">Cancelar</Button>
         <Box sx={{ flex: '1 1 auto' }} />
         {activeStep > 0 && (
-          <Button onClick={handleBack} disabled={isGenerating}>Voltar</Button>
+          <Button onClick={handleBack} disabled={isGenerating || isExtracting}>Voltar</Button>
         )}
         {activeStep === 0 && (
-          <Button onClick={handleGenerate} variant="contained" disabled={isNextDisabled()}>Gerar Paleta</Button>
+          <>
+            {paletteData && paletteData.colors?.length > 0 && (
+              <Button onClick={handleNext}>
+                Ajustar Paleta Atual
+              </Button>
+            )}
+            <Button onClick={handleGenerate} variant="contained" disabled={isNextDisabled() || isExtracting}>
+              Gerar Nova Paleta
+            </Button>
+          </>
         )}
         {activeStep === 1 && (
-          <Button onClick={handleSave} variant="contained" disabled={isSaveDisabled()}>Salvar Paleta</Button>
+          <Button onClick={handleSave} variant="contained" disabled={isSaveDisabled()}>
+            Salvar Paleta
+          </Button>
         )}
       </DialogActions>
     </Dialog>

@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Box, TextField, Typography, IconButton, Button,
+  Box, TextField, Typography, IconButton, Button, Paper, Grid,
 } from '@mui/material';
 import { Add, DeleteForever as DeleteForeverIcon } from '@mui/icons-material';
 
@@ -11,16 +11,23 @@ const PaletteEditor = ({ paletteData, onPaletteDataChange }) => {
     onPaletteDataChange({ ...paletteData, name: event.target.value });
   };
 
-  const handleColorChange = (index, newColor) => {
+  const handleColorFieldChange = (index, field, value) => {
     const newColors = [...colors];
-    newColors[index] = newColor;
+    newColors[index] = { ...newColors[index], [field]: value };
     onPaletteDataChange({ ...paletteData, colors: newColors });
   };
 
   const handleAddColor = () => {
-    // Palettes are capped at 5 colors for now.
-    if (colors.length < 5) {
-      const newColors = [...colors, '#000000'];
+    // Limit the number of colors to avoid overly complex palettes.
+    // The AI generates 5, so we can cap it at 6 or 7.
+    if (colors.length < 7) {
+      const newColor = {
+        hex: '#000000',
+        name: 'Nova Cor',
+        role: 'Acento',
+        justification: 'Adicionada manualmente pelo usuário.',
+      };
+      const newColors = [...colors, newColor];
       onPaletteDataChange({ ...paletteData, colors: newColors });
     }
   };
@@ -42,25 +49,68 @@ const PaletteEditor = ({ paletteData, onPaletteDataChange }) => {
         value={name}
         onChange={handleNameChange}
         required
+        sx={{ mb: 2 }}
       />
-      <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Cores</Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+      <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Cores e Descrições</Typography>
+      <Grid container spacing={2}>
         {colors.map((color, index) => (
-          <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <input
-              type="color"
-              value={color}
-              onChange={(e) => handleColorChange(index, e.target.value)}
-              style={{ width: '50px', height: '50px', border: 'none', cursor: 'pointer', backgroundColor: 'transparent' }}
-              title="Clique para escolher uma cor"
-            />
-            <Typography variant="caption" sx={{ mt: 0.5 }}>{color}</Typography>
-            <IconButton onClick={() => handleRemoveColor(index)} size="small" title="Remover Cor">
-              <DeleteForeverIcon />
-            </IconButton>
-          </Box>
+          <Grid item xs={12} key={index}>
+            <Paper variant="outlined" sx={{ p: 2, display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <input
+                  type="color"
+                  value={color.hex || '#000000'}
+                  onChange={(e) => handleColorFieldChange(index, 'hex', e.target.value)}
+                  style={{ width: '60px', height: '60px', border: '1px solid #ccc', cursor: 'pointer', backgroundColor: 'transparent' }}
+                  title="Clique para escolher uma cor"
+                />
+                <Typography variant="caption" sx={{ mt: 0.5, fontFamily: 'monospace' }}>{color.hex}</Typography>
+              </Box>
+              <Box sx={{ flexGrow: 1 }}>
+                <Grid container spacing={1}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Nome da Cor"
+                      value={color.name || ''}
+                      onChange={(e) => handleColorFieldChange(index, 'name', e.target.value)}
+                      fullWidth
+                      size="small"
+                      variant="standard"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      label="Papel na Paleta"
+                      value={color.role || ''}
+                      onChange={(e) => handleColorFieldChange(index, 'role', e.target.value)}
+                      fullWidth
+                      size="small"
+                      variant="standard"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      label="Justificativa / Descrição"
+                      value={color.justification || ''}
+                      onChange={(e) => handleColorFieldChange(index, 'justification', e.target.value)}
+                      fullWidth
+                      multiline
+                      rows={2}
+                      size="small"
+                      variant="standard"
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+              <IconButton onClick={() => handleRemoveColor(index)} size="small" title="Remover Cor" sx={{ alignSelf: 'center' }}>
+                <DeleteForeverIcon />
+              </IconButton>
+            </Paper>
+          </Grid>
         ))}
-        {colors.length < 5 && (
+      </Grid>
+      <Box sx={{ mt: 2 }}>
+        {colors.length < 7 && (
           <Button variant="outlined" onClick={handleAddColor} startIcon={<Add />}>
             Adicionar Cor
           </Button>
