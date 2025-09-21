@@ -206,7 +206,7 @@ const CampaignStandardsModal = ({ open, onClose }) => {
                   <MenuItem value="">
                     <em>Nenhuma</em>
                   </MenuItem>
-                  {palettes.map(palette => (
+                  {(palettes || []).map(palette => (
                     <MenuItem key={palette.id} value={palette.id}>
                       {palette.name}
                     </MenuItem>
@@ -219,7 +219,7 @@ const CampaignStandardsModal = ({ open, onClose }) => {
               <Divider />
               <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Cores da Campanha Ativa</Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, alignItems: 'center' }}>
-                {colors.map((color, index) => (
+                {(colors || []).map((color, index) => (
                   <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <input type="color" value={color.hex} onChange={(e) => handleColorChange(index, e.target.value)} style={{ width: '50px', height: '50px', border: 'none', cursor: 'pointer' }} />
                     <Typography variant="caption">{color.name || color.hex}</Typography>
