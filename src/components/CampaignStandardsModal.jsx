@@ -47,7 +47,7 @@ import TextEditorDialog from './TextEditorDialog';
 import HtmlDisplayField from './HtmlDisplayField';
 import PaletteWizard from './PaletteWizard';
 import MemorialDescritivoModal from './MemorialDescritivoModal';
-import generationHandlers from '../utils/generationHandlers';
+import * as generationHandlers from '../utils/generationHandlers';
 import { useSettings } from '../context/SettingsContext';
 import { useCampaign } from '../context/CampaignContext';
 import { getPalettes } from '../utils/paletteState';

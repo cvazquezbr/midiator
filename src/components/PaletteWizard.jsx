@@ -21,7 +21,7 @@ import {
   Alert,
 } from '@mui/material';
 import PaletteEditor from './PaletteEditor';
-import generationHandlers from '../utils/generationHandlers';
+import * as generationHandlers from '../utils/generationHandlers';
 
 const steps = [
   'Definir Briefing',
