@@ -42,28 +42,24 @@ const briefingLabels = {
     atmosfera: 'Atmosfera',
 };
 
-const PaletteWizard = ({ open, onClose, onSave }) => {
+const PaletteWizard = ({ open, onClose, onSave, paletteData, onPaletteDataChange, initialStep = 0 }) => {
   const isMobile = useIsMobile();
-  const [activeStep, setActiveStep] = useState(0);
+  const [activeStep, setActiveStep] = useState(initialStep);
   const [briefing, setBriefing] = useState({});
-  const [editablePalette, setEditablePalette] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState(null);
 
   useEffect(() => {
     if (open) {
-      setBriefing({
-        objetivo: '',
-        publicoAlvo: '',
-        mensagemPrincipal: '',
-        atmosfera: '',
-        details: '',
-      });
-      setEditablePalette(null);
+      setActiveStep(initialStep);
+      // If we are editing (initialStep is 1), the paletteData is already set.
+      // If we are creating (initialStep is 0), we can clear the briefing.
+      if (initialStep === 0) {
+        setBriefing({});
+      }
       setGenerationError(null);
-      setActiveStep(0);
     }
-  }, [open]);
+  }, [open, initialStep]);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -77,13 +73,14 @@ const PaletteWizard = ({ open, onClose, onSave }) => {
     `;
     try {
       const generatedData = await generationHandlers.generateColorPalette(fullBriefing.trim());
-      setEditablePalette({
+      // Instead of setting local state, we lift the result up to the parent
+      onPaletteDataChange({
         name: generatedData.palette_name || 'Nova Paleta Gerada',
         colors: generatedData.palette_colors || [],
       });
     } catch (error) {
       setGenerationError(error.message || 'Ocorreu um erro desconhecido durante a geração.');
-      setEditablePalette(null);
+      onPaletteDataChange(null); // Clear data on error
     } finally {
       setIsGenerating(false);
       setActiveStep(1);
@@ -91,7 +88,7 @@ const PaletteWizard = ({ open, onClose, onSave }) => {
   };
 
   const handleSave = () => {
-    onSave(editablePalette);
+    onSave(); // The parent now handles the saving logic with its own state
     onClose();
   };
 
@@ -146,10 +143,10 @@ const PaletteWizard = ({ open, onClose, onSave }) => {
                 <strong>Falha na Geração:</strong> {generationError}
               </Alert>
             )}
-            {editablePalette ? (
+            {paletteData ? (
               <PaletteEditor
-                paletteData={editablePalette}
-                onPaletteDataChange={setEditablePalette}
+                paletteData={paletteData}
+                onPaletteDataChange={onPaletteDataChange}
               />
             ) : (
               !generationError && <Typography>A paleta gerada será exibida aqui para edição.</Typography>
@@ -165,11 +162,15 @@ const PaletteWizard = ({ open, onClose, onSave }) => {
     if (activeStep === 0) {
       return isGenerating || !briefing.objetivo || !briefing.publicoAlvo || !briefing.mensagemPrincipal || !briefing.atmosfera;
     }
-    if (activeStep === 1) {
-      return !editablePalette || !editablePalette.name?.trim() || editablePalette.colors?.length === 0;
-    }
-    return false;
+    return false; // The save button on step 2 will have its own logic
   };
+
+  const isSaveDisabled = () => {
+    if (activeStep === 1) {
+      return !paletteData || !paletteData.name?.trim() || paletteData.colors?.length === 0;
+    }
+    return true;
+  }
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
@@ -195,7 +196,7 @@ const PaletteWizard = ({ open, onClose, onSave }) => {
           <Button onClick={handleGenerate} variant="contained" disabled={isNextDisabled()}>Gerar Paleta</Button>
         )}
         {activeStep === 1 && (
-          <Button onClick={handleSave} variant="contained" disabled={isNextDisabled()}>Salvar Paleta</Button>
+          <Button onClick={handleSave} variant="contained" disabled={isSaveDisabled()}>Salvar Paleta</Button>
         )}
       </DialogActions>
     </Dialog>
