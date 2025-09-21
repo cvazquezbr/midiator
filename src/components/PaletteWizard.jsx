@@ -114,10 +114,22 @@ const PaletteWizard = ({
     `;
     try {
       const generatedData = await generationHandlers.generateColorPalette(fullBriefing.trim());
-      setPaletteData({
-        name: generatedData.palette_name || generatedData.name || 'Nova Paleta Gerada',
-        colors: generatedData.palette_colors || generatedData.colors || [],
-      });
+
+      // Transform the AI response (which has a `palette` array of objects)
+      // into the format expected by PaletteEditor (which needs a `colors` array of strings).
+      const transformedData = {
+        name: `Paleta (Harmonia: ${generatedData.harmony || 'Custom'})`,
+        colors: generatedData.palette ? generatedData.palette.map(c => c.hex) : [],
+      };
+
+      // Handle cases where the AI might return a valid JSON structure but with no colors.
+      if (transformedData.colors.length === 0) {
+        console.warn("A IA retornou uma paleta vazia ou em formato inesperado.", generatedData);
+        throw new Error("A IA não retornou cores no formato esperado.");
+      }
+
+      setPaletteData(transformedData);
+
     } catch (error) {
       setGenerationError(error.message || 'Ocorreu um erro desconhecido durante a geração.');
       setPaletteData(null); // Clear data on error
