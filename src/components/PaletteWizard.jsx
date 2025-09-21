@@ -88,7 +88,9 @@ const PaletteWizard = ({ open, onClose, onSave, paletteData, onPaletteDataChange
   };
 
   const handleSave = () => {
-    onSave(); // The parent now handles the saving logic with its own state
+    // The parent now handles the saving logic with its own state
+    // We pass the current data back so the parent can use it.
+    onSave(paletteData);
     onClose();
   };
 
