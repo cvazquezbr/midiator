@@ -20,7 +20,7 @@ import { getPalettes, savePalette, updatePalette, deletePalette } from '../utils
 import PaletteEditModal from '../components/PaletteEditModal';
 import PaletteWizard from '../components/PaletteWizard';
 
-const PalettesPage = () => {
+const PalettesPage = ({ onNoPaletteSelected }) => {
   const [palettes, setPalettes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -45,6 +45,12 @@ const PalettesPage = () => {
   useEffect(() => {
     fetchPalettes();
   }, [fetchPalettes]);
+
+  useEffect(() => {
+    if (!selectedPalette && onNoPaletteSelected) {
+      onNoPaletteSelected();
+    }
+  }, [selectedPalette, onNoPaletteSelected]);
 
   const handleOpenEditModal = (palette) => {
     setSelectedPalette(palette);
