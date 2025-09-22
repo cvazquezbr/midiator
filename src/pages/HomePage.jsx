@@ -1335,13 +1335,18 @@ function HomePage() {
   const currentTheme = darkMode ? darkTheme : lightTheme;
 
   const memorialColors = useMemo(() => {
+    // This logic computes the array of color strings for the Memorial Descritivo.
+    // It depends on `paletteId` (from the current campaign context) and `palettes` (the global list of all palettes).
     if (paletteId && paletteId !== 'custom') {
+      // If a global palette is selected, find it in the master list and return its colors.
       const selectedPalette = palettes.find(p => p.id === paletteId);
       return selectedPalette ? selectedPalette.colors : [];
     }
     if (customPalette) {
+      // If a new, unsaved custom palette is active, use its colors.
       return customPalette.colors;
     }
+    // Default to an empty array if no palette is selected or found.
     return [];
   }, [paletteId, customPalette, palettes]);
 

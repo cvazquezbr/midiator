@@ -34,10 +34,23 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorLis
     setError('');
     getCampaigns()
       .then(data => {
-        setCampaigns(data);
+        if (Array.isArray(data)) {
+          setCampaigns(data);
+        } else {
+          // This case handles successful requests that return non-array data, which is unexpected.
+          console.error("MyCampaignsStep Error: API returned data, but it was not an array.", data);
+          // Set campaigns to an empty array to prevent the .map() call from crashing.
+          setCampaigns([]);
+          // Inform the user that something went wrong.
+          setError("Received an invalid response from the server.");
+        }
       })
       .catch(err => {
-        setError(err.message);
+        // This case handles failed requests (e.g., network errors, 500 status codes).
+        console.error("MyCampaignsStep Error: Failed to fetch campaigns.", err);
+        setError(err.message || 'An unknown error occurred while fetching campaigns.');
+        // Ensure campaigns is an empty array on error to prevent crashes.
+        setCampaigns([]);
       })
       .finally(() => {
         setLoading(false);
@@ -92,7 +105,7 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorLis
                 Nenhuma campanha salva encontrada. Crie uma nova para começar.
               </Typography>
             ) : (
-              campaigns.map((campaign) => (
+              (campaigns || []).map((campaign) => (
                 <Card key={campaign.id} sx={{ mb: 2 }}>
                   <ListItemButton onClick={() => onLoadCampaign(campaign.id)} sx={{ p: 0 }}>
                     <CardContent sx={{ flexGrow: 1 }}>
