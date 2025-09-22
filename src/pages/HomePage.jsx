@@ -77,21 +77,27 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
 }).join('');
 
 const extractColorPalette = (imageUrl, paletteSetter) => {
+  console.log(`[ColorThief] 1. Starting extraction for URL: ${imageUrl}`);
   const img = new Image();
   img.crossOrigin = 'Anonymous';
 
   const processImage = () => {
+    console.log('[ColorThief] 2. processImage function called.');
     try {
       const colorThief = new ColorThief();
       const palette = colorThief.getPalette(img, 5);
+      console.log('[ColorThief] 3. Raw palette from ColorThief:', palette);
+
       if (palette) {
         const hexPalette = palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2]));
+        console.log('[ColorThief] 4. Converted hex palette:', hexPalette);
         paletteSetter(hexPalette);
       } else {
+        console.log('[ColorThief] 4. Palette was null or empty, setting empty array.');
         paletteSetter([]);
       }
     } catch (error) {
-      console.error("Error extracting color palette:", error);
+      console.error("[ColorThief] 5. Error during color extraction:", error);
       paletteSetter([]);
     }
   };
