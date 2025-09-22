@@ -464,15 +464,6 @@ function HomePage() {
       images: sanitizeMediaArray(pageTemplate.images),
     };
 
-    const sanitizedPagesData = sanitizeMediaArray(generatedPagesData);
-    const sanitizedBrandElements = sanitizeMediaArray(brandElements);
-    const sanitizedAudioData = sanitizeMediaArray(generatedAudioData);
-    const sanitizedVideos = sanitizeMediaArray(generatedVideos);
-    const sanitizedPageTemplate = {
-      ...pageTemplate,
-      images: sanitizeMediaArray(pageTemplate.images),
-    };
-
     // Re-assign the properties with the sanitized versions
     campaignDataToSave.generatedPagesData = sanitizedPagesData;
     campaignDataToSave.brandElements = sanitizedBrandElements;
