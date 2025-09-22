@@ -1539,7 +1539,7 @@ function HomePage() {
                 {activeStep === 4 && (
                   <PageGeneratorFrontendOnly
                     displayedImageSize={displayedImageSize}
-                    colorPalette={colorPalette}
+                    colorPalette={memorialColors}
                     initialGeneratedPagesData={generatedPagesData}
                     onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
                     originalImageSize={originalImageSize}
