@@ -62,6 +62,7 @@ const FormattingPanel = ({
   selectedField: selectedFieldProp,
   setSelectedField: setSelectedFieldProp,
 }) => {
+  console.log('[FormattingPanel] Received imagePalette prop:', imagePalette);
   const context = useCampaign();
 
   // Use props if provided (controlled mode), otherwise use context (standalone mode)
@@ -219,7 +220,7 @@ const FormattingPanel = ({
             <Button variant="contained" component="label" startIcon={<ImageIcon />} fullWidth>
               Carregar <input type="file" accept=".png,.jpg,.jpeg" hidden onChange={handleImageUpload} />
             </Button>
-            <Button variant="outlined" onClick={onOpenImageGallery} fullWidth> Galeria </Button>
+            <Button variant="outlined" onClick={() => onOpenImageGallery()} fullWidth> Galeria </Button>
           </Box>
         )}
         {!currentElement ? (
