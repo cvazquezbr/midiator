@@ -114,9 +114,7 @@ function HomePage() {
     pendingAssets, setPendingAssets,
     defaultPageTemplate,
     paletteId,
-    setPaletteId,
     customPalette,
-    setCustomPalette,
   } = useCampaign();
 
   // Component State
@@ -147,6 +145,7 @@ function HomePage() {
   const [generationError, setGenerationError] = useState('');
   const [editingField, setEditingField] = useState(null);
   const [isHtmlField, setIsHtmlField] = useState(false);
+  const [formato, setFormato] = useState('');
   const [generatedPageUrl, setGeneratedPageUrl] = useState(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
@@ -245,13 +244,6 @@ function HomePage() {
     setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
     setColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
-
-    if (state.customPalette) {
-      setCustomPalette(state.customPalette);
-    } else {
-      setCustomPalette(null);
-    }
-
     const sanitizedPagesData = (Array.isArray(state.generatedPagesData) ? state.generatedPagesData : [])
       .filter(page => {
         if (!page || page.record === null || page.record === undefined) {
@@ -262,6 +254,7 @@ function HomePage() {
       });
     setGeneratedPagesData(sanitizedPagesData);
 
+    // Mantém o áudio carregado se ele tiver uma URL, a duração será calculada depois.
     setGeneratedAudioData(
         Array.isArray(state.generatedAudioData)
             ? state.generatedAudioData.filter(a => a && a.url)
@@ -271,16 +264,18 @@ function HomePage() {
     setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
 
     if (state.pageTemplate) {
+        // New format: Deep merge to ensure new properties are not lost on load
         const loadedTemplate = state.pageTemplate;
         setPageTemplate({
             ...defaultPageTemplate,
             ...loadedTemplate,
             images: (loadedTemplate.images || []).map(img => ({
-                ...createNewImageElement(null),
+                ...createNewImageElement(null), // Get all default keys
                 ...img
             }))
         });
     } else {
+        // Legacy format, convert it
         const newPageTemplate = { ...defaultPageTemplate };
         const legacyBg = state.backgroundElement;
         if (legacyBg) {
@@ -298,11 +293,13 @@ function HomePage() {
                 newPageTemplate.images = [image];
             }
         } else if (state.backgroundImage) {
+            // Even older legacy format
             newPageTemplate.images = [createNewImageElement(state.backgroundImage)];
         }
         setPageTemplate(newPageTemplate);
     }
 
+    // When loading, if there's an image, we need to set the originalImageSize for the editor to work correctly
     const firstImageSrc = state.pageTemplate?.images?.[0]?.src || state.backgroundElement?.src || state.backgroundImage;
     if (firstImageSrc) {
         const img = new Image();
@@ -320,6 +317,7 @@ function HomePage() {
     setObjetivo(state.objetivo ?? '');
     setTomDeVoz(state.tomDeVoz ?? '');
     setCampaignContent(state.campaignContent ?? null);
+    setFormato(state.formato ?? '');
     setAspectRatio(state.aspectRatio ?? '1:1');
     setGeneratedPageUrl(state.generatedPageUrl ?? null);
     setFollowupPostsQuantity(state.followupPostsQuantity ?? 5);
@@ -330,6 +328,7 @@ function HomePage() {
     setSelectedImages(state.selectedImages ?? {});
     setSelectedVideos(state.selectedVideos ?? {});
     setInputMethod(state.inputMethod ?? 'ia');
+    // Default to 5, which matches the slider's max value in PostsCurtosStep.
     setPromptNumRecords(state.promptNumRecords ?? 5);
     setPromptText(state.promptText ?? '');
     setFieldPositions(state.fieldPositions ?? {});
@@ -379,7 +378,9 @@ function HomePage() {
     const sanitizeMediaArray = (arr) => {
       if (!Array.isArray(arr)) return [];
       return arr.map(item => {
+        // Create a shallow copy to avoid mutating the original state object directly
         const sanitizedItem = { ...item };
+        // Explicitly delete large binary data properties
         delete sanitizedItem.blob;
         delete sanitizedItem.file;
         delete sanitizedItem.thumbnailBlob;
@@ -398,12 +399,12 @@ function HomePage() {
 
     const campaignDataToSave = {
       activeStep,
-      customPalette: paletteId === 'custom' ? customPalette : null,
       problema,
       solucao,
       objetivo,
       tomDeVoz,
       campaignContent,
+      formato,
       aspectRatio,
       followupPosts,
       followupPostsQuantity,
@@ -428,22 +429,24 @@ function HomePage() {
       let result;
       if (currentCampaign) {
         console.log(`[HomePage] Updating existing campaign, ID: ${currentCampaign.id}`);
-        result = await updateCampaign(currentCampaign.id, name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign, paletteId);
+        result = await updateCampaign(currentCampaign.id, name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign);
         toast.success(`Campaign "${name}" updated.`);
         setCurrentCampaign(result.campaign);
       } else {
         console.log(`[HomePage] Saving new campaign.`);
-        result = await saveCampaign(name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign, paletteId);
+        result = await saveCampaign(name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign);
         toast.success(`Campaign "${name}" saved.`);
         setCurrentCampaign(result.campaign);
       }
 
+      // After saving, re-apply the state that was just saved to sync permanent URLs
+      // This solves the issue of the UI still holding blob: URLs after a save.
       if (result.finalState) {
         console.log("[HomePage] Syncing local state with saved state containing permanent URLs.");
         applyAppState(result.finalState);
       }
 
-      setPendingAssets({});
+      setPendingAssets({}); // Clear pending assets after successful save/update
       console.log("[HomePage] Save/Update operation completed successfully.");
     } catch (err) {
       console.error("[HomePage] Error during save/update campaign:", err);
@@ -466,15 +469,18 @@ function HomePage() {
       const loadedCampaign = await loadCampaign(id);
       console.log("Loaded campaign data from DB:", loadedCampaign);
 
+      // When a campaign is loaded, it now comes with a 'pendingAssets' map
+      // containing the blobs for any images that were downloaded.
       if (loadedCampaign.pendingAssets) {
         setPendingAssets(loadedCampaign.pendingAssets);
       }
 
+      // Apply the rest of the general state from campaign_data
       applyAppState(loadedCampaign.campaign_data);
 
+      // Explicitly set the author and persona IDs from the top-level of the loaded campaign
       setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
       setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
-      setPaletteId(loadedCampaign.palette_id || null);
 
       setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
       toast.success(`Campaign "${loadedCampaign.name}" loaded successfully!`);
@@ -509,6 +515,7 @@ function HomePage() {
   }, []);
 
   useEffect(() => {
+    // Fetch personas for the campaign step dropdown
     if (user) {
       fetchPersonasForCampaign();
       fetchAutoresForCampaign();
@@ -574,6 +581,7 @@ function HomePage() {
 
   useEffect(() => {
     console.log('[HomePage] pageTemplate state changed:', pageTemplate);
+    // When the last image is removed, reset the originalImageSize.
     if (!pageTemplate.images || pageTemplate.images.length === 0) {
       setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     }
@@ -661,6 +669,7 @@ function HomePage() {
 
           videoElement.onerror = (e) => {
             console.error('Error loading video metadata for', videoData.url, e);
+            // Resolve with original data so we don't lose the video
             resolve(videoData);
           };
 
@@ -685,6 +694,8 @@ function HomePage() {
     processVideos();
   }, [generatedVideos, setGeneratedVideos]);
 
+  // Processes audio files that are loaded or generated to calculate their duration,
+  // which is needed for video generation. Disables the UI while processing.
   useEffect(() => {
     const processAudios = async () => {
       const audiosToProcess = generatedAudioData.filter(a => a && a.url && !a.duration);
@@ -707,9 +718,10 @@ function HomePage() {
 
           audioElement.onerror = (e) => {
             console.error('Error loading audio metadata for', audioData.url, e);
-            resolve(audioData);
+            resolve(audioData); // Resolve with original data on error
           };
 
+          // Use the blob from pendingAssets if available, otherwise use the URL
           const blob = pendingAssets[audioData.url];
           if (blob) {
             audioElement.src = URL.createObjectURL(blob);
@@ -742,12 +754,10 @@ function HomePage() {
 
   const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Modelo de Página', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Edição de Páginas', description: 'Gere as páginas finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish }, { label: 'Monitorar', description: 'Acompanhe as estatísticas de suas publicações.', icon: BarChart } ];
   const handleCreateNewCampaign = () => {
-    applyAppState({});
+    applyAppState({}); // This will reset most state
     setCurrentCampaign(null);
-    setPageTemplate(defaultPageTemplate);
+    setPageTemplate(defaultPageTemplate); // Explicitly reset page template
     setOriginalImageSize(DEFAULT_IMAGE_SIZE);
-    setPaletteId(null);
-    setCustomPalette(null);
     setActiveStep(1);
   };
   const handleEditCampaign = (campaign) => {
@@ -798,6 +808,7 @@ function HomePage() {
     console.log(`[HomePage] addNewImageToCanvas called. Target index: ${imageGalleryTargetIndex}`);
     const newImage = createNewImageElement(imageUrl);
 
+    // If target index is a number, we are on the "Page Editing" step for a specific page.
     if (typeof imageGalleryTargetIndex === 'number') {
       setGeneratedPagesData(prevPages => {
         const newPages = [...prevPages];
@@ -825,6 +836,7 @@ function HomePage() {
         return newPages;
       });
     } else {
+      // Otherwise, update the global template (likely on Step 3).
       setPageTemplate(prevTemplate => ({
         ...prevTemplate,
         images: [...(prevTemplate.images || []), newImage],
@@ -833,6 +845,7 @@ function HomePage() {
       toast.success('Imagem adicionada ao modelo.');
     }
 
+    // The color palette logic can remain global as it's a UI hint.
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
@@ -898,6 +911,7 @@ function HomePage() {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
 
+      // Revoke the initial object URL as it's no longer needed
       URL.revokeObjectURL(tempUrl);
 
       canvas.toBlob((blob) => {
@@ -936,14 +950,14 @@ function HomePage() {
       case 1: return true;
       case 2: return campaignContent !== null;
       case 3: return csvData.length > 0;
-      case 4: return true;
+      case 4: return true; // Always allow proceeding to formatting step
       case 5:
         if (generatedPagesData.length === 0 || !generatedPagesData.every(img => img.blob || img.url)) {
           toast.error("Por favor, gere todas as páginas na etapa 4 antes de prosseguir.");
           return false;
         }
         return true;
-      case 6:
+      case 6: // From Audio to Video
         if (generatedAudioData.length === 0 && csvData.length > 0) {
             toast.error("Por favor, gere os áudios na etapa 5 antes de prosseguir.");
             return false;
@@ -969,10 +983,16 @@ function HomePage() {
   };
   const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
     setCsvData(novosRegistros);
+    // A atualização de colunas é mantida para o caso de adição/remoção de colunas.
     if (JSON.stringify(novasColunas) !== JSON.stringify(csvHeaders)) {
         setCsvHeaders(novasColunas);
     }
 
+    // A lógica de reposicionamento e re-estilização foi removida daqui
+    // para evitar que a edição de um simples campo de texto reorganize a UI inteira.
+    // Essa lógica agora deve ser chamada explicitamente quando as colunas mudam.
+
+    // A atualização dos dados das páginas geradas é mantida para consistência.
     setGeneratedPagesData(prevGeneratedPages => {
         const newGeneratedPages = novosRegistros.map((record, index) => {
             const existingPage = prevGeneratedPages.find(img => img.index === index);
@@ -997,12 +1017,15 @@ function HomePage() {
   }, [csvHeaders]);
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
     setCsvData(newCsvData);
+    // Esta função é chamada ao editar texto diretamente na thumbnail (ImageStep)
+    // e precisa atualizar os dados das páginas também.
     setGeneratedPagesData(prevGeneratedPages => {
         const newGeneratedPages = newCsvData.map((record, index) => {
             const existingPage = prevGeneratedPages.find(img => img.index === index);
             if (existingPage) {
                 return { ...existingPage, record: record };
             }
+            // Retorna um novo objeto se não houver página existente.
             return {
                 index,
                 record,
@@ -1079,17 +1102,22 @@ function HomePage() {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
       const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor, colors });
 
+      // 1. Get the raw base64 data from the generation service
       const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors });
 
+      // 2. Convert base64 to a Blob
       const blob = dataURLtoBlob(base64Data);
       if (!blob) {
         throw new Error("Failed to convert generated image data to a Blob.");
       }
 
+      // 3. Create a temporary blob: URL
       const tempUrl = URL.createObjectURL(blob);
 
+      // 4. Add the asset to the pending uploads queue
       setPendingAssets(prev => ({ ...prev, [tempUrl]: blob }));
 
+      // 5. Update the UI and state using the clean blob: URL
       console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Using temporary blob URL:', tempUrl);
       setGeneratedPageUrl(tempUrl);
       addNewImageToCanvas(tempUrl);
@@ -1170,7 +1198,6 @@ function HomePage() {
         fieldStyles: {},
         csvData: csvDataResult,
         effectiveImageSize: originalImageSize,
-        standardsColors,
       });
 
       const newGeneratedPagesData = csvDataResult.map((record, index) => ({
@@ -1194,6 +1221,7 @@ function HomePage() {
       setGeneratedPagesData(newGeneratedPagesData);
       setInputMethod('manual');
 
+      // A geração de imagens foi movida para a etapa "Edição de Páginas" a pedido do usuário.
       toast.success('Geração de posts concluída. Prossiga para a próxima etapa para gerar as imagens.');
     } catch (error) {
       toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
@@ -1207,22 +1235,28 @@ function HomePage() {
     const imagePrompt = record.prompt_imagem_carrossel;
     let pageUpdateData = {};
 
+    // 1. Determine the effective styles and template for this specific page
     const pageData = generatedPagesData.find(p => p.index === index);
     const effectiveBrandElements = pageData?.customBrandElements || brandElements;
     const effectiveFieldPositions = pageData?.customFieldPositions || fieldPositions;
     const effectiveFieldStyles = pageData?.customFieldStyles || fieldStyles;
     let effectivePageTemplate = pageData?.customPageTemplate || pageTemplate;
 
+    // 2. Handle image generation from prompt (if any)
     if (imagePrompt && imagePrompt.trim() !== '') {
         setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
         try {
+            // Use a simple default style for the new image.
+            // The complex logic of finding another page's image style was brittle.
             let sourceStyle = { x: 0, y: 0, width: 100, height: 100, zIndex: -1, objectFit: 'cover' };
             const firstImage = effectivePageTemplate.images?.[0];
             if (firstImage) {
+                // If the current page template already has an image, use its style.
                 const { id, src, ...style } = firstImage;
                 sourceStyle = style;
             }
 
+            // This entire block is now wrapped in the blob conversion logic
             const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
             const blob = dataURLtoBlob(base64Data);
             if (!blob) {
@@ -1234,13 +1268,14 @@ function HomePage() {
             const newImage = { ...createNewImageElement(tempUrl), ...sourceStyle, visible: true };
             const pageImages = effectivePageTemplate.images || [];
 
+            // Se houver imagens, substitui a primeira. Caso contrário, adiciona a nova imagem.
             const finalImages = pageImages.length > 0
                 ? [newImage, ...pageImages.slice(1)]
                 : [newImage];
 
             const tempPageTemplate = { ...effectivePageTemplate, images: finalImages };
-            effectivePageTemplate = tempPageTemplate;
-            pageUpdateData.customPageTemplate = tempPageTemplate;
+            effectivePageTemplate = tempPageTemplate; // Update for this generation pass
+            pageUpdateData.customPageTemplate = tempPageTemplate; // Persist this change
         } catch (error) {
             if (error.message && error.message.includes('503')) {
                 toast.error(`O serviço de geração de imagem está indisponível no momento. Tente novamente mais tarde para o post #${index + 1}.`);
@@ -1252,6 +1287,7 @@ function HomePage() {
 
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
+      // 3. Use the new generation service with the effective styles
       const finalPageData = await PageGenerationService.generatePageImage({
         record,
         index,
@@ -1301,13 +1337,13 @@ function HomePage() {
   const memorialColors = useMemo(() => {
     if (paletteId && paletteId !== 'custom') {
       const selectedPalette = palettes.find(p => p.id === paletteId);
-      return selectedPalette ? selectedPalette.colors : standardsColors;
+      return selectedPalette ? selectedPalette.colors : [];
     }
     if (customPalette) {
       return customPalette.colors;
     }
-    return standardsColors;
-  }, [paletteId, customPalette, palettes, standardsColors]);
+    return [];
+  }, [paletteId, customPalette, palettes]);
 
   const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, formato, aspectRatio, followupPosts, colors: memorialColors, generatedPagesData, };
 
@@ -1319,7 +1355,6 @@ function HomePage() {
             darkMode={darkMode}
             setDarkMode={setDarkMode}
             setShowSetupModal={setShowSetupModal}
-            setShowCampaignStandardsModal={setShowCampaignStandardsModal}
             onMenuClick={() => setSidebarOpen(!sidebarOpen)}
             isMobile={isMobile}
             onSaveCampaign={() => setShowSaveModal(true)}
@@ -1448,7 +1483,6 @@ function HomePage() {
                     initialFieldStyles={initialFieldStyles}
                     onImageDisplayedSizeChange={setDisplayedImageSize}
                     colorPalette={colorPalette}
-                    standardsColors={standardsColors}
                     onCsvDataUpdate={handleCsvRecordContentUpdate}
                     originalImageSize={originalImageSize}
                     onZIndexChange={handleZIndexChange}
@@ -1468,7 +1502,6 @@ function HomePage() {
                   <PageGeneratorFrontendOnly
                     displayedImageSize={displayedImageSize}
                     colorPalette={colorPalette}
-                    standardsColors={standardsColors}
                     initialGeneratedPagesData={generatedPagesData}
                     onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
                     originalImageSize={originalImageSize}
@@ -1585,7 +1618,6 @@ function HomePage() {
       <SaveCampaignModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={handleSaveCampaign} campaignToEdit={currentCampaign} isSaving={isSaving} />
       <LoadCampaignModal open={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadCampaign} onEdit={(campaign) => { setCurrentCampaign(campaign); setShowSaveModal(true); }} />
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
-      <CampaignStandardsModal open={showCampaignStandardsModal} onClose={() => { setShowCampaignStandardsModal(false); loadCampaignStandards(); }} onGeneratePalette={async (briefing) => { try { const palette = await generateColorPalette(briefing); return palette; } catch (error) { toast.error(error.message || "Ocorreu um erro ao gerar a paleta de cores."); throw error; } }} />
       <ImageGallerySelector
         open={showImageGallery}
         onClose={handleCloseImageGallery}

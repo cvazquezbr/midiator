@@ -38,7 +38,6 @@ const PageEditor = ({
   onSave,
   colorPalette,
   originalImageSize,
-  standardsColors,
   aspectRatio,
   onOpenImageGallery,
   editedPageTemplate,
@@ -259,7 +258,6 @@ const PageEditor = ({
                 brandElements={editedBrandElements}
                 setBrandElements={setEditedBrandElements}
                 onOpenHtmlEditor={handleOpenHtmlEditor}
-                standardsColors={standardsColors || colorPalette}
                 showImageLoaders={true}
                 handleImageUpload={handleLocalImageUpload}
                 onOpenImageGallery={onOpenImageGallery}
@@ -290,7 +288,6 @@ const PageEditor = ({
             setPageTemplate={setEditedPageTemplate}
             brandElements={editedBrandElements}
             setBrandElements={setEditedBrandElements}
-            standardsColors={standardsColors || colorPalette}
             showImageLoaders={true}
             handleImageUpload={handleLocalImageUpload}
             onOpenImageGallery={onOpenImageGallery}

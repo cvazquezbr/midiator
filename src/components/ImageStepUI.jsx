@@ -34,7 +34,6 @@ const ImageStepUI = ({
   initialFieldStyles,
   onImageDisplayedSizeChange,
   colorPalette,
-  standardsColors,
   onCsvDataUpdate,
   originalImageSize,
   onZIndexChange,
@@ -109,7 +108,6 @@ const ImageStepUI = ({
             csvData={csvData}
             onImageDisplayedSizeChange={onImageDisplayedSizeChange}
             colorPalette={colorPalette}
-            standardsColors={standardsColors}
             onCsvDataUpdate={onCsvDataUpdate}
             selectedField={selectedField}
             setSelectedField={setSelectedField}
@@ -166,7 +164,6 @@ const ImageStepUI = ({
               setPageTemplate={setPageTemplate}
               onZIndexChange={onZIndexChange}
               onOpenHtmlEditor={onOpenHtmlEditor}
-              standardsColors={standardsColors}
               templateFieldStyles={templateFieldStyles}
               activeStep={activeStep}
               isCropping={isCropping}
@@ -204,7 +201,6 @@ const ImageStepUI = ({
             setPageTemplate={setPageTemplate}
             onZIndexChange={onZIndexChange}
             onOpenHtmlEditor={onOpenHtmlEditor}
-            standardsColors={standardsColors}
             templateFieldStyles={templateFieldStyles}
             activeStep={activeStep}
             isCropping={isCropping}

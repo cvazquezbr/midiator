@@ -54,7 +54,6 @@ const PageGeneratorFrontendOnly = ({
   originalImageSize,
   onBrandElementsChange,
   fontScale = 1,
-  standardsColors,
   handleGenerateSinglePage,
   aspectRatio,
   handleImageUpload, // New prop
@@ -666,7 +665,6 @@ const PageGeneratorFrontendOnly = ({
           pageData={safeDeepClone(pageToEdit)}
           onSave={handleSaveIndividualModifications}
           colorPalette={colorPalette}
-          standardsColors={standardsColors}
           aspectRatio={aspectRatio}
           originalImageSize={originalImageSize}
           onOpenImageGallery={() => onOpenImageGallery(editingGeneratedPageIndex)}
