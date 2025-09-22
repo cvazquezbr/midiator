@@ -691,11 +691,15 @@ const Campaign = ({
                                     </FormControl>
                                 </Grid>
                                 <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'center' }}>
-                                    {paletteId === 'custom' && (
-                                        <Button onClick={() => setPaletteWizardOpen(true)} variant="contained">
-                                            {customPalette ? 'Editar Paleta Customizada' : 'Criar Paleta Customizada'}
-                                        </Button>
-                                    )}
+                                    <Button
+                                        onClick={() => {
+                                            setPaletteId('custom');
+                                            setPaletteWizardOpen(true);
+                                        }}
+                                        variant="contained"
+                                    >
+                                        {customPalette ? 'Editar Paleta Customizada' : 'Criar Paleta Customizada'}
+                                    </Button>
                                 </Grid>
 
                                 <Grid item xs={12}>
