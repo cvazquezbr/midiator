@@ -76,6 +76,41 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
   return hex.length === 1 ? '0' + hex : hex;
 }).join('');
 
+const extractColorPalette = (imageUrl, paletteSetter) => {
+  const img = new Image();
+  img.crossOrigin = 'Anonymous';
+
+  const processImage = () => {
+    try {
+      const colorThief = new ColorThief();
+      const palette = colorThief.getPalette(img, 5);
+      if (palette) {
+        const hexPalette = palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2]));
+        paletteSetter(hexPalette);
+      } else {
+        paletteSetter([]);
+      }
+    } catch (error) {
+      console.error("Error extracting color palette:", error);
+      paletteSetter([]);
+    }
+  };
+
+  img.onload = processImage;
+  img.onerror = (err) => {
+    console.error("Error loading image to extract colors:", err);
+    paletteSetter([]);
+  };
+
+  img.src = imageUrl;
+
+  // If the image is already cached and complete, the onload event might not fire.
+  // In this case, we process it directly.
+  if (img.complete) {
+    processImage();
+  }
+};
+
 import { createNewImageElement } from '../utils/elementFactory.js';
 
 const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
@@ -306,14 +341,7 @@ function HomePage() {
         img.onload = () => {
             setOriginalImageSize({ width: img.width, height: img.height });
             // Also extract colors from this loaded image
-            try {
-                const colorThief = new ColorThief();
-                const palette = colorThief.getPalette(img, 5);
-                setImageColorPalette(palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])));
-            } catch (e) {
-                console.error("Error extracting palette from loaded image:", e);
-                setImageColorPalette([]);
-            }
+            extractColorPalette(firstImageSrc, setImageColorPalette);
         };
         img.onerror = () => {
             setOriginalImageSize(DEFAULT_IMAGE_SIZE);
@@ -885,23 +913,7 @@ function HomePage() {
     }
 
     // The color palette logic can remain global as it's a UI hint.
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-    img.onload = () => {
-      try {
-        const colorThief = new ColorThief();
-        const palette = colorThief.getPalette(img, 5);
-        setImageColorPalette(palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])));
-      } catch (error) {
-        console.error("Error extracting color palette:", error);
-        setImageColorPalette([]);
-      }
-    };
-    img.onerror = (err) => {
-      console.error("Error loading image to extract colors:", err);
-      setImageColorPalette([]);
-    };
-    img.src = imageUrl;
+    extractColorPalette(imageUrl, setImageColorPalette);
   }, [imageGalleryTargetIndex, pageTemplate, setPageTemplate, setGeneratedPagesData, setImageColorPalette]);
 
   const parseImageFile = (file) => {
