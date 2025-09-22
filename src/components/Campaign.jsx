@@ -30,7 +30,7 @@ import {
 import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
 import { useSettings } from '../context/SettingsContext';
 import { useCampaign as useCampaignContext } from '../context/CampaignContext';
-import { getPalettes, savePalette, updatePalette } from '../utils/paletteState';
+import { getPalettes } from '../utils/paletteState';
 import PaletteWizard from './PaletteWizard';
 import { uploadImageToDrive, getOrCreateBackgroundsFolderId } from '../utils/googleApi';
 import {
@@ -195,6 +195,7 @@ const Campaign = ({
     personaList,
     selectedPersonaForCampaign,
     setSelectedPersonaForCampaign,
+    palettes,
 }) => {
     useSettings();
     const {
@@ -214,14 +215,12 @@ const Campaign = ({
     const [isLoadingSolutions, setIsLoadingSolutions] = React.useState(false);
     const [solutionsError, setSolutionsError] = React.useState(null);
     const [imageTabError, setImageTabError] = React.useState('');
-    const [palettes, setPalettes] = useState([]);
     const [isPaletteWizardOpen, setPaletteWizardOpen] = useState(false);
 
     const emptyLabelStyle = {
         '& .MuiInputLabel-root:not(.Mui-focused):not(.MuiFormLabel-filled)': {
             fontFamily: 'Montserrat, sans-serif',
             fontSize: '1.4rem',
-            // Aproxima o posicionamento ao centro para um campo de 4 linhas, com maior recuo e tamanho
             transform: 'translate(24px, 47px) scale(1)',
         },
     };
@@ -233,8 +232,6 @@ const Campaign = ({
     const prevCampaignContent = prevCampaignContentRef.current;
 
     useEffect(() => {
-        // Only switch to tab 1 if campaignContent just became available (was null or undefined before)
-        // and the campaign is not currently being generated.
         if (campaignContent && !prevCampaignContent && !isGeneratingCampaign) {
             setActiveTab(1);
         }
@@ -334,19 +331,6 @@ const Campaign = ({
         }
     }, [isSolucaoHintModalOpen, fetchSolutionsOnOpen]);
 
-    useEffect(() => {
-        const fetchAndSetPalettes = async () => {
-            try {
-                const fetchedPalettes = await getPalettes();
-                setPalettes(fetchedPalettes);
-            } catch (error) {
-                console.error("Failed to fetch palettes:", error);
-                // Optionally, show an error to the user
-            }
-        };
-        fetchAndSetPalettes();
-    }, []);
-
     const handleSaveToDrive = async () => {
         setIsSavingToDrive(true);
         setImageTabError('');
@@ -360,7 +344,6 @@ const Campaign = ({
         try {
             const folderId = await getOrCreateBackgroundsFolderId();
             if (!folderId) {
-                // The utility function should throw, but as a safeguard:
                 throw new Error("Não foi possível obter a pasta de coleção do Google Drive.");
             }
 
@@ -371,9 +354,7 @@ const Campaign = ({
             const imageBlob = await response.blob();
 
             await uploadImageToDrive(imageBlob, folderId);
-            // Success toast is handled inside uploadImageToDrive
         } catch (error) {
-            // Error toast is also handled inside the utility functions
             setImageTabError(error.message || "Ocorreu uma falha ao salvar na coleção.");
             console.error("Falha ao salvar na coleção:", error);
         } finally {
@@ -399,7 +380,6 @@ const Campaign = ({
                     </Tabs>
                 </Box>
 
-                {/* Painel 0: Problema e Solução */}
                 <TabPanel value={activeTab} index={0}>
                     <Grid container spacing={3} sx={{ mt: 2 }}>
                         <Grid item xs={12}>
@@ -553,7 +533,6 @@ const Campaign = ({
                     )}
                 </TabPanel>
 
-                {/* Painel 1: Conteúdo Principal */}
                 <TabPanel value={activeTab} index={1}>
                     {campaignContent && (
                         <Grid container spacing={2} sx={{ mt: 2 }}>
@@ -667,7 +646,6 @@ const Campaign = ({
                     )}
                 </TabPanel>
 
-                {/* Painel 2: Página */}
                 <TabPanel value={activeTab} index={2}>
                     {campaignContent && (
                         <Box sx={{ mt: 2 }}>
@@ -803,7 +781,6 @@ const Campaign = ({
                     )}
                 </TabPanel>
 
-                {/* Painel 3: Posts de Follow-Up */}
                 <TabPanel value={activeTab} index={3}>
                     {campaignContent && (
                          <Grid container spacing={2} sx={{ mt: 2 }}>
@@ -867,7 +844,6 @@ const Campaign = ({
                     )}
                 </TabPanel>
 
-                {/* Painel 4: Conteúdo WordPress */}
                 <TabPanel value={activeTab} index={4}>
                     {campaignContent && (
                         <Grid container spacing={2} sx={{ mt: 2 }}>
