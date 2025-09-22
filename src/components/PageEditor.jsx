@@ -37,6 +37,7 @@ const PageEditor = ({
   pageData,
   onSave,
   colorPalette,
+  imagePalette,
   originalImageSize,
   aspectRatio,
   onOpenImageGallery,
@@ -247,6 +248,7 @@ const PageEditor = ({
             <Grid item xs={12} md={4}>
               <FormattingPanel
                 colorPalette={colorPalette}
+                imagePalette={imagePalette}
                 selectedField={selectedFieldInternal}
                 setSelectedField={setSelectedFieldInternal}
                 fieldStyles={editedStyles}

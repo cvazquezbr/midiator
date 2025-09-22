@@ -102,21 +102,27 @@ const TextFormatting = ({
               <Grid item xs={12}>
                 <Typography variant="caption">Cores da Imagem</Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center', mt: 1 }}>
-                  {imagePalette.map((color, index) => (
-                    <Tooltip title={color} key={index}>
-                      <Box
-                        sx={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: '50%',
-                          backgroundColor: color,
-                          border: '1px solid #ddd',
-                          cursor: 'pointer',
-                        }}
-                        onClick={() => updateFieldStyle('color', color)}
-                      />
-                    </Tooltip>
-                  ))}
+                  {imagePalette.map((color, index) => {
+                    // Safeguard against non-string values in the palette
+                    if (typeof color !== 'string') {
+                      return null;
+                    }
+                    return (
+                      <Tooltip title={color} key={index}>
+                        <Box
+                          sx={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: '50%',
+                            backgroundColor: color,
+                            border: '1px solid #ddd',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => updateFieldStyle('color', color)}
+                        />
+                      </Tooltip>
+                    );
+                  })}
                 </Box>
               </Grid>
             )}
