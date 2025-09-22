@@ -305,10 +305,24 @@ function HomePage() {
         img.crossOrigin = 'Anonymous';
         img.onload = () => {
             setOriginalImageSize({ width: img.width, height: img.height });
+            // Also extract colors from this loaded image
+            try {
+                const colorThief = new ColorThief();
+                const palette = colorThief.getPalette(img, 5);
+                setColorPalette(palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])));
+            } catch (e) {
+                console.error("Error extracting palette from loaded image:", e);
+                setColorPalette([]);
+            }
+        };
+        img.onerror = () => {
+            setOriginalImageSize(DEFAULT_IMAGE_SIZE);
+            setColorPalette([]);
         };
         img.src = firstImageSrc;
     } else {
         setOriginalImageSize(DEFAULT_IMAGE_SIZE);
+        setColorPalette([]);
     }
 
     setProblema(state.problema ?? '');
