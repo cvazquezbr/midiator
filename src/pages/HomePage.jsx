@@ -474,6 +474,10 @@ function HomePage() {
         setPendingAssets(loadedCampaign.pendingAssets);
       }
 
+      // Set the current campaign first to ensure its state is updated before any navigation
+      // or re-rendering is triggered by applyAppState.
+      setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
+
       // Apply the rest of the general state from campaign_data
       applyAppState(loadedCampaign.campaign_data);
 
@@ -481,8 +485,6 @@ function HomePage() {
       setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
       setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
       setPaletteId(loadedCampaign.palette_id || null);
-
-      setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
       toast.success(`Campaign "${loadedCampaign.name}" loaded successfully!`);
     } catch (err) {
       toast.error(err.message);
