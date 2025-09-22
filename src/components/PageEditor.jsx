@@ -246,6 +246,7 @@ const PageEditor = ({
           {!isMobile && (
             <Grid item xs={12} md={4}>
               <FormattingPanel
+                colorPalette={colorPalette}
                 selectedField={selectedFieldInternal}
                 setSelectedField={setSelectedFieldInternal}
                 fieldStyles={editedStyles}

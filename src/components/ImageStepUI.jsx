@@ -147,6 +147,7 @@ const ImageStepUI = ({
         }}>
           <Stack spacing={2}>
             <FormattingPanel
+              colorPalette={colorPalette}
               showImageLoaders={true}
               handleImageUpload={handleImageUpload}
               onOpenImageGallery={onOpenImageGallery}

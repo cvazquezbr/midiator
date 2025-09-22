@@ -40,6 +40,7 @@ import BackgroundFormatting from './formatting/BackgroundFormatting';
 import PositionSizeFormatting from './formatting/PositionSizeFormatting';
 
 const FormattingPanel = ({
+  colorPalette,
   initialFieldStyles,
   onOpenHtmlEditor,
   templateFieldStyles,
@@ -237,6 +238,7 @@ const FormattingPanel = ({
             {isTextField && (
               <>
                 <TextFormatting
+                  colorPalette={colorPalette}
                   currentElement={currentElement}
                   updateFieldStyle={updateFieldStyle}
                   resetFieldStyle={resetFieldStyle}

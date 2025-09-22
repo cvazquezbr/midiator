@@ -1345,7 +1345,20 @@ function HomePage() {
     return [];
   }, [paletteId, customPalette, palettes]);
 
-  const campaignData = { problema, solucao, objetivo, tomDeVoz, campaignContent, formato, aspectRatio, followupPosts, colors: memorialColors, generatedPagesData, };
+  const campaignData = {
+    problema,
+    solucao,
+    objetivo,
+    tomDeVoz,
+    campaignContent,
+    formato,
+    aspectRatio,
+    followupPosts,
+    colors: memorialColors,
+    generatedPagesData,
+    persona: personaList.find(p => p.id === selectedPersonaForCampaign),
+    autor: autorList.find(a => a.id === selectedAutorForCampaign),
+  };
 
   return (
     <ThemeProvider theme={currentTheme}>
@@ -1439,6 +1452,7 @@ function HomePage() {
                       personaList={personaList}
                       selectedPersonaForCampaign={selectedPersonaForCampaign}
                       setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
+                      palettes={palettes}
                     />
                   </Container>
                 )}
