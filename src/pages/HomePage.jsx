@@ -1520,7 +1520,7 @@ function HomePage() {
                     onOpenImageGallery={handleOpenImageGallery}
                     initialFieldStyles={initialFieldStyles}
                     onImageDisplayedSizeChange={setDisplayedImageSize}
-                    colorPalette={colorPalette}
+                    colorPalette={memorialColors}
                     onCsvDataUpdate={handleCsvRecordContentUpdate}
                     originalImageSize={originalImageSize}
                     onZIndexChange={handleZIndexChange}
