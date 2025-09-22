@@ -486,7 +486,19 @@ function HomePage() {
       // Explicitly set the author and persona IDs from the top-level of the loaded campaign
       setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
       setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
-      setPaletteId(loadedCampaign.palette_id || null);
+
+      // Set palette ID: if a DB-level palette_id exists, use it. Otherwise,
+      // check if a custom palette exists in the loaded data and set the ID to "custom".
+      const dbPaletteId = loadedCampaign.palette_id;
+      const hasCustomPalette = loadedCampaign.campaign_data?.customPalette?.colors?.length > 0;
+
+      if (dbPaletteId) {
+        setPaletteId(dbPaletteId);
+      } else if (hasCustomPalette) {
+        setPaletteId('custom');
+      } else {
+        setPaletteId(null);
+      }
       toast.success(`Campaign "${loadedCampaign.name}" loaded successfully!`);
     } catch (err) {
       toast.error(err.message);
