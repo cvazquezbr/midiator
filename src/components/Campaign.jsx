@@ -679,6 +679,41 @@ const Campaign = ({
                                         </Button>
                                     )}
                                 </Grid>
+
+                                <Grid item xs={12}>
+                                    <Box sx={{ display: 'flex', gap: 1, mt: 1, mb: 2, flexWrap: 'wrap' }}>
+                                        {(() => {
+                                            const selectedPalette = paletteId === 'custom'
+                                                ? customPalette
+                                                : (palettes || []).find(p => p.id === paletteId);
+
+                                            const colors = selectedPalette?.colors || [];
+
+                                            if (colors.length === 0) {
+                                                return (
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Nenhuma paleta selecionada ou a paleta selecionada não possui cores.
+                                                    </Typography>
+                                                );
+                                            }
+
+                                            return colors.map((color, index) => (
+                                                <Tooltip title={color} key={index}>
+                                                    <Box
+                                                        sx={{
+                                                            width: 30,
+                                                            height: 30,
+                                                            borderRadius: '50%',
+                                                            backgroundColor: color,
+                                                            border: '1px solid #ddd',
+                                                        }}
+                                                    />
+                                                </Tooltip>
+                                            ));
+                                        })()}
+                                    </Box>
+                                </Grid>
+
                                 <Grid item xs={12}>
                                     <FormControl fullWidth variant="outlined" disabled={!campaignContent}>
                                         <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
