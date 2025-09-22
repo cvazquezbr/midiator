@@ -608,7 +608,7 @@ const Campaign = ({
                             <Grid item xs={12}>
                                 <Typography variant="subtitle2" gutterBottom>Hashtags</Typography>
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                    {campaignContent.hashtags.map((tag, index) => (
+                                    {(campaignContent.hashtags || []).map((tag, index) => (
                                         <Chip
                                             key={index}
                                             label={tag}
