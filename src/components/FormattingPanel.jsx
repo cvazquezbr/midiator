@@ -42,7 +42,6 @@ import PositionSizeFormatting from './formatting/PositionSizeFormatting';
 const FormattingPanel = ({
   initialFieldStyles,
   onOpenHtmlEditor,
-  standardsColors,
   templateFieldStyles,
   isCropping,
   setIsCropping,
@@ -242,7 +241,6 @@ const FormattingPanel = ({
                   updateFieldStyle={updateFieldStyle}
                   resetFieldStyle={resetFieldStyle}
                   onOpenHtmlEditor={onOpenHtmlEditor}
-                  standardsColors={standardsColors}
                   expandedPanel={expandedPanel}
                   handleAccordionChange={handleAccordionChange}
                   selectedField={selectedField}

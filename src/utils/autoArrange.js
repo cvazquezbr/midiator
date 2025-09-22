@@ -62,7 +62,6 @@ export const autoArrangeFields = ({
   fieldStyles,
   csvData,
   effectiveImageSize,
-  standardsColors,
   currentPreviewIndex = 0,
 }) => {
     // 1. Define Safe Zone and Field Roles
@@ -138,7 +137,7 @@ export const autoArrangeFields = ({
         shadowBlur: 5,
         shadowOffsetX: 2,
         shadowOffsetY: 2,
-        color: standardsColors?.[0]?.hex || '#FFFFFF', // Usa a cor de acento
+        color: '#FFFFFF',
       };
     }
 
