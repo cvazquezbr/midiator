@@ -41,7 +41,6 @@ import PositionSizeFormatting from './formatting/PositionSizeFormatting';
 
 const FormattingPanel = ({
   colorPalette,
-  imagePalette,
   initialFieldStyles,
   onOpenHtmlEditor,
   templateFieldStyles,
@@ -62,8 +61,8 @@ const FormattingPanel = ({
   selectedField: selectedFieldProp,
   setSelectedField: setSelectedFieldProp,
 }) => {
-  console.log('[FormattingPanel] Received imagePalette prop:', imagePalette);
   const context = useCampaign();
+  const { imageColorPalette: imagePalette } = context; // Get image palette from context
 
   // Use props if provided (controlled mode), otherwise use context (standalone mode)
   const fieldStyles = fieldStylesProp ?? context.fieldStyles;

@@ -65,8 +65,6 @@ const TextFormatting = ({
 }) => {
   if (!currentElement) return null;
 
-  console.log('[TextFormatting] Received imagePalette prop:', imagePalette);
-
   return (
     <>
       <Button variant="contained" startIcon={<Edit />} onClick={() => onOpenHtmlEditor(selectedField)} fullWidth sx={{ mb: 2 }}>Editar Conteúdo</Button>

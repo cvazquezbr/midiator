@@ -34,6 +34,7 @@ export const CampaignProvider = ({ children }) => {
   const [colors, setColors] = useState([]);
   const [paletteId, setPaletteId] = useState(null);
   const [customPalette, setCustomPalette] = useState(null);
+  const [imageColorPalette, setImageColorPalette] = useState([]);
 
 
   const value = useMemo(() => ({
@@ -53,6 +54,7 @@ export const CampaignProvider = ({ children }) => {
     colors,
     paletteId,
     customPalette,
+    imageColorPalette,
 
     // Setters
     setCsvData,
@@ -70,6 +72,7 @@ export const CampaignProvider = ({ children }) => {
     setColors,
     setPaletteId,
     setCustomPalette,
+    setImageColorPalette,
 
     // Constants
     defaultPageTemplate,
@@ -89,6 +92,7 @@ export const CampaignProvider = ({ children }) => {
     colors,
     paletteId,
     customPalette,
+    imageColorPalette,
   ]);
 
   return (
