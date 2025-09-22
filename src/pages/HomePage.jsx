@@ -77,27 +77,21 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
 }).join('');
 
 const extractColorPalette = (imageUrl, paletteSetter) => {
-  console.log(`[ColorThief] 1. Starting extraction for URL: ${imageUrl}`);
   const img = new Image();
   img.crossOrigin = 'Anonymous';
 
   const processImage = () => {
-    console.log('[ColorThief] 2. processImage function called.');
     try {
       const colorThief = new ColorThief();
       const palette = colorThief.getPalette(img, 5);
-      console.log('[ColorThief] 3. Raw palette from ColorThief:', palette);
-
       if (palette) {
         const hexPalette = palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2]));
-        console.log('[ColorThief] 4. Converted hex palette:', hexPalette);
         paletteSetter(hexPalette);
       } else {
-        console.log('[ColorThief] 4. Palette was null or empty, setting empty array.');
         paletteSetter([]);
       }
     } catch (error) {
-      console.error("[ColorThief] 5. Error during color extraction:", error);
+      console.error("Error extracting color palette:", error);
       paletteSetter([]);
     }
   };
@@ -156,6 +150,7 @@ function HomePage() {
     defaultPageTemplate,
     paletteId, setPaletteId,
     customPalette, setCustomPalette,
+    imageColorPalette, setImageColorPalette,
   } = useCampaign();
 
   // Component State
@@ -174,7 +169,6 @@ function HomePage() {
   const [personaDrawerOpen, setPersonaDrawerOpen] = useState(!isMobile);
   const [autorDrawerOpen, setAutorDrawerOpen] = useState(!isMobile);
   const [paletteDrawerOpen, setPaletteDrawerOpen] = useState(!isMobile);
-  const [imageColorPalette, setImageColorPalette] = useState([]);
   const [problema, setProblema] = useState('');
   const [solucao, setSolucao] = useState('');
   const [objetivo, setObjetivo] = useState('');
@@ -354,9 +348,6 @@ function HomePage() {
             setImageColorPalette([]);
         };
         img.src = firstImageSrc;
-    } else {
-        setOriginalImageSize(DEFAULT_IMAGE_SIZE);
-        setImageColorPalette([]);
     }
 
     setProblema(state.problema ?? '');
@@ -410,6 +401,35 @@ function HomePage() {
   const handleSaveCampaign = async (name) => {
     console.log(`[HomePage] Attempting to save campaign: "${name}"`);
 
+    // Create the campaign data object first for inspection
+    const campaignDataToSave = {
+      activeStep,
+      problema,
+      solucao,
+      objetivo,
+      tomDeVoz,
+      campaignContent,
+      aspectRatio,
+      followupPosts,
+      followupPostsQuantity,
+      fieldPositions,
+      fieldStyles,
+      templateFieldStyles,
+      brandElements,
+      pageTemplate,
+      generatedPageUrl,
+      generatedPagesData,
+      generatedAudioData,
+      generatedVideos,
+      csvData,
+      csvHeaders,
+      customPalette,
+    };
+
+    // Log the object that will be saved, for final diagnosis
+    console.log("[HomePage] DIAGNOSTIC: Data structure just before saving:", JSON.stringify(campaignDataToSave, null, 2));
+
+
     try {
       await checkAuthStatus();
     } catch (error) {
@@ -444,30 +464,21 @@ function HomePage() {
       images: sanitizeMediaArray(pageTemplate.images),
     };
 
-    const campaignDataToSave = {
-      activeStep,
-      problema,
-      solucao,
-      objetivo,
-      tomDeVoz,
-      campaignContent,
-      aspectRatio,
-      followupPosts,
-      followupPostsQuantity,
-      fieldPositions,
-      fieldStyles,
-      templateFieldStyles,
-      brandElements: sanitizedBrandElements,
-      pageTemplate: sanitizedPageTemplate,
-      generatedPageUrl,
-      generatedPagesData: sanitizedPagesData,
-      generatedAudioData: sanitizedAudioData,
-      generatedVideos: sanitizedVideos,
-      csvData,
-      csvHeaders,
-      customPalette,
+    const sanitizedPagesData = sanitizeMediaArray(generatedPagesData);
+    const sanitizedBrandElements = sanitizeMediaArray(brandElements);
+    const sanitizedAudioData = sanitizeMediaArray(generatedAudioData);
+    const sanitizedVideos = sanitizeMediaArray(generatedVideos);
+    const sanitizedPageTemplate = {
+      ...pageTemplate,
+      images: sanitizeMediaArray(pageTemplate.images),
     };
-    console.log("[HomePage] Campaign data object created:", campaignDataToSave);
+
+    // Re-assign the properties with the sanitized versions
+    campaignDataToSave.generatedPagesData = sanitizedPagesData;
+    campaignDataToSave.brandElements = sanitizedBrandElements;
+    campaignDataToSave.generatedAudioData = sanitizedAudioData;
+    campaignDataToSave.generatedVideos = sanitizedVideos;
+    campaignDataToSave.pageTemplate = sanitizedPageTemplate;
 
 
     setIsSaving(true);
@@ -1553,7 +1564,6 @@ function HomePage() {
                     initialFieldStyles={initialFieldStyles}
                     onImageDisplayedSizeChange={setDisplayedImageSize}
                     colorPalette={memorialColors}
-                    imagePalette={imageColorPalette}
                     onCsvDataUpdate={handleCsvRecordContentUpdate}
                     originalImageSize={originalImageSize}
                     onZIndexChange={handleZIndexChange}
@@ -1573,7 +1583,6 @@ function HomePage() {
                   <PageGeneratorFrontendOnly
                     displayedImageSize={displayedImageSize}
                     colorPalette={memorialColors}
-                    imagePalette={imageColorPalette}
                     initialGeneratedPagesData={generatedPagesData}
                     onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
                     originalImageSize={originalImageSize}
