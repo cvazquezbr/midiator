@@ -133,7 +133,7 @@ function HomePage() {
   const [personaDrawerOpen, setPersonaDrawerOpen] = useState(!isMobile);
   const [autorDrawerOpen, setAutorDrawerOpen] = useState(!isMobile);
   const [paletteDrawerOpen, setPaletteDrawerOpen] = useState(!isMobile);
-  const [colorPalette, setColorPalette] = useState([]);
+  const [imageColorPalette, setImageColorPalette] = useState([]);
   const [problema, setProblema] = useState('');
   const [solucao, setSolucao] = useState('');
   const [objetivo, setObjetivo] = useState('');
@@ -241,7 +241,7 @@ function HomePage() {
 
     setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
     setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
-    setColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
+    setImageColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
     const sanitizedPagesData = (Array.isArray(state.generatedPagesData) ? state.generatedPagesData : [])
       .filter(page => {
@@ -309,20 +309,20 @@ function HomePage() {
             try {
                 const colorThief = new ColorThief();
                 const palette = colorThief.getPalette(img, 5);
-                setColorPalette(palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])));
+                setImageColorPalette(palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])));
             } catch (e) {
                 console.error("Error extracting palette from loaded image:", e);
-                setColorPalette([]);
+                setImageColorPalette([]);
             }
         };
         img.onerror = () => {
             setOriginalImageSize(DEFAULT_IMAGE_SIZE);
-            setColorPalette([]);
+            setImageColorPalette([]);
         };
         img.src = firstImageSrc;
     } else {
         setOriginalImageSize(DEFAULT_IMAGE_SIZE);
-        setColorPalette([]);
+        setImageColorPalette([]);
     }
 
     setProblema(state.problema ?? '');
@@ -891,18 +891,18 @@ function HomePage() {
       try {
         const colorThief = new ColorThief();
         const palette = colorThief.getPalette(img, 5);
-        setColorPalette(palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])));
+        setImageColorPalette(palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])));
       } catch (error) {
         console.error("Error extracting color palette:", error);
-        setColorPalette([]);
+        setImageColorPalette([]);
       }
     };
     img.onerror = (err) => {
       console.error("Error loading image to extract colors:", err);
-      setColorPalette([]);
+      setImageColorPalette([]);
     };
     img.src = imageUrl;
-  }, [imageGalleryTargetIndex, pageTemplate, setPageTemplate, setGeneratedPagesData, setColorPalette]);
+  }, [imageGalleryTargetIndex, pageTemplate, setPageTemplate, setGeneratedPagesData, setImageColorPalette]);
 
   const parseImageFile = (file) => {
     if (!file) return;
@@ -1535,7 +1535,7 @@ function HomePage() {
                     initialFieldStyles={initialFieldStyles}
                     onImageDisplayedSizeChange={setDisplayedImageSize}
                     colorPalette={memorialColors}
-                    imagePalette={colorPalette}
+                    imagePalette={imageColorPalette}
                     onCsvDataUpdate={handleCsvRecordContentUpdate}
                     originalImageSize={originalImageSize}
                     onZIndexChange={handleZIndexChange}
@@ -1555,7 +1555,7 @@ function HomePage() {
                   <PageGeneratorFrontendOnly
                     displayedImageSize={displayedImageSize}
                     colorPalette={memorialColors}
-                    imagePalette={colorPalette}
+                    imagePalette={imageColorPalette}
                     initialGeneratedPagesData={generatedPagesData}
                     onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
                     originalImageSize={originalImageSize}
