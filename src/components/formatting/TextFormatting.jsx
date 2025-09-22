@@ -54,6 +54,7 @@ const fonts = [
 
 const TextFormatting = ({
   colorPalette,
+  imagePalette,
   currentElement,
   updateFieldStyle,
   resetFieldStyle,
@@ -76,6 +77,7 @@ const TextFormatting = ({
 
             {colorPalette && colorPalette.length > 0 && (
               <Grid item xs={12}>
+                <Typography variant="caption">Paleta da Campanha</Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center', mt: 1 }}>
                   {colorPalette.map((color, index) => (
                     <Tooltip title={color.name || color.hex} key={index}>
@@ -89,6 +91,29 @@ const TextFormatting = ({
                           cursor: 'pointer',
                         }}
                         onClick={() => updateFieldStyle('color', color.hex)}
+                      />
+                    </Tooltip>
+                  ))}
+                </Box>
+              </Grid>
+            )}
+
+            {imagePalette && imagePalette.length > 0 && (
+              <Grid item xs={12}>
+                <Typography variant="caption">Cores da Imagem</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center', mt: 1 }}>
+                  {imagePalette.map((color, index) => (
+                    <Tooltip title={color} key={index}>
+                      <Box
+                        sx={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          backgroundColor: color,
+                          border: '1px solid #ddd',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => updateFieldStyle('color', color)}
                       />
                     </Tooltip>
                   ))}

@@ -1521,6 +1521,7 @@ function HomePage() {
                     initialFieldStyles={initialFieldStyles}
                     onImageDisplayedSizeChange={setDisplayedImageSize}
                     colorPalette={memorialColors}
+                    imagePalette={colorPalette}
                     onCsvDataUpdate={handleCsvRecordContentUpdate}
                     originalImageSize={originalImageSize}
                     onZIndexChange={handleZIndexChange}
@@ -1540,6 +1541,7 @@ function HomePage() {
                   <PageGeneratorFrontendOnly
                     displayedImageSize={displayedImageSize}
                     colorPalette={memorialColors}
+                    imagePalette={colorPalette}
                     initialGeneratedPagesData={generatedPagesData}
                     onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
                     originalImageSize={originalImageSize}
