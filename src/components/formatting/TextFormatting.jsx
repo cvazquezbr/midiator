@@ -78,17 +78,17 @@ const TextFormatting = ({
               <Grid item xs={12}>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center', mt: 1 }}>
                   {colorPalette.map((color, index) => (
-                    <Tooltip title={color} key={index}>
+                    <Tooltip title={color.name || color.hex} key={index}>
                       <Box
                         sx={{
                           width: 24,
                           height: 24,
                           borderRadius: '50%',
-                          backgroundColor: color,
+                          backgroundColor: color.hex,
                           border: '1px solid #ddd',
                           cursor: 'pointer',
                         }}
-                        onClick={() => updateFieldStyle('color', color)}
+                        onClick={() => updateFieldStyle('color', color.hex)}
                       />
                     </Tooltip>
                   ))}

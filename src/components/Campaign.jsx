@@ -698,13 +698,13 @@ const Campaign = ({
                                             }
 
                                             return colors.map((color, index) => (
-                                                <Tooltip title={color} key={index}>
+                                                <Tooltip title={color.name || color.hex} key={index}>
                                                     <Box
                                                         sx={{
                                                             width: 30,
                                                             height: 30,
                                                             borderRadius: '50%',
-                                                            backgroundColor: color,
+                                                            backgroundColor: color.hex,
                                                             border: '1px solid #ddd',
                                                         }}
                                                     />
