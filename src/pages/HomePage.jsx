@@ -145,7 +145,6 @@ function HomePage() {
   const [generationError, setGenerationError] = useState('');
   const [editingField, setEditingField] = useState(null);
   const [isHtmlField, setIsHtmlField] = useState(false);
-  const [formato, setFormato] = useState('');
   const [generatedPageUrl, setGeneratedPageUrl] = useState(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
@@ -404,7 +403,6 @@ function HomePage() {
       objetivo,
       tomDeVoz,
       campaignContent,
-      formato,
       aspectRatio,
       followupPosts,
       followupPostsQuantity,
@@ -514,14 +512,23 @@ function HomePage() {
       });
   }, []);
 
+  const fetchPalettesForCampaign = useCallback(() => {
+    return getPalettes()
+      .then(setPalettes)
+      .catch(err => {
+        console.error("Failed to fetch palettes for campaign step:", err);
+        toast.error('Could not load palettes for campaign dropdown.');
+      });
+  }, []);
+
   useEffect(() => {
-    // Fetch personas for the campaign step dropdown
+    // Fetch personas, autores, and palettes for the campaign step dropdown
     if (user) {
       fetchPersonasForCampaign();
       fetchAutoresForCampaign();
-      getPalettes().then(setPalettes).catch(err => toast.error("Failed to load palettes."));
+      fetchPalettesForCampaign();
     }
-  }, [user, fetchPersonasForCampaign, fetchAutoresForCampaign]);
+  }, [user, fetchPersonasForCampaign, fetchAutoresForCampaign, fetchPalettesForCampaign]);
 
   useEffect(() => {
     const checkCampaignsAndSetInitialStep = async () => {
@@ -1351,7 +1358,6 @@ function HomePage() {
     objetivo,
     tomDeVoz,
     campaignContent,
-    formato,
     aspectRatio,
     followupPosts,
     colors: memorialColors,
