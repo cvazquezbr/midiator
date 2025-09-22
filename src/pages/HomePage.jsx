@@ -441,13 +441,10 @@ function HomePage() {
         setCurrentCampaign(result.campaign);
       }
 
-      // After saving, re-apply the state that was just saved to sync permanent URLs
-      // This solves the issue of the UI still holding blob: URLs after a save.
-      if (result.finalState) {
-        console.log("[HomePage] Syncing local state with saved state containing permanent URLs.");
-        applyAppState(result.finalState);
-      }
-
+      // After a successful save, the state now contains permanent URLs, but the local
+      // state still has blob URLs. The most robust way to sync is to clear pending
+      // assets and let the user reload if they need to see the permanent state.
+      // Calling applyAppState here was causing other state to be reset.
       setPendingAssets({}); // Clear pending assets after successful save/update
       console.log("[HomePage] Save/Update operation completed successfully.");
     } catch (err) {
