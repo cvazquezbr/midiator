@@ -34,6 +34,7 @@ const ImageStepUI = ({
   initialFieldStyles,
   onImageDisplayedSizeChange,
   colorPalette,
+  imagePalette,
   onCsvDataUpdate,
   originalImageSize,
   onZIndexChange,
@@ -148,6 +149,7 @@ const ImageStepUI = ({
           <Stack spacing={2}>
             <FormattingPanel
               colorPalette={colorPalette}
+              imagePalette={imagePalette}
               showImageLoaders={true}
               handleImageUpload={handleImageUpload}
               onOpenImageGallery={onOpenImageGallery}
