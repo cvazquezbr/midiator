@@ -113,8 +113,8 @@ function HomePage() {
     aspectRatio, setAspectRatio,
     pendingAssets, setPendingAssets,
     defaultPageTemplate,
-    paletteId,
-    customPalette,
+    paletteId, setPaletteId,
+    customPalette, setCustomPalette,
   } = useCampaign();
 
   // Component State
@@ -331,6 +331,7 @@ function HomePage() {
     setPromptText(state.promptText ?? '');
     setFieldPositions(state.fieldPositions ?? {});
     setTemplateFieldStyles(state.templateFieldStyles ?? {});
+    setCustomPalette(state.customPalette ?? null);
 
     const loadedStyles = state.fieldStyles ?? {};
     const completeStyles = {};
@@ -416,6 +417,7 @@ function HomePage() {
       generatedVideos: sanitizedVideos,
       csvData,
       csvHeaders,
+      customPalette,
     };
     console.log("[HomePage] Campaign data object created:", campaignDataToSave);
 
