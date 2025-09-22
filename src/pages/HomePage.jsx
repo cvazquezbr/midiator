@@ -244,6 +244,15 @@ function HomePage() {
     setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
     setColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
+
+    // Also load the custom palette if it exists in the saved state
+    if (state.customPalette) {
+      setCustomPalette(state.customPalette);
+    } else {
+      // If no custom palette is in the saved state, ensure the context is cleared.
+      setCustomPalette(null);
+    }
+
     const sanitizedPagesData = (Array.isArray(state.generatedPagesData) ? state.generatedPagesData : [])
       .filter(page => {
         if (!page || page.record === null || page.record === undefined) {
@@ -398,6 +407,7 @@ function HomePage() {
 
     const campaignDataToSave = {
       activeStep,
+      customPalette: paletteId === 'custom' ? customPalette : null,
       problema,
       solucao,
       objetivo,

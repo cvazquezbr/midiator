@@ -30,7 +30,6 @@ import {
 import { generateCommonProblems, generateCommonSolutions } from '../utils/generationHandlers';
 import { useSettings } from '../context/SettingsContext';
 import { useCampaign as useCampaignContext } from '../context/CampaignContext';
-import { getPalettes } from '../utils/paletteState';
 import PaletteWizard from './PaletteWizard';
 import { uploadImageToDrive, getOrCreateBackgroundsFolderId } from '../utils/googleApi';
 import {
@@ -394,7 +393,7 @@ const Campaign = ({
                                     <MenuItem value="">
                                         <em>Não especificar</em>
                                     </MenuItem>
-                                    {personaList.map((p) => (
+                                    {(personaList || []).map((p) => (
                                         <MenuItem key={p.id} value={p.id}>
                                             {p.name}
                                         </MenuItem>
@@ -436,7 +435,7 @@ const Campaign = ({
                                             <MenuItem value="">
                                                 <em>Não especificar</em>
                                             </MenuItem>
-                                            {autorList.map((p) => (
+                                            {(autorList || []).map((p) => (
                                                 <MenuItem key={p.id} value={p.id}>
                                                     {p.name}
                                                 </MenuItem>
@@ -656,12 +655,17 @@ const Campaign = ({
                                         <Select
                                             labelId="palette-select-label"
                                             value={paletteId || 'custom'}
-                                            onChange={(e) => setPaletteId(e.target.value)}
+                                            onChange={(e) => {
+                                                setPaletteId(e.target.value);
+                                                if (e.target.value !== 'custom') {
+                                                    setCustomPalette(null); // Clear custom palette when a global one is chosen
+                                                }
+                                            }}
                                             label="Paleta de Cores"
                                         >
                                             <MenuItem value="custom">Paleta Customizada da Campanha</MenuItem>
                                             <Divider />
-                                            {palettes.map((p) => (
+                                            {(palettes || []).map((p) => (
                                                 <MenuItem key={p.id} value={p.id}>
                                                     <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                                                         <Typography sx={{ flexGrow: 1 }}>{p.name}</Typography>
@@ -686,14 +690,14 @@ const Campaign = ({
                                         </Select>
                                     </FormControl>
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'center' }}>
                                     {paletteId === 'custom' && (
                                         <Button onClick={() => setPaletteWizardOpen(true)} variant="contained">
                                             {customPalette ? 'Editar Paleta Customizada' : 'Criar Paleta Customizada'}
                                         </Button>
                                     )}
                                 </Grid>
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12}>
                                     <FormControl fullWidth variant="outlined" disabled={!campaignContent}>
                                         <InputLabel id="aspect-ratio-label">Razão de Aspecto</InputLabel>
                                         <Select
@@ -816,7 +820,7 @@ const Campaign = ({
                                     {isGeneratingFollowup ? 'Gerando...' : 'Regerar Posts'}
                                 </Button>
                             </Box>
-                            {followupPosts.map((post, index) => (
+                            {(followupPosts || []).map((post, index) => (
                                 <Accordion key={index}>
                                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
@@ -833,7 +837,7 @@ const Campaign = ({
                                         </Typography>
                                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
                                             <Chip icon={<InfoIcon />} label={post.tipo_gancho || 'Gancho'} size="small" variant="outlined" />
-                                            {post.hashtags_sugeridas.map((tag, i) => (
+                                            {(post.hashtags_sugeridas || []).map((tag, i) => (
                                                 <Chip key={i} label={`#${tag}`} size="small" />
                                             ))}
                                         </Box>
