@@ -1,5 +1,5 @@
 import { query } from '../db.js';
-import { markdownToLinkedinText } from '../utils.js';
+import { markdownToLinkedinText, escapeLinkedinText } from '../utils.js';
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -100,7 +100,7 @@ export async function publishPost(fetch, post, accessToken) {
     const videoUrn = post.post_content?.video;
     const payload = {
         author: authorUrn,
-        content: postText,
+        content: escapeLinkedinText(postText),
         images: imageUrns,
         video: videoUrn,
         title: post.post_content?.titulo || 'Video Post'
