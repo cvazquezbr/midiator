@@ -332,25 +332,6 @@ function HomePage() {
         setPageTemplate(newPageTemplate);
     }
 
-    // When loading, if there's an image, we need to set the originalImageSize for the editor to work correctly
-    const firstImageSrc = state.pageTemplate?.images?.[0]?.src || state.backgroundElement?.src || state.backgroundImage;
-    if (firstImageSrc) {
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.onload = () => {
-            setOriginalImageSize({ width: img.width, height: img.height });
-            // Also extract colors from this loaded image
-            extractColorPalette(firstImageSrc, setImageColorPalette);
-        };
-        img.onerror = () => {
-            setOriginalImageSize(DEFAULT_IMAGE_SIZE);
-            setImageColorPalette([]);
-        };
-        img.src = firstImageSrc;
-    } else {
-        const campaignPalette = state.customPalette?.colors?.map(c => c.hex) || [];
-        setImageColorPalette(campaignPalette);
-    }
 
     setProblema(state.problema ?? '');
     setSolucao(state.solucao ?? '');
@@ -531,6 +512,49 @@ function HomePage() {
       // Set the current campaign first to ensure its state is updated before any navigation
       // or re-rendering is triggered by applyAppState.
       setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
+
+      // --- START of Color Swatch Logic ---
+      const campaignData = loadedCampaign.campaign_data;
+      const firstImageSrc = campaignData?.pageTemplate?.images?.[0]?.src || campaignData?.backgroundElement?.src || campaignData?.backgroundImage;
+
+      if (firstImageSrc) {
+          const img = new Image();
+          img.crossOrigin = 'Anonymous';
+          img.onload = () => {
+              setOriginalImageSize({ width: img.width, height: img.height });
+              extractColorPalette(firstImageSrc, setImageColorPalette);
+          };
+          img.onerror = () => {
+              setOriginalImageSize(DEFAULT_IMAGE_SIZE);
+              // On image error, try to fall back to campaign palette
+              let fallbackPalette = [];
+              const customPaletteColors = campaignData?.customPalette?.colors;
+              if (customPaletteColors && customPaletteColors.length > 0) {
+                  fallbackPalette = customPaletteColors.map(c => c.hex);
+              } else if (loadedCampaign.palette_id) {
+                  const selectedDbPalette = palettes.find(p => p.id === loadedCampaign.palette_id);
+                  if (selectedDbPalette?.colors) {
+                      fallbackPalette = selectedDbPalette.colors.map(c => c.hex);
+                  }
+              }
+              setImageColorPalette(fallbackPalette);
+          };
+          img.src = firstImageSrc;
+      } else {
+          // Fallback to campaign palette if no image
+          let fallbackPalette = [];
+          const customPaletteColors = campaignData?.customPalette?.colors;
+          if (customPaletteColors && customPaletteColors.length > 0) {
+              fallbackPalette = customPaletteColors.map(c => c.hex);
+          } else if (loadedCampaign.palette_id) {
+              const selectedDbPalette = palettes.find(p => p.id === loadedCampaign.palette_id);
+              if (selectedDbPalette?.colors) {
+                  fallbackPalette = selectedDbPalette.colors.map(c => c.hex);
+              }
+          }
+          setImageColorPalette(fallbackPalette);
+      }
+      // --- END of Color Swatch Logic ---
 
       // Apply the rest of the general state from campaign_data
       applyAppState(loadedCampaign.campaign_data);
