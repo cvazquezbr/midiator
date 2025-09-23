@@ -237,15 +237,20 @@ const Campaign = ({
     const prevCampaignContent = prevCampaignContentRef.current;
 
     useEffect(() => {
-        if (location.state?.newAutorId) {
-            setSelectedAutorForCampaign(location.state.newAutorId);
+        if (location.state?.newAutorId || location.state?.newPersonaId) {
+            if (location.state.newAutorId) {
+                setSelectedAutorForCampaign(location.state.newAutorId);
+            }
+            if (location.state.newPersonaId) {
+                setSelectedPersonaForCampaign(location.state.newPersonaId);
+            }
             if (problemaRef.current) {
                 problemaRef.current.focus();
             }
             // Limpa o estado para evitar re-acionamento
-            navigate(location.pathname, { replace: true });
+            navigate(location.pathname, { state: {}, replace: true });
         }
-    }, [location.state, setSelectedAutorForCampaign, navigate, location.pathname]);
+    }, [location.state, setSelectedAutorForCampaign, setSelectedPersonaForCampaign, navigate, location.pathname]);
 
     useEffect(() => {
         if (campaignContent && !prevCampaignContent && !isGeneratingCampaign) {
@@ -399,24 +404,35 @@ const Campaign = ({
                 <TabPanel value={activeTab} index={0}>
                     <Grid container spacing={3} sx={{ mt: 2 }}>
                         <Grid item xs={12}>
-                            <FormControl fullWidth variant="outlined" sx={{ mb: 2 }} disabled={campaignContent !== null}>
-                                <InputLabel id="persona-select-label">Selecionar Persona</InputLabel>
-                                <Select
-                                    labelId="persona-select-label"
-                                    value={selectedPersonaForCampaign}
-                                    onChange={(e) => setSelectedPersonaForCampaign(e.target.value)}
-                                    label="Selecionar Persona"
-                                >
-                                    <MenuItem value="">
-                                        <em>Não especificar</em>
-                                    </MenuItem>
-                                    {(personaList || []).map((p) => (
-                                        <MenuItem key={p.id} value={p.id}>
-                                            {p.name}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                                <FormControl fullWidth variant="outlined" disabled={campaignContent !== null}>
+                                    <InputLabel id="persona-select-label">Selecionar Persona</InputLabel>
+                                    <Select
+                                        labelId="persona-select-label"
+                                        value={selectedPersonaForCampaign}
+                                        onChange={(e) => setSelectedPersonaForCampaign(e.target.value)}
+                                        label="Selecionar Persona"
+                                    >
+                                        <MenuItem value="">
+                                            <em>Não especificar</em>
                                         </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
+                                        {(personaList || []).map((p) => (
+                                            <MenuItem key={p.id} value={p.id}>
+                                                {p.name}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                                <Tooltip title="Adicionar nova persona">
+                                    <IconButton
+                                        color="primary"
+                                        onClick={() => navigate('/personas/new', { state: { from: location.pathname } })}
+                                        disabled={campaignContent !== null}
+                                    >
+                                        <AddIcon />
+                                    </IconButton>
+                                </Tooltip>
+                            </Box>
                         </Grid>
                         <Grid item xs={12}>
                             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
