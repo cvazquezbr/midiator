@@ -286,6 +286,7 @@ Retorne apenas um único objeto JSON.`;
                   isMobile ? (
                     <AutorWizard
                       key={selectedAutor.id || 'new'}
+                      open={Boolean(selectedAutor)}
                       onClose={() => handleNavigation(() => {
                         if (startInCreateMode && onCreationCancelled) {
                           onCreationCancelled();
