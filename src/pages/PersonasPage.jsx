@@ -190,7 +190,7 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
             geminiAPI.initialize(apiKey);
         }
         setIsGeneratingFromLinkedIn(true);
-        const prompt = `Com base no seguinte perfil do LinkedIn: ${linkedInUrl}, elabore o conteúdo para o campo de descrição de uma persona de marketing. A descrição deve ser detalhada, em primeira pessoa, e capturar a essência profissional, as responsabilidades e os desafios do indivíduo, como se ele mesmo estivesse se descrevendo.`;
+        const prompt = `Com base no seguinte perfil do LinkedIn: ${linkedInUrl}, elabore o resumo da descrição de sua persona no contexto de elaborar uma campanha de marketing destinada a pessoas com esse tipo de perfil. A descrição deve ser detalhada, em primeira pessoa, e capturar a essência profissional, as responsabilidades e os desafios do indivíduo, como se ele mesmo estivesse se descrevendo.`;
         try {
             const response = await geminiAPI.generateContent(prompt);
             if (callback) callback(response);
