@@ -76,49 +76,7 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
   return hex.length === 1 ? '0' + hex : hex;
 }).join('');
 
-const extractColorPalette = (imageUrl, paletteSetter) => {
-  let finalImageUrl = imageUrl;
-  // Use proxy for Vercel Blob Storage URLs to avoid CORS issues with ColorThief
-  if (imageUrl && imageUrl.includes('blob.vercel-storage.com')) {
-    finalImageUrl = `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`;
-  }
-
-  const img = new Image();
-  // When using the proxy, the image is same-origin, so we don't need crossOrigin.
-  if (!finalImageUrl.startsWith('/api/')) {
-    img.crossOrigin = 'Anonymous';
-  }
-
-  const processImage = () => {
-    try {
-      const colorThief = new ColorThief();
-      const palette = colorThief.getPalette(img, 5);
-      if (palette) {
-        const hexPalette = palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2]));
-        paletteSetter(hexPalette);
-      } else {
-        paletteSetter([]);
-      }
-    } catch (error) {
-      console.error("Error extracting color palette:", error);
-      paletteSetter([]);
-    }
-  };
-
-  img.onload = processImage;
-  img.onerror = (err) => {
-    console.error("Error loading image to extract colors:", err);
-    paletteSetter([]);
-  };
-
-  img.src = finalImageUrl;
-
-  // If the image is already cached and complete, the onload event might not fire.
-  // In this case, we process it directly.
-  if (img.complete) {
-    processImage();
-  }
-};
+// This function is now defined inside the useEffect where it's used.
 
 import { createNewImageElement } from '../utils/elementFactory.js';
 
@@ -285,6 +243,7 @@ function HomePage() {
 
     setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
     setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
+    setImageColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
     const sanitizedPagesData = (Array.isArray(state.generatedPagesData) ? state.generatedPagesData : [])
       .filter(page => {
@@ -341,6 +300,22 @@ function HomePage() {
         setPageTemplate(newPageTemplate);
     }
 
+    // When loading, if there's an image, we need to set the originalImageSize for the editor to work correctly
+    const firstImageSrc = state.pageTemplate?.images?.[0]?.src || state.backgroundElement?.src || state.backgroundImage;
+    if (firstImageSrc) {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+            setOriginalImageSize({ width: img.width, height: img.height });
+            // Also extract colors from this loaded image
+            extractColorPalette(firstImageSrc, setImageColorPalette);
+        };
+        img.onerror = () => {
+            setOriginalImageSize(DEFAULT_IMAGE_SIZE);
+            setImageColorPalette([]);
+        };
+        img.src = firstImageSrc;
+    }
 
     setProblema(state.problema ?? '');
     setSolucao(state.solucao ?? '');
@@ -522,27 +497,6 @@ function HomePage() {
       // or re-rendering is triggered by applyAppState.
       setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
 
-      // --- START of Color Swatch Logic ---
-      const campaignData = loadedCampaign.campaign_data;
-      const firstImageSrc = campaignData?.pageTemplate?.images?.[0]?.src || campaignData?.backgroundElement?.src || campaignData?.backgroundImage;
-
-      if (firstImageSrc) {
-          const img = new Image();
-          img.crossOrigin = 'Anonymous';
-          img.onload = () => {
-              setOriginalImageSize({ width: img.width, height: img.height });
-              extractColorPalette(firstImageSrc, setImageColorPalette);
-          };
-          img.onerror = () => {
-              setOriginalImageSize(DEFAULT_IMAGE_SIZE);
-              setImageColorPalette([]);
-          };
-          img.src = firstImageSrc;
-      } else {
-          setImageColorPalette([]);
-      }
-      // --- END of Color Swatch Logic ---
-
       // Apply the rest of the general state from campaign_data
       applyAppState(loadedCampaign.campaign_data);
 
@@ -674,6 +628,51 @@ function HomePage() {
       setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     }
   }, [pageTemplate]);
+
+  // Effect to extract color palette from the primary image
+  useEffect(() => {
+    const firstImage = pageTemplate?.images?.[0];
+
+    // Define the extraction function inside the effect to capture the current scope
+    const extract = (url, setter) => {
+      let finalUrl = url;
+      if (url && url.includes('blob.vercel-storage.com')) {
+        finalUrl = `/api/image-proxy?url=${encodeURIComponent(url)}`;
+      }
+      const img = new Image();
+      if (!finalUrl.startsWith('/api/')) {
+        img.crossOrigin = 'Anonymous';
+      }
+      img.onload = () => {
+        try {
+          const colorThief = new ColorThief();
+          const palette = colorThief.getPalette(img, 5);
+          setter(palette ? palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])) : []);
+        } catch (e) {
+          console.error("Error extracting palette from image:", e);
+          setter([]);
+        }
+      };
+      img.onerror = () => {
+        console.error("Failed to load image for color extraction, clearing swatches.");
+        setter([]);
+      }
+      img.src = finalUrl;
+      if (img.complete) {
+        // If the image is already in cache, onload might not fire.
+        img.onload();
+      }
+    };
+
+    if (firstImage?.src) {
+      extract(firstImage.src, setImageColorPalette);
+    } else {
+      // If there's no image, ensure the image palette is empty.
+      // The fallback to the campaign palette will be handled by the UI components.
+      setImageColorPalette([]);
+    }
+    // Dependency array ensures this runs only when the first image's src changes.
+  }, [pageTemplate?.images?.[0]?.src, setImageColorPalette]);
 
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
@@ -1568,6 +1567,7 @@ function HomePage() {
                     initialFieldStyles={initialFieldStyles}
                     onImageDisplayedSizeChange={setDisplayedImageSize}
                     colorPalette={memorialColors}
+                    imagePalette={imageColorPalette}
                     onCsvDataUpdate={handleCsvRecordContentUpdate}
                     originalImageSize={originalImageSize}
                     onZIndexChange={handleZIndexChange}
