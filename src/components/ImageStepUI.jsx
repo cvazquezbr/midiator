@@ -34,6 +34,7 @@ const ImageStepUI = ({
   initialFieldStyles,
   onImageDisplayedSizeChange,
   colorPalette,
+  imagePalette,
   onCsvDataUpdate,
   originalImageSize,
   onZIndexChange,
@@ -58,7 +59,7 @@ const ImageStepUI = ({
     brandElements, setBrandElements,
     pageTemplate, setPageTemplate,
     selectedField, setSelectedField,
-    imageColorPalette, // Get the image palette from context
+    imageColorPalette,
   } = useCampaign();
 
   const handleNextPreview = () => {
