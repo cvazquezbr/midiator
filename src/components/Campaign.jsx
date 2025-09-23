@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
@@ -44,6 +45,7 @@ import {
     Edit as EditIcon,
     Close as CloseIcon,
     Save as SaveIcon,
+    Add as AddIcon,
 } from '@mui/icons-material';
 
 const problemaHint = (
@@ -203,6 +205,10 @@ const Campaign = ({
         customPalette,
         setCustomPalette,
     } = useCampaignContext();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const problemaRef = useRef(null);
+
     const [activeTab, setActiveTab] = useState(0);
     const [isHintModalOpen, setHintModalOpen] = React.useState(false);
     const [isSolucaoHintModalOpen, setSolucaoHintModalOpen] = React.useState(false);
@@ -229,6 +235,17 @@ const Campaign = ({
         prevCampaignContentRef.current = campaignContent;
     });
     const prevCampaignContent = prevCampaignContentRef.current;
+
+    useEffect(() => {
+        if (location.state?.newAutorId) {
+            setSelectedAutorForCampaign(location.state.newAutorId);
+            if (problemaRef.current) {
+                problemaRef.current.focus();
+            }
+            // Limpa o estado para evitar re-acionamento
+            navigate(location.pathname, { replace: true });
+        }
+    }, [location.state, setSelectedAutorForCampaign, navigate, location.pathname]);
 
     useEffect(() => {
         if (campaignContent && !prevCampaignContent && !isGeneratingCampaign) {
@@ -414,6 +431,7 @@ const Campaign = ({
                                     placeholder="Descreva o problema que sua campanha busca resolver."
                                     disabled={campaignContent !== null}
                                     sx={problema.trim() === '' ? emptyLabelStyle : {}}
+                                    inputRef={problemaRef}
                                 />
                                 <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setHintModalOpen(true)}>
                                     <GeminiIcon />
@@ -424,24 +442,35 @@ const Campaign = ({
                         {problema.trim() !== '' && (
                             <>
                                 <Grid item xs={12}>
-                                    <FormControl fullWidth variant="outlined" sx={{ mb: 2 }} disabled={campaignContent !== null}>
-                                        <InputLabel id="autor-select-label">Selecionar Autor</InputLabel>
-                                        <Select
-                                            labelId="autor-select-label"
-                                            value={selectedAutorForCampaign}
-                                            onChange={(e) => setSelectedAutorForCampaign(e.target.value)}
-                                            label="Selecionar Autor"
-                                        >
-                                            <MenuItem value="">
-                                                <em>Não especificar</em>
-                                            </MenuItem>
-                                            {(autorList || []).map((p) => (
-                                                <MenuItem key={p.id} value={p.id}>
-                                                    {p.name}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                                        <FormControl fullWidth variant="outlined" disabled={campaignContent !== null}>
+                                            <InputLabel id="autor-select-label">Selecionar Autor</InputLabel>
+                                            <Select
+                                                labelId="autor-select-label"
+                                                value={selectedAutorForCampaign}
+                                                onChange={(e) => setSelectedAutorForCampaign(e.target.value)}
+                                                label="Selecionar Autor"
+                                            >
+                                                <MenuItem value="">
+                                                    <em>Não especificar</em>
                                                 </MenuItem>
-                                            ))}
-                                        </Select>
-                                    </FormControl>
+                                                {(autorList || []).map((p) => (
+                                                    <MenuItem key={p.id} value={p.id}>
+                                                        {p.name}
+                                                    </MenuItem>
+                                                ))}
+                                            </Select>
+                                        </FormControl>
+                                        <Tooltip title="Adicionar novo autor">
+                                            <IconButton
+                                                color="primary"
+                                                onClick={() => navigate('/autores/new', { state: { from: location.pathname } })}
+                                                disabled={campaignContent !== null}
+                                            >
+                                                <AddIcon />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </Box>
                                 </Grid>
                                 <Grid item xs={12}>
                                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>

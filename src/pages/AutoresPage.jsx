@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {
@@ -17,6 +18,8 @@ import geminiAPI from '../utils/geminiAPI';
 const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected, onUpdate }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [autorList, setAutorList] = useState([]);
   const [selectedAutor, setSelectedAutor] = useState(null);
@@ -89,10 +92,18 @@ const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected, o
         return false;
     }
     try {
+        const isNewAutor = !autorToSave.id;
         const saved = autorToSave.id
             ? await updateAutor(autorToSave.id, autorToSave.name, autorToSave.autor_data)
             : await saveAutor(autorToSave.name, autorToSave.autor_data);
+
         toast.success("Autor salvo com sucesso!");
+
+        if (isNewAutor && location.state?.from) {
+            navigate(location.state.from, { state: { newAutorId: saved.id }, replace: true });
+            return true;
+        }
+
         await fetchAutores();
         if (onUpdate) onUpdate();
         setSelectedAutor(saved);
