@@ -77,40 +77,6 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
 }).join('');
 
 // This function is now defined inside the useEffect where it's used.
-// const extractColorPalette = (imageUrl, paletteSetter) => {
-  const img = new Image();
-  img.crossOrigin = 'Anonymous';
-
-  const processImage = () => {
-    try {
-      const colorThief = new ColorThief();
-      const palette = colorThief.getPalette(img, 5);
-      if (palette) {
-        const hexPalette = palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2]));
-        paletteSetter(hexPalette);
-      } else {
-        paletteSetter([]);
-      }
-    } catch (error) {
-      console.error("Error extracting color palette:", error);
-      paletteSetter([]);
-    }
-  };
-
-  img.onload = processImage;
-  img.onerror = (err) => {
-    console.error("Error loading image to extract colors:", err);
-    paletteSetter([]);
-  };
-
-  img.src = imageUrl;
-
-  // If the image is already cached and complete, the onload event might not fire.
-  // In this case, we process it directly.
-  if (img.complete) {
-    processImage();
-  }
-};
 
 import { createNewImageElement } from '../utils/elementFactory.js';
 
