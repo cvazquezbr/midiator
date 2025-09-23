@@ -32,7 +32,6 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
   const [personasLoading, setPersonasLoading] = useState(true);
   const [personasError, setPersonasError] = useState(null);
   const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
-  const [isGeneratingFromLinkedIn, setIsGeneratingFromLinkedIn] = useState(false);
   const [initialWizardStep, setInitialWizardStep] = useState(0);
 
   // State for unsaved changes guard
@@ -174,29 +173,6 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
             toast.error('Ocorreu um erro ao processar a resposta da IA. Verifique o console para detalhes.');
         } finally {
             setIsGeneratingPersona(false);
-        }
-    };
-
-    const handleGenerateDescriptionFromLinkedIn = async (linkedInUrl, callback) => {
-        if (!geminiAPI.isInitialized) {
-            const apiKey = getGeminiApiKey();
-            if (!apiKey) {
-                toast.error('Chave de API do Gemini não configurada.');
-                return;
-            }
-            geminiAPI.initialize(apiKey);
-        }
-        setIsGeneratingFromLinkedIn(true);
-        const prompt = `Com base no seguinte perfil do LinkedIn: ${linkedInUrl}, elabore o resumo da descrição de sua persona no contexto da elaboração uma campanha de marketing destinada a pessoas com esse tipo de perfil. A descrição deve ser detalhada, em primeira pessoa, e capturar a essência profissional, as responsabilidades e os desafios do indivíduo, como se ele mesmo estivesse se descrevendo. Você deve priorizar sua ocupação atual`;
-        try {
-            const response = await geminiAPI.generateContent(prompt);
-            if (callback) callback(response);
-            toast.success('Descrição gerada com sucesso!');
-        } catch (error) {
-            console.error("Error generating description from LinkedIn:", error);
-            toast.error('Ocorreu um erro ao gerar a descrição a partir do LinkedIn. Verifique o console para detalhes.');
-        } finally {
-            setIsGeneratingFromLinkedIn(false);
         }
     };
 
@@ -349,8 +325,6 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
                       onPersonaDataChange={setPersonaFormData}
                       onGenerate={handleGeneratePersonaWithAI}
                       isGeneratingPersona={isGeneratingPersona}
-                      onGenerateFromLinkedIn={handleGenerateDescriptionFromLinkedIn}
-                      isGeneratingFromLinkedIn={isGeneratingFromLinkedIn}
                       initialStep={initialWizardStep}
                     />
                   ) : (
@@ -370,8 +344,6 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
                         onPersonaDataChange={setPersonaFormData}
                         onGenerate={handleGeneratePersonaWithAI}
                         isGeneratingPersona={isGeneratingPersona}
-                        onGenerateFromLinkedIn={handleGenerateDescriptionFromLinkedIn}
-                        isGeneratingFromLinkedIn={isGeneratingFromLinkedIn}
                         initialStep={initialWizardStep}
                       />
                     </Paper>
