@@ -1144,7 +1144,7 @@ const Publisher = ({
                                                 </IconButton>
                                             </Tooltip>
                                             <Tooltip title={row.status === 'failed' ? 'Retry' : 'Edit Schedule'}>
-                                                <IconButton onClick={() => handleOpenEditModal(row)} size="small" disabled={row.status === 'published'}>
+                                                <IconButton onClick={() => handleOpenEditModal(row)} size="small">
                                                     {row.status === 'failed' ? <Replay /> : <Edit />}
                                                 </IconButton>
                                             </Tooltip>
