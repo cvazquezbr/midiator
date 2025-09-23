@@ -252,6 +252,7 @@ function HomePage() {
   };
 
   const handleAutorCreated = (newAutor) => {
+    fetchAutoresForCampaign();
     if (newAutor && newAutor.id) {
         setSelectedAutorForCampaign(newAutor.id);
     }
@@ -260,6 +261,7 @@ function HomePage() {
   };
 
   const handlePersonaCreated = (newPersona) => {
+    fetchPersonasForCampaign();
     if (newPersona && newPersona.id) {
         setSelectedPersonaForCampaign(newPersona.id);
     }
