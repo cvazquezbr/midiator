@@ -98,34 +98,6 @@ const TextFormatting = ({
               </Grid>
             )}
 
-            {imagePalette && imagePalette.length > 0 && (
-              <Grid item xs={12}>
-                <Typography variant="caption">Cores da Imagem</Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center', mt: 1 }}>
-                  {imagePalette.map((color, index) => {
-                    // Safeguard against non-string values in the palette
-                    if (typeof color !== 'string') {
-                      return null;
-                    }
-                    return (
-                      <Tooltip title={color} key={index}>
-                        <Box
-                          sx={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: '50%',
-                            backgroundColor: color,
-                            border: '1px solid #ddd',
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => updateFieldStyle('color', color)}
-                        />
-                      </Tooltip>
-                    );
-                  })}
-                </Box>
-              </Grid>
-            )}
 
             <Grid item xs={12}><ToggleButtonGroup size="small" fullWidth><ToggleButton value="bold" selected={currentElement.style.fontWeight === 'bold'} onClick={() => updateFieldStyle('fontWeight', currentElement.style.fontWeight === 'bold' ? 'normal' : 'bold')}><FormatBold /></ToggleButton><ToggleButton value="italic" selected={currentElement.style.fontStyle === 'italic'} onClick={() => updateFieldStyle('fontStyle', currentElement.style.fontStyle === 'italic' ? 'normal' : 'italic')}><FormatItalic /></ToggleButton><ToggleButton value="underline" selected={currentElement.style.textDecoration === 'underline'} onClick={() => updateFieldStyle('textDecoration', currentElement.style.textDecoration === 'underline' ? 'none' : 'underline')}><FormatUnderlined /></ToggleButton></ToggleButtonGroup></Grid>
             <Grid item xs={12}><Typography variant="caption" display="block" gutterBottom>Alinhamento</Typography><ToggleButtonGroup value={currentElement.style.textAlign || 'left'} exclusive onChange={(e, v) => v && updateFieldStyle('textAlign', v)} size="small" fullWidth><ToggleButton value="left"><FormatAlignLeft /></ToggleButton><ToggleButton value="center"><FormatAlignCenter /></ToggleButton><ToggleButton value="right"><FormatAlignRight /></ToggleButton></ToggleButtonGroup></Grid>
