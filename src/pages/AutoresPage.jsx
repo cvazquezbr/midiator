@@ -52,6 +52,13 @@ const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected, o
     }
   }, [selectedAutor, onNoAutorSelected]);
 
+  useEffect(() => {
+    if (location.state?.createNew) {
+      handleNewAutor();
+      navigate(location.pathname, { state: {}, replace: true });
+    }
+  }, [location.state]);
+
   const fetchAutores = async () => {
       setAutoresLoading(true);
       try {

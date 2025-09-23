@@ -426,7 +426,7 @@ const Campaign = ({
                                 <Tooltip title="Adicionar nova persona">
                                     <IconButton
                                         color="primary"
-                                        onClick={() => navigate('/personas/new', { state: { from: location.pathname } })}
+                                        onClick={() => navigate('/personas', { state: { createNew: true, from: location.pathname } })}
                                         disabled={campaignContent !== null}
                                     >
                                         <AddIcon />
@@ -480,7 +480,7 @@ const Campaign = ({
                                         <Tooltip title="Adicionar novo autor">
                                             <IconButton
                                                 color="primary"
-                                                onClick={() => navigate('/autores/new', { state: { from: location.pathname } })}
+                                                onClick={() => navigate('/autores', { state: { createNew: true, from: location.pathname } })}
                                                 disabled={campaignContent !== null}
                                             >
                                                 <AddIcon />
