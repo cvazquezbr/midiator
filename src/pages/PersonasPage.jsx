@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {
@@ -26,8 +25,6 @@ import geminiAPI from '../utils/geminiAPI';
 const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected, onUpdate, startInCreateMode, onPersonaCreated, onCreationCancelled }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const navigate = useNavigate();
-  const location = useLocation();
 
   // State for Persona View
   const [personaList, setPersonaList] = useState([]);
