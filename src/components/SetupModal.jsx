@@ -98,9 +98,13 @@ const GeneralSettings = () => {
 };
 
 
-const SetupModal = ({ open, onClose }) => {
+const SetupModal = ({ open, onClose, initialTab = 0 }) => {
   const isMobile = useIsMobile();
-  const [value, setValue] = useState(0);
+  const [value, setValue] = useState(initialTab);
+
+  useEffect(() => {
+    setValue(initialTab);
+  }, [initialTab]);
   const { saveSettings, isLoading } = useSettings();
 
   const handleChange = (event, newValue) => {
@@ -114,6 +118,10 @@ const SetupModal = ({ open, onClose }) => {
     } catch (error) {
       // Error is already toasted in the context
     }
+  };
+
+  const handleSaveForRedirect = async () => {
+    await saveSettings();
   };
 
   const a11yProps = (index) => {
@@ -162,7 +170,7 @@ const SetupModal = ({ open, onClose }) => {
           <WordpressAuthSetup />
         </TabPanel>
         <TabPanel value={value} index={4}>
-          <LinkedinAuthSetup onBeforeRedirect={handleSave} />
+          <LinkedinAuthSetup onBeforeRedirect={handleSaveForRedirect} />
         </TabPanel>
       </DialogContent>
       <DialogActions>
