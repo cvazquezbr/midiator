@@ -4,7 +4,7 @@ import { useSwipeable } from 'react-swipeable';
 import {
   Dialog, DialogTitle, DialogContent, Button, LinearProgress, Box, TextField, Typography, Grid, FormControl, InputLabel, Select, MenuItem, Chip, Checkbox, ListItemText, Accordion, AccordionSummary, AccordionDetails, FormGroup, FormControlLabel, CircularProgress, Tooltip, IconButton, Link as MuiLink,
 } from '@mui/material';
-import { ExpandMore as ExpandMoreIcon, InfoOutlined as InfoOutlinedIcon, Replay as ReplayIcon, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon } from '@mui/icons-material';
+import { ExpandMore as ExpandMoreIcon, InfoOutlined as InfoOutlinedIcon, Replay as ReplayIcon, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon, LinkedIn as LinkedInIcon } from '@mui/icons-material';
 import TextEditor from './TextEditor';
 
 // Constants
@@ -31,8 +31,10 @@ const steps = ['Início Rápido com IA', 'Revisão Básica', 'Responsabilidades'
  * @param {object} props.personaData - The object containing all the data for the persona being edited.
  * @param {function} props.onPersonaDataChange - Callback to update the personaData object in the parent component.
  * @param {number} [props.initialStep=0] - The step the wizard should start on.
+ * @param {function} props.onGenerateFromLinkedIn - Callback to trigger AI description generation from LinkedIn.
+ * @param {boolean} props.isGeneratingFromLinkedIn - Flag indicating if the LinkedIn generation is in progress.
  */
-export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGeneratingPersona, personaData, onPersonaDataChange, initialStep = 0 }) => {
+export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGeneratingPersona, personaData, onPersonaDataChange, initialStep = 0, onGenerateFromLinkedIn, isGeneratingFromLinkedIn }) => {
   const [activeStep, setActiveStep] = useState(initialStep);
   const isMobile = useIsMobile();
 
@@ -84,6 +86,15 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
     }
   };
 
+  const handleGenerateFromLinkedInClick = () => {
+    const linkedInUrl = window.prompt("Por favor, insira a URL do perfil do LinkedIn:");
+    if (linkedInUrl) {
+        onGenerateFromLinkedIn(linkedInUrl, (generatedDescription) => {
+            onPersonaDataChange(prev => ({ ...prev, description: generatedDescription }));
+        });
+    }
+  };
+
 
   const InfoTooltip = ({ title, url }) => (<Tooltip title={<Typography variant="body2" sx={{ p: 1 }}>{title} {url && <MuiLink href={url} target="_blank" rel="noopener noreferrer" sx={{ color: 'cyan', display: 'block', mt: 1 }}>Saiba mais</MuiLink>}</Typography>}><IconButton><InfoOutlinedIcon sx={{ color: 'text.secondary', fontSize: '1rem' }} /></IconButton></Tooltip>);
 
@@ -91,9 +102,14 @@ export const PersonaWizardContent = ({ onSave, onClose, onGenerate, isGenerating
     switch (step) {
       case 0: return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <TextField name="description" label="Descrição da Persona" multiline rows={6} fullWidth value={personaData.description || ''} onChange={handleChange} placeholder="Ex: 'CTO de uma startup...'" disabled={isGeneratingPersona} />
+            <TextField name="description" label="Descrição da Persona" multiline rows={6} fullWidth value={personaData.description || ''} onChange={handleChange} placeholder="Ex: 'CTO de uma startup...'" disabled={isGeneratingPersona || isGeneratingFromLinkedIn} />
+            <Tooltip title="Gerar descrição com IA a partir de um perfil do LinkedIn">
+                <IconButton onClick={handleGenerateFromLinkedInClick} disabled={isGeneratingPersona || isGeneratingFromLinkedIn} color="primary">
+                    {isGeneratingFromLinkedIn ? <CircularProgress size={24} /> : <LinkedInIcon />}
+                </IconButton>
+            </Tooltip>
             <Tooltip title="Gerar persona com IA">
-                <IconButton onClick={handleGenerateClick} disabled={isGeneratingPersona || !personaData.description?.trim()} color="primary">
+                <IconButton onClick={handleGenerateClick} disabled={isGeneratingPersona || isGeneratingFromLinkedIn || !personaData.description?.trim()} color="primary">
                     {isGeneratingPersona ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
                 </IconButton>
             </Tooltip>
