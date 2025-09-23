@@ -30,8 +30,11 @@ import {
   AspectRatio,
   Image as ImageIcon,
   BrandingWatermark,
+  ContentCopy,
+  ContentPaste,
 } from '@mui/icons-material';
 import { useCampaign } from '../context/CampaignContext';
+import { copyStyleToClipboard, pasteStyleFromClipboard } from '../utils/styleClipboard';
 import BrandElementManager from './BrandElementManager';
 import ImageManager from './ImageManager';
 import TextFormatting from './formatting/TextFormatting';
@@ -211,9 +214,36 @@ const FormattingPanel = ({
 
   const isImageElement = isPageImage || isBrandElement;
 
+  const handleCopy = () => {
+    copyStyleToClipboard(fieldStyles, fieldPositions, brandElements, pageTemplate);
+  };
+
+  const handlePaste = () => {
+    pasteStyleFromClipboard(setFieldStyles, setFieldPositions, setBrandElements, setPageTemplate);
+  };
+
   return (
     <Card>
       <CardContent>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" component="div">
+            Formatação
+          </Typography>
+          <Box>
+            <Tooltip title="Copiar Estilo da Página">
+              <IconButton onClick={handleCopy} size="small">
+                <ContentCopy />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Colar Estilo na Página">
+              <IconButton onClick={handlePaste} size="small">
+                <ContentPaste />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+        <Divider sx={{ mb: 2 }} />
+
         {showImageLoaders && (
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
             <Button variant="contained" component="label" startIcon={<ImageIcon />} fullWidth>

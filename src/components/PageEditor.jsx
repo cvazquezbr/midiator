@@ -21,6 +21,7 @@ import { createNewImageElement } from '../utils/elementFactory';
 import { usePageData } from '../hooks/usePageData';
 import { useCampaign } from '../context/CampaignContext';
 import { safeDeepClone } from '../lib/utils';
+import { copyStyleToClipboard, pasteStyleFromClipboard } from '../utils/styleClipboard';
 import ColorThief from 'colorthief';
 
 const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
@@ -118,67 +119,16 @@ const PageEditor = ({
   };
 
   const handleCopyStyle = () => {
-    const styleData = {
-      styles: editedStyles,
-      positions: editedPositions,
-      brandElements: editedBrandElements,
-      pageTemplate: editedPageTemplate,
-    };
-
-    navigator.clipboard.writeText(JSON.stringify(styleData, null, 2))
-      .then(() => {
-        alert('Estilo copiado para a área de transferência!');
-      })
-      .catch(err => {
-        console.error('Erro ao copiar estilo: ', err);
-        alert('Erro ao copiar estilo. Verifique o console para mais detalhes.');
-      });
+    copyStyleToClipboard(editedStyles, editedPositions, editedBrandElements, editedPageTemplate);
   };
 
   const handlePasteStyle = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      const pastedData = JSON.parse(text);
-
-      // Basic validation
-      if (pastedData && pastedData.styles && pastedData.positions) {
-        // Merge styles and positions field by field
-        setEditedStyles(prevStyles => {
-          const newStyles = { ...prevStyles };
-          for (const field in pastedData.styles) {
-            if (Object.prototype.hasOwnProperty.call(newStyles, field)) {
-              newStyles[field] = pastedData.styles[field];
-            }
-          }
-          return newStyles;
-        });
-
-        setEditedPositions(prevPositions => {
-          const newPositions = { ...prevPositions };
-          for (const field in pastedData.positions) {
-            if (Object.prototype.hasOwnProperty.call(newPositions, field)) {
-              newPositions[field] = pastedData.positions[field];
-            }
-          }
-          return newPositions;
-        });
-
-        if (pastedData.brandElements) {
-          setEditedBrandElements(pastedData.brandElements);
-        }
-
-        if (pastedData.pageTemplate) {
-          setEditedPageTemplate(pastedData.pageTemplate);
-        }
-
-        alert('Estilo colado com sucesso!');
-      } else {
-        alert('Os dados da área de transferência não parecem ser um estilo válido.');
-      }
-    } catch (err) {
-      console.error('Erro ao colar estilo: ', err);
-      alert('Erro ao colar estilo. Verifique o console para mais detalhes.');
-    }
+    await pasteStyleFromClipboard(
+      setEditedStyles,
+      setEditedPositions,
+      setEditedBrandElements,
+      setEditedPageTemplate
+    );
   };
 
   const handleInternalFieldSelection = useCallback((fieldToSelect) => {
