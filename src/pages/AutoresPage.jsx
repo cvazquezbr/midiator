@@ -15,7 +15,7 @@ import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 import geminiAPI from '../utils/geminiAPI';
 
-const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected, onUpdate }) => {
+const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected, onUpdate, startInCreateMode, onAutorCreated, onCreationCancelled }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
@@ -53,11 +53,10 @@ const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected, o
   }, [selectedAutor, onNoAutorSelected]);
 
   useEffect(() => {
-    if (location.state?.createNew) {
+    if (startInCreateMode) {
       handleNewAutor();
-      navigate(location.pathname, { state: {}, replace: true });
     }
-  }, [location.state]);
+  }, [startInCreateMode]);
 
   const fetchAutores = async () => {
       setAutoresLoading(true);
@@ -106,8 +105,8 @@ const AutoresPage = ({ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected, o
 
         toast.success("Autor salvo com sucesso!");
 
-        if (isNewAutor && location.state?.from) {
-            navigate(location.state.from, { state: { newAutorId: saved.id }, replace: true });
+        if (isNewAutor && onAutorCreated) {
+            onAutorCreated(saved);
             return true;
         }
 
@@ -287,8 +286,12 @@ Retorne apenas um único objeto JSON.`;
                   isMobile ? (
                     <AutorWizard
                       key={selectedAutor.id || 'new'}
-                      open={Boolean(selectedAutor)}
-                      onClose={() => handleNavigation(() => setSelectedAutor(null))}
+                      onClose={() => handleNavigation(() => {
+                        if (startInCreateMode && onCreationCancelled) {
+                          onCreationCancelled();
+                        }
+                        setSelectedAutor(null);
+                      })}
                       onSave={handleSaveAutor}
                       onReset={handleNewAutor}
                       autorData={autorFormData}
@@ -302,7 +305,12 @@ Retorne apenas um único objeto JSON.`;
                       <AutorWizard
                         key={selectedAutor.id || 'new'}
                         open={Boolean(selectedAutor)}
-                        onClose={() => handleNavigation(() => setSelectedAutor(null))}
+                        onClose={() => handleNavigation(() => {
+                          if (startInCreateMode && onCreationCancelled) {
+                            onCreationCancelled();
+                          }
+                          setSelectedAutor(null);
+                        })}
                         onSave={handleSaveAutor}
                         onReset={handleNewAutor}
                         autorData={autorFormData}
