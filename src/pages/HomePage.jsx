@@ -1326,7 +1326,7 @@ function HomePage() {
             }
 
             // This entire block is now wrapped in the blob conversion logic
-            const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
+            const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
             const blob = dataURLtoBlob(base64Data);
             if (!blob) {
               throw new Error("Failed to convert generated image for page to a Blob.");
