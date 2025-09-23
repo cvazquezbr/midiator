@@ -77,8 +77,17 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
 }).join('');
 
 const extractColorPalette = (imageUrl, paletteSetter) => {
+  let finalImageUrl = imageUrl;
+  // Use proxy for Vercel Blob Storage URLs to avoid CORS issues with ColorThief
+  if (imageUrl && imageUrl.includes('blob.vercel-storage.com')) {
+    finalImageUrl = `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`;
+  }
+
   const img = new Image();
-  img.crossOrigin = 'Anonymous';
+  // When using the proxy, the image is same-origin, so we don't need crossOrigin.
+  if (!finalImageUrl.startsWith('/api/')) {
+    img.crossOrigin = 'Anonymous';
+  }
 
   const processImage = () => {
     try {
@@ -102,7 +111,7 @@ const extractColorPalette = (imageUrl, paletteSetter) => {
     paletteSetter([]);
   };
 
-  img.src = imageUrl;
+  img.src = finalImageUrl;
 
   // If the image is already cached and complete, the onload event might not fire.
   // In this case, we process it directly.
@@ -526,33 +535,11 @@ function HomePage() {
           };
           img.onerror = () => {
               setOriginalImageSize(DEFAULT_IMAGE_SIZE);
-              // On image error, try to fall back to campaign palette
-              let fallbackPalette = [];
-              const customPaletteColors = campaignData?.customPalette?.colors;
-              if (customPaletteColors && customPaletteColors.length > 0) {
-                  fallbackPalette = customPaletteColors.map(c => c.hex);
-              } else if (loadedCampaign.palette_id) {
-                  const selectedDbPalette = palettes.find(p => p.id === loadedCampaign.palette_id);
-                  if (selectedDbPalette?.colors) {
-                      fallbackPalette = selectedDbPalette.colors.map(c => c.hex);
-                  }
-              }
-              setImageColorPalette(fallbackPalette);
+              setImageColorPalette([]);
           };
           img.src = firstImageSrc;
       } else {
-          // Fallback to campaign palette if no image
-          let fallbackPalette = [];
-          const customPaletteColors = campaignData?.customPalette?.colors;
-          if (customPaletteColors && customPaletteColors.length > 0) {
-              fallbackPalette = customPaletteColors.map(c => c.hex);
-          } else if (loadedCampaign.palette_id) {
-              const selectedDbPalette = palettes.find(p => p.id === loadedCampaign.palette_id);
-              if (selectedDbPalette?.colors) {
-                  fallbackPalette = selectedDbPalette.colors.map(c => c.hex);
-              }
-          }
-          setImageColorPalette(fallbackPalette);
+          setImageColorPalette([]);
       }
       // --- END of Color Swatch Logic ---
 
