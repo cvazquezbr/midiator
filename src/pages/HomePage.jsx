@@ -175,6 +175,7 @@ function HomePage() {
   const [isProcessingAudio, setIsProcessingAudio] = useState(false);
   const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
+  const [initialSetupTab, setInitialSetupTab] = useState(0);
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
@@ -760,6 +761,7 @@ function HomePage() {
             updateSetting('linkedin', newConfig);
             await saveSettings();
             toast.success('Conexão com o LinkedIn estabelecida com sucesso!');
+            setInitialSetupTab(4);
             setShowSetupModal(true);
           } else {
             throw new Error(data.error_description || data.error || 'Falha na troca de token do LinkedIn.');
@@ -1742,7 +1744,7 @@ function HomePage() {
         onConfirmDiscard={handleDialogDiscard}
         onConfirmSave={handleDialogSaveAndNavigate}
       />
-      <SetupModal open={showSetupModal} onClose={() => setShowSetupModal(false)} />
+      <SetupModal open={showSetupModal} onClose={() => setShowSetupModal(false)} initialTab={initialSetupTab} />
       <SaveCampaignModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={handleSaveCampaign} campaignToEdit={currentCampaign} isSaving={isSaving} />
       <LoadCampaignModal open={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadCampaign} onEdit={(campaign) => { setCurrentCampaign(campaign); setShowSaveModal(true); }} />
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
