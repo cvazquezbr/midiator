@@ -1160,7 +1160,7 @@ function HomePage() {
       setGenerationStatus('');
     }
   };
-  const handleGenerateImage = useCallback(async (content, colors = []) => {
+  const handleGenerateImage = useCallback(async (content, palette = null) => {
     const finalContent = content || campaignContentRef.current;
     if (!finalContent) {
       toast.error("Por favor, gere o conteúdo do texto primeiro.");
@@ -1169,10 +1169,10 @@ function HomePage() {
     setIsGeneratingImage(true);
     try {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
-      const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor, colors });
+      const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor, palette });
 
       // 1. Get the raw base64 data from the generation service
-      const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors });
+      const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: palette?.colors || [] });
 
       // 2. Convert base64 to a Blob
       const blob = dataURLtoBlob(base64Data);
@@ -1326,7 +1326,7 @@ function HomePage() {
             }
 
             // This entire block is now wrapped in the blob conversion logic
-            const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio });
+            const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
             const blob = dataURLtoBlob(base64Data);
             if (!blob) {
               throw new Error("Failed to convert generated image for page to a Blob.");

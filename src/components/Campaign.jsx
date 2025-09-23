@@ -764,7 +764,7 @@ const Campaign = ({
                                                 const selectedPalette = paletteId === 'custom'
                                                     ? customPalette
                                                     : palettes.find(p => p.id === paletteId);
-                                                handleGenerateImage(campaignContent, selectedPalette?.colors || []);
+                                                handleGenerateImage(campaignContent, selectedPalette);
                                             }} disabled={isGeneratingImage || isSavingToDrive} startIcon={<GeminiIcon />} sx={{ ml: 1 }}>
                                                 {isGeneratingImage ? 'Gerando...' : 'Regerar Página'}
                                             </Button>
@@ -788,7 +788,7 @@ const Campaign = ({
                                             const selectedPalette = paletteId === 'custom'
                                                 ? customPalette
                                                 : palettes.find(p => p.id === paletteId);
-                                            handleGenerateImage(campaignContent, selectedPalette?.colors || []);
+                                            handleGenerateImage(campaignContent, selectedPalette);
                                         }}
                                         startIcon={<ImageIcon />}
                                         disabled={isGeneratingImage}
@@ -810,7 +810,7 @@ const Campaign = ({
                                             const selectedPalette = paletteId === 'custom'
                                                 ? customPalette
                                                 : palettes.find(p => p.id === paletteId);
-                                            handleGenerateImage(campaignContent, selectedPalette?.colors || []);
+                                            handleGenerateImage(campaignContent, selectedPalette);
                                         }}
                                         disabled={isGeneratingImage}
                                         startIcon={<ImageIcon />}

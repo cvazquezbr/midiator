@@ -167,7 +167,7 @@ export const generateCampaignContent = async ({ problema, solucao, objetivo, tom
 /**
  * Generates a prompt for the campaign image using an AI API.
  */
-export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor = null, colors = [] }) => {
+export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor = null, palette = null }) => {
     if (!content) {
         throw new Error("O conteúdo da campanha deve ser gerado primeiro.");
     }
@@ -179,8 +179,11 @@ export const generateCampaignImagePrompt = async ({ content, aspectRatio, autor 
 
     const autorString = formatObjectForPrompt(autor);
 
+    const colors = palette?.colors || [];
+    const justification = palette?.harmony_justification || 'N/A';
+
     const colorPalettePrompt = colors && colors.length > 0
-        ? `A imagem deve usar predominantemente a seguinte paleta de cores: ${colors.map(c => `${c.name} (${c.hex})`).join(', ')}. Justificativa da paleta: ${colors[0]?.palette_justification || 'N/A'}`
+        ? `A imagem deve usar predominantemente a seguinte paleta de cores: ${colors.map(c => `${c.name} (${c.hex})`).join(', ')}. Justificativa da paleta: ${justification}`
         : 'A paleta de cores é livre e deve ser escolhida pelo artista para melhor se adequar ao tema.';
 
     const promptTemplate = await getPrompt('generateCampaignImagePrompt');
