@@ -403,50 +403,65 @@ async function handleGetShareStatistics(fetch, request, response) {
         return response.status(400).json({ error: 'Missing accessToken, authorUrn, or shareUrns in payload.' });
     }
 
-    // Per documentation, this endpoint is for organizations and has different parameter formats
-    // for 'share' URNs vs 'ugcPost' URNs.
     const shareUrnsForApi = shareUrns.filter(u => u.includes(':share:'));
-    // Treat carousels as ugcPosts for this endpoint.
     const ugcPostUrnsForApi = shareUrns.filter(u => u.includes(':ugcPost:') || u.includes(':carousel:'));
 
-    const queryParams = [];
+    const fetchPromises = [];
+    const baseUrl = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}`;
+
+    const headers = {
+        'Authorization': `Bearer ${accessToken}`,
+        'X-Restli-Protocol-Version': '2.0.0',
+        'LinkedIn-Version': LINKEDIN_API_VERSION
+    };
+
+    // Create a fetch promise for share URNs if they exist
     if (shareUrnsForApi.length > 0) {
-        queryParams.push(`shares=List(${shareUrnsForApi.map(urn => encodeURIComponent(urn)).join(',')})`);
-    }
-    if (ugcPostUrnsForApi.length > 0) {
-        ugcPostUrnsForApi.forEach((urn, index) => {
-            queryParams.push(`ugcPosts[${index}]=${encodeURIComponent(urn)}`);
-        });
+        const sharesQueryParam = `shares=List(${shareUrnsForApi.map(urn => encodeURIComponent(urn)).join(',')})`;
+        const url = `${baseUrl}&${sharesQueryParam}`;
+        fetchPromises.push(fetchWithRetry(fetch, url, { method: 'GET', headers }));
     }
 
-    if (queryParams.length === 0) {
+    // Create a fetch promise for UGC post URNs if they exist
+    if (ugcPostUrnsForApi.length > 0) {
+        const ugcPostsQueryParam = ugcPostUrnsForApi.map((urn, index) => `ugcPosts[${index}]=${encodeURIComponent(urn)}`).join('&');
+        const url = `${baseUrl}&${ugcPostsQueryParam}`;
+        fetchPromises.push(fetchWithRetry(fetch, url, { method: 'GET', headers }));
+    }
+
+    if (fetchPromises.length === 0) {
         return response.status(200).json({ elements: [] }); // Nothing to fetch
     }
 
-    const url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}&${queryParams.join('&')}`;
-
     try {
-        const linkedinResponse = await fetchWithRetry(fetch, url, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'X-Restli-Protocol-Version': '2.0.0',
-                'LinkedIn-Version': LINKEDIN_API_VERSION
-            },
-        });
+        const responses = await Promise.all(fetchPromises);
+        let allElements = [];
+        let firstError = null;
 
-        const data = await linkedinResponse.json();
-
-        if (linkedinResponse.ok) {
-            return response.status(200).json(data);
-        } else {
-            console.error(`[ERROR] LinkedIn Stats API responded with status ${linkedinResponse.status} for author ${authorUrn}:`, data);
-            return response.status(linkedinResponse.status).json(data);
+        for (const res of responses) {
+            const data = await res.json();
+            if (res.ok) {
+                if (data.elements) {
+                    allElements = allElements.concat(data.elements);
+                }
+            } else {
+                console.error(`[ERROR] LinkedIn Stats API responded with status ${res.status} for author ${authorUrn}:`, data);
+                if (!firstError) {
+                    firstError = { status: res.status, data };
+                }
+            }
         }
+
+        if (firstError && allElements.length === 0) {
+             return response.status(firstError.status).json(firstError.data);
+        }
+
+        return response.status(200).json({ elements: allElements });
+
     } catch (error) {
-        console.error(`[FATAL] Error during GET to ${url}:`, error.message, error.stack);
+        console.error(`[FATAL] Error during handleGetShareStatistics:`, error.message, error.stack);
         return response.status(500).json({
-            error: `Internal Server Error during GET to ${url}`,
+            error: `Internal Server Error during GET to organizationalEntityShareStatistics`,
             details: error.message,
         });
     }
