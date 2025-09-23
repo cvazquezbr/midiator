@@ -384,6 +384,10 @@ export const generateFollowupPosts = async ({ content, plan, persona = null, aut
           throw new Error(`O conteúdo gerado tem ${conteudo_post.length} caracteres, mas o mínimo é ${MIN_CONTENT_LENGTH}.`);
         }
 
+        const campaignHashtags = content.hashtags || [];
+        const suggestedHashtags = postPlan.hashtags_sugeridas || [];
+        const combinedHashtags = [...new Set([...campaignHashtags, ...suggestedHashtags])];
+
         generatedPosts.push({
           post_numero: postPlan.post_numero,
           tipo_gancho: postPlan.tipo_gancho,
@@ -391,7 +395,7 @@ export const generateFollowupPosts = async ({ content, plan, persona = null, aut
           titulo: titulo_post,
           conteudo: conteudo_post,
           cta: postPlan.cta_sugerido,
-          hashtags_sugeridas: postPlan.hashtags_sugeridas || [],
+          hashtags_sugeridas: combinedHashtags,
         });
 
         console.log(`Post de follow-up #${postPlan.post_numero} gerado com sucesso na tentativa ${attempt}.`);

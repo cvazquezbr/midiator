@@ -1269,7 +1269,12 @@ function HomePage() {
         persona: finalPersona,
         autor: finalAutor,
       });
-      const newPosts = await generateFollowupPosts({ content, plan, persona: finalPersona, autor: finalAutor });
+      const newPosts = await generateFollowupPosts({
+        content,
+        plan,
+        persona: finalPersona,
+        autor: finalAutor,
+      });
       setFollowupPosts(prevPosts => [...prevPosts, ...newPosts]);
     } catch (error) {
       toast.error(`Ocorreu um erro ao gerar os posts de follow-up: ${error.message}`);
