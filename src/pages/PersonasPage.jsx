@@ -65,6 +65,15 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
     }
   }, [selectedPersona, onNoPersonaSelected]);
 
+  useEffect(() => {
+    // If the user was routed from another page with the intent to create a new persona
+    if (location.state?.createNew) {
+      handleNewPersona();
+      // Clean the state to prevent this from re-triggering on refresh
+      navigate(location.pathname, { state: {}, replace: true });
+    }
+  }, [location.state]);
+
   /**
    * Fetches the list of personas from the API and updates the state.
    */
