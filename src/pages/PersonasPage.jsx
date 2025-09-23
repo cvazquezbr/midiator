@@ -315,6 +315,7 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
                   isMobile ? (
                     <PersonaWizard
                       key={selectedPersona.id || 'new'}
+                      open={Boolean(selectedPersona)}
                       onClose={() => handleNavigation(() => {
                         if (startInCreateMode && onCreationCancelled) {
                           onCreationCancelled();
