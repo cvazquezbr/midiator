@@ -58,11 +58,11 @@ export const SettingsProvider = ({ children }) => {
     loadSettings();
   }, [user, loadSettings]);
 
-  const updateSetting = (key, value) => {
+  const updateSetting = useCallback((key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
-  };
+  }, []);
 
-  const saveSettings = async () => {
+  const saveSettings = useCallback(async () => {
     setIsLoading(true);
     try {
       // The single source of truth is the `settings` state in this context.
@@ -74,7 +74,7 @@ export const SettingsProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [settings]);
 
   const value = {
     settings,
