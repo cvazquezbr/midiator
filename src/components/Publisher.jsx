@@ -59,7 +59,6 @@ import { publishToWordPress } from '../utils/wordpressAPI';
 import { dataURLtoBlob, urlToBlob } from '../utils/imageComposer';
 import { markdownToLinkedinText } from '../lib/utils';
 import { getLinkedInProfiles, publishToLinkedIn, uploadImagesForLinkedIn, uploadVideoForLinkedIn } from '../utils/linkedinAPI';
-import { useUserAuth } from '../context/UserAuthContext';
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
 import { getCampaigns } from '../utils/campaignState.js';
 import ConfirmationModal from './ui/ConfirmationModal/ConfirmationModal';
@@ -117,13 +116,14 @@ const Publisher = ({
   const [publishResults, setPublishResults] = useState([]);
   const [content, setContent] = useState('');
   const [contentSize, setContentSize] = useState('grande');
-  const [characterLimit, setCharacterLimit] = useState(3000);
   const [unifiedMedia, setUnifiedMedia] = useState([]);
   const [previewedMedia, setPreviewedMedia] = useState(null);
   const [schedulePreview, setSchedulePreview] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
 
+  const characterLimit = 3000;
+  
   const uploadPendingAssets = async (imageUrls) => {
     const urlMap = {};
     const uploadsToProcess = [];
