@@ -276,7 +276,6 @@ function HomePage() {
 
     setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
     setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
-    setImageColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
     setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
     const sanitizedPagesData = (Array.isArray(state.generatedPagesData) ? state.generatedPagesData : [])
       .filter(page => {
@@ -348,6 +347,9 @@ function HomePage() {
             setImageColorPalette([]);
         };
         img.src = firstImageSrc;
+    } else {
+        const campaignPalette = state.customPalette?.colors?.map(c => c.hex) || [];
+        setImageColorPalette(campaignPalette);
     }
 
     setProblema(state.problema ?? '');
