@@ -152,7 +152,7 @@ function HomePage() {
   const [isGeneratingConteudoFormatado, setIsGeneratingConteudoFormatado] = useState(false);
   const [followupPosts, setFollowupPosts] = useState([]);
   const [isGeneratingFollowup, setIsGeneratingFollowup] = useState(false);
-  const [followupPostsQuantity, setFollowupPostsQuantity] = useState(5);
+  const [followupPostsQuantity, setFollowupPostsQuantity] = useState(10);
   const [editingFollowup, setEditingFollowup] = useState(null);
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
@@ -161,7 +161,7 @@ function HomePage() {
   const [selectedImages, setSelectedImages] = useState({});
   const [selectedVideos, setSelectedVideos] = useState({});
   const [inputMethod, setInputMethod] = useState('ia');
-  const [promptNumRecords, setPromptNumRecords] = useState(5);
+  const [promptNumRecords, setPromptNumRecords] = useState(10);
   const [promptText, setPromptText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -361,7 +361,7 @@ function HomePage() {
     setCampaignContent(state.campaignContent ?? null);
     setAspectRatio(state.aspectRatio ?? '1:1');
     setGeneratedPageUrl(state.generatedPageUrl ?? null);
-    setFollowupPostsQuantity(state.followupPostsQuantity ?? 5);
+    setFollowupPostsQuantity(state.followupPostsQuantity ?? 10);
     setIsScheduled(state.isScheduled ?? false);
     setScheduleDate(state.scheduleDate ? new Date(state.scheduleDate) : new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
     setWeeklySchedule(state.weeklySchedule ?? {});
@@ -369,8 +369,8 @@ function HomePage() {
     setSelectedImages(state.selectedImages ?? {});
     setSelectedVideos(state.selectedVideos ?? {});
     setInputMethod(state.inputMethod ?? 'ia');
-    // Default to 5, which matches the slider's max value in PostsCurtosStep.
-    setPromptNumRecords(state.promptNumRecords ?? 5);
+    // Default to 10, which matches the slider's max value in PostsCurtosStep.
+    setPromptNumRecords(state.promptNumRecords ?? 10);
     setPromptText(state.promptText ?? '');
     setFieldPositions(state.fieldPositions ?? {});
     setTemplateFieldStyles(state.templateFieldStyles ?? {});
@@ -1282,7 +1282,7 @@ function HomePage() {
     setCampaignContent(null);
     setGeneratedPageUrl(null);
     setFollowupPosts([]);
-    setFollowupPostsQuantity(5);
+    setFollowupPostsQuantity(10);
   };
   const handleEditFollowup = (index, content) => { setEditingFollowup({ index, content }); };
   const handleSaveFollowup = (newContent) => { if (editingFollowup === null) return; const updatedPosts = followupPosts.map((post, index) => { if (index === editingFollowup.index) { return { ...post, conteudo: newContent }; } return post; }); setFollowupPosts(updatedPosts); setEditingFollowup(null); };
