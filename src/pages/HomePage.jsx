@@ -186,6 +186,8 @@ function HomePage() {
 
   const [selectedPersonaForCampaign, setSelectedPersonaForCampaign] = useState('');
   const [selectedAutorForCampaign, setSelectedAutorForCampaign] = useState('');
+  const [startAutoresInCreate, setStartAutoresInCreate] = useState(false);
+  const [startPersonasInCreate, setStartPersonasInCreate] = useState(false);
 
   // State for unsaved changes guard
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -229,6 +231,41 @@ function HomePage() {
         // }
         setNavigationTarget(null);
     };
+
+  const handleRequestNewAutor = () => {
+    setStartAutoresInCreate(true);
+    setCurrentView('autores');
+  };
+
+  const handleRequestNewPersona = () => {
+    setStartPersonasInCreate(true);
+    setCurrentView('personas');
+  };
+
+  const handleCreationDone = (view) => {
+    if (view === 'autores') {
+      setStartAutoresInCreate(false);
+    } else if (view === 'personas') {
+      setStartPersonasInCreate(false);
+    }
+    setCurrentView('campaigns');
+  };
+
+  const handleAutorCreated = (newAutor) => {
+    if (newAutor && newAutor.id) {
+        setSelectedAutorForCampaign(newAutor.id);
+    }
+    setStartAutoresInCreate(false);
+    setCurrentView('campaigns');
+  };
+
+  const handlePersonaCreated = (newPersona) => {
+    if (newPersona && newPersona.id) {
+        setSelectedPersonaForCampaign(newPersona.id);
+    }
+    setStartPersonasInCreate(false);
+    setCurrentView('campaigns');
+  };
 
 
   const applyAppState = (state) => {
@@ -1521,6 +1558,8 @@ function HomePage() {
                       selectedPersonaForCampaign={selectedPersonaForCampaign}
                       setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
                       palettes={palettes}
+                      onRequestNewAutor={handleRequestNewAutor}
+                      onRequestNewPersona={handleRequestNewPersona}
                     />
                   </Container>
                 )}
@@ -1685,8 +1724,8 @@ function HomePage() {
                 </Box>
               </>
             )}
-            {currentView === 'personas' && <PersonasPage personaDrawerOpen={personaDrawerOpen} setPersonaDrawerOpen={setPersonaDrawerOpen} onNoPersonaSelected={() => setPersonaDrawerOpen(true)} onUpdate={fetchPersonasForCampaign} />}
-            {currentView === 'autores' && <AutoresPage autorDrawerOpen={autorDrawerOpen} setAutorDrawerOpen={setAutorDrawerOpen} onNoAutorSelected={() => setAutorDrawerOpen(true)} onUpdate={fetchAutoresForCampaign} />}
+            {currentView === 'personas' && <PersonasPage personaDrawerOpen={personaDrawerOpen} setPersonaDrawerOpen={setPersonaDrawerOpen} onNoPersonaSelected={() => setPersonaDrawerOpen(true)} onUpdate={fetchPersonasForCampaign} startInCreateMode={startPersonasInCreate} onPersonaCreated={handlePersonaCreated} onCreationCancelled={() => handleCreationDone('personas')} />}
+            {currentView === 'autores' && <AutoresPage autorDrawerOpen={autorDrawerOpen} setAutorDrawerOpen={setAutorDrawerOpen} onNoAutorSelected={() => setAutorDrawerOpen(true)} onUpdate={fetchAutoresForCampaign} startInCreateMode={startAutoresInCreate} onAutorCreated={handleAutorCreated} onCreationCancelled={() => handleCreationDone('autores')} />}
             {currentView === 'palettes' && <PalettesPage paletteDrawerOpen={paletteDrawerOpen} setPaletteDrawerOpen={setPaletteDrawerOpen} onNoPaletteSelected={() => setPaletteDrawerOpen(true)} />}
         </Box>
       </Box>

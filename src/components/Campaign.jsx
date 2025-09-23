@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Card,
   CardContent,
@@ -47,6 +46,7 @@ import {
     Save as SaveIcon,
     Add as AddIcon,
 } from '@mui/icons-material';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const problemaHint = (
     <Box sx={{ p: 2, maxWidth: 500 }}>
@@ -197,6 +197,8 @@ const Campaign = ({
     selectedPersonaForCampaign,
     setSelectedPersonaForCampaign,
     palettes,
+    onRequestNewAutor,
+    onRequestNewPersona,
 }) => {
     useSettings();
     const {
@@ -205,8 +207,6 @@ const Campaign = ({
         customPalette,
         setCustomPalette,
     } = useCampaignContext();
-    const navigate = useNavigate();
-    const location = useLocation();
     const problemaRef = useRef(null);
 
     const [activeTab, setActiveTab] = useState(0);
@@ -237,20 +237,10 @@ const Campaign = ({
     const prevCampaignContent = prevCampaignContentRef.current;
 
     useEffect(() => {
-        if (location.state?.newAutorId || location.state?.newPersonaId) {
-            if (location.state.newAutorId) {
-                setSelectedAutorForCampaign(location.state.newAutorId);
-            }
-            if (location.state.newPersonaId) {
-                setSelectedPersonaForCampaign(location.state.newPersonaId);
-            }
-            if (problemaRef.current) {
-                problemaRef.current.focus();
-            }
-            // Limpa o estado para evitar re-acionamento
-            navigate(location.pathname, { state: {}, replace: true });
+        if (problemaRef.current) {
+            problemaRef.current.focus();
         }
-    }, [location.state, setSelectedAutorForCampaign, setSelectedPersonaForCampaign, navigate, location.pathname]);
+    }, []);
 
     useEffect(() => {
         if (campaignContent && !prevCampaignContent && !isGeneratingCampaign) {
@@ -426,7 +416,7 @@ const Campaign = ({
                                 <Tooltip title="Adicionar nova persona">
                                     <IconButton
                                         color="primary"
-                                        onClick={() => navigate('/personas', { state: { createNew: true, from: location.pathname } })}
+                                        onClick={onRequestNewPersona}
                                         disabled={campaignContent !== null}
                                     >
                                         <AddIcon />
@@ -480,7 +470,7 @@ const Campaign = ({
                                         <Tooltip title="Adicionar novo autor">
                                             <IconButton
                                                 color="primary"
-                                                onClick={() => navigate('/autores', { state: { createNew: true, from: location.pathname } })}
+                                                onClick={onRequestNewAutor}
                                                 disabled={campaignContent !== null}
                                             >
                                                 <AddIcon />

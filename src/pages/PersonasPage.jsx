@@ -23,7 +23,7 @@ import geminiAPI from '../utils/geminiAPI';
  * where the `PersonaWizard` is displayed. The component is self-contained and handles
  * all its state and API interactions.
  */
-const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected, onUpdate }) => {
+const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected, onUpdate, startInCreateMode, onPersonaCreated, onCreationCancelled }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
@@ -66,13 +66,10 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
   }, [selectedPersona, onNoPersonaSelected]);
 
   useEffect(() => {
-    // If the user was routed from another page with the intent to create a new persona
-    if (location.state?.createNew) {
+    if (startInCreateMode) {
       handleNewPersona();
-      // Clean the state to prevent this from re-triggering on refresh
-      navigate(location.pathname, { state: {}, replace: true });
     }
-  }, [location.state]);
+  }, [startInCreateMode]);
 
   /**
    * Fetches the list of personas from the API and updates the state.
@@ -135,8 +132,8 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
 
         toast.success("Persona salva com sucesso!");
 
-        if (isNewPersona && location.state?.from) {
-            navigate(location.state.from, { state: { newPersonaId: saved.id }, replace: true });
+        if (isNewPersona && onPersonaCreated) {
+            onPersonaCreated(saved);
             return true;
         }
 
@@ -318,8 +315,12 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
                   isMobile ? (
                     <PersonaWizard
                       key={selectedPersona.id || 'new'}
-                      open={Boolean(selectedPersona)}
-                      onClose={() => handleNavigation(() => setSelectedPersona(null))}
+                      onClose={() => handleNavigation(() => {
+                        if (startInCreateMode && onCreationCancelled) {
+                          onCreationCancelled();
+                        }
+                        setSelectedPersona(null);
+                      })}
                       onSave={handleSavePersona}
                       onReset={handleNewPersona}
                       personaData={personaFormData}
@@ -333,7 +334,12 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
                       <PersonaWizard
                         key={selectedPersona.id || 'new'}
                         open={Boolean(selectedPersona)}
-                        onClose={() => handleNavigation(() => setSelectedPersona(null))}
+                        onClose={() => handleNavigation(() => {
+                            if (startInCreateMode && onCreationCancelled) {
+                                onCreationCancelled();
+                            }
+                            setSelectedPersona(null);
+                        })}
                         onSave={handleSavePersona}
                         onReset={handleNewPersona}
                         personaData={personaFormData}
