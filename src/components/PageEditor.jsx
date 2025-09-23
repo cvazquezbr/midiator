@@ -21,6 +21,52 @@ import { createNewImageElement } from '../utils/elementFactory';
 import { usePageData } from '../hooks/usePageData';
 import { useCampaign } from '../context/CampaignContext';
 import { safeDeepClone } from '../lib/utils';
+import ColorThief from 'colorthief';
+
+const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
+  const hex = x.toString(16);
+  return hex.length === 1 ? '0' + hex : hex;
+}).join('');
+
+const extractColorPalette = (imageUrl, paletteSetter) => {
+  let finalImageUrl = imageUrl;
+  if (imageUrl && imageUrl.includes('blob.vercel-storage.com')) {
+    finalImageUrl = `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`;
+  }
+
+  const img = new Image();
+  if (!finalImageUrl.startsWith('/api/')) {
+    img.crossOrigin = 'Anonymous';
+  }
+
+  const processImage = () => {
+    try {
+      const colorThief = new ColorThief();
+      const palette = colorThief.getPalette(img, 5);
+      if (palette) {
+        const hexPalette = palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2]));
+        paletteSetter(hexPalette);
+      } else {
+        paletteSetter([]);
+      }
+    } catch (error) {
+      console.error("Error extracting color palette:", error);
+      paletteSetter([]);
+    }
+  };
+
+  img.onload = processImage;
+  img.onerror = (err) => {
+    console.error("Error loading image for color extraction:", err);
+    paletteSetter([]);
+  };
+  img.src = finalImageUrl;
+
+  if (img.complete) {
+    processImage();
+  }
+};
+
 
 const COMPLETE_DEFAULT_STYLE = {
   fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
@@ -54,7 +100,18 @@ const PageEditor = ({
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
+  const [imageSwatches, setImageSwatches] = useState([]);
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    const firstImage = editedPageTemplate?.images?.[0];
+    if (firstImage?.src) {
+      extractColorPalette(firstImage.src, setImageSwatches);
+    } else {
+      // Fallback to the campaign palette if no image in the editor
+      setImageSwatches(colorPalette || []);
+    }
+  }, [editedPageTemplate?.images?.[0]?.src, colorPalette]);
 
   const handleOpenHtmlEditor = (fieldId) => {
     setEditingField(fieldId);
@@ -232,7 +289,7 @@ const PageEditor = ({
               fieldStyles={editedStyles}
               setFieldStyles={setEditedStyles}
               csvData={editorCsvData}
-              colorPalette={colorPalette}
+              colorPalette={imageSwatches}
               selectedField={selectedFieldInternal}
               setSelectedField={handleInternalFieldSelection}
               onCsvDataUpdate={handleFieldPositionerCsvDataUpdate}
