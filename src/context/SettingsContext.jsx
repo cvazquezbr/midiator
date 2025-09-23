@@ -4,7 +4,6 @@ import { useUserAuth } from './UserAuthContext';
 import {
   loadSettingsFromDb,
   saveSettingsToDb,
-  saveSetting,
   gatherCredentials,
 } from '../utils/credentialsManager';
 
@@ -34,8 +33,15 @@ export const SettingsProvider = ({ children }) => {
     setIsLoading(true);
     try {
       console.log('User is authenticated, loading settings from database...');
-      const loadedSettings = await loadSettingsFromDb();
-      setSettings(loadedSettings || {});
+      // loadSettingsFromDb applies the DB settings to localStorage.
+      const dbSettings = await loadSettingsFromDb();
+      // gatherCredentials reads all settings from localStorage.
+      const allSettings = gatherCredentials();
+
+      // We merge them to ensure the context has the full picture.
+      // The settings from the database (dbSettings) should take precedence
+      // in case of any overlap, as they are the persisted truth.
+      setSettings({ ...allSettings, ...dbSettings });
     } catch (error) {
       // Avoid showing an error toast if the user just hasn't saved any settings yet.
       // The API should return a 404 or empty object in that case, which is handled above.
@@ -53,27 +59,14 @@ export const SettingsProvider = ({ children }) => {
   }, [user, loadSettings]);
 
   const updateSetting = (key, value) => {
-    // First, persist the change to localStorage to ensure UI consistency
-    // for components that might read directly from it.
-    saveSetting(key, value);
-
-    // Then, update the context's state.
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
   const saveSettings = async () => {
     setIsLoading(true);
     try {
-      // Gather all settings from localStorage to ensure we have the latest values,
-      // especially from parts of the app that might not use the context.
-      const settingsToSave = gatherCredentials();
-
-      // We pass the up-to-date settings object to the DB.
-      await saveSettingsToDb(settingsToSave);
-
-      // Also, update the local context state to be in sync with what was saved.
-      setSettings(settingsToSave);
-
+      // The single source of truth is the `settings` state in this context.
+      await saveSettingsToDb(settings);
       toast.success('Settings saved successfully!');
     } catch (error) {
       toast.error(`Failed to save settings: ${error.message}`);
