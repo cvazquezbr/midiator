@@ -76,8 +76,6 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
   return hex.length === 1 ? '0' + hex : hex;
 }).join('');
 
-// This function is now defined inside the useEffect where it's used.
-
 import { createNewImageElement } from '../utils/elementFactory.js';
 
 const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
@@ -1567,7 +1565,6 @@ function HomePage() {
                     initialFieldStyles={initialFieldStyles}
                     onImageDisplayedSizeChange={setDisplayedImageSize}
                     colorPalette={memorialColors}
-                    imagePalette={imageColorPalette}
                     onCsvDataUpdate={handleCsvRecordContentUpdate}
                     originalImageSize={originalImageSize}
                     onZIndexChange={handleZIndexChange}
