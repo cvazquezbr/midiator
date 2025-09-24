@@ -48,13 +48,13 @@ const Overview = ({ data, loading }) => {
   } = data || {};
 
   const stats = [
-    { title: "Total de Impressões", value: total_impressions.toLocaleString('pt-BR'), icon: <Visibility fontSize="large" />, loading },
-    { title: "Total de Cliques", value: total_clicks.toLocaleString('pt-BR'), icon: <AdsClick fontSize="large" />, loading },
-    { title: "Total de Likes", value: total_likes.toLocaleString('pt-BR'), icon: <ThumbUp fontSize="large" />, loading },
-    { title: "Total de Comentários", value: total_comments.toLocaleString('pt-BR'), icon: <Comment fontSize="large" />, loading },
-    { title: "Total de Compartilhamentos", value: total_shares.toLocaleString('pt-BR'), icon: <Share fontSize="large" />, loading },
-    { title: "Taxa Média de Engajamento", value: `${(avg_engagement_rate * 100).toFixed(2)}%`, icon: <TrendingUp fontSize="large" />, loading },
-    { title: "CTR Médio", value: `${avg_ctr.toFixed(2)}%`, icon: <Percent fontSize="large" />, loading },
+    { title: "Total de Impressões", value: (total_impressions || 0).toLocaleString('pt-BR'), icon: <Visibility fontSize="large" />, loading },
+    { title: "Total de Cliques", value: (total_clicks || 0).toLocaleString('pt-BR'), icon: <AdsClick fontSize="large" />, loading },
+    { title: "Total de Likes", value: (total_likes || 0).toLocaleString('pt-BR'), icon: <ThumbUp fontSize="large" />, loading },
+    { title: "Total de Comentários", value: (total_comments || 0).toLocaleString('pt-BR'), icon: <Comment fontSize="large" />, loading },
+    { title: "Total de Compartilhamentos", value: (total_shares || 0).toLocaleString('pt-BR'), icon: <Share fontSize="large" />, loading },
+    { title: "Taxa Média de Engajamento", value: `${((avg_engagement_rate || 0) * 100).toFixed(2)}%`, icon: <TrendingUp fontSize="large" />, loading },
+    { title: "CTR Médio", value: `${(avg_ctr || 0).toFixed(2)}%`, icon: <Percent fontSize="large" />, loading },
   ];
 
   return (
