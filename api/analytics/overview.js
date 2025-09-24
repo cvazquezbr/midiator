@@ -28,34 +28,32 @@ const handler = async (req, res) => {
         }
 
         const finalQuery = `
-            WITH latest_analytics AS (
-                SELECT
-                    lpa.*,
-                    ls.campaign_id,
-                    ROW_NUMBER() OVER(PARTITION BY lpa.publication_id ORDER BY lpa.snapshot_date DESC) as rn
+            WITH latest_snapshots AS (
+                SELECT DISTINCT ON (lpa.publication_id)
+                    lpa.*
                 FROM
                     linkedin_post_analytics lpa
-                JOIN
-                    linkedin_schedules ls ON lpa.publication_id = ls.id
-                WHERE
-                    ls.user_id = $1
-                    AND lpa.snapshot_date BETWEEN $2 AND $3
+                ORDER BY
+                    lpa.publication_id, lpa.snapshot_date DESC
             )
             SELECT
-                COALESCE(SUM(la.impression_count), 0) AS total_impressions,
-                COALESCE(SUM(la.click_count), 0) AS total_clicks,
-                COALESCE(SUM(la.like_count), 0) AS total_likes,
-                COALESCE(SUM(la.comment_count), 0) AS total_comments,
-                COALESCE(SUM(la.share_count), 0) AS total_shares,
-                COALESCE(SUM(la.like_count + la.comment_count + la.share_count), 0) as total_engagement_actions,
-                COALESCE(AVG(la.engagement), 0) AS avg_engagement_rate,
-                COALESCE(SUM(la.click_count) * 100.0 / NULLIF(SUM(la.impression_count), 0), 0) AS avg_ctr
+                COALESCE(SUM(lsnp.impression_count), 0) AS total_impressions,
+                COALESCE(SUM(lsnp.click_count), 0) AS total_clicks,
+                COALESCE(SUM(lsnp.like_count), 0) AS total_likes,
+                COALESCE(SUM(lsnp.comment_count), 0) AS total_comments,
+                COALESCE(SUM(lsnp.share_count), 0) AS total_shares,
+                COALESCE(SUM(lsnp.like_count + lsnp.comment_count + lsnp.share_count), 0) as total_engagement_actions,
+                COALESCE(AVG(lsnp.engagement), 0) AS avg_engagement_rate,
+                COALESCE(SUM(lsnp.click_count) * 100.0 / NULLIF(SUM(lsnp.impression_count), 0), 0) AS avg_ctr
             FROM
-                latest_analytics la
+                linkedin_schedules ls
+            JOIN
+                latest_snapshots lsnp ON ls.id = lsnp.publication_id
             LEFT JOIN
-                campaigns c ON la.campaign_id = c.id
+                campaigns c ON ls.campaign_id = c.id
             WHERE
-                la.rn = 1
+                ls.user_id = $1
+                AND lsnp.snapshot_date BETWEEN $2 AND $3
                 ${campaignFilter}
         `;
 
