@@ -1,5 +1,5 @@
 import { query } from '../../db.js';
-import { authenticate } from '../../middleware/auth.js';
+import { withAuth } from '../../middleware/auth.js';
 
 const ALLOWED_METRICS = {
     total_impressions: 'SUM(lpa.impression_count)',
@@ -84,4 +84,4 @@ const handler = async (req, res) => {
     }
 };
 
-export default authenticate(handler);
+export default withAuth(handler);

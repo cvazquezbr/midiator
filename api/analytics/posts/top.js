@@ -1,5 +1,5 @@
 import { query } from '../../db.js';
-import { authenticate } from '../../middleware/auth.js';
+import { withAuth } from '../../middleware/auth.js';
 
 // We are aggregating over the snapshots, so we use SUM for counts/rates
 const ALLOWED_METRICS = {
@@ -93,4 +93,4 @@ const handler = async (req, res) => {
     }
 };
 
-export default authenticate(handler);
+export default withAuth(handler);

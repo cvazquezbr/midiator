@@ -1,5 +1,5 @@
 import { query } from '../db.js';
-import { authenticate } from '../middleware/auth.js';
+import { withAuth } from '../middleware/auth.js';
 
 const handler = async (req, res) => {
     if (req.method !== 'GET') {
@@ -92,4 +92,4 @@ const handler = async (req, res) => {
     }
 };
 
-export default authenticate(handler);
+export default withAuth(handler);
