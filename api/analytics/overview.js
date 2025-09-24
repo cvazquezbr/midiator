@@ -19,13 +19,13 @@ const handler = async (req, res) => {
         const formattedStartDate = new Date(startDate).toISOString().split('T')[0];
         const formattedEndDate = new Date(endDate).toISOString().split('T')[0];
 
-        const queryParams = [userId, formattedStartDate, formattedEndDate];
+        const queryParams = [userId];
 
         let campaignFilter = '';
-        if (campaignIdArray.length > 0) {
-            campaignFilter = `AND c.id = ANY($${queryParams.length + 1}::int[])`;
-            queryParams.push(campaignIdArray);
-        }
+        // if (campaignIdArray.length > 0) {
+        //     campaignFilter = `AND c.id = ANY($${queryParams.length + 1}::int[])`;
+        //     queryParams.push(campaignIdArray);
+        // }
 
         const finalQuery = `
             WITH latest_analytics AS (
@@ -39,7 +39,7 @@ const handler = async (req, res) => {
                     linkedin_schedules ls ON lpa.publication_id = ls.id
                 WHERE
                     ls.user_id = $1
-                    AND lpa.snapshot_date BETWEEN $2 AND $3
+                    -- AND lpa.snapshot_date BETWEEN $2 AND $3
             )
             SELECT
                 COALESCE(SUM(la.impression_count), 0) AS total_impressions,

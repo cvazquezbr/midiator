@@ -38,13 +38,13 @@ const handler = async (req, res) => {
         const formattedStartDate = new Date(startDate).toISOString().split('T')[0];
         const formattedEndDate = new Date(endDate).toISOString().split('T')[0];
 
-        const queryParams = [userId, formattedStartDate, formattedEndDate];
+        const queryParams = [userId];
 
         let campaignFilter = '';
-        if (campaignIdArray.length > 0) {
-            campaignFilter = `AND c.id = ANY($${queryParams.length + 1}::int[])`;
-            queryParams.push(campaignIdArray);
-        }
+        // if (campaignIdArray.length > 0) {
+        //     campaignFilter = `AND c.id = ANY($${queryParams.length + 1}::int[])`;
+        //     queryParams.push(campaignIdArray);
+        // }
 
         const metricAggregation = ALLOWED_METRICS[metric];
 
@@ -55,8 +55,8 @@ const handler = async (req, res) => {
                     ROW_NUMBER() OVER(PARTITION BY lpa.publication_id ORDER BY lpa.snapshot_date DESC) as rn
                 FROM
                     linkedin_post_analytics lpa
-                WHERE
-                    lpa.snapshot_date BETWEEN $2 AND $3
+                -- WHERE
+                    -- lpa.snapshot_date BETWEEN $2 AND $3
             )
             SELECT
                 ls.id AS post_id,
