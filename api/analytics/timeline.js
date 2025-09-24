@@ -34,16 +34,14 @@ const handler = async (req, res) => {
         const startDate = startDateStr ? new Date(startDateStr) : new Date(new Date().setDate(endDate.getDate() - 30));
 
         const queryParams = [
-            userId,
-            startDate.toISOString().split('T')[0],
-            endDate.toISOString().split('T')[0]
+            userId
         ];
 
         let campaignFilter = '';
-        if (campaignIdArray.length > 0) {
-            campaignFilter = `AND c.id = ANY($${queryParams.length + 1}::int[])`;
-            queryParams.push(campaignIdArray);
-        }
+        // if (campaignIdArray.length > 0) {
+        //     campaignFilter = `AND c.id = ANY($${queryParams.length + 1}::int[])`;
+        //     queryParams.push(campaignIdArray);
+        // }
 
         const finalQuery = `
             WITH latest_analytics AS (
@@ -57,7 +55,7 @@ const handler = async (req, res) => {
                     linkedin_schedules ls ON lpa.publication_id = ls.id
                 WHERE
                     ls.user_id = $1
-                    AND lpa.snapshot_date BETWEEN $2 AND $3
+                    -- AND lpa.snapshot_date BETWEEN $2 AND $3
             )
             SELECT
                 la.snapshot_date AS date,
