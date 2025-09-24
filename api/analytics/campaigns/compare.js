@@ -31,7 +31,10 @@ const handler = async (req, res) => {
 
         const campaignIdArray = campaignIds ? campaignIds.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id)) : [];
 
-        const queryParams = [userId, startDate, endDate];
+        const formattedStartDate = new Date(startDate).toISOString().split('T')[0];
+        const formattedEndDate = new Date(endDate).toISOString().split('T')[0];
+
+        const queryParams = [userId, formattedStartDate, formattedEndDate];
 
         let campaignFilter = '';
         if (campaignIdArray.length > 0) {
