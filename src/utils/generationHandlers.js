@@ -384,8 +384,8 @@ export const generateFollowupPosts = async ({ content, plan, persona = null, aut
           throw new Error(`O conteúdo gerado tem ${conteudo_post.length} caracteres, mas o mínimo é ${MIN_CONTENT_LENGTH}.`);
         }
 
-        const campaignHashtags = content.hashtags || [];
-        const suggestedHashtags = postPlan.hashtags_sugeridas || [];
+        const campaignHashtags = (content.hashtags || []).map(h => h.trim().replace(/#/g, ''));
+        const suggestedHashtags = (postPlan.hashtags_sugeridas || []).map(h => h.trim().replace(/#/g, ''));
         const combinedHashtags = [...new Set([...campaignHashtags, ...suggestedHashtags])];
 
         generatedPosts.push({
