@@ -49,30 +49,29 @@ const handler = async (req, res) => {
         const metricAggregation = ALLOWED_METRICS[metric];
 
         const finalQuery = `
-            WITH latest_analytics AS (
-                SELECT
-                    lpa.*,
-                    ROW_NUMBER() OVER(PARTITION BY lpa.publication_id ORDER BY lpa.snapshot_date DESC) as rn
+            WITH latest_snapshots AS (
+                SELECT DISTINCT ON (lpa.publication_id)
+                    lpa.*
                 FROM
                     linkedin_post_analytics lpa
-                WHERE
-                    lpa.snapshot_date BETWEEN $2 AND $3
+                ORDER BY
+                    lpa.publication_id, lpa.snapshot_date DESC
             )
             SELECT
                 ls.id AS post_id,
                 COALESCE(ls.post_content->>'titulo', 'Publicação sem título') AS post_title,
                 c.name AS campaign_name,
                 ls.linkedin_post_url,
-                COALESCE(${metricAggregation.replace(/lpa\./g, 'la.')}, 0) AS value
+                COALESCE(${metricAggregation.replace(/lpa\./g, 'lsnp.')}, 0) AS value
             FROM
                 linkedin_schedules ls
             JOIN
-                latest_analytics la ON ls.id = la.publication_id
+                latest_snapshots lsnp ON ls.id = lsnp.publication_id
             LEFT JOIN
                 campaigns c ON ls.campaign_id = c.id
             WHERE
                 ls.user_id = $1
-                AND la.rn = 1
+                AND lsnp.snapshot_date BETWEEN $2 AND $3
                 ${campaignFilter}
             GROUP BY
                 ls.id, c.name, ls.post_content, ls.linkedin_post_url
