@@ -96,16 +96,12 @@ const AnalyticsDashboard = ({ currentCampaign }) => {
     const startDate = dateRange.startDate.toISOString().split('T')[0];
     const endDate = dateRange.endDate.toISOString().split('T')[0];
 
-    // Use a period string for overview, e.g., 30d
-    const periodInDays = Math.ceil((dateRange.endDate - dateRange.startDate) / (1000 * 60 * 60 * 24));
-    const period = `${periodInDays}d`;
-
     try {
       const endpoints = {
-        overview: `/api/analytics/overview?period=${period}&campaignIds=${campaignIds}`,
+        overview: `/api/analytics/overview?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}`,
         timeline: `/api/analytics/timeline?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}&metric=impression_count`,
-        campaignCompare: `/api/analytics/campaigns/compare?period=${period}&campaignIds=${campaignIds}&metric=total_impressions`,
-        topPosts: `/api/analytics/posts/top?period=${period}&campaignIds=${campaignIds}&metric=engagement&limit=10`,
+        campaignCompare: `/api/analytics/campaigns/compare?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}&metric=total_impressions`,
+        topPosts: `/api/analytics/posts/top?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}&metric=engagement&limit=10`,
       };
 
       const requests = Object.entries(endpoints).map(([key, url]) =>

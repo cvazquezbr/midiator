@@ -7,28 +7,14 @@ const handler = async (req, res) => {
     }
 
     try {
-        const { period = '30d', campaignIds } = req.query;
+        const { startDate, endDate, campaignIds } = req.query;
         const userId = req.user.id;
 
-        const campaignIdArray = campaignIds ? campaignIds.split(',').map(id => parseInt(id.trim(), 10)) : [];
-
-        // Calculate start date based on period
-        const startDate = new Date();
-        const periodMatch = period.match(/(\d+)([d|m|y])/);
-        if (periodMatch) {
-            const amount = parseInt(periodMatch[1]);
-            const unit = periodMatch[2];
-            if (unit === 'd') {
-                startDate.setDate(startDate.getDate() - amount);
-            } else if (unit === 'm') {
-                startDate.setMonth(startDate.getMonth() - amount);
-            } else if (unit === 'y') {
-                startDate.setFullYear(startDate.getFullYear() - amount);
-            }
-        } else {
-            // Default to 30 days if period format is invalid
-            startDate.setDate(startDate.getDate() - 30);
+        if (!startDate || !endDate) {
+            return res.status(400).json({ error: 'Os parâmetros startDate e endDate são obrigatórios.' });
         }
+
+        const campaignIdArray = campaignIds ? campaignIds.split(',').map(id => parseInt(id.trim(), 10)) : [];
 
         const baseQuery = `
             FROM
@@ -39,10 +25,10 @@ const handler = async (req, res) => {
                 campaigns c ON ls.campaign_id = c.id
             WHERE
                 c.user_id = $1
-                AND lpa.snapshot_date >= $2
+                AND lpa.snapshot_date BETWEEN $2 AND $3
         `;
 
-        const queryParams = [userId, startDate.toISOString().split('T')[0]];
+        const queryParams = [userId, startDate, endDate];
 
         let campaignFilter = '';
         if (campaignIdArray.length > 0) {
