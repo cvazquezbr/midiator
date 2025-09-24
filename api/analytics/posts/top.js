@@ -33,7 +33,7 @@ const handler = async (req, res) => {
             return res.status(400).json({ error: 'Invalid limit specified. Must be between 1 and 100.' });
         }
 
-        const campaignIdArray = campaignIds ? campaignIds.split(',').map(id => parseInt(id.trim(), 10)) : [];
+        const campaignIdArray = campaignIds ? campaignIds.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id)) : [];
 
         const baseQuery = `
             FROM
