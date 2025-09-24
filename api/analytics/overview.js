@@ -16,18 +16,6 @@ const handler = async (req, res) => {
 
         const campaignIdArray = campaignIds ? campaignIds.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id)) : [];
 
-        const baseQuery = `
-            FROM
-                linkedin_post_analytics lpa
-            JOIN
-                linkedin_schedules ls ON lpa.publication_id = ls.id
-            JOIN
-                campaigns c ON ls.campaign_id = c.id
-            WHERE
-                ls.user_id = $1
-                AND lpa.snapshot_date BETWEEN $2 AND $3
-        `;
-
         const queryParams = [userId, startDate, endDate];
 
         let campaignFilter = '';
@@ -37,17 +25,35 @@ const handler = async (req, res) => {
         }
 
         const finalQuery = `
+            WITH latest_analytics AS (
+                SELECT
+                    lpa.*,
+                    ls.campaign_id,
+                    ROW_NUMBER() OVER(PARTITION BY lpa.publication_id ORDER BY lpa.snapshot_date DESC) as rn
+                FROM
+                    linkedin_post_analytics lpa
+                JOIN
+                    linkedin_schedules ls ON lpa.publication_id = ls.id
+                WHERE
+                    ls.user_id = $1
+                    AND lpa.snapshot_date BETWEEN $2 AND $3
+            )
             SELECT
-                COALESCE(SUM(lpa.impression_count), 0) AS total_impressions,
-                COALESCE(SUM(lpa.click_count), 0) AS total_clicks,
-                COALESCE(SUM(lpa.like_count), 0) AS total_likes,
-                COALESCE(SUM(lpa.comment_count), 0) AS total_comments,
-                COALESCE(SUM(lpa.share_count), 0) AS total_shares,
-                COALESCE(SUM(lpa.like_count + lpa.comment_count + lpa.share_count), 0) as total_engagement_actions,
-                COALESCE(AVG(lpa.engagement), 0) AS avg_engagement_rate,
-                COALESCE(SUM(lpa.click_count) * 100.0 / NULLIF(SUM(lpa.impression_count), 0), 0) AS avg_ctr
-            ${baseQuery}
-            ${campaignFilter}
+                COALESCE(SUM(la.impression_count), 0) AS total_impressions,
+                COALESCE(SUM(la.click_count), 0) AS total_clicks,
+                COALESCE(SUM(la.like_count), 0) AS total_likes,
+                COALESCE(SUM(la.comment_count), 0) AS total_comments,
+                COALESCE(SUM(la.share_count), 0) AS total_shares,
+                COALESCE(SUM(la.like_count + la.comment_count + la.share_count), 0) as total_engagement_actions,
+                COALESCE(AVG(la.engagement), 0) AS avg_engagement_rate,
+                COALESCE(SUM(la.click_count) * 100.0 / NULLIF(SUM(la.impression_count), 0), 0) AS avg_ctr
+            FROM
+                latest_analytics la
+            LEFT JOIN
+                campaigns c ON la.campaign_id = c.id
+            WHERE
+                la.rn = 1
+                ${campaignFilter}
         `;
 
         const { rows } = await query(finalQuery, queryParams);
