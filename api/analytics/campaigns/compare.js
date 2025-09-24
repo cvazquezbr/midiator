@@ -18,26 +18,18 @@ const handler = async (req, res) => {
     }
 
     try {
-        const { period = '30d', campaignIds, metric = 'total_impressions' } = req.query;
+        const { startDate, endDate, campaignIds, metric = 'total_impressions' } = req.query;
         const userId = req.user.id;
+
+        if (!startDate || !endDate) {
+            return res.status(400).json({ error: 'Os parâmetros startDate e endDate são obrigatórios.' });
+        }
 
         if (!Object.keys(ALLOWED_METRICS).includes(metric)) {
             return res.status(400).json({ error: 'Invalid metric specified.' });
         }
 
         const campaignIdArray = campaignIds ? campaignIds.split(',').map(id => parseInt(id.trim(), 10)) : [];
-
-        const startDate = new Date();
-        const periodMatch = period.match(/(\d+)([d|m|y])/);
-        if (periodMatch) {
-            const amount = parseInt(periodMatch[1]);
-            const unit = periodMatch[2];
-            if (unit === 'd') startDate.setDate(startDate.getDate() - amount);
-            else if (unit === 'm') startDate.setMonth(startDate.getMonth() - amount);
-            else if (unit === 'y') startDate.setFullYear(startDate.getFullYear() - amount);
-        } else {
-            startDate.setDate(startDate.getDate() - 30);
-        }
 
         const baseQuery = `
             FROM
@@ -48,10 +40,10 @@ const handler = async (req, res) => {
                 campaigns c ON ls.campaign_id = c.id
             WHERE
                 c.user_id = $1
-                AND lpa.snapshot_date >= $2
+                AND lpa.snapshot_date BETWEEN $2 AND $3
         `;
 
-        const queryParams = [userId, startDate.toISOString().split('T')[0]];
+        const queryParams = [userId, startDate, endDate];
 
         let campaignFilter = '';
         if (campaignIdArray.length > 0) {
