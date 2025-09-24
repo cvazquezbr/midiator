@@ -3,7 +3,7 @@ import { useUserAuth } from '../context/UserAuthContext';
 import { useNavigate } from 'react-router-dom';
 import { DataGrid } from '@mui/x-data-grid';
 import { Box, Button, Container, Typography, Paper, CircularProgress, Alert, IconButton } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon, PlayCircleOutline as PlayCircleOutlineIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Edit as EditIcon, PlayCircleOutline as PlayCircleOutlineIcon, BarChart as BarChartIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 
 // For now, the edit functionality will be a placeholder.
@@ -17,6 +17,7 @@ const AdminDashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSchedulerRunning, setIsSchedulerRunning] = useState(false);
+  const [isAnalyticsRunning, setIsAnalyticsRunning] = useState(false);
   const { user: adminUser, logout } = useUserAuth();
   const navigate = useNavigate();
 
@@ -78,6 +79,24 @@ const AdminDashboardPage = () => {
     }
   };
 
+  const handleRunAnalytics = async () => {
+    setIsAnalyticsRunning(true);
+    toast.info('Analytics collection initiated...');
+    try {
+      const res = await fetch('/api/schedule/run-analytics', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Analytics collection completed successfully.');
+      } else {
+        throw new Error(data.error || 'Failed to run analytics collector');
+      }
+    } catch (err) {
+      toast.error(`Analytics collection failed: ${err.message}`);
+    } finally {
+      setIsAnalyticsRunning(false);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
@@ -120,12 +139,22 @@ const AdminDashboardPage = () => {
           <Box>
             <Button
               variant="contained"
+              color="secondary"
+              sx={{ mr: 2 }}
+              onClick={handleRunAnalytics}
+              disabled={isAnalyticsRunning || isSchedulerRunning}
+              startIcon={isAnalyticsRunning ? <CircularProgress size={20} color="inherit" /> : <BarChartIcon />}
+            >
+              {isAnalyticsRunning ? 'Coletando...' : 'Coletar Estatísticas'}
+            </Button>
+            <Button
+              variant="contained"
               sx={{ mr: 2 }}
               onClick={handleRunScheduler}
-              disabled={isSchedulerRunning}
+              disabled={isSchedulerRunning || isAnalyticsRunning}
               startIcon={isSchedulerRunning ? <CircularProgress size={20} color="inherit" /> : <PlayCircleOutlineIcon />}
             >
-              {isSchedulerRunning ? 'Running...' : 'Run Scheduler'}
+              {isSchedulerRunning ? 'Publicando...' : 'Publicar Agendados'}
             </Button>
             <Button variant="outlined" onClick={handleLogout}>Logout</Button>
           </Box>
