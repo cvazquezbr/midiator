@@ -46,33 +46,23 @@ const handler = async (req, res) => {
         }
 
         const finalQuery = `
-            WITH latest_analytics AS (
-                SELECT
-                    lpa.*,
-                    ls.campaign_id,
-                    ROW_NUMBER() OVER(PARTITION BY lpa.publication_id ORDER BY lpa.snapshot_date DESC) as rn
-                FROM
-                    linkedin_post_analytics lpa
-                JOIN
-                    linkedin_schedules ls ON lpa.publication_id = ls.id
-                WHERE
-                    ls.user_id = $1
-                    AND lpa.snapshot_date BETWEEN $2 AND $3
-            )
             SELECT
-                la.snapshot_date AS date,
-                SUM(la.${metric}) as value
+                lpa.snapshot_date AS date,
+                SUM(lpa.${metric}) as value
             FROM
-                latest_analytics la
+                linkedin_post_analytics lpa
+            JOIN
+                linkedin_schedules ls ON lpa.publication_id = ls.id
             LEFT JOIN
-                campaigns c ON la.campaign_id = c.id
+                campaigns c ON ls.campaign_id = c.id
             WHERE
-                la.rn = 1
+                ls.user_id = $1
+                AND lpa.snapshot_date BETWEEN $2 AND $3
                 ${campaignFilter}
             GROUP BY
-                la.snapshot_date
+                lpa.snapshot_date
             ORDER BY
-                la.snapshot_date ASC;
+                lpa.snapshot_date ASC;
         `;
 
         const { rows } = await query(finalQuery, queryParams);
