@@ -18,6 +18,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { ptBR } from 'date-fns/locale';
 import { getCampaigns } from '../utils/campaignState';
 import fetchWithAuth from '../utils/fetchWithAuth';
 import { subDays } from 'date-fns';
@@ -146,7 +147,7 @@ const AnalyticsDashboard = ({ currentCampaign }) => {
   };
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ptBR}>
       <Box>
         <Typography variant="h6" gutterBottom>Dashboard de Analytics</Typography>
 
