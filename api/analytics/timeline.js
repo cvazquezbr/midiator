@@ -40,10 +40,10 @@ const handler = async (req, res) => {
         ];
 
         let campaignFilter = '';
-        if (campaignIdArray.length > 0) {
-            campaignFilter = `AND c.id = ANY($${queryParams.length + 1}::int[])`;
-            queryParams.push(campaignIdArray);
-        }
+        // if (campaignIdArray.length > 0) {
+        //     campaignFilter = `AND c.id = ANY($${queryParams.length + 1}::int[])`;
+        //     queryParams.push(campaignIdArray);
+        // }
 
         const finalQuery = `
             SELECT
