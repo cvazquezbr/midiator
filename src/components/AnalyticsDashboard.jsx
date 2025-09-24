@@ -53,22 +53,35 @@ const AnalyticsDashboard = ({ currentCampaign }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Fetch all campaigns for the filter dropdown
+  // Fetch date range and campaigns on initial load
   useEffect(() => {
-    const loadCampaigns = async () => {
+    const loadInitialData = async () => {
       try {
+        // Fetch available date range
+        const dateRangeRes = await fetchWithAuth('/api/analytics/daterange');
+        if (dateRangeRes.ok) {
+          const { min_date, max_date } = await dateRangeRes.json();
+          if (min_date && max_date) {
+            // Set dates, adding a day to max_date to ensure it's inclusive
+            const startDate = new Date(min_date);
+            const endDate = new Date(max_date);
+            setDateRange({ startDate, endDate });
+          }
+        }
+
+        // Fetch campaigns
         const userCampaigns = await getCampaigns();
         setCampaigns(userCampaigns);
-        // Pre-select the current campaign if it exists
         if (currentCampaign?.id) {
           setSelectedCampaigns([currentCampaign.id]);
         }
       } catch (err) {
-        setError('Falha ao carregar campanhas.');
+        setError('Falha ao carregar dados iniciais do dashboard.');
         console.error(err);
       }
     };
-    loadCampaigns();
+
+    loadInitialData();
   }, [currentCampaign]);
 
   // Fetch analytics data when filters change
