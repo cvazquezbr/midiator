@@ -19,7 +19,7 @@ const handler = async (req, res) => {
         const formattedStartDate = new Date(startDate).toISOString().split('T')[0];
         const formattedEndDate = new Date(endDate).toISOString().split('T')[0];
 
-        const queryParams = [userId];
+        const queryParams = [];
 
         let campaignFilter = '';
         // if (campaignIdArray.length > 0) {
@@ -37,8 +37,8 @@ const handler = async (req, res) => {
                     linkedin_post_analytics lpa
                 JOIN
                     linkedin_schedules ls ON lpa.publication_id = ls.id
-                WHERE
-                    ls.user_id = $1
+                -- WHERE
+                    -- ls.user_id = $1
                     -- AND lpa.snapshot_date BETWEEN $2 AND $3
             )
             SELECT

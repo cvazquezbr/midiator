@@ -38,7 +38,7 @@ const handler = async (req, res) => {
         const formattedStartDate = new Date(startDate).toISOString().split('T')[0];
         const formattedEndDate = new Date(endDate).toISOString().split('T')[0];
 
-        const queryParams = [userId];
+        const queryParams = [];
 
         let campaignFilter = '';
         // if (campaignIdArray.length > 0) {
@@ -71,8 +71,9 @@ const handler = async (req, res) => {
             LEFT JOIN
                 campaigns c ON ls.campaign_id = c.id
             WHERE
-                ls.user_id = $1
-                AND la.rn = 1
+                -- ls.user_id = $1
+                -- AND
+                la.rn = 1
                 ${campaignFilter}
             GROUP BY
                 ls.id, c.name, ls.post_content, ls.linkedin_post_url
