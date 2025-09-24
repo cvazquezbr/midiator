@@ -37,37 +37,27 @@ const handler = async (req, res) => {
         const queryParams = [parseInt(userId, 10), formattedStartDate, formattedEndDate];
 
         let campaignFilter = '';
-        if (campaignIdArray.length > 0) {
-            campaignFilter = `AND c.id = ANY($${queryParams.length + 1}::int[])`;
-            queryParams.push(campaignIdArray);
-        }
+        // if (campaignIdArray.length > 0) {
+        //     campaignFilter = `AND c.id = ANY($${queryParams.length + 1}::int[])`;
+        //     queryParams.push(campaignIdArray);
+        // }
 
         const metricAggregation = ALLOWED_METRICS[metric];
 
         const finalQuery = `
-            WITH latest_analytics AS (
-                SELECT
-                    lpa.*,
-                    ls.campaign_id,
-                    ROW_NUMBER() OVER(PARTITION BY lpa.publication_id ORDER BY lpa.snapshot_date DESC) as rn
-                FROM
-                    linkedin_post_analytics lpa
-                JOIN
-                    linkedin_schedules ls ON lpa.publication_id = ls.id
-                WHERE
-                    ls.user_id = $1
-                    AND lpa.snapshot_date BETWEEN $2 AND $3
-            )
             SELECT
                 c.id AS campaign_id,
                 c.name AS campaign_name,
-                COALESCE(${metricAggregation.replace(/lpa\./g, 'la.')}, 0) AS value
+                COALESCE(${metricAggregation}, 0) AS value
             FROM
-                latest_analytics la
+                linkedin_post_analytics lpa
+            JOIN
+                linkedin_schedules ls ON lpa.publication_id = ls.id
             LEFT JOIN
-                campaigns c ON la.campaign_id = c.id
+                campaigns c ON ls.campaign_id = c.id
             WHERE
-                la.rn = 1
+                ls.user_id = $1
+                AND lpa.snapshot_date BETWEEN $2 AND $3
                 ${campaignFilter}
             GROUP BY
                 c.id, c.name
