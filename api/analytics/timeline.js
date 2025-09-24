@@ -30,21 +30,8 @@ const handler = async (req, res) => {
 
         const campaignIdArray = campaignIds ? campaignIds.split(',').map(id => parseInt(id.trim(), 10)) : [];
 
-        // Default to last 30 days if dates are not provided
         const endDate = endDateStr ? new Date(endDateStr) : new Date();
         const startDate = startDateStr ? new Date(startDateStr) : new Date(new Date().setDate(endDate.getDate() - 30));
-
-        const baseQuery = `
-            FROM
-                linkedin_post_analytics lpa
-            JOIN
-                linkedin_schedules ls ON lpa.publication_id = ls.id
-            JOIN
-                campaigns c ON ls.campaign_id = c.id
-            WHERE
-                ls.user_id = $1
-                AND lpa.snapshot_date BETWEEN $2 AND $3
-        `;
 
         const queryParams = [
             userId,
@@ -58,17 +45,34 @@ const handler = async (req, res) => {
             queryParams.push(campaignIdArray);
         }
 
-        // The metric is sanitized by checking against ALLOWED_METRICS
         const finalQuery = `
+            WITH latest_analytics AS (
+                SELECT
+                    lpa.*,
+                    ls.campaign_id,
+                    ROW_NUMBER() OVER(PARTITION BY lpa.publication_id ORDER BY lpa.snapshot_date DESC) as rn
+                FROM
+                    linkedin_post_analytics lpa
+                JOIN
+                    linkedin_schedules ls ON lpa.publication_id = ls.id
+                WHERE
+                    ls.user_id = $1
+                    AND lpa.snapshot_date BETWEEN $2 AND $3
+            )
             SELECT
-                lpa.snapshot_date AS date,
-                SUM(lpa.${metric}) as value
-            ${baseQuery}
-            ${campaignFilter}
+                la.snapshot_date AS date,
+                SUM(la.${metric}) as value
+            FROM
+                latest_analytics la
+            LEFT JOIN
+                campaigns c ON la.campaign_id = c.id
+            WHERE
+                la.rn = 1
+                ${campaignFilter}
             GROUP BY
-                lpa.snapshot_date
+                la.snapshot_date
             ORDER BY
-                lpa.snapshot_date ASC;
+                la.snapshot_date ASC;
         `;
 
         const { rows } = await query(finalQuery, queryParams);
