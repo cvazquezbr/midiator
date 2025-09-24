@@ -20,7 +20,7 @@ const handler = async (req, res) => {
             JOIN
                 campaigns c ON ls.campaign_id = c.id
             WHERE
-                c.user_id = $1;
+                ls.user_id = $1;
         `;
 
         const { rows } = await query(dateRangeQuery, [userId]);

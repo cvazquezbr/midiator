@@ -39,7 +39,7 @@ const handler = async (req, res) => {
             JOIN
                 campaigns c ON ls.campaign_id = c.id
             WHERE
-                c.user_id = $1
+                ls.user_id = $1
                 AND lpa.snapshot_date BETWEEN $2 AND $3
         `;
 
