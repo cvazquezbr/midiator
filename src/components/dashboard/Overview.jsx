@@ -37,24 +37,27 @@ const StatCard = ({ title, value, icon, loading }) => (
 );
 
 const Overview = ({ data, loading }) => {
+  // Adiciona um log para depuração, conforme solicitado.
+  console.log({ overviewData: data });
+
   const {
-    total_impressions = 0,
-    total_clicks = 0,
-    total_likes = 0,
-    total_comments = 0,
-    total_shares = 0,
-    avg_engagement_rate = 0,
-    avg_ctr = 0
+    total_impressions,
+    total_clicks,
+    total_likes,
+    total_comments,
+    total_shares,
+    avg_engagement_rate,
+    avg_ctr
   } = data || {};
 
   const stats = [
-    { title: "Total de Impressões", value: (total_impressions || 0).toLocaleString('pt-BR'), icon: <Visibility fontSize="large" />, loading },
-    { title: "Total de Cliques", value: (total_clicks || 0).toLocaleString('pt-BR'), icon: <AdsClick fontSize="large" />, loading },
-    { title: "Total de Likes", value: (total_likes || 0).toLocaleString('pt-BR'), icon: <ThumbUp fontSize="large" />, loading },
-    { title: "Total de Comentários", value: (total_comments || 0).toLocaleString('pt-BR'), icon: <Comment fontSize="large" />, loading },
-    { title: "Total de Compartilhamentos", value: (total_shares || 0).toLocaleString('pt-BR'), icon: <Share fontSize="large" />, loading },
-    { title: "Taxa Média de Engajamento", value: `${((avg_engagement_rate || 0) * 100).toFixed(2)}%`, icon: <TrendingUp fontSize="large" />, loading },
-    { title: "CTR Médio", value: `${(avg_ctr || 0).toFixed(2)}%`, icon: <Percent fontSize="large" />, loading },
+    { title: "Total de Impressões", value: (Number(total_impressions) || 0).toLocaleString('pt-BR'), icon: <Visibility fontSize="large" />, loading },
+    { title: "Total de Cliques", value: (Number(total_clicks) || 0).toLocaleString('pt-BR'), icon: <AdsClick fontSize="large" />, loading },
+    { title: "Total de Likes", value: (Number(total_likes) || 0).toLocaleString('pt-BR'), icon: <ThumbUp fontSize="large" />, loading },
+    { title: "Total de Comentários", value: (Number(total_comments) || 0).toLocaleString('pt-BR'), icon: <Comment fontSize="large" />, loading },
+    { title: "Total de Compartilhamentos", value: (Number(total_shares) || 0).toLocaleString('pt-BR'), icon: <Share fontSize="large" />, loading },
+    { title: "Taxa Média de Engajamento", value: `${(Number(avg_engagement_rate) * 100 || 0).toFixed(2)}%`, icon: <TrendingUp fontSize="large" />, loading },
+    { title: "CTR Médio", value: `${(Number(avg_ctr) || 0).toFixed(2)}%`, icon: <Percent fontSize="large" />, loading },
   ];
 
   return (
