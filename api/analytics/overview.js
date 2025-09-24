@@ -59,12 +59,7 @@ const handler = async (req, res) => {
                 COALESCE(SUM(lpa.share_count), 0) AS total_shares,
                 COALESCE(SUM(lpa.like_count + lpa.comment_count + lpa.share_count), 0) as total_engagement_actions,
                 COALESCE(AVG(lpa.engagement), 0) AS avg_engagement_rate,
-                CASE
-                    WHEN SUM(lpa.impression_count) > 0 THEN
-                        COALESCE(SUM(lpa.click_count) * 100.0 / SUM(lpa.impression_count), 0)
-                    ELSE
-                        0
-                END AS avg_ctr
+                COALESCE(SUM(lpa.click_count) * 100.0 / NULLIF(SUM(lpa.impression_count), 0), 0) AS avg_ctr
             ${baseQuery}
             ${campaignFilter}
         `;
