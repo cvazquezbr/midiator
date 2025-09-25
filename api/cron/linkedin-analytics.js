@@ -4,35 +4,34 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const PROXY_API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:5173';
 
 // Fetches stats for a given set of posts, handling token refresh internally.
-async function fetchStatsWithRefresh(fetch, userId, accessToken, postsByAuthor) {
+async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByAuthor) {
     const internalApiHeaders = {
         'Content-Type': 'application/json',
         'x-internal-secret': process.env.INTERNAL_API_SECRET,
     };
 
-    let currentAccessToken = accessToken;
-
-    const callProxy = (action, payload) => {
+    // This function now takes the token explicitly to avoid closure issues.
+    const callProxy = (action, payload, token) => {
         return fetch(`${PROXY_API_BASE_URL}/api/linkedin-proxy`, {
             method: 'POST',
             headers: internalApiHeaders,
             body: JSON.stringify({
                 action,
-                accessToken: currentAccessToken,
+                accessToken: token,
                 payload,
             }),
         });
     };
 
-    const processAuthor = async (authorUrn, posts) => {
+    // This function now takes the token explicitly.
+    const processAuthor = async (authorUrn, posts, token) => {
         if (authorUrn.includes(':organization:')) {
             const urns = posts.map(p => p.urn);
-            return callProxy('getShareStatistics', { authorUrn, shareUrns: urns });
+            return callProxy('getShareStatistics', { authorUrn, shareUrns: urns }, token);
         } else {
-            // For personal posts, we must call them one by one.
             const results = [];
             for (const post of posts) {
-                const res = await callProxy('getMemberPostStatistics', { ugcPostUrn: post.urn });
+                const res = await callProxy('getMemberPostStatistics', { ugcPostUrn: post.urn }, token);
                 results.push(res);
             }
             return results;
@@ -40,14 +39,14 @@ async function fetchStatsWithRefresh(fetch, userId, accessToken, postsByAuthor) 
     };
 
     let allResults = [];
+    let currentAccessToken = initialAccessToken;
 
     for (const [authorUrn, posts] of Object.entries(postsByAuthor)) {
-        let responseOrResponses = await processAuthor(authorUrn, posts);
+        let responseOrResponses = await processAuthor(authorUrn, posts, currentAccessToken);
 
         const isSingleResponse = !Array.isArray(responseOrResponses);
         const responses = isSingleResponse ? [responseOrResponses] : responseOrResponses;
 
-        // Check for 401 in any of the responses
         const needsRefresh = responses.some(res => res.status === 401);
 
         if (needsRefresh) {
@@ -60,16 +59,16 @@ async function fetchStatsWithRefresh(fetch, userId, accessToken, postsByAuthor) 
 
             if (!refreshResponse.ok) {
                 console.warn(`Could not refresh token for user ${userId}, they may have revoked access. Skipping their posts.`);
-                return []; // Return empty array to skip processing for this user
+                continue; // Skip this author and move to the next.
             }
 
             const { accessToken: newAccessToken } = await refreshResponse.json();
-            currentAccessToken = newAccessToken;
+            currentAccessToken = newAccessToken; // Update token for the next author for this user.
             console.log(`Token refreshed for user ${userId}. Retrying stat collection...`);
             await delay(2000);
 
-            // Retry the API call with the new token
-            responseOrResponses = await processAuthor(authorUrn, posts);
+            // Retry the API call with the new, explicitly passed token.
+            responseOrResponses = await processAuthor(authorUrn, posts, newAccessToken);
         }
 
         allResults.push(responseOrResponses);
