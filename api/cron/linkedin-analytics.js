@@ -132,14 +132,31 @@ export async function handleRunAnalyticsCollector(request, response) {
                     }
 
                     const data = await res.json();
-                    if (!data.elements) continue;
+                    const statsList = data.elements || [];
 
-                    for (const stat of data.elements) {
+                    for (const stat of statsList) {
                         const urn = stat.share || stat.ugcPost || stat.post || data.urn;
-                        const statsData = stat.totalShareStatistics || stat; // Adapt for different response structures
+                        // For member stats, the data is in the 'elements' array, but the stats are nested differently.
+                        // For share stats (organizations), the data is in `totalShareStatistics`.
+                        let statsData = stat.totalShareStatistics;
+                        if (!statsData && (stat.totalImpressions || stat.reactionSummaries)) {
+                            statsData = {
+                                impressionCount: stat.totalImpressions?.count || 0,
+                                likeCount: stat.reactionSummaries?.LIKE || 0,
+                                commentCount: stat.totalComments?.count || 0,
+                                shareCount: stat.totalReshares?.count || 0,
+                                clickCount: stat.totalClicks?.count || 0,
+                                engagement: stat.engagementRate?.rate || 0,
+                            };
+                        }
+
+                        if (!statsData) continue;
 
                         const post = userData.posts.find(p => p.urn === urn);
-                        if (!post) continue;
+                        if (!post) {
+                            console.warn(`Could not find matching post in our DB for URN: ${urn}`);
+                            continue;
+                        }
 
                         const {
                             impressionCount = 0,
