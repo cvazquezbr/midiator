@@ -22,7 +22,11 @@ const handler = async (req, res) => {
             campaignIds,
             metric = 'impression_count'
         } = req.query;
-        const userId = req.user.id;
+        const userId = req.user?.id;
+
+        if (!userId || isNaN(parseInt(userId, 10))) {
+            return res.status(401).json({ error: 'Usuário não autenticado ou inválido.' });
+        }
 
         if (!ALLOWED_METRICS.includes(metric)) {
             return res.status(400).json({ error: 'Invalid metric specified.' });

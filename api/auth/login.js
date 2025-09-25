@@ -64,6 +64,7 @@ export default async function handler(req, res) {
 
     // User is authenticated, create JWT
     const tokenPayload = {
+      id: user.id, // Explicitly include 'id' for our middleware
       sub: user.id, // 'sub' is the standard claim for subject (user ID)
       uuid: user.uuid,
       name: user.name,
