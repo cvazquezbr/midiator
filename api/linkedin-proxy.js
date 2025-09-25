@@ -470,9 +470,9 @@ async function handleGetMemberPostStatistics(fetch, request, response) {
         return response.status(400).json({ error: 'Missing required parameters for member post statistics.' });
     }
 
-    // This is the final attempt to fix the 404 error for this endpoint.
-    // Instead of the complex `entity=(ugc:...)` format, we try a simpler `entity=urn` format.
-    const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=${encodeURIComponent(ugcPostUrn)}&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
+    // The correct format for the entity parameter is `(ugcPost:urn)`.
+    const encodedEntity = encodeURIComponent(`(ugcPost:${ugcPostUrn})`);
+    const url = `https://api.linkedin.com/rest/memberCreatorPostAnalytics?q=entity&entity=${encodedEntity}&queryType=${queryType}&aggregation=${aggregation}&dateRange=(start:(day:${dateRange.start.day},month:${dateRange.start.month},year:${dateRange.start.year}),end:(day:${dateRange.end.day},month:${dateRange.end.month},year:${dateRange.end.year}))`;
 
     try {
         const linkedinResponse = await fetchWithRetry(fetch, url, {
