@@ -1,20 +1,16 @@
-import { withAuth, isAdmin } from '../middleware/auth.js';
+import { withAdminAuth } from '../middleware/auth.js';
 import { handleRunScheduler } from '../cron/linkedin.js';
 
+// The withAdminAuth middleware now handles the authentication and admin role check.
 const schedulerRunnerHandler = async (request, response) => {
-    // Ensure the user is an admin
-    if (!isAdmin(request)) {
-        return response.status(403).json({ error: 'Forbidden: You do not have permission to perform this action.' });
-    }
-
     return handleRunScheduler(request, response);
 };
 
 // Main handler for the endpoint
 const mainHandler = async (request, response) => {
     if (request.method === 'POST') {
-        // Wrap the handler with withAuth to ensure the user is authenticated
-        return withAuth(schedulerRunnerHandler)(request, response);
+        // Wrap the handler with withAdminAuth.
+        return withAdminAuth(schedulerRunnerHandler)(request, response);
     }
 
     response.setHeader('Allow', ['POST']);
