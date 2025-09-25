@@ -93,7 +93,7 @@ export async function handleRunAnalyticsCollector(request, response) {
             `SELECT ls.id, ls.linkedin_post_id AS urn, ls.user_id, ls.post_content->>'authorUrn' as author_urn, u.linkedin_access_token
              FROM linkedin_schedules ls
              JOIN users u ON ls.user_id = u.id
-             WHERE ls.status = 'published' AND ls.scheduled_at >= $1 AND ls.linkedin_post_id IS NOT NULL`,
+             WHERE ls.status = 'published' AND ls.scheduled_at >= $1 AND ls.linkedin_post_id IS NOT NULL AND u.linkedin_access_token IS NOT NULL`,
             [threeMonthsAgo]
         );
 
