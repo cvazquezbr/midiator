@@ -110,6 +110,9 @@ async function handleGenericPost(fetch, request, response, url) {
             try {
                 // Try to parse the error body as JSON, as LinkedIn often returns structured errors.
                 const errorJson = JSON.parse(errorBody);
+                if (errorJson.errorDetails) {
+                    console.error('[ERROR DETAILS] LinkedIn API Error Details:', JSON.stringify(errorJson.errorDetails, null, 2));
+                }
                 return response.status(linkedinResponse.status).json(errorJson);
             } catch (e) {
                 // If the error body is not JSON, return it as a plain text message.
@@ -373,6 +376,13 @@ async function handleRefreshTokenInternal(fetch, userId) {
         );
         return { success: true, accessToken: access_token };
     } else {
+        // If refresh fails, the token is invalid. Nullify the user's LinkedIn credentials.
+        console.warn(`Failed to refresh token for user ${userId}. The token is likely expired or revoked. Nullifying credentials.`);
+        await query(
+            'UPDATE users SET linkedin_access_token = NULL, linkedin_access_token_expiry = NULL, linkedin_refresh_token = NULL WHERE id = $1',
+            [userId]
+        );
+
         // Construct a meaningful error from LinkedIn's response
         const errorMessage = data.error_description || data.error || `LinkedIn API error with status ${linkedinResponse.status}`;
         throw new Error(errorMessage);
@@ -403,60 +413,45 @@ async function handleGetShareStatistics(fetch, request, response) {
         return response.status(400).json({ error: 'Missing accessToken, authorUrn, or shareUrns in payload.' });
     }
 
-    const shareUrnsForApi = shareUrns.filter(u => u.includes(':share:'));
-    const ugcPostUrnsForApi = shareUrns.filter(u => u.includes(':ugcPost:') || u.includes(':carousel:'));
+    // Separate URNs by type.
+    const shares = shareUrns.filter(u => u.includes(':share:'));
+    const ugcPosts = shareUrns.filter(u => u.includes(':ugcPost:') || u.includes(':carousel:'));
 
-    const fetchPromises = [];
-    const baseUrl = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}`;
+    let url = `https://api.linkedin.com/rest/organizationalEntityShareStatistics?q=organizationalEntity&organizationalEntity=${encodeURIComponent(authorUrn)}`;
+    const queryParams = [];
 
-    const headers = {
-        'Authorization': `Bearer ${accessToken}`,
-        'X-Restli-Protocol-Version': '2.0.0',
-        'LinkedIn-Version': LINKEDIN_API_VERSION
-    };
-
-    // Create a fetch promise for share URNs if they exist
-    if (shareUrnsForApi.length > 0) {
-        const sharesQueryParam = `shares=List(${shareUrnsForApi.map(urn => encodeURIComponent(urn)).join(',')})`;
-        const url = `${baseUrl}&${sharesQueryParam}`;
-        fetchPromises.push(fetchWithRetry(fetch, url, { method: 'GET', headers }));
+    // Use the standard List() format for both parameter types.
+    if (shares.length > 0) {
+        queryParams.push(`shares=List(${shares.map(urn => encodeURIComponent(urn)).join(',')})`);
+    }
+    if (ugcPosts.length > 0) {
+        queryParams.push(`ugcPosts=List(${ugcPosts.map(urn => encodeURIComponent(urn)).join(',')})`);
     }
 
-    // Create a fetch promise for UGC post URNs if they exist
-    if (ugcPostUrnsForApi.length > 0) {
-        const ugcPostsQueryParam = ugcPostUrnsForApi.map((urn, index) => `ugcPosts[${index}]=${encodeURIComponent(urn)}`).join('&');
-        const url = `${baseUrl}&${ugcPostsQueryParam}`;
-        fetchPromises.push(fetchWithRetry(fetch, url, { method: 'GET', headers }));
+    if (queryParams.length === 0) {
+        return response.status(200).json({ elements: [] }); // Nothing to fetch.
     }
 
-    if (fetchPromises.length === 0) {
-        return response.status(200).json({ elements: [] }); // Nothing to fetch
-    }
+    url += `&${queryParams.join('&')}`;
 
     try {
-        const responses = await Promise.all(fetchPromises);
-        let allElements = [];
-        let firstError = null;
-
-        for (const res of responses) {
-            const data = await res.json();
-            if (res.ok) {
-                if (data.elements) {
-                    allElements = allElements.concat(data.elements);
-                }
-            } else {
-                console.error(`[ERROR] LinkedIn Stats API responded with status ${res.status} for author ${authorUrn}:`, data);
-                if (!firstError) {
-                    firstError = { status: res.status, data };
-                }
+        const res = await fetchWithRetry(fetch, url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0',
+                'LinkedIn-Version': LINKEDIN_API_VERSION
             }
-        }
+        });
 
-        if (firstError && allElements.length === 0) {
-             return response.status(firstError.status).json(firstError.data);
-        }
+        const data = await res.json();
 
-        return response.status(200).json({ elements: allElements });
+        if (res.ok) {
+            return response.status(200).json(data);
+        } else {
+            console.error(`[ERROR] LinkedIn Stats API responded with status ${res.status} for author ${authorUrn}:`, data);
+            return response.status(res.status).json(data);
+        }
 
     } catch (error) {
         console.error(`[FATAL] Error during handleGetShareStatistics:`, error.message, error.stack);
