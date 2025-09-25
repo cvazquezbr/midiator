@@ -498,10 +498,25 @@ function HomePage() {
         setCurrentCampaign(result.campaign);
       }
 
-      // After a successful save, the state now contains permanent URLs, but the local
-      // state still has blob URLs. The most robust way to sync is to clear pending
-      // assets and let the user reload if they need to see the permanent state.
-      // Calling applyAppState here was causing other state to be reset.
+      // After a successful save, the state returned (`result.finalState`) contains the permanent URLs.
+      // We must update the component's state with these new URLs to prevent stale blob URLs
+      // from being used or re-saved.
+      const { finalState } = result;
+      if (finalState) {
+        console.log("[HomePage] Save successful. Synchronizing component state with permanent URLs.");
+        // Selectively update the state with the data that contains the new permanent URLs.
+        // This is better than calling applyAppState(finalState) because it avoids resetting
+        // other UI-related state that is not part of the campaign data (e.g., activeStep).
+        setPageTemplate(finalState.pageTemplate);
+        setGeneratedPagesData(finalState.generatedPagesData);
+        setBrandElements(finalState.brandElements);
+        setGeneratedAudioData(finalState.generatedAudioData);
+        setGeneratedVideos(finalState.generatedVideos);
+        setGeneratedPageUrl(finalState.generatedPageUrl);
+      } else {
+         console.warn("[HomePage] Save operation did not return a final state to synchronize.");
+      }
+
       setPendingAssets({}); // Clear pending assets after successful save/update
       console.log("[HomePage] Save/Update operation completed successfully.");
     } catch (err) {
