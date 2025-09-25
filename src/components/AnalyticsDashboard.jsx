@@ -37,10 +37,20 @@ const TabPanel = (props) => {
   );
 };
 
+const AVAILABLE_METRICS = [
+    { value: 'impression_count', label: 'Impressões' },
+    { value: 'click_count', label: 'Cliques' },
+    { value: 'like_count', label: 'Curtidas' },
+    { value: 'comment_count', label: 'Comentários' },
+    { value: 'share_count', label: 'Compartilhamentos' },
+    { value: 'engagement', label: 'Taxa de Engajamento' }
+];
+
 const AnalyticsDashboard = ({ currentCampaign }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaigns, setSelectedCampaigns] = useState([]);
+  const [selectedMetric, setSelectedMetric] = useState('impression_count');
   const [dateRange, setDateRange] = useState({
     startDate: subDays(new Date(), 30),
     endDate: new Date(),
@@ -98,10 +108,20 @@ const AnalyticsDashboard = ({ currentCampaign }) => {
     const endDate = dateRange.endDate.toISOString().split('T')[0];
 
     try {
+      const campaignCompareMetricMap = {
+        'impression_count': 'total_impressions',
+        'click_count': 'total_clicks',
+        'like_count': 'total_likes',
+        'comment_count': 'total_comments',
+        'share_count': 'total_shares',
+        'engagement': 'avg_engagement_rate'
+      };
+      const campaignCompareMetric = campaignCompareMetricMap[selectedMetric] || 'total_impressions';
+
       const endpoints = {
         overview: `/api/analytics/overview?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}`,
-        timeline: `/api/analytics/timeline?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}&metric=impression_count`,
-        campaignCompare: `/api/analytics/campaigns/compare?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}&metric=total_impressions`,
+        timeline: `/api/analytics/timeline?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}&metric=${selectedMetric}`,
+        campaignCompare: `/api/analytics/campaigns/compare?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}&metric=${campaignCompareMetric}`,
         topPosts: `/api/analytics/posts/top?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}&metric=engagement&limit=10`,
       };
 
@@ -127,7 +147,7 @@ const AnalyticsDashboard = ({ currentCampaign }) => {
     } finally {
       setLoading(false);
     }
-  }, [selectedCampaigns, dateRange]);
+  }, [selectedCampaigns, dateRange, selectedMetric]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -185,6 +205,22 @@ const AnalyticsDashboard = ({ currentCampaign }) => {
               value={dateRange.endDate}
               onChange={(newValue) => setDateRange(prev => ({ ...prev, endDate: newValue }))}
             />
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth>
+              <InputLabel>Métrica</InputLabel>
+              <Select
+                value={selectedMetric}
+                onChange={(e) => setSelectedMetric(e.target.value)}
+                input={<OutlinedInput label="Métrica" />}
+              >
+                {AVAILABLE_METRICS.map((metric) => (
+                  <MenuItem key={metric.value} value={metric.value}>
+                    <ListItemText primary={metric.label} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
         </Grid>
 
