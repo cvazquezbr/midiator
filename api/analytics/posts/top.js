@@ -18,7 +18,7 @@ const handler = async (req, res) => {
 
     try {
         const { startDate, endDate, campaignIds, metric = 'engagement', limit = 10 } = req.query;
-        const userId = req.user?.id;
+        const userId = req.user?.sub;
 
         if (!userId || isNaN(parseInt(userId, 10))) {
             return res.status(401).json({ error: 'Usuário não autenticado ou inválido.' });
