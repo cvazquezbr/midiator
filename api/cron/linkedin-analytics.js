@@ -31,7 +31,20 @@ async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByA
         } else {
             const results = [];
             for (const post of posts) {
-                const res = await callProxy('getMemberPostStatistics', { ugcPostUrn: post.urn }, token);
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(endDate.getDate() - 90);
+
+                const payload = {
+                    ugcPostUrn: post.urn,
+                    queryType: 'TOTAL',
+                    aggregation: 'TOTAL',
+                    dateRange: {
+                        start: { day: startDate.getUTCDate(), month: startDate.getUTCMonth() + 1, year: startDate.getUTCFullYear() },
+                        end: { day: endDate.getUTCDate(), month: endDate.getUTCMonth() + 1, year: endDate.getUTCFullYear() }
+                    }
+                };
+                const res = await callProxy('getMemberPostStatistics', payload, token);
                 results.push(res);
             }
             return results;
