@@ -59,7 +59,8 @@ async function fetchStatsWithRefresh(fetch, userId, accessToken, postsByAuthor) 
             });
 
             if (!refreshResponse.ok) {
-                throw new Error(`Failed to refresh token for user ${userId}.`);
+                console.warn(`Could not refresh token for user ${userId}, they may have revoked access. Skipping their posts.`);
+                return []; // Return empty array to skip processing for this user
             }
 
             const { accessToken: newAccessToken } = await refreshResponse.json();
