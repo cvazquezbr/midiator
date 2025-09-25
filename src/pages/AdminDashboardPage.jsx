@@ -17,6 +17,7 @@ const AdminDashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSchedulerRunning, setIsSchedulerRunning] = useState(false);
+  const [isAnalyticsRunning, setIsAnalyticsRunning] = useState(false);
   const { user: adminUser, logout } = useUserAuth();
   const navigate = useNavigate();
 
@@ -78,6 +79,24 @@ const AdminDashboardPage = () => {
     }
   };
 
+  const handleRunAnalytics = async () => {
+    setIsAnalyticsRunning(true);
+    toast.info('Analytics run initiated...');
+    try {
+      const res = await fetch('/api/schedule/run-analytics', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Analytics run completed successfully.');
+      } else {
+        throw new Error(data.error || 'Failed to run analytics');
+      }
+    } catch (err) {
+      toast.error(`Analytics run failed: ${err.message}`);
+    } finally {
+      setIsAnalyticsRunning(false);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
@@ -126,6 +145,16 @@ const AdminDashboardPage = () => {
               startIcon={isSchedulerRunning ? <CircularProgress size={20} color="inherit" /> : <PlayCircleOutlineIcon />}
             >
               {isSchedulerRunning ? 'Running...' : 'Run Scheduler'}
+            </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              sx={{ mr: 2 }}
+              onClick={handleRunAnalytics}
+              disabled={isAnalyticsRunning}
+              startIcon={isAnalyticsRunning ? <CircularProgress size={20} color="inherit" /> : <PlayCircleOutlineIcon />}
+            >
+              {isAnalyticsRunning ? 'Running...' : 'Run Analytics'}
             </Button>
             <Button variant="outlined" onClick={handleLogout}>Logout</Button>
           </Box>
