@@ -3,7 +3,7 @@ import { withAuth } from '../../middleware/auth.js';
 
 // We are aggregating over the snapshots, so we use SUM for counts/rates
 const ALLOWED_METRICS = {
-    engagement: 'SUM(lpa.engagement)',
+    engagement: 'AVG(lpa.engagement)',
     impressions: 'SUM(lpa.impression_count)',
     clicks: 'SUM(lpa.click_count)',
     likes: 'SUM(lpa.like_count)',
