@@ -7,7 +7,7 @@ const PROXY_API_BASE_URL = process.env.VITE_API_BASE_URL || 'http://localhost:51
 async function fetchStatsWithRefresh(fetch, userId, initialAccessToken, postsByAuthor) {
     const internalApiHeaders = {
         'Content-Type': 'application/json',
-        'x-internal-secret': process.env.INTERNAL_API_SECRET,
+        'X-Internal-Secret': process.env.INTERNAL_API_SECRET,
     };
 
     // This function now takes the token explicitly to avoid closure issues.

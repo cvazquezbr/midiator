@@ -532,7 +532,9 @@ const SCHEDULER_ACTIONS = new Set([
   'initializeVideoUpload',
   'uploadVideo',
   'finalizeVideoUpload',
-  'checkVideoStatus'
+  'checkVideoStatus',
+  'getShareStatistics',
+  'getMemberPostStatistics'
 ]);
 
 // This handler is for requests that are authenticated via a shared secret.
