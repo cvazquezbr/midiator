@@ -122,7 +122,7 @@ const AnalyticsDashboard = ({ currentCampaign }) => {
         overview: `/api/analytics/overview?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}`,
         timeline: `/api/analytics/timeline?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}&metric=${selectedMetric}`,
         campaignCompare: `/api/analytics/campaigns/compare?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}&metric=${campaignCompareMetric}`,
-        topPosts: `/api/analytics/posts/top?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}&metric=engagement&limit=10`,
+        topPosts: `/api/analytics/posts/top?startDate=${startDate}&endDate=${endDate}&campaignIds=${campaignIds}&metric=${selectedMetric}&limit=10`,
       };
 
       const requests = Object.entries(endpoints).map(([key, url]) =>
