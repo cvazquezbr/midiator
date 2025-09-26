@@ -4,11 +4,11 @@ import { withAuth } from '../../middleware/auth.js';
 // We are aggregating over the snapshots, so we use SUM for counts/rates
 const ALLOWED_METRICS = {
     engagement: 'AVG(lpa.engagement)',
-    impressions: 'SUM(lpa.impression_count)',
-    clicks: 'SUM(lpa.click_count)',
-    likes: 'SUM(lpa.like_count)',
-    comments: 'SUM(lpa.comment_count)',
-    shares: 'SUM(lpa.share_count)'
+    impression_count: 'SUM(lpa.impression_count)',
+    click_count: 'SUM(lpa.click_count)',
+    like_count: 'SUM(lpa.like_count)',
+    comment_count: 'SUM(lpa.comment_count)',
+    share_count: 'SUM(lpa.share_count)'
 };
 
 const handler = async (req, res) => {
