@@ -249,36 +249,48 @@ export const loadCampaign = async (id) => {
 export const saveCampaign = async (name, campaignData, pendingAssets, setProgress, userId, autorId, personaId, paletteId) => {
   console.log('[campaignState] Starting saveCampaign process...');
   try {
+    // --- Step 1: Serialize and upload all pending assets ---
     console.log('[campaignState] Step 1: Serializing and uploading assets...');
-    // The state returned from serializeCampaignData has the permanent URLs
     const serializedState = await serializeCampaignData(campaignData, pendingAssets, userId, null, setProgress);
     console.log('[campaignState] Step 1 COMPLETE.');
 
+    // --- Step 2: Save the campaign data with permanent URLs to the database ---
     console.log('[campaignState] Step 2: Sending campaign data to server...');
     const requestBody = JSON.stringify({
       name,
-      campaign_data: serializedState, // Use the state with permanent URLs
+      campaign_data: serializedState,
       autor_id: autorId,
       persona_id: personaId,
       palette_id: paletteId
     });
-
     const createRes = await fetchWithAuth('/api/campaigns', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: requestBody,
     });
-
     if (!createRes.ok) {
       const errorBody = await createRes.text();
-      console.error('[campaignState] Server returned an error on create:', errorBody);
       throw new Error(`Failed to create campaign entry. Server says: ${errorBody}`);
     }
+    const savedCampaign = await createRes.json();
+    console.log('[campaignState] Campaign created successfully:', savedCampaign);
 
-    const result = await createRes.json();
-    console.log('[campaignState] Campaign created successfully:', result);
-    // Return both the campaign result from the DB and the final state with permanent URLs
-    return { campaign: result, finalState: serializedState };
+    // --- Step 3: Post-save re-hydration ---
+    // Immediately deserialize the just-saved data to get a fresh, playable state.
+    // This ensures the UI can continue seamlessly without a manual reload.
+    console.log('[campaignState] Step 3: Re-hydrating campaign state post-save...');
+    if (savedCampaign.campaign_data) {
+      const { finalState, newlyCreatedAssets } = await deserializeCampaignData(savedCampaign.campaign_data);
+      console.log('[campaignState] Step 3 COMPLETE. State re-hydrated.');
+      return {
+        campaign: { ...savedCampaign, campaign_data: finalState },
+        pendingAssets: newlyCreatedAssets,
+      };
+    }
+
+    // Fallback if there was no data to re-hydrate
+    return { campaign: savedCampaign, pendingAssets: {} };
+
   } catch (error) {
       console.error('[campaignState] An error occurred during the save process:', error);
       toast.error(`Save failed: ${error.message}`);
@@ -289,34 +301,46 @@ export const saveCampaign = async (name, campaignData, pendingAssets, setProgres
 export const updateCampaign = async (id, name, campaignData, pendingAssets, setProgress, userId, autorId, personaId, paletteId) => {
     console.log(`[campaignState] Starting updateCampaign process for ID: ${id}...`);
     try {
+        // --- Step 1: Serialize and upload all pending assets ---
         console.log('[campaignState] Step 1: Serializing and uploading assets...');
         const serializedState = await serializeCampaignData(campaignData, pendingAssets, userId, id, setProgress);
         console.log('[campaignState] Step 1 COMPLETE.');
 
+        // --- Step 2: Save the updated campaign data to the database ---
         console.log('[campaignState] Step 2: Sending updated campaign data to server...');
         const requestBody = JSON.stringify({
           name,
-          campaign_data: serializedState, // Use the state with permanent URLs
+          campaign_data: serializedState,
           autor_id: autorId,
           persona_id: personaId,
           palette_id: paletteId
         });
-
-        const res = await fetchWithAuth(`/api/campaigns/${id}`, {
+        const updateRes = await fetchWithAuth(`/api/campaigns/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: requestBody,
         });
-
-        if (!res.ok) {
-            const errorBody = await res.text();
-            console.error(`[campaignState] Server returned an error on update for campaign ${id}:`, errorBody);
+        if (!updateRes.ok) {
+            const errorBody = await updateRes.text();
             throw new Error(`Failed to update campaign. Server says: ${errorBody}`);
         }
+        const updatedCampaign = await updateRes.json();
+        console.log(`[campaignState] Campaign ${id} updated successfully:`, updatedCampaign);
 
-        const result = await res.json();
-        console.log(`[campaignState] Campaign ${id} updated successfully:`, result);
-        return { campaign: result, finalState: serializedState };
+        // --- Step 3: Post-update re-hydration ---
+        console.log('[campaignState] Step 3: Re-hydrating campaign state post-update...');
+        if (updatedCampaign.campaign_data) {
+            const { finalState, newlyCreatedAssets } = await deserializeCampaignData(updatedCampaign.campaign_data);
+            console.log('[campaignState] Step 3 COMPLETE. State re-hydrated.');
+            return {
+                campaign: { ...updatedCampaign, campaign_data: finalState },
+                pendingAssets: newlyCreatedAssets,
+            };
+        }
+
+        // Fallback if there was no data to re-hydrate
+        return { campaign: updatedCampaign, pendingAssets: {} };
+
     } catch (error) {
         console.error(`[campaignState] An error occurred during the update process for campaign ${id}:`, error);
         toast.error(`Update failed: ${error.message}`);

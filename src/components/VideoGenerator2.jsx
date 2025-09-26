@@ -15,13 +15,15 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
 
 import { getPlayableBlob, deleteBlob } from '../utils/fileUtils';
+import { useCampaign } from '../context/CampaignContext';
 import NarrationSettings from './VideoGenerator/NarrationSettings';
 import Preview from './VideoGenerator/Preview';
 import SlidesSettings from './VideoGenerator/SlidesSettings';
 import EditableTypography from './EditableTypography';
 import { toast } from 'sonner';
 
-const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, generatedVideos = [], pendingAssets = {}, onVideoGenerated, onUpdateVideos, onNewAsset }) => {
+const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, generatedVideos = [], onVideoGenerated, onUpdateVideos }) => {
+  const { pendingAssets, addPendingAsset, removePendingAsset } = useCampaign();
   const [video, setVideo] = useState(null);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -137,6 +139,14 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       // First, delete from blob storage if the URL is a vercel blob url
       if (videoToDelete.vercelBlobUrl && videoToDelete.vercelBlobUrl.includes('blob.vercel-storage.com')) {
         await deleteBlob(videoToDelete.vercelBlobUrl);
+      }
+
+      // Clean up local blob URLs from context
+      if (videoToDelete.url && videoToDelete.url.startsWith('blob:')) {
+        removePendingAsset(videoToDelete.url);
+      }
+      if (videoToDelete.thumbnailUrl && videoToDelete.thumbnailUrl.startsWith('blob:')) {
+        removePendingAsset(videoToDelete.thumbnailUrl);
       }
 
       // Then, remove from the local state
@@ -654,8 +664,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       setVideo(url);
 
       // --- Thumbnail Generation ---
-      const thumbnailBlob = await generateThumbnail(blob);
-      const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
+      const thumbnailBlob = await generateThumbnail(ffmpeg, blob);
+      const thumbnailUrl = thumbnailBlob ? addPendingAsset(thumbnailBlob) : null;
       // --------------------------
 
       if (onVideoGenerated) {
@@ -663,25 +673,18 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
           id: crypto.randomUUID(),
           type: 'video',
           url: url,
-          blob: blob,
+          // blob property is removed, context handles it
           name: `video-${Date.now()}.mp4`,
           vercelBlobId: null,
-          vercelBlobUrl: url,
+          vercelBlobUrl: url, // This will be replaced by the real one on save
           mimeType: blob.type,
           size: blob.size,
           linkedinVideoUrn: null,
           thumbnailUrl: thumbnailUrl,
-          thumbnailBlob: thumbnailBlob, // Pass the blob up to be added to pendingAssets
+          // thumbnailBlob property is removed
         };
 
         onVideoGenerated([videoAsset]);
-
-        if (onNewAsset) {
-          onNewAsset(url, blob);
-          if (thumbnailUrl && thumbnailBlob) {
-            onNewAsset(thumbnailUrl, thumbnailBlob);
-          }
-        }
       }
     } catch (err) {
       console.error("Erro na geração do vídeo:", err);
@@ -749,14 +752,13 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
           // This line was causing the progress to "jump". The handleSubProgress is now solely responsible for updates.
           // setProgress(framesCompletedSoFar); // This line is now removed to allow for smooth progress.
 
-          const videoUrl = URL.createObjectURL(videoBlob);
-          const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
+          const videoUrl = addPendingAsset(videoBlob);
+          const thumbnailUrl = thumbnailBlob ? addPendingAsset(thumbnailBlob) : null;
 
           const videoAsset = {
             id: crypto.randomUUID(),
             type: 'video',
             url: videoUrl,
-            blob: videoBlob,
             name: `video_${i + 1}.mp4`,
             vercelBlobId: null,
             vercelBlobUrl: videoUrl,
@@ -764,17 +766,9 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
             size: videoBlob.size,
             linkedinVideoUrn: null,
             thumbnailUrl: thumbnailUrl,
-            thumbnailBlob: thumbnailBlob,
           };
 
           allGeneratedVideoAssets.push(videoAsset);
-
-          if (onNewAsset) {
-            onNewAsset(videoUrl, videoBlob);
-            if (thumbnailUrl && thumbnailBlob) {
-              onNewAsset(thumbnailUrl, thumbnailBlob);
-            }
-          }
 
         } catch (err) {
           setError(`Erro ao gerar vídeo para o registro ${i + 1}: ${err.message || 'Erro desconhecido'}`);
@@ -905,14 +899,18 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       recorder.ondataavailable = (e) => chunks.push(e.data);
       recorder.onstop = async () => {
         const blob = new Blob(chunks, { type: 'video/webm' });
-        const videoUrl = URL.createObjectURL(blob);
+        const videoUrl = addPendingAsset(blob);
         setVideo(videoUrl);
         if (onVideoGenerated) {
-          const videoData = { blob, url: videoUrl, name: `video-compat-${Date.now()}.webm` };
+          const videoData = {
+            id: crypto.randomUUID(),
+            type: 'video',
+            url: videoUrl,
+            name: `video-compat-${Date.now()}.webm`,
+            mimeType: blob.type,
+            size: blob.size,
+          };
           onVideoGenerated([videoData]);
-          if (onNewAsset) {
-            onNewAsset(videoUrl, blob);
-          }
         }
       };
 
@@ -1052,18 +1050,17 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
       const data = await ffmpeg.readFile('output.mp4');
       const blob = new Blob([data.buffer], { type: 'video/mp4' });
-      const url = URL.createObjectURL(blob);
+      const url = addPendingAsset(blob);
       setVideo(url);
 
-      const thumbnailBlob = await generateThumbnail(blob);
-      const thumbnailUrl = thumbnailBlob ? URL.createObjectURL(thumbnailBlob) : null;
+      const thumbnailBlob = await generateThumbnail(ffmpeg, blob);
+      const thumbnailUrl = thumbnailBlob ? addPendingAsset(thumbnailBlob) : null;
 
       if (onVideoGenerated) {
         const videoAsset = {
           id: crypto.randomUUID(),
           type: 'video',
           url: url,
-          blob: blob,
           name: `video-narrado-${Date.now()}.mp4`,
           vercelBlobId: null,
           vercelBlobUrl: url,
@@ -1071,15 +1068,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
           size: blob.size,
           linkedinVideoUrn: null,
           thumbnailUrl: thumbnailUrl,
-          thumbnailBlob: thumbnailBlob,
         };
         onVideoGenerated([videoAsset]);
-        if (onNewAsset) {
-          onNewAsset(url, blob);
-          if (thumbnailUrl && thumbnailBlob) {
-            onNewAsset(thumbnailUrl, thumbnailBlob);
-          }
-        }
       }
 
     } catch (err) {
@@ -1096,9 +1086,9 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
   const handleExport = async () => {
     if (video) {
-      try {
-        const data = await ffmpegRef.current.readFile('output.mp4');
-        const blob = new Blob([data.buffer], { type: 'video/mp4' });
+      // 'video' is a blob URL. We need the actual blob from pendingAssets.
+      const blob = pendingAssets[video] || (await fetch(video).then(r => r.blob()));
+      if (blob) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -1107,9 +1097,8 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-      } catch (error) {
-        console.error('Error exporting video:', error);
-        setError('Erro ao exportar o vídeo. Tente gerar o vídeo novamente.');
+      } else {
+        setError('Não foi possível encontrar os dados do vídeo para exportar.');
         setSnackbarOpen(true);
       }
     }
@@ -1157,12 +1146,17 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
   const handleNarrationVideoUpload = (event) => {
     const file = event.target.files[0];
     if (file && (file.type === 'video/mp4' || file.type === 'video/webm' || file.type === 'video/quicktime')) {
-      const videoUrl = URL.createObjectURL(file);
+      const videoUrl = addPendingAsset(file);
+      if (!videoUrl) {
+        setError('Não foi possível criar uma URL local para o vídeo de narração.');
+        setSnackbarOpen(true);
+        return;
+      }
       const videoElement = document.createElement('video');
       videoElement.src = videoUrl;
       videoElement.onloadedmetadata = () => {
         setNarrationVideoData({
-          file: file,
+          file: file, // Keep file for potential re-use if needed, though blob in context is primary
           url: videoUrl,
           width: videoElement.videoWidth,
           height: videoElement.videoHeight,
