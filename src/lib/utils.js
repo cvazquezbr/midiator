@@ -77,12 +77,6 @@ export const markdownToLinkedinText = (markdown) => {
     // First, strip any HTML tags that might be present
     let text = stripHtml(markdown);
 
-    // Escape reserved characters for LinkedIn as per user request
-    // The characters to escape are: | { } @ [ ] ( ) < > # \ * _ ~
-    // The backslash is escaped in the regex itself.
-    const reservedCharsRegex = /([|{}@[\]()<>#\\*_~])/g;
-    text = text.replace(reservedCharsRegex, '\\$1');
-
     // Collapse multiple newlines to just two for cleaner formatting
     text = text.trim().replace(/\n{3,}/g, '\n\n');
 

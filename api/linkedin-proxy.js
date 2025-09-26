@@ -69,6 +69,14 @@ function stripEmojis(text) {
     return text.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
 }
 
+function escapeLinkedinText(text) {
+    if (!text) return '';
+    // Escape special characters that LinkedIn might interpret as formatting.
+    // The list of characters is based on community documentation and testing.
+    // The backslash '\' needs to be escaped in the regex and in the replacement string.
+    return text.replace(/([|{}@[\]()<>#*_~\\])/g, '\\$1');
+}
+
 async function handleGenericPost(fetch, request, response, url) {
     const { accessToken, payload } = request.body;
     if (!accessToken || !payload) return response.status(400).json({ error: 'Missing accessToken or payload.' });
@@ -221,7 +229,7 @@ async function handleCreatePost(fetch, request, response) {
         // Base structure for the new Posts API
         const postData = {
             author: authorUrn,
-            commentary: content,
+            commentary: escapeLinkedinText(content),
             visibility: "PUBLIC",
             distribution: {
                 feedDistribution: "MAIN_FEED",
