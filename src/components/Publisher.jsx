@@ -1170,11 +1170,21 @@ const Publisher = ({
             {viewingSchedule ? (
                 <Box>
                     <Typography variant="h6" gutterBottom>{viewingSchedule.post_content.titulo}</Typography>
-                    <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', my: 2 }}>{viewingSchedule.post_content.conteudo}</Typography>
-                    <Typography variant="body2" color="text.secondary"><strong>CTA:</strong> {viewingSchedule.post_content.cta}</Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        <strong>Hashtags:</strong> {(viewingSchedule.post_content.hashtags || []).join(' ')}
-                    </Typography>
+
+                    {viewingSchedule.post_content.fullText ? (
+                        <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', my: 2 }}>
+                            {viewingSchedule.post_content.fullText}
+                        </Typography>
+                    ) : (
+                        <>
+                            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', my: 2 }}>{viewingSchedule.post_content.conteudo}</Typography>
+                            <Typography variant="body2" color="text.secondary"><strong>CTA:</strong> {viewingSchedule.post_content.cta}</Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                <strong>Hashtags:</strong> {(viewingSchedule.post_content.hashtags || []).join(' ')}
+                            </Typography>
+                        </>
+                    )}
+
                     <Divider sx={{ my: 2 }} />
                     <Typography variant="body2"><strong>Scheduled for:</strong> {formatInTimeZone(new Date(viewingSchedule.scheduled_at), getTimezone() || 'UTC', 'dd/MM/yyyy HH:mm:ss zzz', { locale: ptBR })}</Typography>
                     <Typography variant="body2"><strong>Status:</strong> {viewingSchedule.status}</Typography>
