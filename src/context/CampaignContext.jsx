@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
-import { createNewImageElement } from '../utils/elementFactory.js';
+import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
 
 const defaultPageTemplate = {
     backgroundColor: '#FFFFFF',
@@ -36,6 +35,41 @@ export const CampaignProvider = ({ children }) => {
   const [customPalette, setCustomPalette] = useState(null);
   const [imageColorPalette, setImageColorPalette] = useState([]);
 
+  // Centralized asset handlers
+  const addPendingAsset = useCallback((blob) => {
+    if (!(blob instanceof Blob)) {
+      console.error("[addPendingAsset] Invalid argument. Expected a Blob.", blob);
+      return null;
+    }
+    const blobUrl = URL.createObjectURL(blob);
+    setPendingAssets(prev => ({ ...prev, [blobUrl]: blob }));
+    return blobUrl;
+  }, []);
+
+  const removePendingAsset = useCallback((blobUrl) => {
+    if (typeof blobUrl !== 'string' || !blobUrl.startsWith('blob:')) {
+      console.error("[removePendingAsset] Invalid argument. Expected a blob URL string.", blobUrl);
+      return;
+    }
+    setPendingAssets(prev => {
+      const newAssets = { ...prev };
+      if (newAssets[blobUrl]) {
+        URL.revokeObjectURL(blobUrl);
+        delete newAssets[blobUrl];
+      }
+      return newAssets;
+    });
+  }, []);
+
+  // Effect to clean up all blob URLs on unmount
+  useEffect(() => {
+    return () => {
+      Object.keys(pendingAssets).forEach(url => {
+        console.log(`[CampaignContext] Revoking blob URL on unmount: ${url}`);
+        URL.revokeObjectURL(url);
+      });
+    };
+  }, [pendingAssets]);
 
   const value = useMemo(() => ({
     // State
@@ -68,11 +102,15 @@ export const CampaignProvider = ({ children }) => {
     setGeneratedPagesData,
     setGeneratedVideos,
     setAspectRatio,
-    setPendingAssets,
+    setPendingAssets, // Kept for direct manipulation if needed, e.g., on load
     setColors,
     setPaletteId,
     setCustomPalette,
     setImageColorPalette,
+
+    // Asset Management
+    addPendingAsset,
+    removePendingAsset,
 
     // Constants
     defaultPageTemplate,
@@ -93,6 +131,8 @@ export const CampaignProvider = ({ children }) => {
     paletteId,
     customPalette,
     imageColorPalette,
+    addPendingAsset,
+    removePendingAsset,
   ]);
 
   return (
