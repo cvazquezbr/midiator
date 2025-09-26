@@ -66,6 +66,7 @@ const handler = async (req, res) => {
                 COALESCE(ls.post_content->>'titulo', 'Publicação sem título') AS post_title,
                 c.name AS campaign_name,
                 ls.linkedin_post_url,
+                ls.scheduled_at AS publication_date,
                 COALESCE(${metricAggregation.replace(/lpa\./g, 'lsnp.')}, 0) AS value
             FROM
                 linkedin_schedules ls
