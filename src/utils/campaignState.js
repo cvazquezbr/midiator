@@ -1,6 +1,7 @@
 import { toast } from 'sonner';
 import { upload } from '@vercel/blob/client';
 import fetchWithAuth from './fetchWithAuth';
+import { traverseState } from './stateTraversal';
 
 /**
  * Uploads a single Blob using the client-side upload method.
@@ -37,217 +38,140 @@ export const uploadAsset = async (blob, filename, campaignId, userId) => {
 
 
 /**
- * Recursively traverses the campaign state, finds 'blob:' URLs,
- * uploads the corresponding assets from the pendingAssets map, and replaces
- * the 'blob:' URLs with the permanent URLs returned by the server.
+ * Refactored serialization function.
+ * Traverses the campaign state, finds temporary asset URLs (blob: and data:),
+ * uploads them to Vercel Blob Storage, and replaces the temporary URLs with
+ * the permanent ones in a deep copy of the state.
  */
 export const serializeCampaignData = async (state, pendingAssets, userId, campaignId = null, onProgress = () => {}) => {
-  console.log('[serializeCampaignData] Starting serialization and upload...');
-  const cleanState = JSON.parse(JSON.stringify(state)); // Deep copy to avoid mutation
-  const allPendingAssets = { ...pendingAssets }; // Use a mutable copy
+  console.log('[serializeCampaignData] Starting refactored serialization and upload...');
+  const workingState = JSON.parse(JSON.stringify(state)); // Deep copy to work on
+  const allPendingAssets = { ...pendingAssets }; // Mutable copy of pending assets
 
   // --- Step 1: Convert all `data:` URIs to `blob:` URIs ---
-  console.log('[serializeCampaignData] Step 1a: Converting data URIs to blobs...');
-  const convertDataUris = async (currentObj) => {
-    if (!currentObj || typeof currentObj !== 'object') {
-      return;
-    }
-    if (Array.isArray(currentObj)) {
-      await Promise.all(currentObj.map(item => convertDataUris(item)));
-      return;
-    }
-
-    const promises = Object.keys(currentObj).map(async (key) => {
-      const value = currentObj[key];
-      if (typeof value === 'string' && value.startsWith('data:')) {
-        try {
-          const blob = await fetch(value).then(res => res.blob());
-          console.log('[serializeCampaignData] Converted data URI to blob with type:', blob.type);
+  // This step ensures that assets represented as data URIs are also uploaded.
+  console.log('[serializeCampaignData] Step 1: Converting data URIs to blobs...');
+  const dataUriConversionPromises = [];
+  traverseState(workingState, (key, value, owner) => {
+    if (typeof value === 'string' && value.startsWith('data:')) {
+      const conversionPromise = fetch(value)
+        .then(res => res.blob())
+        .then(blob => {
           const blobUrl = URL.createObjectURL(blob);
-          allPendingAssets[blobUrl] = blob; // Add the new blob to our asset map
-          currentObj[key] = blobUrl; // Replace the data: URI with a blob: URI
-        } catch (error) {
-          console.error(`[serializeCampaignData] Failed to convert data URI to blob for key "${key}":`, error);
-          // Decide if you want to throw or just log the error
-        }
-      } else {
-        await convertDataUris(value); // Recurse
-      }
-    });
-    await Promise.all(promises);
-  };
-
-  await convertDataUris(cleanState);
-  console.log('[serializeCampaignData] Step 1a COMPLETE.');
-
-  // --- Step 2: Find all `blob:` URIs that need to be uploaded ---
-  const uploadPromises = [];
-  const assetsToUpload = []; // Will store { obj, key, url, assetType }
-
-  const findAssets = (currentObj) => {
-    if (!currentObj || typeof currentObj !== 'object') return;
-    if (Array.isArray(currentObj)) {
-      currentObj.forEach(findAssets);
-      return;
-    }
-
-    // Special handling for video objects
-    if (currentObj.type === 'video') {
-      // Check for the main video file
-      if (typeof currentObj.vercelBlobUrl === 'string' && currentObj.vercelBlobUrl.startsWith('blob:')) {
-        assetsToUpload.push({ obj: currentObj, key: 'vercelBlobUrl', url: currentObj.vercelBlobUrl, assetType: 'video' });
-      }
-      // Check for the thumbnail file
-      if (typeof currentObj.thumbnailUrl === 'string' && currentObj.thumbnailUrl.startsWith('blob:')) {
-        assetsToUpload.push({ obj: currentObj, key: 'thumbnailUrl', url: currentObj.thumbnailUrl, assetType: 'thumbnail' });
-      }
-      // Stop recursion here for video objects to avoid finding the URLs again
-      return;
-    }
-
-    // Generic handling for other properties
-    for (const key in currentObj) {
-      if (Object.prototype.hasOwnProperty.call(currentObj, key)) {
-        const value = currentObj[key];
-        if (typeof value === 'string' && value.startsWith('blob:')) {
-          assetsToUpload.push({ obj: currentObj, key, url: value, assetType: 'simple' });
-        } else {
-          findAssets(value);
-        }
-      }
-    }
-  };
-
-  findAssets(cleanState);
-  console.log(`[serializeCampaignData] Found ${assetsToUpload.length} assets to upload.`);
-
-  // --- Step 3: Upload all unique blob URLs ---
-  const uniqueUrlsToUpload = new Map();
-  for (const asset of assetsToUpload) {
-    if (allPendingAssets[asset.url]) {
-      if (!uniqueUrlsToUpload.has(asset.url)) {
-        uniqueUrlsToUpload.set(asset.url, {
-          blob: allPendingAssets[asset.url],
-          targets: [],
-        });
-      }
-      uniqueUrlsToUpload.get(asset.url).targets.push({ obj: asset.obj, key: asset.key, assetType: asset.assetType });
-    }
-  }
-
-  onProgress({ current: 0, total: uniqueUrlsToUpload.size });
-
-  let assetsUploadedCount = 0;
-  for (const [tempUrl, { blob, targets }] of uniqueUrlsToUpload.entries()) {
-    if (blob) {
-      const targetWithId = targets.find(t => t.obj.id);
-      const fileExtension = blob.type.split('/')[1] || 'bin';
-      const randomSuffix = Math.random().toString(36).substring(2, 9);
-      const filename = targetWithId
-        ? `${targetWithId.obj.id}.${fileExtension}`
-        : `asset_${Date.now()}_${randomSuffix}.${fileExtension}`;
-
-      const promise = uploadAsset(blob, filename, campaignId, userId)
-        .then(vercelBlobResponse => {
-          targets.forEach(target => {
-            if (target.assetType === 'video') {
-              // This is the main video file, update the whole object
-              target.obj.vercelBlobUrl = vercelBlobResponse.url;
-              target.obj.url = vercelBlobResponse.url; // Also update the playback url
-              target.obj.vercelBlobId = vercelBlobResponse.pathname;
-              target.obj.mimeType = vercelBlobResponse.contentType;
-              target.obj.size = vercelBlobResponse.size;
-            } else if (target.assetType === 'thumbnail') {
-                target.obj[target.key] = vercelBlobResponse.url;
-            }
-            else {
-              // This is a simple asset or a thumbnail, just replace the URL
-              target.obj[target.key] = vercelBlobResponse.url;
-            }
-          });
-          assetsUploadedCount++;
-          onProgress({ current: assetsUploadedCount, total: uniqueUrlsToUpload.size });
+          allPendingAssets[blobUrl] = blob; // Add new blob to our asset map
+          owner[key] = blobUrl; // Replace data: URI with blob: URI in the working state
         })
         .catch(error => {
-          console.error(`Failed to upload asset from ${tempUrl}`, error);
-          toast.error(`Upload failed for asset ${filename}: ${error.message}`);
-          throw error;
+          console.error(`[serializeCampaignData] Failed to convert data URI to blob for key "${key}":`, error);
         });
-      uploadPromises.push(promise);
+      dataUriConversionPromises.push(conversionPromise);
     }
+  });
+  await Promise.all(dataUriConversionPromises);
+  console.log('[serializeCampaignData] Step 1 COMPLETE.');
+
+  // --- Step 2: Collect all unique `blob:` URLs to be uploaded ---
+  console.log('[serializeCampaignData] Step 2: Collecting unique blob URLs...');
+  const uniqueUrlsToUpload = new Map(); // Map<string, { blob: Blob }>
+  traverseState(workingState, (key, value) => {
+    if (typeof value === 'string' && value.startsWith('blob:')) {
+      if (allPendingAssets[value] && !uniqueUrlsToUpload.has(value)) {
+        uniqueUrlsToUpload.set(value, { blob: allPendingAssets[value] });
+      }
+    }
+  });
+  console.log(`[serializeCampaignData] Found ${uniqueUrlsToUpload.size} unique assets to upload.`);
+
+  // --- Step 3: Upload all unique assets and map temp URLs to Vercel's response ---
+  console.log('[serializeCampaignData] Step 3: Uploading assets...');
+  onProgress({ current: 0, total: uniqueUrlsToUpload.size });
+
+  const tempToVercelResponseMap = new Map(); // Map<string, VercelBlob.BlobObject>
+  const uploadPromises = [];
+  let assetsUploadedCount = 0;
+
+  for (const [tempUrl, { blob }] of uniqueUrlsToUpload.entries()) {
+    const fileExtension = blob.type.split('/')[1] || 'bin';
+    const randomSuffix = Math.random().toString(36).substring(2, 9);
+    // Add a more descriptive name if possible, fallback to random.
+    const filename = `asset_${Date.now()}_${randomSuffix}.${fileExtension}`;
+
+    const promise = uploadAsset(blob, filename, campaignId, userId)
+      .then(vercelBlobResponse => {
+        console.log(`[serializeCampaignData] Uploaded ${filename}. Temp URL: ${tempUrl}, Permanent URL: ${vercelBlobResponse.url}`);
+        tempToVercelResponseMap.set(tempUrl, vercelBlobResponse); // Store the full response
+
+        assetsUploadedCount++;
+        onProgress({ current: assetsUploadedCount, total: uniqueUrlsToUpload.size });
+      })
+      .catch(error => {
+        console.error(`Upload failed for asset from ${tempUrl}`, error);
+        toast.error(`Upload failed for ${filename}: ${error.message}`);
+        throw error; // Fail fast
+      });
+    uploadPromises.push(promise);
   }
 
   await Promise.all(uploadPromises);
+  console.log('[serializeCampaignData] Step 3 COMPLETE.');
+
+  // --- Step 4: Replace all temporary `blob:` URLs with permanent URLs ---
+  console.log('[serializeCampaignData] Step 4: Replacing temporary URLs with permanent ones...');
+  traverseState(workingState, (key, value, owner) => {
+    if (typeof value === 'string' && tempToVercelResponseMap.has(value)) {
+      const vercelBlobResponse = tempToVercelResponseMap.get(value);
+      const permanentUrl = vercelBlobResponse.url;
+
+      // Generic replacement
+      owner[key] = permanentUrl;
+
+      // Special handling for video objects to update related properties.
+      // This is necessary because the video object stores more metadata from Vercel.
+      if (owner.type === 'video' && (key === 'url' || key === 'vercelBlobUrl')) {
+        owner.url = permanentUrl;
+        owner.vercelBlobUrl = permanentUrl;
+        owner.vercelBlobId = vercelBlobResponse.pathname;
+        owner.mimeType = vercelBlobResponse.contentType;
+        owner.size = vercelBlobResponse.size;
+      }
+    }
+  });
+  console.log('[serializeCampaignData] Step 4 COMPLETE.');
 
   console.log('[serializeCampaignData] All uploads and serialization complete.');
-  return cleanState;
+  return workingState;
 };
 
 
+/**
+ * Refactored deserialization function.
+ * Traverses the loaded campaign state, finds permanent Vercel Storage URLs,
+ * downloads the assets, and replaces the permanent URLs with local, temporary
+ * blob: URLs. This "hydrates" the state for use in the UI.
+ */
 export const deserializeCampaignData = async (loadedState) => {
-  console.log('[deserializeCampaignData] Starting deserialization and asset download...');
-  const state = JSON.parse(JSON.stringify(loadedState)); // Deep copy
-  const newlyCreatedAssets = {};
-  const downloadPromises = [];
-  const uniqueUrlsToDownload = new Map();
+  console.log('[deserializeCampaignData] Starting refactored deserialization and asset download...');
+  const finalState = JSON.parse(JSON.stringify(loadedState)); // Deep copy to modify
+  const newlyCreatedAssets = {}; // This will become the new `pendingAssets` map in the UI
 
   const isVercelUrl = (url) => typeof url === 'string' && url.includes('blob.vercel-storage.com');
 
-  // 1. Recursively find all Vercel URLs to download.
-  const findUrls = (currentObj) => {
-    if (!currentObj || typeof currentObj !== 'object') {
-      return;
+  // --- Step 1: Collect all unique Vercel URLs to download ---
+  console.log('[deserializeCampaignData] Step 1: Collecting unique Vercel URLs...');
+  const uniqueUrlsToDownload = new Map();
+  traverseState(finalState, (key, value) => {
+    if (isVercelUrl(value) && !uniqueUrlsToDownload.has(value)) {
+      uniqueUrlsToDownload.set(value, null); // Value will be the downloaded blob later
     }
+  });
+  console.log(`[deserializeCampaignData] Found ${uniqueUrlsToDownload.size} unique assets to download.`);
 
-    if (Array.isArray(currentObj)) {
-      currentObj.forEach(findUrls);
-      return;
-    }
+  // --- Step 2: Download all unique assets and create local blobs ---
+  console.log('[deserializeCampaignData] Step 2: Downloading assets...');
+  const downloadPromises = [];
+  const permanentToTempUrlMap = new Map();
 
-    // Special handling for video objects to find their URLs
-    if (currentObj.type === 'video') {
-      // Check for the main video file URL
-      if (isVercelUrl(currentObj.vercelBlobUrl)) {
-        if (!uniqueUrlsToDownload.has(currentObj.vercelBlobUrl)) {
-          uniqueUrlsToDownload.set(currentObj.vercelBlobUrl, { targets: [] });
-        }
-        // Target the object and the specific keys to be updated
-        uniqueUrlsToDownload.get(currentObj.vercelBlobUrl).targets.push({ obj: currentObj, key: 'vercelBlobUrl' });
-        uniqueUrlsToDownload.get(currentObj.vercelBlobUrl).targets.push({ obj: currentObj, key: 'url' });
-      }
-      // Check for the thumbnail file URL
-      if (isVercelUrl(currentObj.thumbnailUrl)) {
-        if (!uniqueUrlsToDownload.has(currentObj.thumbnailUrl)) {
-          uniqueUrlsToDownload.set(currentObj.thumbnailUrl, { targets: [] });
-        }
-        uniqueUrlsToDownload.get(currentObj.thumbnailUrl).targets.push({ obj: currentObj, key: 'thumbnailUrl' });
-      }
-      // Do not recurse further into video objects
-      return;
-    }
-
-    // Generic handling for other properties
-    for (const key in currentObj) {
-      if (Object.prototype.hasOwnProperty.call(currentObj, key)) {
-        const value = currentObj[key];
-        if (isVercelUrl(value)) {
-          // Found a Vercel URL, store it for download.
-          if (!uniqueUrlsToDownload.has(value)) {
-            uniqueUrlsToDownload.set(value, { targets: [] });
-          }
-          uniqueUrlsToDownload.get(value).targets.push({ obj: currentObj, key });
-        } else {
-          // Recurse into nested objects/arrays.
-          findUrls(value);
-        }
-      }
-    }
-  };
-
-  findUrls(state);
-
-  // 2. Create download promises for all unique URLs.
-  for (const [downloadUrl, { targets }] of uniqueUrlsToDownload.entries()) {
+  for (const downloadUrl of uniqueUrlsToDownload.keys()) {
     const promise = fetch(downloadUrl)
       .then(response => {
         if (!response.ok) {
@@ -256,35 +180,35 @@ export const deserializeCampaignData = async (loadedState) => {
         return response.blob();
       })
       .then(blob => {
-        // Extract a filename from the URL, e.g., "asset_123.png" from ".../asset_123.png?..."
         const filename = downloadUrl.split('/').pop().split('?')[0] || `downloaded_asset_${Date.now()}`;
-        // Convert the downloaded blob into a File object, which the Vercel client library handles more robustly.
         const file = new File([blob], filename, { type: blob.type });
-
         const tempUrl = URL.createObjectURL(file);
-        newlyCreatedAssets[tempUrl] = file; // Store a File object instead of a raw Blob
 
-        // Update all occurrences of this URL with the new local blob URL.
-        targets.forEach(target => {
-            target.obj[target.key] = tempUrl;
-            // If we are updating a video object, let's also ensure its size is set from the downloaded blob.
-            if (target.obj.type === 'video' && target.key === 'vercelBlobUrl') {
-                target.obj.size = file.size;
-            }
-        });
+        newlyCreatedAssets[tempUrl] = file; // For the UI's pendingAssets state
+        permanentToTempUrlMap.set(downloadUrl, tempUrl); // For replacement in the next step
       })
       .catch(error => {
-        console.error(`[deserializeCampaignData] Failed to download or process asset: ${downloadUrl}`, error);
+        console.error(`[deserializeCampaignData] Failed to download asset: ${downloadUrl}`, error);
         toast.error(`Não foi possível carregar o recurso: ${error.message}`);
+        // Don't throw, allow other assets to load
       });
     downloadPromises.push(promise);
   }
 
-  // 3. Wait for all downloads to complete.
   await Promise.all(downloadPromises);
+  console.log('[deserializeCampaignData] Step 2 COMPLETE.');
 
-  console.log(`[deserializeCampaignData] Deserialization complete. ${Object.keys(newlyCreatedAssets).length} assets downloaded and converted.`);
-  return { finalState: state, newlyCreatedAssets };
+  // --- Step 3: Replace all permanent URLs with their new temporary blob: URLs ---
+  console.log('[deserializeCampaignData] Step 3: Replacing permanent URLs with local blob URLs...');
+  traverseState(finalState, (key, value, owner) => {
+    if (typeof value === 'string' && permanentToTempUrlMap.has(value)) {
+      owner[key] = permanentToTempUrlMap.get(value);
+    }
+  });
+  console.log('[deserializeCampaignData] Step 3 COMPLETE.');
+
+  console.log(`[deserializeCampaignData] Deserialization complete. ${Object.keys(newlyCreatedAssets).length} assets downloaded.`);
+  return { finalState, newlyCreatedAssets };
 };
 
 // --- API Functions ---
