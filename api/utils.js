@@ -11,10 +11,3 @@ export const markdownToLinkedinText = (markdown) => {
     return text;
 };
 
-export const escapeLinkedinText = (text) => {
-    if (!text) return '';
-    // Escapa caracteres especiais que o LinkedIn pode interpretar como formatação.
-    // A lista de caracteres é baseada em documentação e testes da comunidade.
-    // A barra invertida '\' precisa ser escapada na regex e na string de substituição.
-    return text.replace(/([|{}@[\]()<>#*_~\\])/g, '\\$1');
-};
