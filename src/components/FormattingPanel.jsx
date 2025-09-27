@@ -320,6 +320,8 @@ const FormattingPanel = ({
                 setPageTemplate={setPageTemplate}
                 expandedPanel={expandedPanel}
                 handleAccordionChange={handleAccordionChange}
+                colorPalette={colorPalette}
+                imagePalette={imagePalette}
               />
             )}
           </>

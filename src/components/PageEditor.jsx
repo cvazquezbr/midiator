@@ -158,7 +158,8 @@ const PageEditor = ({
   }, []);
 
   useEffect(() => {
-    if (open && pageData) {
+    // Only initialize state if the dialog is opening and the state is not already populated
+    if (open && pageData && !editedPositions) {
       const {
         effectiveFieldPositions,
         effectiveFieldStyles,
@@ -183,7 +184,7 @@ const PageEditor = ({
       setEditedRecord(null);
       setSelectedFieldInternal(null);
     }
-  }, [open, pageData, pageDataFromHook, csvHeaders]);
+  }, [open, pageData, pageDataFromHook, csvHeaders, editedPositions]);
 
   if (!open || !pageData || !editedPageTemplate) {
     // Render nothing or a loader until the state is initialized by the effect
@@ -239,7 +240,7 @@ const PageEditor = ({
               fieldStyles={editedStyles}
               setFieldStyles={setEditedStyles}
               csvData={editorCsvData}
-              colorPalette={imageSwatches}
+              imagePalette={imageSwatches}
               selectedField={selectedFieldInternal}
               setSelectedField={handleInternalFieldSelection}
               onCsvDataUpdate={handleFieldPositionerCsvDataUpdate}
@@ -255,7 +256,7 @@ const PageEditor = ({
             <Grid item xs={12} md={4}>
               <FormattingPanel
                 colorPalette={colorPalette}
-                imagePalette={imagePalette}
+                imagePalette={imageSwatches}
                 selectedField={selectedFieldInternal}
                 setSelectedField={setSelectedFieldInternal}
                 fieldStyles={editedStyles}
@@ -286,6 +287,8 @@ const PageEditor = ({
           <FormattingDrawer
             open={isDrawerOpen}
             onClose={() => setIsDrawerOpen(false)}
+            colorPalette={colorPalette}
+            imagePalette={imageSwatches}
             selectedField={selectedFieldInternal}
             setSelectedField={setSelectedFieldInternal}
             fieldStyles={editedStyles}
