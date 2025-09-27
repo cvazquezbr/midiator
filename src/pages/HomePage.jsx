@@ -1368,18 +1368,20 @@ function HomePage() {
                 sourceStyle = style;
             }
 
-            // This entire block is now wrapped in the blob conversion logic
+            // Generate the image, convert it to a Blob, and get a managed URL from the context.
             const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
             const blob = dataURLtoBlob(base64Data);
             if (!blob) {
               throw new Error("Failed to convert generated image for page to a Blob.");
             }
-            const tempUrl = addPendingAsset(blob, isSaving);
-            if (!tempUrl) {
-              throw new Error("Failed to create managed URL for generated page image.");
+
+            const managedAiImageUrl = addPendingAsset(blob, isSaving);
+            if (!managedAiImageUrl) {
+              throw new Error("Failed to create a managed URL for the AI-generated image.");
             }
 
-            const newImage = { ...createNewImageElement(tempUrl), ...sourceStyle, visible: true };
+            // Use the managed blob URL in the new image element.
+            const newImage = { ...createNewImageElement(managedAiImageUrl), ...sourceStyle, visible: true };
             const pageImages = effectivePageTemplate.images || [];
 
             // Se houver imagens, substitui a primeira. Caso contrário, adiciona a nova imagem.
