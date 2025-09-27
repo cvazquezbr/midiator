@@ -195,7 +195,6 @@ export const CampaignProvider = ({ children }) => {
     // Asset Management
     addPendingAsset,
     addPendingAssetMap,
-    addPendingAssetMap,
     removePendingAsset,
     processAssetQueue,
 
@@ -219,6 +218,7 @@ export const CampaignProvider = ({ children }) => {
     customPalette,
     imageColorPalette,
     addPendingAsset,
+    addPendingAssetMap,
     removePendingAsset,
     processAssetQueue,
   ]);
