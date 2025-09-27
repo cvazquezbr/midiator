@@ -23,15 +23,15 @@ const handler = async (req, res) => {
         [userId]
       );
 
-      const campaignsWithPreview = rows.map(campaign => {
-        const firstPageUrl = campaign.campaign_data?.generatedPagesData?.[0]?.url || null;
+      const campaignsWithPages = rows.map(campaign => {
+        const pageUrls = campaign.campaign_data?.generatedPagesData?.map(page => page.url).filter(Boolean) || [];
         // We don't want to send the full, potentially large, campaign_data object
         // in the list view. So we extract what we need and return the rest.
         const { campaign_data, ...rest } = campaign;
-        return { ...rest, firstPageUrl };
+        return { ...rest, pageUrls };
       });
 
-      return res.status(200).json(campaignsWithPreview);
+      return res.status(200).json(campaignsWithPages);
     } catch (error) {
       console.error(`[GET /api/campaigns] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
