@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import DOMPurify from 'dompurify';
 import styles from './RecordRow.module.css';
 
 /**
@@ -39,9 +40,12 @@ const RecordRow = ({ registro, colunas, onEditar, onExcluir, darkMode = false })
             </td>
             {colunas.map(colunaNome => (
                 <td key={`${registro.id}-${colunaNome}`} data-label={colunaNome} className={styles.dataCell}>
-                    <span className={styles.cellContent}>
-                        {registro[colunaNome] !== undefined && registro[colunaNome] !== null ? String(registro[colunaNome]) : ''}
-                    </span>
+                    <div
+                        className={styles.cellContent}
+                        dangerouslySetInnerHTML={{
+                            __html: DOMPurify.sanitize(registro[colunaNome] !== undefined && registro[colunaNome] !== null ? registro[colunaNome] : '')
+                        }}
+                    />
                 </td>
             ))}
         </tr>
