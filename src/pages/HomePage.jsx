@@ -665,50 +665,46 @@ function HomePage() {
     }
   }, [pageTemplate]);
 
+  const extractColorPalette = useCallback((url, setter) => {
+    let finalUrl = url;
+    if (url && url.includes('blob.vercel-storage.com')) {
+      finalUrl = `/api/image-proxy?url=${encodeURIComponent(url)}`;
+    }
+    const img = new Image();
+    if (!finalUrl.startsWith('/api/')) {
+      img.crossOrigin = 'Anonymous';
+    }
+    img.onload = () => {
+      try {
+        const colorThief = new ColorThief();
+        const palette = colorThief.getPalette(img, 5);
+        setter(palette ? palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])) : []);
+      } catch (e) {
+        console.error("Error extracting palette from image:", e);
+        setter([]);
+      }
+    };
+    img.onerror = () => {
+      console.error("Failed to load image for color extraction, clearing swatches.");
+      setter([]);
+    }
+    img.src = finalUrl;
+    if (img.complete) {
+      img.onload();
+    }
+  }, []);
+
   // Effect to extract color palette from the primary image
   useEffect(() => {
     const firstImage = pageTemplate?.images?.[0];
-
-    // Define the extraction function inside the effect to capture the current scope
-    const extract = (url, setter) => {
-      let finalUrl = url;
-      if (url && url.includes('blob.vercel-storage.com')) {
-        finalUrl = `/api/image-proxy?url=${encodeURIComponent(url)}`;
-      }
-      const img = new Image();
-      if (!finalUrl.startsWith('/api/')) {
-        img.crossOrigin = 'Anonymous';
-      }
-      img.onload = () => {
-        try {
-          const colorThief = new ColorThief();
-          const palette = colorThief.getPalette(img, 5);
-          setter(palette ? palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])) : []);
-        } catch (e) {
-          console.error("Error extracting palette from image:", e);
-          setter([]);
-        }
-      };
-      img.onerror = () => {
-        console.error("Failed to load image for color extraction, clearing swatches.");
-        setter([]);
-      }
-      img.src = finalUrl;
-      if (img.complete) {
-        // If the image is already in cache, onload might not fire.
-        img.onload();
-      }
-    };
-
     if (firstImage?.src) {
-      extract(firstImage.src, setImageColorPalette);
+      extractColorPalette(firstImage.src, setImageColorPalette);
     } else {
       // If there's no image, ensure the image palette is empty.
       // The fallback to the campaign palette will be handled by the UI components.
       setImageColorPalette([]);
     }
-    // Dependency array ensures this runs only when the first image's src changes.
-  }, [pageTemplate?.images?.[0]?.src, setImageColorPalette]);
+  }, [pageTemplate?.images?.[0]?.src, extractColorPalette, setImageColorPalette]);
 
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
