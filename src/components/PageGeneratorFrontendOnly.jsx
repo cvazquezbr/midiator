@@ -59,6 +59,7 @@ const PageGeneratorFrontendOnly = ({
   handleImageUpload, // New prop
   onOpenImageGallery,
   imagePalette,
+  pendingAssets,
 }) => {
   const {
     csvData,
@@ -289,12 +290,30 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const downloadPage = (pageData) => {
-    const link = document.createElement('a');
-    link.href = pageData.url;
-    link.download = pageData.filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const blob = pendingAssets[pageData.url];
+    if (blob) {
+      // Create a new, temporary URL specifically for this download.
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = pageData.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      // Revoke the temporary URL immediately after use.
+      URL.revokeObjectURL(downloadUrl);
+    } else {
+      // Fallback for cases where the asset might not be in pendingAssets (e.g., already saved)
+      console.warn(`[downloadPage] Blob not found in pendingAssets for URL: ${pageData.url}. Using direct URL for download.`);
+      const link = document.createElement('a');
+      link.href = pageData.url;
+      link.download = pageData.filename;
+      link.target = '_blank'; // Open in new tab as a fallback for cross-origin issues
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   const handleShare = async (pageData) => {
