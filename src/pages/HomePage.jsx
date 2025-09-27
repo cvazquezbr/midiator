@@ -112,6 +112,7 @@ function HomePage() {
     generatedVideos, setGeneratedVideos,
     aspectRatio, setAspectRatio,
     pendingAssets, setPendingAssets,
+    addPendingAsset,
     defaultPageTemplate,
     paletteId, setPaletteId,
     customPalette, setCustomPalette,
@@ -988,11 +989,13 @@ function HomePage() {
     const file = event.target.files[0];
     if (!file) return;
 
-    const tempUrl = URL.createObjectURL(file);
-    setPendingAssets(prev => ({ ...prev, [tempUrl]: file }));
-    addNewImageToCanvas(tempUrl);
-
-  }, [addNewImageToCanvas, setPendingAssets]);
+    const tempUrl = addPendingAsset(file);
+    if (tempUrl) {
+      addNewImageToCanvas(tempUrl);
+    } else {
+      toast.error("Não foi possível criar uma URL local para a imagem carregada.");
+    }
+  }, [addNewImageToCanvas, addPendingAsset]);
 
   const handleImageSelected = async (file) => {
     if (!file) return;
@@ -1025,9 +1028,12 @@ function HomePage() {
 
       canvas.toBlob((blob) => {
         if (blob) {
-          const resizedTempUrl = URL.createObjectURL(blob);
-          setPendingAssets(prev => ({ ...prev, [resizedTempUrl]: blob }));
-          addNewImageToCanvas(resizedTempUrl);
+          const resizedTempUrl = addPendingAsset(blob);
+          if (resizedTempUrl) {
+            addNewImageToCanvas(resizedTempUrl);
+          } else {
+            toast.error("Houve um erro ao criar uma URL gerenciada para a imagem.");
+          }
         } else {
           toast.error("Houve um erro ao processar a imagem.");
         }
@@ -1211,23 +1217,18 @@ function HomePage() {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
       const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor, palette });
 
-      // 1. Get the raw base64 data from the generation service
       const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: palette?.colors || [] });
-
-      // 2. Convert base64 to a Blob
       const blob = dataURLtoBlob(base64Data);
       if (!blob) {
         throw new Error("Failed to convert generated image data to a Blob.");
       }
 
-      // 3. Create a temporary blob: URL
-      const tempUrl = URL.createObjectURL(blob);
+      const tempUrl = addPendingAsset(blob);
+      if (!tempUrl) {
+        throw new Error("Failed to create a managed URL for the generated image.");
+      }
 
-      // 4. Add the asset to the pending uploads queue
-      setPendingAssets(prev => ({ ...prev, [tempUrl]: blob }));
-
-      // 5. Update the UI and state using the clean blob: URL
-      console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Using temporary blob URL:', tempUrl);
+      console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Using managed blob URL:', tempUrl);
       setGeneratedPageUrl(tempUrl);
       addNewImageToCanvas(tempUrl);
       return true;
