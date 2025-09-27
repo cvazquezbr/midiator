@@ -289,26 +289,57 @@ const PageGeneratorFrontendOnly = ({
     }
   };
 
-  const downloadPage = (pageData) => {
-    const blob = pendingAssets[pageData.url];
-    if (blob) {
-      // Create a new, temporary URL specifically for this download.
-      const downloadUrl = URL.createObjectURL(blob);
+  const downloadPage = async (pageData) => {
+    if (!pageData || !pageData.url) {
+      toast.error('Não há dados de página para baixar.');
+      return;
+    }
+
+    let blobToDownload = null;
+    const url = pageData.url;
+
+    try {
+      if (url.startsWith('blob:')) {
+        blobToDownload = pendingAssets[url];
+        if (!blobToDownload) {
+          // If not in pendingAssets, it might be a revoked URL from another session. Try fetching it.
+          const response = await fetch(url);
+          blobToDownload = await response.blob();
+        }
+      } else if (url.startsWith('data:')) {
+        blobToDownload = dataURLtoBlob(url);
+      } else {
+        // For http(s) URLs, fetch it via the proxy to handle CORS
+        const fetchUrl = `/api/asset-proxy?url=${encodeURIComponent(url)}`;
+        const response = await fetch(fetchUrl);
+        if (!response.ok) {
+          throw new Error(`Falha ao buscar o recurso: ${response.statusText}`);
+        }
+        blobToDownload = await response.blob();
+      }
+
+      if (!blobToDownload) {
+        throw new Error('Não foi possível obter os dados da imagem como Blob.');
+      }
+
+      // Unified download mechanism
+      const tempDownloadUrl = URL.createObjectURL(blobToDownload);
       const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = pageData.filename;
+      link.href = tempDownloadUrl;
+      link.download = pageData.filename || 'pagina.png';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      // Revoke the temporary URL immediately after use.
-      URL.revokeObjectURL(downloadUrl);
-    } else {
-      // Fallback for cases where the asset might not be in pendingAssets (e.g., already saved)
-      console.warn(`[downloadPage] Blob not found in pendingAssets for URL: ${pageData.url}. Using direct URL for download.`);
+      URL.revokeObjectURL(tempDownloadUrl); // Clean up immediately
+
+    } catch (error) {
+      console.error(`[downloadPage] Falha ao baixar a página ${pageData.filename}:`, error);
+      toast.error(`Falha ao baixar a página: ${error.message}`);
+      // Fallback for the original URL just in case, for external URLs that might not need the proxy.
       const link = document.createElement('a');
-      link.href = pageData.url;
-      link.download = pageData.filename;
-      link.target = '_blank'; // Open in new tab as a fallback for cross-origin issues
+      link.href = url;
+      link.download = pageData.filename || 'pagina.png';
+      link.target = '_blank';
       link.rel = 'noopener noreferrer';
       document.body.appendChild(link);
       link.click();
@@ -334,10 +365,17 @@ const PageGeneratorFrontendOnly = ({
     }
   };
 
-  const downloadAllPages = () => {
-    initialGeneratedPagesData.forEach((pageData, index) => {
-      setTimeout(() => downloadPage(pageData), index * 100);
-    });
+  const downloadAllPages = async () => {
+    for (const [index, pageData] of initialGeneratedPagesData.entries()) {
+      try {
+        // Stagger downloads to avoid browser limitations/throttling
+        await new Promise(resolve => setTimeout(resolve, index * 250));
+        await downloadPage(pageData);
+      } catch (error) {
+        console.error(`Falha ao enfileirar o download para a página ${index + 1}:`, error);
+        toast.error(`Falha no download da página ${index + 1}.`);
+      }
+    }
   };
 
   const closePreview = () => {
