@@ -143,20 +143,20 @@ const FieldPositioner = ({
         }
       }));
     } else {
-      const imageIndex = pageTemplate.images.findIndex(img => img.id === id);
-      if (imageIndex > -1) {
-        setPageTemplate(prev => {
+      setPageTemplate(prev => {
+        const imageIndex = prev.images.findIndex(img => img.id === id);
+        if (imageIndex > -1) {
           const newImages = [...prev.images];
           newImages[imageIndex] = { ...newImages[imageIndex], ...newPosition };
           return { ...prev, images: newImages };
-        });
-      } else {
-        setBrandElements(prev => prev.map(el =>
-          el.id === id ? { ...el, ...newPosition } : el
-        ));
-      }
+        }
+        return prev;
+      });
+      setBrandElements(prev => prev.map(el =>
+        el.id === id ? { ...el, ...newPosition } : el
+      ));
     }
-  }, [fieldPositions, pageTemplate, brandElements, selectedField, setPageTemplate, setFieldPositions, setBrandElements]);
+  }, [selectedField, setPageTemplate, setFieldPositions, setBrandElements]);
 
   const handleSizeChange = useCallback((id, newSize) => {
     if (id === '__cropbox__') {
@@ -177,20 +177,20 @@ const FieldPositioner = ({
         }
       }));
     } else {
-      const imageIndex = pageTemplate.images.findIndex(img => img.id === id);
-      if (imageIndex > -1) {
-        setPageTemplate(prev => {
+      setPageTemplate(prev => {
+        const imageIndex = prev.images.findIndex(img => img.id === id);
+        if (imageIndex > -1) {
           const newImages = [...prev.images];
           newImages[imageIndex] = { ...newImages[imageIndex], ...newSize };
           return { ...prev, images: newImages };
-        });
-      } else {
-        setBrandElements(prev => prev.map(el =>
-          el.id === id ? { ...el, ...newSize } : el
-        ));
-      }
+        }
+        return prev;
+      });
+      setBrandElements(prev => prev.map(el =>
+        el.id === id ? { ...el, ...newSize } : el
+      ));
     }
-  }, [fieldPositions, pageTemplate, brandElements, selectedField, setPageTemplate, setFieldPositions, setBrandElements]);
+  }, [selectedField, setPageTemplate, setFieldPositions, setBrandElements]);
 
   const centerAllFields = () => {
     const newPositions = { ...fieldPositions };
