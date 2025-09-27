@@ -17,10 +17,11 @@ import {
   CardContent,
   CardActions,
   Fab,
+  CardMedia,
 } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon, Image as ImageIcon } from '@mui/icons-material';
 import { useIsMobile } from '../hooks/use-mobile';
-import { getCampaigns, deleteCampaign, loadCampaign } from '../utils/campaignState';
+import { getCampaigns, deleteCampaign } from '../utils/campaignState';
 import { toast } from 'sonner';
 
 const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorList, personaList }) => {
@@ -106,25 +107,47 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorLis
               </Typography>
             ) : (
               (campaigns || []).map((campaign) => (
-                <Card key={campaign.id} sx={{ mb: 2 }}>
-                  <ListItemButton onClick={() => onLoadCampaign(campaign.id)} sx={{ p: 0 }}>
-                    <CardContent sx={{ flexGrow: 1 }}>
-                      <Typography variant="h6" component="div">
-                        {campaign.name}
-                      </Typography>
-                      <Typography sx={{ mb: 1.5 }} color="text.secondary">
-                        Atualizada em: {new Date(campaign.updated_at).toLocaleString()}
-                      </Typography>
-                    </CardContent>
-                  </ListItemButton>
-                  <CardActions sx={{ justifyContent: 'flex-end' }}>
-                    <IconButton aria-label="edit" onClick={() => onEditCampaign(campaign)}>
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton aria-label="delete" onClick={() => handleDelete(campaign.id, campaign.name)}>
-                      <DeleteIcon />
-                    </IconButton>
-                  </CardActions>
+                <Card key={campaign.id} sx={{ mb: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' } }}>
+                  {campaign.firstPageUrl ? (
+                    <CardMedia
+                      component="img"
+                      sx={{ width: { xs: '100%', sm: 151 }, height: { xs: 151, sm: 'auto' }, objectFit: 'cover' }}
+                      image={campaign.firstPageUrl}
+                      alt={`Preview of ${campaign.name}`}
+                    />
+                  ) : (
+                    <Box sx={{
+                      width: { xs: '100%', sm: 151 },
+                      height: { xs: 151, sm: 'auto' },
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: 'grey.200',
+                      minHeight: 151,
+                    }}>
+                      <ImageIcon color="disabled" sx={{ fontSize: 40 }} />
+                    </Box>
+                  )}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                    <ListItemButton onClick={() => onLoadCampaign(campaign.id)} sx={{ p: 0, flexGrow: 1 }}>
+                      <CardContent>
+                        <Typography variant="h6" component="div">
+                          {campaign.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Atualizada em: {new Date(campaign.updated_at).toLocaleString()}
+                        </Typography>
+                      </CardContent>
+                    </ListItemButton>
+                    <CardActions sx={{ justifyContent: 'flex-end', alignSelf: 'flex-end', p: 1 }}>
+                      <IconButton aria-label="edit" onClick={() => onEditCampaign(campaign)}>
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton aria-label="delete" onClick={() => handleDelete(campaign.id, campaign.name)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </CardActions>
+                  </Box>
                 </Card>
               ))
             )}

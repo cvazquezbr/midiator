@@ -19,10 +19,19 @@ const handler = async (req, res) => {
   if (req.method === 'GET') {
     try {
       const { rows } = await query(
-        'SELECT id, name, updated_at FROM campaigns WHERE user_id = $1 ORDER BY updated_at DESC',
+        'SELECT id, name, updated_at, campaign_data FROM campaigns WHERE user_id = $1 ORDER BY updated_at DESC',
         [userId]
       );
-      return res.status(200).json(rows);
+
+      const campaignsWithPreview = rows.map(campaign => {
+        const firstPageUrl = campaign.campaign_data?.generatedPagesData?.[0]?.url || null;
+        // We don't want to send the full, potentially large, campaign_data object
+        // in the list view. So we extract what we need and return the rest.
+        const { campaign_data, ...rest } = campaign;
+        return { ...rest, firstPageUrl };
+      });
+
+      return res.status(200).json(campaignsWithPreview);
     } catch (error) {
       console.error(`[GET /api/campaigns] Error for user ${userId}:`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
