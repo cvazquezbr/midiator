@@ -459,17 +459,20 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
       const hasAudio = generatedAudioData && generatedAudioData.length > 0;
       if (hasAudio) {
-        await Promise.all(
-          generatedAudioData.map(async (audio, i) => {
-            const audioBlob = getPlayableBlob(audio, pendingAssets);
-            if (audioBlob) {
-              const audioSource = await fetchFile(URL.createObjectURL(audioBlob));
+        for (const [i, audio] of generatedAudioData.entries()) {
+          const audioBlob = getPlayableBlob(audio, pendingAssets);
+          if (audioBlob) {
+            const tempUrl = URL.createObjectURL(audioBlob);
+            try {
+              const audioSource = await fetchFile(tempUrl);
               await ffmpeg.writeFile(`audio${i}.mp3`, audioSource);
-            } else {
-               console.warn(`Could not find a playable blob for audio slide ${i}. It will be silent.`);
+            } finally {
+              URL.revokeObjectURL(tempUrl);
             }
-          })
-        );
+          } else {
+            console.warn(`Could not find a playable blob for audio slide ${i}. It will be silent.`);
+          }
+        }
       }
 
       const inputs = [];
@@ -660,7 +663,10 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
       const data = await ffmpeg.readFile("output.mp4");
       const blob = new Blob([data.buffer], { type: 'video/mp4' });
-      const url = URL.createObjectURL(blob);
+      const url = addPendingAsset(blob);
+      if (!url) {
+        throw new Error('Failed to create a managed URL for the generated video.');
+      }
       setVideo(url);
 
       // --- Thumbnail Generation ---
@@ -807,9 +813,14 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
     const inputs = ["-loop", "1", "-i", imgFile];
     if (hasAudio) {
-      const audioSource = await fetchFile(URL.createObjectURL(audioBlob));
-      await ffmpeg.writeFile(audioFile, audioSource);
-      inputs.push("-i", audioFile);
+      const tempUrl = URL.createObjectURL(audioBlob);
+      try {
+        const audioSource = await fetchFile(tempUrl);
+        await ffmpeg.writeFile(audioFile, audioSource);
+        inputs.push("-i", audioFile);
+      } finally {
+        URL.revokeObjectURL(tempUrl);
+      }
     }
 
     const firstImage = new Image();
@@ -1051,6 +1062,9 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       const data = await ffmpeg.readFile('output.mp4');
       const blob = new Blob([data.buffer], { type: 'video/mp4' });
       const url = addPendingAsset(blob);
+      if (!url) {
+        throw new Error('Failed to create a managed URL for the narrated video.');
+      }
       setVideo(url);
 
       const thumbnailBlob = await generateThumbnail(ffmpeg, blob);

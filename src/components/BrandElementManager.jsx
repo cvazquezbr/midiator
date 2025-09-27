@@ -5,6 +5,7 @@ import {
 } from '@mui/material';
 import { Refresh, Upload } from '@mui/icons-material';
 import { useUserAuth } from '../context/UserAuthContext';
+import { useCampaign } from '../context/CampaignContext';
 import { findFolderByName, listFiles, getFileAsBlob, uploadFile, createFolder } from '../utils/googleApi';
 import { toast } from 'sonner';
 
@@ -14,6 +15,7 @@ const BrandElementManager = ({ onElementSelect }) => {
   const [error, setError] = useState(null);
   const [loadingImageId, setLoadingImageId] = useState(null);
   const { googleAccessToken } = useUserAuth(); // Only used to check for connection status
+  const { addPendingAsset } = useCampaign();
   const fileInputRef = React.useRef(null);
 
   const fetchBrandElements = useCallback(async () => {
@@ -69,13 +71,17 @@ const BrandElementManager = ({ onElementSelect }) => {
     setError(null);
 
     try {
-      const blob = await getFileAsBlob(image.id); // Corrected call
-      const blobUrl = URL.createObjectURL(blob);
+      const blob = await getFileAsBlob(image.id);
+      const managedBlobUrl = addPendingAsset(blob);
+
+      if (!managedBlobUrl) {
+        throw new Error("Não foi possível criar uma URL local para o elemento de marca.");
+      }
 
       const newElement = {
         id: `brand_${new Date().getTime()}`,
         gDriveId: image.id,
-        url: blobUrl,
+        url: managedBlobUrl,
         x: 10, y: 10, width: 20, height: 20, rotation: 0,
         filters: {
           brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100,
@@ -84,7 +90,9 @@ const BrandElementManager = ({ onElementSelect }) => {
       onElementSelect(newElement);
 
     } catch (err) {
-      setError(`Falha ao carregar imagem: ${err.message}`);
+      const errorMessage = err.message || 'Ocorreu um erro desconhecido ao carregar o elemento.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoadingImageId(null);
     }

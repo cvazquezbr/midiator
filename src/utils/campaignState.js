@@ -52,6 +52,7 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
   // This step ensures that assets represented as data URIs are also uploaded.
   console.log('[serializeCampaignData] Step 1: Converting data URIs to blobs...');
   const dataUriConversionPromises = [];
+  const temporaryDataUriBlobs = []; // To track and revoke these specific blobs
   traverseState(workingState, (key, value, owner) => {
     if (typeof value === 'string' && value.startsWith('data:')) {
       const conversionPromise = fetch(value)
@@ -60,6 +61,7 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
           const blobUrl = URL.createObjectURL(blob);
           allPendingAssets[blobUrl] = blob; // Add new blob to our asset map
           owner[key] = blobUrl; // Replace data: URI with blob: URI in the working state
+          temporaryDataUriBlobs.push(blobUrl); // Track for cleanup
         })
         .catch(error => {
           console.error(`[serializeCampaignData] Failed to convert data URI to blob for key "${key}":`, error);
@@ -114,6 +116,12 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
 
   await Promise.all(uploadPromises);
   console.log('[serializeCampaignData] Step 3 COMPLETE.');
+
+  // --- Clean up temporary blobs created from data URIs ---
+  temporaryDataUriBlobs.forEach(url => {
+    console.log(`[serializeCampaignData] Revoking temporary data-uri blob: ${url}`);
+    URL.revokeObjectURL(url);
+  });
 
   // --- Step 4: Replace all temporary `blob:` URLs with permanent URLs ---
   console.log('[serializeCampaignData] Step 4: Replacing temporary URLs with permanent ones...');
