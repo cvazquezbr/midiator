@@ -1381,25 +1381,20 @@ function HomePage() {
 
             const oldImage = (effectivePageTemplate.images || [])[0];
 
-            // Generate the image, convert it to a Blob, and get a managed URL from the context.
+            // Generate the image and get the base64 data URL.
             const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
-            const blob = dataURLtoBlob(base64Data);
-            if (!blob) {
-              throw new Error("Failed to convert generated image for page to a Blob.");
+            if (!base64Data) {
+              throw new Error("A IA não conseguiu gerar a imagem.");
             }
 
-            const managedAiImageUrl = addPendingAsset(blob, isSaving);
-            if (!managedAiImageUrl) {
-              throw new Error("Failed to create a managed URL for the AI-generated image.");
-            }
-
-            // Revoke the old image's blob URL if it exists and is managed
+            // Revoke the old image's blob URL if it exists to prevent memory leaks.
             if (oldImage && oldImage.src && oldImage.src.startsWith('blob:')) {
               removePendingAsset(oldImage.src);
             }
 
-            // Use the managed blob URL in the new image element.
-            const newImage = { ...createNewImageElement(managedAiImageUrl), ...sourceStyle, visible: true };
+            // Use the self-contained data: URL directly. This is robust and avoids lifecycle issues.
+            // The serialization process is already equipped to handle data: URLs on save.
+            const newImage = { ...createNewImageElement(base64Data), ...sourceStyle, visible: true };
             const pageImages = effectivePageTemplate.images || [];
 
             // Se houver imagens, substitui a primeira. Caso contrário, adiciona a nova imagem.
