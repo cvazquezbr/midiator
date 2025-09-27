@@ -18,7 +18,11 @@ export default async function handler(req) {
   }
 
   try {
-    const imageResponse = await fetch(imageUrl);
+    const imageResponse = await fetch(imageUrl, {
+      headers: {
+        Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
+      },
+    });
 
     if (!imageResponse.ok) {
       return new Response('Failed to fetch the image from the external source.', { status: imageResponse.status });
