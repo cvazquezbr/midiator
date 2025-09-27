@@ -60,7 +60,7 @@ import { dataURLtoBlob, urlToBlob } from '../utils/imageComposer';
 import { markdownToLinkedinText } from '../lib/utils';
 import { getLinkedInProfiles, publishToLinkedIn, uploadImagesForLinkedIn, uploadVideoForLinkedIn } from '../utils/linkedinAPI';
 import { createSchedule, getSchedulesForUser, deleteSchedule, getSchedule, updateSchedule } from '../utils/scheduleAPI';
-import { getCampaigns } from '../utils/campaignState.js';
+import { getCampaigns, deserializeCampaignData } from '../utils/campaignState.js';
 import ConfirmationModal from './ui/ConfirmationModal/ConfirmationModal';
 import { upload } from '@vercel/blob/client';
 
@@ -101,6 +101,7 @@ const Publisher = ({
   setSelectedVideos,
   currentCampaign,
   pendingAssets,
+  setPendingAssets,
 }) => {
   const [tabValue, setTabValue] = React.useState(0);
   const [mySchedules, setMySchedules] = useState([]);
@@ -192,11 +193,38 @@ const Publisher = ({
       setIsLoadingSchedules(true);
       try {
         const schedules = await getSchedulesForUser();
-        const parsedSchedules = schedules.map(s => ({
+
+        const hydrationPromises = schedules.map(async (schedule) => {
+          if (schedule.campaign_data) {
+            try {
+              const { finalState, newlyCreatedAssets } = await deserializeCampaignData(schedule.campaign_data);
+              return { ...schedule, campaign_data: finalState, newlyCreatedAssets };
+            } catch (e) {
+              console.error(`Failed to hydrate schedule ${schedule.id}`, e);
+              return { ...schedule, newlyCreatedAssets: {} }; // Return original on failure
+            }
+          }
+          return { ...schedule, newlyCreatedAssets: {} };
+        });
+
+        const hydratedSchedulesResults = await Promise.all(hydrationPromises);
+
+        const allNewAssets = {};
+        const finalSchedules = hydratedSchedulesResults.map(result => {
+          Object.assign(allNewAssets, result.newlyCreatedAssets);
+          const { newlyCreatedAssets, ...schedule } = result;
+          return schedule;
+        });
+
+        if (Object.keys(allNewAssets).length > 0) {
+          setPendingAssets(prev => ({ ...prev, ...allNewAssets }));
+        }
+
+        const parsedSchedules = finalSchedules.map(s => ({
           ...s,
           post_content: typeof s.post_content === 'string' ? JSON.parse(s.post_content) : s.post_content,
         }));
-        parsedSchedules.sort((a, b) => new Date(b.scheduled_at) - new Date(a.scheduled_at));
+        parsedSchedules.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         setMySchedules(parsedSchedules);
       } catch (error) {
         console.error("Failed to fetch user schedules:", error);
@@ -205,7 +233,7 @@ const Publisher = ({
         setIsLoadingSchedules(false);
       }
     }
-  }, [tabValue]);
+  }, [tabValue, setPendingAssets]);
 
   const handleViewDetails = async (scheduleId) => {
     try {
@@ -1103,8 +1131,8 @@ const Publisher = ({
                                 {mySchedules.map((row) => (
                                     <TableRow key={row.id}>
                                         <TableCell>
-                                            {row.campaign_data?.images?.[0] && (
-                                                <img src={row.campaign_data.images[0]} alt="Campaign" style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }} />
+                                            {row.campaign_data?.pageTemplate?.images?.[0]?.url && (
+                                                <img src={row.campaign_data.pageTemplate.images[0].url} alt="Campaign" style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }} />
                                             )}
                                         </TableCell>
                                         <TableCell component="th" scope="row">
