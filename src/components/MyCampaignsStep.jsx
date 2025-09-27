@@ -18,11 +18,13 @@ import {
   CardActions,
   Fab,
   CardMedia,
+  Grid,
 } from '@mui/material';
 import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon, Image as ImageIcon } from '@mui/icons-material';
 import { useIsMobile } from '../hooks/use-mobile';
 import { getCampaigns, deleteCampaign } from '../utils/campaignState';
 import { toast } from 'sonner';
+import CampaignCard from './CampaignCard';
 
 const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorList, personaList }) => {
   const [campaigns, setCampaigns] = useState([]);
@@ -106,50 +108,18 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorLis
                 Nenhuma campanha salva encontrada. Crie uma nova para começar.
               </Typography>
             ) : (
-              (campaigns || []).map((campaign) => (
-                <Card key={campaign.id} sx={{ mb: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' } }}>
-                  {campaign.firstPageUrl ? (
-                    <CardMedia
-                      component="img"
-                      sx={{ width: { xs: '100%', sm: 151 }, height: { xs: 151, sm: 'auto' }, objectFit: 'cover' }}
-                      image={campaign.firstPageUrl}
-                      alt={`Preview of ${campaign.name}`}
+              <Grid container spacing={4}>
+                {(campaigns || []).map((campaign) => (
+                  <Grid item key={campaign.id} xs={12} sm={6} md={4}>
+                    <CampaignCard
+                      campaign={campaign}
+                      onLoadCampaign={onLoadCampaign}
+                      onEditCampaign={onEditCampaign}
+                      onDeleteCampaign={handleDelete}
                     />
-                  ) : (
-                    <Box sx={{
-                      width: { xs: '100%', sm: 151 },
-                      height: { xs: 151, sm: 'auto' },
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: 'grey.200',
-                      minHeight: 151,
-                    }}>
-                      <ImageIcon color="disabled" sx={{ fontSize: 40 }} />
-                    </Box>
-                  )}
-                  <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
-                    <ListItemButton onClick={() => onLoadCampaign(campaign.id)} sx={{ p: 0, flexGrow: 1 }}>
-                      <CardContent>
-                        <Typography variant="h6" component="div">
-                          {campaign.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Atualizada em: {new Date(campaign.updated_at).toLocaleString()}
-                        </Typography>
-                      </CardContent>
-                    </ListItemButton>
-                    <CardActions sx={{ justifyContent: 'flex-end', alignSelf: 'flex-end', p: 1 }}>
-                      <IconButton aria-label="edit" onClick={() => onEditCampaign(campaign)}>
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton aria-label="delete" onClick={() => handleDelete(campaign.id, campaign.name)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </CardActions>
-                  </Box>
-                </Card>
-              ))
+                  </Grid>
+                ))}
+              </Grid>
             )}
           </Box>
         )}
