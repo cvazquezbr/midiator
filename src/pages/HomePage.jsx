@@ -406,7 +406,6 @@ function HomePage() {
   const handleSaveCampaign = async (name) => {
     console.log(`[HomePage] Attempting to save campaign: "${name}"`);
 
-    // Create the campaign data object first for inspection
     const campaignDataToSave = {
       activeStep,
       problema,
@@ -431,10 +430,6 @@ function HomePage() {
       customPalette,
     };
 
-    // Log the object that will be saved, for final diagnosis
-    console.log("[HomePage] DIAGNOSTIC: Data structure just before saving:", JSON.stringify(campaignDataToSave, null, 2));
-
-
     try {
       await checkAuthStatus();
     } catch (error) {
@@ -450,9 +445,7 @@ function HomePage() {
     const sanitizeMediaArray = (arr) => {
       if (!Array.isArray(arr)) return [];
       return arr.map(item => {
-        // Create a shallow copy to avoid mutating the original state object directly
         const sanitizedItem = { ...item };
-        // Explicitly delete large binary data properties
         delete sanitizedItem.blob;
         delete sanitizedItem.file;
         delete sanitizedItem.thumbnailBlob;
@@ -460,22 +453,17 @@ function HomePage() {
       });
     };
 
-    const sanitizedPagesData = sanitizeMediaArray(generatedPagesData);
-    const sanitizedBrandElements = sanitizeMediaArray(brandElements);
-    const sanitizedAudioData = sanitizeMediaArray(generatedAudioData);
-    const sanitizedVideos = sanitizeMediaArray(generatedVideos);
-    const sanitizedPageTemplate = {
-      ...pageTemplate,
-      images: sanitizeMediaArray(pageTemplate.images),
+    const sanitizedCampaignData = {
+        ...campaignDataToSave,
+        generatedPagesData: sanitizeMediaArray(campaignDataToSave.generatedPagesData),
+        brandElements: sanitizeMediaArray(campaignDataToSave.brandElements),
+        generatedAudioData: sanitizeMediaArray(campaignDataToSave.generatedAudioData),
+        generatedVideos: sanitizeMediaArray(campaignDataToSave.generatedVideos),
+        pageTemplate: {
+            ...campaignDataToSave.pageTemplate,
+            images: sanitizeMediaArray(campaignDataToSave.pageTemplate.images),
+        },
     };
-
-    // Re-assign the properties with the sanitized versions
-    campaignDataToSave.generatedPagesData = sanitizedPagesData;
-    campaignDataToSave.brandElements = sanitizedBrandElements;
-    campaignDataToSave.generatedAudioData = sanitizedAudioData;
-    campaignDataToSave.generatedVideos = sanitizedVideos;
-    campaignDataToSave.pageTemplate = sanitizedPageTemplate;
-
 
     setIsSaving(true);
     setUploadProgress({ current: 0, total: 0 });
@@ -483,41 +471,35 @@ function HomePage() {
       let result;
       if (currentCampaign) {
         console.log(`[HomePage] Updating existing campaign, ID: ${currentCampaign.id}`);
-        result = await updateCampaign(currentCampaign.id, name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign, paletteId);
+        result = await updateCampaign(currentCampaign.id, name, sanitizedCampaignData, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign, paletteId);
         toast.success(`Campaign "${name}" updated.`);
-        const updatedCampaignObject = {
-          ...currentCampaign,
-          name: name,
-          ...(result.campaign || {}),
-        };
-        setCurrentCampaign(updatedCampaignObject);
       } else {
         console.log(`[HomePage] Saving new campaign.`);
-        result = await saveCampaign(name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign, paletteId);
+        result = await saveCampaign(name, sanitizedCampaignData, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign, paletteId);
         toast.success(`Campaign "${name}" saved.`);
-        setCurrentCampaign(result.campaign);
       }
 
-      // After a successful save, the state returned (`result.finalState`) contains the permanent URLs.
-      // We must update the component's state with these new URLs to prevent stale blob URLs
-      // from being used or re-saved.
-      const { finalState } = result;
-      if (finalState) {
-        console.log("[HomePage] Save successful. Synchronizing component state with permanent URLs.");
-        // Selectively update the state with the data that contains the new permanent URLs.
-        // This is better than calling applyAppState(finalState) because it avoids resetting
-        // other UI-related state that is not part of the campaign data (e.g., activeStep).
-        setPageTemplate(finalState.pageTemplate);
-        setGeneratedPagesData(finalState.generatedPagesData);
-        setBrandElements(finalState.brandElements);
-        setGeneratedAudioData(finalState.generatedAudioData);
-        setGeneratedVideos(finalState.generatedVideos);
-        setGeneratedPageUrl(finalState.generatedPageUrl);
+      // After a successful save, the 'result' contains the fully re-hydrated campaign data
+      // and the new pendingAssets map. We must apply this new state to the context.
+      const { campaign: rehydratedCampaign, pendingAssets: newPendingAssets } = result;
+
+      if (rehydratedCampaign && rehydratedCampaign.campaign_data) {
+        console.log("[HomePage] Save successful. Synchronizing component state with re-hydrated data.");
+
+        // 1. Update the context with the new map of pending assets
+        setPendingAssets(newPendingAssets || {});
+
+        // 2. Update the rest of the UI state using the hydrated campaign data
+        applyAppState(rehydratedCampaign.campaign_data);
+
+        // 3. Update the top-level currentCampaign object to keep it in sync
+        setCurrentCampaign(rehydratedCampaign);
+
       } else {
-         console.warn("[HomePage] Save operation did not return a final state to synchronize.");
+         console.warn("[HomePage] Save operation did not return a re-hydrated state to synchronize.");
+         setPendingAssets({}); // Clear pending assets as a fallback
       }
 
-      setPendingAssets({}); // Clear pending assets after successful save/update
       console.log("[HomePage] Save/Update operation completed successfully.");
     } catch (err) {
       console.error("[HomePage] Error during save/update campaign:", err);
@@ -901,9 +883,11 @@ function HomePage() {
     setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     setActiveStep(1);
   };
-  const handleEditCampaign = (campaign) => {
-    setCurrentCampaign(campaign);
-    setShowSaveModal(true);
+  const handleEditCampaign = async (campaign) => {
+    toast.info(`Carregando "${campaign.name}" para edição...`);
+    await handleLoadCampaign(campaign.id);
+    // Navigate directly to the page editor step after loading
+    setActiveStep(3);
   };
   const parseCsvFile = async (file) => {
     if (!file) return;
