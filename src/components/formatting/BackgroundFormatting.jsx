@@ -18,11 +18,20 @@ const BackgroundFormatting = ({
   setPageTemplate,
   expandedPanel,
   handleAccordionChange,
+  colorPalette,
+  imagePalette,
 }) => {
   return (
     <Accordion expanded={expandedPanel === 'backgroundColor'} onChange={handleAccordionChange('backgroundColor')}>
       <AccordionSummary expandIcon={<ExpandMore />}><Typography><Gradient sx={{ mr: 1, verticalAlign: 'middle' }} />Fundo da Página</Typography></AccordionSummary>
-      <AccordionDetails><BackgroundColorEditor pageTemplate={pageTemplate} onUpdate={setPageTemplate} /></AccordionDetails>
+      <AccordionDetails>
+        <BackgroundColorEditor
+          pageTemplate={pageTemplate}
+          onUpdate={setPageTemplate}
+          colorPalette={colorPalette}
+          imagePalette={imagePalette}
+        />
+      </AccordionDetails>
     </Accordion>
   );
 };
