@@ -115,6 +115,7 @@ function HomePage() {
     addPendingAsset,
     addPendingAssetMap,
     processAssetQueue,
+    removePendingAsset,
     defaultPageTemplate,
     paletteId, setPaletteId,
     customPalette, setCustomPalette,
@@ -848,10 +849,20 @@ function HomePage() {
 
           // Use the blob from pendingAssets if available, otherwise use the URL
           const blob = pendingAssets[audioData.url];
-          if (blob) {
-            audioElement.src = URL.createObjectURL(blob);
-          } else {
-            audioElement.src = audioData.url;
+          let tempUrl = null;
+          try {
+            if (blob) {
+              tempUrl = URL.createObjectURL(blob);
+              audioElement.src = tempUrl;
+            } else {
+              audioElement.src = audioData.url;
+            }
+          } finally {
+            // Ensure the temporary URL is revoked after the metadata is loaded or an error occurs.
+            if (tempUrl) {
+              audioElement.addEventListener('loadedmetadata', () => URL.revokeObjectURL(tempUrl), { once: true });
+              audioElement.addEventListener('error', () => URL.revokeObjectURL(tempUrl), { once: true });
+            }
           }
         });
       });
@@ -1368,6 +1379,8 @@ function HomePage() {
                 sourceStyle = style;
             }
 
+            const oldImage = (effectivePageTemplate.images || [])[0];
+
             // Generate the image, convert it to a Blob, and get a managed URL from the context.
             const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
             const blob = dataURLtoBlob(base64Data);
@@ -1378,6 +1391,11 @@ function HomePage() {
             const managedAiImageUrl = addPendingAsset(blob, isSaving);
             if (!managedAiImageUrl) {
               throw new Error("Failed to create a managed URL for the AI-generated image.");
+            }
+
+            // Revoke the old image's blob URL if it exists and is managed
+            if (oldImage && oldImage.src && oldImage.src.startsWith('blob:')) {
+              removePendingAsset(oldImage.src);
             }
 
             // Use the managed blob URL in the new image element.
