@@ -237,7 +237,17 @@ const Publisher = ({
 
   const handleViewDetails = async (scheduleId) => {
     try {
-      const scheduleDetails = await getSchedule(scheduleId);
+      let scheduleDetails = await getSchedule(scheduleId);
+
+      // Hydrate campaign_data if it exists
+      if (scheduleDetails.campaign_data) {
+        const { finalState, newlyCreatedAssets } = await deserializeCampaignData(scheduleDetails.campaign_data);
+        scheduleDetails.campaign_data = finalState;
+        if (Object.keys(newlyCreatedAssets).length > 0) {
+          setPendingAssets(prev => ({ ...prev, ...newlyCreatedAssets }));
+        }
+      }
+
       const parsedSchedule = {
         ...scheduleDetails,
         post_content: typeof scheduleDetails.post_content === 'string' ? JSON.parse(scheduleDetails.post_content) : scheduleDetails.post_content,
