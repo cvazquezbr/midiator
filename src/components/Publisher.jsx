@@ -687,8 +687,14 @@ const Publisher = ({
             const imageBlobsToUpload = await Promise.all(
               selectedImageIndexes.map(async (index, i) => {
                 const media = unifiedMedia[parseInt(index)];
-                if (media.blob) return media.blob;
 
+                // Corrected logic:
+                // 1. Check if the URL corresponds to a pending asset (a local blob).
+                if (media.url && pendingAssets[media.url]) {
+                  return pendingAssets[media.url];
+                }
+
+                // 2. If not, it's a permanent URL that needs to be downloaded.
                 toast.info(`Baixando imagem ${i + 1}/${selectedImageIndexes.length}...`);
                 try {
                   const blob = await urlToBlob(media.url);
