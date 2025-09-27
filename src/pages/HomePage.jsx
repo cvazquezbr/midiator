@@ -113,6 +113,8 @@ function HomePage() {
     aspectRatio, setAspectRatio,
     pendingAssets, setPendingAssets,
     addPendingAsset,
+    addPendingAssetMap,
+    processAssetQueue,
     defaultPageTemplate,
     paletteId, setPaletteId,
     customPalette, setCustomPalette,
@@ -500,6 +502,9 @@ function HomePage() {
          console.warn("[HomePage] Save operation did not return a re-hydrated state to synchronize.");
          setPendingAssets({}); // Clear pending assets as a fallback
       }
+
+      // 4. Process any assets that were queued during the save operation
+      processAssetQueue();
 
       console.log("[HomePage] Save/Update operation completed successfully.");
     } catch (err) {
@@ -985,13 +990,13 @@ function HomePage() {
     const file = event.target.files[0];
     if (!file) return;
 
-    const tempUrl = addPendingAsset(file);
+    const tempUrl = addPendingAsset(file, isSaving);
     if (tempUrl) {
       addNewImageToCanvas(tempUrl);
     } else {
       toast.error("Não foi possível criar uma URL local para a imagem carregada.");
     }
-  }, [addNewImageToCanvas, addPendingAsset]);
+  }, [addNewImageToCanvas, addPendingAsset, isSaving]);
 
   const handleImageSelected = async (file) => {
     if (!file) return;
@@ -1024,7 +1029,7 @@ function HomePage() {
 
       canvas.toBlob((blob) => {
         if (blob) {
-          const resizedTempUrl = addPendingAsset(blob);
+          const resizedTempUrl = addPendingAsset(blob, isSaving);
           if (resizedTempUrl) {
             addNewImageToCanvas(resizedTempUrl);
           } else {
@@ -1155,10 +1160,6 @@ function HomePage() {
   }, []);
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => { setCsvData(prevCsvData => { if (recordIndex < 0 || recordIndex >= prevCsvData.length) { return prevCsvData; } return prevCsvData.map((row, idx) => { if (idx === recordIndex) { return updatedRecord; } return row; }); }); }, [setCsvData]);
 
-  const addAssetToPendingQueue = (url, blob) => {
-    setPendingAssets(prev => ({ ...prev, [url]: blob }));
-  };
-
   const handleGenerateCampaignContent = async (regenerate = false) => {
     setIsGeneratingCampaign(true);
     setCampaignGenerationFailed(false);
@@ -1219,7 +1220,7 @@ function HomePage() {
         throw new Error("Failed to convert generated image data to a Blob.");
       }
 
-      const tempUrl = addPendingAsset(blob);
+      const tempUrl = addPendingAsset(blob, isSaving);
       if (!tempUrl) {
         throw new Error("Failed to create a managed URL for the generated image.");
       }
@@ -1241,7 +1242,7 @@ function HomePage() {
     } finally {
       setIsGeneratingImage(false);
     }
-  }, [aspectRatio, addNewImageToCanvas, setPendingAssets, autorList, selectedAutorForCampaign]);
+  }, [aspectRatio, addNewImageToCanvas, addPendingAsset, autorList, selectedAutorForCampaign, isSaving]);
   const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
   const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
   const handleGenerateFollowupPosts = async (content = campaignContent) => {
@@ -1373,8 +1374,10 @@ function HomePage() {
             if (!blob) {
               throw new Error("Failed to convert generated image for page to a Blob.");
             }
-            const tempUrl = URL.createObjectURL(blob);
-            setPendingAssets(prev => ({ ...prev, [tempUrl]: blob }));
+            const tempUrl = addPendingAsset(blob, isSaving);
+            if (!tempUrl) {
+              throw new Error("Failed to create managed URL for generated page image.");
+            }
 
             const newImage = { ...createNewImageElement(tempUrl), ...sourceStyle, visible: true };
             const pageImages = effectivePageTemplate.images || [];
@@ -1413,8 +1416,10 @@ function HomePage() {
       });
 
       const { blob } = finalPageData;
-      const tempUrl = URL.createObjectURL(blob);
-      setPendingAssets(prev => ({ ...prev, [tempUrl]: blob }));
+      const tempUrl = addPendingAsset(blob, isSaving);
+      if (!tempUrl) {
+        throw new Error("Failed to create managed URL for final page image.");
+      }
 
       setGeneratedPagesData(currentPagesData => {
         const newPagesData = [...currentPagesData];
@@ -1659,21 +1664,21 @@ function HomePage() {
                       // newVideoAssets is an array of video asset objects
                       setGeneratedVideos(prev => [...prev, ...newVideoAssets]);
 
-                      const newPendingAssets = {};
+                      const newAssetMap = {};
                       newVideoAssets.forEach(asset => {
                         // Add main video blob
                         if (asset.blob && asset.url) {
-                          newPendingAssets[asset.url] = asset.blob;
+                          newAssetMap[asset.url] = asset.blob;
                         }
                         // Add thumbnail blob if it exists
                         if (asset.thumbnailBlob && asset.thumbnailUrl) {
-                          newPendingAssets[asset.thumbnailUrl] = asset.thumbnailBlob;
+                          newAssetMap[asset.thumbnailUrl] = asset.thumbnailBlob;
                         }
                       });
-                      setPendingAssets(prev => ({ ...prev, ...newPendingAssets }));
+                      addPendingAssetMap(newAssetMap, isSaving);
                     }}
                     onUpdateVideos={setGeneratedVideos}
-                    onNewAsset={addAssetToPendingQueue}
+                    onNewAsset={(blob) => addPendingAsset(blob, isSaving)}
                   />
                 )}
                 {activeStep === 7 && (
