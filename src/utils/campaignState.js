@@ -182,7 +182,7 @@ export const deserializeCampaignData = async (loadedState) => {
   for (const downloadUrl of uniqueUrlsToDownload.keys()) {
     // Use the proxy for Vercel URLs to avoid CORS issues
     const fetchUrl = isVercelUrl(downloadUrl)
-      ? `/api/image-proxy?url=${encodeURIComponent(downloadUrl)}`
+      ? `/api/asset-proxy?url=${encodeURIComponent(downloadUrl)}`
       : downloadUrl;
 
     const promise = fetch(fetchUrl)
