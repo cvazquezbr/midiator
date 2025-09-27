@@ -133,12 +133,16 @@ export const drawTextWithEffects = async (ctx, text, x, y, style, maxWidth, maxH
 const loadImage = (src) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    if (src.startsWith('http')) {
-        img.crossOrigin = 'Anonymous';
+    // Adiciona o proxy para imagens do Vercel Blob Storage para evitar problemas de CORS no canvas
+    let finalSrc = src;
+    if (src && src.includes('blob.vercel-storage.com')) {
+      finalSrc = `/api/image-proxy?url=${encodeURIComponent(src)}`;
+    } else if (src && src.startsWith('http')) {
+      img.crossOrigin = 'Anonymous';
     }
     img.onload = () => resolve(img);
     img.onerror = (err) => reject(new Error(`Failed to load image: ${src}`, { cause: err }));
-    img.src = src;
+    img.src = finalSrc;
   });
 };
 
