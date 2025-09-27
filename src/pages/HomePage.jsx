@@ -1699,6 +1699,7 @@ function HomePage() {
                     setSelectedVideos={setSelectedVideos}
                     currentCampaign={currentCampaign}
                     pendingAssets={pendingAssets}
+                    setPendingAssets={setPendingAssets}
                   />
                 )}
                 {activeStep === 8 && <Monitor currentCampaign={currentCampaign} />}
