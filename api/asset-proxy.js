@@ -10,20 +10,26 @@ export default async function handler(req) {
     return new Response('Missing "url" query parameter', { status: 400 });
   }
 
-  // Security: Only allow proxying for Vercel blob storage URLs
-  const allowedHost = 'blob.vercel-storage.com';
+  // Security: Only allow proxying for Vercel blob storage URLs.
+  // The check now correctly uses `endsWith` to allow for the unique
+  // subdomain in Vercel's public blob URLs.
+  const allowedHostSuffix = '.blob.vercel-storage.com';
   const urlObject = new URL(assetUrl);
-  if (urlObject.host !== allowedHost) {
+  if (!urlObject.hostname.endsWith(allowedHostSuffix)) {
     return new Response('Provided URL is not from an allowed host.', { status: 403 });
   }
 
   try {
-    // The Authorization header was removed. Public assets on Vercel Blob do not require it,
-    // and providing one can lead to 403 Forbidden errors.
-    const assetResponse = await fetch(assetUrl);
+    // The Authorization header is required for the server-side proxy to fetch
+    // assets from the blob store.
+    const assetResponse = await fetch(assetUrl, {
+      headers: {
+        Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
+      },
+    });
 
     if (!assetResponse.ok) {
-      return new Response('Failed to fetch the asset from the external source.', { status: assetResponse.status });
+      return new Response(`Failed to fetch the asset from the external source. Status: ${assetResponse.status}`, { status: assetResponse.status });
     }
 
     // Create a new response that streams the asset body
