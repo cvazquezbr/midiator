@@ -172,7 +172,12 @@ export const deserializeCampaignData = async (loadedState) => {
   const permanentToTempUrlMap = new Map();
 
   for (const downloadUrl of uniqueUrlsToDownload.keys()) {
-    const promise = fetch(downloadUrl)
+    // Use the proxy for Vercel URLs to avoid CORS issues
+    const fetchUrl = isVercelUrl(downloadUrl)
+      ? `/api/image-proxy?url=${encodeURIComponent(downloadUrl)}`
+      : downloadUrl;
+
+    const promise = fetch(fetchUrl)
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP error ${response.status} fetching ${downloadUrl}`);
