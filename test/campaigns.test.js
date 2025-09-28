@@ -77,7 +77,8 @@ describe('Campaigns API Endpoint with Mocked DB', () => {
 
     const req = {
       method: 'DELETE',
-      user: { id: userId, sub: 'test-user-sub' },
+      // The real middleware attaches a user object where 'sub' is the user's integer ID.
+      user: { sub: userId },
       query: { id: campaignId.toString() },
     };
     const res = {
@@ -110,7 +111,7 @@ describe('Campaigns API Endpoint with Mocked DB', () => {
   it('should return 404 if campaign to delete is not found', async () => {
     const req = {
       method: 'DELETE',
-      user: { id: 1, sub: 'test-user-sub' },
+      user: { sub: 1 },
       query: { id: '999' }, // Non-existent ID
     };
     const res = {

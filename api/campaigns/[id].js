@@ -17,14 +17,12 @@ const parseBody = async (req) => {
 };
 
 const handler = async (req, res) => {
-  const userId = req.user.id; // Correctly use the user's integer ID
+  // The user ID is stored in the 'sub' (subject) claim of the JWT.
+  const userId = req.user.sub;
   const { id } = req.query;
-
-  console.log(`[API /api/campaigns/${id}] Received request for campaign ID: ${id} from User ID: ${userId}`);
 
   if (req.method === 'GET') {
     try {
-      console.log(`[API /api/campaigns/${id}] Executing SELECT query...`);
       const { rows } = await query(
         'SELECT id, name, campaign_data, autor_id, persona_id, palette_id, updated_at FROM campaigns WHERE id = $1 AND user_id = $2',
         [id, userId]
@@ -64,7 +62,7 @@ const handler = async (req, res) => {
   } else if (req.method === 'DELETE') {
     try {
       // Dynamically import the ESM module as it's used in a CJS environment
-      const { extractAssetUrls } = await import('../../../shared/utils/campaignUtils.js');
+      const { extractAssetUrls } = await import('@/shared/utils/campaignUtils.js');
 
       // Step 1: Fetch the campaign to get its data
       const { rows } = await query('SELECT campaign_data FROM campaigns WHERE id = $1 AND user_id = $2', [id, userId]);

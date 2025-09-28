@@ -841,7 +841,6 @@ function HomePage() {
     setActiveStep(1);
   };
   const handleEditCampaign = async (campaign) => {
-    console.log(`[handleEditCampaign] Attempting to load campaign with ID: ${campaign.id} and name: "${campaign.name}"`);
     toast.info(`Carregando "${campaign.name}" para edição...`);
     try {
       await checkAuthStatus();
