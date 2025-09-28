@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import { Delete as DeleteIcon, Edit as EditIcon, Image as ImageIcon } from '@mui/icons-material';
 
-const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onHover }) => {
+const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onHover, isFeatured, position }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const intervalRef = useRef(null);
@@ -50,11 +50,17 @@ const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onHover }) =
       onMouseLeave={stopCarousel}
       sx={{
         position: 'relative',
-        width: { xs: '100%', sm: '180px', md: '220px' }, // Use 100% width on mobile
-        maxWidth: { xs: '160px', sm: '180px', md: '220px' }, // Max-width for consistency
-        transition: 'transform 0.3s ease',
+        width: { xs: '100%', sm: '240px', md: '280px' },
+        maxWidth: { xs: '170px', sm: '240px', md: '280px' },
+        flexShrink: 0,
+        transition: 'all 0.4s cubic-bezier(0.23, 1, 0.32, 1)',
+        transform: `translateX(${position * 35}%) rotateY(${position * 50}deg) scale(${isFeatured ? 1 : 0.7})`,
+        opacity: isFeatured ? 1 : 0.3,
+        zIndex: isFeatured ? 10 : 1,
         '&:hover': {
-          transform: 'scale(1.05)',
+          transform: `translateX(${position * 30}%) rotateY(${position * 45}deg) scale(${isFeatured ? 1.05 : 0.75})`,
+          zIndex: 20,
+          opacity: 1,
         },
       }}
     >

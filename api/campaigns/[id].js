@@ -1,8 +1,7 @@
 import { del } from '@vercel/blob';
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
-
-// The import will be done dynamically inside the handler
+import { extractAssetUrls } from '../../src/utils/campaignUtils.js';
 
 const parseBody = async (req) => {
   let body = '';
@@ -17,8 +16,7 @@ const parseBody = async (req) => {
 };
 
 const handler = async (req, res) => {
-  // The user ID is stored in the 'sub' (subject) claim of the JWT.
-  const userId = req.user.sub;
+  const userId = req.user.id; // Correctly use the user's integer ID
   const { id } = req.query;
 
   if (req.method === 'GET') {
@@ -48,7 +46,7 @@ const handler = async (req, res) => {
       const finalPaletteId = (palette_id === '' || palette_id === 'custom') ? null : palette_id;
 
       const { rows } = await query(
-        'UPDATE campaigns SET name = $1, campaign_data = $2, autor_id = $3, persona_id = $4, palette_id = $5, updated_at = NOW() WHERE id = $6 AND user_id = $7 RETURNING id, name, campaign_data, autor_id, persona_id, palette_id, updated_at',
+        'UPDATE campaigns SET name = $1, campaign_data = $2, autor_id = $3, persona_id = $4, palette_id = $5, updated_at = NOW() WHERE id = $6 AND user_id = $7 RETURNING id, name, updated_at',
         [name, campaign_data, finalAutorId, finalPersonaId, finalPaletteId, id, userId]
       );
       if (rows.length === 0) {
@@ -61,9 +59,6 @@ const handler = async (req, res) => {
     }
   } else if (req.method === 'DELETE') {
     try {
-      // Dynamically import the ESM module as it's used in a CJS environment
-      const { extractAssetUrls } = await import('@/shared/utils/campaignUtils.js');
-
       // Step 1: Fetch the campaign to get its data
       const { rows } = await query('SELECT campaign_data FROM campaigns WHERE id = $1 AND user_id = $2', [id, userId]);
 
