@@ -20,8 +20,11 @@ const handler = async (req, res) => {
   const userId = req.user.id; // Correctly use the user's integer ID
   const { id } = req.query;
 
+  console.log(`[API /api/campaigns/${id}] Received request for campaign ID: ${id} from User ID: ${userId}`);
+
   if (req.method === 'GET') {
     try {
+      console.log(`[API /api/campaigns/${id}] Executing SELECT query...`);
       const { rows } = await query(
         'SELECT id, name, campaign_data, autor_id, persona_id, palette_id, updated_at FROM campaigns WHERE id = $1 AND user_id = $2',
         [id, userId]
