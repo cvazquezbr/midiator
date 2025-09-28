@@ -26,7 +26,7 @@ import { getCampaigns, deleteCampaign } from '../utils/campaignState';
 import { toast } from 'sonner';
 import CampaignCard from './CampaignCard';
 
-const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorList, personaList }) => {
+const MyCampaignsStep = ({ onEditCampaign, onCreateNew, autorList, personaList }) => {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -113,7 +113,6 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorLis
                   <Grid item key={campaign.id} xs={12} sm={6} md={4}>
                     <CampaignCard
                       campaign={campaign}
-                      onLoadCampaign={onLoadCampaign}
                       onEditCampaign={onEditCampaign}
                       onDeleteCampaign={handleDelete}
                     />

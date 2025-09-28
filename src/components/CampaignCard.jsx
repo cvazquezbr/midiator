@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import { Delete as DeleteIcon, Edit as EditIcon, Image as ImageIcon } from '@mui/icons-material';
 
-const CampaignCard = ({ campaign, onLoadCampaign, onEditCampaign, onDeleteCampaign }) => {
+const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const intervalRef = useRef(null);
 
@@ -50,7 +50,7 @@ const CampaignCard = ({ campaign, onLoadCampaign, onEditCampaign, onDeleteCampai
       onMouseLeave={stopCarousel}
       raised={!!intervalRef.current}
     >
-      <Box sx={{ cursor: 'pointer', position: 'relative' }} onClick={() => onLoadCampaign(campaign.id)}>
+      <Box sx={{ cursor: 'pointer', position: 'relative' }}>
         {displayedImageUrl ? (
           <CardMedia
             component="img"
