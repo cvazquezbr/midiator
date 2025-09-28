@@ -41,7 +41,6 @@ const MainAppBar = ({
   onMenuClick,
   isMobile,
   onSaveCampaign,
-  onLoadCampaign,
   currentView,
   onPersonaMenuClick,
   onAutorMenuClick,
@@ -119,12 +118,6 @@ const MainAppBar = ({
         <Tooltip title="Salvar Campanha">
           <IconButton color="inherit" onClick={onSaveCampaign}>
             <SaveIcon />
-          </IconButton>
-        </Tooltip>
-
-        <Tooltip title="Carregar Campanha">
-          <IconButton color="inherit" onClick={onLoadCampaign}>
-            <FolderOpenIcon />
           </IconButton>
         </Tooltip>
 

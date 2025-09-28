@@ -42,7 +42,6 @@ import Publisher from '../components/Publisher';
 import Monitor from '../components/Monitor';
 import SetupModal from '../components/SetupModal';
 import SaveCampaignModal from '../components/SaveCampaignModal';
-import LoadCampaignModal from '../components/LoadCampaignModal';
 import ImageGallerySelector from '../components/ImageGallerySelector';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 
@@ -182,7 +181,6 @@ function HomePage() {
   const [initialSetupTab, setInitialSetupTab] = useState(0);
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
-  const [showLoadModal, setShowLoadModal] = useState(false);
   const [showImageGallery, setShowImageGallery] = useState(false);
   const [imageGalleryTargetIndex, setImageGalleryTargetIndex] = useState(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
@@ -513,56 +511,6 @@ function HomePage() {
       toast.error(err.message || 'An unknown error occurred while saving the campaign.');
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleLoadCampaign = async (id) => {
-    try {
-      await checkAuthStatus();
-    } catch (error) {
-      toast.error(error.message);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const loadedCampaign = await loadCampaign(id);
-      console.log("Loaded campaign data from DB:", loadedCampaign);
-
-      // When a campaign is loaded, it now comes with a 'pendingAssets' map
-      // containing the blobs for any images that were downloaded.
-      if (loadedCampaign.pendingAssets) {
-        setPendingAssets(loadedCampaign.pendingAssets);
-      }
-
-      // Set the current campaign first to ensure its state is updated before any navigation
-      // or re-rendering is triggered by applyAppState.
-      setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
-
-      // Apply the rest of the general state from campaign_data
-      applyAppState(loadedCampaign.campaign_data);
-
-      // Explicitly set the author and persona IDs from the top-level of the loaded campaign
-      setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
-      setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
-
-      // Set palette ID: if a DB-level palette_id exists, use it. Otherwise,
-      // check if a custom palette exists in the loaded data and set the ID to "custom".
-      const dbPaletteId = loadedCampaign.palette_id;
-      const hasCustomPalette = loadedCampaign.campaign_data?.customPalette?.colors?.length > 0;
-
-      if (dbPaletteId) {
-        setPaletteId(dbPaletteId);
-      } else if (hasCustomPalette) {
-        setPaletteId('custom');
-      } else {
-        setPaletteId(null);
-      }
-      toast.success(`Campaign "${loadedCampaign.name}" loaded successfully!`);
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -898,9 +846,55 @@ function HomePage() {
   };
   const handleEditCampaign = async (campaign) => {
     toast.info(`Carregando "${campaign.name}" para edição...`);
-    await handleLoadCampaign(campaign.id);
-    // Navigate directly to the page editor step after loading
-    setActiveStep(3);
+    try {
+      await checkAuthStatus();
+    } catch (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const loadedCampaign = await loadCampaign(campaign.id);
+      console.log("Loaded campaign data from DB:", loadedCampaign);
+
+      // When a campaign is loaded, it now comes with a 'pendingAssets' map
+      // containing the blobs for any images that were downloaded.
+      if (loadedCampaign.pendingAssets) {
+        setPendingAssets(loadedCampaign.pendingAssets);
+      }
+
+      // Set the current campaign first to ensure its state is updated before any navigation
+      // or re-rendering is triggered by applyAppState.
+      setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
+
+      // Apply the rest of the general state from campaign_data
+      applyAppState(loadedCampaign.campaign_data);
+
+      // Explicitly set the author and persona IDs from the top-level of the loaded campaign
+      setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
+      setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
+
+      // Set palette ID: if a DB-level palette_id exists, use it. Otherwise,
+      // check if a custom palette exists in the loaded data and set the ID to "custom".
+      const dbPaletteId = loadedCampaign.palette_id;
+      const hasCustomPalette = loadedCampaign.campaign_data?.customPalette?.colors?.length > 0;
+
+      if (dbPaletteId) {
+        setPaletteId(dbPaletteId);
+      } else if (hasCustomPalette) {
+        setPaletteId('custom');
+      } else {
+        setPaletteId(null);
+      }
+      toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
+      // Navigate directly to the page editor step after loading
+      setActiveStep(3);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
   const parseCsvFile = async (file) => {
     if (!file) return;
@@ -1501,7 +1495,6 @@ function HomePage() {
             onMenuClick={() => setSidebarOpen(!sidebarOpen)}
             isMobile={isMobile}
             onSaveCampaign={() => setShowSaveModal(true)}
-            onLoadCampaign={() => setShowLoadModal(true)}
             onShowPersonas={() => handleNavigation(() => setCurrentView('personas'))}
             onShowAutores={() => handleNavigation(() => setCurrentView('autores'))}
             onShowPalettes={() => handleNavigation(() => setCurrentView('palettes'))}
@@ -1764,7 +1757,6 @@ function HomePage() {
       />
       <SetupModal open={showSetupModal} onClose={() => setShowSetupModal(false)} initialTab={initialSetupTab} />
       <SaveCampaignModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={handleSaveCampaign} campaignToEdit={currentCampaign} isSaving={isSaving} />
-      <LoadCampaignModal open={showLoadModal} onClose={() => setShowLoadModal(false)} onLoad={handleLoadCampaign} onEdit={(campaign) => { setCurrentCampaign(campaign); setShowSaveModal(true); }} />
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
       <ImageGallerySelector
         open={showImageGallery}
