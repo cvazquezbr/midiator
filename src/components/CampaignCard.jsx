@@ -50,9 +50,8 @@ const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onHover }) =
       onMouseLeave={stopCarousel}
       sx={{
         position: 'relative',
-        width: { xs: '150px', sm: '180px', md: '220px' },
-        // The reflection will take up space below, so we need to account for that in the container.
-        // Using a wrapper Box for the reflection.
+        width: { xs: '100%', sm: '180px', md: '220px' }, // Use 100% width on mobile
+        maxWidth: { xs: '160px', sm: '180px', md: '220px' }, // Max-width for consistency
         transition: 'transform 0.3s ease',
         '&:hover': {
           transform: 'scale(1.05)',
