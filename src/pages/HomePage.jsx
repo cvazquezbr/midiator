@@ -113,7 +113,6 @@ function HomePage() {
     pendingAssets, setPendingAssets,
     addPendingAsset,
     addPendingAssetMap,
-    processAssetQueue,
     removePendingAsset,
     defaultPageTemplate,
     paletteId, setPaletteId,
@@ -501,9 +500,6 @@ function HomePage() {
          console.warn("[HomePage] Save operation did not return a re-hydrated state to synchronize.");
          setPendingAssets({}); // Clear pending assets as a fallback
       }
-
-      // 4. Process any assets that were queued during the save operation
-      processAssetQueue();
 
       console.log("[HomePage] Save/Update operation completed successfully.");
     } catch (err) {
@@ -995,13 +991,13 @@ function HomePage() {
     const file = event.target.files[0];
     if (!file) return;
 
-    const tempUrl = addPendingAsset(file, isSaving);
+    const tempUrl = addPendingAsset(file);
     if (tempUrl) {
       addNewImageToCanvas(tempUrl);
     } else {
       toast.error("Não foi possível criar uma URL local para a imagem carregada.");
     }
-  }, [addNewImageToCanvas, addPendingAsset, isSaving]);
+  }, [addNewImageToCanvas, addPendingAsset]);
 
   const handleImageSelected = async (file) => {
     if (!file) return;
@@ -1034,7 +1030,7 @@ function HomePage() {
 
       canvas.toBlob((blob) => {
         if (blob) {
-          const resizedTempUrl = addPendingAsset(blob, isSaving);
+          const resizedTempUrl = addPendingAsset(blob);
           if (resizedTempUrl) {
             addNewImageToCanvas(resizedTempUrl);
           } else {
@@ -1225,7 +1221,7 @@ function HomePage() {
         throw new Error("Failed to convert generated image data to a Blob.");
       }
 
-      const tempUrl = addPendingAsset(blob, isSaving);
+      const tempUrl = addPendingAsset(blob);
       if (!tempUrl) {
         throw new Error("Failed to create a managed URL for the generated image.");
       }
@@ -1247,7 +1243,7 @@ function HomePage() {
     } finally {
       setIsGeneratingImage(false);
     }
-  }, [aspectRatio, addNewImageToCanvas, addPendingAsset, autorList, selectedAutorForCampaign, isSaving]);
+  }, [aspectRatio, addNewImageToCanvas, addPendingAsset, autorList, selectedAutorForCampaign]);
   const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
   const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
   const handleGenerateFollowupPosts = async (content = campaignContent) => {
@@ -1425,7 +1421,7 @@ function HomePage() {
       });
 
       const { blob } = finalPageData;
-      const tempUrl = addPendingAsset(blob, isSaving);
+      const tempUrl = addPendingAsset(blob);
       if (!tempUrl) {
         throw new Error("Failed to create managed URL for final page image.");
       }
@@ -1682,10 +1678,10 @@ function HomePage() {
                           newAssetMap[asset.thumbnailUrl] = asset.thumbnailBlob;
                         }
                       });
-                      addPendingAssetMap(newAssetMap, isSaving);
+                      addPendingAssetMap(newAssetMap);
                     }}
                     onUpdateVideos={setGeneratedVideos}
-                    onNewAsset={(blob) => addPendingAsset(blob, isSaving)}
+                    onNewAsset={(blob) => addPendingAsset(blob)}
                   />
                 )}
                 {activeStep === 7 && (
