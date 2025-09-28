@@ -1524,7 +1524,6 @@ function HomePage() {
               <>
                 {activeStep === 0 && (
                   <MyCampaignsStep
-                    onLoadCampaign={handleLoadCampaign}
                     onEditCampaign={handleEditCampaign}
                     onCreateNew={handleCreateNewCampaign}
                     autorList={autorList}
