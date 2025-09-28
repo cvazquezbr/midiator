@@ -1,6 +1,9 @@
 
-> midiator-google-drive-frontend@0.0.0 preview
-> vite preview
+> midiator-google-drive-frontend@0.0.0 dev /app
+> vite
 
-  ➜  Local:   http://localhost:4173/
+
+  VITE v5.4.20  ready in 378 ms
+
+  ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
