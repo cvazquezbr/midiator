@@ -1,5 +1,7 @@
+import { del } from '@vercel/blob';
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
+import { extractAssetUrls } from '../../src/utils/campaignUtils.js';
 
 const parseBody = async (req) => {
   let body = '';
@@ -14,7 +16,7 @@ const parseBody = async (req) => {
 };
 
 const handler = async (req, res) => {
-  const userId = req.user.sub;
+  const userId = req.user.id; // Correctly use the user's integer ID
   const { id } = req.query;
 
   if (req.method === 'GET') {
@@ -57,16 +59,38 @@ const handler = async (req, res) => {
     }
   } else if (req.method === 'DELETE') {
     try {
-      const { rowCount } = await query(
-        'DELETE FROM campaigns WHERE id = $1 AND user_id = $2',
-        [id, userId]
-      );
-      if (rowCount === 0) {
+      // Step 1: Fetch the campaign to get its data
+      const { rows } = await query('SELECT campaign_data FROM campaigns WHERE id = $1 AND user_id = $2', [id, userId]);
+
+      if (rows.length === 0) {
         return res.status(404).json({ error: 'Campaign not found or access denied.' });
       }
-      return res.status(200).json({ message: 'Campaign deleted successfully.' });
+
+      const campaignData = rows[0].campaign_data;
+      const assetUrls = extractAssetUrls(campaignData);
+
+      // Step 2: Delete associated assets from Vercel Blob Storage
+      if (assetUrls.length > 0) {
+        console.log(`[DELETE /api/campaigns/${id}] Deleting ${assetUrls.length} assets from blob storage...`);
+        await del(assetUrls);
+        console.log(`[DELETE /api/campaigns/${id}] Successfully deleted assets.`);
+      }
+
+      // Step 3: Delete the campaign from the database
+      const { rowCount } = await query('DELETE FROM campaigns WHERE id = $1 AND user_id = $2', [id, userId]);
+
+      if (rowCount === 0) {
+        // This case should ideally not be reached if the first query succeeded
+        return res.status(404).json({ error: 'Campaign not found or access denied after asset deletion.' });
+      }
+
+      return res.status(200).json({ message: 'Campaign and associated assets deleted successfully.' });
     } catch (error) {
       console.error(`[DELETE /api/campaigns/${id}] Error for user ${userId}:`, error);
+      // Check if the error is from the blob deletion
+      if (error.message.includes('blob')) {
+        return res.status(500).json({ error: 'Failed to delete one or more assets from storage. Campaign not deleted.' });
+      }
       return res.status(500).json({ error: 'Internal Server Error' });
     }
   } else {
