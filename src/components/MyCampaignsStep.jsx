@@ -12,7 +12,6 @@ import {
   Typography,
   Divider,
   Container,
-  Paper,
   Card,
   CardContent,
   CardActions,
@@ -77,10 +76,16 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorLis
   };
 
   return (
-    <Container maxWidth="md">
-      <Paper sx={{ p: { xs: 2, md: 4 }, mt: 4, position: 'relative' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant={isMobile ? 'h5' : 'h4'} component="h1">
+    <Box
+      sx={{
+        background: 'radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%)',
+        minHeight: 'calc(100vh - 64px)', // Adjust based on AppBar height
+        py: 5,
+      }}
+    >
+      <Container maxWidth="lg">
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+          <Typography variant={isMobile ? 'h5' : 'h4'} component="h1" sx={{ color: 'white' }}>
             Minhas Campanhas
           </Typography>
           {!isMobile && (
@@ -93,9 +98,6 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorLis
             </Button>
           )}
         </Box>
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-          Selecione uma campanha existente para carregar e continuar editando, ou crie uma nova.
-        </Typography>
 
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>
@@ -104,13 +106,13 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorLis
         ) : (
           <Box>
             {campaigns.length === 0 ? (
-              <Typography sx={{ p: 2, textAlign: 'center' }}>
+              <Typography sx={{ p: 2, textAlign: 'center', color: 'white' }}>
                 Nenhuma campanha salva encontrada. Crie uma nova para começar.
               </Typography>
             ) : (
-              <Grid container spacing={4}>
+              <Grid container spacing={{ xs: 2, md: 3 }}>
                 {(campaigns || []).map((campaign) => (
-                  <Grid item key={campaign.id} xs={12} sm={6} md={4}>
+                  <Grid item key={campaign.id} xs={4} sm={3} md={2}>
                     <CampaignCard
                       campaign={campaign}
                       onLoadCampaign={onLoadCampaign}
@@ -137,8 +139,8 @@ const MyCampaignsStep = ({ onLoadCampaign, onEditCampaign, onCreateNew, autorLis
             <AddIcon />
           </Fab>
         )}
-      </Paper>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 
