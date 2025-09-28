@@ -181,9 +181,15 @@ export const deserializeCampaignData = async (loadedState) => {
 
   for (const downloadUrl of uniqueUrlsToDownload.keys()) {
     // Use the proxy for Vercel URLs to avoid CORS issues
-    const fetchUrl = isVercelUrl(downloadUrl)
+    let fetchUrl = isVercelUrl(downloadUrl)
       ? `/api/asset-proxy?url=${encodeURIComponent(downloadUrl)}`
       : downloadUrl;
+
+    // In a test environment (Node.js), fetch requires an absolute URL.
+    // Vite exposes `import.meta.env.VITEST` which is true when running in Vitest.
+    if (import.meta.env.VITEST && fetchUrl.startsWith('/')) {
+      fetchUrl = `http://localhost:3000${fetchUrl}`;
+    }
 
     const promise = fetch(fetchUrl)
       .then(response => {
@@ -201,9 +207,11 @@ export const deserializeCampaignData = async (loadedState) => {
         permanentToTempUrlMap.set(downloadUrl, tempUrl); // For replacement in the next step
       })
       .catch(error => {
-        console.error(`[deserializeCampaignData] Failed to download asset: ${downloadUrl}`, error);
-        toast.error(`Não foi possível carregar o recurso: ${error.message}`);
-        // Don't throw, allow other assets to load
+        const shortUrl = downloadUrl.split('/').pop().split('?')[0];
+        const errorMessage = `Failed to download asset: ${shortUrl}. ${error.message}`;
+        console.error(`[deserializeCampaignData] Detailed Error: ${errorMessage}`, error);
+        toast.error(errorMessage);
+        // Don't throw, allow other assets to load but notify the user of each failure.
       });
     downloadPromises.push(promise);
   }
@@ -237,8 +245,16 @@ export const getCampaigns = async () => {
 export const loadCampaign = async (id) => {
   const res = await fetchWithAuth(`/api/campaigns/${id}`);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Failed to load campaign.');
+    const errText = await res.text();
+    let errJson = {};
+    try {
+      errJson = JSON.parse(errText);
+    } catch {
+      errJson = { error: errText || `HTTP status ${res.status}` };
+    }
+    const finalError = `Failed to load campaign. Server responded with: ${errJson.error || 'Unknown error'}`;
+    console.error(`[loadCampaign] Error fetching campaign ${id}:`, finalError, `Full response: ${errText}`);
+    throw new Error(finalError);
   }
   const campaign = await res.json();
 
