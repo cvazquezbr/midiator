@@ -46,7 +46,7 @@ const handler = async (req, res) => {
       const finalPaletteId = (palette_id === '' || palette_id === 'custom') ? null : palette_id;
 
       const { rows } = await query(
-        'UPDATE campaigns SET name = $1, campaign_data = $2, autor_id = $3, persona_id = $4, palette_id = $5, updated_at = NOW() WHERE id = $6 AND user_id = $7 RETURNING id, name, updated_at',
+        'UPDATE campaigns SET name = $1, campaign_data = $2, autor_id = $3, persona_id = $4, palette_id = $5, updated_at = NOW() WHERE id = $6 AND user_id = $7 RETURNING id, name, campaign_data, autor_id, persona_id, palette_id, updated_at',
         [name, campaign_data, finalAutorId, finalPersonaId, finalPaletteId, id, userId]
       );
       if (rows.length === 0) {
