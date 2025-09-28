@@ -1,7 +1,8 @@
 import { del } from '@vercel/blob';
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
-import { extractAssetUrls } from '../../src/utils/campaignUtils.js';
+
+// The import will be done dynamically inside the handler
 
 const parseBody = async (req) => {
   let body = '';
@@ -59,6 +60,9 @@ const handler = async (req, res) => {
     }
   } else if (req.method === 'DELETE') {
     try {
+      // Dynamically import the ESM module as it's used in a CJS environment
+      const { extractAssetUrls } = await import('../../../shared/utils/campaignUtils.js');
+
       // Step 1: Fetch the campaign to get its data
       const { rows } = await query('SELECT campaign_data FROM campaigns WHERE id = $1 AND user_id = $2', [id, userId]);
 
