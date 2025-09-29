@@ -126,6 +126,7 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
                   onSlideChange={setActiveIndex}
                   initialSlide={activeIndex}
                   onSwiper={setSwiperInstance}
+                  isMobile={isMobile}
                 />
                 <Divider sx={{ my: 4 }} />
                 <Typography variant="h6" component="h3" sx={{ mb: 2, pl: 2 }}>
