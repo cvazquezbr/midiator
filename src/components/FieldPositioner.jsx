@@ -396,13 +396,11 @@ const FieldPositioner = ({
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box
         sx={{
-          position: 'relative',
           width: '100%',
           flex: '1 1 0',
           minHeight: 0,
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
+          p: 1,
         }}
       >
         <Box
@@ -410,6 +408,7 @@ const FieldPositioner = ({
           className="text-container"
           sx={{
             position: 'relative',
+            margin: 'auto',
             background: backgroundValue,
             aspectRatio: aspectRatio,
             maxWidth: '100%',
