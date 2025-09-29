@@ -22,13 +22,6 @@ import FormattingDrawer from './FormattingDrawer';
 import { useCampaign } from '../context/CampaignContext';
 
 const ImageStepUI = ({
-  steps,
-  isDraggingOverImage,
-  handleImageDrop,
-  handleImageDragOver,
-  handleImageDragEnter,
-  handleImageDragLeave,
-  imageInputRef,
   handleImageUpload,
   onOpenImageGallery,
   initialFieldStyles,
@@ -39,7 +32,6 @@ const ImageStepUI = ({
   originalImageSize,
   onZIndexChange,
   isMobile,
-  onDeselectField,
   onOpenHtmlEditor,
   currentPreviewIndex,
   setCurrentPreviewIndex,
@@ -79,7 +71,13 @@ const ImageStepUI = ({
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, height: { xs: 'calc(100dvh - 140px)', md: 'calc(100vh - 150px)' } }}>
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: { xs: 'column', md: 'row' }, 
+      gap: { xs: 1, md: 2 }, 
+      height: { xs: 'calc(100dvh - 120px)', md: 'calc(100vh - 130px)' },
+      overflow: 'hidden',
+    }}>
 
       {/* Main Content: Editor Area */}
       <Box sx={{
@@ -87,43 +85,70 @@ const ImageStepUI = ({
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,
+        overflow: 'hidden',
       }}>
-        <Typography variant="h6" sx={{ flexShrink: 0, textAlign: 'center', my: 2 }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            flexShrink: 0, 
+            textAlign: 'center', 
+            my: { xs: 1, md: 2 },
+            fontSize: { xs: '1.1rem', md: '1.25rem' },
+          }}
+        >
           Editor de Página
         </Typography>
         <Box
           sx={{
             flexGrow: 1,
-            minHeight: 0, // Allow shrinking
+            minHeight: 0,
             display: 'flex',
-            p: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            p: { xs: 0.5, md: 1 },
+            overflow: 'hidden',
           }}
         >
-          <FieldPositioner
-            csvHeaders={csvHeaders}
-            fieldPositions={fieldPositions}
-            setFieldPositions={setFieldPositions}
-            fieldStyles={fieldStyles}
-            setFieldStyles={setFieldStyles}
-            csvData={csvData}
-            onImageDisplayedSizeChange={onImageDisplayedSizeChange}
-            colorPalette={imageColorPalette}
-            onCsvDataUpdate={onCsvDataUpdate}
-            selectedField={selectedField}
-            setSelectedField={setSelectedField}
-            originalImageSize={originalImageSize}
-            brandElements={brandElements}
-            setBrandElements={setBrandElements}
-            pageTemplate={pageTemplate}
-            setPageTemplate={setPageTemplate}
-            onZIndexChange={onZIndexChange}
-            onOpenHtmlEditor={onOpenHtmlEditor}
-            currentPreviewIndex={currentPreviewIndex}
-            setCurrentPreviewIndex={setCurrentPreviewIndex}
-            onFontScaleChange={onFontScaleChange}
-            isCropping={isCropping}
-            setIsCropping={setIsCropping}
-          />
+          <Box
+            sx={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              '& > *': {
+                maxWidth: '100%',
+                maxHeight: '100%',
+              }
+            }}
+          >
+            <FieldPositioner
+              csvHeaders={csvHeaders}
+              fieldPositions={fieldPositions}
+              setFieldPositions={setFieldPositions}
+              fieldStyles={fieldStyles}
+              setFieldStyles={setFieldStyles}
+              csvData={csvData}
+              onImageDisplayedSizeChange={onImageDisplayedSizeChange}
+              colorPalette={imageColorPalette}
+              onCsvDataUpdate={onCsvDataUpdate}
+              selectedField={selectedField}
+              setSelectedField={setSelectedField}
+              originalImageSize={originalImageSize}
+              brandElements={brandElements}
+              setBrandElements={setBrandElements}
+              pageTemplate={pageTemplate}
+              setPageTemplate={setPageTemplate}
+              onZIndexChange={onZIndexChange}
+              onOpenHtmlEditor={onOpenHtmlEditor}
+              currentPreviewIndex={currentPreviewIndex}
+              setCurrentPreviewIndex={setCurrentPreviewIndex}
+              onFontScaleChange={onFontScaleChange}
+              isCropping={isCropping}
+              setIsCropping={setIsCropping}
+            />
+          </Box>
         </Box>
         {imageColorPalette && imageColorPalette.length > 0 && (
           <Box sx={{ flexShrink: 0, py: 1, display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>

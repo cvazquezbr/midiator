@@ -12,6 +12,7 @@ import { UserAuthContextProvider } from './context/UserAuthContext.jsx';
 import { SettingsProvider } from './context/SettingsContext.jsx';
 
 import './index.css';
+import './styles/responsive-improvements.css';
 import App from './App.jsx';
 
 // The Google Client ID from the environment variable, exposed by Vite
