@@ -1,7 +1,6 @@
 import { del } from '@vercel/blob';
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
-import { extractAssetUrls } from '../../src/utils/campaignUtils.js';
 
 const parseBody = async (req) => {
   let body = '';
@@ -67,6 +66,9 @@ const handler = async (req, res) => {
       }
 
       const campaignData = rows[0].campaign_data;
+
+      // Dynamically import the utility function
+      const { extractAssetUrls } = await import('../../src/utils/campaignUtils.js');
       const assetUrls = extractAssetUrls(campaignData);
 
       // Step 2: Delete associated assets from Vercel Blob Storage

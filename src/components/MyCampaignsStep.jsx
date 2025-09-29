@@ -20,17 +20,27 @@ import {
   CardMedia,
   Grid,
 } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon, Image as ImageIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon } from '@mui/icons-material';
 import { useIsMobile } from '../hooks/use-mobile';
 import { getCampaigns, deleteCampaign } from '../utils/campaignState';
 import { toast } from 'sonner';
-import CampaignCard from './CampaignCard';
+import CampaignCoverFlow from './CampaignCoverFlow'; // Import the new component
+import CampaignCard from './CampaignCard'; // Keep for the list view or future use
 
-const MyCampaignsStep = ({ onEditCampaign, onCreateNew, autorList, personaList }) => {
+const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeIndex, setActiveIndex] = useState(0); // State for the active slide
+  const [swiperInstance, setSwiperInstance] = useState(null); // State for Swiper instance
   const isMobile = useIsMobile();
+
+  // Effect to sync list clicks to the Swiper instance
+  useEffect(() => {
+    if (swiperInstance && swiperInstance.realIndex !== activeIndex) {
+      swiperInstance.slideToLoop(activeIndex);
+    }
+  }, [activeIndex, swiperInstance]);
 
   const fetchCampaigns = () => {
     setLoading(true);
@@ -108,17 +118,34 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew, autorList, personaList }
                 Nenhuma campanha salva encontrada. Crie uma nova para começar.
               </Typography>
             ) : (
-              <Grid container spacing={4}>
-                {(campaigns || []).map((campaign) => (
-                  <Grid item key={campaign.id} xs={12} sm={6} md={4}>
-                    <CampaignCard
-                      campaign={campaign}
-                      onEditCampaign={onEditCampaign}
-                      onDeleteCampaign={handleDelete}
-                    />
-                  </Grid>
-                ))}
-              </Grid>
+              <>
+                <CampaignCoverFlow
+                  campaigns={campaigns}
+                  onEditCampaign={onEditCampaign}
+                  onDeleteCampaign={handleDelete}
+                  onSlideChange={setActiveIndex}
+                  initialSlide={activeIndex}
+                  onSwiper={setSwiperInstance}
+                />
+                <Divider sx={{ my: 4 }} />
+                <Typography variant="h6" component="h3" sx={{ mb: 2, pl: 2 }}>
+                  Todas as Campanhas
+                </Typography>
+                <List sx={{ maxHeight: 300, overflow: 'auto' }}>
+                  {campaigns.map((campaign, index) => (
+                    <ListItemButton
+                      key={campaign.id}
+                      selected={index === activeIndex}
+                      onClick={() => setActiveIndex(index)}
+                    >
+                      <ListItemText primary={campaign.name} secondary={`Atualizado em: ${new Date(campaign.updated_at).toLocaleDateString()}`} />
+                      <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(campaign.id, campaign.name)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </ListItemButton>
+                  ))}
+                </List>
+              </>
             )}
           </Box>
         )}
