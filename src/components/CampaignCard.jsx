@@ -19,7 +19,6 @@ const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, isCoverFlowA
     <Card
       sx={{
         width: '100%',
-        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         cursor: isCoverFlowActive ? 'pointer' : 'default',
