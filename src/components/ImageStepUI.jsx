@@ -125,6 +125,37 @@ const ImageStepUI = ({
             setIsCropping={setIsCropping}
           />
         </Box>
+        {imageColorPalette && imageColorPalette.length > 0 && (
+          <Box sx={{ flexShrink: 0, py: 1, display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
+            {imageColorPalette.map((color, index) => (
+              <Box
+                key={index}
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  backgroundColor: color,
+                  cursor: 'pointer',
+                  border: '2px solid #fff',
+                  boxShadow: '0 0 5px rgba(0,0,0,0.2)',
+                  touchAction: 'manipulation',
+                  '&:active': { transform: 'scale(0.95)' }
+                }}
+                onClick={() => {
+                  if (selectedField) {
+                    setFieldStyles(prev => ({
+                      ...prev,
+                      [selectedField]: {
+                        ...(prev[selectedField] || {}),
+                        color: color
+                      }
+                    }));
+                  }
+                }}
+              />
+            ))}
+          </Box>
+        )}
         {csvData && csvData.length > 1 && (
           <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ flexShrink: 0, mt: 2 }} flexWrap="wrap">
             <Tooltip title="Primeiro Registro"><span><IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small"><SkipPrevious /></IconButton></span></Tooltip>

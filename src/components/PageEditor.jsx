@@ -240,6 +240,7 @@ const PageEditor = ({
               fieldStyles={editedStyles}
               setFieldStyles={setEditedStyles}
               csvData={editorCsvData}
+              colorPalette={imageSwatches}
               selectedField={selectedFieldInternal}
               setSelectedField={handleInternalFieldSelection}
               onCsvDataUpdate={handleFieldPositionerCsvDataUpdate}
