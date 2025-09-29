@@ -393,109 +393,74 @@ const FieldPositioner = ({
     : pageTemplate.backgroundColor || '#FFFFFF';
 
   return (
-    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box
+      ref={containerRef}
+      className="text-container"
+      sx={{
+        position: 'relative',
+        background: backgroundValue,
+        aspectRatio: aspectRatio,
+        maxWidth: '100%',
+        maxHeight: '100%',
+        border: '2px solid #ddd',
+        borderRadius: 2,
+        overflow: 'hidden',
+        cursor: 'default',
+        touchAction: 'pan-x pan-y',
+        WebkitOverflowScrolling: 'touch',
+        '&.interacting': {
+          touchAction: 'none'
+        },
+      }}
+      onTouchStart={handleContainerTouchStart}
+      onTouchEnd={handleContainerTouchEnd}
+    >
       <Box
+        className="elements-wrapper"
         sx={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
           width: '100%',
-          flex: '1 1 0',
-          minHeight: 0,
-          display: 'flex',
-          p: 1,
+          height: '100%',
+        }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setSelectedField('__page_background__');
+          }
+        }}
+        onTouchStart={(e) => {
+          if (e.target === e.currentTarget) {
+            setSelectedField('__page_background__');
+          }
         }}
       >
-        <Box
-          ref={containerRef}
-          className="text-container"
-          sx={{
-            position: 'relative',
-            margin: 'auto',
-            background: backgroundValue,
-            aspectRatio: aspectRatio,
-            maxWidth: '100%',
-            maxHeight: '100%',
-            border: '2px solid #ddd',
-            borderRadius: 2,
-            overflow: 'hidden',
-            cursor: 'default',
-            touchAction: 'pan-x pan-y',
-            WebkitOverflowScrolling: 'touch',
-            '&.interacting': {
-              touchAction: 'none'
-            },
-          }}
-          onTouchStart={handleContainerTouchStart}
-          onTouchEnd={handleContainerTouchEnd}
-        >
-          <Box
-            className="elements-wrapper"
-            sx={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              width: '100%',
-              height: '100%',
-            }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setSelectedField('__page_background__');
+        {renderableElements.map(element => (
+          <DraggableElement
+            key={element.id}
+            element={{ ...element.position, type: element.type, id: element.id }}
+            position={element.position}
+            style={element.style}
+            content={element.content}
+            isSelected={selectedField === element.id}
+            onSelect={setSelectedField}
+            onPositionChange={handlePositionChange}
+            onSizeChange={handleSizeChange}
+            containerSize={renderedImageMetrics}
+            onContentChange={element.type === 'text' ? handleContentChange : undefined}
+            onDoubleClick={() => {
+              if (element.type === 'text' && isHtmlField(element.id)) {
+                onOpenHtmlEditor(element.id);
               }
             }}
-            onTouchStart={(e) => {
-              if (e.target === e.currentTarget) {
-                setSelectedField('__page_background__');
-              }
-            }}
-          >
-            {renderableElements.map(element => (
-              <DraggableElement
-                key={element.id}
-                element={{ ...element.position, type: element.type, id: element.id }}
-                position={element.position}
-                style={element.style}
-                content={element.content}
-                isSelected={selectedField === element.id}
-                onSelect={setSelectedField}
-                onPositionChange={handlePositionChange}
-                onSizeChange={handleSizeChange}
-                containerSize={renderedImageMetrics}
-                onContentChange={element.type === 'text' ? handleContentChange : undefined}
-                onDoubleClick={() => {
-                  if (element.type === 'text' && isHtmlField(element.id)) {
-                    onOpenHtmlEditor(element.id);
-                  }
-                }}
-                rotation={element.rotation}
-                originalImageSize={effectiveImageSize}
-                fontScale={element.fontScale}
-                enableHtmlRendering={element.enableHtmlRendering}
-                darkMode={darkMode}
-              />
-            ))}
-          </Box>
-        </Box>
+            rotation={element.rotation}
+            originalImageSize={effectiveImageSize}
+            fontScale={element.fontScale}
+            enableHtmlRendering={element.enableHtmlRendering}
+            darkMode={darkMode}
+          />
+        ))}
       </Box>
-
-      {colorPalette && colorPalette.length > 0 && (
-        <Box sx={{ flexShrink: 0, mt: 2, display: 'flex', justifyContent: 'center', gap: 1 }}>
-          {colorPalette.map((color, index) => (
-            <Box
-              key={index}
-              sx={{
-                width: 30,
-                height: 30,
-                borderRadius: '50%',
-                backgroundColor: color,
-                cursor: 'pointer',
-                border: '2px solid #fff',
-                boxShadow: '0 0 5px rgba(0,0,0,0.2)',
-                touchAction: 'manipulation',
-                '&:active': { transform: 'scale(0.95)' }
-              }}
-              onClick={() => handleColorCircleClick(color)}
-            />
-          ))}
-        </Box>
-      )}
     </Box>
   );
 };
