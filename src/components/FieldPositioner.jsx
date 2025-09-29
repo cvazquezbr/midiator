@@ -398,6 +398,7 @@ const FieldPositioner = ({
       className="text-container"
       sx={{
         position: 'relative',
+        margin: 'auto',
         background: backgroundValue,
         aspectRatio: aspectRatio,
         maxWidth: '100%',
