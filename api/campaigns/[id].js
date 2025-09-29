@@ -16,7 +16,7 @@ const parseBody = async (req) => {
 };
 
 const handler = async (req, res) => {
-  const userId = req.user.id; // Correctly use the user's integer ID
+  const userId = req.user.sub; // The user ID is in the 'sub' (subject) claim
   const { id } = req.query;
 
   if (req.method === 'GET') {

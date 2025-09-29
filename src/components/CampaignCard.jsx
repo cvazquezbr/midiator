@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import {
   Box,
   Typography,
@@ -6,96 +6,67 @@ import {
 } from '@mui/material';
 import { Delete as DeleteIcon, Edit as EditIcon, Image as ImageIcon } from '@mui/icons-material';
 
-const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onHover, isFeatured, position }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const intervalRef = useRef(null);
+const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onHover, isFeatured, position, zIndex }) => {
+  const [isHovered, setIsHovered] = React.useState(false);
 
   const hasImages = campaign.pageUrls && campaign.pageUrls.length > 0;
-
-  const startCarousel = () => {
-    if (onHover) {
-      onHover(campaign);
-    }
-    setIsHovered(true);
-    if (hasImages && campaign.pageUrls.length > 1) {
-      intervalRef.current = setInterval(() => {
-        setCurrentImageIndex(prevIndex => (prevIndex + 1) % campaign.pageUrls.length);
-      }, 800);
-    }
-  };
-
-  const stopCarousel = () => {
-    setIsHovered(false);
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    setCurrentImageIndex(0);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, []);
-
-  const displayedImageUrl = hasImages ? campaign.pageUrls[currentImageIndex] : null;
+  // For the top gallery, we just show the first image as a static preview.
+  const displayedImageUrl = hasImages ? campaign.pageUrls[0] : null;
 
   return (
     <Box
-      onMouseEnter={startCarousel}
-      onMouseLeave={stopCarousel}
+      onMouseEnter={() => {
+        setIsHovered(true);
+        if (onHover) onHover(campaign);
+      }}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={() => onEditCampaign(campaign)} // The whole card is clickable to edit
       sx={{
-        position: 'relative',
-        width: { xs: '100%', sm: '240px', md: '280px' },
-        maxWidth: { xs: '170px', sm: '240px', md: '280px' },
-        flexShrink: 0,
-        transition: 'all 0.4s cubic-bezier(0.23, 1, 0.32, 1)',
-        transform: `translateX(${position * 35}%) rotateY(${position * 50}deg) scale(${isFeatured ? 1 : 0.7})`,
-        opacity: isFeatured ? 1 : 0.3,
-        zIndex: isFeatured ? 10 : 1,
+        position: 'absolute', // Necessary for layering in the 3D space
+        width: { xs: '60%', sm: '40%', md: '320px' },
+        height: 'auto',
+        aspectRatio: '1 / 1', // Maintain aspect ratio as requested
+        transition: 'all 0.5s cubic-bezier(0.23, 1, 0.32, 1)',
+        transform: `translateX(${position * 40}%) rotateY(${position * -50}deg) scale(${isFeatured ? 1 : 0.6})`,
+        opacity: isFeatured ? 1 : 0.4,
+        zIndex: isFeatured ? 20 : zIndex, // Use passed zIndex, but give featured card highest priority
+        cursor: 'pointer',
         '&:hover': {
-          transform: `translateX(${position * 30}%) rotateY(${position * 45}deg) scale(${isFeatured ? 1.05 : 0.75})`,
-          zIndex: 20,
+          transform: `translateX(${position * 35}%) rotateY(${position * -45}deg) scale(${isFeatured ? 1.05 : 0.65})`,
+          zIndex: 30, // Ensure hovered card is always on top
           opacity: 1,
         },
       }}
     >
       <Box
-        onClick={() => onEditCampaign(campaign)}
         sx={{
           width: '100%',
-          height: { xs: '225px', sm: '270px', md: '330px' },
+          height: '100%',
           backgroundColor: '#000',
           borderRadius: '8px',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundImage: displayedImageUrl ? `url(${displayedImageUrl})` : 'none',
-          cursor: 'pointer',
-          position: 'relative',
-          // The reflection effect using the simpler webkit property
-          '-webkit-box-reflect': 'below 5px linear-gradient(transparent, transparent, rgba(0,0,0,0.4))',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+          // The reflection effect
+          WebkitBoxReflect: 'below 5px linear-gradient(transparent, transparent, rgba(0,0,0,0.4))',
         }}
       >
         {!displayedImageUrl && (
-          <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'grey.900', borderRadius: '8px' }}>
+          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'grey.900', borderRadius: '8px' }}>
             <ImageIcon sx={{ fontSize: 60, color: 'grey.700' }} />
           </Box>
         )}
 
+        {/* Title overlay */}
         <Box
           sx={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
             p: 1.5,
             background: 'linear-gradient(to top, rgba(0,0,0,0.9) 10%, rgba(0,0,0,0))',
             borderRadius: '0 0 8px 8px',
-            opacity: isHovered ? 1 : 0.8,
+            opacity: isHovered || isFeatured ? 1 : 0.8,
             transition: 'opacity 0.3s ease',
           }}
         >
@@ -109,7 +80,8 @@ const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onHover, isF
             {campaign.name}
           </Typography>
         </Box>
-
+      </Box>
+        {/* Action buttons appear on hover */}
         {isHovered && (
           <Box
             sx={{
@@ -119,6 +91,7 @@ const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onHover, isF
               display: 'flex',
               flexDirection: 'column',
               gap: 1,
+              zIndex: 30, // Ensure buttons are on top
             }}
           >
             <IconButton
@@ -145,7 +118,6 @@ const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onHover, isF
             </IconButton>
           </Box>
         )}
-      </Box>
     </Box>
   );
 };
