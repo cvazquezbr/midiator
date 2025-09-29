@@ -77,7 +77,7 @@ describe('Campaigns API Endpoint with Mocked DB', () => {
 
     const req = {
       method: 'DELETE',
-      user: { id: userId, sub: 'test-user-sub' },
+      user: { sub: userId }, // Correctly mock the user object from withAuth middleware
       query: { id: campaignId.toString() },
     };
     const res = {
@@ -110,7 +110,7 @@ describe('Campaigns API Endpoint with Mocked DB', () => {
   it('should return 404 if campaign to delete is not found', async () => {
     const req = {
       method: 'DELETE',
-      user: { id: 1, sub: 'test-user-sub' },
+      user: { sub: 1 }, // Correctly mock the user object
       query: { id: '999' }, // Non-existent ID
     };
     const res = {
