@@ -11,9 +11,9 @@ import 'swiper/css/navigation';
 
 import { Box } from '@mui/material';
 
-const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlideChange, initialSlide, onSwiper }) => {
+const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlideChange, initialSlide, onSwiper, isMobile }) => {
   return (
-    <Box sx={{ py: 4 }}>
+    <Box sx={{ py: 4, mx: isMobile ? -2 : 0 }}>
       <Swiper
         onSwiper={onSwiper}
         effect={'coverflow'}
@@ -39,7 +39,7 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
         }}
       >
         {campaigns.map((campaign) => (
-          <SwiperSlide key={campaign.id} style={{ width: '320px' }}>
+          <SwiperSlide key={campaign.id} style={{ width: isMobile ? '80%' : '320px' }}>
             {({ isActive }) => (
               <CampaignCard
                 campaign={campaign}
