@@ -79,7 +79,7 @@ const ImageStepUI = ({
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, height: { xs: 'auto', md: 'calc(100vh - 150px)' } }}>
+    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, height: { xs: 'calc(100dvh - 140px)', md: 'calc(100vh - 150px)' } }}>
 
       {/* Main Content: Editor Area */}
       <Box sx={{
