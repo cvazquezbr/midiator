@@ -25,6 +25,7 @@ import { UploadFile as UploadFileIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import ColorThief from 'colorthief';
 import PaletteEditor from './PaletteEditor';
+import PalettePreview from './PalettePreview';
 import * as generationHandlers from '../utils/generationHandlers';
 
 const steps = [
@@ -299,13 +300,21 @@ const PaletteWizard = ({
                 <strong>Falha na Geração:</strong> {generationError}
               </Alert>
             )}
-            {paletteData ? (
-              <PaletteEditor
-                paletteData={paletteData}
-                onPaletteDataChange={setPaletteData} // Always use our unified setter
-              />
-            ) : (
-              !generationError && <Typography>A paleta gerada será exibida aqui para edição.</Typography>
+            {!paletteData && !generationError && (
+              <Typography>A paleta gerada e sua pré-visualização serão exibidas aqui para edição.</Typography>
+            )}
+            {paletteData && (
+            <Grid container spacing={4}>
+                <Grid item xs={12} md={6}>
+                  <PaletteEditor
+                    paletteData={paletteData}
+                    onPaletteDataChange={setPaletteData}
+                  />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <PalettePreview paletteData={paletteData} />
+                </Grid>
+              </Grid>
             )}
           </Box>
         );
