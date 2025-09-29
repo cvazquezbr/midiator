@@ -3,122 +3,87 @@ import {
   Box,
   Typography,
   IconButton,
+  Card,
+  CardMedia,
+  CardContent,
+  CardActions,
 } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon, Image as ImageIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Image as ImageIcon } from '@mui/icons-material';
 
-const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onHover, isFeatured, position, zIndex }) => {
-  const [isHovered, setIsHovered] = React.useState(false);
-
-  const hasImages = campaign.pageUrls && campaign.pageUrls.length > 0;
-  // For the top gallery, we just show the first image as a static preview.
-  const displayedImageUrl = hasImages ? campaign.pageUrls[0] : null;
+const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, isCoverFlowActive }) => {
+  // Attempt to get a preview image from the campaign data.
+  // Uses optional chaining to prevent errors if the structure is not as expected.
+  const previewImageUrl = campaign.campaign_data?.pages?.[0]?.imageUrl || null;
 
   return (
-    <Box
-      onMouseEnter={() => {
-        setIsHovered(true);
-        if (onHover) onHover(campaign);
-      }}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={() => onEditCampaign(campaign)} // The whole card is clickable to edit
+    <Card
       sx={{
-        position: 'absolute', // Necessary for layering in the 3D space
-        width: { xs: '60%', sm: '40%', md: '320px' },
-        height: 'auto',
-        aspectRatio: '1 / 1', // Maintain aspect ratio as requested
-        transition: 'all 0.5s cubic-bezier(0.23, 1, 0.32, 1)',
-        transform: `translateX(${position * 40}%) rotateY(${position * -50}deg) scale(${isFeatured ? 1 : 0.6})`,
-        opacity: isFeatured ? 1 : 0.4,
-        zIndex: isFeatured ? 20 : zIndex, // Use passed zIndex, but give featured card highest priority
-        cursor: 'pointer',
-        '&:hover': {
-          transform: `translateX(${position * 35}%) rotateY(${position * -45}deg) scale(${isFeatured ? 1.05 : 0.65})`,
-          zIndex: 30, // Ensure hovered card is always on top
-          opacity: 1,
-        },
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        cursor: isCoverFlowActive ? 'pointer' : 'default',
+        transform: isCoverFlowActive ? 'scale(1.02)' : 'scale(0.95)',
+        boxShadow: isCoverFlowActive ? 10 : 3,
+        transition: 'transform 0.4s ease, box-shadow 0.4s ease',
+        position: 'relative', // Needed to position the delete button
+        aspectRatio: '4 / 5', // Set the desired aspect ratio
       }}
+      // The whole card is clickable to edit, but only when active in the coverflow
+      onClick={() => isCoverFlowActive && onEditCampaign(campaign)}
     >
-      <Box
+      <CardMedia
         sx={{
-          width: '100%',
-          height: '100%',
-          backgroundColor: '#000',
-          borderRadius: '8px',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundImage: displayedImageUrl ? `url(${displayedImageUrl})` : 'none',
+          flexGrow: 1,
+          backgroundColor: 'grey.200',
           display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'flex-end',
-          // The reflection effect
-          WebkitBoxReflect: 'below 5px linear-gradient(transparent, transparent, rgba(0,0,0,0.4))',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
+        image={previewImageUrl}
       >
-        {!displayedImageUrl && (
-          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'grey.900', borderRadius: '8px' }}>
-            <ImageIcon sx={{ fontSize: 60, color: 'grey.700' }} />
-          </Box>
-        )}
+        {!previewImageUrl && <ImageIcon sx={{ fontSize: 60, color: 'grey.500' }} />}
+      </CardMedia>
+      <CardContent sx={{ p: 2 }}>
+        <Typography
+          variant="h6"
+          component="h2"
+          title={campaign.name}
+          noWrap
+        >
+          {campaign.name}
+        </Typography>
+      </CardContent>
 
-        {/* Title overlay */}
-        <Box
+      {/* The delete button is only visible on the active (centered) card */}
+      {isCoverFlowActive && (
+        <CardActions
           sx={{
-            p: 1.5,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.9) 10%, rgba(0,0,0,0))',
-            borderRadius: '0 0 8px 8px',
-            opacity: isHovered || isFeatured ? 1 : 0.8,
-            transition: 'opacity 0.3s ease',
+            position: 'absolute',
+            top: 8,
+            right: 8,
           }}
         >
-          <Typography
-            variant="h6"
-            component="h2"
-            noWrap
-            title={campaign.name}
-            sx={{ color: '#fff', textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}
-          >
-            {campaign.name}
-          </Typography>
-        </Box>
-      </Box>
-        {/* Action buttons appear on hover */}
-        {isHovered && (
-          <Box
+          <IconButton
+            aria-label="delete"
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent the card's onClick from firing
+              onDeleteCampaign(campaign.id, campaign.name);
+            }}
             sx={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 1,
-              zIndex: 30, // Ensure buttons are on top
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 0, 0, 0.7)',
+              },
             }}
           >
-            <IconButton
-              aria-label="edit"
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEditCampaign(campaign);
-              }}
-              sx={{ backgroundColor: 'rgba(0,0,0,0.6)', '&:hover': { backgroundColor: 'rgba(0,0,0,0.9)'}, color: '#fff' }}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-            <IconButton
-              aria-label="delete"
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteCampaign(campaign.id, campaign.name);
-              }}
-              sx={{ backgroundColor: 'rgba(0,0,0,0.6)', '&:hover': { backgroundColor: 'rgba(0,0,0,0.9)'}, color: '#fff' }}
-            >
-              <DeleteIcon fontSize="small" />
-            </IconButton>
-          </Box>
-        )}
-    </Box>
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+        </CardActions>
+      )}
+    </Card>
   );
 };
 
