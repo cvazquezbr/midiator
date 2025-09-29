@@ -78,6 +78,18 @@ const ImageStepUI = ({
     setCurrentPreviewIndex(csvData.length - 1);
   };
 
+  const handleColorCircleClick = (color) => {
+    if (selectedField) {
+      setFieldStyles(prev => ({
+        ...prev,
+        [selectedField]: {
+          ...(prev[selectedField] || {}),
+          color: color
+        }
+      }));
+    }
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, height: { xs: 'calc(100dvh - 140px)', md: 'calc(100vh - 150px)' } }}>
 
@@ -109,7 +121,6 @@ const ImageStepUI = ({
             setFieldStyles={setFieldStyles}
             csvData={csvData}
             onImageDisplayedSizeChange={onImageDisplayedSizeChange}
-            colorPalette={imageColorPalette}
             onCsvDataUpdate={onCsvDataUpdate}
             selectedField={selectedField}
             setSelectedField={setSelectedField}
@@ -127,6 +138,27 @@ const ImageStepUI = ({
             setIsCropping={setIsCropping}
           />
         </Box>
+        {imageColorPalette && imageColorPalette.length > 0 && (
+          <Box sx={{ flexShrink: 0, py: 1, display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
+            {imageColorPalette.map((color, index) => (
+              <Box
+                key={index}
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  backgroundColor: color,
+                  cursor: 'pointer',
+                  border: '2px solid #fff',
+                  boxShadow: '0 0 5px rgba(0,0,0,0.2)',
+                  touchAction: 'manipulation',
+                  '&:active': { transform: 'scale(0.95)' }
+                }}
+                onClick={() => handleColorCircleClick(color)}
+              />
+            ))}
+          </Box>
+        )}
         {csvData && csvData.length > 1 && (
           <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ flexShrink: 0, mt: 2 }} flexWrap="wrap">
             <Tooltip title="Primeiro Registro"><span><IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small"><SkipPrevious /></IconButton></span></Tooltip>
