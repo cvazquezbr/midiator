@@ -393,15 +393,14 @@ const FieldPositioner = ({
     : pageTemplate.backgroundColor || '#FFFFFF';
 
   return (
-    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-      <Box sx={{ position: 'relative', overflow: 'hidden', borderRadius: 2, width: '100%', height: 'auto', maxWidth: '100%', flexShrink: 0 }}>
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Box
           ref={containerRef}
           className="text-container"
               sx={{
+                position: 'relative',
                 border: '2px solid #ddd',
                 background: backgroundValue,
-                position: 'relative', // Needed for absolute positioning of children
                 cursor: 'default',
                 touchAction: 'pan-x pan-y',
                 WebkitOverflowScrolling: 'touch',
@@ -409,10 +408,12 @@ const FieldPositioner = ({
                   touchAction: 'none'
                 },
                 aspectRatio: aspectRatio,
-                width: '100%',
-                height: '100%',
+                width: 'auto',
+                height: 'auto',
                 maxWidth: '100%',
                 maxHeight: '100%',
+                overflow: 'hidden',
+                borderRadius: 2,
               }}
               onTouchStart={handleContainerTouchStart}
               onTouchEnd={handleContainerTouchEnd}
