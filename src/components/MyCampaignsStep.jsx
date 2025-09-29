@@ -13,19 +13,13 @@ import {
   Divider,
   Container,
   Paper,
-  Card,
-  CardContent,
-  CardActions,
   Fab,
-  CardMedia,
-  Grid,
 } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon, Add as AddIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import { useIsMobile } from '../hooks/use-mobile';
 import { getCampaigns, deleteCampaign } from '../utils/campaignState';
 import { toast } from 'sonner';
 import CampaignCoverFlow from './CampaignCoverFlow'; // Import the new component
-import CampaignCard from './CampaignCard'; // Keep for the list view or future use
 
 const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
   const [campaigns, setCampaigns] = useState([]);
@@ -37,7 +31,7 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
 
   // Effect to sync list clicks to the Swiper instance
   useEffect(() => {
-    if (swiperInstance && swiperInstance.realIndex !== activeIndex) {
+    if (swiperInstance && !swiperInstance.destroyed && swiperInstance.realIndex !== activeIndex) {
       swiperInstance.slideToLoop(activeIndex);
     }
   }, [activeIndex, swiperInstance]);
@@ -50,19 +44,14 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
         if (Array.isArray(data)) {
           setCampaigns(data);
         } else {
-          // This case handles successful requests that return non-array data, which is unexpected.
           console.error("MyCampaignsStep Error: API returned data, but it was not an array.", data);
-          // Set campaigns to an empty array to prevent the .map() call from crashing.
           setCampaigns([]);
-          // Inform the user that something went wrong.
           setError("Received an invalid response from the server.");
         }
       })
       .catch(err => {
-        // This case handles failed requests (e.g., network errors, 500 status codes).
         console.error("MyCampaignsStep Error: Failed to fetch campaigns.", err);
         setError(err.message || 'An unknown error occurred while fetching campaigns.');
-        // Ensure campaigns is an empty array on error to prevent crashes.
         setCampaigns([]);
       })
       .finally(() => {
@@ -140,7 +129,7 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
                       onClick={() => setActiveIndex(index)}
                     >
                       <ListItemText primary={campaign.name} secondary={`Atualizado em: ${new Date(campaign.updated_at).toLocaleDateString()}`} />
-                      <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(campaign.id, campaign.name)}>
+                      <IconButton edge="end" aria-label="delete" onClick={(e) => { e.stopPropagation(); handleDelete(campaign.id, campaign.name); }}>
                         <DeleteIcon />
                       </IconButton>
                     </ListItemButton>
