@@ -60,7 +60,6 @@ const FieldPositioner = ({
   setFieldStyles,
   csvData,
   onImageDisplayedSizeChange,
-  colorPalette,
   selectedField, // Use prop from parent
   setSelectedField, // Use prop from parent
   onCsvDataUpdate, // New prop to notify App.jsx of changes
@@ -217,18 +216,6 @@ const FieldPositioner = ({
     });
     setFieldPositions(newPositions);
     setFieldStyles(newStyles);
-  };
-
-  const handleColorCircleClick = (color) => {
-    if (selectedField) {
-      setFieldStyles(prev => ({
-        ...prev,
-        [selectedField]: {
-          ...(prev[selectedField] || {}),
-          color: color
-        }
-      }));
-    }
   };
 
   const handleContainerTouchStart = (e) => {
