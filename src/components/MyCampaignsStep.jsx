@@ -16,20 +16,17 @@ import {
   Fab,
 } from '@mui/material';
 import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
-import { useIsMobile } from '../hooks/use-mobile';
 import { getCampaigns, deleteCampaign } from '../utils/campaignState';
 import { toast } from 'sonner';
-import CampaignCoverFlow from './CampaignCoverFlow'; // Import the new component
+import CampaignCoverFlow from './CampaignCoverFlow';
 
 const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeIndex, setActiveIndex] = useState(0); // State for the active slide
-  const [swiperInstance, setSwiperInstance] = useState(null); // State for Swiper instance
-  const isMobile = useIsMobile();
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [swiperInstance, setSwiperInstance] = useState(null);
 
-  // Effect to sync list clicks to the Swiper instance
   useEffect(() => {
     if (swiperInstance && !swiperInstance.destroyed && swiperInstance.realIndex !== activeIndex) {
       swiperInstance.slideToLoop(activeIndex);
@@ -68,7 +65,7 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
       try {
         await deleteCampaign(id);
         toast.success(`Campaign "${name}" deleted.`);
-        fetchCampaigns(); // Refresh the list
+        fetchCampaigns();
       } catch (err) {
         toast.error(err.message);
       }
@@ -76,21 +73,20 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
   };
 
   return (
-    <Container maxWidth="md">
-      <Paper sx={{ p: { xs: 2, md: 4 }, mt: 4, position: 'relative' }}>
+    <Container maxWidth={false} sx={{ maxWidth: '1200px', px: { xs: 1, sm: 2 } }}>
+      <Paper sx={{ p: { xs: 2, sm: 3, md: 4 }, mt: 4, position: 'relative', overflow: 'hidden' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant={isMobile ? 'h5' : 'h4'} component="h1">
+          <Typography variant={{ xs: 'h5', sm: 'h4' }} component="h1">
             Minhas Campanhas
           </Typography>
-          {!isMobile && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={onCreateNew}
-            >
-              Nova Campanha
-            </Button>
-          )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={onCreateNew}
+            sx={{ display: { xs: 'none', md: 'inline-flex' } }}
+          >
+            Nova Campanha
+          </Button>
         </Box>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
           Selecione uma campanha existente para carregar e continuar editando, ou crie uma nova.
@@ -115,10 +111,9 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
                   onSlideChange={setActiveIndex}
                   initialSlide={activeIndex}
                   onSwiper={setSwiperInstance}
-                  isMobile={isMobile}
                 />
                 <Divider sx={{ my: 4 }} />
-                <Typography variant="h6" component="h3" sx={{ mb: 2, pl: 2 }}>
+                <Typography variant="h6" component="h3" sx={{ mb: 2, pl: { xs: 0, sm: 2 } }}>
                   Todas as Campanhas
                 </Typography>
                 <List sx={{ maxHeight: 300, overflow: 'auto' }}>
@@ -139,20 +134,19 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
             )}
           </Box>
         )}
-        {isMobile && (
-          <Fab
-            color="primary"
-            aria-label="add"
-            sx={{
-              position: 'fixed',
-              bottom: 16,
-              right: 16,
-            }}
-            onClick={onCreateNew}
-          >
-            <AddIcon />
-          </Fab>
-        )}
+        <Fab
+          color="primary"
+          aria-label="add"
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            display: { xs: 'flex', md: 'none' }
+          }}
+          onClick={onCreateNew}
+        >
+          <AddIcon />
+        </Fab>
       </Paper>
     </Container>
   );
