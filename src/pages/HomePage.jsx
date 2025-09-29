@@ -373,7 +373,16 @@ function HomePage() {
     setInputMethod(state.inputMethod ?? 'ia');
     // Default to 10, which matches the slider's max value in PostsCurtosStep.
     setPromptNumRecords(state.promptNumRecords ?? 10);
-    setPromptText(state.promptText ?? '');
+    // Logic for setting the base text for short posts.
+    // Priority: 1. Use saved promptText. 2. Derive from campaign content. 3. Default to empty.
+    if (state.promptText) {
+      setPromptText(state.promptText);
+    } else if (state.campaignContent) {
+      const { titulo, conteudo, cta } = state.campaignContent;
+      setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
+    } else {
+      setPromptText('');
+    }
     setFieldPositions(state.fieldPositions ?? {});
     setTemplateFieldStyles(state.templateFieldStyles ?? {});
     setCustomPalette(state.customPalette ?? null);
@@ -415,6 +424,7 @@ function HomePage() {
       tomDeVoz,
       campaignContent,
       aspectRatio,
+      promptText,
       followupPosts,
       followupPostsQuantity,
       fieldPositions,
@@ -664,13 +674,6 @@ function HomePage() {
     const newSize = getDimensionsFromAspectRatio(aspectRatio) || DEFAULT_IMAGE_SIZE;
     setOriginalImageSize(newSize);
   }, [aspectRatio]);
-
-  useEffect(() => {
-    if (activeStep === 1 && campaignContent) {
-      const { titulo, conteudo, cta } = campaignContent;
-      setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
-    }
-  }, [activeStep, campaignContent]);
 
   useEffect(() => {
     const handleLinkedInRedirect = async () => {
@@ -1177,6 +1180,8 @@ function HomePage() {
         throw new Error("A geração do conteúdo principal falhou e não retornou dados.");
       }
       setCampaignContent(normalizedContent);
+      const { titulo, conteudo, cta } = normalizedContent;
+      setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
 
       if (regenerate) {
         toast.success("Conteúdo principal da campanha foi regenerado.");
