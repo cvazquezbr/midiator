@@ -11,9 +11,9 @@ import {
 import { Delete as DeleteIcon, Image as ImageIcon } from '@mui/icons-material';
 
 const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, isCoverFlowActive }) => {
-  // Attempt to get a preview image from the campaign data.
-  // Uses optional chaining to prevent errors if the structure is not as expected.
-  const previewImageUrl = campaign.campaign_data?.pages?.[0]?.imageUrl || null;
+  // The campaign object from the list view now contains a `pageUrls` array.
+  // We use the first URL for the preview.
+  const previewImageUrl = campaign.pageUrls && campaign.pageUrls.length > 0 ? campaign.pageUrls[0] : null;
 
   return (
     <Card
