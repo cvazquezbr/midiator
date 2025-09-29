@@ -393,7 +393,7 @@ const FieldPositioner = ({
     : pageTemplate.backgroundColor || '#FFFFFF';
 
   return (
-    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Box
         sx={{
           position: 'relative',
