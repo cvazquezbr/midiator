@@ -32,7 +32,7 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
         }}
         coverflowEffect={{
           rotate: 50,
-          stretch: 0,
+          stretch: -20,
           depth: 100,
           modifier: 1,
           slideShadows: true,
