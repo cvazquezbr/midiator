@@ -49,7 +49,7 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const problemaHint = (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: 2, maxWidth: 500 }}>
         <Typography variant="body1" gutterBottom>
             Aqui você descreve a situação real que sua campanha pretende resolver ou a necessidade do seu público que será atendida.
         </Typography>
@@ -90,7 +90,7 @@ const problemaHint = (
 );
 
 const solucaoHint = (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: 2, maxWidth: 500 }}>
         <Typography variant="body1" gutterBottom>
             Aqui você descreve a ideia principal da campanha para resolver o problema ou atender à necessidade mencionada.
         </Typography>
@@ -226,7 +226,7 @@ const Campaign = ({
         '& .MuiInputLabel-root:not(.Mui-focused):not(.MuiFormLabel-filled)': {
             fontFamily: 'Montserrat, sans-serif',
             fontSize: '1.4rem',
-            transform: 'translate(14px, 47px) scale(1)',
+            transform: 'translate(24px, 47px) scale(1)',
         },
     };
 
@@ -961,7 +961,7 @@ const Campaign = ({
                 </TabPanel>
 
 
-                <Dialog open={isHintModalOpen} onClose={() => setHintModalOpen(false)} fullWidth>
+                <Dialog open={isHintModalOpen} onClose={() => setHintModalOpen(false)} maxWidth="lg" fullWidth>
                     <DialogTitle>
                         Como Descrever o Problema ou Necessidade
                         <IconButton
@@ -1039,7 +1039,7 @@ const Campaign = ({
                     </DialogActions>
                 </Dialog>
 
-                <Dialog open={isSolucaoHintModalOpen} onClose={() => setSolucaoHintModalOpen(false)} fullWidth>
+                <Dialog open={isSolucaoHintModalOpen} onClose={() => setSolucaoHintModalOpen(false)} maxWidth="lg" fullWidth>
                     <DialogTitle>
                         Como Descrever a Solução ou Proposta
                         <IconButton
