@@ -19,17 +19,11 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
         effect={'coverflow'}
         grabCursor={true}
         centeredSlides={true}
-        slidesPerView={'auto'}
         initialSlide={initialSlide}
-        coverflowEffect={{
-          rotate: 50,
-          stretch: 0,
-          depth: 100,
-          modifier: 1,
-          slideShadows: true,
-        }}
-        pagination={{ clickable: true }}
+        slidesPerView={1}
+        spaceBetween={10}
         navigation={true}
+        pagination={{ clickable: true }}
         modules={[EffectCoverflow, Pagination, Navigation]}
         onSlideChange={(swiper) => onSlideChange(swiper.realIndex)}
         className="mySwiper"
@@ -37,9 +31,22 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
           '--swiper-navigation-color': '#fff',
           '--swiper-pagination-color': '#fff',
         }}
+        coverflowEffect={{
+          rotate: 50,
+          stretch: 0,
+          depth: 100,
+          modifier: 1,
+          slideShadows: true,
+        }}
+        breakpoints={{
+          768: {
+            slidesPerView: 'auto',
+            spaceBetween: 0,
+          },
+        }}
       >
         {campaigns.map((campaign) => (
-          <SwiperSlide key={campaign.id} style={{ width: '80%', maxWidth: '320px' }}>
+          <SwiperSlide key={campaign.id} style={{ width: '80%', maxWidth: '280px' }}>
             {({ isActive }) => (
               <CampaignCard
                 campaign={campaign}
