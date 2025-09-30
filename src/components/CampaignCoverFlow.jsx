@@ -32,8 +32,8 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
           '--swiper-pagination-color': '#fff',
         }}
         coverflowEffect={{
-          rotate: 50,
-          stretch: 0,
+          rotate: 60,
+          stretch: -40,
           depth: 100,
           modifier: 1,
           slideShadows: true,
