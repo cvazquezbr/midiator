@@ -39,7 +39,7 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
         }}
       >
         {campaigns.map((campaign) => (
-          <SwiperSlide key={campaign.id} style={{ width: '80%', maxWidth: '320px' }}>
+          <SwiperSlide key={campaign.id} style={{ width: '80%' }}>
             {({ isActive }) => (
               <CampaignCard
                 campaign={campaign}
