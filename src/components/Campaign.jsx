@@ -433,12 +433,10 @@ const Campaign = ({
                                     value={problema}
                                     onChange={(e) => setProblema(e.target.value)}
                                     variant="outlined"
+                                    fullWidth
                                     placeholder="Descreva o problema que sua campanha busca resolver."
                                     disabled={campaignContent !== null}
-                                    sx={{
-                                        flexGrow: 1,
-                                        ...(problema.trim() === '' ? emptyLabelStyle : {})
-                                    }}
+                                    sx={problema.trim() === '' ? emptyLabelStyle : {}}
                                     inputRef={problemaRef}
                                 />
                                 <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setHintModalOpen(true)}>
@@ -489,9 +487,9 @@ const Campaign = ({
                                             value={solucao}
                                             onChange={(e) => setSolucao(e.target.value)}
                                             variant="outlined"
+                                            fullWidth
                                             placeholder="Descreva a solução que sua campanha oferece."
                                             disabled={campaignContent !== null}
-                                            sx={{ flexGrow: 1 }}
                                         />
                                         <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setSolucaoHintModalOpen(true)}>
                                             <GeminiIcon />
