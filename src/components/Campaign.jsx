@@ -433,10 +433,12 @@ const Campaign = ({
                                     value={problema}
                                     onChange={(e) => setProblema(e.target.value)}
                                     variant="outlined"
-                                    fullWidth
                                     placeholder="Descreva o problema que sua campanha busca resolver."
                                     disabled={campaignContent !== null}
-                                    sx={problema.trim() === '' ? emptyLabelStyle : {}}
+                                    sx={{
+                                        flexGrow: 1,
+                                        ...(problema.trim() === '' ? emptyLabelStyle : {})
+                                    }}
                                     inputRef={problemaRef}
                                 />
                                 <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setHintModalOpen(true)}>
@@ -487,9 +489,9 @@ const Campaign = ({
                                             value={solucao}
                                             onChange={(e) => setSolucao(e.target.value)}
                                             variant="outlined"
-                                            fullWidth
                                             placeholder="Descreva a solução que sua campanha oferece."
                                             disabled={campaignContent !== null}
+                                            sx={{ flexGrow: 1 }}
                                         />
                                         <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setSolucaoHintModalOpen(true)}>
                                             <GeminiIcon />
@@ -959,7 +961,7 @@ const Campaign = ({
                 </TabPanel>
 
 
-                <Dialog open={isHintModalOpen} onClose={() => setHintModalOpen(false)} maxWidth="lg" fullWidth>
+                <Dialog open={isHintModalOpen} onClose={() => setHintModalOpen(false)} fullWidth>
                     <DialogTitle>
                         Como Descrever o Problema ou Necessidade
                         <IconButton
@@ -1037,7 +1039,7 @@ const Campaign = ({
                     </DialogActions>
                 </Dialog>
 
-                <Dialog open={isSolucaoHintModalOpen} onClose={() => setSolucaoHintModalOpen(false)} maxWidth="lg" fullWidth>
+                <Dialog open={isSolucaoHintModalOpen} onClose={() => setSolucaoHintModalOpen(false)} fullWidth>
                     <DialogTitle>
                         Como Descrever a Solução ou Proposta
                         <IconButton
