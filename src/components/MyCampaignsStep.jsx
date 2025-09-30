@@ -73,7 +73,7 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ px: { xs: 1, sm: 2 } }}>
+    <Container maxWidth={false} sx={{ maxWidth: '1200px', px: { xs: 1, sm: 2 } }}>
       <Paper sx={{ p: { xs: 2, sm: 3, md: 4 }, mt: 4, position: 'relative', overflow: 'hidden' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant={{ xs: 'h5', sm: 'h4' }} component="h1">
