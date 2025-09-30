@@ -20,8 +20,8 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
         grabCursor={true}
         centeredSlides={true}
         initialSlide={initialSlide}
-        slidesPerView={1}
-        spaceBetween={10}
+        slidesPerView={1.7}
+        loop={true}
         navigation={true}
         pagination={{ clickable: true }}
         modules={[EffectCoverflow, Pagination, Navigation]}
@@ -32,17 +32,11 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
           '--swiper-pagination-color': '#fff',
         }}
         coverflowEffect={{
-          rotate: 60,
-          stretch: -40,
+          rotate: 50,
+          stretch: 0,
           depth: 100,
           modifier: 1,
           slideShadows: true,
-        }}
-        breakpoints={{
-          768: {
-            slidesPerView: 'auto',
-            spaceBetween: 0,
-          },
         }}
       >
         {campaigns.map((campaign) => (
