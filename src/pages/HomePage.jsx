@@ -1532,54 +1532,52 @@ function HomePage() {
                   />
                 )}
                 {activeStep === 1 && (
-                  <Container maxWidth="lg">
-                    <Campaign
-                      steps={steps}
-                      activeStep={activeStep}
-                      {...campaignData}
-                      setProblema={setProblema}
-                      setSolucao={setSolucao}
-                      objetivo={objetivo}
-                      setObjetivo={setObjetivo}
-                      tomDeVoz={tomDeVoz}
-                      setTomDeVoz={setTomDeVoz}
-                      isGeneratingCampaign={isGeneratingCampaign}
-                      campaignGenerationFailed={campaignGenerationFailed}
-                      generationError={generationError}
-                      handleGenerateCampaignContent={handleGenerateCampaignContent}
-                      handleResetCampaign={handleResetCampaign}
-                      handleExportHtml={() => exportHtml(campaignData)}
-                      editingField={editingField}
-                      setEditingField={(field) => {
-                        setEditingField(field);
-                        setIsHtmlField(field === 'conteudoFormatado');
-                      }}
-                      isGeneratingSummaryMedio={isGeneratingSummaryMedio}
-                      handleGenerateSummary={handleGenerateSummary}
-                      isGeneratingSummaryPequeno={isGeneratingSummaryPequeno}
-                      isGeneratingConteudoFormatado={isGeneratingConteudoFormatado}
-                      handleGenerateFormattedContent={handleGenerateFormattedContent}
-                      isGeneratingFollowup={isGeneratingFollowup}
-                      handleGenerateFollowupPosts={handleGenerateFollowupPosts}
-                      generatedPageUrl={generatedPageUrl}
-                      isGeneratingImage={isGeneratingImage}
-                      handleGenerateImage={handleGenerateImage}
-                      setCampaignContent={setCampaignContent}
-                      onEditFollowup={handleEditFollowup}
-                      followupPostsQuantity={followupPostsQuantity}
-                      setFollowupPostsQuantity={setFollowupPostsQuantity}
-                      setAspectRatio={setAspectRatio}
-                      autorList={autorList}
-                      selectedAutorForCampaign={selectedAutorForCampaign}
-                      setSelectedAutorForCampaign={setSelectedAutorForCampaign}
-                      personaList={personaList}
-                      selectedPersonaForCampaign={selectedPersonaForCampaign}
-                      setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
-                      palettes={palettes}
-                      onRequestNewAutor={handleRequestNewAutor}
-                      onRequestNewPersona={handleRequestNewPersona}
-                    />
-                  </Container>
+                  <Campaign
+                    steps={steps}
+                    activeStep={activeStep}
+                    {...campaignData}
+                    setProblema={setProblema}
+                    setSolucao={setSolucao}
+                    objetivo={objetivo}
+                    setObjetivo={setObjetivo}
+                    tomDeVoz={tomDeVoz}
+                    setTomDeVoz={setTomDeVoz}
+                    isGeneratingCampaign={isGeneratingCampaign}
+                    campaignGenerationFailed={campaignGenerationFailed}
+                    generationError={generationError}
+                    handleGenerateCampaignContent={handleGenerateCampaignContent}
+                    handleResetCampaign={handleResetCampaign}
+                    handleExportHtml={() => exportHtml(campaignData)}
+                    editingField={editingField}
+                    setEditingField={(field) => {
+                      setEditingField(field);
+                      setIsHtmlField(field === 'conteudoFormatado');
+                    }}
+                    isGeneratingSummaryMedio={isGeneratingSummaryMedio}
+                    handleGenerateSummary={handleGenerateSummary}
+                    isGeneratingSummaryPequeno={isGeneratingSummaryPequeno}
+                    isGeneratingConteudoFormatado={isGeneratingConteudoFormatado}
+                    handleGenerateFormattedContent={handleGenerateFormattedContent}
+                    isGeneratingFollowup={isGeneratingFollowup}
+                    handleGenerateFollowupPosts={handleGenerateFollowupPosts}
+                    generatedPageUrl={generatedPageUrl}
+                    isGeneratingImage={isGeneratingImage}
+                    handleGenerateImage={handleGenerateImage}
+                    setCampaignContent={setCampaignContent}
+                    onEditFollowup={handleEditFollowup}
+                    followupPostsQuantity={followupPostsQuantity}
+                    setFollowupPostsQuantity={setFollowupPostsQuantity}
+                    setAspectRatio={setAspectRatio}
+                    autorList={autorList}
+                    selectedAutorForCampaign={selectedAutorForCampaign}
+                    setSelectedAutorForCampaign={setSelectedAutorForCampaign}
+                    personaList={personaList}
+                    selectedPersonaForCampaign={selectedPersonaForCampaign}
+                    setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
+                    palettes={palettes}
+                    onRequestNewAutor={handleRequestNewAutor}
+                    onRequestNewPersona={handleRequestNewPersona}
+                  />
                 )}
                 {activeStep === 2 && (
                   <PostsCurtosStep
