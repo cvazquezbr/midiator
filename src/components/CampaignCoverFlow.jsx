@@ -13,58 +13,60 @@ import { Box } from '@mui/material';
 
 const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlideChange, initialSlide, onSwiper }) => {
   return (
-    <Box sx={{ py: 4 }}>
-      <Swiper
-        onSwiper={onSwiper}
-        grabCursor={true}
-        initialSlide={initialSlide}
-        navigation={true}
-        pagination={{ clickable: true }}
-        modules={[EffectCoverflow, Pagination, Navigation]}
-        onSlideChange={(swiper) => onSlideChange(swiper.realIndex)}
-        className="mySwiper"
-        style={{
-          '--swiper-navigation-color': '#fff',
-          '--swiper-pagination-color': '#fff',
-        }}
-        effect="coverflow"
-        centeredSlides={true}
-        slidesPerView={1} // Default mobile: 1 card
-        spaceBetween={20}
-        coverflowEffect={{
-          rotate: 0,
-          stretch: 0,
-          depth: 0,
-          modifier: 0,
-          slideShadows: false, // No effect on mobile
-        }}
-        breakpoints={{
-          768: {
-            slidesPerView: 3, // Desktop: 3 cards
-            spaceBetween: 40,
-            coverflowEffect: {
-              rotate: 50,
-              stretch: 0,
-              depth: 100,
-              modifier: 1,
-              slideShadows: true,
-            },
-          },
-        }}
-      >
-        {campaigns.map((campaign) => (
-          <SwiperSlide key={campaign.id} style={{ maxWidth: '320px' }}>
-            {({ isActive }) => (
-              <CampaignCard
-                campaign={campaign}
-                onEditCampaign={onEditCampaign}
-                onDeleteCampaign={onDeleteCampaign}
-                isCoverFlowActive={isActive}
-              />
-            )}
-          </SwiperSlide>
-        ))}
-      </Swiper>
+    // This outer box centers the Swiper component and constrains its width,
+    // which is the key to preventing the layout calculation bug.
+    <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+      <Box sx={{
+        py: 4,
+        width: '100%',
+        // On mobile, constrain the width to prevent the wrapper from expanding infinitely.
+        // This directly addresses the user's finding from the inspector.
+        maxWidth: '320px',
+        // On desktop, allow it to take more space.
+        '@media (min-width: 768px)': {
+          maxWidth: '100%',
+        }
+      }}>
+        <Swiper
+          onSwiper={onSwiper}
+          effect={'coverflow'}
+          grabCursor={true}
+          centeredSlides={true}
+          slidesPerView={'auto'} // 'auto' is best for coverflow with defined slide widths
+          initialSlide={initialSlide}
+          navigation={true}
+          pagination={{ clickable: true }}
+          modules={[EffectCoverflow, Pagination, Navigation]}
+          onSlideChange={(swiper) => onSlideChange(swiper.realIndex)}
+          className="mySwiper"
+          style={{
+            '--swiper-navigation-color': '#fff',
+            '--swiper-pagination-color': '#fff',
+          }}
+          coverflowEffect={{
+            rotate: 50,
+            stretch: 0,
+            depth: 100,
+            modifier: 1,
+            slideShadows: true,
+          }}
+        >
+          {campaigns.map((campaign) => (
+            // By giving the slide a clear width, `slidesPerView: 'auto'` works reliably.
+            // This setup ensures ~3 slides are visible without horizontal scroll.
+            <SwiperSlide key={campaign.id} style={{ width: '280px' }}>
+              {({ isActive }) => (
+                <CampaignCard
+                  campaign={campaign}
+                  onEditCampaign={onEditCampaign}
+                  onDeleteCampaign={onDeleteCampaign}
+                  isCoverFlowActive={isActive}
+                />
+              )}
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      </Box>
     </Box>
   );
 };
