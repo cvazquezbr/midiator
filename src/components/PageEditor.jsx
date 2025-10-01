@@ -103,16 +103,34 @@ const PageEditor = ({
   const [editingField, setEditingField] = useState(null);
   const [imageSwatches, setImageSwatches] = useState([]);
   const isMobile = useIsMobile();
+  const prevImagesRef = useRef();
 
   useEffect(() => {
+    // Sincronizar paleta de cores da imagem
     const firstImage = editedPageTemplate?.images?.[0];
     if (firstImage?.src) {
       extractColorPalette(firstImage.src, setImageSwatches);
     } else {
-      // Fallback to the campaign palette if no image in the editor
       setImageSwatches(colorPalette || []);
     }
-  }, [editedPageTemplate?.images?.[0]?.src, colorPalette]);
+
+    // Lógica para detectar e selecionar a nova imagem
+    const currentImages = editedPageTemplate?.images || [];
+    const previousImages = prevImagesRef.current || [];
+
+    if (currentImages.length > previousImages.length) {
+      const newImage = currentImages.find(
+        (img) => !previousImages.some((prevImg) => prevImg.id === img.id)
+      );
+      if (newImage) {
+        handleInternalFieldSelection(newImage.id);
+      }
+    }
+
+    // Atualizar a referência para o próximo render
+    prevImagesRef.current = currentImages;
+  }, [editedPageTemplate?.images, colorPalette, handleInternalFieldSelection]);
+
 
   const handleOpenHtmlEditor = (fieldId) => {
     setEditingField(fieldId);
