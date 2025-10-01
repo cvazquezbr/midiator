@@ -153,6 +153,10 @@ const PageEditor = ({
     );
   };
 
+  const handleInternalFieldSelection = useCallback((fieldToSelect) => {
+    setSelectedFieldInternal(fieldToSelect);
+  }, []);
+
   const handleLocalImageUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
