@@ -105,6 +105,10 @@ const PageEditor = ({
   const isMobile = useIsMobile();
   const prevImagesRef = useRef();
 
+  const handleInternalFieldSelection = useCallback((fieldToSelect) => {
+    setSelectedFieldInternal(fieldToSelect);
+  }, []);
+
   useEffect(() => {
     // Sincronizar paleta de cores da imagem
     const firstImage = editedPageTemplate?.images?.[0];
@@ -148,10 +152,6 @@ const PageEditor = ({
       setEditedPageTemplate
     );
   };
-
-  const handleInternalFieldSelection = useCallback((fieldToSelect) => {
-    setSelectedFieldInternal(fieldToSelect);
-  }, []);
 
   const handleLocalImageUpload = (event) => {
     const file = event.target.files[0];
