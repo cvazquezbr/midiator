@@ -16,10 +16,7 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
     <Box sx={{ py: 4 }}>
       <Swiper
         onSwiper={onSwiper}
-        effect={'coverflow'}
         grabCursor={true}
-        centeredSlides={true}
-        slidesPerView={'auto'} // Use 'auto' for coverflow with variable slide widths
         initialSlide={initialSlide}
         navigation={true}
         pagination={{ clickable: true }}
@@ -30,28 +27,30 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
           '--swiper-navigation-color': '#fff',
           '--swiper-pagination-color': '#fff',
         }}
-        // Base coverflow effect for mobile, less pronounced
-        coverflowEffect={{
-          rotate: 30,
-          stretch: -10,
-          depth: 100,
-          modifier: 1,
-          slideShadows: true,
-        }}
+        // Default to mobile-first: 1 slide, simple slide effect
+        effect={'slide'}
+        slidesPerView={1}
+        centeredSlides={true}
+        spaceBetween={20}
+
         breakpoints={{
-          // More pronounced effect for desktop
+          // At 768px and up, switch to coverflow with 3 slides
           768: {
+            effect: 'coverflow',
+            slidesPerView: 3,
+            centeredSlides: true,
             coverflowEffect: {
               rotate: 50,
               stretch: 0,
+              depth: 100,
+              modifier: 1,
+              slideShadows: true,
             },
           },
         }}
       >
         {campaigns.map((campaign) => (
-          // Define a width on the slides so 'auto' works correctly.
-          // This configuration ensures roughly 3 slides are visible.
-          <SwiperSlide key={campaign.id} style={{ width: '80%', maxWidth: '280px' }}>
+          <SwiperSlide key={campaign.id}>
             {({ isActive }) => (
               <CampaignCard
                 campaign={campaign}
