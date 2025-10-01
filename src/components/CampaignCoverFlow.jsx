@@ -27,18 +27,21 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
           '--swiper-navigation-color': '#fff',
           '--swiper-pagination-color': '#fff',
         }}
-        // Default to mobile-first: 1 slide, simple slide effect
-        effect={'slide'}
-        slidesPerView={1}
+        effect="coverflow"
         centeredSlides={true}
+        slidesPerView={1} // Default mobile: 1 card
         spaceBetween={20}
-
+        coverflowEffect={{
+          rotate: 0,
+          stretch: 0,
+          depth: 0,
+          modifier: 0,
+          slideShadows: false, // No effect on mobile
+        }}
         breakpoints={{
-          // At 768px and up, switch to coverflow with 3 slides
           768: {
-            effect: 'coverflow',
-            slidesPerView: 3,
-            centeredSlides: true,
+            slidesPerView: 3, // Desktop: 3 cards
+            spaceBetween: 40,
             coverflowEffect: {
               rotate: 50,
               stretch: 0,
@@ -50,7 +53,7 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
         }}
       >
         {campaigns.map((campaign) => (
-          <SwiperSlide key={campaign.id}>
+          <SwiperSlide key={campaign.id} style={{ maxWidth: '320px' }}>
             {({ isActive }) => (
               <CampaignCard
                 campaign={campaign}
