@@ -16,6 +16,7 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
     <Box sx={{ py: 4 }}>
       <Swiper
         onSwiper={onSwiper}
+        effect={'coverflow'}
         grabCursor={true}
         centeredSlides={true}
         initialSlide={initialSlide}
@@ -29,18 +30,23 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
           '--swiper-pagination-color': '#fff',
         }}
         breakpoints={{
+          // For mobile
           0: {
-            effect: 'slide',
-            slidesPerView: 1,
-            spaceBetween: 10,
+            slidesPerView: 3,
+            coverflowEffect: {
+              rotate: 25,
+              stretch: -20,
+              depth: 100,
+              modifier: 1,
+              slideShadows: true,
+            },
           },
+          // For tablet and desktop
           768: {
-            effect: 'coverflow',
-            slidesPerView: 'auto',
-            spaceBetween: 0,
+            slidesPerView: 3,
             coverflowEffect: {
               rotate: 50,
-              stretch: -20,
+              stretch: 0,
               depth: 100,
               modifier: 1,
               slideShadows: true,
@@ -49,7 +55,7 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
         }}
       >
         {campaigns.map((campaign) => (
-          <SwiperSlide key={campaign.id} style={{ width: '80%', maxWidth: '280px' }}>
+          <SwiperSlide key={campaign.id}>
             {({ isActive }) => (
               <CampaignCard
                 campaign={campaign}
