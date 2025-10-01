@@ -28,24 +28,23 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
           '--swiper-navigation-color': '#fff',
           '--swiper-pagination-color': '#fff',
         }}
-        // Mobile-first settings
-        effect={'slide'}
-        slidesPerView={1}
-        spaceBetween={10}
-
-        coverflowEffect={{
-          rotate: 50,
-          stretch: -20,
-          depth: 100,
-          modifier: 1,
-          slideShadows: true,
-        }}
-
         breakpoints={{
+          0: {
+            effect: 'slide',
+            slidesPerView: 1,
+            spaceBetween: 10,
+          },
           768: {
             effect: 'coverflow',
             slidesPerView: 'auto',
             spaceBetween: 0,
+            coverflowEffect: {
+              rotate: 50,
+              stretch: -20,
+              depth: 100,
+              modifier: 1,
+              slideShadows: true,
+            },
           },
         }}
       >
