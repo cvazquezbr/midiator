@@ -938,6 +938,7 @@ function HomePage() {
   const addNewImageToCanvas = useCallback((imageUrl) => {
     console.log(`[HomePage] addNewImageToCanvas called. Target index: ${imageGalleryTargetIndex}`);
     const newImage = createNewImageElement(imageUrl);
+    setSelectedField(newImage.id);
 
     // If target index is a number, we are on the "Page Editing" step for a specific page.
     if (typeof imageGalleryTargetIndex === 'number') {

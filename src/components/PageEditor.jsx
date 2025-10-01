@@ -147,6 +147,7 @@ const PageEditor = ({
             ...prevTemplate,
             images: [...(prevTemplate.images || []), newImage],
         }));
+        handleInternalFieldSelection(newImage.id);
     };
     reader.readAsDataURL(file);
   };
