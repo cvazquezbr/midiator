@@ -547,6 +547,25 @@ const PageGeneratorFrontendOnly = ({
 
   const pageToEdit = initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex);
 
+  useEffect(() => {
+    // This effect synchronizes the editor's template with the parent's state.
+    // When an image is added from the gallery, `initialGeneratedPagesData` changes.
+    // This effect ensures the open `PageEditor` receives the updated template.
+    if (editingGeneratedPageIndex !== null) {
+      const updatedPageData = initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex);
+      if (updatedPageData) {
+        const finalTemplate = {
+          ...pageTemplate,
+          ...(updatedPageData.customPageTemplate || {}),
+        };
+        finalTemplate.images = [...(finalTemplate.images || [])];
+
+        // Update the state that is passed as a prop to the PageEditor
+        setPageTemplateForEditor(finalTemplate);
+      }
+    }
+  }, [initialGeneratedPagesData, editingGeneratedPageIndex, pageTemplate]);
+
   return (
     <Box sx={{ mt: 3 }}>
       <Card>
