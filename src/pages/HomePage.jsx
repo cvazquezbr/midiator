@@ -943,31 +943,37 @@ function HomePage() {
     // If target index is a number, we are on the "Page Editing" step for a specific page.
     if (typeof imageGalleryTargetIndex === 'number') {
       setGeneratedPagesData(prevPages => {
-        const newPages = [...prevPages];
         const pageIndex = imageGalleryTargetIndex;
-
-        if (pageIndex < 0 || pageIndex >= newPages.length) {
+        if (pageIndex < 0 || pageIndex >= prevPages.length) {
           console.error("Invalid page index for custom template update:", pageIndex);
           toast.error(`Falha ao adicionar imagem: índice de página inválido (${pageIndex}).`);
           return prevPages;
         }
 
-        const pageToUpdate = { ...newPages[pageIndex] };
-        // If the page doesn't have a custom template yet, create a deep clone
-        // of the main template to prevent shared state mutations.
-        const baseTemplate = pageToUpdate.customPageTemplate || JSON.parse(JSON.stringify(pageTemplate));
+        return prevPages.map((page, index) => {
+          if (index !== pageIndex) {
+            return page;
+          }
 
-        const newCustomTemplate = {
-          ...baseTemplate,
-          images: [...(baseTemplate.images || []), newImage],
-        };
+          // Deep clone the page to avoid any state mutation issues.
+          const updatedPage = JSON.parse(JSON.stringify(page));
 
-        pageToUpdate.customPageTemplate = newCustomTemplate;
-        newPages[pageIndex] = pageToUpdate;
+          // If the page doesn't have a custom template yet, create one by cloning the main template.
+          // Otherwise, use its existing custom template.
+          const baseTemplate = updatedPage.customPageTemplate || JSON.parse(JSON.stringify(pageTemplate));
 
-        console.log(`[HomePage] Image added to specific page index: ${pageIndex}`);
-        toast.success(`Imagem adicionada à página ${pageIndex + 1}.`);
-        return newPages;
+          const newCustomTemplate = {
+            ...baseTemplate,
+            images: [...(baseTemplate.images || []), newImage],
+          };
+
+          updatedPage.customPageTemplate = newCustomTemplate;
+
+          console.log(`[HomePage] Image added to specific page index: ${pageIndex}`);
+          toast.success(`Imagem adicionada à página ${pageIndex + 1}.`);
+
+          return updatedPage;
+        });
       });
     } else {
       // Otherwise, update the global template (likely on Step 3).
