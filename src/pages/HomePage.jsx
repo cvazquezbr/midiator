@@ -953,7 +953,9 @@ function HomePage() {
         }
 
         const pageToUpdate = { ...newPages[pageIndex] };
-        const baseTemplate = pageToUpdate.customPageTemplate || pageTemplate;
+        // If the page doesn't have a custom template yet, create a deep clone
+        // of the main template to prevent shared state mutations.
+        const baseTemplate = pageToUpdate.customPageTemplate || JSON.parse(JSON.stringify(pageTemplate));
 
         const newCustomTemplate = {
           ...baseTemplate,
