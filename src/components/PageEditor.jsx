@@ -153,8 +153,7 @@ const PageEditor = ({
     );
   };
 
-  const handleLocalImageUpload = (event) => {
-    const file = event.target.files[0];
+  const handleImageSelection = (file) => {
     if (!file) return;
 
     const reader = new FileReader();
@@ -168,6 +167,10 @@ const PageEditor = ({
         handleInternalFieldSelection(newImage.id);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleLocalImageUpload = (event) => {
+    handleImageSelection(event.target.files[0]);
   };
 
   const handleFieldPositionerCsvDataUpdate = useCallback((updatedDataArray) => {
@@ -220,6 +223,7 @@ const PageEditor = ({
       customPageTemplate: editedPageTemplate,
     };
     console.log('[PageEditor] handleSave called. Data being passed up:', savedData);
+    console.log('[PageEditor] Images before save:', editedPageTemplate.images);
     onSave(savedData);
     onClose();
   };
@@ -290,7 +294,7 @@ const PageEditor = ({
                 onOpenHtmlEditor={handleOpenHtmlEditor}
                 showImageLoaders={true}
                 handleImageUpload={handleLocalImageUpload}
-                onOpenImageGallery={onOpenImageGallery}
+                onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
               />
             </Grid>
           )}
@@ -322,7 +326,7 @@ const PageEditor = ({
             setBrandElements={setEditedBrandElements}
             showImageLoaders={true}
             handleImageUpload={handleLocalImageUpload}
-            onOpenImageGallery={onOpenImageGallery}
+            onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
           />
         </>
       )}
