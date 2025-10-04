@@ -110,7 +110,7 @@ function HomePage() {
     generatedPagesData, setGeneratedPagesData,
     generatedVideos, setGeneratedVideos,
     aspectRatio, setAspectRatio,
-    pendingAssets,
+    pendingAssets, setPendingAssets,
     addPendingAsset,
     addPendingAssetMap,
     removePendingAsset,
@@ -332,8 +332,7 @@ function HomePage() {
                 }
                 newPageTemplate.images = [image];
             }
-        }
-        else if (state.backgroundImage) {
+        } else if (state.backgroundImage) {
             // Even older legacy format
             newPageTemplate.images = [createNewImageElement(state.backgroundImage)];
         }
@@ -351,122 +350,155 @@ function HomePage() {
             extractColorPalette(firstImageSrc, setImageColorPalette);
         };
         img.onerror = () => {
-            console.error("Failed to load image for original size/color extraction.");
             setOriginalImageSize(DEFAULT_IMAGE_SIZE);
             setImageColorPalette([]);
         };
         img.src = firstImageSrc;
-        if (img.complete) {
-            img.onload();
-        }
     }
 
-    setFieldPositions(state.fieldPositions ?? {});
-    setFieldStyles(state.fieldStyles ?? {});
-    setInitialFieldStyles(state.fieldStyles ?? {});
     setProblema(state.problema ?? '');
     setSolucao(state.solucao ?? '');
     setObjetivo(state.objetivo ?? '');
     setTomDeVoz(state.tomDeVoz ?? '');
     setCampaignContent(state.campaignContent ?? null);
+    setAspectRatio(state.aspectRatio ?? '1:1');
     setGeneratedPageUrl(state.generatedPageUrl ?? null);
     setFollowupPostsQuantity(state.followupPostsQuantity ?? 10);
-    setInputMethod(state.inputMethod ?? 'ia');
-    setPromptNumRecords(state.promptNumRecords ?? 10);
-    setPromptText(state.promptText ?? '');
+    setIsScheduled(state.isScheduled ?? false);
     setScheduleDate(state.scheduleDate ? new Date(state.scheduleDate) : new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
     setWeeklySchedule(state.weeklySchedule ?? {});
     setSelectedProfile(state.selectedProfile ?? '');
     setSelectedImages(state.selectedImages ?? {});
     setSelectedVideos(state.selectedVideos ?? {});
-    setAspectRatio(state.aspectRatio ?? '1:1');
-    setFontScale(state.fontScale ?? 1);
+    setInputMethod(state.inputMethod ?? 'ia');
+    // Default to 10, which matches the slider's max value in PostsCurtosStep.
+    setPromptNumRecords(state.promptNumRecords ?? 10);
+    // Logic for setting the base text for short posts.
+    // Priority: 1. Use saved promptText. 2. Derive from campaign content. 3. Default to empty.
+    if (state.promptText) {
+      setPromptText(state.promptText);
+    } else if (state.campaignContent) {
+      const { titulo, conteudo, cta } = state.campaignContent;
+      setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
+    } else {
+      setPromptText('');
+    }
+    setFieldPositions(state.fieldPositions ?? {});
     setTemplateFieldStyles(state.templateFieldStyles ?? {});
-    setPaletteId(state.paletteId ?? null);
     setCustomPalette(state.customPalette ?? null);
+
+    const loadedStyles = state.fieldStyles ?? {};
+    const completeStyles = {};
+    const defaultStylesBase = {
+      fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
+      textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
+      strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
+      shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
+      textAlign: 'left', verticalAlign: 'top',
+      backgroundColor: 'rgba(0,0,0,0)', borderColor: '#000000', borderWidth: 0,
+      borderRadius: 0, padding: 5, backgroundOpacity: 0,
+    };
+    if (state.csvHeaders && Array.isArray(state.csvHeaders)) {
+      state.csvHeaders.forEach(header => {
+        completeStyles[header] = {
+          ...defaultStylesBase,
+          ...(loadedStyles[header] || {}),
+        };
+      });
+    }
+    setFieldStyles(completeStyles);
+    setInitialFieldStyles(completeStyles);
+
+    setDisplayedImageSize(state.displayedImageSize ?? { width: 0, height: 0 });
+    setOriginalImageSize(state.originalImageSize ?? DEFAULT_IMAGE_SIZE);
   };
 
-  const handleSaveCampaign = async (campaignName, autorId, personaId, paletteId) => {
-    if (!campaignName) {
-      toast.error("Por favor, insira um nome para a campanha.");
+  const handleSaveCampaign = async (name) => {
+    console.log(`[HomePage] Attempting to save campaign: "${name}"`);
+
+    const campaignDataToSave = {
+      activeStep,
+      problema,
+      solucao,
+      objetivo,
+      tomDeVoz,
+      campaignContent,
+      aspectRatio,
+      promptText,
+      followupPosts,
+      followupPostsQuantity,
+      fieldPositions,
+      fieldStyles,
+      templateFieldStyles,
+      brandElements,
+      pageTemplate,
+      generatedPageUrl,
+      generatedPagesData,
+      generatedAudioData,
+      generatedVideos,
+      csvData,
+      csvHeaders,
+      customPalette,
+    };
+
+    try {
+      await checkAuthStatus();
+    } catch (error) {
+      toast.error(error.message || "Could not verify your session.");
       return;
     }
 
-    setIsSaving(true);
-    try {
-      const campaignData = {
-        activeStep,
-        sidebarOpen,
-        csvData,
-        csvHeaders,
-        fieldPositions,
-        fieldStyles,
-        brandElements,
-        pageTemplate,
-        generatedPagesData,
-        generatedVideos,
-        generatedAudioData,
-        problema,
-        solucao,
-        objetivo,
-        tomDeVoz,
-        campaignContent,
-        generatedPageUrl,
-        followupPosts,
-        followupPostsQuantity,
-        inputMethod,
-        promptNumRecords,
-        promptText,
-        scheduleDate,
-        weeklySchedule,
-        selectedProfile,
-        selectedImages,
-        selectedVideos,
-        aspectRatio,
-        fontScale,
-        templateFieldStyles,
-        paletteId,
-        customPalette,
-        imageColorPalette,
-      };
+    if (!user || !user.uuid) {
+      toast.error("Your session appears to be invalid. Please try logging out and logging back in.");
+      return;
+    }
 
-      let rehydratedCampaign;
-      if (currentCampaign?.id) {
-        // Update existing campaign
-        rehydratedCampaign = await updateCampaign(
-          currentCampaign.id,
-          campaignName,
-          campaignData,
-          pendingAssets,
-          (progress) => setUploadProgress(progress),
-          user.uuid,
-          autorId,
-          personaId,
-          paletteId
-        );
-        toast.success(`Campanha "${campaignName}" atualizada com sucesso!`);
+    const sanitizeMediaArray = (arr) => {
+      if (!Array.isArray(arr)) return [];
+      return arr.map(item => {
+        const sanitizedItem = { ...item };
+        delete sanitizedItem.blob;
+        delete sanitizedItem.file;
+        delete sanitizedItem.thumbnailBlob;
+        return sanitizedItem;
+      });
+    };
+
+    const sanitizedCampaignData = {
+        ...campaignDataToSave,
+        generatedPagesData: sanitizeMediaArray(campaignDataToSave.generatedPagesData),
+        brandElements: sanitizeMediaArray(campaignDataToSave.brandElements),
+        generatedAudioData: sanitizeMediaArray(campaignDataToSave.generatedAudioData),
+        generatedVideos: sanitizeMediaArray(campaignDataToSave.generatedVideos),
+        pageTemplate: {
+            ...campaignDataToSave.pageTemplate,
+            images: sanitizeMediaArray(campaignDataToSave.pageTemplate.images),
+        },
+    };
+
+    setIsSaving(true);
+    setUploadProgress({ current: 0, total: 0 });
+    try {
+      let result;
+      if (currentCampaign) {
+        console.log(`[HomePage] Updating existing campaign, ID: ${currentCampaign.id}`);
+        result = await updateCampaign(currentCampaign.id, name, sanitizedCampaignData, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign, paletteId);
+        toast.success(`Campaign "${name}" updated.`);
       } else {
-        // Create new campaign
-        rehydratedCampaign = await saveCampaign(
-          campaignName,
-          campaignData,
-          pendingAssets,
-          (progress) => setUploadProgress(progress),
-          user.uuid,
-          autorId,
-          personaId,
-          paletteId
-        );
-        toast.success(`Campanha "${campaignName}" criada com sucesso!`);
+        console.log(`[HomePage] Saving new campaign.`);
+        result = await saveCampaign(name, sanitizedCampaignData, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign, paletteId);
+        toast.success(`Campaign "${name}" saved.`);
       }
 
-      if (rehydratedCampaign && rehydratedCampaign.campaign_data) {
-        // After saving, the campaign data is returned with permanent Vercel URLs.
-        // We need to re-hydrate it immediately to get local blob URLs for the UI.
-        // The deserialize function already returns the new pendingAssets map.
+      // After a successful save, the 'result' contains the fully re-hydrated campaign data
+      // and the new pendingAssets map. We must apply this new state to the context.
+      const { campaign: rehydratedCampaign, pendingAssets: newPendingAssets } = result;
 
-        // 1. Clear old pending assets and set new ones from the re-hydration
-        setPendingAssets(rehydratedCampaign.pendingAssets);
+      if (rehydratedCampaign && rehydratedCampaign.campaign_data) {
+        console.log("[HomePage] Save successful. Synchronizing component state with re-hydrated data.");
+
+        // 1. Update the context with the new map of pending assets
+        setPendingAssets(newPendingAssets || {});
 
         // 2. Update the rest of the UI state using the hydrated campaign data
         applyAppState(rehydratedCampaign.campaign_data);
@@ -851,6 +883,8 @@ function HomePage() {
         setPaletteId(dbPaletteId);
       } else if (hasCustomPalette) {
         setPaletteId('custom');
+      } else {
+        setPaletteId(null);
       }
       toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
       // Navigate directly to the page editor step after loading
@@ -916,74 +950,71 @@ function HomePage() {
           return prevPages;
         }
 
-        const pageToUpdate = prevPages[pageIndex];
-        // If the page doesn't have a custom template yet, create one by cloning the main template.
-        // Otherwise, use its existing custom template.
-        const templateToUpdate = pageToUpdate.customPageTemplate ? { ...pageToUpdate.customPageTemplate } : { ...pageTemplate };
+        return prevPages.map((page, index) => {
+          if (index !== pageIndex) {
+            return page;
+          }
 
-        // Ensure images array exists and add the new image, replacing any existing background image.
-        templateToUpdate.images = [newImage, ...(templateToUpdate.images || []).filter(img => img.id !== newImage.id)];
+          // Deep clone the page to avoid any state mutation issues.
+          const updatedPage = JSON.parse(JSON.stringify(page));
 
-        return prevPages.map((page, idx) =>
-          idx === pageIndex
-            ? { ...page, customPageTemplate: templateToUpdate }
-            : page
-        );
+          // If the page doesn't have a custom template yet, create one by cloning the main template.
+          // Otherwise, use its existing custom template.
+          const baseTemplate = updatedPage.customPageTemplate || JSON.parse(JSON.stringify(pageTemplate));
+
+          const newCustomTemplate = {
+            ...baseTemplate,
+            images: [...(baseTemplate.images || []), newImage],
+          };
+
+          updatedPage.customPageTemplate = newCustomTemplate;
+
+          console.log(`[HomePage] Image added to specific page index: ${pageIndex}`);
+          toast.success(`Imagem adicionada à página ${pageIndex + 1}.`);
+
+          return updatedPage;
+        });
       });
-      console.log('[HomePage] Image added to specific generated page template.');
     } else {
       // Otherwise, update the global template (likely on Step 3).
       setPageTemplate(prevTemplate => ({
         ...prevTemplate,
-        images: [newImage, ...(prevTemplate.images || []).filter(img => img.id !== newImage.id)],
+        images: [...(prevTemplate.images || []), newImage],
       }));
       console.log('[HomePage] Image added to global page template.');
+      toast.success('Imagem adicionada ao modelo.');
     }
-  }, [imageGalleryTargetIndex, setGeneratedPagesData, setPageTemplate, pageTemplate]);
 
-  const handleImageUpload = useCallback((event) => {
-    const file = event.target.files[0];
+    // The color palette logic can remain global as it's a UI hint.
+    extractColorPalette(imageUrl, setImageColorPalette);
+  }, [imageGalleryTargetIndex, pageTemplate, setPageTemplate, setGeneratedPagesData, setImageColorPalette]);
+
+  const parseImageFile = (file) => {
     if (!file) return;
     handleImageSelected(file);
-  }, [handleImageSelected]);
+  };
+  const handleImageUpload = (event) => { const file = event.target.files[0]; parseImageFile(file); };
+  const handleImageDrop = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(false); const file = event.dataTransfer.files[0]; parseImageFile(file); };
+  const handleImageDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
+  const handleImageDragEnter = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(true); };
+  const handleImageDragLeave = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(false); };
 
-  const handleImageSelected = async (fileOrUrl) => {
-    if (!fileOrUrl) return;
+  const handleForegroundImageUpload = useCallback((event) => {
+    const file = event.target.files[0];
+    if (!file) return;
 
-    let finalUrlForCanvas = fileOrUrl;
-    let blobToProcess = null;
-
-    if (fileOrUrl instanceof File || fileOrUrl instanceof Blob) {
-      // If it's a File or Blob, create a temporary URL for processing
-      blobToProcess = fileOrUrl;
-      finalUrlForCanvas = URL.createObjectURL(fileOrUrl);
-    } else if (typeof fileOrUrl === 'string') {
-      // If it's already a URL (e.g., from gallery with permanent URL), use it directly
-      // We still need to fetch it to get a blob for pendingAssets if it's not already a blob: URL
-      if (!fileOrUrl.startsWith('blob:') && !fileOrUrl.startsWith('data:')) {
-        try {
-          const response = await fetch(fileOrUrl);
-          blobToProcess = await response.blob();
-          // Create a new object URL for the fetched blob to ensure consistency
-          finalUrlForCanvas = URL.createObjectURL(blobToProcess);
-        } catch (error) {
-          console.error("Failed to fetch image from URL:", fileOrUrl, error);
-          toast.error("Não foi possível carregar a imagem da URL selecionada.");
-          return;
-        }
-      } else {
-        // If it's a blob: or data: URL string, we need to convert it to a Blob
-        try {
-          const response = await fetch(fileOrUrl);
-          blobToProcess = await response.blob();
-        } catch (error) {
-          console.error("Failed to convert blob/data URL to Blob:", fileOrUrl, error);
-          toast.error("Não foi possível processar a imagem da URL selecionada.");
-          return;
-        }
-      }
+    const tempUrl = addPendingAsset(file);
+    if (tempUrl) {
+      addNewImageToCanvas(tempUrl);
+    } else {
+      toast.error("Não foi possível criar uma URL local para a imagem carregada.");
     }
+  }, [addNewImageToCanvas, addPendingAsset]);
 
+  const handleImageSelected = async (file) => {
+    if (!file) return;
+
+    const tempUrl = URL.createObjectURL(file);
     const img = new Image();
 
     img.onload = () => {
@@ -1000,19 +1031,14 @@ function HomePage() {
         }
       }
 
-      const canvas = document.createElement("canvas");
+      const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
-      const ctx = canvas.getContext("2d");
+      const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
 
-      // Revoke the initial object URL if it was created from a File/Blob
-      if (fileOrUrl instanceof File || fileOrUrl instanceof Blob) {
-        URL.revokeObjectURL(finalUrlForCanvas);
-      } else if (typeof fileOrUrl === 'string' && finalUrlForCanvas.startsWith('blob:')) {
-        // If finalUrlForCanvas was created from a fetched blob, revoke it
-        URL.revokeObjectURL(finalUrlForCanvas);
-      }
+      // Revoke the initial object URL as it's no longer needed
+      URL.revokeObjectURL(tempUrl);
 
       canvas.toBlob((blob) => {
         if (blob) {
@@ -1025,19 +1051,15 @@ function HomePage() {
         } else {
           toast.error("Houve um erro ao processar a imagem.");
         }
-      }, blobToProcess?.type || 'image/png'); // Use original blob type or default to image/png
+      }, file.type);
     };
 
     img.onerror = () => {
-      if (fileOrUrl instanceof File || fileOrUrl instanceof Blob) {
-        URL.revokeObjectURL(finalUrlForCanvas);
-      } else if (typeof fileOrUrl === 'string' && finalUrlForCanvas.startsWith('blob:')) {
-        URL.revokeObjectURL(finalUrlForCanvas);
-      }
+      URL.revokeObjectURL(tempUrl);
       toast.error("Não foi possível carregar o arquivo de imagem selecionado.");
     };
 
-    img.src = finalUrlForCanvas;
+    img.src = tempUrl;
   };
 
   const handleNext = () => {
@@ -1122,8 +1144,33 @@ function HomePage() {
         return newGeneratedPages;
     });
   }, [csvHeaders]);
-  const handleCsvRecordContentUpdate = useCallback((recordIndex, updatedRecord) => { setCsvData(prevCsvData => { if (recordIndex < 0 || recordIndex >= prevCsvData.length) { return prevCsvData; } return prevCsvData.map((row, idx) => { if (idx === recordIndex) { return updatedRecord; } return row; }); }); }, [setCsvData]);
-
+  const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
+    setCsvData(newCsvData);
+    // Esta função é chamada ao editar texto diretamente na thumbnail (ImageStep)
+    // e precisa atualizar os dados das páginas também.
+    setGeneratedPagesData(prevGeneratedPages => {
+        const newGeneratedPages = newCsvData.map((record, index) => {
+            const existingPage = prevGeneratedPages.find(img => img.index === index);
+            if (existingPage) {
+                return { ...existingPage, record: record };
+            }
+            // Retorna um novo objeto se não houver página existente.
+            return {
+                index,
+                record,
+                blob: null,
+                url: null,
+                filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+                customFieldPositions: null,
+                customFieldStyles: null,
+                customBrandElements: null,
+                customImageFilters: null,
+                fontScale: 1,
+            };
+        });
+        return newGeneratedPages;
+    });
+  }, []);
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => { setCsvData(prevCsvData => { if (recordIndex < 0 || recordIndex >= prevCsvData.length) { return prevCsvData; } return prevCsvData.map((row, idx) => { if (idx === recordIndex) { return updatedRecord; } return row; }); }); }, [setCsvData]);
 
   const handleGenerateCampaignContent = async (regenerate = false) => {
@@ -1299,82 +1346,158 @@ function HomePage() {
       setFieldStyles(updatedFieldStyles);
       setInitialFieldStyles(updatedFieldStyles);
       setGeneratedPagesData(newGeneratedPagesData);
-      setInputMethod('ia');
-      toast.success('Conteúdo gerado com sucesso!');
+      setInputMethod('manual');
+
+      // A geração de imagens foi movida para a etapa "Edição de Páginas" a pedido do usuário.
+      toast.success('Geração de posts concluída. Prossiga para a próxima etapa para gerar as imagens.');
     } catch (error) {
-      toast.error(`Ocorreu um erro ao gerar o conteúdo da IA: ${error.message}`);
+      toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
     } finally {
       setIsGenerating(false);
       setGenerationStatus('');
     }
   };
 
-  const handleGenerateSinglePage = useCallback(async (record, index, fontScaleToUse = 1) => {
-    console.log(`[HomePage] handleGenerateSinglePage called for index ${index}`);
+  const handleGenerateSinglePage = async (record, index, fontScale = 1) => {
+    const imagePrompt = record.prompt_imagem_carrossel;
+    let pageUpdateData = {};
+
+    // 1. Determine the effective styles and template for this specific page
+    const pageData = generatedPagesData.find(p => p.index === index);
+    const effectiveBrandElements = pageData?.customBrandElements || brandElements;
+    const effectiveFieldPositions = pageData?.customFieldPositions || fieldPositions;
+    const effectiveFieldStyles = pageData?.customFieldStyles || fieldStyles;
+    let effectivePageTemplate = pageData?.customPageTemplate || pageTemplate;
+
+    // 2. Handle image generation from prompt (if any)
+    if (imagePrompt && imagePrompt.trim() !== '') {
+        setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
+        try {
+            // Use a simple default style for the new image.
+            // The complex logic of finding another page's image style was brittle.
+            let sourceStyle = { x: 0, y: 0, width: 100, height: 100, zIndex: -1, objectFit: 'cover' };
+            const firstImage = effectivePageTemplate.images?.[0];
+            if (firstImage) {
+                // If the current page template already has an image, use its style.
+                const { id, src, ...style } = firstImage;
+                sourceStyle = style;
+            }
+
+            const oldImage = (effectivePageTemplate.images || [])[0];
+
+            // Generate the image and get the base64 data URL.
+            const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
+            if (!base64Data) {
+              throw new Error("A IA não conseguiu gerar a imagem.");
+            }
+
+            // Revoke the old image's blob URL if it exists to prevent memory leaks.
+            if (oldImage && oldImage.src && oldImage.src.startsWith('blob:')) {
+              removePendingAsset(oldImage.src);
+            }
+
+            // Use the self-contained data: URL directly. This is robust and avoids lifecycle issues.
+            // The serialization process is already equipped to handle data: URLs on save.
+            const newImage = { ...createNewImageElement(base64Data), ...sourceStyle, visible: true };
+            const pageImages = effectivePageTemplate.images || [];
+
+            // Se houver imagens, substitui a primeira. Caso contrário, adiciona a nova imagem.
+            const finalImages = pageImages.length > 0
+                ? [newImage, ...pageImages.slice(1)]
+                : [newImage];
+
+            const tempPageTemplate = { ...effectivePageTemplate, images: finalImages };
+            effectivePageTemplate = tempPageTemplate; // Update for this generation pass
+            pageUpdateData.customPageTemplate = tempPageTemplate; // Persist this change
+        } catch (error) {
+            if (error.message && error.message.includes('503')) {
+                toast.error(`O serviço de geração de imagem está indisponível no momento. Tente novamente mais tarde para o post #${index + 1}.`);
+            } else {
+                toast.error(`Falha ao gerar imagem para o post #${index + 1}: ${error.message}`);
+            }
+        }
+    }
+
+    setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
-      const pageData = await drawAndComposeImage({
+      // 3. Use the new generation service with the effective styles
+      const finalPageData = await PageGenerationService.generatePageImage({
         record,
         index,
-        brandElements,
-        fieldPositions,
-        fieldStyles,
-        fontScale: fontScaleToUse,
-        pageTemplate: generatedPagesData[index]?.customPageTemplate || pageTemplate,
-        aspectRatio,
+        campaignContext: {
+          brandElements: effectiveBrandElements,
+          fieldPositions: effectiveFieldPositions,
+          fieldStyles: effectiveFieldStyles,
+          aspectRatio,
+          pageTemplate: effectivePageTemplate,
+          fontScale,
+        }
       });
 
-      setGeneratedPagesData(currentPages =>
-        currentPages.map(p => (p.index === index ? { ...p, ...pageData } : p))
-      );
-      return pageData;
-    } catch (error) {
-      console.error(`Erro ao gerar página única para o registro ${index}:`, error);
-      toast.error(`Erro ao gerar página única para o registro ${index}: ${error.message}`);
-      throw error;
-    }
-  }, [brandElements, fieldPositions, fieldStyles, pageTemplate, generatedPagesData, aspectRatio]);
+      const { blob } = finalPageData;
+      const tempUrl = addPendingAsset(blob);
+      if (!tempUrl) {
+        throw new Error("Failed to create managed URL for final page image.");
+      }
 
-  const campaignData = useMemo(() => ({
+      setGeneratedPagesData(currentPagesData => {
+        const newPagesData = [...currentPagesData];
+        const existingPageData = newPagesData[index] || {};
+
+        const newPageDataObject = {
+          ...existingPageData,
+          ...finalPageData,
+          ...pageUpdateData,
+          url: tempUrl,
+          dataUrl: null,
+        };
+        delete newPageDataObject.blob;
+
+        newPagesData[index] = newPageDataObject;
+        return newPagesData;
+      });
+
+      toast.success(`Página final para o post #${index + 1} gerada.`);
+      return true;
+    } catch (error) {
+      console.error(`Error during page generation for post ${index + 1}:`, error);
+      toast.error(error.message);
+      return false;
+    } finally {
+      setGenerationStatus('');
+    }
+  };
+  const currentTheme = darkMode ? darkTheme : lightTheme;
+
+  const memorialColors = useMemo(() => {
+    if (paletteId && paletteId !== 'custom') {
+      const selectedPalette = palettes.find(p => p.id === paletteId);
+      return selectedPalette ? selectedPalette.colors : [];
+    }
+    if (customPalette) {
+      return customPalette.colors;
+    }
+    return [];
+  }, [paletteId, customPalette, palettes]);
+
+  const campaignData = {
     problema,
     solucao,
     objetivo,
     tomDeVoz,
     campaignContent,
-    followupPosts,
-    generatedPageUrl,
-    csvData,
-    csvHeaders,
-    fieldPositions,
-    fieldStyles,
-    brandElements,
-    pageTemplate,
-    generatedPagesData,
-    generatedVideos,
-    generatedAudioData,
     aspectRatio,
-    fontScale,
-    templateFieldStyles,
-    paletteId,
-    customPalette,
-    imageColorPalette,
-  }), [problema, solucao, objetivo, tomDeVoz, campaignContent, followupPosts, generatedPageUrl, csvData, csvHeaders, fieldPositions, fieldStyles, brandElements, pageTemplate, generatedPagesData, generatedVideos, generatedAudioData, aspectRatio, fontScale, templateFieldStyles, paletteId, customPalette, palettes, imageColorPalette]);
-
-  const memorialColors = useMemo(() => {
-    if (paletteId === 'custom' && customPalette) {
-      return customPalette.colors;
-    } else if (paletteId && palettes.length > 0) {
-      return palettes.find(p => p.id === paletteId)?.colors || [];
-    } else if (imageColorPalette.length > 0) {
-      return imageColorPalette;
-    }
-    return [];
-  }, [paletteId, customPalette, palettes, imageColorPalette]);
+    followupPosts,
+    colors: memorialColors,
+    generatedPagesData,
+    persona: personaList.find(p => p.id === selectedPersonaForCampaign),
+    autor: autorList.find(a => a.id === selectedAutorForCampaign),
+  };
 
   return (
-    <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
+    <ThemeProvider theme={currentTheme}>
       <CssBaseline />
-      <Toaster position="top-right" richColors />
-      <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
         <MainAppBar
             darkMode={darkMode}
             setDarkMode={setDarkMode}
@@ -1442,6 +1565,7 @@ function HomePage() {
                     isGeneratingSummaryMedio={isGeneratingSummaryMedio}
                     handleGenerateSummary={handleGenerateSummary}
                     isGeneratingSummaryPequeno={isGeneratingSummaryPequeno}
+                    isGeneratingConteudoFormatado={isGeneratingConteudoFormatado}
                     handleGenerateFormattedContent={handleGenerateFormattedContent}
                     isGeneratingFollowup={isGeneratingFollowup}
                     handleGenerateFollowupPosts={handleGenerateFollowupPosts}
@@ -1457,6 +1581,7 @@ function HomePage() {
                     selectedAutorForCampaign={selectedAutorForCampaign}
                     setSelectedAutorForCampaign={setSelectedAutorForCampaign}
                     personaList={personaList}
+                    selectedPersonaForCampaign={selectedPersonaForCampaign}
                     setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
                     palettes={palettes}
                     onRequestNewAutor={handleRequestNewAutor}
@@ -1499,7 +1624,7 @@ function HomePage() {
                     handleImageDragEnter={handleImageDragEnter}
                     handleImageDragLeave={handleImageDragLeave}
                     imageInputRef={imageInputRef}
-                    handleImageUpload={handleImageUpload} // Use new handler for foreground
+                    handleImageUpload={handleForegroundImageUpload} // Use new handler for foreground
                     onOpenImageGallery={handleOpenImageGallery}
                     initialFieldStyles={initialFieldStyles}
                     onImageDisplayedSizeChange={setDisplayedImageSize}
@@ -1663,28 +1788,75 @@ function HomePage() {
             ? "Aguarde enquanto buscamos suas campanhas."
             : generationStatus
             ? "A IA está trabalhando. Isso pode levar alguns instantes."
-            : ""
+            : isSaving
+            ? "Aguarde um momento, estamos fazendo o upload dos seus arquivos."
+            : isLoading
+            ? "Estamos desempacotando sua configuração. Quase pronto!"
+            : "A IA está pensando e escrevendo. Isso pode levar alguns segundos."
         }
+        progress={isSaving ? (uploadProgress.total > 0 ? (uploadProgress.current / uploadProgress.total) * 100 : 0) : null}
       />
       <TextEditorDialog
-        open={editingField !== null}
-        onClose={() => setEditingField(null)}
-        fieldId={editingField}
-        initialContent={campaignContent ? campaignContent[editingField] : ''}
-        onSave={(newContent) => setCampaignContent(prev => ({ ...prev, [editingField]: newContent }))}
-        isHtml={isHtmlField}
+        open={editingField !== null || editingFollowup !== null}
+        html={isHtmlField}
+        title={
+          editingFollowup !== null
+            ? `Editar Post de Follow-up ${editingFollowup.index + 1}`
+            : `Editar ${
+                {
+                  conteudo: 'Conteúdo',
+                  conteudoMedio: 'Conteúdo Médio',
+                  conteudoPequeno: 'Conteúdo Pequeno',
+                  conteudoFormatado: 'Conteúdo Formatado',
+                  cta: 'CTA',
+                }[editingField] || editingField || 'Conteúdo'
+              }`
+        }
+        content={
+          (() => {
+            if (editingFollowup) return editingFollowup.content;
+            if (!editingField) return '';
+
+            if (activeStep === 1) {
+              return campaignContent ? campaignContent[editingField] || '' : '';
+            }
+
+            if (activeStep === 3) {
+              const currentRecord = csvData[currentPreviewIndex];
+              return currentRecord ? currentRecord[editingField] || '' : '';
+            }
+
+            return '';
+          })()
+        }
+        onSave={
+          (newContent) => {
+            if (editingFollowup) {
+              handleSaveFollowup(newContent);
+            } else if (editingField) {
+              if (activeStep === 1) {
+                setCampaignContent((prev) => ({ ...prev, [editingField]: newContent }));
+              } else if (activeStep === 3) {
+                const updatedCsvData = csvData.map((row, index) => {
+                  if (index === currentPreviewIndex) {
+                    return { ...row, [editingField]: newContent };
+                  }
+                  return row;
+                });
+                handleCsvRecordContentUpdate(updatedCsvData);
+              }
+            }
+          }
+        }
+        onClose={() => {
+          setEditingField(null);
+          setEditingFollowup(null);
+          setIsHtmlField(false);
+        }}
       />
-      <TextEditorDialog
-        open={editingFollowup !== null}
-        onClose={() => setEditingFollowup(null)}
-        fieldId={editingFollowup?.index}
-        initialContent={editingFollowup?.content || ''}
-        onSave={handleSaveFollowup}
-        isHtml={false}
-      />
+      <Toaster richColors theme={darkMode ? 'dark' : 'light'} />
     </ThemeProvider>
   );
 }
 
 export default HomePage;
-
