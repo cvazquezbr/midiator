@@ -224,9 +224,9 @@ const FormattingPanel = ({
   };
 
   return (
-    <Card sx={{maxHeight: '80vh'}}>
+    <Card>
       <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ maxHeight: '80vh', overflowY: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" component="div">
             Formatação
           </Typography>
