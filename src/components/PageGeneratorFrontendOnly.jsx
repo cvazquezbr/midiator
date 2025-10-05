@@ -131,6 +131,7 @@ const PageGeneratorFrontendOnly = ({
             fieldStyles: stylesToUse,
             fontScale: pageData.fontScale || 1,
             aspectRatio,
+            pendingAssets,
           }).catch(error => {
             console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${pageData.index}:`, error);
             return pageData;
@@ -186,6 +187,7 @@ const PageGeneratorFrontendOnly = ({
         fontScale,
         pageTemplate: pageTemplate,
         aspectRatio,
+        pendingAssets,
       })
       .then(pageData => {
         setProgress(p => p + 1);
@@ -251,6 +253,7 @@ const PageGeneratorFrontendOnly = ({
       fieldStyles: stylesToUse,
       fontScale,
       aspectRatio,
+      pendingAssets,
     });
   };
 
@@ -555,18 +558,11 @@ const PageGeneratorFrontendOnly = ({
     if (editingGeneratedPageIndex !== null) {
       const updatedPageData = initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex);
       if (updatedPageData) {
-        // If a custom template exists on the page data, it is the source of truth.
-        // If not, fall back to the global campaign template.
-        // The previous logic was merging the two, which could cause subtle issues if the
-        // global template was updated, wiping out custom image additions.
-        const templateToUse = updatedPageData.customPageTemplate || pageTemplate;
-
-        // Create a new object with a shallow copy of the images array to prevent
-        // direct mutation of the source state by the child component (PageEditor).
         const finalTemplate = {
-            ...templateToUse,
-            images: [...(templateToUse.images || [])]
+          ...pageTemplate,
+          ...(updatedPageData.customPageTemplate || {}),
         };
+        finalTemplate.images = [...(finalTemplate.images || [])];
 
         // Update the state that is passed as a prop to the PageEditor
         setPageTemplateForEditor(finalTemplate);

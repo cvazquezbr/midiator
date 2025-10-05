@@ -8,93 +8,101 @@ import { useUserAuth } from '../context/UserAuthContext';
 import { findFolderByName, listFiles, getFileAsBlob } from '../utils/googleApi';
 import { toast } from 'sonner';
 
-const ImageGallery = ({ open, onClose, onFileSelect }) => {
+const BackgroundImageSelector = ({ open, onClose, onSelect, onLocalUpload }) => {
   const [tab, setTab] = useState(0);
   const [images, setImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [loadingImageId, setLoadingImageId] = useState(null);
-  const { googleAccessToken } = useUserAuth();
+  const { googleAccessToken } = useUserAuth(); // Keep this to check if user is connected
   const fileInputRef = useRef(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
-  const fetchFromDrive = useCallback(async () => {
+  const fetchBackgrounds = useCallback(async () => {
     if (!googleAccessToken) {
-      setError("Por favor, conecte-se com o Google para ver a galeria.");
+      setError("Por favor, conecte-se com o Google para ver os backgrounds.");
       return;
     }
 
     setIsLoading(true);
     setError(null);
     try {
+      // Calls no longer need token arguments
       let midiatorFolder = await findFolderByName('midiator');
       if (!midiatorFolder) {
-        console.log("[ImageGallery] Pasta 'midiator' não encontrada.");
+        // If the root folder doesn't exist, no point in creating it here.
+        // It should be created when a user first saves a background.
+        console.log("[BgSelector] 'midiator' folder not found. No backgrounds to load.");
         setImages([]);
         return;
       }
 
       let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id);
       if (!backgroundsFolder) {
-        console.log("[ImageGallery] Pasta 'backgrounds' não encontrada.");
+        console.log("[BgSelector] 'backgrounds' folder not found. No backgrounds to load.");
         setImages([]);
         return;
       }
 
       const fileList = await listFiles(backgroundsFolder.id);
       const imageFiles = fileList.files.filter(file => file.mimeType.startsWith('image/'));
-      setImages(imageFiles.map(file => ({
+
+      const imagesWithLinks = imageFiles.map(file => ({
         id: file.id,
         name: file.name,
         thumbnailLink: file.thumbnailLink,
-      })));
+      }));
+
+      setImages(imagesWithLinks);
     } catch (err) {
-      const errorMessage = err.message || 'Ocorreu um erro desconhecido ao buscar imagens.';
-      setError(errorMessage);
-      console.error("Error fetching from Drive:", err);
+      setError(err.message || 'Ocorreu um erro desconhecido ao buscar os backgrounds.');
+      console.error("Error fetching backgrounds:", err);
     } finally {
       setIsLoading(false);
     }
   }, [googleAccessToken]);
 
   useEffect(() => {
-    if (open && tab === 0) {
-      fetchFromDrive();
+    if (open && tab === 0) { // Only fetch when the dialog is open and the Drive tab is active
+      fetchBackgrounds();
     }
-  }, [open, tab, fetchFromDrive]);
+  }, [open, tab, fetchBackgrounds]);
 
-  const handleFileSelected = (file) => {
-    if (file && onFileSelect) {
-      onFileSelect(file);
-      onClose();
-    }
-  };
-
-  const handleDriveImageSelect = async (image) => {
+  const handleSelect = async (image) => {
+    if (!onSelect) return;
     setLoadingImageId(image.id);
     setError(null);
     try {
+      // Call no longer needs token argument
       const blob = await getFileAsBlob(image.id);
       const file = new File([blob], image.name, { type: blob.type });
-      handleFileSelected(file);
+      onSelect(file);
+      onClose(); // Close dialog on selection
     } catch (err) {
-      const errorMessage = `Falha ao carregar imagem do Drive: ${err.message}`;
-      setError(errorMessage);
-      toast.error(errorMessage);
+      setError(`Falha ao carregar imagem: ${err.message}`);
+      toast.error(`Falha ao carregar imagem: ${err.message}`);
     } finally {
       setLoadingImageId(null);
     }
   };
 
+  const handleLocalFileSelect = (file) => {
+    if (!file) return;
+    if (!onLocalUpload) return;
+
+    onLocalUpload(file);
+    onClose();
+  };
+
   const handleFileChange = (event) => {
-    handleFileSelected(event.target.files[0]);
+    handleLocalFileSelect(event.target.files[0]);
   };
 
   const handleDrop = (event) => {
     event.preventDefault();
     event.stopPropagation();
     setIsDraggingOver(false);
-    handleFileSelected(event.dataTransfer.files[0]);
+    handleLocalFileSelect(event.dataTransfer.files[0]);
   };
 
   const handleDragOver = (event) => {
@@ -111,24 +119,24 @@ const ImageGallery = ({ open, onClose, onFileSelect }) => {
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" sx={{ zIndex: 1400 }}>
-      <DialogTitle>Selecionar Imagem da Galeria</DialogTitle>
+      <DialogTitle>Selecionar Imagem</DialogTitle>
       <DialogContent sx={{ p: 0 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={tab} onChange={(e, newValue) => setTab(newValue)} centered>
-            <Tab label="Galeria Google Drive" icon={<CloudQueue />} iconPosition="start" />
-            <Tab label="Fazer Upload do Computador" icon={<Upload />} iconPosition="start" />
+            <Tab label="Google Drive" icon={<CloudQueue />} iconPosition="start" />
+            <Tab label="Fazer Upload" icon={<Upload />} iconPosition="start" />
           </Tabs>
         </Box>
         <Divider />
 
         {/* Google Drive Tab */}
         <Box hidden={tab !== 0} sx={{ p: 3 }}>
-          <Button onClick={fetchFromDrive} disabled={isLoading || !googleAccessToken} startIcon={<Refresh />} size="small" sx={{ mb: 2 }}>
-            Atualizar Galeria
+          <Button onClick={fetchBackgrounds} disabled={isLoading || !googleAccessToken} startIcon={<Refresh />} size="small" sx={{ mb: 2 }}>
+            Atualizar
           </Button>
           {isLoading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}><CircularProgress /></Box>}
           {error && <Alert severity="error">{error}</Alert>}
-          {!googleAccessToken && !isLoading && <Alert severity="info">Conecte-se com sua conta Google para carregar imagens da galeria.</Alert>}
+          {!googleAccessToken && !isLoading && <Alert severity="info">Conecte-se com sua conta Google para carregar imagens de fundo.</Alert>}
           {googleAccessToken && !isLoading && !error && images.length === 0 && (
             <Alert severity="info">Nenhuma imagem encontrada na pasta `midiator/backgrounds` do seu Google Drive.</Alert>
           )}
@@ -137,7 +145,7 @@ const ImageGallery = ({ open, onClose, onFileSelect }) => {
               {images.map((image) => (
                 <Grid item xs={6} sm={4} md={3} key={image.id}>
                   <Card>
-                    <CardActionArea onClick={() => handleDriveImageSelect(image)} title={`Selecionar ${image.name}`} disabled={loadingImageId === image.id}>
+                    <CardActionArea onClick={() => handleSelect(image)} title={`Selecionar ${image.name}`} disabled={loadingImageId === image.id}>
                       {loadingImageId === image.id ? (
                         <Box sx={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CircularProgress size={24} /></Box>
                       ) : (
@@ -180,4 +188,4 @@ const ImageGallery = ({ open, onClose, onFileSelect }) => {
   );
 };
 
-export default ImageGallery;
+export default BackgroundImageSelector;

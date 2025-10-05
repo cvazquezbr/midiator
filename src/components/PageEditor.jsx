@@ -154,13 +154,9 @@ const PageEditor = ({
     );
   };
 
-  // 🔧 CORREÇÃO PRINCIPAL: Esta função agora usa addPendingAsset
-  const handleImageSelection = async (file) => {
+  const handleFileSelection = useCallback((file) => {
     if (!file) return;
 
-    console.log('[PageEditor] CORREÇÃO: handleImageSelection chamado com file:', file.name);
-
-    // Processar a imagem (redimensionar se necessário)
     const tempUrl = URL.createObjectURL(file);
     const img = new Image();
 
@@ -183,59 +179,28 @@ const PageEditor = ({
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
-
-      // Revogar URL temporária
       URL.revokeObjectURL(tempUrl);
 
       canvas.toBlob((blob) => {
         if (blob) {
-          console.log('[PageEditor] CORREÇÃO: Blob criado, adicionando ao pendingAssets');
-          
-          // 🎯 CORREÇÃO CRÍTICA: Adicionar ao pendingAssets
-          const managedUrl = addPendingAsset ? addPendingAsset(blob) : null;
-          
-          if (managedUrl) {
-            console.log('[PageEditor] CORREÇÃO: URL gerenciada criada:', managedUrl);
-            const newImage = createNewImageElement(managedUrl);
-            
-            setEditedPageTemplate(prevTemplate => ({
-              ...prevTemplate,
-              images: [...(prevTemplate.images || []), newImage],
-            }));
-            
-            handleInternalFieldSelection(newImage.id);
-          } else {
-            console.error('[PageEditor] ERRO: addPendingAsset não disponível ou falhou');
-            // Fallback para data URL (menos ideal mas funcional)
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const dataUrl = e.target.result;
-              const newImage = createNewImageElement(dataUrl);
-              setEditedPageTemplate(prevTemplate => ({
-                ...prevTemplate,
-                images: [...(prevTemplate.images || []), newImage],
-              }));
-              handleInternalFieldSelection(newImage.id);
-            };
-            reader.readAsDataURL(blob);
-          }
-        } else {
-          console.error('[PageEditor] ERRO: Falha ao criar blob da imagem processada');
+          const managedUrl = addPendingAsset(blob);
+          const newImage = createNewImageElement(managedUrl);
+          setEditedPageTemplate(prev => ({
+            ...prev,
+            images: [...(prev.images || []), newImage],
+          }));
+          handleInternalFieldSelection(newImage.id);
         }
       }, file.type);
     };
 
     img.onerror = () => {
       URL.revokeObjectURL(tempUrl);
-      console.error('[PageEditor] ERRO: Falha ao carregar imagem');
+      console.error('[PageEditor] Failed to load image for processing.');
     };
 
     img.src = tempUrl;
-  };
-
-  const handleLocalImageUpload = (event) => {
-    handleImageSelection(event.target.files[0]);
-  };
+  }, [addPendingAsset, setEditedPageTemplate, handleInternalFieldSelection]);
 
   const handleFieldPositionerCsvDataUpdate = useCallback((updatedDataArray) => {
     if (updatedDataArray && updatedDataArray.length > 0) {
@@ -357,8 +322,8 @@ const PageEditor = ({
                 setBrandElements={setEditedBrandElements}
                 onOpenHtmlEditor={handleOpenHtmlEditor}
                 showImageLoaders={true}
-                handleImageUpload={handleLocalImageUpload}
-                onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
+                handleImageUpload={(e) => handleFileSelection(e.target.files[0])}
+                onOpenImageGallery={() => onOpenImageGallery(handleFileSelection)}
               />
             </Grid>
           )}
@@ -389,8 +354,8 @@ const PageEditor = ({
             brandElements={editedBrandElements}
             setBrandElements={setEditedBrandElements}
             showImageLoaders={true}
-            handleImageUpload={handleLocalImageUpload}
-            onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
+            handleImageUpload={(e) => handleFileSelection(e.target.files[0])}
+            onOpenImageGallery={() => onOpenImageGallery(handleFileSelection)}
           />
         </>
       )}

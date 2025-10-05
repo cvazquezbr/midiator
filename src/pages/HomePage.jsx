@@ -182,6 +182,7 @@ function HomePage() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showImageGallery, setShowImageGallery] = useState(false);
   const [imageGalleryTargetIndex, setImageGalleryTargetIndex] = useState(null);
+  const [onImageGallerySelect, setOnImageGallerySelect] = useState(() => () => {});
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [fontScale, setFontScale] = useState(1);
@@ -924,15 +925,21 @@ function HomePage() {
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
 
-  const handleOpenImageGallery = (index = null) => {
-    console.log(`[HomePage] Opening image gallery for index: ${index}`);
-    setImageGalleryTargetIndex(index);
+  const handleOpenImageGallery = (callback, index = null) => {
+    if (typeof callback === 'function') {
+      setOnImageGallerySelect(() => callback);
+    } else {
+      // Fallback for calls that don't pass a function
+      setOnImageGallerySelect(() => handleImageSelected);
+    }
+    setImageGalleryTargetIndex(index === undefined ? null : index);
     setShowImageGallery(true);
   };
 
   const handleCloseImageGallery = () => {
     setShowImageGallery(false);
     setImageGalleryTargetIndex(null);
+    setOnImageGallerySelect(() => () => {}); // Reset on close
   };
 
   const addNewImageToCanvas = useCallback((imageUrl) => {
@@ -955,25 +962,19 @@ function HomePage() {
             return page;
           }
 
-          // To prevent state mutation, we create a new custom template.
-          // 1. Determine the base: use the page's own custom template if it exists,
-          //    otherwise, use the global campaign template.
-          // 2. Deep clone the chosen base to ensure we don't mutate the original.
-          const baseTemplate = page.customPageTemplate || pageTemplate;
-          const newCustomTemplate = JSON.parse(JSON.stringify(baseTemplate));
+          // Deep clone the page to avoid any state mutation issues.
+          const updatedPage = JSON.parse(JSON.stringify(page));
 
-          // 3. Ensure the 'images' array exists and add the new image.
-          if (!newCustomTemplate.images) {
-            newCustomTemplate.images = [];
-          }
-          newCustomTemplate.images.push(newImage);
+          // If the page doesn't have a custom template yet, create one by cloning the main template.
+          // Otherwise, use its existing custom template.
+          const baseTemplate = updatedPage.customPageTemplate || JSON.parse(JSON.stringify(pageTemplate));
 
-          // 4. Return a new page object, merging the original page data
-          //    with the new custom template.
-          const updatedPage = {
-            ...page,
-            customPageTemplate: newCustomTemplate,
+          const newCustomTemplate = {
+            ...baseTemplate,
+            images: [...(baseTemplate.images || []), newImage],
           };
+
+          updatedPage.customPageTemplate = newCustomTemplate;
 
           console.log(`[HomePage] Image added to specific page index: ${pageIndex}`);
           toast.success(`Imagem adicionada à página ${pageIndex + 1}.`);
@@ -1776,7 +1777,7 @@ function HomePage() {
       <ImageGallery
         open={showImageGallery}
         onClose={handleCloseImageGallery}
-        onFileSelect={handleImageSelected}
+        onFileSelect={onImageGallerySelect}
       />
       <LoadingDialog
         open={isGeneratingCampaign || isSaving || isLoading || isGenerating || isFetchingCampaigns}
