@@ -42,7 +42,7 @@ import Publisher from '../components/Publisher';
 import Monitor from '../components/Monitor';
 import SetupModal from '../components/SetupModal';
 import SaveCampaignModal from '../components/SaveCampaignModal';
-import ImageGallery from '../components/ImageGallery';
+import ImageGallerySelector from '../components/ImageGallerySelector';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 
 
@@ -182,7 +182,6 @@ function HomePage() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showImageGallery, setShowImageGallery] = useState(false);
   const [imageGalleryTargetIndex, setImageGalleryTargetIndex] = useState(null);
-  const [onImageGallerySelect, setOnImageGallerySelect] = useState(() => () => {});
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [fontScale, setFontScale] = useState(1);
@@ -925,21 +924,15 @@ function HomePage() {
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
 
-  const handleOpenImageGallery = (callback, index = null) => {
-    if (typeof callback === 'function') {
-      setOnImageGallerySelect(() => callback);
-    } else {
-      // Fallback for calls that don't pass a function
-      setOnImageGallerySelect(() => handleImageSelected);
-    }
-    setImageGalleryTargetIndex(index === undefined ? null : index);
+  const handleOpenImageGallery = (index = null) => {
+    console.log(`[HomePage] Opening image gallery for index: ${index}`);
+    setImageGalleryTargetIndex(index);
     setShowImageGallery(true);
   };
 
   const handleCloseImageGallery = () => {
     setShowImageGallery(false);
     setImageGalleryTargetIndex(null);
-    setOnImageGallerySelect(() => () => {}); // Reset on close
   };
 
   const addNewImageToCanvas = useCallback((imageUrl) => {
@@ -1774,10 +1767,11 @@ function HomePage() {
       <SetupModal open={showSetupModal} onClose={() => setShowSetupModal(false)} initialTab={initialSetupTab} />
       <SaveCampaignModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={handleSaveCampaign} campaignToEdit={currentCampaign} isSaving={isSaving} />
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
-      <ImageGallery
+      <ImageGallerySelector
         open={showImageGallery}
         onClose={handleCloseImageGallery}
-        onFileSelect={onImageGallerySelect}
+        onSelect={handleImageSelected}
+        onLocalUpload={parseImageFile}
       />
       <LoadingDialog
         open={isGeneratingCampaign || isSaving || isLoading || isGenerating || isFetchingCampaigns}
