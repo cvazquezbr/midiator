@@ -42,7 +42,7 @@ import Publisher from '../components/Publisher';
 import Monitor from '../components/Monitor';
 import SetupModal from '../components/SetupModal';
 import SaveCampaignModal from '../components/SaveCampaignModal';
-import ImageGallerySelector from '../components/ImageGallerySelector';
+import ImageGallery from '../components/ImageGallery';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
 
 
@@ -955,19 +955,25 @@ function HomePage() {
             return page;
           }
 
-          // Deep clone the page to avoid any state mutation issues.
-          const updatedPage = JSON.parse(JSON.stringify(page));
+          // To prevent state mutation, we create a new custom template.
+          // 1. Determine the base: use the page's own custom template if it exists,
+          //    otherwise, use the global campaign template.
+          // 2. Deep clone the chosen base to ensure we don't mutate the original.
+          const baseTemplate = page.customPageTemplate || pageTemplate;
+          const newCustomTemplate = JSON.parse(JSON.stringify(baseTemplate));
 
-          // If the page doesn't have a custom template yet, create one by cloning the main template.
-          // Otherwise, use its existing custom template.
-          const baseTemplate = updatedPage.customPageTemplate || JSON.parse(JSON.stringify(pageTemplate));
+          // 3. Ensure the 'images' array exists and add the new image.
+          if (!newCustomTemplate.images) {
+            newCustomTemplate.images = [];
+          }
+          newCustomTemplate.images.push(newImage);
 
-          const newCustomTemplate = {
-            ...baseTemplate,
-            images: [...(baseTemplate.images || []), newImage],
+          // 4. Return a new page object, merging the original page data
+          //    with the new custom template.
+          const updatedPage = {
+            ...page,
+            customPageTemplate: newCustomTemplate,
           };
-
-          updatedPage.customPageTemplate = newCustomTemplate;
 
           console.log(`[HomePage] Image added to specific page index: ${pageIndex}`);
           toast.success(`Imagem adicionada à página ${pageIndex + 1}.`);
@@ -1767,11 +1773,10 @@ function HomePage() {
       <SetupModal open={showSetupModal} onClose={() => setShowSetupModal(false)} initialTab={initialSetupTab} />
       <SaveCampaignModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={handleSaveCampaign} campaignToEdit={currentCampaign} isSaving={isSaving} />
       <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
-      <ImageGallerySelector
+      <ImageGallery
         open={showImageGallery}
         onClose={handleCloseImageGallery}
-        onSelect={handleImageSelected}
-        onLocalUpload={parseImageFile}
+        onFileSelect={handleImageSelected}
       />
       <LoadingDialog
         open={isGeneratingCampaign || isSaving || isLoading || isGenerating || isFetchingCampaigns}
