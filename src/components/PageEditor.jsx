@@ -190,19 +190,19 @@ const PageEditor = ({
       canvas.toBlob((blob) => {
         if (blob) {
           console.log('[PageEditor] CORREÇÃO: Blob criado, adicionando ao pendingAssets');
-          
+
           // 🎯 CORREÇÃO CRÍTICA: Adicionar ao pendingAssets
           const managedUrl = addPendingAsset ? addPendingAsset(blob) : null;
-          
+
           if (managedUrl) {
             console.log('[PageEditor] CORREÇÃO: URL gerenciada criada:', managedUrl);
             const newImage = createNewImageElement(managedUrl);
-            
+
             setEditedPageTemplate(prevTemplate => ({
               ...prevTemplate,
               images: [...(prevTemplate.images || []), newImage],
             }));
-            
+
             handleInternalFieldSelection(newImage.id);
           } else {
             console.error('[PageEditor] ERRO: addPendingAsset não disponível ou falhou');
