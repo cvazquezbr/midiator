@@ -130,18 +130,42 @@ export const drawTextWithEffects = async (ctx, text, x, y, style, maxWidth, maxH
     }
 };
 
-const loadImage = (src) => {
+const loadImage = (src, pendingAssets = {}) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    // Adiciona o proxy para imagens do Vercel Blob Storage para evitar problemas de CORS no canvas
     let finalSrc = src;
-    if (src && src.includes('blob.vercel-storage.com')) {
+    let tempObjectUrl = null;
+
+    if (src && src.startsWith('blob:')) {
+      const blob = pendingAssets[src];
+      if (blob) {
+        tempObjectUrl = URL.createObjectURL(blob);
+        finalSrc = tempObjectUrl;
+      } else {
+        // If the blob URL is not in pendingAssets, it's a broken link.
+        return reject(new Error(`Blob not found for pending asset URL: ${src}`));
+      }
+    } else if (src && src.includes('blob.vercel-storage.com')) {
       finalSrc = `/api/image-proxy?url=${encodeURIComponent(src)}`;
     } else if (src && src.startsWith('http')) {
       img.crossOrigin = 'Anonymous';
     }
-    img.onload = () => resolve(img);
-    img.onerror = (err) => reject(new Error(`Failed to load image: ${src}`, { cause: err }));
+
+    const cleanup = () => {
+      if (tempObjectUrl) {
+        URL.revokeObjectURL(tempObjectUrl);
+      }
+    };
+
+    img.onload = () => {
+      cleanup();
+      resolve(img);
+    };
+    img.onerror = (err) => {
+      cleanup();
+      reject(new Error(`Failed to load image: ${src}`, { cause: err }));
+    };
+
     img.src = finalSrc;
   });
 };
@@ -159,12 +183,12 @@ export const getDimensionsFromAspectRatio = (aspectRatio) => {
   }
 };
 
-const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight) => {
+const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight, pendingAssets) => {
     const src = element.src || element.url;
     if (!src) return;
 
     try {
-        const img = await loadImage(src);
+        const img = await loadImage(src, pendingAssets);
         ctx.save();
 
         const {
@@ -313,6 +337,7 @@ export const drawAndComposeImage = async ({
     fieldStyles = {},
     aspectRatio,
     pageTemplate,
+    pendingAssets,
 }) => {
 
     const finalCanvas = document.createElement('canvas');
@@ -409,7 +434,7 @@ export const drawAndComposeImage = async ({
     // 3. Draw sorted elements
     for (const element of elementsToDraw) {
         if (element.type === 'image') {
-            await drawImageWithEffects(ctx, element, finalCanvas.width, finalCanvas.height);
+            await drawImageWithEffects(ctx, element, finalCanvas.width, finalCanvas.height, pendingAssets);
         } else if (element.type === 'text') {
             ctx.save();
             const { content, position, style } = element;
