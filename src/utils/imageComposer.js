@@ -505,7 +505,8 @@ export const drawAndComposeImage = async ({
                     if (finalStyle.textAlign === 'center') {
                         currentLineRenderX = textContentStartX + effectiveTextWidth / 2;
                     } else if (finalStyle.textAlign === 'right') {
-                        currentLineRenderX = textContentStartX + effectiveTextWidth;
+                        currentLineRenderX = textContentStartX +
+                          effectiveTextWidth;
                     } else {
                         currentLineRenderX = textContentStartX;
                     }

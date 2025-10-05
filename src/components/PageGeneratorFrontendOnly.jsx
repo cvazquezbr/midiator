@@ -151,7 +151,7 @@ const PageGeneratorFrontendOnly = ({
       };
       regenerateMissingThumbnails();
     }
-  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, pageTemplate, brandElements, setGeneratedPagesData, aspectRatio]);
+  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, pageTemplate, brandElements, setGeneratedPagesData, aspectRatio, pendingAssets]);
 
   const generatePages = async () => {
     if (isGenerating) return;
@@ -394,16 +394,12 @@ const PageGeneratorFrontendOnly = ({
       return;
     }
 
-    // Merge the base template with the custom page template to get the final version
-    const finalTemplate = {
-      ...pageTemplate, // Start with the global template
-      ...(pageFromClosure.customPageTemplate || {}), // Override with custom properties
-    };
+    const templateToUse = pageFromClosure.customPageTemplate || pageTemplate;
 
-    // Ensure the 'images' property is always a shallow-copied array
-    finalTemplate.images = [...(finalTemplate.images || [])];
-
-    setPageTemplateForEditor(finalTemplate);
+    setPageTemplateForEditor({
+        ...templateToUse,
+        images: [...(templateToUse.images || [])]
+    });
     setEditingGeneratedPageIndex(index);
     setShowGeneratedPageEditor(true);
   };
@@ -422,25 +418,24 @@ const PageGeneratorFrontendOnly = ({
       const newPageImageData = await regenerateSinglePage(
         pageIndex,
         modifiedPageData.record,
-        modifiedPageData.customPageTemplate, // Use the correct prop name
+        modifiedPageData.customPageTemplate,
         modifiedPageData.customFieldPositions,
         modifiedPageData.customFieldStyles,
         modifiedPageData.customBrandElements,
-        1 // Always use a scale of 1 for the final render, as per user feedback.
+        1
       );
       setGeneratedPagesData(currentPages =>
         currentPages.map(page => {
           if (page.index !== pageIndex) return page;
-          // Persist the changes
           return {
-            ...page, // Keep old data like blob, url
-            ...newPageImageData, // Overwrite with new image data
+            ...page,
+            ...newPageImageData,
             record: modifiedPageData.record,
             customFieldPositions: modifiedPageData.customFieldPositions,
             customFieldStyles: modifiedPageData.customFieldStyles,
             customBrandElements: modifiedPageData.customBrandElements,
             customPageTemplate: modifiedPageData.customPageTemplate,
-            fontScale: 1, // Always save the scale as 1 for consistency.
+            fontScale: 1,
           };
         })
       );
@@ -469,7 +464,7 @@ const PageGeneratorFrontendOnly = ({
         if (pageToUpdate) {
           const templateToUpdate = pageToUpdate.customPageTemplate || pageTemplate;
           const newImageElement = createNewImageElement(newImageUrl);
-          newImageElement.zIndex = -1; // Keep the background zIndex
+          newImageElement.zIndex = -1;
 
           const updatedTemplate = {
             ...templateToUpdate,
@@ -550,32 +545,6 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const pageToEdit = initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex);
-
-  useEffect(() => {
-    // This effect synchronizes the editor's template with the parent's state.
-    // When an image is added from the gallery, `initialGeneratedPagesData` changes.
-    // This effect ensures the open `PageEditor` receives the updated template.
-    if (editingGeneratedPageIndex !== null) {
-      const updatedPageData = initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex);
-      if (updatedPageData) {
-        // If a custom template exists on the page data, it is the source of truth.
-        // If not, fall back to the global campaign template.
-        // The previous logic was merging the two, which could cause subtle issues if the
-        // global template was updated, wiping out custom image additions.
-        const templateToUse = updatedPageData.customPageTemplate || pageTemplate;
-
-        // Create a new object with a shallow copy of the images array to prevent
-        // direct mutation of the source state by the child component (PageEditor).
-        const finalTemplate = {
-            ...templateToUse,
-            images: [...(templateToUse.images || [])]
-        };
-
-        // Update the state that is passed as a prop to the PageEditor
-        setPageTemplateForEditor(finalTemplate);
-      }
-    }
-  }, [initialGeneratedPagesData, editingGeneratedPageIndex, pageTemplate]);
 
   return (
     <Box sx={{ mt: 3 }}>
@@ -756,10 +725,11 @@ const PageGeneratorFrontendOnly = ({
           imagePalette={imagePalette}
           aspectRatio={aspectRatio}
           originalImageSize={originalImageSize}
-          onOpenImageGallery={() => onOpenImageGallery(editingGeneratedPageIndex)}
+          onOpenImageGallery={(callback) => onOpenImageGallery(callback, editingGeneratedPageIndex)}
           editedPageTemplate={pageTemplateForEditor}
           setEditedPageTemplate={setPageTemplateForEditor}
-          addPendingAsset={addPendingAsset} 
+          addPendingAsset={addPendingAsset}
+          pendingAssets={pendingAssets}
         />
       )}
 
