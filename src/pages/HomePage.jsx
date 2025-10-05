@@ -182,6 +182,7 @@ function HomePage() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showImageGallery, setShowImageGallery] = useState(false);
   const [imageGalleryTargetIndex, setImageGalleryTargetIndex] = useState(null);
+  const [imageSelectionCallback, setImageSelectionCallback] = useState(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [fontScale, setFontScale] = useState(1);
@@ -924,8 +925,10 @@ function HomePage() {
   const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
 
-  const handleOpenImageGallery = (index = null) => {
-    console.log(`[HomePage] Opening image gallery for index: ${index}`);
+  const handleOpenImageGallery = (callback, index = null) => {
+    console.log(`[HomePage] Opening image gallery with custom callback for index: ${index}`);
+    // If a custom callback is provided, store it. Otherwise, clear it to use the default.
+    setImageSelectionCallback(callback ? () => callback : null);
     setImageGalleryTargetIndex(index);
     setShowImageGallery(true);
   };
@@ -1770,7 +1773,7 @@ function HomePage() {
       <ImageGallerySelector
         open={showImageGallery}
         onClose={handleCloseImageGallery}
-        onSelect={handleImageSelected}
+        onSelect={imageSelectionCallback || handleImageSelected}
         onLocalUpload={parseImageFile}
       />
       <LoadingDialog

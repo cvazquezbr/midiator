@@ -91,6 +91,7 @@ const PageEditor = ({
   editedPageTemplate,
   setEditedPageTemplate,
   addPendingAsset,
+  pendingAssets,
 }) => {
   const { csvHeaders } = useCampaign();
   const pageDataFromHook = usePageData(pageData?.index);
@@ -337,6 +338,7 @@ const PageEditor = ({
               pageTemplate={editedPageTemplate}
               setPageTemplate={setEditedPageTemplate}
               currentPreviewIndex={0}
+              pendingAssets={pendingAssets}
             />
           </Grid>
           {!isMobile && (
