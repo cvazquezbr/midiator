@@ -90,6 +90,7 @@ const PageEditor = ({
   onOpenImageGallery,
   editedPageTemplate,
   setEditedPageTemplate,
+  addPendingAsset,
 }) => {
   const { csvHeaders } = useCampaign();
   const pageDataFromHook = usePageData(pageData?.index);
@@ -134,7 +135,7 @@ const PageEditor = ({
     // Atualizar a referência para o próximo render
     prevImagesRef.current = currentImages;
   }, [editedPageTemplate?.images, colorPalette, handleInternalFieldSelection]);
-
+  
 
   const handleOpenHtmlEditor = (fieldId) => {
     setEditingField(fieldId);
@@ -153,20 +154,83 @@ const PageEditor = ({
     );
   };
 
-  const handleImageSelection = (file) => {
+  // 🔧 CORREÇÃO PRINCIPAL: Esta função agora usa addPendingAsset
+  const handleImageSelection = async (file) => {
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const imageUrl = e.target.result;
-        const newImage = createNewImageElement(imageUrl);
-        setEditedPageTemplate(prevTemplate => ({
-            ...prevTemplate,
-            images: [...(prevTemplate.images || []), newImage],
-        }));
-        handleInternalFieldSelection(newImage.id);
+    console.log('[PageEditor] CORREÇÃO: handleImageSelection chamado com file:', file.name);
+
+    // Processar a imagem (redimensionar se necessário)
+    const tempUrl = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      const MAX_DIMENSION = 720;
+      let { width, height } = img;
+
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        if (width > height) {
+          height = Math.round(height * (MAX_DIMENSION / width));
+          width = MAX_DIMENSION;
+        } else {
+          width = Math.round(width * (MAX_DIMENSION / height));
+          height = MAX_DIMENSION;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Revogar URL temporária
+      URL.revokeObjectURL(tempUrl);
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          console.log('[PageEditor] CORREÇÃO: Blob criado, adicionando ao pendingAssets');
+          
+          // 🎯 CORREÇÃO CRÍTICA: Adicionar ao pendingAssets
+          const managedUrl = addPendingAsset ? addPendingAsset(blob) : null;
+          
+          if (managedUrl) {
+            console.log('[PageEditor] CORREÇÃO: URL gerenciada criada:', managedUrl);
+            const newImage = createNewImageElement(managedUrl);
+            
+            setEditedPageTemplate(prevTemplate => ({
+              ...prevTemplate,
+              images: [...(prevTemplate.images || []), newImage],
+            }));
+            
+            handleInternalFieldSelection(newImage.id);
+          } else {
+            console.error('[PageEditor] ERRO: addPendingAsset não disponível ou falhou');
+            // Fallback para data URL (menos ideal mas funcional)
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const dataUrl = e.target.result;
+              const newImage = createNewImageElement(dataUrl);
+              setEditedPageTemplate(prevTemplate => ({
+                ...prevTemplate,
+                images: [...(prevTemplate.images || []), newImage],
+              }));
+              handleInternalFieldSelection(newImage.id);
+            };
+            reader.readAsDataURL(blob);
+          }
+        } else {
+          console.error('[PageEditor] ERRO: Falha ao criar blob da imagem processada');
+        }
+      }, file.type);
     };
-    reader.readAsDataURL(file);
+
+    img.onerror = () => {
+      URL.revokeObjectURL(tempUrl);
+      console.error('[PageEditor] ERRO: Falha ao carregar imagem');
+    };
+
+    img.src = tempUrl;
   };
 
   const handleLocalImageUpload = (event) => {

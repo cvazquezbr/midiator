@@ -50,6 +50,7 @@ const ImageStepUI = ({
   isCropping,
   setIsCropping,
   onFontScaleChange,
+  addPendingAsset, 
 }) => {
   const {
     csvData,
@@ -123,6 +124,7 @@ const ImageStepUI = ({
             onFontScaleChange={onFontScaleChange}
             isCropping={isCropping}
             setIsCropping={setIsCropping}
+            addPendingAsset={addPendingAsset} 
           />
         </Box>
         {imageColorPalette && imageColorPalette.length > 0 && (

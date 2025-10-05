@@ -60,6 +60,7 @@ const PageGeneratorFrontendOnly = ({
   onOpenImageGallery,
   imagePalette,
   pendingAssets,
+  addPendingAsset, 
 }) => {
   const {
     csvData,
@@ -748,6 +749,7 @@ const PageGeneratorFrontendOnly = ({
           onOpenImageGallery={() => onOpenImageGallery(editingGeneratedPageIndex)}
           editedPageTemplate={pageTemplateForEditor}
           setEditedPageTemplate={setPageTemplateForEditor}
+          addPendingAsset={addPendingAsset} 
         />
       )}
 
