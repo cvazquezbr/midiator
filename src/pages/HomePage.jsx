@@ -1623,6 +1623,7 @@ function HomePage() {
                   generatedPagesData={generatedPagesData}
                   handleImageUpload={handleImageUpload}
                   onOpenImageGallery={handleOpenImageGallery}
+                  pendingAssets={pendingAssets}
                   addPendingAsset={addPendingAsset}
                 />
               )}
