@@ -43,7 +43,7 @@ const DraggableElementInternal = ({
   const [isRotating, setIsRotating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(content);
-  const [renderableSrc, setRenderableSrc] = useState(content);
+  const [displayUrl, setDisplayUrl] = useState(content);
   const [resizeHandle, setResizeHandle] = useState(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [initialPosition, setInitialPosition] = useState({ x: 0, y: 0 });
@@ -78,27 +78,31 @@ const DraggableElementInternal = ({
     return `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
   };
 
+  // useEffect para renderização do canvas foi REMOVIDO
   useEffect(() => {
+    // This effect resolves blob URLs to a displayable format.
     let objectUrl = null;
-    if (element.type === 'image' && content && content.startsWith('blob:')) {
-      const blob = pendingAssets ? pendingAssets[content] : null;
+    if (content && content.startsWith('blob:') && pendingAssets) {
+      const blob = pendingAssets[content];
       if (blob) {
         objectUrl = URL.createObjectURL(blob);
-        setRenderableSrc(objectUrl);
+        setDisplayUrl(objectUrl);
       } else {
-        // If blob is not found, it might be a revoked URL. Show nothing or a placeholder.
-        setRenderableSrc('');
+        // Blob not found, maybe it's from a previous session and now invalid.
+        // Show a placeholder or a broken image indicator.
+        setDisplayUrl(null); // Or a path to a broken image asset
       }
     } else {
-      setRenderableSrc(content);
+      setDisplayUrl(content);
     }
 
     return () => {
+      // Clean up the created object URL to prevent memory leaks.
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [content, pendingAssets, element.type]);
+  }, [content, pendingAssets]);
 
 
   // Função para renderizar conteúdo HTML ou texto simples
@@ -108,8 +112,11 @@ const DraggableElementInternal = ({
       return null;
     }
     if (element.type === 'image') {
-      if (!renderableSrc) return <CircularProgress size={24} />;
-      return <img src={renderableSrc} alt="Elemento de imagem" style={{ objectFit: style.objectFit || 'fill' }} />;
+       if (!displayUrl) {
+        // Render a placeholder or an error message if the URL is invalid
+        return <Box sx={{ width: '100%', height: '100%', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Typography variant="caption" color="error">Erro Imagem</Typography></Box>;
+      }
+      return <img src={displayUrl} alt="Elemento de imagem" style={{ objectFit: style.objectFit || 'fill' }} />;
     }
 
     if (element.type === 'cropbox') {

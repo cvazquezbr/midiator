@@ -955,26 +955,23 @@ function HomePage() {
             return page;
           }
 
-          // Deep clone the page to avoid any state mutation issues.
-          const updatedPage = JSON.parse(JSON.stringify(page));
-
-          // If the page doesn't have a custom template yet, create one by cloning the main template.
-          // Otherwise, use its existing custom template.
-          const baseTemplate = updatedPage.customPageTemplate || JSON.parse(JSON.stringify(pageTemplate));
+          // Use the existing custom template or create a new one from the main template.
+          // The flawed `pageTemplateUsed` is no longer used.
+          const baseTemplate = page.customPageTemplate || JSON.parse(JSON.stringify(pageTemplate));
 
           const newCustomTemplate = {
             ...baseTemplate,
             images: [...(baseTemplate.images || []), newImage],
           };
 
-          updatedPage.customPageTemplate = newCustomTemplate;
-
-          console.log(`[HomePage] Image added to specific page index: ${pageIndex}`);
-          toast.success(`Imagem adicionada à página ${pageIndex + 1}.`);
-
-          return updatedPage;
+          // Return a new object for the updated page to ensure React detects the change.
+          return {
+            ...page,
+            customPageTemplate: newCustomTemplate,
+          };
         });
       });
+      toast.success(`Imagem adicionada à página ${imageGalleryTargetIndex + 1}.`);
     } else {
       // Otherwise, update the global template (likely on Step 3).
       setPageTemplate(prevTemplate => ({
@@ -987,7 +984,7 @@ function HomePage() {
 
     // The color palette logic can remain global as it's a UI hint.
     extractColorPalette(imageUrl, setImageColorPalette);
-  }, [imageGalleryTargetIndex, pageTemplate, setPageTemplate, setGeneratedPagesData, setImageColorPalette]);
+  }, [imageGalleryTargetIndex, pageTemplate, setPageTemplate, setGeneratedPagesData, setImageColorPalette, extractColorPalette]);
 
   const parseImageFile = (file) => {
     if (!file) return;
@@ -1011,56 +1008,23 @@ function HomePage() {
     }
   }, [addNewImageToCanvas, addPendingAsset]);
 
-  const handleImageSelected = async (file) => {
-    if (!file) return;
+  const handleImageSelected = useCallback((file) => {
+    if (!file) {
+      toast.warning("Nenhum arquivo de imagem foi selecionado.");
+      return;
+    }
 
-    const tempUrl = URL.createObjectURL(file);
-    const img = new Image();
+    // The file object from the gallery or local upload is used directly.
+    const managedUrl = addPendingAsset(file);
 
-    img.onload = () => {
-      const MAX_DIMENSION = 720;
-      let { width, height } = img;
-
-      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-        if (width > height) {
-          height = Math.round(height * (MAX_DIMENSION / width));
-          width = MAX_DIMENSION;
-        } else {
-          width = Math.round(width * (MAX_DIMENSION / height));
-          height = MAX_DIMENSION;
-        }
-      }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // Revoke the initial object URL as it's no longer needed
-      URL.revokeObjectURL(tempUrl);
-
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const resizedTempUrl = addPendingAsset(blob);
-          if (resizedTempUrl) {
-            addNewImageToCanvas(resizedTempUrl);
-          } else {
-            toast.error("Houve um erro ao criar uma URL gerenciada para a imagem.");
-          }
-        } else {
-          toast.error("Houve um erro ao processar a imagem.");
-        }
-      }, file.type);
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(tempUrl);
-      toast.error("Não foi possível carregar o arquivo de imagem selecionado.");
-    };
-
-    img.src = tempUrl;
-  };
+    if (managedUrl) {
+      // addNewImageToCanvas correctly appends the new image to the template
+      // or to the specific page being edited.
+      addNewImageToCanvas(managedUrl);
+    } else {
+      toast.error("Houve um erro ao registrar a imagem como um ativo pendente.");
+    }
+  }, [addPendingAsset, addNewImageToCanvas]);
 
   const handleNext = () => {
     handleNavigation(() => {
