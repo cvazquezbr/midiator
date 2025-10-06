@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box, Button, Typography, Grid, FormControl, InputLabel, Select, MenuItem, TextField, Chip, IconButton, Tooltip, Paper, Dialog, DialogTitle, DialogContent, CircularProgress,
+  Box, Button, Typography, Grid, FormControl, InputLabel, Select, MenuItem, TextField, Chip, IconButton, Tooltip, Paper, Dialog, DialogTitle, DialogContent, CircularProgress, Radio, RadioGroup, FormControlLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Divider
 } from '@mui/material';
 import { Add, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
-import AISuggestionModal from './AISuggestionModal';
 import TomDeVozModal from './TomDeVozModal';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
@@ -12,19 +11,41 @@ import TextEditor from './TextEditor';
 
 export const emptyBriefingWizardData = {
   name: '',
+  // Step 1: Motivacao
+  motivacao: '',
+  // Step 2: Objeto
+  marca: '',
+  produtoServico: '',
+  descricao: '',
+  // Step 3: Referencias
   tom_de_voz: [],
-  nao_faca: [],
   faca: [],
-  saudacao: '',
-  entregas: '',
+  nao_faca: [],
+  quantidadeConteudos: 1,
+  envioProdutos: 'não',
+  prazoEnvio: null,
+  egcUgc: 'ugc',
+  inspiracoes: ['', '', ''],
+  // Step 4: Mensagem
   objetivo: '',
-  briefing_final: '',
+  cta: '',
+  mensagemPrincipal: '',
+  textoBase: '',
+  // Step 5: Finalizacao (revisão)
 };
 
 const TONS_DE_VOZ = [
   "Inspirador", "Educativo", "Confiante", "Próximo", "Engraçado / Descontraído",
   "Elegante / Sofisticado", "Inovador", "Institucional", "Cuidadoso / Humano",
   "Visionário", "Provocador", "Acessível / Democrático"
+];
+
+const MOTIVACOES = [
+    { id: 'reconhecimento', nome: 'Aumentar reconhecimento da marca', descricao: 'Tornar a marca mais conhecida e presente na mente do público-alvo.' },
+    { id: 'engajamento', nome: 'Engajar e gerar conexão com a audiência', descricao: 'Criar interações autênticas, fortalecendo o vínculo com os consumidores.' },
+    { id: 'vendas', nome: 'Impulsionar vendas ou conversões', descricao: 'Direcionar o público para comprar, assinar ou experimentar o produto/serviço.' },
+    { id: 'educar', nome: 'Educar o público sobre a marca/produto', descricao: 'Explicar benefícios, diferenciais e funcionalidades de forma clara e atrativa.' },
+    { id: 'reforcar', nome: 'Reforçar posicionamento e valores da marca', descricao: 'Transmitir a identidade, propósito e diferenciais competitivos de forma consistente.' },
 ];
 
 const SUGESTOES_NAO_FACA = [
@@ -98,50 +119,18 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   const [activeStep, setActiveStep] = useState(initialStep);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [tomDeVozModalOpen, setTomDeVozModalOpen] = useState(false);
-  const [modalConfig, setModalConfig] = useState({ title: '', field: '' });
-  const [suggestions, setSuggestions] = useState([]);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [isGeneratingMessage, setIsGeneratingMessage] = useState(false);
+  const [showTextoBase, setShowTextoBase] = useState(true);
+
 
   useEffect(() => {
     setActiveStep(initialStep);
   }, [initialStep]);
 
-  const handleOpenModal = async (field, title, promptGenerator) => {
-    if (!geminiAPI.isInitialized) {
-      const apiKey = getGeminiApiKey();
-      if (!apiKey) {
-        toast.error('Chave de API do Gemini não configurada.');
-        return;
-      }
-      geminiAPI.initialize(apiKey);
-    }
+  const TOTAL_STEPS = 5;
 
-    setModalConfig({ title, field });
-    setModalOpen(true);
-    setLoadingSuggestions(true);
-    setSuggestions([]);
-
-    try {
-      const prompt = promptGenerator();
-      const response = await geminiAPI.generateContent(prompt);
-      const cleanedResponse = response.replace(/```json/g, '').replace(/```/g, '').trim();
-      const jsonResponse = JSON.parse(cleanedResponse);
-      setSuggestions(jsonResponse.saudacoes || jsonResponse.entregas || jsonResponse.opcoes_revisadas || []);
-    } catch (error) {
-      toast.error('Erro ao gerar sugestões com IA.');
-      console.error("AI suggestion error:", error);
-    } finally {
-      setLoadingSuggestions(false);
-    }
-  };
-
-  const handleSelectSuggestion = (suggestion) => {
-    onBriefingDataChange(prev => ({ ...prev, [modalConfig.field]: suggestion }));
-    setModalOpen(false);
-  };
-
-  const handleNext = () => setActiveStep(1);
-  const handleBack = () => setActiveStep(0);
+  const handleNext = () => setActiveStep(prev => Math.min(prev + 1, TOTAL_STEPS - 1));
+  const handleBack = () => setActiveStep(prev => Math.max(prev - 1, 0));
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -156,197 +145,389 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     onBriefingDataChange(prev => ({ ...prev, [name]: value }));
   };
 
-  const generateBriefingFinal = () => {
-    const { tom_de_voz, nao_faca, faca, saudacao, entregas, objetivo } = briefingData;
-    const finalBriefing = `
-      **Tom de Voz:** ${(tom_de_voz || []).join(', ')}\n
-      **O que FAZER:**\n${faca.map(item => `- ${item}`).join('\n')}\n
-      **O que NÃO FAZER:**\n${nao_faca.map(item => `- ${item}`).join('\n')}\n
-      **Objetivo:** ${objetivo}\n
-      **Saudação:** ${saudacao}\n
-      **Entregas:** ${entregas}
-    `;
-    onBriefingDataChange(prev => ({ ...prev, briefing_final: finalBriefing.trim() }));
-  };
-
-  useEffect(() => {
-    if (activeStep === 1) {
-      generateBriefingFinal();
-    }
-  }, [activeStep]);
-
   if (!open || !briefingData) return null;
+
+  const renderStepContent = (step) => {
+    switch (step) {
+      case 0:
+        return (
+          <Box sx={{ p: 2, minHeight: 400 }}>
+            <Typography variant="h6" gutterBottom>Qual é a principal motivação da sua campanha?</Typography>
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell padding="checkbox"></TableCell>
+                    <TableCell>Motivação</TableCell>
+                    <TableCell>Descrição</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <RadioGroup
+                    aria-label="motivacao"
+                    name="motivacao"
+                    value={briefingData.motivacao}
+                    onChange={handleChange}
+                  >
+                    {MOTIVACOES.map((motiv) => (
+                      <TableRow
+                        key={motiv.id}
+                        hover
+                        onClick={() => onBriefingDataChange(prev => ({ ...prev, motivacao: motiv.id }))}
+                        role="radio"
+                        aria-checked={briefingData.motivacao === motiv.id}
+                        selected={briefingData.motivacao === motiv.id}
+                        sx={{ cursor: 'pointer' }}
+                      >
+                        <TableCell padding="checkbox">
+                          <Radio
+                            checked={briefingData.motivacao === motiv.id}
+                            value={motiv.id}
+                            name="motivacao-radio"
+                          />
+                        </TableCell>
+                        <TableCell component="th" scope="row">
+                          {motiv.nome}
+                        </TableCell>
+                        <TableCell>{motiv.descricao}</TableCell>
+                      </TableRow>
+                    ))}
+                  </RadioGroup>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        );
+      case 1:
+        return (
+          <Box sx={{ p: 2, minHeight: 400 }}>
+            <Typography variant="h6" gutterBottom>Qual é o objeto da sua campanha?</Typography>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  name="marca"
+                  label="Marca"
+                  fullWidth
+                  value={briefingData.marca || ''}
+                  onChange={handleChange}
+                  inputProps={{ maxLength: 40 }}
+                  helperText={`${(briefingData.marca || '').length}/40`}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  name="produtoServico"
+                  label="Produto ou Serviço"
+                  fullWidth
+                  value={briefingData.produtoServico || ''}
+                  onChange={handleChange}
+                  inputProps={{ maxLength: 40 }}
+                  helperText={`${(briefingData.produtoServico || '').length}/40`}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  name="descricao"
+                  label="Descrição do Produto ou Serviço"
+                  fullWidth
+                  multiline
+                  rows={4}
+                  value={briefingData.descricao || ''}
+                  onChange={handleChange}
+                  inputProps={{ maxLength: 250 }}
+                  helperText={`${(briefingData.descricao || '').length}/250`}
+                  required
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        );
+      case 2:
+        const handleInspiracaoChange = (index, value) => {
+            const newInspiracoes = [...briefingData.inspiracoes];
+            newInspiracoes[index] = value;
+            onBriefingDataChange(prev => ({ ...prev, inspiracoes: newInspiracoes }));
+        };
+        return (
+            <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
+                <Typography variant="h6" gutterBottom>Referências e Diretrizes</Typography>
+                <Grid container spacing={3}>
+                    {/* Tom de Voz */}
+                    <Grid item xs={12}>
+                        <Typography variant="subtitle1" gutterBottom>Tom de Voz</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Paper variant="outlined" sx={{ p: 1, display: 'flex', flexWrap: 'wrap', gap: 1, flexGrow: 1, minHeight: '40px' }}>
+                                {(briefingData.tom_de_voz || []).map((item) => <Chip key={item} label={item} />)}
+                                {(briefingData.tom_de_voz || []).length === 0 && <Typography sx={{p:1}} color="text.secondary">Nenhum tom selecionado</Typography>}
+                            </Paper>
+                            <Button onClick={() => setTomDeVozModalOpen(true)} variant="outlined">Selecionar</Button>
+                        </Box>
+                    </Grid>
+                    {/* DOs e DON'Ts */}
+                    <Grid item xs={12} md={6}>
+                        <ChipInput label="FAÇA (DOs)" items={briefingData.faca || []} setItems={(v) => handleChipChange('faca', v)} suggestions={SUGESTOES_FACA} />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <ChipInput label="NÃO FAÇA (DON'Ts)" items={briefingData.nao_faca || []} setItems={(v) => handleChipChange('nao_faca', v)} suggestions={SUGESTOES_NAO_FACA} />
+                    </Grid>
+                    <Grid item xs={12}><Divider /></Grid>
+                    {/* Quantidade, Envio, Prazo, EGC/UGC */}
+                    <Grid item xs={12} sm={6}>
+                        <TextField
+                            name="quantidadeConteudos"
+                            label="Quantidade de Conteúdos"
+                            type="number"
+                            fullWidth
+                            value={briefingData.quantidadeConteudos || 1}
+                            onChange={handleChange}
+                            InputProps={{ inputProps: { min: 1 } }}
+                        />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <FormControl component="fieldset">
+                            <Typography variant="subtitle2">Envio de Produtos?</Typography>
+                            <RadioGroup row name="envioProdutos" value={briefingData.envioProdutos} onChange={handleChange}>
+                                <FormControlLabel value="sim" control={<Radio />} label="Sim" />
+                                <FormControlLabel value="não" control={<Radio />} label="Não" />
+                            </RadioGroup>
+                        </FormControl>
+                    </Grid>
+                    {briefingData.envioProdutos === 'sim' && (
+                        <Grid item xs={12} sm={6}>
+                            <TextField
+                                name="prazoEnvio"
+                                label="Prazo de Envio"
+                                type="date"
+                                fullWidth
+                                value={briefingData.prazoEnvio || ''}
+                                onChange={handleChange}
+                                InputLabelProps={{ shrink: true }}
+                            />
+                        </Grid>
+                    )}
+                    <Grid item xs={12} sm={6}>
+                        <FormControl component="fieldset">
+                           <Typography variant="subtitle2">EGC ou UGC?</Typography>
+                            <RadioGroup row name="egcUgc" value={briefingData.egcUgc} onChange={handleChange}>
+                                <FormControlLabel value="egc" control={<Radio />} label="EGC" />
+                                <FormControlLabel value="ugc" control={<Radio />} label="UGC" />
+                            </RadioGroup>
+                        </FormControl>
+                    </Grid>
+                     <Grid item xs={12}><Divider>Inspirações (Links ou textos)</Divider></Grid>
+                    {/* Inspirações */}
+                    {briefingData.inspiracoes.map((inspiracao, index) => (
+                        <Grid item xs={12} key={index}>
+                            <TextField
+                                label={`Inspiração ${index + 1}`}
+                                fullWidth
+                                value={inspiracao}
+                                onChange={(e) => handleInspiracaoChange(index, e.target.value)}
+                                inputProps={{ maxLength: 150 }}
+                                helperText={`${inspiracao.length}/150`}
+                            />
+                        </Grid>
+                    ))}
+                </Grid>
+            </Box>
+        );
+      case 3: {
+        const textoBaseLength = (briefingData.textoBase || '').length;
+        let counterColor = 'green';
+        if (textoBaseLength > 500) {
+            counterColor = 'red';
+        } else if (textoBaseLength > 250) {
+            counterColor = 'yellow';
+        }
+
+        const handleGenerateAIMessage = async () => {
+            if (!geminiAPI.isInitialized) {
+                const apiKey = getGeminiApiKey();
+                if (!apiKey) {
+                    toast.error('Chave de API do Gemini não configurada.');
+                    return;
+                }
+                geminiAPI.initialize(apiKey);
+            }
+
+            const { textoBase, cta, faca, nao_faca } = briefingData;
+            if (!textoBase) {
+                toast.error('O texto base não pode estar vazio.');
+                return;
+            }
+
+            const prompt = `
+                Elabore uma proposta de "Mensagem Principal" a partir do "Texto Base" a seguir.
+
+                Texto Base: "${textoBase}"
+
+                Siga estas regras rigorosamente:
+                1. O texto final deve ter no máximo 250 caracteres.
+                2. A mensagem deve ser dividida em no máximo 4 parágrafos, cada um com até 80 caracteres.
+                3. Não pode haver repetições de palavras ou ideias.
+                4. A mensagem deve conter apenas UM número (ex: "1", "uma vez").
+                5. A mensagem NÃO PODE conter NADA que esteja no CTA ("${cta}"), nos DOs ("${faca.join(', ')}") ou nos DON'Ts ("${nao_faca.join(', ')}").
+
+                Retorne apenas o texto da mensagem principal, sem formatação extra, sem introduções ou observações.
+            `;
+
+            setIsGeneratingMessage(true);
+            try {
+                const response = await geminiAPI.generateContent(prompt);
+                onBriefingDataChange(prev => ({ ...prev, mensagemPrincipal: response.trim() }));
+                setShowTextoBase(false);
+                toast.success('Mensagem principal gerada com sucesso!');
+            } catch (error) {
+                toast.error('Erro ao gerar mensagem com IA.');
+                console.error("AI message generation error:", error);
+            } finally {
+                setIsGeneratingMessage(false);
+            }
+        };
+
+        return (
+            <Box sx={{ p: 2, minHeight: 400 }}>
+                <Typography variant="h6" gutterBottom>Mensagem Principal da Campanha</Typography>
+                <Grid container spacing={3}>
+                    <Grid item xs={12}>
+                        <TextField name="objetivo" label="Objetivo da Mensagem" fullWidth value={briefingData.objetivo || ''} onChange={handleChange} />
+                    </Grid>
+                    <Grid item xs={12}>
+                        <TextField name="cta" label="CTA (Call to Action)" fullWidth value={briefingData.cta || ''} onChange={handleChange} />
+                    </Grid>
+
+                    {isGeneratingMessage ? (
+                        <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                            <CircularProgress />
+                            <Typography sx={{ ml: 2 }}>Gerando mensagem...</Typography>
+                        </Grid>
+                    ) : showTextoBase ? (
+                        <Grid item xs={12}>
+                            <Box sx={{ position: 'relative' }}>
+                                <TextField
+                                    name="textoBase"
+                                    label="Texto Base para a Mensagem Principal"
+                                    fullWidth
+                                    multiline
+                                    rows={8}
+                                    value={briefingData.textoBase || ''}
+                                    onChange={handleChange}
+                                />
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'absolute', bottom: 8, right: 8, width: '95%' }}>
+                                    <Typography variant="caption" sx={{ color: counterColor, fontWeight: 'bold', backgroundColor: 'rgba(255, 255, 255, 0.7)', padding: '0 4px', borderRadius: '4px' }}>
+                                        {textoBaseLength}
+                                    </Typography>
+                                    <Tooltip title="Gerar Mensagem Principal com IA">
+                                        <IconButton color="primary" onClick={handleGenerateAIMessage} disabled={!briefingData.textoBase}>
+                                            <AutoAwesomeIcon />
+                                        </IconButton>
+                                    </Tooltip>
+                                </Box>
+                            </Box>
+                            {textoBaseLength > 250 && (
+                                <Alert severity="warning" sx={{ mt: 1 }}>
+                                    O texto final gerado pela IA será limitado a 250 caracteres, mas não se preocupe, todo o conteúdo que você escreveu será considerado.
+                                </Alert>
+                            )}
+                        </Grid>
+                    ) : (
+                        <Grid item xs={12}>
+                             <Typography variant="subtitle1" gutterBottom>Mensagem Principal (Gerada por IA)</Typography>
+                             <Paper elevation={2} sx={{p: 2, mb: 1}}>
+                                <Typography sx={{whiteSpace: 'pre-wrap'}}>{briefingData.mensagemPrincipal}</Typography>
+                             </Paper>
+                             <Button onClick={() => setShowTextoBase(true)} size="small">Voltar e editar texto base</Button>
+                        </Grid>
+                    )}
+                </Grid>
+            </Box>
+        );
+      }
+      case 4: {
+        const selectedMotivacao = MOTIVACOES.find(m => m.id === briefingData.motivacao);
+        return (
+            <Box sx={{ p: 2, maxHeight: '70vh', overflowY: 'auto' }}>
+                <Typography variant="h6" gutterBottom>Finalização e Revisão</Typography>
+                <Grid container spacing={3}>
+                    <Grid item xs={12}>
+                        <TextField
+                            name="name"
+                            label="Nome do Briefing"
+                            fullWidth
+                            value={briefingData.name || ''}
+                            onChange={handleChange}
+                            required
+                            helperText="Dê um nome para identificar facilmente este briefing no futuro."
+                        />
+                    </Grid>
+                    <Grid item xs={12}><Divider>Resumo do Briefing</Divider></Grid>
+
+                    <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2" gutterBottom><strong>Motivação</strong></Typography>
+                        <Typography>{selectedMotivacao ? selectedMotivacao.nome : 'Não definido'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2" gutterBottom><strong>Marca / Produto</strong></Typography>
+                        <Typography>{briefingData.marca || 'N/A'} / {briefingData.produtoServico || 'N/A'}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                        <Typography variant="subtitle2" gutterBottom><strong>Descrição do Objeto</strong></Typography>
+                        <Typography sx={{ whiteSpace: 'pre-wrap', maxHeight: 80, overflowY: 'auto' }}>{briefingData.descricao || 'N/A'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2" gutterBottom><strong>Tom de Voz</strong></Typography>
+                        <Typography>{(briefingData.tom_de_voz || []).join(', ') || 'N/A'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2" gutterBottom><strong>Tipo de Conteúdo</strong></Typography>
+                        <Typography>{briefingData.egcUgc === 'egc' ? 'EGC' : 'UGC'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2" gutterBottom><strong>Envio de Produtos</strong></Typography>
+                        <Typography>{briefingData.envioProdutos === 'sim' ? `Sim (Prazo: ${briefingData.prazoEnvio || 'N/A'})` : 'Não'}</Typography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2" gutterBottom><strong>Quantidade</strong></Typography>
+                        <Typography>{briefingData.quantidadeConteudos || 1}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                        <Typography variant="subtitle2" gutterBottom><strong>Inspirações</strong></Typography>
+                        <Box component="ul" sx={{ pl: 2, m: 0 }}>
+                            {briefingData.inspiracoes.filter(i => i).map((i, index) => <li key={index}><Typography variant="body2">{i}</Typography></li>)}
+                            {briefingData.inspiracoes.filter(i => i).length === 0 && <Typography variant="body2">Nenhuma</Typography>}
+                        </Box>
+                    </Grid>
+                    <Grid item xs={12}>
+                        <Typography variant="subtitle2" gutterBottom><strong>Mensagem Principal</strong></Typography>
+                        <Paper variant="outlined" sx={{ p: 1, whiteSpace: 'pre-wrap', maxHeight: 150, overflowY: 'auto', backgroundColor: 'action.hover' }}>
+                            {briefingData.mensagemPrincipal || 'Nenhuma mensagem gerada.'}
+                        </Paper>
+                    </Grid>
+                </Grid>
+            </Box>
+        );
+      }
+      default:
+        return <Box sx={{ p: 2, minHeight: 400 }}><Typography>Step {step + 1} Content</Typography></Box>;
+    }
+  }
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>Assistente de Criação de Briefing</DialogTitle>
+      <DialogTitle>Assistente de Criação de Briefing - Etapa {activeStep + 1} de {TOTAL_STEPS}</DialogTitle>
       <DialogContent>
-        {activeStep === 0 && (
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <TextField
-                name="name"
-                label="Nome do Briefing"
-                fullWidth
-                value={briefingData.name || ''}
-                onChange={handleChange}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>Tom de Voz</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Paper variant="outlined" sx={{ p: 1, display: 'flex', flexWrap: 'wrap', gap: 1, flexGrow: 1, minHeight: '40px' }}>
-                  {(briefingData.tom_de_voz || []).map((item) => (
-                    <Chip key={item} label={item} />
-                  ))}
-                  {(briefingData.tom_de_voz || []).length === 0 && <Typography sx={{p:1}} color="text.secondary">Nenhum tom de voz selecionado</Typography>}
-                </Paper>
-                <Button onClick={() => setTomDeVozModalOpen(true)} variant="outlined">Selecionar</Button>
-              </Box>
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <ChipInput
-                label="FAÇA (DOs)"
-                items={briefingData.faca || []}
-                setItems={(v) => handleChipChange('faca', v)}
-                suggestions={SUGESTOES_FACA}
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <ChipInput
-                label="NÃO FAÇA (DON'Ts)"
-                items={briefingData.nao_faca || []}
-                setItems={(v) => handleChipChange('nao_faca', v)}
-                suggestions={SUGESTOES_NAO_FACA}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <TextField name="objetivo" label="Objetivo" fullWidth value={briefingData.objetivo || ''} onChange={handleChange} multiline rows={3} />
-                <Tooltip title="Gerar com IA">
-                  <IconButton color="primary" onClick={() => handleOpenModal('objetivo', 'Sugestões de Objetivo', () => `'A partir do texto do usuário ${briefingData.objetivo} e considerando os critérios de comunicação da marca fornecidos nos Do’s ${briefingData.faca.join(', ')} e Don’ts ${briefingData.nao_faca.join(', ')}, gere até 5 opções de texto revisado que estejam alinhadas com o tom de voz da marca.
-Cada opção deve:
-Seguir fielmente os Do’s, incorporando boas práticas de tom, estilo e linguagem;
-Evitar estritamente os Don’ts, como termos, expressões ou estilos proibidos;
-Manter o significado original do texto do usuário, aprimorando clareza, engajamento e adequação à marca;
-Ser concisa, clara e com impacto emocional adequado ao público.
-O JSON de saída deve ter a seguinte estrutura:
-{
-  "opcoes_revisadas": [
-    {"opcao": 1, "texto": "{texto_revisado_1}"},
-    {"opcao": 2, "texto": "{texto_revisado_2}"},
-    {"opcao": 3, "texto": "{texto_revisado_3}"},
-    {"opcao": 4, "texto": "{texto_revisado_4}"},
-    {"opcao": 5, "texto": "{texto_revisado_5}"}
-  ]
-}
-'`)}>
-                    <AutoAwesomeIcon />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            </Grid>
-            <Grid item xs={12}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <TextField name="saudacao" label="Saudação" fullWidth value={briefingData.saudacao || ''} onChange={handleChange} multiline rows={2} />
-                <Tooltip title="Gerar com IA">
-                  <IconButton color="primary" onClick={() => handleOpenModal('saudacao', 'Sugestões de Saudação', () => `{
-  "saudacoes": [
-    {"opcao": 1, "mensagem": "{mensagem_1}"},
-    {"opcao": 2, "mensagem": "{mensagem_2}"},
-    {"opcao": 3, "mensagem": "{mensagem_3}"},
-    {"opcao": 4, "mensagem": "{mensagem_4}"},
-    {"opcao": 5, "mensagem": "{mensagem_5}"}
-  ]
-}`)}>
-                    <AutoAwesomeIcon />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            </Grid>
-            <Grid item xs={12}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <TextField name="entregas" label="Entregas" fullWidth value={briefingData.entregas || ''} onChange={handleChange} multiline rows={3} />
-                <Tooltip title="Gerar com IA">
-                  <IconButton color="primary" onClick={() => handleOpenModal('entregas', 'Sugestões de Entregas', () => `'A partir do texto de referência ${briefingData.entregas}, gere um JSON contendo uma lista de entregas esperadas para uma missão ou desafio de marketing de conteúdo (UGC ou EGC). Cada entrega deve conter até 250 caracteres e resumir claramente o que o participante deve produzir.
-O JSON deve ter a seguinte estrutura:
-{
- "entregas": [
-    {"opcao": 1, "descricao": "{descricao_1}"},
-    {"opcao": 2, "descricao": "{descricao_2}"},
-    {"opcao": 3, "descricao": "{descricao_3}"},
-    {"opcao": 4, "descricao": "{descricao_4}"},
-    {"opcao": 5, "descricao": "{descricao_5}"}
-  ]
-}
-Regras:
-Cada descrição deve ser clara, objetiva e prática.
-Incluir quantidade de conteúdos, formato, links ou cupons, e prazo se mencionados no texto de referência.
-Adaptar o tom para facilitar o entendimento e execução do participante.'`)}>
-                    <AutoAwesomeIcon />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            </Grid>
-          </Grid>
-        )}
-
-        {activeStep === 1 && (
-          <Box>
-            <Typography variant="h6" gutterBottom>Revisão do Briefing</Typography>
-            <TextEditor
-              value={briefingData.briefing_final || ''}
-              onChange={(v) => handleRichTextChange('briefing_final', v)}
-            />
-          </Box>
-        )}
-
+        {renderStepContent(activeStep)}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
           <Button onClick={onClose} color="secondary">Cancelar</Button>
           <Box>
-            {activeStep > 0 && <Button onClick={handleBack} startIcon={<ArrowBack />}>Anterior</Button>}
-            {activeStep < 1 && <Button onClick={handleNext} endIcon={<ArrowForward />} sx={{ ml: 1 }}>Próximo</Button>}
-            <Button onClick={onSave} variant="contained" color="primary" sx={{ ml: 2 }}>Salvar</Button>
+            <Button disabled={activeStep === 0} onClick={handleBack} startIcon={<ArrowBack />}>Anterior</Button>
+            {activeStep < TOTAL_STEPS - 1 && <Button onClick={handleNext} endIcon={<ArrowForward />} sx={{ ml: 1 }}>Próximo</Button>}
+            {activeStep === TOTAL_STEPS - 1 && <Button onClick={onSave} variant="contained" color="primary" sx={{ ml: 2 }}>Salvar Briefing</Button>}
           </Box>
         </Box>
       </DialogContent>
-      <AISuggestionModal
-        open={aiModalOpen}
-        title={modalConfig.title}
-        suggestions={suggestions}
-        loading={loadingSuggestions}
-        onClose={() => setAiModalOpen(false)}
-        onSelect={handleSelectSuggestion}
-        bestPractices={modalConfig.field === 'saudacao' ? `1. Clareza e objetividade
-A saudação deve transmitir imediatamente a mensagem de boas-vindas.
-
-Exemplo bom: “Bem-vindo ao nosso desafio! Estamos felizes que você está aqui.”
-
-2. Tom de voz consistente com a marca
-
-A saudação deve refletir a personalidade da marca:
-
-Inspirador: motiva e engaja (“Vamos juntos transformar ideias em ação!”)
-Próximo: cria conexão pessoal (“Olá! Que bom ter você conosco no desafio!”)
-Descontraído: leve e divertido (“Oi! Preparado para se divertir e criar algo incrível?”)
-Institucional: formal e sério (“Seja bem-vindo ao nosso programa de inovação.”)
-
-3. Humanização
-Use a primeira pessoa do plural (“estamos felizes”) ou a segunda pessoa (“você”) para criar proximidade.
-
-4. Encorajamento à participação
-Inclua uma breve menção ao propósito do desafio ou incentivo à ação.
-
-5. Brevidade
-Idealmente, até 150 caracteres, para que a mensagem seja rápida de ler e fácil de lembrar.
-
-6. Personalização (quando possível)
-Inserir o nome do participante ou referência ao seu perfil aumenta a conexão.
-
-7. Tom positivo e acolhedor
-A primeira impressão é crucial. Use palavras que transmitam entusiasmo, acolhimento e confiança.` : null}
-      />
       <TomDeVozModal
         open={tomDeVozModalOpen}
         onClose={() => setTomDeVozModalOpen(false)}
