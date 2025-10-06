@@ -5,13 +5,14 @@ import {
 import { Add, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import AISuggestionModal from './AISuggestionModal';
+import TomDeVozModal from './TomDeVozModal';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 import TextEditor from './TextEditor';
 
 export const emptyBriefingWizardData = {
   name: '',
-  tom_de_voz: '',
+  tom_de_voz: [],
   nao_faca: [],
   faca: [],
   saudacao: '',
@@ -95,7 +96,8 @@ const ChipInput = ({ label, items, setItems, suggestions }) => {
 
 const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataChange, initialStep = 0 }) => {
   const [activeStep, setActiveStep] = useState(initialStep);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [tomDeVozModalOpen, setTomDeVozModalOpen] = useState(false);
   const [modalConfig, setModalConfig] = useState({ title: '', field: '' });
   const [suggestions, setSuggestions] = useState([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
@@ -157,7 +159,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   const generateBriefingFinal = () => {
     const { tom_de_voz, nao_faca, faca, saudacao, entregas, objetivo } = briefingData;
     const finalBriefing = `
-      **Tom de Voz:** ${tom_de_voz}\n
+      **Tom de Voz:** ${(tom_de_voz || []).join(', ')}\n
       **O que FAZER:**\n${faca.map(item => `- ${item}`).join('\n')}\n
       **O que NÃO FAZER:**\n${nao_faca.map(item => `- ${item}`).join('\n')}\n
       **Objetivo:** ${objetivo}\n
@@ -192,12 +194,16 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
               />
             </Grid>
             <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Tom de Voz</InputLabel>
-                <Select name="tom_de_voz" value={briefingData.tom_de_voz || ''} onChange={handleChange} label="Tom de Voz">
-                  {TONS_DE_VOZ.map(v => <MenuItem key={v} value={v}>{v}</MenuItem>)}
-                </Select>
-              </FormControl>
+              <Typography variant="subtitle1" gutterBottom>Tom de Voz</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Paper variant="outlined" sx={{ p: 1, display: 'flex', flexWrap: 'wrap', gap: 1, flexGrow: 1, minHeight: '40px' }}>
+                  {(briefingData.tom_de_voz || []).map((item) => (
+                    <Chip key={item} label={item} />
+                  ))}
+                  {(briefingData.tom_de_voz || []).length === 0 && <Typography sx={{p:1}} color="text.secondary">Nenhum tom de voz selecionado</Typography>}
+                </Paper>
+                <Button onClick={() => setTomDeVozModalOpen(true)} variant="outlined">Selecionar</Button>
+              </Box>
             </Grid>
             <Grid item xs={12} md={6}>
               <ChipInput
@@ -306,11 +312,11 @@ Adaptar o tom para facilitar o entendimento e execução do participante.'`)}>
         </Box>
       </DialogContent>
       <AISuggestionModal
-        open={modalOpen}
+        open={aiModalOpen}
         title={modalConfig.title}
         suggestions={suggestions}
         loading={loadingSuggestions}
-        onClose={() => setModalOpen(false)}
+        onClose={() => setAiModalOpen(false)}
         onSelect={handleSelectSuggestion}
         bestPractices={modalConfig.field === 'saudacao' ? `1. Clareza e objetividade
 A saudação deve transmitir imediatamente a mensagem de boas-vindas.
@@ -340,6 +346,12 @@ Inserir o nome do participante ou referência ao seu perfil aumenta a conexão.
 
 7. Tom positivo e acolhedor
 A primeira impressão é crucial. Use palavras que transmitam entusiasmo, acolhimento e confiança.` : null}
+      />
+      <TomDeVozModal
+        open={tomDeVozModalOpen}
+        onClose={() => setTomDeVozModalOpen(false)}
+        selectedTones={briefingData.tom_de_voz || []}
+        onSave={(newTones) => handleChipChange('tom_de_voz', newTones)}
       />
     </Dialog>
   );
