@@ -267,7 +267,7 @@ const PageGeneratorFrontendOnly = ({
           fieldStyles,
           brandElements,
           fontScale,
-          pendingAssets,
+          pendingAssets
         );
         setGeneratedPagesData(currentPages => currentPages.map(p => {
           if (p.index === index) {
@@ -745,6 +745,7 @@ const PageGeneratorFrontendOnly = ({
           editedPageTemplate={pageTemplateForEditor}
           setEditedPageTemplate={setPageTemplateForEditor}
           addPendingAsset={addPendingAsset}
+          pendingAssets={pendingAssets}
         />
       )}
 

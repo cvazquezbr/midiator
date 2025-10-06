@@ -35,6 +35,7 @@ const DraggableElementInternal = ({
   enableHtmlRendering = false,
   darkMode,
   onDoubleClick,
+  pendingAssets,
 }) => {
   console.log('[DraggableElement] PROPS RECEIVED:', { element, content });
   const [isDragging, setIsDragging] = useState(false);
@@ -42,6 +43,7 @@ const DraggableElementInternal = ({
   const [isRotating, setIsRotating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(content);
+  const [renderableSrc, setRenderableSrc] = useState(content);
   const [resizeHandle, setResizeHandle] = useState(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [initialPosition, setInitialPosition] = useState({ x: 0, y: 0 });
@@ -76,7 +78,28 @@ const DraggableElementInternal = ({
     return `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
   };
 
-  // useEffect para renderização do canvas foi REMOVIDO
+  useEffect(() => {
+    let objectUrl = null;
+    if (element.type === 'image' && content && content.startsWith('blob:')) {
+      const blob = pendingAssets ? pendingAssets[content] : null;
+      if (blob) {
+        objectUrl = URL.createObjectURL(blob);
+        setRenderableSrc(objectUrl);
+      } else {
+        // If blob is not found, it might be a revoked URL. Show nothing or a placeholder.
+        setRenderableSrc('');
+      }
+    } else {
+      setRenderableSrc(content);
+    }
+
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [content, pendingAssets, element.type]);
+
 
   // Função para renderizar conteúdo HTML ou texto simples
   const renderContent = () => {
@@ -85,7 +108,8 @@ const DraggableElementInternal = ({
       return null;
     }
     if (element.type === 'image') {
-      return <img src={content} alt="Elemento de imagem" style={{ objectFit: style.objectFit || 'fill' }} />;
+      if (!renderableSrc) return <CircularProgress size={24} />;
+      return <img src={renderableSrc} alt="Elemento de imagem" style={{ objectFit: style.objectFit || 'fill' }} />;
     }
 
     if (element.type === 'cropbox') {
