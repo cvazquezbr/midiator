@@ -145,8 +145,6 @@ const loadImage = (src, pendingAssets = {}) => {
         // If the blob URL is not in pendingAssets, it's a broken link.
         return reject(new Error(`Blob not found for pending asset URL: ${src}`));
       }
-    } else if (src && src.includes('blob.vercel-storage.com')) {
-      finalSrc = `/api/image-proxy?url=${encodeURIComponent(src)}`;
     } else if (src && src.startsWith('http')) {
       img.crossOrigin = 'Anonymous';
     }

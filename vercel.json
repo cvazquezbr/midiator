@@ -13,11 +13,5 @@
     "api/upload-client.js": {
       "includeFiles": "api/node_modules/@vercel/blob/**"
     }
-  },
-  "rewrites": [
-    {
-      "source": "/api/image-proxy",
-      "destination": "/api/image-proxy.js"
-    }
-  ]
+  }
 }
