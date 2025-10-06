@@ -120,7 +120,7 @@ const PageGeneratorFrontendOnly = ({
           const positionsToUse = pageData.customFieldPositions || fieldPositions;
           const stylesToUse = pageData.customFieldStyles || fieldStyles;
           const elementsToUse = pageData.customBrandElements !== undefined ? pageData.customBrandElements : brandElements;
-          const pageTemplateToUse = pageData.customPageTemplate || pageTemplate;
+          const pageTemplateToUse = pageData.customPageTemplate || pageData.pageTemplateUsed || pageTemplate;
 
           return drawAndComposeImage({
             record: pageData.record,
@@ -175,6 +175,8 @@ const PageGeneratorFrontendOnly = ({
     setProgress(0);
     isCancelledRef.current = false;
 
+    const templateSnapshot = safeDeepClone(pageTemplate);
+
     const pagePromises = csvData.map((record, i) => {
       if (isCancelledRef.current) return Promise.resolve(null);
       return drawAndComposeImage({
@@ -184,14 +186,12 @@ const PageGeneratorFrontendOnly = ({
         fieldPositions,
         fieldStyles,
         fontScale,
-        pageTemplate: pageTemplate,
+        pageTemplate: templateSnapshot,
         aspectRatio,
       })
       .then(pageData => {
         setProgress(p => p + 1);
-        // Return only the essential page data.
-        // Custom styles/positions will be added only when a user edits a specific page.
-        return pageData;
+        return { ...pageData, pageTemplateUsed: templateSnapshot };
       })
       .catch(error => {
         console.error(`Erro ao gerar página para o registro ${i}:`, error);
@@ -237,7 +237,7 @@ const PageGeneratorFrontendOnly = ({
 
   const handleCancelGeneration = () => { isCancelledRef.current = true; };
 
-  const regenerateSinglePage = async (index, record, pageTemplateToUse, positionsToUse, stylesToUse, elementsToUse = brandElements, fontScale = 1) => {
+  const regenerateSinglePage = async (index, record, pageTemplateToUse, positionsToUse, stylesToUse, elementsToUse = brandElements, fontScale = 1, pendingAssets) => {
     if (!pageTemplateToUse || !record || !positionsToUse || !stylesToUse || !fontsLoaded) {
       console.error('Pré-requisitos para regeneração não atendidos.');
       throw new Error('Pré-requisitos para regeneração não atendidos.');
@@ -251,6 +251,7 @@ const PageGeneratorFrontendOnly = ({
       fieldStyles: stylesToUse,
       fontScale,
       aspectRatio,
+      pendingAssets,
     });
   };
 
@@ -265,7 +266,8 @@ const PageGeneratorFrontendOnly = ({
           fieldPositions,
           fieldStyles,
           brandElements,
-          fontScale
+          fontScale,
+          pendingAssets,
         );
         setGeneratedPagesData(currentPages => currentPages.map(p => {
           if (p.index === index) {
@@ -277,6 +279,7 @@ const PageGeneratorFrontendOnly = ({
               customFieldStyles: null,
               customBrandElements: null,
               customPageTemplate: null,
+              pageTemplateUsed: safeDeepClone(pageTemplate), // A new snapshot is created on reset.
               fontScale,
             };
           }
@@ -391,16 +394,12 @@ const PageGeneratorFrontendOnly = ({
       return;
     }
 
-    // Merge the base template with the custom page template to get the final version
-    const finalTemplate = {
-      ...pageTemplate, // Start with the global template
-      ...(pageFromClosure.customPageTemplate || {}), // Override with custom properties
-    };
+    const templateToUse = pageFromClosure.customPageTemplate || pageFromClosure.pageTemplateUsed || pageTemplate;
 
-    // Ensure the 'images' property is always a shallow-copied array
-    finalTemplate.images = [...(finalTemplate.images || [])];
-
-    setPageTemplateForEditor(finalTemplate);
+    setPageTemplateForEditor({
+        ...templateToUse,
+        images: [...(templateToUse.images || [])]
+    });
     setEditingGeneratedPageIndex(index);
     setShowGeneratedPageEditor(true);
   };
@@ -423,7 +422,8 @@ const PageGeneratorFrontendOnly = ({
         modifiedPageData.customFieldPositions,
         modifiedPageData.customFieldStyles,
         modifiedPageData.customBrandElements,
-        1 // Always use a scale of 1 for the final render, as per user feedback.
+        1, // Always use a scale of 1 for the final render, as per user feedback.
+        pendingAssets
       );
       setGeneratedPagesData(currentPages =>
         currentPages.map(page => {
@@ -464,7 +464,7 @@ const PageGeneratorFrontendOnly = ({
         const newImageUrl = e.target.result;
         const pageToUpdate = initialGeneratedPagesData.find(img => img.index === replacingImageIndex);
         if (pageToUpdate) {
-          const templateToUpdate = pageToUpdate.customPageTemplate || pageTemplate;
+          const templateToUpdate = pageToUpdate.customPageTemplate || pageToUpdate.pageTemplateUsed || pageTemplate;
           const newImageElement = createNewImageElement(newImageUrl);
           newImageElement.zIndex = -1; // Keep the background zIndex
 
@@ -481,7 +481,8 @@ const PageGeneratorFrontendOnly = ({
               pageToUpdate.customFieldPositions || fieldPositions,
               pageToUpdate.customFieldStyles || fieldStyles,
               pageToUpdate.customBrandElements || brandElements,
-              pageToUpdate.fontScale || 1
+              pageToUpdate.fontScale || 1,
+              pendingAssets
             );
             setGeneratedPagesData(currentPages => currentPages.map(p => {
               if (p.index === replacingImageIndex) {
@@ -549,20 +550,14 @@ const PageGeneratorFrontendOnly = ({
   const pageToEdit = initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex);
 
   useEffect(() => {
-    // This effect synchronizes the editor's template with the parent's state.
-    // When an image is added from the gallery, `initialGeneratedPagesData` changes.
-    // This effect ensures the open `PageEditor` receives the updated template.
     if (editingGeneratedPageIndex !== null) {
       const updatedPageData = initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex);
       if (updatedPageData) {
-        const finalTemplate = {
-          ...pageTemplate,
-          ...(updatedPageData.customPageTemplate || {}),
-        };
-        finalTemplate.images = [...(finalTemplate.images || [])];
-
-        // Update the state that is passed as a prop to the PageEditor
-        setPageTemplateForEditor(finalTemplate);
+        const templateToUse = updatedPageData.customPageTemplate || updatedPageData.pageTemplateUsed || pageTemplate;
+        setPageTemplateForEditor({
+          ...templateToUse,
+          images: [...(templateToUse.images || [])],
+        });
       }
     }
   }, [initialGeneratedPagesData, editingGeneratedPageIndex, pageTemplate]);
@@ -746,7 +741,7 @@ const PageGeneratorFrontendOnly = ({
           imagePalette={imagePalette}
           aspectRatio={aspectRatio}
           originalImageSize={originalImageSize}
-          onOpenImageGallery={() => onOpenImageGallery(editingGeneratedPageIndex)}
+          onOpenImageGallery={(callback) => onOpenImageGallery(callback, editingGeneratedPageIndex)}
           editedPageTemplate={pageTemplateForEditor}
           setEditedPageTemplate={setPageTemplateForEditor}
           addPendingAsset={addPendingAsset}
