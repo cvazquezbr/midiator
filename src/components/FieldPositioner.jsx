@@ -75,7 +75,6 @@ const FieldPositioner = ({
   onFontScaleChange,
   isCropping,
   setIsCropping,
-  pendingAssets,
 }) => {
   console.log('[FieldPositioner] props:', { pageTemplate, fieldStyles });
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
@@ -448,7 +447,6 @@ const FieldPositioner = ({
             fontScale={element.fontScale}
             enableHtmlRendering={element.enableHtmlRendering}
             darkMode={darkMode}
-            pendingAssets={pendingAssets}
           />
         ))}
       </Box>

@@ -35,7 +35,6 @@ const DraggableElementInternal = ({
   enableHtmlRendering = false,
   darkMode,
   onDoubleClick,
-  pendingAssets,
 }) => {
   console.log('[DraggableElement] PROPS RECEIVED:', { element, content });
   const [isDragging, setIsDragging] = useState(false);
@@ -48,28 +47,6 @@ const DraggableElementInternal = ({
   const [initialPosition, setInitialPosition] = useState({ x: 0, y: 0 });
   const [initialSize, setInitialSize] = useState({ width: 0, height: 0 });
   const [initialRotation, setInitialRotation] = useState(0);
-  const [imageUrl, setImageUrl] = useState(content);
-
-  useEffect(() => {
-    let objectUrl = null;
-    if (content && typeof content === 'string' && content.startsWith('blob:') && pendingAssets) {
-      const blob = pendingAssets[content];
-      if (blob) {
-        objectUrl = URL.createObjectURL(blob);
-        setImageUrl(objectUrl);
-      } else {
-        setImageUrl(content); // Fallback to broken link if blob not found
-      }
-    } else {
-      setImageUrl(content);
-    }
-
-    return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
-    };
-  }, [content, pendingAssets]);
   // const [isCanvasLoading, setIsCanvasLoading] = useState(true); // Removido
 
   const textBoxRef = useRef(null);
@@ -108,7 +85,7 @@ const DraggableElementInternal = ({
       return null;
     }
     if (element.type === 'image') {
-      return <img src={imageUrl} alt="Elemento de imagem" style={{ objectFit: style.objectFit || 'fill' }} />;
+      return <img src={content} alt="Elemento de imagem" style={{ objectFit: style.objectFit || 'fill' }} />;
     }
 
     if (element.type === 'cropbox') {

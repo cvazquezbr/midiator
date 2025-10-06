@@ -120,7 +120,7 @@ const PageGeneratorFrontendOnly = ({
           const positionsToUse = pageData.customFieldPositions || fieldPositions;
           const stylesToUse = pageData.customFieldStyles || fieldStyles;
           const elementsToUse = pageData.customBrandElements !== undefined ? pageData.customBrandElements : brandElements;
-          const pageTemplateToUse = pageData.customPageTemplate || pageTemplate;
+          const pageTemplateToUse = pageData.customPageTemplate || pageData.baseTemplate || pageTemplate;
 
           return drawAndComposeImage({
             record: pageData.record,
@@ -131,7 +131,6 @@ const PageGeneratorFrontendOnly = ({
             fieldStyles: stylesToUse,
             fontScale: pageData.fontScale || 1,
             aspectRatio,
-            pendingAssets,
           }).catch(error => {
             console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${pageData.index}:`, error);
             return pageData;
@@ -151,7 +150,7 @@ const PageGeneratorFrontendOnly = ({
       };
       regenerateMissingThumbnails();
     }
-  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, pageTemplate, brandElements, setGeneratedPagesData, aspectRatio, pendingAssets]);
+  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, pageTemplate, brandElements, setGeneratedPagesData, aspectRatio]);
 
   const generatePages = async () => {
     if (isGenerating) return;
@@ -176,6 +175,8 @@ const PageGeneratorFrontendOnly = ({
     setProgress(0);
     isCancelledRef.current = false;
 
+    const templateSnapshot = safeDeepClone(pageTemplate);
+
     const pagePromises = csvData.map((record, i) => {
       if (isCancelledRef.current) return Promise.resolve(null);
       return drawAndComposeImage({
@@ -185,15 +186,13 @@ const PageGeneratorFrontendOnly = ({
         fieldPositions,
         fieldStyles,
         fontScale,
-        pageTemplate: pageTemplate,
+        pageTemplate: templateSnapshot,
         aspectRatio,
         pendingAssets,
       })
       .then(pageData => {
         setProgress(p => p + 1);
-        // Return only the essential page data.
-        // Custom styles/positions will be added only when a user edits a specific page.
-        return pageData;
+        return { ...pageData, baseTemplate: templateSnapshot };
       })
       .catch(error => {
         console.error(`Erro ao gerar página para o registro ${i}:`, error);
@@ -253,7 +252,6 @@ const PageGeneratorFrontendOnly = ({
       fieldStyles: stylesToUse,
       fontScale,
       aspectRatio,
-      pendingAssets,
     });
   };
 
@@ -280,6 +278,7 @@ const PageGeneratorFrontendOnly = ({
               customFieldStyles: null,
               customBrandElements: null,
               customPageTemplate: null,
+              baseTemplate: null,
               fontScale,
             };
           }
@@ -394,7 +393,7 @@ const PageGeneratorFrontendOnly = ({
       return;
     }
 
-    const templateToUse = pageFromClosure.customPageTemplate || pageTemplate;
+    const templateToUse = pageFromClosure.customPageTemplate || pageFromClosure.baseTemplate || pageTemplate;
 
     setPageTemplateForEditor({
         ...templateToUse,
@@ -418,24 +417,25 @@ const PageGeneratorFrontendOnly = ({
       const newPageImageData = await regenerateSinglePage(
         pageIndex,
         modifiedPageData.record,
-        modifiedPageData.customPageTemplate,
+        modifiedPageData.customPageTemplate, // Use the correct prop name
         modifiedPageData.customFieldPositions,
         modifiedPageData.customFieldStyles,
         modifiedPageData.customBrandElements,
-        1
+        1 // Always use a scale of 1 for the final render, as per user feedback.
       );
       setGeneratedPagesData(currentPages =>
         currentPages.map(page => {
           if (page.index !== pageIndex) return page;
+          // Persist the changes
           return {
-            ...page,
-            ...newPageImageData,
+            ...page, // Keep old data like blob, url
+            ...newPageImageData, // Overwrite with new image data
             record: modifiedPageData.record,
             customFieldPositions: modifiedPageData.customFieldPositions,
             customFieldStyles: modifiedPageData.customFieldStyles,
             customBrandElements: modifiedPageData.customBrandElements,
             customPageTemplate: modifiedPageData.customPageTemplate,
-            fontScale: 1,
+            fontScale: 1, // Always save the scale as 1 for consistency.
           };
         })
       );
@@ -462,9 +462,9 @@ const PageGeneratorFrontendOnly = ({
         const newImageUrl = e.target.result;
         const pageToUpdate = initialGeneratedPagesData.find(img => img.index === replacingImageIndex);
         if (pageToUpdate) {
-          const templateToUpdate = pageToUpdate.customPageTemplate || pageTemplate;
+          const templateToUpdate = pageToUpdate.customPageTemplate || pageToUpdate.baseTemplate || pageTemplate;
           const newImageElement = createNewImageElement(newImageUrl);
-          newImageElement.zIndex = -1;
+          newImageElement.zIndex = -1; // Keep the background zIndex
 
           const updatedTemplate = {
             ...templateToUpdate,
@@ -545,6 +545,19 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const pageToEdit = initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex);
+
+  useEffect(() => {
+    if (editingGeneratedPageIndex !== null) {
+      const updatedPageData = initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex);
+      if (updatedPageData) {
+        const templateToUse = updatedPageData.customPageTemplate || updatedPageData.baseTemplate || pageTemplate;
+        setPageTemplateForEditor({
+          ...templateToUse,
+          images: [...(templateToUse.images || [])],
+        });
+      }
+    }
+  }, [initialGeneratedPagesData, editingGeneratedPageIndex, pageTemplate]);
 
   return (
     <Box sx={{ mt: 3 }}>
@@ -729,7 +742,6 @@ const PageGeneratorFrontendOnly = ({
           editedPageTemplate={pageTemplateForEditor}
           setEditedPageTemplate={setPageTemplateForEditor}
           addPendingAsset={addPendingAsset}
-          pendingAssets={pendingAssets}
         />
       )}
 
