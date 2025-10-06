@@ -160,9 +160,9 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
       **Tom de Voz:** ${tom_de_voz}\n
       **O que FAZER:**\n${faca.map(item => `- ${item}`).join('\n')}\n
       **O que NÃO FAZER:**\n${nao_faca.map(item => `- ${item}`).join('\n')}\n
+      **Objetivo:** ${objetivo}\n
       **Saudação:** ${saudacao}\n
-      **Entregas:** ${entregas}\n
-      **Objetivo:** ${objetivo}
+      **Entregas:** ${entregas}
     `;
     onBriefingDataChange(prev => ({ ...prev, briefing_final: finalBriefing.trim() }));
   };
@@ -217,6 +217,32 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
             </Grid>
             <Grid item xs={12}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TextField name="objetivo" label="Objetivo" fullWidth value={briefingData.objetivo || ''} onChange={handleChange} multiline rows={3} />
+                <Tooltip title="Gerar com IA">
+                  <IconButton color="primary" onClick={() => handleOpenModal('objetivo', 'Sugestões de Objetivo', () => `'A partir do texto do usuário ${briefingData.objetivo} e considerando os critérios de comunicação da marca fornecidos nos Do’s ${briefingData.faca.join(', ')} e Don’ts ${briefingData.nao_faca.join(', ')}, gere até 5 opções de texto revisado que estejam alinhadas com o tom de voz da marca.
+Cada opção deve:
+Seguir fielmente os Do’s, incorporando boas práticas de tom, estilo e linguagem;
+Evitar estritamente os Don’ts, como termos, expressões ou estilos proibidos;
+Manter o significado original do texto do usuário, aprimorando clareza, engajamento e adequação à marca;
+Ser concisa, clara e com impacto emocional adequado ao público.
+O JSON de saída deve ter a seguinte estrutura:
+{
+  "opcoes_revisadas": [
+    {"opcao": 1, "texto": "{texto_revisado_1}"},
+    {"opcao": 2, "texto": "{texto_revisado_2}"},
+    {"opcao": 3, "texto": "{texto_revisado_3}"},
+    {"opcao": 4, "texto": "{texto_revisado_4}"},
+    {"opcao": 5, "texto": "{texto_revisado_5}"}
+  ]
+}
+'`)}>
+                    <AutoAwesomeIcon />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Grid>
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <TextField name="saudacao" label="Saudação" fullWidth value={briefingData.saudacao || ''} onChange={handleChange} multiline rows={2} />
                 <Tooltip title="Gerar com IA">
                   <IconButton color="primary" onClick={() => handleOpenModal('saudacao', 'Sugestões de Saudação', () => `{
@@ -252,32 +278,6 @@ Regras:
 Cada descrição deve ser clara, objetiva e prática.
 Incluir quantidade de conteúdos, formato, links ou cupons, e prazo se mencionados no texto de referência.
 Adaptar o tom para facilitar o entendimento e execução do participante.'`)}>
-                    <AutoAwesomeIcon />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            </Grid>
-            <Grid item xs={12}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <TextField name="objetivo" label="Objetivo" fullWidth value={briefingData.objetivo || ''} onChange={handleChange} multiline rows={3} />
-                <Tooltip title="Gerar com IA">
-                  <IconButton color="primary" onClick={() => handleOpenModal('objetivo', 'Sugestões de Objetivo', () => `'A partir do texto do usuário ${briefingData.objetivo} e considerando os critérios de comunicação da marca fornecidos nos Do’s ${briefingData.faca.join(', ')} e Don’ts ${briefingData.nao_faca.join(', ')}, gere até 5 opções de texto revisado que estejam alinhadas com o tom de voz da marca.
-Cada opção deve:
-Seguir fielmente os Do’s, incorporando boas práticas de tom, estilo e linguagem;
-Evitar estritamente os Don’ts, como termos, expressões ou estilos proibidos;
-Manter o significado original do texto do usuário, aprimorando clareza, engajamento e adequação à marca;
-Ser concisa, clara e com impacto emocional adequado ao público.
-O JSON de saída deve ter a seguinte estrutura:
-{
-  "opcoes_revisadas": [
-    {"opcao": 1, "texto": "{texto_revisado_1}"},
-    {"opcao": 2, "texto": "{texto_revisado_2}"},
-    {"opcao": 3, "texto": "{texto_revisado_3}"},
-    {"opcao": 4, "texto": "{texto_revisado_4}"},
-    {"opcao": 5, "texto": "{texto_revisado_5}"}
-  ]
-}
-'`)}>
                     <AutoAwesomeIcon />
                   </IconButton>
                 </Tooltip>
