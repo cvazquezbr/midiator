@@ -19,17 +19,9 @@ const TomDeVozModal = ({ open, onClose, selectedTones, onSave }) => {
   }, [open, selectedTones]);
 
   const handleToggle = (value) => {
-    const currentIndex = localSelection.indexOf(value);
-    const newSelection = [...localSelection];
-
-    if (currentIndex === -1) {
-      if (newSelection.length < 2) {
-        newSelection.push(value);
-      }
-    } else {
-      newSelection.splice(currentIndex, 1);
-    }
-
+    // If the clicked value is already selected, unselect it.
+    // Otherwise, select it as the only one.
+    const newSelection = localSelection.includes(value) ? [] : [value];
     setLocalSelection(newSelection);
   };
 
@@ -40,7 +32,7 @@ const TomDeVozModal = ({ open, onClose, selectedTones, onSave }) => {
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
-      <DialogTitle>Selecione até dois Tons de Voz</DialogTitle>
+      <DialogTitle>Selecione o Tom de Voz</DialogTitle>
       <DialogContent>
         <TableContainer component={Paper}>
           <Table>
@@ -60,7 +52,6 @@ const TomDeVozModal = ({ open, onClose, selectedTones, onSave }) => {
                     <Checkbox
                       color="primary"
                       checked={localSelection.includes(row.tom)}
-                      disabled={!localSelection.includes(row.tom) && localSelection.length >= 2}
                     />
                   </TableCell>
                   <TableCell>{row.tom}</TableCell>
