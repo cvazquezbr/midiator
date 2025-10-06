@@ -36,6 +36,7 @@ const MainAppBar = ({
   onShowPersonas,
   onShowAutores,
   onShowPalettes,
+  onShowBriefings,
   onShowCampaigns,
   setShowSetupModal,
   onMenuClick,
@@ -45,6 +46,7 @@ const MainAppBar = ({
   onPersonaMenuClick,
   onAutorMenuClick,
   onPaletteMenuClick,
+  onBriefingMenuClick,
   isDrawerOpen,
   onShowMemorial,
   isCampaignOpen,
@@ -74,6 +76,8 @@ const MainAppBar = ({
       onAutorMenuClick();
     } else if (currentView === 'palettes') {
       onPaletteMenuClick();
+    } else if (currentView === 'briefings') {
+      onBriefingMenuClick();
     } else {
       onMenuClick();
     }
@@ -87,6 +91,8 @@ const MainAppBar = ({
         return 'Autores';
       case 'palettes':
         return 'Paletas de Cores';
+      case 'briefings':
+        return 'Briefings';
       default:
         return 'Midiator';
     }
@@ -182,6 +188,10 @@ const MainAppBar = ({
           <MenuItem onClick={() => { handleUserMenuClose(); onShowPalettes(); }}>
             <Palette sx={{ mr: 1 }} />
             Paletas
+          </MenuItem>
+          <MenuItem onClick={() => { handleUserMenuClose(); onShowBriefings(); }}>
+            <ArticleIcon sx={{ mr: 1 }} />
+            Briefings
           </MenuItem>
           <Divider />
           <MenuItem onClick={() => { handleUserMenuClose(); setShowSetupModal(true); }}>
