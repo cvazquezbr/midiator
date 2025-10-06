@@ -59,8 +59,8 @@ const PageGeneratorFrontendOnly = ({
   handleImageUpload, // New prop
   onOpenImageGallery,
   imagePalette,
-  pendingAssets,
-  addPendingAsset, 
+  // pendingAssets is now sourced from context
+  addPendingAsset,
 }) => {
   const {
     csvData,
@@ -70,6 +70,7 @@ const PageGeneratorFrontendOnly = ({
     brandElements,
     pageTemplate,
     setGeneratedPagesData,
+    pendingAssets, // Use the latest pendingAssets from context
   } = useCampaign();
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
