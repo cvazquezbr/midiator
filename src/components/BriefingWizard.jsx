@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box, Button, Typography, Grid, FormControl, InputLabel, Select, MenuItem, TextField, Chip, IconButton, Tooltip, Paper, Dialog, DialogTitle, DialogContent, CircularProgress, Radio, RadioGroup, FormControlLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Divider
+  Box, Button, Typography, Grid, FormControl, InputLabel, Select, MenuItem, TextField, Chip, IconButton, Tooltip, Paper, Dialog, DialogTitle, DialogContent, CircularProgress, Radio, RadioGroup, FormControlLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Divider, useMediaQuery
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Add, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import TomDeVozModal from './TomDeVozModal';
@@ -116,6 +117,8 @@ const ChipInput = ({ label, items, setItems, suggestions }) => {
 };
 
 const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataChange, initialStep = 0 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [activeStep, setActiveStep] = useState(initialStep);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [tomDeVozModalOpen, setTomDeVozModalOpen] = useState(false);
@@ -150,49 +153,83 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   const renderStepContent = (step) => {
     switch (step) {
       case 0:
+        if (isMobile) {
+          return (
+            <Box sx={{ p: 1, minHeight: 400 }}>
+              <Typography variant="h6" gutterBottom>Qual é a principal motivação?</Typography>
+              <RadioGroup
+                aria-label="motivacao"
+                name="motivacao"
+                value={briefingData.motivacao}
+                onChange={handleChange}
+              >
+                <Grid container spacing={2}>
+                  {MOTIVACOES.map((motiv) => (
+                    <Grid item xs={12} key={motiv.id}>
+                      <Paper
+                        variant="outlined"
+                        onClick={() => onBriefingDataChange(prev => ({ ...prev, motivacao: motiv.id }))}
+                        sx={{
+                          p: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          backgroundColor: briefingData.motivacao === motiv.id ? 'action.selected' : 'background.paper',
+                          border: 2,
+                          borderColor: briefingData.motivacao === motiv.id ? 'primary.main' : 'divider',
+                        }}
+                      >
+                        <Radio
+                          checked={briefingData.motivacao === motiv.id}
+                          value={motiv.id}
+                          name="motivacao-radio"
+                        />
+                        <Box ml={1}>
+                          <Typography variant="subtitle1" component="div">{motiv.nome}</Typography>
+                          <Typography variant="body2" color="text.secondary">{motiv.descricao}</Typography>
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  ))}
+                </Grid>
+              </RadioGroup>
+            </Box>
+          );
+        }
         return (
           <Box sx={{ p: 2, minHeight: 400 }}>
             <Typography variant="h6" gutterBottom>Qual é a principal motivação da sua campanha?</Typography>
             <TableContainer component={Paper}>
-              <Table>
+              <Table aria-label="tabela de motivações">
                 <TableHead>
                   <TableRow>
-                    <TableCell padding="checkbox"></TableCell>
+                    <TableCell padding="checkbox" />
                     <TableCell>Motivação</TableCell>
                     <TableCell>Descrição</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  <RadioGroup
-                    aria-label="motivacao"
-                    name="motivacao"
-                    value={briefingData.motivacao}
-                    onChange={handleChange}
-                  >
-                    {MOTIVACOES.map((motiv) => (
-                      <TableRow
-                        key={motiv.id}
-                        hover
-                        onClick={() => onBriefingDataChange(prev => ({ ...prev, motivacao: motiv.id }))}
-                        role="radio"
-                        aria-checked={briefingData.motivacao === motiv.id}
-                        selected={briefingData.motivacao === motiv.id}
-                        sx={{ cursor: 'pointer' }}
-                      >
-                        <TableCell padding="checkbox">
-                          <Radio
-                            checked={briefingData.motivacao === motiv.id}
-                            value={motiv.id}
-                            name="motivacao-radio"
-                          />
-                        </TableCell>
-                        <TableCell component="th" scope="row">
-                          {motiv.nome}
-                        </TableCell>
-                        <TableCell>{motiv.descricao}</TableCell>
-                      </TableRow>
-                    ))}
-                  </RadioGroup>
+                  {MOTIVACOES.map((motiv) => (
+                    <TableRow
+                      key={motiv.id}
+                      hover
+                      onClick={() => onBriefingDataChange(prev => ({ ...prev, motivacao: motiv.id }))}
+                      role="radio"
+                      aria-checked={briefingData.motivacao === motiv.id}
+                      selected={briefingData.motivacao === motiv.id}
+                      sx={{ cursor: 'pointer' }}
+                    >
+                      <TableCell padding="checkbox">
+                        <Radio
+                          checked={briefingData.motivacao === motiv.id}
+                          value={motiv.id}
+                          name="motivacao-radio"
+                        />
+                      </TableCell>
+                      <TableCell component="th" scope="row">{motiv.nome}</TableCell>
+                      <TableCell>{motiv.descricao}</TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </TableContainer>
