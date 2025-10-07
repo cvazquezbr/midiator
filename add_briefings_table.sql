@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.briefings
     updated_at timestamp with time zone DEFAULT now(),
     CONSTRAINT briefings_pkey PRIMARY KEY (id),
     CONSTRAINT briefings_user_id_fkey FOREIGN KEY (user_id)
-        REFERENCES auth.users (id) MATCH SIMPLE
+        REFERENCES public.users (uuid) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE NO ACTION
 )

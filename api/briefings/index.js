@@ -16,15 +16,28 @@ const parseBody = async (req) => {
 const handler = async (req, res) => {
   const userId = req.user.sub;
 
+  // First, get the user's UUID from their integer ID (from JWT sub)
+  let userUUID;
+  try {
+    const { rows } = await query('SELECT uuid FROM users WHERE id = $1', [userId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    userUUID = rows[0].uuid;
+  } catch (error) {
+    console.error(`[GET /api/briefings] Error fetching user UUID for user ${userId}:`, error);
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+
   if (req.method === 'GET') {
     try {
       const { rows } = await query(
         'SELECT id, name, briefing_data, updated_at FROM briefings WHERE user_id = $1',
-        [userId]
+        [userUUID]
       );
       return res.status(200).json(rows);
     } catch (error) {
-      console.error(`[GET /api/briefings] Error for user ${userId}:`, error);
+      console.error(`[GET /api/briefings] Error for user ${userId} (UUID: ${userUUID}):`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
   } else if (req.method === 'POST') {
@@ -38,12 +51,12 @@ const handler = async (req, res) => {
 
       const { rows } = await query(
         'INSERT INTO briefings (user_id, name, briefing_data) VALUES ($1, $2, $3) RETURNING id, name, briefing_data, updated_at',
-        [userId, name, briefingData]
+        [userUUID, name, briefingData]
       );
 
       return res.status(201).json(rows[0]);
     } catch (error) {
-      console.error(`[POST /api/briefings] Error for user ${userId}:`, error);
+      console.error(`[POST /api/briefings] Error for user ${userId} (UUID: ${userUUID}):`, error);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
   } else {
