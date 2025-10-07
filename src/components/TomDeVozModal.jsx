@@ -41,7 +41,7 @@ const TomDeVozModal = ({ open, onClose, selectedTones, onSave }) => {
         >
           <Grid container spacing={2}>
             {TONS_DE_VOZ_DATA.map((item) => (
-              <Grid item xs={12} md={6} key={item.tom}>
+              <Grid item xs={12} md={4} key={item.tom}>
                 <Paper
                   variant="outlined"
                   onClick={() => handleToggle(item.tom)}
