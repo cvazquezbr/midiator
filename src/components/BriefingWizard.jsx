@@ -3,7 +3,7 @@ import {
   Box, Button, Typography, Grid, FormControl, InputLabel, Select, MenuItem, TextField, Chip, IconButton, Tooltip, Paper, Dialog, DialogTitle, DialogContent, CircularProgress, Radio, RadioGroup, FormControlLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Divider, useMediaQuery, Alert, Stepper, Step, StepLabel
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { Add, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon } from '@mui/icons-material';
+import { Add, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import TomDeVozModal from './TomDeVozModal';
 import SuggestionModal from './SuggestionModal';
@@ -42,7 +42,7 @@ export const emptyBriefingWizardData = {
   envioProdutos: 'não',
   prazoEnvio: null,
   egcUgc: 'ugc',
-  inspiracoes: ['', '', ''],
+  inspiracoes: [{ description: '', link: '', screenshotUrl: '' }],
   // Step 4: Mensagem
   objetivo: '',
   cta: '',
@@ -136,9 +136,9 @@ const steps = [
     'Objetivo da Campanha',
     'Produto, Serviço ou Experiência',
     'Guia da Marca',
-    'Inspiração',
     'Entregas',
     'Mensagem',
+    'Inspiração',
     'Finalização'
 ];
 
@@ -179,10 +179,29 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     onBriefingDataChange(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleInspiracaoChange = (index, value) => {
-      const newInspiracoes = [...briefingData.inspiracoes];
-      newInspiracoes[index] = value;
+  const handleInspiracaoChange = (index, field, value) => {
+    const newInspiracoes = [...briefingData.inspiracoes];
+    newInspiracoes[index][field] = value;
+    onBriefingDataChange(prev => ({ ...prev, inspiracoes: newInspiracoes }));
+  };
+
+  const handleAddInspiracao = () => {
+      const newInspiracoes = [...briefingData.inspiracoes, { description: '', link: '', screenshotUrl: '' }];
       onBriefingDataChange(prev => ({ ...prev, inspiracoes: newInspiracoes }));
+  };
+
+  const handleRemoveInspiracao = (index) => {
+      const newInspiracoes = briefingData.inspiracoes.filter((_, i) => i !== index);
+      onBriefingDataChange(prev => ({ ...prev, inspiracoes: newInspiracoes }));
+  };
+
+  const handleLinkBlur = (index, link) => {
+    if (link && (link.startsWith('http://') || link.startsWith('https://'))) {
+      const screenshotUrl = `https://s.wordpress.com/mshots/v1/${encodeURIComponent(link)}?w=400`;
+      handleInspiracaoChange(index, 'screenshotUrl', screenshotUrl);
+    } else {
+      handleInspiracaoChange(index, 'screenshotUrl', ''); // Clear screenshot if link is invalid
+    }
   };
 
   const objetivoMensagemDescription = "Descreve de forma concisa o propósito do conteúdo solicitado ao participante da missão ou desafio. Deve indicar:\n• A ação desejada do público ou participante (ex: engajar, convidar, informar, ensinar);\n• A dor ou necessidade que o conteúdo pretende atender;\n• O resultado esperado ou valor agregado da ação.\nServe como guia para o criador entender o “porquê” da missão e alinhar o conteúdo com os objetivos da marca, mantendo clareza e foco na mensagem principal.";
@@ -354,38 +373,21 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
 
   const renderStepContent = (step) => {
     switch (step) {
-      case 0:
+      case 0: // Objetivo
         if (isMobile) {
           return (
             <Box sx={{ p: 1, minHeight: 400 }}>
               <Typography variant="h6" gutterBottom>Qual é a principal motivação?</Typography>
-              <RadioGroup
-                aria-label="motivacao"
-                name="motivacao"
-                value={briefingData.motivacao}
-                onChange={handleChange}
-              >
+              <RadioGroup aria-label="motivacao" name="motivacao" value={briefingData.motivacao} onChange={handleChange}>
                 <Grid container spacing={2}>
                   {MOTIVACOES.map((motiv) => (
                     <Grid item xs={12} key={motiv.id}>
                       <Paper
                         variant="outlined"
                         onClick={() => onBriefingDataChange(prev => ({ ...prev, motivacao: motiv.id }))}
-                        sx={{
-                          p: 2,
-                          display: 'flex',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                          backgroundColor: briefingData.motivacao === motiv.id ? 'action.selected' : 'background.paper',
-                          border: 2,
-                          borderColor: briefingData.motivacao === motiv.id ? 'primary.main' : 'divider',
-                        }}
+                        sx={{ p: 2, display: 'flex', alignItems: 'center', cursor: 'pointer', backgroundColor: briefingData.motivacao === motiv.id ? 'action.selected' : 'background.paper', border: 2, borderColor: briefingData.motivacao === motiv.id ? 'primary.main' : 'divider' }}
                       >
-                        <Radio
-                          checked={briefingData.motivacao === motiv.id}
-                          value={motiv.id}
-                          name="motivacao-radio"
-                        />
+                        <Radio checked={briefingData.motivacao === motiv.id} value={motiv.id} name="motivacao-radio" />
                         <Box ml={1}>
                           <Typography variant="subtitle1" component="div">{motiv.nome}</Typography>
                           <Typography variant="body2" color="text.secondary">{motiv.descricao}</Typography>
@@ -412,22 +414,8 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                 </TableHead>
                 <TableBody>
                   {MOTIVACOES.map((motiv) => (
-                    <TableRow
-                      key={motiv.id}
-                      hover
-                      onClick={() => onBriefingDataChange(prev => ({ ...prev, motivacao: motiv.id }))}
-                      role="radio"
-                      aria-checked={briefingData.motivacao === motiv.id}
-                      selected={briefingData.motivacao === motiv.id}
-                      sx={{ cursor: 'pointer' }}
-                    >
-                      <TableCell padding="checkbox">
-                        <Radio
-                          checked={briefingData.motivacao === motiv.id}
-                          value={motiv.id}
-                          name="motivacao-radio"
-                        />
-                      </TableCell>
+                    <TableRow key={motiv.id} hover onClick={() => onBriefingDataChange(prev => ({ ...prev, motivacao: motiv.id }))} role="radio" aria-checked={briefingData.motivacao === motiv.id} selected={briefingData.motivacao === motiv.id} sx={{ cursor: 'pointer' }}>
+                      <TableCell padding="checkbox"><Radio checked={briefingData.motivacao === motiv.id} value={motiv.id} name="motivacao-radio" /></TableCell>
                       <TableCell component="th" scope="row">{motiv.nome}</TableCell>
                       <TableCell>{motiv.descricao}</TableCell>
                     </TableRow>
@@ -437,58 +425,28 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
             </TableContainer>
           </Box>
         );
-      case 1:
+      case 1: // Produto
         return (
           <Box sx={{ p: 2, minHeight: 400 }}>
             <Typography variant="h6" gutterBottom>Qual é o produto, serviço ou experiência da sua campanha?</Typography>
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  name="marca"
-                  label="Marca"
-                  fullWidth
-                  value={briefingData.marca || ''}
-                  onChange={handleChange}
-                  inputProps={{ maxLength: 40 }}
-                  helperText={`${(briefingData.marca || '').length}/40`}
-                  required
-                />
+                <TextField name="marca" label="Marca" fullWidth value={briefingData.marca || ''} onChange={handleChange} inputProps={{ maxLength: 40 }} helperText={`${(briefingData.marca || '').length}/40`} required />
               </Grid>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  name="produtoServico"
-                  label="Produto ou Serviço"
-                  fullWidth
-                  value={briefingData.produtoServico || ''}
-                  onChange={handleChange}
-                  inputProps={{ maxLength: 40 }}
-                  helperText={`${(briefingData.produtoServico || '').length}/40`}
-                  required
-                />
+                <TextField name="produtoServico" label="Produto ou Serviço" fullWidth value={briefingData.produtoServico || ''} onChange={handleChange} inputProps={{ maxLength: 40 }} helperText={`${(briefingData.produtoServico || '').length}/40`} required />
               </Grid>
               <Grid item xs={12}>
-                <TextField
-                  name="descricao"
-                  label="Descrição do Produto ou Serviço"
-                  fullWidth
-                  multiline
-                  rows={4}
-                  value={briefingData.descricao || ''}
-                  onChange={handleChange}
-                  inputProps={{ maxLength: 250 }}
-                  helperText={`${(briefingData.descricao || '').length}/250`}
-                  required
-                />
+                <TextField name="descricao" label="Descrição do Produto ou Serviço" fullWidth multiline rows={4} value={briefingData.descricao || ''} onChange={handleChange} inputProps={{ maxLength: 250 }} helperText={`${(briefingData.descricao || '').length}/250`} required />
               </Grid>
             </Grid>
           </Box>
         );
-      case 2:
+      case 2: // Guia da Marca
         return (
             <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
                 <Typography variant="h6" gutterBottom>Guia da Marca</Typography>
                 <Grid container spacing={3}>
-                    {/* Tom de Voz */}
                     <Grid item xs={12}>
                         <Typography variant="subtitle1" gutterBottom>Tom de Voz</Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -499,7 +457,6 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                             <Button onClick={() => setTomDeVozModalOpen(true)} variant="outlined">Selecionar</Button>
                         </Box>
                     </Grid>
-                    {/* DOs e DON'Ts */}
                     <Grid item xs={12} md={6}>
                         <ChipInput label="FAÇA (DOs)" items={briefingData.faca || []} setItems={(v) => handleChipChange('faca', v)} suggestions={SUGESTOES_FACA} />
                     </Grid>
@@ -509,47 +466,14 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                 </Grid>
             </Box>
         );
-      case 3:
-        return (
-            <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
-                <Typography variant="h6" gutterBottom>Inspirações</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Adicione links ou descrições de conteúdos que servem como referência ou inspiração para a campanha.
-                </Typography>
-                <Grid container spacing={3}>
-                    {briefingData.inspiracoes.map((inspiracao, index) => (
-                        <Grid item xs={12} key={index}>
-                            <TextField
-                                label={`Inspiração ${index + 1}`}
-                                fullWidth
-                                value={inspiracao}
-                                onChange={(e) => handleInspiracaoChange(index, e.target.value)}
-                                inputProps={{ maxLength: 150 }}
-                                helperText={`${(inspiracao || '').length}/150`}
-                            />
-                        </Grid>
-                    ))}
-                </Grid>
-            </Box>
-        );
-      case 4:
+      case 3: // Entregas
         return (
             <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
                 <Typography variant="h6" gutterBottom>Entregas</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Defina os detalhes sobre os conteúdos a serem produzidos e a logística de envio de produtos, se aplicável.
-                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Defina os detalhes sobre os conteúdos a serem produzidos e a logística de envio de produtos, se aplicável.</Typography>
                 <Grid container spacing={3}>
                     <Grid item xs={12} sm={6}>
-                        <TextField
-                            name="quantidadeConteudos"
-                            label="Quantidade de Conteúdos"
-                            type="number"
-                            fullWidth
-                            value={briefingData.quantidadeConteudos || 1}
-                            onChange={handleChange}
-                            InputProps={{ inputProps: { min: 1 } }}
-                        />
+                        <TextField name="quantidadeConteudos" label="Quantidade de Conteúdos" type="number" fullWidth value={briefingData.quantidadeConteudos || 1} onChange={handleChange} InputProps={{ inputProps: { min: 1 } }} />
                     </Grid>
                     <Grid item xs={12} sm={6}>
                         <FormControl component="fieldset">
@@ -572,28 +496,17 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                     </Grid>
                     {briefingData.envioProdutos === 'sim' && (
                         <Grid item xs={12} sm={6}>
-                            <TextField
-                                name="prazoEnvio"
-                                label="Prazo de Envio"
-                                type="date"
-                                fullWidth
-                                value={briefingData.prazoEnvio || ''}
-                                onChange={handleChange}
-                                InputLabelProps={{ shrink: true }}
-                            />
+                            <TextField name="prazoEnvio" label="Prazo de Envio" type="date" fullWidth value={briefingData.prazoEnvio || ''} onChange={handleChange} InputLabelProps={{ shrink: true }} />
                         </Grid>
                     )}
                 </Grid>
             </Box>
         );
-      case 5: {
+      case 4: { // Mensagem
         const textoBaseLength = (briefingData.textoBase || '').length;
         let counterColor = 'green';
-        if (textoBaseLength > 500) {
-            counterColor = 'red';
-        } else if (textoBaseLength > 250) {
-            counterColor = 'yellow';
-        }
+        if (textoBaseLength > 500) counterColor = 'red';
+        else if (textoBaseLength > 250) counterColor = 'yellow';
 
         return (
             <Box sx={{ p: 2, minHeight: 400 }}>
@@ -601,80 +514,34 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                 <Grid container spacing={3}>
                     <Grid item xs={12}>
                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                            <TextField
-                                name="cta"
-                                label="CTA (Call to Action)"
-                                fullWidth
-                                multiline
-                                rows={3}
-                                value={briefingData.cta || ''}
-                                onChange={handleChange}
-                                inputProps={{ maxLength: 250 }}
-                                helperText={`${(briefingData.cta || '').length}/250`}
-                            />
-                            <Tooltip title="Gerar Sugestões de CTA com IA">
-                                <IconButton color="primary" onClick={handleGenerateCtaSuggestions} sx={{ mt: 1 }}>
-                                    <AutoAwesomeIcon />
-                                </IconButton>
-                            </Tooltip>
+                            <TextField name="cta" label="CTA (Call to Action)" fullWidth multiline rows={3} value={briefingData.cta || ''} onChange={handleChange} inputProps={{ maxLength: 250 }} helperText={`${(briefingData.cta || '').length}/250`} />
+                            <Tooltip title="Gerar Sugestões de CTA com IA"><IconButton color="primary" onClick={handleGenerateCtaSuggestions} sx={{ mt: 1 }}><AutoAwesomeIcon /></IconButton></Tooltip>
                         </Box>
                     </Grid>
-
                     {isGeneratingMessage ? (
                         <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
-                            <CircularProgress />
-                            <Typography sx={{ ml: 2 }}>Gerando mensagem...</Typography>
+                            <CircularProgress /><Typography sx={{ ml: 2 }}>Gerando mensagem...</Typography>
                         </Grid>
                     ) : showTextoBase ? (
                         <Grid item xs={12}>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                <Typography variant="subtitle1" component="label" htmlFor="texto-base-field" sx={{ fontWeight: 'medium' }}>
-                                    Texto Base para a Mensagem Principal
-                                </Typography>
+                                <Typography variant="subtitle1" component="label" htmlFor="texto-base-field" sx={{ fontWeight: 'medium' }}>Texto Base para a Mensagem Principal</Typography>
                                 <InfoBox title="Texto Base para a Mensagem Principal" description={textoBaseDescription} />
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                                <TextField
-                                    id="texto-base-field"
-                                    name="textoBase"
-                                    fullWidth
-                                    multiline
-                                    rows={8}
-                                    value={briefingData.textoBase || ''}
-                                    onChange={handleChange}
-                                />
+                                <TextField id="texto-base-field" name="textoBase" fullWidth multiline rows={8} value={briefingData.textoBase || ''} onChange={handleChange} />
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
-                                    <Tooltip title="Revisar Texto Base com IA">
-                                        <span>
-                                        <IconButton color="primary" onClick={handleReviewTextoBase} disabled={!briefingData.textoBase || loadingTextoBaseReview}>
-                                            {loadingTextoBaseReview ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
-                                        </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                    <Tooltip title="Gerar Mensagem Principal com IA (usando este texto como base)">
-                                        <span>
-                                        <IconButton color="secondary" onClick={handleGenerateAIMessage} disabled={!briefingData.textoBase}>
-                                            <AutoAwesomeIcon />
-                                        </IconButton>
-                                        </span>
-                                    </Tooltip>
+                                    <Tooltip title="Revisar Texto Base com IA"><span><IconButton color="primary" onClick={handleReviewTextoBase} disabled={!briefingData.textoBase || loadingTextoBaseReview}>{loadingTextoBaseReview ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}</IconButton></span></Tooltip>
+                                    <Tooltip title="Gerar Mensagem Principal com IA (usando este texto como base)"><span><IconButton color="secondary" onClick={handleGenerateAIMessage} disabled={!briefingData.textoBase}><AutoAwesomeIcon /></IconButton></span></Tooltip>
                                 </Box>
                             </Box>
-                            <Typography variant="caption" sx={{ color: counterColor, fontWeight: 'bold' }}>
-                                {textoBaseLength}
-                            </Typography>
-                            {textoBaseLength > 250 && (
-                                <Alert severity="warning" sx={{ mt: 1 }}>
-                                    O texto final gerado pela IA será limitado a 250 caracteres, mas não se preocupe, todo o conteúdo que você escreveu será considerado.
-                                </Alert>
-                            )}
+                            <Typography variant="caption" sx={{ color: counterColor, fontWeight: 'bold' }}>{textoBaseLength}</Typography>
+                            {textoBaseLength > 250 && (<Alert severity="warning" sx={{ mt: 1 }}>O texto final gerado pela IA será limitado a 250 caracteres, mas não se preocupe, todo o conteúdo que você escreveu será considerado.</Alert>)}
                         </Grid>
                     ) : (
                         <Grid item xs={12}>
                              <Typography variant="subtitle1" gutterBottom>Mensagem Principal (Gerada por IA)</Typography>
-                             <Paper elevation={2} sx={{p: 2, mb: 1}}>
-                                <Typography sx={{whiteSpace: 'pre-wrap'}}>{briefingData.mensagemPrincipal}</Typography>
-                             </Paper>
+                             <Paper elevation={2} sx={{p: 2, mb: 1}}><Typography sx={{whiteSpace: 'pre-wrap'}}>{briefingData.mensagemPrincipal}</Typography></Paper>
                              <Button onClick={() => setShowTextoBase(true)} size="small">Voltar e editar texto base</Button>
                         </Grid>
                     )}
@@ -682,65 +549,103 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
             </Box>
         );
       }
-      case 6: {
+      case 5: // Inspiração
+        return (
+            <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
+                <Typography variant="h6" gutterBottom>Inspirações</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Adicione links de conteúdos que servem como referência. A aplicação tentará gerar uma miniatura da página.</Typography>
+                <Grid container spacing={3}>
+                    {(briefingData.inspiracoes || []).map((inspiracao, index) => (
+                        <Grid item xs={12} key={index}>
+                            <Paper variant="outlined" sx={{ p: 2 }}>
+                                <Grid container spacing={2} alignItems="center">
+                                    <Grid item xs={12} md={9}>
+                                        <TextField
+                                            label="Descrição"
+                                            fullWidth
+                                            value={inspiracao.description}
+                                            onChange={(e) => handleInspiracaoChange(index, 'description', e.target.value)}
+                                            inputProps={{ maxLength: 80 }}
+                                            helperText={`${(inspiracao.description || '').length}/80`}
+                                            sx={{ mb: 2 }}
+                                        />
+                                        <TextField
+                                            label="Link"
+                                            fullWidth
+                                            value={inspiracao.link}
+                                            onChange={(e) => handleInspiracaoChange(index, 'link', e.target.value)}
+                                            onBlur={(e) => handleLinkBlur(index, e.target.value)}
+                                            placeholder="https://exemplo.com"
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} md={3} sx={{ textAlign: 'center' }}>
+                                        <a href={inspiracao.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                                            <Box
+                                                component="img"
+                                                sx={{
+                                                    width: '100%',
+                                                    aspectRatio: '16/9',
+                                                    objectFit: 'cover',
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                    borderRadius: 1,
+                                                    cursor: inspiracao.link ? 'pointer' : 'default',
+                                                    backgroundColor: 'grey.200'
+                                                }}
+                                                src={inspiracao.screenshotUrl || '/src/assets/no-camera.svg'}
+                                                alt={inspiracao.screenshotUrl ? `Screenshot de ${inspiracao.link}` : 'Nenhuma imagem disponível'}
+                                                onError={(e) => { e.target.onerror = null; e.target.src = '/src/assets/no-camera.svg'; }}
+                                            />
+                                        </a>
+                                    </Grid>
+                                    <Grid item xs={12} sx={{ textAlign: 'right' }}>
+                                        <IconButton onClick={() => handleRemoveInspiracao(index)} color="error" size="small"><DeleteIcon /></IconButton>
+                                    </Grid>
+                                </Grid>
+                            </Paper>
+                        </Grid>
+                    ))}
+                    <Grid item xs={12}>
+                        <Button startIcon={<Add />} onClick={handleAddInspiracao}>Adicionar Inspiração</Button>
+                    </Grid>
+                </Grid>
+            </Box>
+        );
+      case 6: { // Finalização
         const selectedMotivacao = MOTIVACOES.find(m => m.id === briefingData.motivacao);
         return (
             <Box sx={{ p: 2, maxHeight: '70vh', overflowY: 'auto' }}>
                 <Typography variant="h6" gutterBottom>Finalização e Revisão</Typography>
                 <Grid container spacing={3}>
                     <Grid item xs={12}>
-                        <TextField
-                            name="name"
-                            label="Nome do Briefing"
-                            fullWidth
-                            value={briefingData.name || ''}
-                            onChange={handleChange}
-                            required
-                            helperText="Dê um nome para identificar facilmente este briefing no futuro."
-                        />
+                        <TextField name="name" label="Nome do Briefing" fullWidth value={briefingData.name || ''} onChange={handleChange} required helperText="Dê um nome para identificar facilmente este briefing no futuro." />
                     </Grid>
                     <Grid item xs={12}><Divider>Resumo do Briefing</Divider></Grid>
-
-                    <Grid item xs={12} md={6}>
-                        <Typography variant="subtitle2" gutterBottom><strong>Objetivo da Campanha</strong></Typography>
-                        <Typography>{selectedMotivacao ? selectedMotivacao.nome : 'Não definido'}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <Typography variant="subtitle2" gutterBottom><strong>Produto, Serviço ou Experiência</strong></Typography>
-                        <Typography>{briefingData.marca || 'N/A'} / {briefingData.produtoServico || 'N/A'}</Typography>
-                    </Grid>
-                    <Grid item xs={12}>
-                        <Typography variant="subtitle2" gutterBottom><strong>Descrição</strong></Typography>
-                        <Typography sx={{ whiteSpace: 'pre-wrap', maxHeight: 80, overflowY: 'auto' }}>{briefingData.descricao || 'N/A'}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <Typography variant="subtitle2" gutterBottom><strong>Tom de Voz</strong></Typography>
-                        <Typography>{(briefingData.tom_de_voz || []).join(', ') || 'N/A'}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <Typography variant="subtitle2" gutterBottom><strong>Tipo de Conteúdo</strong></Typography>
-                        <Typography>{briefingData.egcUgc === 'egc' ? 'EGC' : 'UGC'}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <Typography variant="subtitle2" gutterBottom><strong>Envio de Produtos</strong></Typography>
-                        <Typography>{briefingData.envioProdutos === 'sim' ? `Sim (Prazo: ${briefingData.prazoEnvio || 'N/A'})` : 'Não'}</Typography>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <Typography variant="subtitle2" gutterBottom><strong>Quantidade</strong></Typography>
-                        <Typography>{briefingData.quantidadeConteudos || 1}</Typography>
-                    </Grid>
+                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Objetivo da Campanha</strong></Typography><Typography>{selectedMotivacao ? selectedMotivacao.nome : 'Não definido'}</Typography></Grid>
+                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Produto, Serviço ou Experiência</strong></Typography><Typography>{briefingData.marca || 'N/A'} / {briefingData.produtoServico || 'N/A'}</Typography></Grid>
+                    <Grid item xs={12}><Typography variant="subtitle2" gutterBottom><strong>Descrição</strong></Typography><Typography sx={{ whiteSpace: 'pre-wrap', maxHeight: 80, overflowY: 'auto' }}>{briefingData.descricao || 'N/A'}</Typography></Grid>
+                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Tom de Voz</strong></Typography><Typography>{(briefingData.tom_de_voz || []).join(', ') || 'N/A'}</Typography></Grid>
+                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Tipo de Conteúdo</strong></Typography><Typography>{briefingData.egcUgc === 'egc' ? 'EGC' : 'UGC'}</Typography></Grid>
+                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Envio de Produtos</strong></Typography><Typography>{briefingData.envioProdutos === 'sim' ? `Sim (Prazo: ${briefingData.prazoEnvio || 'N/A'})` : 'Não'}</Typography></Grid>
+                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Quantidade</strong></Typography><Typography>{briefingData.quantidadeConteudos || 1}</Typography></Grid>
                     <Grid item xs={12}>
                         <Typography variant="subtitle2" gutterBottom><strong>Inspirações</strong></Typography>
                         <Box component="ul" sx={{ pl: 2, m: 0 }}>
-                            {briefingData.inspiracoes.filter(i => i).map((i, index) => <li key={index}><Typography variant="body2">{i}</Typography></li>)}
-                            {briefingData.inspiracoes.filter(i => i).length === 0 && <Typography variant="body2">Nenhuma</Typography>}
+                            {(briefingData.inspiracoes || []).filter(i => i.link).map((i, index) => (
+                                <li key={index}>
+                                    <Typography variant="body2">
+                                        {i.description ? `${i.description} (` : ''}
+                                        <a href={i.link} target="_blank" rel="noopener noreferrer">{i.link}</a>
+                                        {i.description ? ')' : ''}
+                                    </Typography>
+                                </li>
+                            ))}
+                            {(briefingData.inspiracoes || []).filter(i => i.link).length === 0 && <Typography variant="body2">Nenhuma</Typography>}
                         </Box>
                     </Grid>
                     <Grid item xs={12}>
                         <Typography variant="subtitle2" gutterBottom><strong>Mensagem Principal</strong></Typography>
-                        <Paper variant="outlined" sx={{ p: 1, whiteSpace: 'pre-wrap', maxHeight: 150, overflowY: 'auto', backgroundColor: 'action.hover' }}>
-                            {briefingData.mensagemPrincipal || 'Nenhuma mensagem gerada.'}
-                        </Paper>
+                        <Paper variant="outlined" sx={{ p: 1, whiteSpace: 'pre-wrap', maxHeight: 150, overflowY: 'auto', backgroundColor: 'action.hover' }}>{briefingData.mensagemPrincipal || 'Nenhuma mensagem gerada.'}</Paper>
                     </Grid>
                 </Grid>
             </Box>
