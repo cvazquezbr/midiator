@@ -71,7 +71,6 @@ export const emptyBriefingWizardData = {
     envioProdutos: false,
     mensagemPrincipal: '',
     cta: '',
-    textoBase: '',
   }],
   // Step 5: Inspiracoes
   inspiracoes: [{ description: '', link: '', screenshotUrl: '' }],
@@ -187,7 +186,6 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         envioProdutos: false,
         mensagemPrincipal: '',
         cta: '',
-        textoBase: '',
       }];
     onBriefingDataChange(prev => ({ ...prev, entregas: newEntregas }));
   };
@@ -380,34 +378,34 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     }
 
     const prompt = `
-      Aja como um especialista em comunicação e marketing. Analise o "Texto Base" fornecido pelo usuário e critique-o com base no seguinte PROMPT:
+      Aja como um especialista em comunicação e marketing. Sua tarefa é gerar 2 sugestões de texto para uma campanha de marketing.
 
-      **Objetivo Principal:**
-      ${motivacaoObj ? motivacaoObj.nome : 'Não definido'}
+      **INSTRUÇÕES PARA SUA ANÁLISE INTERNA (NÃO INCLUA ISSO NA RESPOSTA):**
+      1.  Analise o "Texto Base" do usuário.
+      2.  Avalie se ele está alinhado com o "Objetivo Principal", "DOS", "DON'TS" e "TOM DE VOZ" fornecidos.
+      3.  Use essa análise para criar duas novas versões do texto.
 
-      **Texto do Usuário para Análise:**
-      "${entrega.textoBase}"
+      **CONTEXTO FORNECIDO:**
+      - **Objetivo Principal:** ${motivacaoObj ? motivacaoObj.nome : 'Não definido'}
+      - **Texto Base do Usuário:** "${entrega.mensagemPrincipal}"
+      - **DOS (O que fazer):** ${faca.join(', ')}
+      - **DON'TS (O que não fazer):** ${nao_faca.join(', ')}
+      - **TOM DE VOZ:**
+          - NOME: ${selectedToneName || 'Não definido'}
+          - QUANDO USAR: ${toneOfVoiceData ? toneOfVoiceData.quando : 'N/A'}
+          - COMO SOA: ${toneOfVoiceData ? toneOfVoiceData.como : 'N/A'}
+          - EXEMPLO: ${toneOfVoiceData ? toneOfVoiceData.exemplo : 'N/A'}
 
-      **Sua Tarefa:**
+      **REQUISITOS PARA AS SUGESTÕES GERADAS:**
+      1.  **Aderência:** As sugestões devem estar fortemente alinhadas ao contexto fornecido (Objetivo, Tom de Voz, etc.).
+      2.  **Clareza:** Use uma estrutura de tópicos. As sugestões devem ser sintéticas, objetivas e sem repetições.
+      3.  **Simplicidade:** Cada sugestão deve ter no máximo 3 tópicos.
 
-      1.  **Analise o texto:** Avalie se o texto do usuário está alinhado com:
-
-        1.1. Objetivo principal
-        1.2. DOS - ${faca.join(', ')}
-        1.3. DONTS - ${nao_faca.join(', ')}
-        ${toneOfVoicePromptSection}
-
-      2.  **Gere 2 Sugestões Alternativas:**
-
-        2.1. Crie duas novas versões do "Texto Base" que melhorem o texto original:
-            2.1.1. Maior aderência em relação ao objetivo principal;
-            2.1.2. Maior aderência aos DOS, DONTS e TOM DE VOZ no que se refere ao conteúdo textual;
-            2.1.3. Maximizar a clareza ao usar uma estrutura de tópicos, bem sintéticos e objetivos, sem repetições;
-            2.1.4. Maximizar a simplicidade ao limitar cada alternativa ao limite máximo de 3 tópicos.
-      3.  **Responda em formato JSON:** Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto ou formatação adicional antes ou depois. Use a seguinte estrutura:
-          {
-            "sugestoes": ["Sugestão 1", "Sugestão 2"]
-          }
+      **FORMATO DA RESPOSTA FINAL:**
+      Sua resposta DEVE ser APENAS um objeto JSON válido, sem nenhum texto, markdown, ou qualquer formatação adicional antes ou depois. Use EXATAMENTE a seguinte estrutura:
+      {
+        "sugestoes": ["Sugestão 1 em formato de string", "Sugestão 2 em formato de string"]
+      }
     `;
 
     try {
@@ -701,14 +699,28 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                                         />
                                     </Grid>
                                     <Grid item xs={12}>
-                                        <TextField
-                                          label="Texto Base"
-                                          fullWidth
-                                          multiline
-                                          rows={4}
-                                          value={entrega.textoBase}
-                                          onChange={(e) => handleEntregaChange(index, 'textoBase', e.target.value)}
-                                        />
+                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                            <TextField
+                                              label="Mensagem Principal"
+                                              fullWidth
+                                              multiline
+                                              rows={4}
+                                              value={entrega.mensagemPrincipal}
+                                              onChange={(e) => handleEntregaChange(index, 'mensagemPrincipal', e.target.value)}
+                                              placeholder="Digite o texto base aqui ou clique no botão para gerar sugestões com IA."
+                                            />
+                                            <Tooltip title="Gerar sugestões para a Mensagem Principal com IA">
+                                                <span>
+                                                    <IconButton
+                                                        color="primary"
+                                                        onClick={() => handleGenerateMessageSuggestions(index)}
+                                                        disabled={(loadingMessageSuggestions && activeEntregaIndex === index) || !entrega.mensagemPrincipal}
+                                                    >
+                                                        {loadingMessageSuggestions && activeEntregaIndex === index ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
+                                        </Box>
                                     </Grid>
                                     <Grid item xs={12}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -731,28 +743,6 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                                             </Tooltip>
                                         </Box>
                                     </Grid>
-                                    <Grid item xs={12}>
-                                       <Tooltip title="Gerar sugestões para a Mensagem Principal com IA">
-                                            <span>
-                                                <Button
-                                                    startIcon={loadingMessageSuggestions && activeEntregaIndex === index ? <CircularProgress size={20} /> : <AutoAwesomeIcon />}
-                                                    variant="outlined"
-                                                    onClick={() => handleGenerateMessageSuggestions(index)}
-                                                    disabled={!entrega.textoBase || loadingMessageSuggestions}
-                                                >
-                                                    Gerar Mensagem Principal
-                                                </Button>
-                                            </span>
-                                        </Tooltip>
-                                    </Grid>
-                                    {entrega.mensagemPrincipal && (
-                                      <Grid item xs={12}>
-                                          <Typography variant="subtitle1" gutterBottom>Mensagem Principal (Gerada por IA)</Typography>
-                                          <Paper elevation={0} variant="outlined" sx={{ p: 2, whiteSpace: 'pre-wrap', backgroundColor: 'action.hover' }}>
-                                              {entrega.mensagemPrincipal}
-                                          </Paper>
-                                      </Grid>
-                                    )}
                                 </Grid>
                             </Paper>
                         </Grid>
