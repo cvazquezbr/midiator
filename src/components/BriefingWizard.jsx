@@ -25,6 +25,32 @@ const ctaBestPractices = (
     </Box>
 );
 
+
+export const emptyBriefingWizardData = {
+  name: '',
+  // Step 1: Motivacao
+  motivacao: '',
+  // Step 2: Objeto
+  marca: '',
+  produtoServico: '',
+  descricao: '',
+  // Step 3: Referencias
+  tom_de_voz: [],
+  faca: SUGESTOES_FACA,
+  nao_faca: SUGESTOES_NAO_FACA,
+  quantidadeConteudos: 1,
+  envioProdutos: 'não',
+  prazoEnvio: null,
+  egcUgc: 'ugc',
+  inspiracoes: [{ description: '', link: '', screenshotUrl: '' }],
+  // Step 4: Mensagem
+  objetivo: '',
+  cta: '',
+  mensagemPrincipal: '',
+  textoBase: '',
+  // Step 5: Finalizacao (revisão)
+};
+
 const TONS_DE_VOZ = [
   "Inspirador", "Educativo", "Confiante", "Próximo", "Engraçado / Descontraído",
   "Elegante / Sofisticado", "Inovador", "Institucional", "Cuidadoso / Humano",
@@ -57,31 +83,6 @@ const SUGESTOES_FACA = [
   "Clareza na captação de áudio.",
   "Legende seu vídeo."
 ];
-
-export const emptyBriefingWizardData = {
-  name: '',
-  // Step 1: Motivacao
-  motivacao: '',
-  // Step 2: Objeto
-  marca: '',
-  produtoServico: '',
-  descricao: '',
-  // Step 3: Referencias
-  tom_de_voz: [],
-  faca: SUGESTOES_FACA,
-  nao_faca: SUGESTOES_NAO_FACA,
-  quantidadeConteudos: 1,
-  envioProdutos: 'não',
-  prazoEnvio: null,
-  egcUgc: 'ugc',
-  inspiracoes: [{ description: '', link: '', screenshotUrl: '' }],
-  // Step 4: Mensagem
-  objetivo: '',
-  cta: '',
-  mensagemPrincipal: '',
-  textoBase: '',
-  // Step 5: Finalizacao (revisão)
-};
 
 const ChipInput = ({ label, items, setItems, suggestions }) => {
   const [inputValue, setInputValue] = useState('');
@@ -185,6 +186,10 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   };
 
   const handleAddInspiracao = () => {
+      if ((briefingData.inspiracoes || []).length >= 3) {
+        toast.info('Você pode adicionar no máximo 3 inspirações.');
+        return;
+      }
       const newInspiracoes = [...briefingData.inspiracoes, { description: '', link: '', screenshotUrl: '' }];
       onBriefingDataChange(prev => ({ ...prev, inspiracoes: newInspiracoes }));
   };
@@ -605,7 +610,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                         </Grid>
                     ))}
                     <Grid item xs={12}>
-                        <Button startIcon={<Add />} onClick={handleAddInspiracao}>Adicionar Inspiração</Button>
+                        <Button startIcon={<Add />} onClick={handleAddInspiracao} disabled={(briefingData.inspiracoes || []).length >= 3}>Adicionar Inspiração</Button>
                     </Grid>
                 </Grid>
             </Box>
