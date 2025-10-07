@@ -64,7 +64,9 @@ export const emptyBriefingWizardData = {
   tom_de_voz: [],
   faca: SUGESTOES_FACA,
   nao_faca: SUGESTOES_NAO_FACA,
-  // Step 4: Entregas - This is now an array of objects
+  // Step 4: Saudacao
+  saudacao: '',
+  // Step 5: Entregas - This is now an array of objects
   entregas: [{
     quantidade: 1,
     tipo: '',
@@ -129,6 +131,7 @@ const steps = [
     'Objetivo da Campanha',
     'Produto, Serviço ou Experiência',
     'Guia da Marca',
+    'Saudação',
     'Entregas',
     'Inspiração',
     'Finalização'
@@ -148,6 +151,9 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   const [ctaSuggestionModalOpen, setCtaSuggestionModalOpen] = useState(false);
   const [ctaSuggestions, setCtaSuggestions] = useState([]);
   const [loadingCtaSuggestions, setLoadingCtaSuggestions] = useState(false);
+  const [saudacaoSuggestionModalOpen, setSaudacaoSuggestionModalOpen] = useState(false);
+  const [saudacaoSuggestions, setSaudacaoSuggestions] = useState([]);
+  const [loadingSaudacaoSuggestions, setLoadingSaudacaoSuggestions] = useState(false);
   const [activeEntregaIndex, setActiveEntregaIndex] = useState(null);
 
 
@@ -155,7 +161,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     setActiveStep(initialStep);
   }, [initialStep]);
 
-  const TOTAL_STEPS = 6;
+  const TOTAL_STEPS = 7;
 
   const handleNext = () => setActiveStep(prev => Math.min(prev + 1, TOTAL_STEPS - 1));
   const handleBack = () => setActiveStep(prev => Math.max(prev - 1, 0));
@@ -507,6 +513,69 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     }
   };
 
+  const handleGenerateSaudacaoSuggestions = async () => {
+    if (!geminiAPI.isInitialized) {
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        toast.error('Chave de API do Gemini não configurada.');
+        return;
+      }
+      geminiAPI.initialize(apiKey);
+    }
+
+    setLoadingSaudacaoSuggestions(true);
+    setSaudacaoSuggestions([]);
+
+    const { motivacao, tom_de_voz, faca, nao_faca } = briefingData;
+    const motivacaoObj = MOTIVACOES.find(m => m.id === motivacao);
+    const selectedToneName = (tom_de_voz || [])[0];
+    const toneOfVoiceData = TONS_DE_VOZ_DATA.find(t => t.tom === selectedToneName);
+
+    let toneOfVoicePromptSection = `Tom de Voz: ${selectedToneName || 'Não definido'}`;
+    if (toneOfVoiceData) {
+        toneOfVoicePromptSection += `\n    - QUANDO USAR: ${toneOfVoiceData.quando}\n    - COMO SOA: ${toneOfVoiceData.como}\n    - EXEMPLO: ${toneOfVoiceData.exemplo}`;
+    }
+
+    const prompt = `
+        Aja como um copywriter criativo. Com base no briefing de campanha, gere 3 sugestões de "Saudação" para iniciar a comunicação.
+
+        **Contexto da Campanha:**
+        - **Objetivo Principal:** ${motivacaoObj ? motivacaoObj.nome : 'Não definido'}
+        - **Tom de Voz Desejado:**
+          - ${toneOfVoicePromptSection}
+        - **O que FAZER (DOs):** ${faca.join(', ')}
+        - **O que NÃO FAZER (DON'Ts):** ${nao_faca.join(', ')}
+
+        **Requisitos para as sugestões de Saudação:**
+        1. Cada saudação deve ser curta, impactante e convidativa.
+        2. O texto deve ter no máximo 150 caracteres.
+        3. As sugestões devem ser distintas, explorando diferentes abordagens (ex: uma mais direta, uma mais emocional, uma mais misteriosa).
+        4. A saudação deve estar alinhada com o objetivo e o tom de voz da campanha.
+        5. A resposta DEVE ser um array JSON contendo 3 strings. Exemplo: ["Saudação 1", "Saudação 2", "Saudação 3"]
+
+        Gere o JSON com as 3 sugestões de saudação.
+    `;
+
+    try {
+        const response = await geminiAPI.generateContent(prompt);
+        // More robust JSON extraction
+        const match = response.match(/\[((.|\n)*)\]/);
+        if (match) {
+            const jsonString = match[0];
+            const jsonResponse = JSON.parse(jsonString);
+            setSaudacaoSuggestions(jsonResponse);
+            setSaudacaoSuggestionModalOpen(true);
+        } else {
+            throw new Error("Nenhum array JSON válido encontrado na resposta da IA.");
+        }
+    } catch (error) {
+        toast.error('Erro ao gerar sugestões de Saudação.');
+        console.error("Saudação suggestion error:", error);
+    } finally {
+        setLoadingSaudacaoSuggestions(false);
+    }
+  };
+
   if (!open || !briefingData) return null;
 
   const renderStepContent = (step) => {
@@ -646,7 +715,41 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                 </Grid>
             </Box>
         );
-      case 3: // Entregas
+      case 3: // Saudação
+        return (
+          <Box sx={{ p: 2, minHeight: 400 }}>
+            <Typography variant="h6" gutterBottom>Saudação</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Crie uma saudação inicial para sua campanha. Pense em como você quer que o público se sinta ao ver seu conteúdo pela primeira vez.
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+              <TextField
+                name="saudacao"
+                label="Texto da Saudação"
+                fullWidth
+                multiline
+                rows={3}
+                value={briefingData.saudacao || ''}
+                onChange={handleChange}
+                inputProps={{ maxLength: 150 }}
+                helperText={`${(briefingData.saudacao || '').length}/150`}
+                placeholder="Ex: Olá! Bem-vindo à nossa nova jornada."
+              />
+              <Tooltip title="Gerar sugestões de Saudação com IA">
+                <span>
+                  <IconButton
+                    color="primary"
+                    onClick={handleGenerateSaudacaoSuggestions}
+                    disabled={loadingSaudacaoSuggestions}
+                  >
+                    {loadingSaudacaoSuggestions ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Box>
+          </Box>
+        );
+      case 4: // Entregas
         return (
             <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -750,7 +853,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                 </Grid>
             </Box>
         );
-      case 4: // Inspiração
+      case 5: // Inspiração
         return (
             <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
                 <Typography variant="h6" gutterBottom>Inspirações</Typography>
@@ -812,7 +915,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                 </Grid>
             </Box>
         );
-      case 5: { // Finalização
+      case 6: { // Finalização
         const selectedMotivacao = MOTIVACOES.find(m => m.id === briefingData.motivacao);
         return (
             <Box sx={{ p: 2, maxHeight: '70vh', overflowY: 'auto' }}>
@@ -826,6 +929,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                     <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Produto, Serviço ou Experiência</strong></Typography><Typography>{briefingData.produtoServico || 'N/A'}</Typography></Grid>
                     <Grid item xs={12}><Typography variant="subtitle2" gutterBottom><strong>Descrição</strong></Typography><Typography sx={{ whiteSpace: 'pre-wrap', maxHeight: 80, overflowY: 'auto' }}>{briefingData.descricao || 'N/A'}</Typography></Grid>
                     <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Tom de Voz</strong></Typography><Typography>{(briefingData.tom_de_voz || []).join(', ') || 'N/A'}</Typography></Grid>
+                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Saudação</strong></Typography><Typography sx={{ whiteSpace: 'pre-wrap', maxHeight: 80, overflowY: 'auto' }}>{briefingData.saudacao || 'N/A'}</Typography></Grid>
                     <Grid item xs={12}><Typography variant="subtitle2" gutterBottom><strong>Inspirações</strong></Typography>
                         <Box component="ul" sx={{ pl: 2, m: 0 }}>
                             {(briefingData.inspiracoes || []).filter(i => i.link).map((i, index) => (
@@ -924,6 +1028,21 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         }}
         onRegenerate={() => handleGenerateCtaSuggestions(activeEntregaIndex)}
         loading={loadingCtaSuggestions}
+        error={null}
+      />
+      <SuggestionModal
+        open={saudacaoSuggestionModalOpen}
+        onClose={() => setSaudacaoSuggestionModalOpen(false)}
+        title="Sugestões de Saudação"
+        suggestionTitle="Sugestões Geradas pela IA"
+        suggestionDescription="Clique em uma sugestão para usar no seu briefing."
+        suggestions={saudacaoSuggestions}
+        onSelectSuggestion={(suggestion) => {
+          handleChange({ target: { name: 'saudacao', value: suggestion } });
+          setSaudacaoSuggestionModalOpen(false);
+        }}
+        onRegenerate={handleGenerateSaudacaoSuggestions}
+        loading={loadingSaudacaoSuggestions}
         error={null}
       />
       <ProductSuggestionModal
