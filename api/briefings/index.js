@@ -29,14 +29,18 @@ const handler = async (req, res) => {
     }
   } else if (req.method === 'POST') {
     try {
-      const { name, briefing_data } = await parseBody(req);
-      if (!name || !briefing_data) {
-        return res.status(400).json({ error: 'Briefing name and data are required.' });
+      const briefingData = await parseBody(req);
+      const name = briefingData.nomeBriefing;
+
+      if (!name) {
+        return res.status(400).json({ error: 'Briefing name is required.' });
       }
+
       const { rows } = await query(
         'INSERT INTO briefings (user_id, name, briefing_data) VALUES ($1, $2, $3) RETURNING id, name, briefing_data, updated_at',
-        [userId, name, briefing_data]
+        [userId, name, briefingData]
       );
+
       return res.status(201).json(rows[0]);
     } catch (error) {
       console.error(`[POST /api/briefings] Error for user ${userId}:`, error);
