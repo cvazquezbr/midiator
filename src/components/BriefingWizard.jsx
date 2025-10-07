@@ -146,6 +146,9 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [objectiveReview, setObjectiveReview] = useState(null);
   const [loadingObjectiveReview, setLoadingObjectiveReview] = useState(false);
+  const [textoBaseReviewModalOpen, setTextoBaseReviewModalOpen] = useState(false);
+  const [textoBaseReview, setTextoBaseReview] = useState(null);
+  const [loadingTextoBaseReview, setLoadingTextoBaseReview] = useState(false);
 
   useEffect(() => {
     setActiveStep(initialStep);
@@ -170,6 +173,60 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   };
 
   const objetivoMensagemDescription = "Descreve de forma concisa o propósito do conteúdo solicitado ao participante da missão ou desafio. Deve indicar:\n• A ação desejada do público ou participante (ex: engajar, convidar, informar, ensinar);\n• A dor ou necessidade que o conteúdo pretende atender;\n• O resultado esperado ou valor agregado da ação.\nServe como guia para o criador entender o “porquê” da missão e alinhar o conteúdo com os objetivos da marca, mantendo clareza e foco na mensagem principal.";
+  const textoBaseDescription = "Convidar seus seguidores a participarem do evento aberto ao público CURTINDO O SEXO NA ENVELHESCÊNCIA. O foco é resolver uma das maiores dores de quem ama sexo na menopausa: estar sempre molhadinha - e com a KY Gel isso é possível!";
+
+  const handleReviewTextoBase = async () => {
+    if (!geminiAPI.isInitialized) {
+        const apiKey = getGeminiApiKey();
+        if (!apiKey) {
+            toast.error('Chave de API do Gemini não configurada.');
+            return;
+        }
+        geminiAPI.initialize(apiKey);
+    }
+    setLoadingTextoBaseReview(true);
+    setTextoBaseReview(null);
+
+    const prompt = `
+      Aja como um especialista em comunicação e marketing. Analise o "Texto Base" fornecido pelo usuário e critique-o com base no seguinte objetivo:
+
+      **Objetivo Principal:**
+      "${textoBaseDescription}"
+
+      **Texto do Usuário para Análise:**
+      "${briefingData.textoBase}"
+
+      **Sua Tarefa:**
+      1.  **Analise o texto:** Avalie se o texto do usuário está alinhado com o objetivo principal.
+      2.  **Identifique Pontos Fortes:** Liste os aspectos positivos do texto.
+      3.  **Identifique Pontos a Melhorar:** Aponte o que está faltando ou o que poderia ser mais claro e direto para atingir o objetivo.
+      4.  **Gere 3 Sugestões Alternativas:** Crie três novas versões do "Texto Base" que melhorem o texto original, focando no objetivo.
+      5.  **Responda em formato JSON:** Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto ou formatação adicional antes ou depois. Use a seguinte estrutura:
+          {
+            "pontosFortes": "...",
+            "pontosFracos": "...",
+            "sugestoes": ["Sugestão 1", "Sugestão 2", "Sugestão 3"]
+          }
+    `;
+
+    try {
+        const response = await geminiAPI.generateContent(prompt);
+        const match = response.match(/\{[\s\S]*\}/);
+        if (match) {
+            const jsonString = match[0];
+            const jsonResponse = JSON.parse(jsonString);
+            setTextoBaseReview(jsonResponse);
+            setTextoBaseReviewModalOpen(true);
+        } else {
+            throw new Error("Nenhum JSON válido encontrado na resposta da IA.");
+        }
+    } catch (error) {
+        toast.error('Erro ao gerar revisão do texto base.');
+        console.error("Texto Base review error:", error);
+    } finally {
+        setLoadingTextoBaseReview(false);
+    }
+  };
 
   const handleReviewObjective = async () => {
     if (!geminiAPI.isInitialized) {
@@ -625,27 +682,42 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                         </Grid>
                     ) : showTextoBase ? (
                         <Grid item xs={12}>
-                            <Box sx={{ position: 'relative' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                <Typography variant="subtitle1" component="label" htmlFor="texto-base-field" sx={{ fontWeight: 'medium' }}>
+                                    Texto Base para a Mensagem Principal
+                                </Typography>
+                                <InfoBox title="Texto Base para a Mensagem Principal" description={textoBaseDescription} />
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                                 <TextField
+                                    id="texto-base-field"
                                     name="textoBase"
-                                    label="Texto Base para a Mensagem Principal"
                                     fullWidth
                                     multiline
                                     rows={8}
                                     value={briefingData.textoBase || ''}
                                     onChange={handleChange}
                                 />
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'absolute', bottom: 8, right: 8, width: '95%' }}>
-                                    <Typography variant="caption" sx={{ color: counterColor, fontWeight: 'bold', backgroundColor: 'rgba(255, 255, 255, 0.7)', padding: '0 4px', borderRadius: '4px' }}>
-                                        {textoBaseLength}
-                                    </Typography>
-                                    <Tooltip title="Gerar Mensagem Principal com IA">
-                                        <IconButton color="primary" onClick={handleGenerateAIMessage} disabled={!briefingData.textoBase}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
+                                    <Tooltip title="Revisar Texto Base com IA">
+                                        <span>
+                                        <IconButton color="primary" onClick={handleReviewTextoBase} disabled={!briefingData.textoBase || loadingTextoBaseReview}>
+                                            {loadingTextoBaseReview ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
+                                        </IconButton>
+                                        </span>
+                                    </Tooltip>
+                                    <Tooltip title="Gerar Mensagem Principal com IA (usando este texto como base)">
+                                        <span>
+                                        <IconButton color="secondary" onClick={handleGenerateAIMessage} disabled={!briefingData.textoBase}>
                                             <AutoAwesomeIcon />
                                         </IconButton>
+                                        </span>
                                     </Tooltip>
                                 </Box>
                             </Box>
+                            <Typography variant="caption" sx={{ color: counterColor, fontWeight: 'bold' }}>
+                                {textoBaseLength}
+                            </Typography>
                             {textoBaseLength > 250 && (
                                 <Alert severity="warning" sx={{ mt: 1 }}>
                                     O texto final gerado pela IA será limitado a 250 caracteres, mas não se preocupe, todo o conteúdo que você escreveu será considerado.
@@ -778,6 +850,16 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         onSelectSuggestion={(suggestion) => {
           onBriefingDataChange(prev => ({ ...prev, objetivo: suggestion }));
           setReviewModalOpen(false);
+        }}
+      />
+      <ReviewSuggestionModal
+        open={textoBaseReviewModalOpen}
+        onClose={() => setTextoBaseReviewModalOpen(false)}
+        review={textoBaseReview}
+        originalText={briefingData.textoBase}
+        onSelectSuggestion={(suggestion) => {
+          onBriefingDataChange(prev => ({ ...prev, textoBase: suggestion }));
+          setTextoBaseReviewModalOpen(false);
         }}
       />
     </Dialog>
