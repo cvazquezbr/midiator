@@ -1,6 +1,5 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { toast } from 'sonner';
 
 // Context
 import { CampaignProvider } from './context/CampaignContext';
@@ -15,9 +14,6 @@ import PromptsPage from './pages/PromptsPage';
 // Route Protection
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
-
-// Utils
-import { savePersona } from './utils/personaState';
 
 function App() {
   return (

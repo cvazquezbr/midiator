@@ -64,7 +64,7 @@ export const emptyBriefingWizardData = {
   // Step 1: Motivacao
   motivacao: '',
   // Step 2: Objeto
-  productUrl: '',
+  productUrl: '',  
   produtoServico: '',
   descricao: '',
   // Step 3: Referencias
@@ -189,6 +189,10 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   };
 
   const handleAddInspiracao = () => {
+      if ((briefingData.inspiracoes || []).length >= 3) {
+        toast.info('Você pode adicionar no máximo 3 inspirações.');
+        return;
+      }
       const newInspiracoes = [...briefingData.inspiracoes, { description: '', link: '', screenshotUrl: '' }];
       onBriefingDataChange(prev => ({ ...prev, inspiracoes: newInspiracoes }));
   };
@@ -723,7 +727,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                         </Grid>
                     ))}
                     <Grid item xs={12}>
-                        <Button startIcon={<Add />} onClick={handleAddInspiracao}>Adicionar Inspiração</Button>
+                        <Button startIcon={<Add />} onClick={handleAddInspiracao} disabled={(briefingData.inspiracoes || []).length >= 3}>Adicionar Inspiração</Button>
                     </Grid>
                 </Grid>
             </Box>
