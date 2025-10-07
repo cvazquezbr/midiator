@@ -6,9 +6,23 @@ import { useTheme } from '@mui/material/styles';
 import { Add, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import TomDeVozModal from './TomDeVozModal';
+import SuggestionModal from './SuggestionModal';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 import TextEditor from './TextEditor';
+
+const ctaBestPractices = (
+    <Box>
+        <Typography variant="h6" gutterBottom>Boas Práticas para CTAs</Typography>
+        <Typography variant="body2" gutterBottom><strong>1. Comece com um Verbo de Ação:</strong> Use palavras que incentivem a ação imediata. Ex: "Compre", "Baixe", "Inscreva-se", "Descubra".</Typography>
+        <Typography variant="body2" gutterBottom><strong>2. Crie Urgência e Escassez:</strong> Incentive a ação rápida com termos como "Hoje", "Agora", "Últimas unidades", "Oferta por tempo limitado".</Typography>
+        <Typography variant="body2" gutterBottom><strong>3. Destaque o Benefício:</strong> Deixe claro o que o usuário ganha ao clicar. Ex: "Compre agora e ganhe 20% de desconto" em vez de apenas "Compre agora".</Typography>
+        <Typography variant="body2" gutterBottom><strong>4. Seja Claro e Conciso:</strong> O CTA deve ser curto, direto e fácil de entender. Evite jargões ou frases complexas.</Typography>
+        <Typography variant="body2" gutterBottom><strong>5. Use a Primeira Pessoa:</strong> CTAs como "Quero meu e-book" podem ter uma taxa de conversão maior do que "Baixe o e-book".</Typography>
+        <Typography variant="body2" gutterBottom><strong>6. Teste Cores e Contraste:</strong> O botão de CTA deve se destacar visualmente do resto da página para atrair a atenção.</Typography>
+    </Box>
+);
+
 
 export const emptyBriefingWizardData = {
   name: '',
@@ -120,10 +134,13 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [activeStep, setActiveStep] = useState(initialStep);
-  const [aiModalOpen, setAiModalOpen] = useState(false);
   const [tomDeVozModalOpen, setTomDeVozModalOpen] = useState(false);
   const [isGeneratingMessage, setIsGeneratingMessage] = useState(false);
   const [showTextoBase, setShowTextoBase] = useState(true);
+  const [ctaModalOpen, setCtaModalOpen] = useState(false);
+  const [ctaSuggestions, setCtaSuggestions] = useState([]);
+  const [loadingCtaSuggestions, setLoadingCtaSuggestions] = useState(false);
+  const [ctaError, setCtaError] = useState(null);
 
 
   useEffect(() => {
@@ -146,6 +163,108 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
 
   const handleRichTextChange = (name, value) => {
     onBriefingDataChange(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleGenerateCtaSuggestions = async () => {
+    if (!geminiAPI.isInitialized) {
+        const apiKey = getGeminiApiKey();
+        if (!apiKey) {
+            toast.error('Chave de API do Gemini não configurada.');
+            return;
+        }
+        geminiAPI.initialize(apiKey);
+    }
+
+    setLoadingCtaSuggestions(true);
+    setCtaError(null);
+    setCtaSuggestions([]);
+
+    const { motivacao, marca, produtoServico, descricao, objetivo, tom_de_voz } = briefingData;
+    const motivacaoObj = MOTIVACOES.find(m => m.id === motivacao);
+
+    const prompt = `
+        Aja como um especialista em marketing digital. Com base nas seguintes informações de um briefing de campanha, gere 5 sugestões de Call-to-Action (CTA) curtas e eficazes.
+
+        **Contexto da Campanha:**
+        - **Motivação Principal:** ${motivacaoObj ? motivacaoObj.nome : 'Não definida'} (${motivacaoObj ? motivacaoObj.descricao : ''})
+        - **Marca:** ${marca || 'Não definida'}
+        - **Produto/Serviço:** ${produtoServico || 'Não definido'}
+        - **Descrição do Produto/Serviço:** ${descricao || 'Não definida'}
+        - **Objetivo da Mensagem:** ${objetivo || 'Não definido'}
+        - **Tom de Voz Desejado:** ${(tom_de_voz || []).join(', ') || 'Neutro'}
+
+        **Requisitos para as sugestões de CTA:**
+        1.  Cada CTA deve ser claro, conciso e orientado para a ação.
+        2.  As sugestões devem ser variadas, explorando diferentes gatilhos (urgência, benefício, curiosidade, etc.).
+        3.  O formato da resposta deve ser um array JSON de strings. Exemplo: ["CTA 1", "CTA 2", "CTA 3", "CTA 4", "CTA 5"]
+
+        Gere o JSON com as 5 sugestões de CTA.
+    `;
+
+    try {
+        const response = await geminiAPI.generateContent(prompt);
+        // Robustly find the JSON array within the response string
+        const match = response.match(/\[(.*?)\]/s);
+        if (match) {
+            const jsonString = match[0];
+            const jsonResponse = JSON.parse(jsonString);
+            setCtaSuggestions(jsonResponse);
+            setCtaModalOpen(true);
+        } else {
+            throw new Error("Nenhum array JSON válido encontrado na resposta da IA.");
+        }
+    } catch (error) {
+        toast.error('Erro ao gerar sugestões de CTA.');
+        console.error("CTA suggestion error:", error);
+        setCtaError('Não foi possível gerar as sugestões. Tente novamente.');
+    } finally {
+        setLoadingCtaSuggestions(false);
+    }
+  };
+
+  const handleGenerateAIMessage = async () => {
+    if (!geminiAPI.isInitialized) {
+        const apiKey = getGeminiApiKey();
+        if (!apiKey) {
+            toast.error('Chave de API do Gemini não configurada.');
+            return;
+        }
+        geminiAPI.initialize(apiKey);
+    }
+
+    const { textoBase, cta, faca, nao_faca } = briefingData;
+    if (!textoBase) {
+        toast.error('O texto base não pode estar vazio.');
+        return;
+    }
+
+    const prompt = `
+        Elabore uma proposta de "Mensagem Principal" a partir do "Texto Base" a seguir.
+
+        Texto Base: "${textoBase}"
+
+        Siga estas regras rigorosamente:
+        1. O texto final deve ter no máximo 250 caracteres.
+        2. A mensagem deve ser dividida em no máximo 4 parágrafos, cada um com até 80 caracteres.
+        3. Não pode haver repetições de palavras ou ideias.
+        4. A mensagem deve conter apenas UM número (ex: "1", "uma vez").
+        5. A mensagem NÃO PODE conter NADA que esteja no CTA ("${cta}"), nos DOs ("${faca.join(', ')}") ou nos DON'Ts ("${nao_faca.join(', ')}").
+
+        Retorne apenas o texto da mensagem principal, sem formatação extra, sem introduções ou observações.
+    `;
+
+    setIsGeneratingMessage(true);
+    try {
+        const response = await geminiAPI.generateContent(prompt);
+        onBriefingDataChange(prev => ({ ...prev, mensagemPrincipal: response.trim() }));
+        setShowTextoBase(false);
+        toast.success('Mensagem principal gerada com sucesso!');
+    } catch (error) {
+        toast.error('Erro ao gerar mensagem com IA.');
+        console.error("AI message generation error:", error);
+    } finally {
+        setIsGeneratingMessage(false);
+    }
   };
 
   if (!open || !briefingData) return null;
@@ -379,51 +498,6 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
             counterColor = 'yellow';
         }
 
-        const handleGenerateAIMessage = async () => {
-            if (!geminiAPI.isInitialized) {
-                const apiKey = getGeminiApiKey();
-                if (!apiKey) {
-                    toast.error('Chave de API do Gemini não configurada.');
-                    return;
-                }
-                geminiAPI.initialize(apiKey);
-            }
-
-            const { textoBase, cta, faca, nao_faca } = briefingData;
-            if (!textoBase) {
-                toast.error('O texto base não pode estar vazio.');
-                return;
-            }
-
-            const prompt = `
-                Elabore uma proposta de "Mensagem Principal" a partir do "Texto Base" a seguir.
-
-                Texto Base: "${textoBase}"
-
-                Siga estas regras rigorosamente:
-                1. O texto final deve ter no máximo 250 caracteres.
-                2. A mensagem deve ser dividida em no máximo 4 parágrafos, cada um com até 80 caracteres.
-                3. Não pode haver repetições de palavras ou ideias.
-                4. A mensagem deve conter apenas UM número (ex: "1", "uma vez").
-                5. A mensagem NÃO PODE conter NADA que esteja no CTA ("${cta}"), nos DOs ("${faca.join(', ')}") ou nos DON'Ts ("${nao_faca.join(', ')}").
-
-                Retorne apenas o texto da mensagem principal, sem formatação extra, sem introduções ou observações.
-            `;
-
-            setIsGeneratingMessage(true);
-            try {
-                const response = await geminiAPI.generateContent(prompt);
-                onBriefingDataChange(prev => ({ ...prev, mensagemPrincipal: response.trim() }));
-                setShowTextoBase(false);
-                toast.success('Mensagem principal gerada com sucesso!');
-            } catch (error) {
-                toast.error('Erro ao gerar mensagem com IA.');
-                console.error("AI message generation error:", error);
-            } finally {
-                setIsGeneratingMessage(false);
-            }
-        };
-
         return (
             <Box sx={{ p: 2, minHeight: 400 }}>
                 <Typography variant="h6" gutterBottom>Mensagem Principal da Campanha</Typography>
@@ -442,7 +516,24 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                         />
                     </Grid>
                     <Grid item xs={12}>
-                        <TextField name="cta" label="CTA (Call to Action)" fullWidth value={briefingData.cta || ''} onChange={handleChange} />
+                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                            <TextField
+                                name="cta"
+                                label="CTA (Call to Action)"
+                                fullWidth
+                                multiline
+                                rows={3}
+                                value={briefingData.cta || ''}
+                                onChange={handleChange}
+                                inputProps={{ maxLength: 250 }}
+                                helperText={`${(briefingData.cta || '').length}/250`}
+                            />
+                            <Tooltip title="Gerar Sugestões de CTA com IA">
+                                <IconButton color="primary" onClick={handleGenerateCtaSuggestions} sx={{ mt: 1 }}>
+                                    <AutoAwesomeIcon />
+                                </IconButton>
+                            </Tooltip>
+                        </Box>
                     </Grid>
 
                     {isGeneratingMessage ? (
@@ -580,6 +671,22 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         onClose={() => setTomDeVozModalOpen(false)}
         selectedTones={briefingData.tom_de_voz || []}
         onSave={(newTones) => handleChipChange('tom_de_voz', newTones)}
+      />
+      <SuggestionModal
+        open={ctaModalOpen}
+        onClose={() => setCtaModalOpen(false)}
+        title="Sugestões de Call-to-Action (CTA)"
+        suggestionTitle="Sugestões Geradas pela IA"
+        suggestionDescription="Clique em uma sugestão para usá-la no seu briefing."
+        bestPractices={ctaBestPractices}
+        suggestions={ctaSuggestions}
+        onSelectSuggestion={(suggestion) => {
+          onBriefingDataChange(prev => ({ ...prev, cta: suggestion }));
+          setCtaModalOpen(false);
+        }}
+        onRegenerate={handleGenerateCtaSuggestions}
+        loading={loadingCtaSuggestions}
+        error={ctaError}
       />
     </Dialog>
   );
