@@ -196,7 +196,15 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         **Requisitos para as sugestões de CTA:**
         1.  Cada CTA deve ser claro, conciso e orientado para a ação.
         2.  As sugestões devem ser variadas, explorando diferentes gatilhos (urgência, benefício, curiosidade, etc.).
-        3.  O formato da resposta deve ser um array JSON de strings. Exemplo: ["CTA 1", "CTA 2", "CTA 3", "CTA 4", "CTA 5"]
+        3.  O CTA deve estar alinhado com a motivação e o objetivo da campanha.
+        4.  O CTA deve ter no mínimo 8 palavras e no máximo 15 palavras.
+        5.  Evite jargões ou termos muito técnicos; o CTA deve ser facilmente compreendido pelo público geral.
+        6.  Não use pontuação excessiva (ex: "Compre agora!!!" ou "Clique aqui...").
+        7.  Não repita palavras ou ideias entre os CTAs.
+        8.  Não use mais de um número em cada CTA (ex: "Compre 1 e ganhe 1" não é permitido).
+        9.  Não inclua nenhum elemento que não seja texto (ex: emojis, símbolos).
+        10. Não use frases que já foram usadas em outros CTAs famosos ou clichês.
+        11.  O formato da resposta deve ser um array JSON de strings. Exemplo: ["CTA 1", "CTA 2", "CTA 3", "CTA 4", "CTA 5"]
 
         Gere o JSON com as 5 sugestões de CTA.
     `;
