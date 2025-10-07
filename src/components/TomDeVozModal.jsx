@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Radio, RadioGroup, Paper
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, Radio, RadioGroup, Paper, Grid, Typography, Box
 } from '@mui/material';
 
 const TONS_DE_VOZ_DATA = [
@@ -34,44 +34,47 @@ const TomDeVozModal = ({ open, onClose, selectedTones, onSave }) => {
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
       <DialogTitle>Selecione o Tom de Voz</DialogTitle>
       <DialogContent>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell padding="checkbox"></TableCell>
-                <TableCell>Tom de Voz</TableCell>
-                <TableCell>Quando Usar</TableCell>
-                <TableCell>Como Soa</TableCell>
-                <TableCell>Exemplo de Frase</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              <RadioGroup
-                aria-label="tom-de-voz"
-                value={localSelection[0] || ''}
-                onChange={(e) => handleToggle(e.target.value)}
-              >
-                {TONS_DE_VOZ_DATA.map((row) => (
-                  <TableRow
-                    key={row.tom}
-                    hover
-                    onClick={() => handleToggle(row.tom)}
-                    selected={localSelection.includes(row.tom)}
-                    sx={{ cursor: 'pointer' }}
-                  >
-                    <TableCell padding="checkbox">
-                      <Radio value={row.tom} />
-                    </TableCell>
-                    <TableCell>{row.tom}</TableCell>
-                    <TableCell>{row.quando}</TableCell>
-                    <TableCell>{row.como}</TableCell>
-                    <TableCell>{row.exemplo}</TableCell>
-                  </TableRow>
-                ))}
-              </RadioGroup>
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <RadioGroup
+          aria-label="tom-de-voz"
+          value={localSelection[0] || ''}
+          onChange={(e) => handleToggle(e.target.value)}
+        >
+          <Grid container spacing={2}>
+            {TONS_DE_VOZ_DATA.map((item) => (
+              <Grid item xs={12} md={6} key={item.tom}>
+                <Paper
+                  variant="outlined"
+                  onClick={() => handleToggle(item.tom)}
+                  sx={{
+                    p: 2,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    border: 2,
+                    borderColor: localSelection.includes(item.tom) ? 'primary.main' : 'divider',
+                    backgroundColor: localSelection.includes(item.tom) ? 'action.selected' : 'background.paper',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Radio value={item.tom} checked={localSelection.includes(item.tom)} />
+                    <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+                      {item.tom}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ pl: 4 }}>
+                    <Typography variant="caption" color="text.secondary" display="block">QUANDO USAR</Typography>
+                    <Typography variant="body2" gutterBottom>{item.quando}</Typography>
+                    <Typography variant="caption" color="text.secondary" display="block">COMO SOA</Typography>
+                    <Typography variant="body2" gutterBottom>{item.como}</Typography>
+                    <Typography variant="caption" color="text.secondary" display="block">EXEMPLO</Typography>
+                    <Typography variant="body2" sx={{ fontStyle: 'italic' }}>{item.exemplo}</Typography>
+                  </Box>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        </RadioGroup>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
