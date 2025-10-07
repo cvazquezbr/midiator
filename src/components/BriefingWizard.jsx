@@ -616,20 +616,20 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                                     </Grid>
                                     <Grid item xs={12}>
                                         <TextField
-                                          label="CTA (Call to Action)"
-                                          fullWidth
-                                          value={entrega.cta}
-                                          onChange={(e) => handleEntregaChange(index, 'cta', e.target.value)}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <TextField
                                           label="Texto Base"
                                           fullWidth
                                           multiline
                                           rows={4}
                                           value={entrega.textoBase}
                                           onChange={(e) => handleEntregaChange(index, 'textoBase', e.target.value)}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12}>
+                                        <TextField
+                                          label="CTA (Call to Action)"
+                                          fullWidth
+                                          value={entrega.cta}
+                                          onChange={(e) => handleEntregaChange(index, 'cta', e.target.value)}
                                         />
                                     </Grid>
                                     <Grid item xs={12}>
