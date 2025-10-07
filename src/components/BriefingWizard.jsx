@@ -36,8 +36,8 @@ export const emptyBriefingWizardData = {
   descricao: '',
   // Step 3: Referencias
   tom_de_voz: [],
-  faca: [],
-  nao_faca: [],
+  faca: SUGESTOES_FACA,
+  nao_faca: SUGESTOES_NAO_FACA,
   quantidadeConteudos: 1,
   envioProdutos: 'não',
   prazoEnvio: null,
@@ -133,9 +133,9 @@ const ChipInput = ({ label, items, setItems, suggestions }) => {
 };
 
 const steps = [
-    'Motivação',
-    'Objeto',
-    'Referências',
+    'Objetivo da Campanha',
+    'Produto, Serviço ou Experiência',
+    'Guia da Marca',
     'Inspiração',
     'Entregas',
     'Mensagem',
@@ -153,9 +153,6 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   const [ctaSuggestions, setCtaSuggestions] = useState([]);
   const [loadingCtaSuggestions, setLoadingCtaSuggestions] = useState(false);
   const [ctaError, setCtaError] = useState(null);
-  const [reviewModalOpen, setReviewModalOpen] = useState(false);
-  const [objectiveReview, setObjectiveReview] = useState(null);
-  const [loadingObjectiveReview, setLoadingObjectiveReview] = useState(false);
   const [textoBaseReviewModalOpen, setTextoBaseReviewModalOpen] = useState(false);
   const [textoBaseReview, setTextoBaseReview] = useState(null);
   const [loadingTextoBaseReview, setLoadingTextoBaseReview] = useState(false);
@@ -244,59 +241,6 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     }
   };
 
-  const handleReviewObjective = async () => {
-    if (!geminiAPI.isInitialized) {
-        const apiKey = getGeminiApiKey();
-        if (!apiKey) {
-            toast.error('Chave de API do Gemini não configurada.');
-            return;
-        }
-        geminiAPI.initialize(apiKey);
-    }
-    setLoadingObjectiveReview(true);
-    setObjectiveReview(null);
-
-    const prompt = `
-      Aja como um especialista em comunicação e marketing. Analise o "Objetivo da Mensagem" fornecido pelo usuário e critique-o com base nos critérios a seguir.
-
-      **Critérios de Avaliação:**
-      ${objetivoMensagemDescription}
-
-      **Texto do Usuário para Análise:**
-      "${briefingData.objetivo}"
-
-      **Sua Tarefa:**
-      1.  **Analise o texto:** Avalie se o texto do usuário atende aos critérios de forma clara e objetiva.
-      2.  **Identifique Pontos Fortes:** Liste os aspectos positivos do texto que já estão alinhados com os critérios.
-      3.  **Identifique Pontos a Melhorar:** Aponte o que está faltando ou o que poderia ser mais claro, específico ou persuasivo.
-      4.  **Gere 3 Sugestões Alternativas:** Crie três novas versões do "Objetivo da Mensagem" que melhorem o texto original, aplicando diretamente os critérios. As sugestões devem ser concisas e práticas.
-      5.  **Responda em formato JSON:** Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto ou formatação adicional antes ou depois. Use a seguinte estrutura:
-          {
-            "pontosFortes": "...",
-            "pontosFracos": "...",
-            "sugestoes": ["Sugestão 1", "Sugestão 2", "Sugestão 3"]
-          }
-    `;
-
-    try {
-        const response = await geminiAPI.generateContent(prompt);
-        const match = response.match(/\{[\s\S]*\}/);
-        if (match) {
-            const jsonString = match[0];
-            const jsonResponse = JSON.parse(jsonString);
-            setObjectiveReview(jsonResponse);
-            setReviewModalOpen(true);
-        } else {
-            throw new Error("Nenhum JSON válido encontrado na resposta da IA.");
-        }
-    } catch (error) {
-        toast.error('Erro ao gerar revisão do objetivo.');
-        console.error("Objective review error:", error);
-    } finally {
-        setLoadingObjectiveReview(false);
-    }
-  };
-
   const handleGenerateCtaSuggestions = async () => {
     if (!geminiAPI.isInitialized) {
         const apiKey = getGeminiApiKey();
@@ -311,18 +255,17 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     setCtaError(null);
     setCtaSuggestions([]);
 
-    const { motivacao, marca, produtoServico, descricao, objetivo, tom_de_voz } = briefingData;
+    const { motivacao, marca, produtoServico, descricao, tom_de_voz } = briefingData;
     const motivacaoObj = MOTIVACOES.find(m => m.id === motivacao);
 
     const prompt = `
         Aja como um especialista em marketing digital. Com base nas seguintes informações de um briefing de campanha, gere 5 sugestões de Call-to-Action (CTA) curtas e eficazes.
 
         **Contexto da Campanha:**
-        - **Motivação Principal:** ${motivacaoObj ? motivacaoObj.nome : 'Não definida'} (${motivacaoObj ? motivacaoObj.descricao : ''})
+        - **Objetivo Principal:** ${motivacaoObj ? motivacaoObj.nome : 'Não definida'} (${motivacaoObj ? motivacaoObj.descricao : ''})
         - **Marca:** ${marca || 'Não definida'}
         - **Produto/Serviço:** ${produtoServico || 'Não definido'}
         - **Descrição do Produto/Serviço:** ${descricao || 'Não definida'}
-        - **Objetivo da Mensagem:** ${objetivo || 'Não definido'}
         - **Tom de Voz Desejado:** ${(tom_de_voz || []).join(', ') || 'Neutro'}
 
         **Requisitos para as sugestões de CTA:**
@@ -457,7 +400,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         }
         return (
           <Box sx={{ p: 2, minHeight: 400 }}>
-            <Typography variant="h6" gutterBottom>Qual é a principal motivação da sua campanha?</Typography>
+            <Typography variant="h6" gutterBottom>Qual é o principal objetivo da sua campanha?</Typography>
             <TableContainer component={Paper}>
               <Table aria-label="tabela de motivações">
                 <TableHead>
@@ -497,7 +440,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
       case 1:
         return (
           <Box sx={{ p: 2, minHeight: 400 }}>
-            <Typography variant="h6" gutterBottom>Qual é o objeto da sua campanha?</Typography>
+            <Typography variant="h6" gutterBottom>Qual é o produto, serviço ou experiência da sua campanha?</Typography>
             <Grid container spacing={3}>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -543,7 +486,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
       case 2:
         return (
             <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
-                <Typography variant="h6" gutterBottom>Referências e Diretrizes</Typography>
+                <Typography variant="h6" gutterBottom>Guia da Marca</Typography>
                 <Grid container spacing={3}>
                     {/* Tom de Voz */}
                     <Grid item xs={12}>
@@ -657,34 +600,6 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                 <Typography variant="h6" gutterBottom>Mensagem Principal da Campanha</Typography>
                 <Grid container spacing={3}>
                     <Grid item xs={12}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <Typography variant="subtitle1" component="label" htmlFor="objetivo-field" sx={{ fontWeight: 'medium' }}>
-                                Objetivo da Mensagem
-                            </Typography>
-                            <InfoBox title="Objetivo da Mensagem" description={objetivoMensagemDescription} />
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                            <TextField
-                                id="objetivo-field"
-                                name="objetivo"
-                                fullWidth
-                                multiline
-                                rows={3}
-                                value={briefingData.objetivo || ''}
-                                onChange={handleChange}
-                                inputProps={{ maxLength: 250 }}
-                                helperText={`${(briefingData.objetivo || '').length}/250`}
-                            />
-                            <Tooltip title="Revisar Objetivo com IA">
-                                <span>
-                                <IconButton color="primary" onClick={handleReviewObjective} disabled={!briefingData.objetivo || loadingObjectiveReview} sx={{ mt: 1 }}>
-                                    {loadingObjectiveReview ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
-                                </IconButton>
-                                </span>
-                            </Tooltip>
-                        </Box>
-                    </Grid>
-                    <Grid item xs={12}>
                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                             <TextField
                                 name="cta"
@@ -787,15 +702,15 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                     <Grid item xs={12}><Divider>Resumo do Briefing</Divider></Grid>
 
                     <Grid item xs={12} md={6}>
-                        <Typography variant="subtitle2" gutterBottom><strong>Motivação</strong></Typography>
+                        <Typography variant="subtitle2" gutterBottom><strong>Objetivo da Campanha</strong></Typography>
                         <Typography>{selectedMotivacao ? selectedMotivacao.nome : 'Não definido'}</Typography>
                     </Grid>
                     <Grid item xs={12} md={6}>
-                        <Typography variant="subtitle2" gutterBottom><strong>Marca / Produto</strong></Typography>
+                        <Typography variant="subtitle2" gutterBottom><strong>Produto, Serviço ou Experiência</strong></Typography>
                         <Typography>{briefingData.marca || 'N/A'} / {briefingData.produtoServico || 'N/A'}</Typography>
                     </Grid>
                     <Grid item xs={12}>
-                        <Typography variant="subtitle2" gutterBottom><strong>Descrição do Objeto</strong></Typography>
+                        <Typography variant="subtitle2" gutterBottom><strong>Descrição</strong></Typography>
                         <Typography sx={{ whiteSpace: 'pre-wrap', maxHeight: 80, overflowY: 'auto' }}>{briefingData.descricao || 'N/A'}</Typography>
                     </Grid>
                     <Grid item xs={12} md={6}>
@@ -878,16 +793,6 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         onRegenerate={handleGenerateCtaSuggestions}
         loading={loadingCtaSuggestions}
         error={ctaError}
-      />
-      <ReviewSuggestionModal
-        open={reviewModalOpen}
-        onClose={() => setReviewModalOpen(false)}
-        review={objectiveReview}
-        originalText={briefingData.objetivo}
-        onSelectSuggestion={(suggestion) => {
-          onBriefingDataChange(prev => ({ ...prev, objetivo: suggestion }));
-          setReviewModalOpen(false);
-        }}
       />
       <ReviewSuggestionModal
         open={textoBaseReviewModalOpen}
