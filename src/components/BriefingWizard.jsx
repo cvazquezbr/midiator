@@ -25,32 +25,6 @@ const ctaBestPractices = (
     </Box>
 );
 
-
-export const emptyBriefingWizardData = {
-  name: '',
-  // Step 1: Motivacao
-  motivacao: '',
-  // Step 2: Objeto
-  marca: '',
-  produtoServico: '',
-  descricao: '',
-  // Step 3: Referencias
-  tom_de_voz: [],
-  faca: SUGESTOES_FACA,
-  nao_faca: SUGESTOES_NAO_FACA,
-  quantidadeConteudos: 1,
-  envioProdutos: 'não',
-  prazoEnvio: null,
-  egcUgc: 'ugc',
-  inspiracoes: ['', '', ''],
-  // Step 4: Mensagem
-  objetivo: '',
-  cta: '',
-  mensagemPrincipal: '',
-  textoBase: '',
-  // Step 5: Finalizacao (revisão)
-};
-
 const TONS_DE_VOZ = [
   "Inspirador", "Educativo", "Confiante", "Próximo", "Engraçado / Descontraído",
   "Elegante / Sofisticado", "Inovador", "Institucional", "Cuidadoso / Humano",
@@ -83,6 +57,31 @@ const SUGESTOES_FACA = [
   "Clareza na captação de áudio.",
   "Legende seu vídeo."
 ];
+
+export const emptyBriefingWizardData = {
+  name: '',
+  // Step 1: Motivacao
+  motivacao: '',
+  // Step 2: Objeto
+  marca: '',
+  produtoServico: '',
+  descricao: '',
+  // Step 3: Referencias
+  tom_de_voz: [],
+  faca: SUGESTOES_FACA,
+  nao_faca: SUGESTOES_NAO_FACA,
+  quantidadeConteudos: 1,
+  envioProdutos: 'não',
+  prazoEnvio: null,
+  egcUgc: 'ugc',
+  inspiracoes: ['', '', ''],
+  // Step 4: Mensagem
+  objetivo: '',
+  cta: '',
+  mensagemPrincipal: '',
+  textoBase: '',
+  // Step 5: Finalizacao (revisão)
+};
 
 const ChipInput = ({ label, items, setItems, suggestions }) => {
   const [inputValue, setInputValue] = useState('');
