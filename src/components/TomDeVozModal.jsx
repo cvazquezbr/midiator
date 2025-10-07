@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Checkbox, Paper
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Radio, RadioGroup, Paper
 } from '@mui/material';
 
 const TONS_DE_VOZ_DATA = [
@@ -46,20 +46,29 @@ const TomDeVozModal = ({ open, onClose, selectedTones, onSave }) => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {TONS_DE_VOZ_DATA.map((row) => (
-                <TableRow key={row.tom} hover onClick={() => handleToggle(row.tom)}>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      color="primary"
-                      checked={localSelection.includes(row.tom)}
-                    />
-                  </TableCell>
-                  <TableCell>{row.tom}</TableCell>
-                  <TableCell>{row.quando}</TableCell>
-                  <TableCell>{row.como}</TableCell>
-                  <TableCell>{row.exemplo}</TableCell>
-                </TableRow>
-              ))}
+              <RadioGroup
+                aria-label="tom-de-voz"
+                value={localSelection[0] || ''}
+                onChange={(e) => handleToggle(e.target.value)}
+              >
+                {TONS_DE_VOZ_DATA.map((row) => (
+                  <TableRow
+                    key={row.tom}
+                    hover
+                    onClick={() => handleToggle(row.tom)}
+                    selected={localSelection.includes(row.tom)}
+                    sx={{ cursor: 'pointer' }}
+                  >
+                    <TableCell padding="checkbox">
+                      <Radio value={row.tom} />
+                    </TableCell>
+                    <TableCell>{row.tom}</TableCell>
+                    <TableCell>{row.quando}</TableCell>
+                    <TableCell>{row.como}</TableCell>
+                    <TableCell>{row.exemplo}</TableCell>
+                  </TableRow>
+                ))}
+              </RadioGroup>
             </TableBody>
           </Table>
         </TableContainer>
