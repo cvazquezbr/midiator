@@ -935,8 +935,19 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
             } else {
                 text += "Tom de Voz: Não definido\n";
             }
-            text += `\nDOs: ${(briefingData.faca || []).join(', ') || 'Nenhum'}\n`;
-            text += `DON'Ts: ${(briefingData.nao_faca || []).join(', ') || 'Nenhum'}\n\n`;
+            const formatListItems = (items) => {
+                if (!items || !items.length) {
+                    return "  Nenhum.\n";
+                }
+                return items.map((item, index) => `  ${item}${index === items.length - 1 ? '.' : ';'}`).join('\n') + '\n';
+            };
+
+            text += "\nDOs:\n";
+            text += formatListItems(briefingData.faca);
+
+            text += "DON'Ts:\n";
+            text += formatListItems(briefingData.nao_faca);
+            text += "\n";
 
             text += "Entregas;\n";
             (briefingData.entregas || []).forEach((entrega, index) => {
