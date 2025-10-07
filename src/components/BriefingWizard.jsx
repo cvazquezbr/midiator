@@ -920,52 +920,68 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         );
       case 6: { // Finalização
         const selectedMotivacao = MOTIVACOES.find(m => m.id === briefingData.motivacao);
+
+        const generateBriefingText = () => {
+            let text = `Saudação;\n${briefingData.saudacao || 'Não definida'}\n\n`;
+            text += `Objetivo;\n${selectedMotivacao ? selectedMotivacao.nome : 'Não definido'}\n\n`;
+            text += `Produto com sua descrição;\n${briefingData.produtoServico || 'N/A'}\n${briefingData.descricao || 'N/A'}\n\n`;
+
+            text += "Guia da Marca com os detalhes do tom de voz escolhido, os DO e os DONTS\n";
+            const selectedToneName = (briefingData.tom_de_voz || [])[0];
+            const toneOfVoiceData = TONS_DE_VOZ_DATA.find(t => t.tom === selectedToneName);
+            if (toneOfVoiceData) {
+                text += `Tom de Voz: ${toneOfVoiceData.tom}\n`;
+                text += `  - Quando usar: ${toneOfVoiceData.quando}\n`;
+                text += `  - Como soa: ${toneOfVoiceData.como}\n`;
+                text += `  - Exemplo: ${toneOfVoiceData.exemplo}\n`;
+            } else {
+                text += "Tom de Voz: Não definido\n";
+            }
+            text += `\nDOs: ${(briefingData.faca || []).join(', ') || 'Nenhum'}\n`;
+            text += `DON'Ts: ${(briefingData.nao_faca || []).join(', ') || 'Nenhum'}\n\n`;
+
+            text += "Entregas;\n";
+            (briefingData.entregas || []).forEach((entrega, index) => {
+                text += `- Entrega No. ${index + 1}\n`;
+                text += `-- Quantidade: ${entrega.quantidade}, Tipo: ${entrega.tipo || 'N/A'}, Envio para entrega: ${entrega.envioProdutos ? 'Sim' : 'Não'}\n`;
+                text += `-- Mensagem Principal:\n   ${entrega.mensagemPrincipal || 'N/A'}\n`;
+                text += `-- CTA: ${entrega.cta || 'N/A'}\n`;
+            });
+            text += "\n";
+
+            text += "Inspirações;\n";
+            const inspirations = (briefingData.inspiracoes || []).filter(i => i.link);
+            if (inspirations.length > 0) {
+                inspirations.forEach(i => {
+                    text += `${i.description ? `${i.description} (${i.link})` : i.link}\n`;
+                });
+            } else {
+                text += "Nenhuma inspiração fornecida.\n";
+            }
+            text += "\n";
+
+            text += "Próximos Passos;\n"; // Placeholder for next steps if any
+
+            return text;
+        };
+
+        const briefingText = generateBriefingText();
+
         return (
             <Box sx={{ p: 2, maxHeight: '70vh', overflowY: 'auto' }}>
                 <Typography variant="h6" gutterBottom>Finalização e Revisão</Typography>
-                <Grid container spacing={3}>
+                <Grid container spacing={2}>
                     <Grid item xs={12}>
                         <TextField name="name" label="Nome do Briefing" fullWidth value={briefingData.name || ''} onChange={handleChange} required helperText="Dê um nome para identificar facilmente este briefing no futuro." />
                     </Grid>
-                    <Grid item xs={12}><Divider>Resumo do Briefing</Divider></Grid>
-                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Objetivo da Campanha</strong></Typography><Typography>{selectedMotivacao ? selectedMotivacao.nome : 'Não definido'}</Typography></Grid>
-                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Produto, Serviço ou Experiência</strong></Typography><Typography>{briefingData.produtoServico || 'N/A'}</Typography></Grid>
-                    <Grid item xs={12}><Typography variant="subtitle2" gutterBottom><strong>Descrição</strong></Typography><Typography sx={{ whiteSpace: 'pre-wrap', maxHeight: 80, overflowY: 'auto' }}>{briefingData.descricao || 'N/A'}</Typography></Grid>
-                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Tom de Voz</strong></Typography><Typography>{(briefingData.tom_de_voz || []).join(', ') || 'N/A'}</Typography></Grid>
-                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Saudação</strong></Typography><Typography sx={{ whiteSpace: 'pre-wrap', maxHeight: 80, overflowY: 'auto' }}>{briefingData.saudacao || 'N/A'}</Typography></Grid>
-                    <Grid item xs={12}><Typography variant="subtitle2" gutterBottom><strong>Inspirações</strong></Typography>
-                        <Box component="ul" sx={{ pl: 2, m: 0 }}>
-                            {(briefingData.inspiracoes || []).filter(i => i.link).map((i, index) => (
-                                <li key={index}>
-                                    <Typography variant="body2">
-                                        {i.description ? `${i.description} (` : ''}
-                                        <a href={i.link} target="_blank" rel="noopener noreferrer">{i.link}</a>
-                                        {i.description ? ')' : ''}
-                                    </Typography>
-                                </li>
-                            ))}
-                            {(briefingData.inspiracoes || []).filter(i => i.link).length === 0 && <Typography variant="body2">Nenhuma</Typography>}
-                        </Box>
+                    <Grid item xs={12}>
+                        <Divider sx={{ my: 2 }}>Resumo do Briefing</Divider>
+                        <Paper variant="outlined" sx={{ p: 2, whiteSpace: 'pre-wrap', backgroundColor: 'grey.100' }}>
+                            <Typography variant="body1" component="pre">
+                                {briefingText}
+                            </Typography>
+                        </Paper>
                     </Grid>
-                    <Grid item xs={12}><Divider>Entregas</Divider></Grid>
-                     {(briefingData.entregas || []).map((entrega, index) => (
-                        <Grid item xs={12} key={index}>
-                            <Paper variant="outlined" sx={{ p: 2, mt: 1 }}>
-                                <Typography variant="subtitle1" gutterBottom><strong>Entrega #{index + 1}: {entrega.tipo}</strong></Typography>
-                                <Grid container spacing={1}>
-                                    <Grid item xs={6}><Typography variant="body2"><strong>Quantidade:</strong> {entrega.quantidade}</Typography></Grid>
-                                    <Grid item xs={6}><Typography variant="body2"><strong>Envio de Produtos:</strong> {entrega.envioProdutos ? 'Sim' : 'Não'}</Typography></Grid>
-                                    <Grid item xs={12}><Typography variant="body2"><strong>CTA:</strong> {entrega.cta || 'N/A'}</Typography></Grid>
-                                    <Grid item xs={12}>
-                                        <Typography variant="body2"><strong>Mensagem Principal:</strong></Typography>
-                                        <Paper variant="outlined" sx={{ p: 1, whiteSpace: 'pre-wrap', maxHeight: 100, overflowY: 'auto', backgroundColor: 'action.hover' }}>
-                                            {entrega.mensagemPrincipal || 'Nenhuma mensagem gerada.'}
-                                        </Paper>
-                                    </Grid>
-                                </Grid>
-                            </Paper>
-                        </Grid>
-                    ))}
                 </Grid>
             </Box>
         );
