@@ -408,6 +408,8 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
       2.  **Clareza:** Use uma estrutura de tópicos. As sugestões devem ser sintéticas, objetivas e sem repetições.
       3.  **Simplicidade:** Cada sugestão deve ter no máximo 3 tópicos.
 
+      **** IMPORTANTE: Cada sugestão deve ser na forma de TÓPICOS, na qual cada tópico deve ser precedido de hífen '-'. NÂO DEVE SER UM PARÁGRAFO COMPLETO. ****
+
       **FORMATO DA RESPOSTA FINAL:**
       Sua resposta DEVE ser APENAS um objeto JSON válido, sem nenhum texto, markdown, ou qualquer formatação adicional antes ou depois. Use EXATAMENTE a seguinte estrutura:
       {
