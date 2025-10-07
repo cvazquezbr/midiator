@@ -429,7 +429,17 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                 <Typography variant="h6" gutterBottom>Mensagem Principal da Campanha</Typography>
                 <Grid container spacing={3}>
                     <Grid item xs={12}>
-                        <TextField name="objetivo" label="Objetivo da Mensagem" fullWidth value={briefingData.objetivo || ''} onChange={handleChange} />
+                        <TextField
+                            name="objetivo"
+                            label="Objetivo da Mensagem"
+                            fullWidth
+                            multiline
+                            rows={3}
+                            value={briefingData.objetivo || ''}
+                            onChange={handleChange}
+                            inputProps={{ maxLength: 250 }}
+                            helperText={`${(briefingData.objetivo || '').length}/250`}
+                        />
                     </Grid>
                     <Grid item xs={12}>
                         <TextField name="cta" label="CTA (Call to Action)" fullWidth value={briefingData.cta || ''} onChange={handleChange} />
