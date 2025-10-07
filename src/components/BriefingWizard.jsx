@@ -529,7 +529,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     setLoadingSaudacaoSuggestions(true);
     setSaudacaoSuggestions([]);
 
-    const { motivacao, tom_de_voz, faca, nao_faca } = briefingData;
+    const { motivacao, tom_de_voz, faca, nao_faca, produtoServico, descricao } = briefingData;
     const motivacaoObj = MOTIVACOES.find(m => m.id === motivacao);
     const selectedToneName = (tom_de_voz || [])[0];
     const toneOfVoiceData = TONS_DE_VOZ_DATA.find(t => t.tom === selectedToneName);
@@ -544,6 +544,8 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
 
         **Contexto da Campanha:**
         - **Objetivo Principal:** ${motivacaoObj ? motivacaoObj.nome : 'Não definido'}
+        - **Produto/Serviço:** ${produtoServico || 'Não definido'}
+        - **Descrição do Produto/Serviço:** ${descricao || 'Não definida'}
         - **Tom de Voz Desejado:**
           - ${toneOfVoicePromptSection}
         - **O que FAZER (DOs):** ${faca.join(', ')}
@@ -562,9 +564,10 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         
         5. A saudação deve estar alinhada ao:
         a) Objetivo Principal;
-        b) Tom de Voz Desejado;
-        c) DOs; e
-        d) DON'Ts.
+        b) Nome e descrição do produto;
+        c) Tom de Voz Desejado;
+        d) DOs; e
+        e) DON'Ts.
         
         6. A resposta DEVE ser um array JSON contendo 3 strings. Exemplo: ["Saudação 1", "Saudação 2", "Saudação 3"]
 
