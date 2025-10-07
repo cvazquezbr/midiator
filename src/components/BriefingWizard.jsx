@@ -7,6 +7,8 @@ import { Add, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon } from '@m
 import { toast } from 'sonner';
 import TomDeVozModal from './TomDeVozModal';
 import SuggestionModal from './SuggestionModal';
+import ReviewSuggestionModal from './ReviewSuggestionModal';
+import InfoBox from './InfoBox';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 import TextEditor from './TextEditor';
@@ -141,7 +143,9 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   const [ctaSuggestions, setCtaSuggestions] = useState([]);
   const [loadingCtaSuggestions, setLoadingCtaSuggestions] = useState(false);
   const [ctaError, setCtaError] = useState(null);
-
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [objectiveReview, setObjectiveReview] = useState(null);
+  const [loadingObjectiveReview, setLoadingObjectiveReview] = useState(false);
 
   useEffect(() => {
     setActiveStep(initialStep);
@@ -163,6 +167,61 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
 
   const handleRichTextChange = (name, value) => {
     onBriefingDataChange(prev => ({ ...prev, [name]: value }));
+  };
+
+  const objetivoMensagemDescription = "Descreve de forma concisa o propósito do conteúdo solicitado ao participante da missão ou desafio. Deve indicar:\n• A ação desejada do público ou participante (ex: engajar, convidar, informar, ensinar);\n• A dor ou necessidade que o conteúdo pretende atender;\n• O resultado esperado ou valor agregado da ação.\nServe como guia para o criador entender o “porquê” da missão e alinhar o conteúdo com os objetivos da marca, mantendo clareza e foco na mensagem principal.";
+
+  const handleReviewObjective = async () => {
+    if (!geminiAPI.isInitialized) {
+        const apiKey = getGeminiApiKey();
+        if (!apiKey) {
+            toast.error('Chave de API do Gemini não configurada.');
+            return;
+        }
+        geminiAPI.initialize(apiKey);
+    }
+    setLoadingObjectiveReview(true);
+    setObjectiveReview(null);
+
+    const prompt = `
+      Aja como um especialista em comunicação e marketing. Analise o "Objetivo da Mensagem" fornecido pelo usuário e critique-o com base nos critérios a seguir.
+
+      **Critérios de Avaliação:**
+      ${objetivoMensagemDescription}
+
+      **Texto do Usuário para Análise:**
+      "${briefingData.objetivo}"
+
+      **Sua Tarefa:**
+      1.  **Analise o texto:** Avalie se o texto do usuário atende aos critérios de forma clara e objetiva.
+      2.  **Identifique Pontos Fortes:** Liste os aspectos positivos do texto que já estão alinhados com os critérios.
+      3.  **Identifique Pontos a Melhorar:** Aponte o que está faltando ou o que poderia ser mais claro, específico ou persuasivo.
+      4.  **Gere 3 Sugestões Alternativas:** Crie três novas versões do "Objetivo da Mensagem" que melhorem o texto original, aplicando diretamente os critérios. As sugestões devem ser concisas e práticas.
+      5.  **Responda em formato JSON:** Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto ou formatação adicional antes ou depois. Use a seguinte estrutura:
+          {
+            "pontosFortes": "...",
+            "pontosFracos": "...",
+            "sugestoes": ["Sugestão 1", "Sugestão 2", "Sugestão 3"]
+          }
+    `;
+
+    try {
+        const response = await geminiAPI.generateContent(prompt);
+        const match = response.match(/\{[\s\S]*\}/);
+        if (match) {
+            const jsonString = match[0];
+            const jsonResponse = JSON.parse(jsonString);
+            setObjectiveReview(jsonResponse);
+            setReviewModalOpen(true);
+        } else {
+            throw new Error("Nenhum JSON válido encontrado na resposta da IA.");
+        }
+    } catch (error) {
+        toast.error('Erro ao gerar revisão do objetivo.');
+        console.error("Objective review error:", error);
+    } finally {
+        setLoadingObjectiveReview(false);
+    }
   };
 
   const handleGenerateCtaSuggestions = async () => {
@@ -511,17 +570,32 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                 <Typography variant="h6" gutterBottom>Mensagem Principal da Campanha</Typography>
                 <Grid container spacing={3}>
                     <Grid item xs={12}>
-                        <TextField
-                            name="objetivo"
-                            label="Objetivo da Mensagem"
-                            fullWidth
-                            multiline
-                            rows={3}
-                            value={briefingData.objetivo || ''}
-                            onChange={handleChange}
-                            inputProps={{ maxLength: 250 }}
-                            helperText={`${(briefingData.objetivo || '').length}/250`}
-                        />
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="subtitle1" component="label" htmlFor="objetivo-field" sx={{ fontWeight: 'medium' }}>
+                                Objetivo da Mensagem
+                            </Typography>
+                            <InfoBox title="Objetivo da Mensagem" description={objetivoMensagemDescription} />
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                            <TextField
+                                id="objetivo-field"
+                                name="objetivo"
+                                fullWidth
+                                multiline
+                                rows={3}
+                                value={briefingData.objetivo || ''}
+                                onChange={handleChange}
+                                inputProps={{ maxLength: 250 }}
+                                helperText={`${(briefingData.objetivo || '').length}/250`}
+                            />
+                            <Tooltip title="Revisar Objetivo com IA">
+                                <span>
+                                <IconButton color="primary" onClick={handleReviewObjective} disabled={!briefingData.objetivo || loadingObjectiveReview} sx={{ mt: 1 }}>
+                                    {loadingObjectiveReview ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
+                                </IconButton>
+                                </span>
+                            </Tooltip>
+                        </Box>
                     </Grid>
                     <Grid item xs={12}>
                          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
@@ -695,6 +769,16 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         onRegenerate={handleGenerateCtaSuggestions}
         loading={loadingCtaSuggestions}
         error={ctaError}
+      />
+      <ReviewSuggestionModal
+        open={reviewModalOpen}
+        onClose={() => setReviewModalOpen(false)}
+        review={objectiveReview}
+        originalText={briefingData.objetivo}
+        onSelectSuggestion={(suggestion) => {
+          onBriefingDataChange(prev => ({ ...prev, objetivo: suggestion }));
+          setReviewModalOpen(false);
+        }}
       />
     </Dialog>
   );
