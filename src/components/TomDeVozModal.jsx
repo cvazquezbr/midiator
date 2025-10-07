@@ -3,7 +3,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Radio, RadioGroup, Paper, Grid, Typography, Box
 } from '@mui/material';
 
-const TONS_DE_VOZ_DATA = [
+export const TONS_DE_VOZ_DATA = [
   { tom: 'Próximo e Humano', quando: 'Para criar vínculo emocional, campanhas de lifestyle, bem-estar, cuidado.', como: 'Empático, acolhedor, acessível.', exemplo: '“A gente sabe que sua rotina é corrida, por isso criamos essa solução rápida e prática.”' },
   { tom: 'Inspirador e Aspiracional', quando: 'Quando a marca quer elevar autoestima, estilo de vida ou conquistas.', como: 'Motivador, positivo, sonhador.', exemplo: '“Mais que um produto, é um convite para você viver sua melhor versão.”' },
   { tom: 'Didático e Prático', quando: 'Em instruções, briefings de UGC, passo a passo, orientações claras.', como: 'Objetivo, simples, direto.', exemplo: '“Passo 1: escolha o formato. Passo 2: grave em boa luz. Passo 3: suba seu vídeo na plataforma.”' },

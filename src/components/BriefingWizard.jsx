@@ -5,7 +5,7 @@ import {
 import { useTheme } from '@mui/material/styles';
 import { Add, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
-import TomDeVozModal from './TomDeVozModal';
+import TomDeVozModal, { TONS_DE_VOZ_DATA } from './TomDeVozModal';
 import SuggestionModal from './SuggestionModal';
 import ProductSuggestionModal from './ProductSuggestionModal';
 import InfoBox from './InfoBox';
@@ -24,12 +24,6 @@ const ctaBestPractices = (
         <Typography variant="body2" gutterBottom><strong>6. Teste Cores e Contraste:</strong> O botão de CTA deve se destacar visualmente do resto da página para atrair a atenção.</Typography>
     </Box>
 );
-
-const TONS_DE_VOZ = [
-  "Inspirador", "Educativo", "Confiante", "Próximo", "Engraçado / Descontraído",
-  "Elegante / Sofisticado", "Inovador", "Institucional", "Cuidadoso / Humano",
-  "Visionário", "Provocador", "Acessível / Democrático"
-];
 
 const MOTIVACOES = [
     { id: 'reconhecimento', nome: 'Aumentar reconhecimento da marca', descricao: 'Tornar a marca mais conhecida e presente na mente do público-alvo.' },
@@ -152,6 +146,9 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   const [messageSuggestionModalOpen, setMessageSuggestionModalOpen] = useState(false);
   const [messageSuggestions, setMessageSuggestions] = useState([]);
   const [loadingMessageSuggestions, setLoadingMessageSuggestions] = useState(false);
+  const [ctaSuggestionModalOpen, setCtaSuggestionModalOpen] = useState(false);
+  const [ctaSuggestions, setCtaSuggestions] = useState([]);
+  const [loadingCtaSuggestions, setLoadingCtaSuggestions] = useState(false);
   const [activeEntregaIndex, setActiveEntregaIndex] = useState(null);
 
 
@@ -369,6 +366,19 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     const entrega = briefingData.entregas[entregaIndex];
     const motivacaoObj = MOTIVACOES.find(m => m.id === motivacao);
 
+    // Find the detailed tone of voice object
+    const selectedToneName = (tom_de_voz || [])[0]; // Assuming only one can be selected
+    const toneOfVoiceData = TONS_DE_VOZ_DATA.find(t => t.tom === selectedToneName);
+
+    // Build the detailed tone of voice string for the prompt
+    let toneOfVoicePromptSection = `1.4. TOM DE VOZ - ${selectedToneName || 'Não definido'}`;
+    if (toneOfVoiceData) {
+        toneOfVoicePromptSection += `
+        1.4.1. QUANDO USAR: ${toneOfVoiceData.quando}
+        1.4.2. COMO SOA: ${toneOfVoiceData.como}
+        1.4.3. EXEMPLO: ${toneOfVoiceData.exemplo}`;
+    }
+
     const prompt = `
       Aja como um especialista em comunicação e marketing. Analise o "Texto Base" fornecido pelo usuário e critique-o com base no seguinte PROMPT:
 
@@ -385,7 +395,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         1.1. Objetivo principal
         1.2. DOS - ${faca.join(', ')}
         1.3. DONTS - ${nao_faca.join(', ')}
-        1.4. TOM DE VOZ - ${tom_de_voz.join(', ')}
+        ${toneOfVoicePromptSection}
 
       2.  **Gere 2 Sugestões Alternativas:**
 
@@ -420,6 +430,82 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         console.error("Message suggestion error:", error);
     } finally {
         setLoadingMessageSuggestions(false);
+    }
+  };
+
+  const handleGenerateCtaSuggestions = async (entregaIndex) => {
+    if (!geminiAPI.isInitialized) {
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        toast.error('Chave de API do Gemini não configurada.');
+        return;
+      }
+      geminiAPI.initialize(apiKey);
+    }
+
+    setLoadingCtaSuggestions(true);
+    setActiveEntregaIndex(entregaIndex);
+    setCtaSuggestions([]);
+
+    const { motivacao, produtoServico, descricao, tom_de_voz, faca, nao_faca } = briefingData;
+    const entrega = briefingData.entregas[entregaIndex];
+    const motivacaoObj = MOTIVACOES.find(m => m.id === motivacao);
+
+    // Find the detailed tone of voice object
+    const selectedToneName = (tom_de_voz || [])[0];
+    const toneOfVoiceData = TONS_DE_VOZ_DATA.find(t => t.tom === selectedToneName);
+
+    // Build the detailed tone of voice string for the prompt
+    let toneOfVoicePromptSection = `Tom de Voz: ${selectedToneName || 'Não definido'}`;
+    if (toneOfVoiceData) {
+        toneOfVoicePromptSection += `\n    - QUANDO USAR: ${toneOfVoiceData.quando}\n    - COMO SOA: ${toneOfVoiceData.como}\n    - EXEMPLO: ${toneOfVoiceData.exemplo}`;
+    }
+
+    const prompt = `
+        Aja como um especialista em marketing digital. Com base nas seguintes informações de um briefing de campanha, gere 3 sugestões de Call-to-Action (CTA) curtas e eficazes.
+
+        **Contexto da Campanha:**
+        - **Objetivo Principal:** ${motivacaoObj ? motivacaoObj.nome : 'Não definido'}
+        - **Produto/Serviço:** ${produtoServico || 'Não definido'}
+        - **Descrição do Produto/Serviço:** ${descricao || 'Não definida'}
+        - **Tom de Voz Desejado:**
+          - ${toneOfVoicePromptSection}
+        - **DOS:** ${faca.join(', ')}
+        - **DONTS:** ${nao_faca.join(', ')}
+        - **Mensagem Principal:** ${entrega.mensagemPrincipal || 'Não definida'}
+
+        **Requisitos para as sugestões de CTA:**
+        1.  Cada CTA deve ser claro, conciso e orientado para a ação.
+        2.  As sugestões devem ser variadas, explorando diferentes gatilhos (urgência, benefício, curiosidade, etc.).
+        3.  O CTA deve estar alinhado com a motivação e o objetivo da campanha.
+        4.  O CTA deve ter no mínimo 8 palavras e no máximo 15 palavras.
+        5.  Evite jargões ou termos muito técnicos; o CTA deve ser facilmente compreendido pelo público geral.
+        6.  Não use pontuação excessiva (ex: "Compre agora!!!" ou "Clique aqui...").
+        7.  Não repita palavras ou ideias entre os CTAs.
+        8.  Não use mais de um número em cada CTA (ex: "Compre 1 e ganhe 1" não é permitido).
+        9.  Não inclua nenhum elemento que não seja texto (ex: emojis, símbolos).
+        10. Não use frases que já foram usadas em outros CTAs famosos ou clichês.
+        11.  O formato da resposta deve ser um array JSON de strings. Exemplo: ["CTA 1", "CTA 2", "CTA 3"]
+
+        Gere o JSON com as 3 sugestões de CTA.
+    `;
+
+    try {
+        const response = await geminiAPI.generateContent(prompt);
+        const match = response.match(/\[(.*?)\]/s);
+        if (match) {
+            const jsonString = `[${match[1]}]`;
+            const jsonResponse = JSON.parse(jsonString);
+            setCtaSuggestions(jsonResponse);
+            setCtaSuggestionModalOpen(true);
+        } else {
+            throw new Error("Nenhum array JSON válido encontrado na resposta da IA.");
+        }
+    } catch (error) {
+        toast.error('Erro ao gerar sugestões de CTA.');
+        console.error("CTA suggestion error:", error);
+    } finally {
+        setLoadingCtaSuggestions(false);
     }
   };
 
@@ -625,12 +711,25 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                                         />
                                     </Grid>
                                     <Grid item xs={12}>
-                                        <TextField
-                                          label="CTA (Call to Action)"
-                                          fullWidth
-                                          value={entrega.cta}
-                                          onChange={(e) => handleEntregaChange(index, 'cta', e.target.value)}
-                                        />
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <TextField
+                                              label="CTA (Call to Action)"
+                                              fullWidth
+                                              value={entrega.cta}
+                                              onChange={(e) => handleEntregaChange(index, 'cta', e.target.value)}
+                                            />
+                                            <Tooltip title="Gerar sugestões de CTA com IA">
+                                                <span>
+                                                    <IconButton
+                                                        color="primary"
+                                                        onClick={() => handleGenerateCtaSuggestions(index)}
+                                                        disabled={loadingCtaSuggestions && activeEntregaIndex === index}
+                                                    >
+                                                        {loadingCtaSuggestions && activeEntregaIndex === index ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
+                                        </Box>
                                     </Grid>
                                     <Grid item xs={12}>
                                        <Tooltip title="Gerar sugestões para a Mensagem Principal com IA">
@@ -819,6 +918,22 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         }}
         onRegenerate={() => handleGenerateMessageSuggestions(activeEntregaIndex)}
         loading={loadingMessageSuggestions}
+        error={null}
+      />
+      <SuggestionModal
+        open={ctaSuggestionModalOpen}
+        onClose={() => setCtaSuggestionModalOpen(false)}
+        title="Sugestões de Call-to-Action (CTA)"
+        suggestionTitle="Sugestões Geradas pela IA"
+        suggestionDescription="Clique em uma sugestão para usá-la no seu briefing."
+        bestPractices={ctaBestPractices}
+        suggestions={ctaSuggestions}
+        onSelectSuggestion={(suggestion) => {
+          handleEntregaChange(activeEntregaIndex, 'cta', suggestion);
+          setCtaSuggestionModalOpen(false);
+        }}
+        onRegenerate={() => handleGenerateCtaSuggestions(activeEntregaIndex)}
+        loading={loadingCtaSuggestions}
         error={null}
       />
       <ProductSuggestionModal
