@@ -5,6 +5,7 @@ import {
 import { useTheme } from '@mui/material/styles';
 import { Add, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
+import noCameraSvg from '../assets/no-camera.svg';
 import TomDeVozModal, { TONS_DE_VOZ_DATA } from './TomDeVozModal';
 import SuggestionModal from './SuggestionModal';
 import ProductSuggestionModal from './ProductSuggestionModal';
@@ -896,9 +897,9 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                                                     cursor: inspiracao.link ? 'pointer' : 'default',
                                                     backgroundColor: 'grey.200'
                                                 }}
-                                                src={inspiracao.screenshotUrl || '/src/assets/no-camera.svg'}
+                                                src={inspiracao.screenshotUrl || noCameraSvg}
                                                 alt={inspiracao.screenshotUrl ? `Screenshot de ${inspiracao.link}` : 'Nenhuma imagem disponível'}
-                                                onError={(e) => { e.target.onerror = null; e.target.src = '/src/assets/no-camera.svg'; }}
+                                                onError={(e) => { e.target.onerror = null; e.target.src = noCameraSvg; }}
                                             />
                                         </a>
                                     </Grid>
