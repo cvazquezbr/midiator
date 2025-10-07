@@ -551,10 +551,22 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
 
         **Requisitos para as sugestões de Saudação:**
         1. Cada saudação deve ser curta, impactante e convidativa.
-        2. O texto deve ter no máximo 150 caracteres.
-        3. As sugestões devem ser distintas, explorando diferentes abordagens (ex: uma mais direta, uma mais emocional, uma mais misteriosa).
-        4. A saudação deve estar alinhada com o objetivo e o tom de voz da campanha.
-        5. A resposta DEVE ser um array JSON contendo 3 strings. Exemplo: ["Saudação 1", "Saudação 2", "Saudação 3"]
+        
+        2. O texto deve ter duas partes:
+        a) uma saudação direta ao público (ex.: “Oi, Creator!”);
+        b) um breve parágrafo introdutório (1 a 2 frases) que crie conexão e prepare o leitor para a mensagem principal da campanha.
+        
+        3. O texto completo (saudação + introdução) deve ter no máximo 150 caracteres.
+        
+        4. As sugestões devem ser distintas, explorando diferentes abordagens (ex.: uma mais direta, outra mais emocional, outra mais criativa).
+        
+        5. A saudação deve estar alinhada ao:
+        a) Objetivo Principal;
+        b) Tom de Voz Desejado;
+        c) DOs; e
+        d) DON'Ts.
+        
+        6. A resposta DEVE ser um array JSON contendo 3 strings. Exemplo: ["Saudação 1", "Saudação 2", "Saudação 3"]
 
         Gere o JSON com as 3 sugestões de saudação.
     `;
