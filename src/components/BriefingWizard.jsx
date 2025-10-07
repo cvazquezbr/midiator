@@ -558,8 +558,9 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         a) uma saudação direta ao público (ex.: “Oi, Creator!”);
         b) um breve parágrafo introdutório (1 a 2 frases) que crie conexão e prepare o leitor para a mensagem principal da campanha.
         
-        3. O texto completo (saudação + introdução) deve ter no máximo 150 caracteres.
-        
+        3. O texto completo (saudação + introdução) deve:
+        a) Ter no máximo 150 caracteres.
+        b) A saudação direta ao público deve estar separada do parágrafo introdutório por uma linha en branco.
         4. As sugestões devem ser distintas, explorando diferentes abordagens (ex.: uma mais direta, outra mais emocional, outra mais criativa).
         
         5. A saudação deve estar alinhada ao:
