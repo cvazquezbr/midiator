@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import TomDeVozModal from './TomDeVozModal';
 import SuggestionModal from './SuggestionModal';
 import ReviewSuggestionModal from './ReviewSuggestionModal';
+import ProductSuggestionModal from './ProductSuggestionModal';
 import InfoBox from './InfoBox';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
@@ -63,7 +64,7 @@ export const emptyBriefingWizardData = {
   // Step 1: Motivacao
   motivacao: '',
   // Step 2: Objeto
-  marca: '',
+  productUrl: '',
   produtoServico: '',
   descricao: '',
   // Step 3: Referencias
@@ -155,6 +156,9 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   const [textoBaseReviewModalOpen, setTextoBaseReviewModalOpen] = useState(false);
   const [textoBaseReview, setTextoBaseReview] = useState(null);
   const [loadingTextoBaseReview, setLoadingTextoBaseReview] = useState(false);
+  const [productSuggestionModalOpen, setProductSuggestionModalOpen] = useState(false);
+  const [productSuggestions, setProductSuggestions] = useState([]);
+  const [loadingProductSuggestions, setLoadingProductSuggestions] = useState(false);
 
   useEffect(() => {
     setActiveStep(initialStep);
@@ -323,6 +327,78 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     }
   };
 
+  const handleGenerateProductSuggestions = async () => {
+    if (!geminiAPI.isInitialized) {
+        const apiKey = getGeminiApiKey();
+        if (!apiKey) {
+            toast.error('Chave de API do Gemini não configurada.');
+            return;
+        }
+        geminiAPI.initialize(apiKey);
+    }
+
+    setLoadingProductSuggestions(true);
+    setProductSuggestions([]);
+    setProductSuggestionModalOpen(true); // Open modal to show loading state
+
+    const { productUrl } = briefingData;
+
+    const prompt = `
+      Aja como um especialista em copywriting e marketing de produto. Sua tarefa é analisar o conteúdo da URL fornecida e, a partir dela, criar 3 propostas de marketing para um produto ou serviço.
+
+      URL para análise: ${productUrl}
+
+      Para cada proposta, você deve gerar:
+      1.  **"produtoServico"**: Um nome ou título curto para o produto/serviço. **Limite rigoroso de 40 caracteres.**
+      2.  **"descricao"**: Uma descrição concisa e atraente. **Limite rigoroso de 250 caracteres.**
+
+      **Instruções Importantes:**
+      - O objetivo é resumir e otimizar a mensagem principal da página, não apenas truncar o texto.
+      - As propostas devem ser distintas entre si, explorando ângulos diferentes (ex: uma focada em benefício, outra em funcionalidade, outra em um apelo emocional).
+      - Sua resposta DEVE ser um objeto JSON válido, contendo um array chamado "propostas". Não inclua nenhum texto, explicação ou formatação fora do JSON.
+
+      **Formato da Resposta (JSON):**
+      {
+        "propostas": [
+          {
+            "produtoServico": "Exemplo de Produto 1",
+            "descricao": "Descrição da primeira proposta, focada em resolver um problema específico do cliente."
+          },
+          {
+            "produtoServico": "Exemplo de Produto 2",
+            "descricao": "Descrição da segunda proposta, destacando o principal diferencial competitivo do produto."
+          },
+          {
+            "produtoServico": "Exemplo de Produto 3",
+            "descricao": "Descrição da terceira proposta, com uma abordagem mais aspiracional e conectada ao estilo de vida."
+          }
+        ]
+      }
+    `;
+
+    try {
+        const response = await geminiAPI.generateContent(prompt);
+        const match = response.match(/\{[\s\S]*\}/);
+        if (match) {
+            const jsonString = match[0];
+            const jsonResponse = JSON.parse(jsonString);
+            if (jsonResponse.propostas && jsonResponse.propostas.length > 0) {
+                setProductSuggestions(jsonResponse.propostas);
+            } else {
+                throw new Error("A resposta da IA não contém a estrutura de 'propostas' esperada.");
+            }
+        } else {
+            throw new Error("Nenhum JSON válido encontrado na resposta da IA.");
+        }
+    } catch (error) {
+        toast.error('Erro ao gerar sugestões de produto.');
+        console.error("Product suggestion error:", error);
+        setProductSuggestionModalOpen(false); // Close modal on error
+    } finally {
+        setLoadingProductSuggestions(false);
+    }
+  };
+
   const handleGenerateAIMessage = async () => {
     if (!geminiAPI.isInitialized) {
         const apiKey = getGeminiApiKey();
@@ -429,14 +505,56 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
           <Box sx={{ p: 2, minHeight: 400 }}>
             <Typography variant="h6" gutterBottom>Qual é o produto, serviço ou experiência da sua campanha?</Typography>
             <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
-                <TextField name="marca" label="Marca" fullWidth value={briefingData.marca || ''} onChange={handleChange} inputProps={{ maxLength: 40 }} helperText={`${(briefingData.marca || '').length}/40`} required />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField name="produtoServico" label="Produto ou Serviço" fullWidth value={briefingData.produtoServico || ''} onChange={handleChange} inputProps={{ maxLength: 40 }} helperText={`${(briefingData.produtoServico || '').length}/40`} required />
+               <Grid item xs={12}>
+                <Typography variant="subtitle1" gutterBottom>Link do Produto (Opcional)</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                  <TextField
+                    name="productUrl"
+                    label="Cole aqui o link do produto ou serviço"
+                    fullWidth
+                    value={briefingData.productUrl || ''}
+                    onChange={handleChange}
+                    placeholder="https://..."
+                  />
+                  <Tooltip title="Analisar link e gerar sugestões com IA">
+                    <span>
+                      <IconButton
+                        color="primary"
+                        onClick={handleGenerateProductSuggestions}
+                        disabled={!briefingData.productUrl || loadingProductSuggestions}
+                        sx={{ mt: 1 }}
+                      >
+                        {loadingProductSuggestions ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Box>
               </Grid>
               <Grid item xs={12}>
-                <TextField name="descricao" label="Descrição do Produto ou Serviço" fullWidth multiline rows={4} value={briefingData.descricao || ''} onChange={handleChange} inputProps={{ maxLength: 250 }} helperText={`${(briefingData.descricao || '').length}/250`} required />
+                <TextField
+                  name="produtoServico"
+                  label="Produto ou Serviço"
+                  fullWidth
+                  value={briefingData.produtoServico || ''}
+                  onChange={handleChange}
+                  inputProps={{ maxLength: 40 }}
+                  helperText={`${(briefingData.produtoServico || '').length}/40`}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  name="descricao"
+                  label="Descrição do Produto ou Serviço"
+                  fullWidth
+                  multiline
+                  rows={4}
+                  value={briefingData.descricao || ''}
+                  onChange={handleChange}
+                  inputProps={{ maxLength: 250 }}
+                  helperText={`${(briefingData.descricao || '').length}/250`}
+                  required
+                />
               </Grid>
             </Grid>
           </Box>
@@ -621,7 +739,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                     </Grid>
                     <Grid item xs={12}><Divider>Resumo do Briefing</Divider></Grid>
                     <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Objetivo da Campanha</strong></Typography><Typography>{selectedMotivacao ? selectedMotivacao.nome : 'Não definido'}</Typography></Grid>
-                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Produto, Serviço ou Experiência</strong></Typography><Typography>{briefingData.marca || 'N/A'} / {briefingData.produtoServico || 'N/A'}</Typography></Grid>
+                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Produto, Serviço ou Experiência</strong></Typography><Typography>{briefingData.produtoServico || 'N/A'}</Typography></Grid>
                     <Grid item xs={12}><Typography variant="subtitle2" gutterBottom><strong>Descrição</strong></Typography><Typography sx={{ whiteSpace: 'pre-wrap', maxHeight: 80, overflowY: 'auto' }}>{briefingData.descricao || 'N/A'}</Typography></Grid>
                     <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Tom de Voz</strong></Typography><Typography>{(briefingData.tom_de_voz || []).join(', ') || 'N/A'}</Typography></Grid>
                     <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Tipo de Conteúdo</strong></Typography><Typography>{briefingData.egcUgc === 'egc' ? 'EGC' : 'UGC'}</Typography></Grid>
@@ -706,6 +824,21 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         onSelectSuggestion={(suggestion) => {
           onBriefingDataChange(prev => ({ ...prev, textoBase: suggestion }));
           setTextoBaseReviewModalOpen(false);
+        }}
+      />
+      <ProductSuggestionModal
+        open={productSuggestionModalOpen}
+        onClose={() => setProductSuggestionModalOpen(false)}
+        suggestions={productSuggestions}
+        loading={loadingProductSuggestions}
+        onRegenerate={handleGenerateProductSuggestions}
+        onSelectSuggestion={(suggestion) => {
+          onBriefingDataChange(prev => ({
+            ...prev,
+            produtoServico: suggestion.produtoServico,
+            descricao: suggestion.descricao,
+          }));
+          setProductSuggestionModalOpen(false);
         }}
       />
     </Dialog>
