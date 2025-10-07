@@ -560,7 +560,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                                 <Grid container spacing={2} alignItems="center">
                                     <Grid item xs={12} md={9}>
                                         <TextField
-                                            label="Descrição"
+                                            label="O que você quer usar de referência desse link? (opcional)"
                                             fullWidth
                                             value={inspiracao.description}
                                             onChange={(e) => handleInspiracaoChange(index, 'description', e.target.value)}
