@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, Grid, Typography, Box, IconButton, CircularProgress, Alert
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, Grid, Typography, Box, IconButton, CircularProgress, Alert, Paper
 } from '@mui/material';
 import { Close as CloseIcon, AutoAwesomeOutlined as GeminiIcon } from '@mui/icons-material';
 
@@ -17,8 +17,10 @@ const SuggestionModal = ({
   loading,
   error,
 }) => {
+  const hasBestPractices = Boolean(bestPractices);
+
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth={hasBestPractices ? "lg" : "md"}>
       <DialogTitle>
         {title}
         <IconButton
@@ -30,8 +32,8 @@ const SuggestionModal = ({
         </IconButton>
       </DialogTitle>
       <DialogContent>
-        <Grid container spacing={4} sx={{ mt: 1 }}>
-          <Grid item xs={12} md={6}>
+        <Grid container spacing={hasBestPractices ? 4 : 2} sx={{ mt: 1 }}>
+          <Grid item xs={12} md={hasBestPractices ? 6 : 12}>
             <Typography variant="h6" gutterBottom>{suggestionTitle}</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               {suggestionDescription}
@@ -58,23 +60,33 @@ const SuggestionModal = ({
               </Alert>
             )}
             {suggestions.length > 0 && (
-              <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {suggestions.map((suggestion, index) => (
-                  <Alert
+                  <Paper
                     key={index}
-                    severity="info"
+                    variant="outlined"
                     onClick={() => onSelectSuggestion(suggestion)}
-                    sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' }, whiteSpace: 'pre-wrap' }}
+                    sx={{
+                      p: 2,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        bgcolor: 'action.hover',
+                        borderColor: 'primary.main'
+                      },
+                      whiteSpace: 'pre-wrap',
+                    }}
                   >
-                    {suggestion}
-                  </Alert>
+                    <Typography variant="body2">{suggestion}</Typography>
+                  </Paper>
                 ))}
               </Box>
             )}
           </Grid>
-          <Grid item xs={12} md={6}>
-            {bestPractices}
-          </Grid>
+          {hasBestPractices && (
+            <Grid item xs={12} md={6}>
+              {bestPractices}
+            </Grid>
+          )}
         </Grid>
       </DialogContent>
       <DialogActions>
