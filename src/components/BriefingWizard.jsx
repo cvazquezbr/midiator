@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box, Button, Typography, Grid, FormControl, InputLabel, Select, MenuItem, TextField, Chip, IconButton, Tooltip, Paper, Dialog, DialogTitle, DialogContent, CircularProgress, Radio, RadioGroup, FormControlLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Divider, useMediaQuery, Alert
+  Box, Button, Typography, Grid, FormControl, InputLabel, Select, MenuItem, TextField, Chip, IconButton, Tooltip, Paper, Dialog, DialogTitle, DialogContent, CircularProgress, Radio, RadioGroup, FormControlLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Divider, useMediaQuery, Alert, Stepper, Step, StepLabel
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Add, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon } from '@mui/icons-material';
@@ -132,6 +132,16 @@ const ChipInput = ({ label, items, setItems, suggestions }) => {
   );
 };
 
+const steps = [
+    'Motivação',
+    'Objeto',
+    'Referências',
+    'Inspiração',
+    'Entregas',
+    'Mensagem',
+    'Finalização'
+];
+
 const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataChange, initialStep = 0 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -154,7 +164,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     setActiveStep(initialStep);
   }, [initialStep]);
 
-  const TOTAL_STEPS = 5;
+  const TOTAL_STEPS = 7;
 
   const handleNext = () => setActiveStep(prev => Math.min(prev + 1, TOTAL_STEPS - 1));
   const handleBack = () => setActiveStep(prev => Math.max(prev - 1, 0));
@@ -170,6 +180,12 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
 
   const handleRichTextChange = (name, value) => {
     onBriefingDataChange(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleInspiracaoChange = (index, value) => {
+      const newInspiracoes = [...briefingData.inspiracoes];
+      newInspiracoes[index] = value;
+      onBriefingDataChange(prev => ({ ...prev, inspiracoes: newInspiracoes }));
   };
 
   const objetivoMensagemDescription = "Descreve de forma concisa o propósito do conteúdo solicitado ao participante da missão ou desafio. Deve indicar:\n• A ação desejada do público ou participante (ex: engajar, convidar, informar, ensinar);\n• A dor ou necessidade que o conteúdo pretende atender;\n• O resultado esperado ou valor agregado da ação.\nServe como guia para o criador entender o “porquê” da missão e alinhar o conteúdo com os objetivos da marca, mantendo clareza e foco na mensagem principal.";
@@ -525,11 +541,6 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
           </Box>
         );
       case 2:
-        const handleInspiracaoChange = (index, value) => {
-            const newInspiracoes = [...briefingData.inspiracoes];
-            newInspiracoes[index] = value;
-            onBriefingDataChange(prev => ({ ...prev, inspiracoes: newInspiracoes }));
-        };
         return (
             <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
                 <Typography variant="h6" gutterBottom>Referências e Diretrizes</Typography>
@@ -552,8 +563,40 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                     <Grid item xs={12} md={6}>
                         <ChipInput label="NÃO FAÇA (DON'Ts)" items={briefingData.nao_faca || []} setItems={(v) => handleChipChange('nao_faca', v)} suggestions={SUGESTOES_NAO_FACA} />
                     </Grid>
-                    <Grid item xs={12}><Divider /></Grid>
-                    {/* Quantidade, Envio, Prazo, EGC/UGC */}
+                </Grid>
+            </Box>
+        );
+      case 3:
+        return (
+            <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
+                <Typography variant="h6" gutterBottom>Inspirações</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Adicione links ou descrições de conteúdos que servem como referência ou inspiração para a campanha.
+                </Typography>
+                <Grid container spacing={3}>
+                    {briefingData.inspiracoes.map((inspiracao, index) => (
+                        <Grid item xs={12} key={index}>
+                            <TextField
+                                label={`Inspiração ${index + 1}`}
+                                fullWidth
+                                value={inspiracao}
+                                onChange={(e) => handleInspiracaoChange(index, e.target.value)}
+                                inputProps={{ maxLength: 150 }}
+                                helperText={`${(inspiracao || '').length}/150`}
+                            />
+                        </Grid>
+                    ))}
+                </Grid>
+            </Box>
+        );
+      case 4:
+        return (
+            <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
+                <Typography variant="h6" gutterBottom>Entregas</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Defina os detalhes sobre os conteúdos a serem produzidos e a logística de envio de produtos, se aplicável.
+                </Typography>
+                <Grid container spacing={3}>
                     <Grid item xs={12} sm={6}>
                         <TextField
                             name="quantidadeConteudos"
@@ -565,6 +608,16 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                             InputProps={{ inputProps: { min: 1 } }}
                         />
                     </Grid>
+                    <Grid item xs={12} sm={6}>
+                        <FormControl component="fieldset">
+                           <Typography variant="subtitle2">EGC ou UGC?</Typography>
+                            <RadioGroup row name="egcUgc" value={briefingData.egcUgc} onChange={handleChange}>
+                                <FormControlLabel value="egc" control={<Radio />} label="EGC" />
+                                <FormControlLabel value="ugc" control={<Radio />} label="UGC" />
+                            </RadioGroup>
+                        </FormControl>
+                    </Grid>
+                    <Grid item xs={12}><Divider sx={{ my: 2 }} /></Grid>
                     <Grid item xs={12} sm={6}>
                         <FormControl component="fieldset">
                             <Typography variant="subtitle2">Envio de Produtos?</Typography>
@@ -587,33 +640,10 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                             />
                         </Grid>
                     )}
-                    <Grid item xs={12} sm={6}>
-                        <FormControl component="fieldset">
-                           <Typography variant="subtitle2">EGC ou UGC?</Typography>
-                            <RadioGroup row name="egcUgc" value={briefingData.egcUgc} onChange={handleChange}>
-                                <FormControlLabel value="egc" control={<Radio />} label="EGC" />
-                                <FormControlLabel value="ugc" control={<Radio />} label="UGC" />
-                            </RadioGroup>
-                        </FormControl>
-                    </Grid>
-                     <Grid item xs={12}><Divider>Inspirações (Links ou textos)</Divider></Grid>
-                    {/* Inspirações */}
-                    {briefingData.inspiracoes.map((inspiracao, index) => (
-                        <Grid item xs={12} key={index}>
-                            <TextField
-                                label={`Inspiração ${index + 1}`}
-                                fullWidth
-                                value={inspiracao}
-                                onChange={(e) => handleInspiracaoChange(index, e.target.value)}
-                                inputProps={{ maxLength: 150 }}
-                                helperText={`${inspiracao.length}/150`}
-                            />
-                        </Grid>
-                    ))}
                 </Grid>
             </Box>
         );
-      case 3: {
+      case 5: {
         const textoBaseLength = (briefingData.textoBase || '').length;
         let counterColor = 'green';
         if (textoBaseLength > 500) {
@@ -737,7 +767,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
             </Box>
         );
       }
-      case 4: {
+      case 6: {
         const selectedMotivacao = MOTIVACOES.find(m => m.id === briefingData.motivacao);
         return (
             <Box sx={{ p: 2, maxHeight: '70vh', overflowY: 'auto' }}>
@@ -808,8 +838,15 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle>Assistente de Criação de Briefing - Etapa {activeStep + 1} de {TOTAL_STEPS}</DialogTitle>
+      <DialogTitle>Assistente de Criação de Briefing</DialogTitle>
       <DialogContent>
+        <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
+            {steps.map((label) => (
+                <Step key={label}>
+                    <StepLabel>{label}</StepLabel>
+                </Step>
+            ))}
+        </Stepper>
         {renderStepContent(activeStep)}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
           <Button onClick={onClose} color="secondary">Cancelar</Button>
