@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box, Button, Typography, Grid, FormControl, InputLabel, Select, MenuItem, TextField, Chip, IconButton, Tooltip, Paper, Dialog, DialogTitle, DialogContent, CircularProgress, Radio, RadioGroup, FormControlLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Divider, useMediaQuery, Alert, Stepper, Step, StepLabel
+  Box, Button, Typography, Grid, FormControl, InputLabel, Select, MenuItem, TextField, Chip, IconButton, Tooltip, Paper, Dialog, DialogTitle, DialogContent, CircularProgress, Radio, RadioGroup, FormControlLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Divider, useMediaQuery, Alert, Stepper, Step, StepLabel, Switch
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Add, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import TomDeVozModal from './TomDeVozModal';
 import SuggestionModal from './SuggestionModal';
-import ReviewSuggestionModal from './ReviewSuggestionModal';
 import ProductSuggestionModal from './ProductSuggestionModal';
 import InfoBox from './InfoBox';
 import geminiAPI from '../utils/geminiAPI';
@@ -64,24 +63,25 @@ export const emptyBriefingWizardData = {
   // Step 1: Motivacao
   motivacao: '',
   // Step 2: Objeto
-  productUrl: '',  
+  productUrl: '',
   produtoServico: '',
   descricao: '',
   // Step 3: Referencias
   tom_de_voz: [],
   faca: SUGESTOES_FACA,
   nao_faca: SUGESTOES_NAO_FACA,
-  quantidadeConteudos: 1,
-  envioProdutos: 'não',
-  prazoEnvio: null,
-  egcUgc: 'ugc',
+  // Step 4: Entregas - This is now an array of objects
+  entregas: [{
+    quantidade: 1,
+    tipo: '',
+    envioProdutos: false,
+    mensagemPrincipal: '',
+    cta: '',
+    textoBase: '',
+  }],
+  // Step 5: Inspiracoes
   inspiracoes: [{ description: '', link: '', screenshotUrl: '' }],
-  // Step 4: Mensagem
-  objetivo: '',
-  cta: '',
-  mensagemPrincipal: '',
-  textoBase: '',
-  // Step 5: Finalizacao (revisão)
+  // Step 6: Finalizacao (revisão)
 };
 
 const ChipInput = ({ label, items, setItems, suggestions }) => {
@@ -137,7 +137,6 @@ const steps = [
     'Produto, Serviço ou Experiência',
     'Guia da Marca',
     'Entregas',
-    'Mensagem',
     'Inspiração',
     'Finalização'
 ];
@@ -147,24 +146,20 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [activeStep, setActiveStep] = useState(initialStep);
   const [tomDeVozModalOpen, setTomDeVozModalOpen] = useState(false);
-  const [isGeneratingMessage, setIsGeneratingMessage] = useState(false);
-  const [showTextoBase, setShowTextoBase] = useState(true);
-  const [ctaModalOpen, setCtaModalOpen] = useState(false);
-  const [ctaSuggestions, setCtaSuggestions] = useState([]);
-  const [loadingCtaSuggestions, setLoadingCtaSuggestions] = useState(false);
-  const [ctaError, setCtaError] = useState(null);
-  const [textoBaseReviewModalOpen, setTextoBaseReviewModalOpen] = useState(false);
-  const [textoBaseReview, setTextoBaseReview] = useState(null);
-  const [loadingTextoBaseReview, setLoadingTextoBaseReview] = useState(false);
   const [productSuggestionModalOpen, setProductSuggestionModalOpen] = useState(false);
   const [productSuggestions, setProductSuggestions] = useState([]);
   const [loadingProductSuggestions, setLoadingProductSuggestions] = useState(false);
+  const [messageSuggestionModalOpen, setMessageSuggestionModalOpen] = useState(false);
+  const [messageSuggestions, setMessageSuggestions] = useState([]);
+  const [loadingMessageSuggestions, setLoadingMessageSuggestions] = useState(false);
+  const [activeEntregaIndex, setActiveEntregaIndex] = useState(null);
+
 
   useEffect(() => {
     setActiveStep(initialStep);
   }, [initialStep]);
 
-  const TOTAL_STEPS = 7;
+  const TOTAL_STEPS = 6;
 
   const handleNext = () => setActiveStep(prev => Math.min(prev + 1, TOTAL_STEPS - 1));
   const handleBack = () => setActiveStep(prev => Math.max(prev - 1, 0));
@@ -180,6 +175,33 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
 
   const handleRichTextChange = (name, value) => {
     onBriefingDataChange(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEntregaChange = (index, field, value) => {
+    const newEntregas = [...briefingData.entregas];
+    newEntregas[index][field] = value;
+    onBriefingDataChange(prev => ({ ...prev, entregas: newEntregas }));
+  };
+
+  const handleAddEntrega = () => {
+    const newEntregas = [...(briefingData.entregas || []), {
+        quantidade: 1,
+        tipo: '',
+        envioProdutos: false,
+        mensagemPrincipal: '',
+        cta: '',
+        textoBase: '',
+      }];
+    onBriefingDataChange(prev => ({ ...prev, entregas: newEntregas }));
+  };
+
+  const handleRemoveEntrega = (index) => {
+    if (briefingData.entregas.length <= 1) {
+        toast.info('É necessário ter pelo menos uma entrega.');
+        return;
+    }
+    const newEntregas = briefingData.entregas.filter((_, i) => i !== index);
+    onBriefingDataChange(prev => ({ ...prev, entregas: newEntregas }));
   };
 
   const handleInspiracaoChange = (index, field, value) => {
@@ -211,125 +233,6 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     }
   };
 
-  const objetivoMensagemDescription = "Descreve de forma concisa o propósito do conteúdo solicitado ao participante da missão ou desafio. Deve indicar:\n• A ação desejada do público ou participante (ex: engajar, convidar, informar, ensinar);\n• A dor ou necessidade que o conteúdo pretende atender;\n• O resultado esperado ou valor agregado da ação.\nServe como guia para o criador entender o “porquê” da missão e alinhar o conteúdo com os objetivos da marca, mantendo clareza e foco na mensagem principal.";
-  const textoBaseDescription = "Convidar seus seguidores a participarem do evento aberto ao público CURTINDO O SEXO NA ENVELHESCÊNCIA. O foco é resolver uma das maiores dores de quem ama sexo na menopausa: estar sempre molhadinha - e com a KY Gel isso é possível!";
-
-  const handleReviewTextoBase = async () => {
-    if (!geminiAPI.isInitialized) {
-        const apiKey = getGeminiApiKey();
-        if (!apiKey) {
-            toast.error('Chave de API do Gemini não configurada.');
-            return;
-        }
-        geminiAPI.initialize(apiKey);
-    }
-    setLoadingTextoBaseReview(true);
-    setTextoBaseReview(null);
-
-    const prompt = `
-      Aja como um especialista em comunicação e marketing. Analise o "Texto Base" fornecido pelo usuário e critique-o com base no seguinte objetivo:
-
-      **Objetivo Principal:**
-      "${textoBaseDescription}"
-
-      **Texto do Usuário para Análise:**
-      "${briefingData.textoBase}"
-
-      **Sua Tarefa:**
-      1.  **Analise o texto:** Avalie se o texto do usuário está alinhado com o objetivo principal.
-      2.  **Identifique Pontos Fortes:** Liste os aspectos positivos do texto.
-      3.  **Identifique Pontos a Melhorar:** Aponte o que está faltando ou o que poderia ser mais claro e direto para atingir o objetivo.
-      4.  **Gere 3 Sugestões Alternativas:** Crie três novas versões do "Texto Base" que melhorem o texto original, focando no objetivo.
-      5.  **Responda em formato JSON:** Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto ou formatação adicional antes ou depois. Use a seguinte estrutura:
-          {
-            "pontosFortes": "...",
-            "pontosFracos": "...",
-            "sugestoes": ["Sugestão 1", "Sugestão 2", "Sugestão 3"]
-          }
-    `;
-
-    try {
-        const response = await geminiAPI.generateContent(prompt);
-        const match = response.match(/\{[\s\S]*\}/);
-        if (match) {
-            const jsonString = match[0];
-            const jsonResponse = JSON.parse(jsonString);
-            setTextoBaseReview(jsonResponse);
-            setTextoBaseReviewModalOpen(true);
-        } else {
-            throw new Error("Nenhum JSON válido encontrado na resposta da IA.");
-        }
-    } catch (error) {
-        toast.error('Erro ao gerar revisão do texto base.');
-        console.error("Texto Base review error:", error);
-    } finally {
-        setLoadingTextoBaseReview(false);
-    }
-  };
-
-  const handleGenerateCtaSuggestions = async () => {
-    if (!geminiAPI.isInitialized) {
-        const apiKey = getGeminiApiKey();
-        if (!apiKey) {
-            toast.error('Chave de API do Gemini não configurada.');
-            return;
-        }
-        geminiAPI.initialize(apiKey);
-    }
-
-    setLoadingCtaSuggestions(true);
-    setCtaError(null);
-    setCtaSuggestions([]);
-
-    const { motivacao, marca, produtoServico, descricao, tom_de_voz } = briefingData;
-    const motivacaoObj = MOTIVACOES.find(m => m.id === motivacao);
-
-    const prompt = `
-        Aja como um especialista em marketing digital. Com base nas seguintes informações de um briefing de campanha, gere 5 sugestões de Call-to-Action (CTA) curtas e eficazes.
-
-        **Contexto da Campanha:**
-        - **Objetivo Principal:** ${motivacaoObj ? motivacaoObj.nome : 'Não definida'} (${motivacaoObj ? motivacaoObj.descricao : ''})
-        - **Marca:** ${marca || 'Não definida'}
-        - **Produto/Serviço:** ${produtoServico || 'Não definido'}
-        - **Descrição do Produto/Serviço:** ${descricao || 'Não definida'}
-        - **Tom de Voz Desejado:** ${(tom_de_voz || []).join(', ') || 'Neutro'}
-
-        **Requisitos para as sugestões de CTA:**
-        1.  Cada CTA deve ser claro, conciso e orientado para a ação.
-        2.  As sugestões devem ser variadas, explorando diferentes gatilhos (urgência, benefício, curiosidade, etc.).
-        3.  O CTA deve estar alinhado com a motivação e o objetivo da campanha.
-        4.  O CTA deve ter no mínimo 8 palavras e no máximo 15 palavras.
-        5.  Evite jargões ou termos muito técnicos; o CTA deve ser facilmente compreendido pelo público geral.
-        6.  Não use pontuação excessiva (ex: "Compre agora!!!" ou "Clique aqui...").
-        7.  Não repita palavras ou ideias entre os CTAs.
-        8.  Não use mais de um número em cada CTA (ex: "Compre 1 e ganhe 1" não é permitido).
-        9.  Não inclua nenhum elemento que não seja texto (ex: emojis, símbolos).
-        10. Não use frases que já foram usadas em outros CTAs famosos ou clichês.
-        11.  O formato da resposta deve ser um array JSON de strings. Exemplo: ["CTA 1", "CTA 2", "CTA 3", "CTA 4", "CTA 5"]
-
-        Gere o JSON com as 5 sugestões de CTA.
-    `;
-
-    try {
-        const response = await geminiAPI.generateContent(prompt);
-        // Robustly find the JSON array within the response string
-        const match = response.match(/\[(.*?)\]/s);
-        if (match) {
-            const jsonString = match[0];
-            const jsonResponse = JSON.parse(jsonString);
-            setCtaSuggestions(jsonResponse);
-            setCtaModalOpen(true);
-        } else {
-            throw new Error("Nenhum array JSON válido encontrado na resposta da IA.");
-        }
-    } catch (error) {
-        toast.error('Erro ao gerar sugestões de CTA.');
-        console.error("CTA suggestion error:", error);
-        setCtaError('Não foi possível gerar as sugestões. Tente novamente.');
-    } finally {
-        setLoadingCtaSuggestions(false);
-    }
-  };
 
   const handleGenerateProductSuggestions = async () => {
     if (!geminiAPI.isInitialized) {
@@ -445,6 +348,78 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         console.error("AI message generation error:", error);
     } finally {
         setIsGeneratingMessage(false);
+    }
+  };
+
+  const handleGenerateMessageSuggestions = async (entregaIndex) => {
+    if (!geminiAPI.isInitialized) {
+        const apiKey = getGeminiApiKey();
+        if (!apiKey) {
+            toast.error('Chave de API do Gemini não configurada.');
+            return;
+        }
+        geminiAPI.initialize(apiKey);
+    }
+
+    setLoadingMessageSuggestions(true);
+    setActiveEntregaIndex(entregaIndex);
+    setMessageSuggestions([]);
+
+    const { motivacao, faca, nao_faca, tom_de_voz } = briefingData;
+    const entrega = briefingData.entregas[entregaIndex];
+    const motivacaoObj = MOTIVACOES.find(m => m.id === motivacao);
+
+    const prompt = `
+      Aja como um especialista em comunicação e marketing. Analise o "Texto Base" fornecido pelo usuário e critique-o com base no seguinte PROMPT:
+
+      **Objetivo Principal:**
+      ${motivacaoObj ? motivacaoObj.nome : 'Não definido'}
+
+      **Texto do Usuário para Análise:**
+      "${entrega.textoBase}"
+
+      **Sua Tarefa:**
+
+      1.  **Analise o texto:** Avalie se o texto do usuário está alinhado com:
+
+        1.1. Objetivo principal
+        1.2. DOS - ${faca.join(', ')}
+        1.3. DONTS - ${nao_faca.join(', ')}
+        1.4. TOM DE VOZ - ${tom_de_voz.join(', ')}
+
+      2.  **Gere 2 Sugestões Alternativas:**
+
+        2.1. Crie duas novas versões do "Texto Base" que melhorem o texto original:
+            2.1.1. Maior aderência em relação ao objetivo principal;
+            2.1.2. Maior aderência aos DOS, DONTS e TOM DE VOZ no que se refere ao conteúdo textual;
+            2.1.3. Maximizar a clareza ao usar uma estrutura de tópicos, bem sintéticos e objetivos, sem repetições;
+            2.1.4. Maximizar a simplicidade ao limitar cada alternativa ao limite máximo de 3 tópicos.
+      3.  **Responda em formato JSON:** Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto ou formatação adicional antes ou depois. Use a seguinte estrutura:
+          {
+            "sugestoes": ["Sugestão 1", "Sugestão 2"]
+          }
+    `;
+
+    try {
+        const response = await geminiAPI.generateContent(prompt);
+        const match = response.match(/\{[\s\S]*\}/);
+        if (match) {
+            const jsonString = match[0];
+            const jsonResponse = JSON.parse(jsonString);
+            if (jsonResponse.sugestoes && jsonResponse.sugestoes.length > 0) {
+                setMessageSuggestions(jsonResponse.sugestoes);
+                setMessageSuggestionModalOpen(true);
+            } else {
+                 throw new Error("A resposta da IA não contém a estrutura de 'sugestoes' esperada.");
+            }
+        } else {
+            throw new Error("Nenhum JSON válido encontrado na resposta da IA.");
+        }
+    } catch (error) {
+        toast.error('Erro ao gerar sugestões de mensagem.');
+        console.error("Message suggestion error:", error);
+    } finally {
+        setLoadingMessageSuggestions(false);
     }
   };
 
@@ -590,87 +565,103 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
       case 3: // Entregas
         return (
             <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
-                <Typography variant="h6" gutterBottom>Entregas</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Defina os detalhes sobre os conteúdos a serem produzidos e a logística de envio de produtos, se aplicável.</Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6">Entregas</Typography>
+                    <Button startIcon={<Add />} onClick={handleAddEntrega} variant="contained">Adicionar Entrega</Button>
+                </Box>
                 <Grid container spacing={3}>
-                    <Grid item xs={12} sm={6}>
-                        <TextField name="quantidadeConteudos" label="Quantidade de Conteúdos" type="number" fullWidth value={briefingData.quantidadeConteudos || 1} onChange={handleChange} InputProps={{ inputProps: { min: 1 } }} />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                        <FormControl component="fieldset">
-                           <Typography variant="subtitle2">EGC ou UGC?</Typography>
-                            <RadioGroup row name="egcUgc" value={briefingData.egcUgc} onChange={handleChange}>
-                                <FormControlLabel value="egc" control={<Radio />} label="EGC" />
-                                <FormControlLabel value="ugc" control={<Radio />} label="UGC" />
-                            </RadioGroup>
-                        </FormControl>
-                    </Grid>
-                    <Grid item xs={12}><Divider sx={{ my: 2 }} /></Grid>
-                    <Grid item xs={12} sm={6}>
-                        <FormControl component="fieldset">
-                            <Typography variant="subtitle2">Envio de Produtos?</Typography>
-                            <RadioGroup row name="envioProdutos" value={briefingData.envioProdutos} onChange={handleChange}>
-                                <FormControlLabel value="sim" control={<Radio />} label="Sim" />
-                                <FormControlLabel value="não" control={<Radio />} label="Não" />
-                            </RadioGroup>
-                        </FormControl>
-                    </Grid>
-                    {briefingData.envioProdutos === 'sim' && (
-                        <Grid item xs={12} sm={6}>
-                            <TextField name="prazoEnvio" label="Prazo de Envio" type="date" fullWidth value={briefingData.prazoEnvio || ''} onChange={handleChange} InputLabelProps={{ shrink: true }} />
+                    {(briefingData.entregas || []).map((entrega, index) => (
+                        <Grid item xs={12} key={index}>
+                            <Paper variant="outlined" sx={{ p: 3, position: 'relative' }}>
+                                <IconButton
+                                    aria-label="delete"
+                                    onClick={() => handleRemoveEntrega(index)}
+                                    sx={{ position: 'absolute', top: 8, right: 8 }}
+                                    disabled={briefingData.entregas.length <= 1}
+                                >
+                                    <DeleteIcon />
+                                </IconButton>
+                                <Typography variant="h6" gutterBottom>Entrega #{index + 1}</Typography>
+                                <Grid container spacing={2}>
+                                    <Grid item xs={12} sm={4}>
+                                        <TextField
+                                            label="Quantidade"
+                                            type="number"
+                                            fullWidth
+                                            value={entrega.quantidade}
+                                            onChange={(e) => handleEntregaChange(index, 'quantidade', parseInt(e.target.value, 10))}
+                                            InputProps={{ inputProps: { min: 1 } }}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12} sm={8}>
+                                        <TextField
+                                            label="Tipo"
+                                            fullWidth
+                                            value={entrega.tipo}
+                                            onChange={(e) => handleEntregaChange(index, 'tipo', e.target.value)}
+                                            inputProps={{ maxLength: 40 }}
+                                            helperText={`${(entrega.tipo || '').length}/40`}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12}>
+                                        <FormControlLabel
+                                            control={
+                                                <Switch
+                                                    checked={entrega.envioProdutos}
+                                                    onChange={(e) => handleEntregaChange(index, 'envioProdutos', e.target.checked)}
+                                                />
+                                            }
+                                            label="Há envio de produtos para esta entrega?"
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12}>
+                                        <TextField
+                                          label="CTA (Call to Action)"
+                                          fullWidth
+                                          value={entrega.cta}
+                                          onChange={(e) => handleEntregaChange(index, 'cta', e.target.value)}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12}>
+                                        <TextField
+                                          label="Texto Base"
+                                          fullWidth
+                                          multiline
+                                          rows={4}
+                                          value={entrega.textoBase}
+                                          onChange={(e) => handleEntregaChange(index, 'textoBase', e.target.value)}
+                                        />
+                                    </Grid>
+                                    <Grid item xs={12}>
+                                       <Tooltip title="Gerar sugestões para a Mensagem Principal com IA">
+                                            <span>
+                                                <Button
+                                                    startIcon={loadingMessageSuggestions && activeEntregaIndex === index ? <CircularProgress size={20} /> : <AutoAwesomeIcon />}
+                                                    variant="outlined"
+                                                    onClick={() => handleGenerateMessageSuggestions(index)}
+                                                    disabled={!entrega.textoBase || loadingMessageSuggestions}
+                                                >
+                                                    Gerar Mensagem Principal
+                                                </Button>
+                                            </span>
+                                        </Tooltip>
+                                    </Grid>
+                                    {entrega.mensagemPrincipal && (
+                                      <Grid item xs={12}>
+                                          <Typography variant="subtitle1" gutterBottom>Mensagem Principal (Gerada por IA)</Typography>
+                                          <Paper elevation={0} variant="outlined" sx={{ p: 2, whiteSpace: 'pre-wrap', backgroundColor: 'action.hover' }}>
+                                              {entrega.mensagemPrincipal}
+                                          </Paper>
+                                      </Grid>
+                                    )}
+                                </Grid>
+                            </Paper>
                         </Grid>
-                    )}
+                    ))}
                 </Grid>
             </Box>
         );
-      case 4: { // Mensagem
-        const textoBaseLength = (briefingData.textoBase || '').length;
-        let counterColor = 'green';
-        if (textoBaseLength > 500) counterColor = 'red';
-        else if (textoBaseLength > 250) counterColor = 'yellow';
-
-        return (
-            <Box sx={{ p: 2, minHeight: 400 }}>
-                <Typography variant="h6" gutterBottom>Mensagem Principal da Campanha</Typography>
-                <Grid container spacing={3}>
-                    <Grid item xs={12}>
-                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                            <TextField name="cta" label="CTA (Call to Action)" fullWidth multiline rows={3} value={briefingData.cta || ''} onChange={handleChange} inputProps={{ maxLength: 250 }} helperText={`${(briefingData.cta || '').length}/250`} />
-                            <Tooltip title="Gerar Sugestões de CTA com IA"><IconButton color="primary" onClick={handleGenerateCtaSuggestions} sx={{ mt: 1 }}><AutoAwesomeIcon /></IconButton></Tooltip>
-                        </Box>
-                    </Grid>
-                    {isGeneratingMessage ? (
-                        <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
-                            <CircularProgress /><Typography sx={{ ml: 2 }}>Gerando mensagem...</Typography>
-                        </Grid>
-                    ) : showTextoBase ? (
-                        <Grid item xs={12}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                <Typography variant="subtitle1" component="label" htmlFor="texto-base-field" sx={{ fontWeight: 'medium' }}>Texto Base para a Mensagem Principal</Typography>
-                                <InfoBox title="Texto Base para a Mensagem Principal" description={textoBaseDescription} />
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                                <TextField id="texto-base-field" name="textoBase" fullWidth multiline rows={8} value={briefingData.textoBase || ''} onChange={handleChange} />
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
-                                    <Tooltip title="Revisar Texto Base com IA"><span><IconButton color="primary" onClick={handleReviewTextoBase} disabled={!briefingData.textoBase || loadingTextoBaseReview}>{loadingTextoBaseReview ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}</IconButton></span></Tooltip>
-                                    <Tooltip title="Gerar Mensagem Principal com IA (usando este texto como base)"><span><IconButton color="secondary" onClick={handleGenerateAIMessage} disabled={!briefingData.textoBase}><AutoAwesomeIcon /></IconButton></span></Tooltip>
-                                </Box>
-                            </Box>
-                            <Typography variant="caption" sx={{ color: counterColor, fontWeight: 'bold' }}>{textoBaseLength}</Typography>
-                            {textoBaseLength > 250 && (<Alert severity="warning" sx={{ mt: 1 }}>O texto final gerado pela IA será limitado a 250 caracteres, mas não se preocupe, todo o conteúdo que você escreveu será considerado.</Alert>)}
-                        </Grid>
-                    ) : (
-                        <Grid item xs={12}>
-                             <Typography variant="subtitle1" gutterBottom>Mensagem Principal (Gerada por IA)</Typography>
-                             <Paper elevation={2} sx={{p: 2, mb: 1}}><Typography sx={{whiteSpace: 'pre-wrap'}}>{briefingData.mensagemPrincipal}</Typography></Paper>
-                             <Button onClick={() => setShowTextoBase(true)} size="small">Voltar e editar texto base</Button>
-                        </Grid>
-                    )}
-                </Grid>
-            </Box>
-        );
-      }
-      case 5: // Inspiração
+      case 4: // Inspiração
         return (
             <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
                 <Typography variant="h6" gutterBottom>Inspirações</Typography>
@@ -732,7 +723,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                 </Grid>
             </Box>
         );
-      case 6: { // Finalização
+      case 5: { // Finalização
         const selectedMotivacao = MOTIVACOES.find(m => m.id === briefingData.motivacao);
         return (
             <Box sx={{ p: 2, maxHeight: '70vh', overflowY: 'auto' }}>
@@ -746,11 +737,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                     <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Produto, Serviço ou Experiência</strong></Typography><Typography>{briefingData.produtoServico || 'N/A'}</Typography></Grid>
                     <Grid item xs={12}><Typography variant="subtitle2" gutterBottom><strong>Descrição</strong></Typography><Typography sx={{ whiteSpace: 'pre-wrap', maxHeight: 80, overflowY: 'auto' }}>{briefingData.descricao || 'N/A'}</Typography></Grid>
                     <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Tom de Voz</strong></Typography><Typography>{(briefingData.tom_de_voz || []).join(', ') || 'N/A'}</Typography></Grid>
-                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Tipo de Conteúdo</strong></Typography><Typography>{briefingData.egcUgc === 'egc' ? 'EGC' : 'UGC'}</Typography></Grid>
-                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Envio de Produtos</strong></Typography><Typography>{briefingData.envioProdutos === 'sim' ? `Sim (Prazo: ${briefingData.prazoEnvio || 'N/A'})` : 'Não'}</Typography></Grid>
-                    <Grid item xs={12} md={6}><Typography variant="subtitle2" gutterBottom><strong>Quantidade</strong></Typography><Typography>{briefingData.quantidadeConteudos || 1}</Typography></Grid>
-                    <Grid item xs={12}>
-                        <Typography variant="subtitle2" gutterBottom><strong>Inspirações</strong></Typography>
+                    <Grid item xs={12}><Typography variant="subtitle2" gutterBottom><strong>Inspirações</strong></Typography>
                         <Box component="ul" sx={{ pl: 2, m: 0 }}>
                             {(briefingData.inspiracoes || []).filter(i => i.link).map((i, index) => (
                                 <li key={index}>
@@ -764,10 +751,25 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                             {(briefingData.inspiracoes || []).filter(i => i.link).length === 0 && <Typography variant="body2">Nenhuma</Typography>}
                         </Box>
                     </Grid>
-                    <Grid item xs={12}>
-                        <Typography variant="subtitle2" gutterBottom><strong>Mensagem Principal</strong></Typography>
-                        <Paper variant="outlined" sx={{ p: 1, whiteSpace: 'pre-wrap', maxHeight: 150, overflowY: 'auto', backgroundColor: 'action.hover' }}>{briefingData.mensagemPrincipal || 'Nenhuma mensagem gerada.'}</Paper>
-                    </Grid>
+                    <Grid item xs={12}><Divider>Entregas</Divider></Grid>
+                     {(briefingData.entregas || []).map((entrega, index) => (
+                        <Grid item xs={12} key={index}>
+                            <Paper variant="outlined" sx={{ p: 2, mt: 1 }}>
+                                <Typography variant="subtitle1" gutterBottom><strong>Entrega #{index + 1}: {entrega.tipo}</strong></Typography>
+                                <Grid container spacing={1}>
+                                    <Grid item xs={6}><Typography variant="body2"><strong>Quantidade:</strong> {entrega.quantidade}</Typography></Grid>
+                                    <Grid item xs={6}><Typography variant="body2"><strong>Envio de Produtos:</strong> {entrega.envioProdutos ? 'Sim' : 'Não'}</Typography></Grid>
+                                    <Grid item xs={12}><Typography variant="body2"><strong>CTA:</strong> {entrega.cta || 'N/A'}</Typography></Grid>
+                                    <Grid item xs={12}>
+                                        <Typography variant="body2"><strong>Mensagem Principal:</strong></Typography>
+                                        <Paper variant="outlined" sx={{ p: 1, whiteSpace: 'pre-wrap', maxHeight: 100, overflowY: 'auto', backgroundColor: 'action.hover' }}>
+                                            {entrega.mensagemPrincipal || 'Nenhuma mensagem gerada.'}
+                                        </Paper>
+                                    </Grid>
+                                </Grid>
+                            </Paper>
+                        </Grid>
+                    ))}
                 </Grid>
             </Box>
         );
@@ -805,30 +807,19 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         onSave={(newTones) => handleChipChange('tom_de_voz', newTones)}
       />
       <SuggestionModal
-        open={ctaModalOpen}
-        onClose={() => setCtaModalOpen(false)}
-        title="Sugestões de Call-to-Action (CTA)"
+        open={messageSuggestionModalOpen}
+        onClose={() => setMessageSuggestionModalOpen(false)}
+        title="Sugestões para Mensagem Principal"
         suggestionTitle="Sugestões Geradas pela IA"
-        suggestionDescription="Clique em uma sugestão para usá-la no seu briefing."
-        bestPractices={ctaBestPractices}
-        suggestions={ctaSuggestions}
+        suggestionDescription="Clique em uma sugestão para usá-la como sua Mensagem Principal."
+        suggestions={messageSuggestions}
         onSelectSuggestion={(suggestion) => {
-          onBriefingDataChange(prev => ({ ...prev, cta: suggestion }));
-          setCtaModalOpen(false);
+          handleEntregaChange(activeEntregaIndex, 'mensagemPrincipal', suggestion);
+          setMessageSuggestionModalOpen(false);
         }}
-        onRegenerate={handleGenerateCtaSuggestions}
-        loading={loadingCtaSuggestions}
-        error={ctaError}
-      />
-      <ReviewSuggestionModal
-        open={textoBaseReviewModalOpen}
-        onClose={() => setTextoBaseReviewModalOpen(false)}
-        review={textoBaseReview}
-        originalText={briefingData.textoBase}
-        onSelectSuggestion={(suggestion) => {
-          onBriefingDataChange(prev => ({ ...prev, textoBase: suggestion }));
-          setTextoBaseReviewModalOpen(false);
-        }}
+        onRegenerate={() => handleGenerateMessageSuggestions(activeEntregaIndex)}
+        loading={loadingMessageSuggestions}
+        error={null}
       />
       <ProductSuggestionModal
         open={productSuggestionModalOpen}
