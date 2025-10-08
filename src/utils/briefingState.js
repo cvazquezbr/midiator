@@ -12,7 +12,10 @@ export const getBriefings = async () => {
 
 export const saveBriefing = async (name, briefingData) => {
   try {
-    const requestBody = JSON.stringify({ name, briefing_data: briefingData });
+    const requestBody = JSON.stringify({
+      nomeBriefing: name,
+      briefing_data: briefingData,
+    });
 
     const createRes = await fetchWithAuth('/api/briefings', {
       method: 'POST',
