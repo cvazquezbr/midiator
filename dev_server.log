@@ -1,6 +1,9 @@
-Re-optimizing dependencies because lockfile has changed
 
-  VITE v5.4.19  ready in 479 ms
+> midiator-google-drive-frontend@0.0.0 dev
+> vite
+
+
+  VITE v5.4.19  ready in 490 ms
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose

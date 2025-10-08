@@ -7,8 +7,7 @@ import { Add, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon, Delete as
 import { toast } from 'sonner';
 import noCameraSvg from '../assets/no-camera.svg';
 import TomDeVozModal, { TONS_DE_VOZ_DATA } from './TomDeVozModal';
-import SuggestionModal from './SuggestionModal';
-import ProductSuggestionModal from './ProductSuggestionModal';
+import AISuggestionModal from './AISuggestionModal';
 import InfoBox from './InfoBox';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
@@ -1045,58 +1044,13 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         selectedTones={briefingData.tom_de_voz || []}
         onSave={(newTones) => handleChipChange('tom_de_voz', newTones)}
       />
-      <SuggestionModal
-        open={messageSuggestionModalOpen}
-        onClose={() => setMessageSuggestionModalOpen(false)}
-        title="Sugestões para Mensagem Principal"
-        suggestionTitle="Sugestões Geradas pela IA"
-        suggestionDescription="Clique em uma sugestão para usá-la como sua Mensagem Principal."
-        suggestions={messageSuggestions}
-        onSelectSuggestion={(suggestion) => {
-          handleEntregaChange(activeEntregaIndex, 'mensagemPrincipal', suggestion);
-          setMessageSuggestionModalOpen(false);
-        }}
-        onRegenerate={() => handleGenerateMessageSuggestions(activeEntregaIndex)}
-        loading={loadingMessageSuggestions}
-        error={null}
-      />
-      <SuggestionModal
-        open={ctaSuggestionModalOpen}
-        onClose={() => setCtaSuggestionModalOpen(false)}
-        title="Sugestões de Call-to-Action (CTA)"
-        suggestionTitle="Sugestões Geradas pela IA"
-        suggestionDescription="Clique em uma sugestão para usá-la no seu briefing."
-        bestPractices={ctaBestPractices}
-        suggestions={ctaSuggestions}
-        onSelectSuggestion={(suggestion) => {
-          handleEntregaChange(activeEntregaIndex, 'cta', suggestion);
-          setCtaSuggestionModalOpen(false);
-        }}
-        onRegenerate={() => handleGenerateCtaSuggestions(activeEntregaIndex)}
-        loading={loadingCtaSuggestions}
-        error={null}
-      />
-      <SuggestionModal
-        open={saudacaoSuggestionModalOpen}
-        onClose={() => setSaudacaoSuggestionModalOpen(false)}
-        title="Sugestões de Saudação"
-        suggestionTitle="Sugestões Geradas pela IA"
-        suggestionDescription="Clique em uma sugestão para usar no seu briefing."
-        suggestions={saudacaoSuggestions}
-        onSelectSuggestion={(suggestion) => {
-          handleChange({ target: { name: 'saudacao', value: suggestion } });
-          setSaudacaoSuggestionModalOpen(false);
-        }}
-        onRegenerate={handleGenerateSaudacaoSuggestions}
-        loading={loadingSaudacaoSuggestions}
-        error={null}
-      />
-      <ProductSuggestionModal
+      <AISuggestionModal
         open={productSuggestionModalOpen}
         onClose={() => setProductSuggestionModalOpen(false)}
-        suggestions={productSuggestions}
+        title="Sugestões para Produto e Descrição"
         loading={loadingProductSuggestions}
-        onRegenerate={handleGenerateProductSuggestions}
+        loadingText="Analisando o link e gerando sugestões..."
+        suggestions={productSuggestions}
         onSelectSuggestion={(suggestion) => {
           onBriefingDataChange(prev => ({
             ...prev,
@@ -1105,6 +1059,47 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
           }));
           setProductSuggestionModalOpen(false);
         }}
+        onRegenerate={handleGenerateProductSuggestions}
+        suggestionType="product"
+      />
+
+      <AISuggestionModal
+        open={messageSuggestionModalOpen}
+        onClose={() => setMessageSuggestionModalOpen(false)}
+        title="Sugestões para Mensagem Principal"
+        loading={loadingMessageSuggestions}
+        suggestions={messageSuggestions}
+        onSelectSuggestion={(suggestion) => {
+          handleEntregaChange(activeEntregaIndex, 'mensagemPrincipal', suggestion);
+          setMessageSuggestionModalOpen(false);
+        }}
+        onRegenerate={() => handleGenerateMessageSuggestions(activeEntregaIndex)}
+      />
+
+      <AISuggestionModal
+        open={ctaSuggestionModalOpen}
+        onClose={() => setCtaSuggestionModalOpen(false)}
+        title="Sugestões de Call-to-Action (CTA)"
+        loading={loadingCtaSuggestions}
+        suggestions={ctaSuggestions}
+        onSelectSuggestion={(suggestion) => {
+          handleEntregaChange(activeEntregaIndex, 'cta', suggestion);
+          setCtaSuggestionModalOpen(false);
+        }}
+        onRegenerate={() => handleGenerateCtaSuggestions(activeEntregaIndex)}
+      />
+
+      <AISuggestionModal
+        open={saudacaoSuggestionModalOpen}
+        onClose={() => setSaudacaoSuggestionModalOpen(false)}
+        title="Sugestões de Saudação"
+        loading={loadingSaudacaoSuggestions}
+        suggestions={saudacaoSuggestions}
+        onSelectSuggestion={(suggestion) => {
+          handleChange({ target: { name: 'saudacao', value: suggestion } });
+          setSaudacaoSuggestionModalOpen(false);
+        }}
+        onRegenerate={handleGenerateSaudacaoSuggestions}
       />
     </Dialog>
   );
