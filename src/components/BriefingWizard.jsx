@@ -985,7 +985,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                             value={entrega.mensagemPrincipal}
                             onChange={(e) => handleEntregaChange(index, 'mensagemPrincipal', e.target.value)}
                             placeholder="Digite o texto base aqui ou clique no botão para gerar sugestões com IA."
-                            inputProps={{ maxLength: 250 }}
+                            inputProps={{ maxLength: 4000 }}
                             helperText={`${(entrega.mensagemPrincipal || '').length}/250`}
                           />
                           <Tooltip title="Gerar sugestões para a Mensagem Principal com IA">
