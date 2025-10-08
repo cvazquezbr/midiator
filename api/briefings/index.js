@@ -42,8 +42,8 @@ const handler = async (req, res) => {
     }
   } else if (req.method === 'POST') {
     try {
-      const briefingData = await parseBody(req);
-      const name = briefingData.nomeBriefing;
+      const { nomeBriefing, briefing_data } = await parseBody(req);
+      const name = nomeBriefing;
 
       if (!name) {
         return res.status(400).json({ error: 'Briefing name is required.' });
@@ -51,7 +51,7 @@ const handler = async (req, res) => {
 
       const { rows } = await query(
         'INSERT INTO briefings (user_id, name, briefing_data) VALUES ($1, $2, $3) RETURNING id, name, briefing_data, updated_at',
-        [userUUID, name, briefingData]
+        [userUUID, name, briefing_data]
       );
 
       return res.status(201).json(rows[0]);
