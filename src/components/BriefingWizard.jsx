@@ -15,23 +15,23 @@ import { getGeminiApiKey } from '../utils/geminiCredentials';
 import TextEditor from './TextEditor';
 
 const ctaBestPractices = (
-    <Box>
-        <Typography variant="h6" gutterBottom>Boas Práticas para CTAs</Typography>
-        <Typography variant="body2" gutterBottom><strong>1. Comece com um Verbo de Ação:</strong> Use palavras que incentivem a ação imediata. Ex: "Compre", "Baixe", "Inscreva-se", "Descubra".</Typography>
-        <Typography variant="body2" gutterBottom><strong>2. Crie Urgência e Escassez:</strong> Incentive a ação rápida com termos como "Hoje", "Agora", "Últimas unidades", "Oferta por tempo limitado".</Typography>
-        <Typography variant="body2" gutterBottom><strong>3. Destaque o Benefício:</strong> Deixe claro o que o usuário ganha ao clicar. Ex: "Compre agora e ganhe 20% de desconto" em vez de apenas "Compre agora".</Typography>
-        <Typography variant="body2" gutterBottom><strong>4. Seja Claro e Conciso:</strong> O CTA deve ser curto, direto e fácil de entender. Evite jargões ou frases complexas.</Typography>
-        <Typography variant="body2" gutterBottom><strong>5. Use a Primeira Pessoa:</strong> CTAs como "Quero meu e-book" podem ter uma taxa de conversão maior do que "Baixe o e-book".</Typography>
-        <Typography variant="body2" gutterBottom><strong>6. Teste Cores e Contraste:</strong> O botão de CTA deve se destacar visualmente do resto da página para atrair a atenção.</Typography>
-    </Box>
+  <Box>
+    <Typography variant="h6" gutterBottom>Boas Práticas para CTAs</Typography>
+    <Typography variant="body2" gutterBottom><strong>1. Comece com um Verbo de Ação:</strong> Use palavras que incentivem a ação imediata. Ex: "Compre", "Baixe", "Inscreva-se", "Descubra".</Typography>
+    <Typography variant="body2" gutterBottom><strong>2. Crie Urgência e Escassez:</strong> Incentive a ação rápida com termos como "Hoje", "Agora", "Últimas unidades", "Oferta por tempo limitado".</Typography>
+    <Typography variant="body2" gutterBottom><strong>3. Destaque o Benefício:</strong> Deixe claro o que o usuário ganha ao clicar. Ex: "Compre agora e ganhe 20% de desconto" em vez de apenas "Compre agora".</Typography>
+    <Typography variant="body2" gutterBottom><strong>4. Seja Claro e Conciso:</strong> O CTA deve ser curto, direto e fácil de entender. Evite jargões ou frases complexas.</Typography>
+    <Typography variant="body2" gutterBottom><strong>5. Use a Primeira Pessoa:</strong> CTAs como "Quero meu e-book" podem ter uma taxa de conversão maior do que "Baixe o e-book".</Typography>
+    <Typography variant="body2" gutterBottom><strong>6. Teste Cores e Contraste:</strong> O botão de CTA deve se destacar visualmente do resto da página para atrair a atenção.</Typography>
+  </Box>
 );
 
 const MOTIVACOES = [
-    { id: 'reconhecimento', nome: 'Aumentar reconhecimento da marca', descricao: 'Tornar a marca mais conhecida e presente na mente do público-alvo.' },
-    { id: 'engajamento', nome: 'Engajar e gerar conexão com a audiência', descricao: 'Criar interações autênticas, fortalecendo o vínculo com os consumidores.' },
-    { id: 'vendas', nome: 'Impulsionar vendas ou conversões', descricao: 'Direcionar o público para comprar, assinar ou experimentar o produto/serviço.' },
-    { id: 'educar', nome: 'Educar o público sobre a marca/produto', descricao: 'Explicar benefícios, diferenciais e funcionalidades de forma clara e atrativa.' },
-    { id: 'reforcar', nome: 'Reforçar posicionamento e valores da marca', descricao: 'Transmitir a identidade, propósito e diferenciais competitivos de forma consistente.' },
+  { id: 'reconhecimento', nome: 'Aumentar reconhecimento da marca', descricao: 'Tornar a marca mais conhecida e presente na mente do público-alvo.' },
+  { id: 'engajamento', nome: 'Engajar e gerar conexão com a audiência', descricao: 'Criar interações autênticas, fortalecendo o vínculo com os consumidores.' },
+  { id: 'vendas', nome: 'Impulsionar vendas ou conversões', descricao: 'Direcionar o público para comprar, assinar ou experimentar o produto/serviço.' },
+  { id: 'educar', nome: 'Educar o público sobre a marca/produto', descricao: 'Explicar benefícios, diferenciais e funcionalidades de forma clara e atrativa.' },
+  { id: 'reforcar', nome: 'Reforçar posicionamento e valores da marca', descricao: 'Transmitir a identidade, propósito e diferenciais competitivos de forma consistente.' },
 ];
 
 const SUGESTOES_NAO_FACA = [
@@ -129,13 +129,13 @@ const ChipInput = ({ label, items, setItems, suggestions }) => {
 };
 
 const steps = [
-    'Objetivo da Campanha',
-    'Produto, Serviço ou Experiência',
-    'Guia da Marca',
-    'Saudação',
-    'Entregas',
-    'Inspiração',
-    'Finalização'
+  'Objetivo da Campanha',
+  'Produto, Serviço ou Experiência',
+  'Guia da Marca',
+  'Saudação',
+  'Entregas',
+  'Inspiração',
+  'Finalização'
 ];
 
 const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataChange, initialStep = 0 }) => {
@@ -188,19 +188,19 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
 
   const handleAddEntrega = () => {
     const newEntregas = [...(briefingData.entregas || []), {
-        quantidade: 1,
-        tipo: '',
-        envioProdutos: false,
-        mensagemPrincipal: '',
-        cta: '',
-      }];
+      quantidade: 1,
+      tipo: '',
+      envioProdutos: false,
+      mensagemPrincipal: '',
+      cta: '',
+    }];
     onBriefingDataChange(prev => ({ ...prev, entregas: newEntregas }));
   };
 
   const handleRemoveEntrega = (index) => {
     if (briefingData.entregas.length <= 1) {
-        toast.info('É necessário ter pelo menos uma entrega.');
-        return;
+      toast.info('É necessário ter pelo menos uma entrega.');
+      return;
     }
     const newEntregas = briefingData.entregas.filter((_, i) => i !== index);
     onBriefingDataChange(prev => ({ ...prev, entregas: newEntregas }));
@@ -213,17 +213,17 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   };
 
   const handleAddInspiracao = () => {
-      if ((briefingData.inspiracoes || []).length >= 3) {
-        toast.info('Você pode adicionar no máximo 3 inspirações.');
-        return;
-      }
-      const newInspiracoes = [...briefingData.inspiracoes, { description: '', link: '', screenshotUrl: '' }];
-      onBriefingDataChange(prev => ({ ...prev, inspiracoes: newInspiracoes }));
+    if ((briefingData.inspiracoes || []).length >= 3) {
+      toast.info('Você pode adicionar no máximo 3 inspirações.');
+      return;
+    }
+    const newInspiracoes = [...briefingData.inspiracoes, { description: '', link: '', screenshotUrl: '' }];
+    onBriefingDataChange(prev => ({ ...prev, inspiracoes: newInspiracoes }));
   };
 
   const handleRemoveInspiracao = (index) => {
-      const newInspiracoes = briefingData.inspiracoes.filter((_, i) => i !== index);
-      onBriefingDataChange(prev => ({ ...prev, inspiracoes: newInspiracoes }));
+    const newInspiracoes = briefingData.inspiracoes.filter((_, i) => i !== index);
+    onBriefingDataChange(prev => ({ ...prev, inspiracoes: newInspiracoes }));
   };
 
   const handleLinkBlur = (index, link) => {
@@ -238,12 +238,12 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
 
   const handleGenerateProductSuggestions = async () => {
     if (!geminiAPI.isInitialized) {
-        const apiKey = getGeminiApiKey();
-        if (!apiKey) {
-            toast.error('Chave de API do Gemini não configurada.');
-            return;
-        }
-        geminiAPI.initialize(apiKey);
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        toast.error('Chave de API do Gemini não configurada.');
+        return;
+      }
+      geminiAPI.initialize(apiKey);
     }
 
     setLoadingProductSuggestions(true);
@@ -286,42 +286,42 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     `;
 
     try {
-        const response = await geminiAPI.generateContent(prompt);
-        const match = response.match(/\{[\s\S]*\}/);
-        if (match) {
-            const jsonString = match[0];
-            const jsonResponse = JSON.parse(jsonString);
-            if (jsonResponse.propostas && jsonResponse.propostas.length > 0) {
-                setProductSuggestions(jsonResponse.propostas);
-            } else {
-                throw new Error("A resposta da IA não contém a estrutura de 'propostas' esperada.");
-            }
+      const response = await geminiAPI.generateContent(prompt);
+      const match = response.match(/\{[\s\S]*\}/);
+      if (match) {
+        const jsonString = match[0];
+        const jsonResponse = JSON.parse(jsonString);
+        if (jsonResponse.propostas && jsonResponse.propostas.length > 0) {
+          setProductSuggestions(jsonResponse.propostas);
         } else {
-            throw new Error("Nenhum JSON válido encontrado na resposta da IA.");
+          throw new Error("A resposta da IA não contém a estrutura de 'propostas' esperada.");
         }
+      } else {
+        throw new Error("Nenhum JSON válido encontrado na resposta da IA.");
+      }
     } catch (error) {
-        toast.error('Erro ao gerar sugestões de produto.');
-        console.error("Product suggestion error:", error);
-        setProductSuggestionModalOpen(false); // Close modal on error
+      toast.error('Erro ao gerar sugestões de produto.');
+      console.error("Product suggestion error:", error);
+      setProductSuggestionModalOpen(false); // Close modal on error
     } finally {
-        setLoadingProductSuggestions(false);
+      setLoadingProductSuggestions(false);
     }
   };
 
   const handleGenerateAIMessage = async () => {
     if (!geminiAPI.isInitialized) {
-        const apiKey = getGeminiApiKey();
-        if (!apiKey) {
-            toast.error('Chave de API do Gemini não configurada.');
-            return;
-        }
-        geminiAPI.initialize(apiKey);
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        toast.error('Chave de API do Gemini não configurada.');
+        return;
+      }
+      geminiAPI.initialize(apiKey);
     }
 
     const { textoBase, cta, faca, nao_faca } = briefingData;
     if (!textoBase) {
-        toast.error('O texto base não pode estar vazio.');
-        return;
+      toast.error('O texto base não pode estar vazio.');
+      return;
     }
 
     const prompt = `
@@ -341,26 +341,26 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
 
     setIsGeneratingMessage(true);
     try {
-        const response = await geminiAPI.generateContent(prompt);
-        onBriefingDataChange(prev => ({ ...prev, mensagemPrincipal: response.trim() }));
-        setShowTextoBase(false);
-        toast.success('Mensagem principal gerada com sucesso!');
+      const response = await geminiAPI.generateContent(prompt);
+      onBriefingDataChange(prev => ({ ...prev, mensagemPrincipal: response.trim() }));
+      setShowTextoBase(false);
+      toast.success('Mensagem principal gerada com sucesso!');
     } catch (error) {
-        toast.error('Erro ao gerar mensagem com IA.');
-        console.error("AI message generation error:", error);
+      toast.error('Erro ao gerar mensagem com IA.');
+      console.error("AI message generation error:", error);
     } finally {
-        setIsGeneratingMessage(false);
+      setIsGeneratingMessage(false);
     }
   };
 
   const handleGenerateMessageSuggestions = async (entregaIndex) => {
     if (!geminiAPI.isInitialized) {
-        const apiKey = getGeminiApiKey();
-        if (!apiKey) {
-            toast.error('Chave de API do Gemini não configurada.');
-            return;
-        }
-        geminiAPI.initialize(apiKey);
+      const apiKey = getGeminiApiKey();
+      if (!apiKey) {
+        toast.error('Chave de API do Gemini não configurada.');
+        return;
+      }
+      geminiAPI.initialize(apiKey);
     }
 
     setLoadingMessageSuggestions(true);
@@ -378,7 +378,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     // Build the detailed tone of voice string for the prompt
     let toneOfVoicePromptSection = `1.4. TOM DE VOZ - ${selectedToneName || 'Não definido'}`;
     if (toneOfVoiceData) {
-        toneOfVoicePromptSection += `
+      toneOfVoicePromptSection += `
         1.4.1. QUANDO USAR: ${toneOfVoiceData.quando}
         1.4.2. COMO SOA: ${toneOfVoiceData.como}
         1.4.3. EXEMPLO: ${toneOfVoiceData.exemplo}`;
@@ -418,25 +418,25 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     `;
 
     try {
-        const response = await geminiAPI.generateContent(prompt);
-        const match = response.match(/\{[\s\S]*\}/);
-        if (match) {
-            const jsonString = match[0];
-            const jsonResponse = JSON.parse(jsonString);
-            if (jsonResponse.sugestoes && jsonResponse.sugestoes.length > 0) {
-                setMessageSuggestions(jsonResponse.sugestoes);
-                setMessageSuggestionModalOpen(true);
-            } else {
-                 throw new Error("A resposta da IA não contém a estrutura de 'sugestoes' esperada.");
-            }
+      const response = await geminiAPI.generateContent(prompt);
+      const match = response.match(/\{[\s\S]*\}/);
+      if (match) {
+        const jsonString = match[0];
+        const jsonResponse = JSON.parse(jsonString);
+        if (jsonResponse.sugestoes && jsonResponse.sugestoes.length > 0) {
+          setMessageSuggestions(jsonResponse.sugestoes);
+          setMessageSuggestionModalOpen(true);
         } else {
-            throw new Error("Nenhum JSON válido encontrado na resposta da IA.");
+          throw new Error("A resposta da IA não contém a estrutura de 'sugestoes' esperada.");
         }
+      } else {
+        throw new Error("Nenhum JSON válido encontrado na resposta da IA.");
+      }
     } catch (error) {
-        toast.error('Erro ao gerar sugestões de mensagem.');
-        console.error("Message suggestion error:", error);
+      toast.error('Erro ao gerar sugestões de mensagem.');
+      console.error("Message suggestion error:", error);
     } finally {
-        setLoadingMessageSuggestions(false);
+      setLoadingMessageSuggestions(false);
     }
   };
 
@@ -465,7 +465,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     // Build the detailed tone of voice string for the prompt
     let toneOfVoicePromptSection = `Tom de Voz: ${selectedToneName || 'Não definido'}`;
     if (toneOfVoiceData) {
-        toneOfVoicePromptSection += `\n    - QUANDO USAR: ${toneOfVoiceData.quando}\n    - COMO SOA: ${toneOfVoiceData.como}\n    - EXEMPLO: ${toneOfVoiceData.exemplo}`;
+      toneOfVoicePromptSection += `\n    - QUANDO USAR: ${toneOfVoiceData.quando}\n    - COMO SOA: ${toneOfVoiceData.como}\n    - EXEMPLO: ${toneOfVoiceData.exemplo}`;
     }
 
     const prompt = `
@@ -498,21 +498,21 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     `;
 
     try {
-        const response = await geminiAPI.generateContent(prompt);
-        const match = response.match(/\[(.*?)\]/s);
-        if (match) {
-            const jsonString = `[${match[1]}]`;
-            const jsonResponse = JSON.parse(jsonString);
-            setCtaSuggestions(jsonResponse);
-            setCtaSuggestionModalOpen(true);
-        } else {
-            throw new Error("Nenhum array JSON válido encontrado na resposta da IA.");
-        }
+      const response = await geminiAPI.generateContent(prompt);
+      const match = response.match(/\[(.*?)\]/s);
+      if (match) {
+        const jsonString = `[${match[1]}]`;
+        const jsonResponse = JSON.parse(jsonString);
+        setCtaSuggestions(jsonResponse);
+        setCtaSuggestionModalOpen(true);
+      } else {
+        throw new Error("Nenhum array JSON válido encontrado na resposta da IA.");
+      }
     } catch (error) {
-        toast.error('Erro ao gerar sugestões de CTA.');
-        console.error("CTA suggestion error:", error);
+      toast.error('Erro ao gerar sugestões de CTA.');
+      console.error("CTA suggestion error:", error);
     } finally {
-        setLoadingCtaSuggestions(false);
+      setLoadingCtaSuggestions(false);
     }
   };
 
@@ -536,7 +536,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
 
     let toneOfVoicePromptSection = `Tom de Voz: ${selectedToneName || 'Não definido'}`;
     if (toneOfVoiceData) {
-        toneOfVoicePromptSection += `\n    - QUANDO USAR: ${toneOfVoiceData.quando}\n    - COMO SOA: ${toneOfVoiceData.como}\n    - EXEMPLO: ${toneOfVoiceData.exemplo}`;
+      toneOfVoicePromptSection += `\n    - QUANDO USAR: ${toneOfVoiceData.quando}\n    - COMO SOA: ${toneOfVoiceData.como}\n    - EXEMPLO: ${toneOfVoiceData.exemplo}`;
     }
 
     const prompt = `
@@ -576,22 +576,22 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     `;
 
     try {
-        const response = await geminiAPI.generateContent(prompt);
-        // More robust JSON extraction
-        const match = response.match(/\[((.|\n)*)\]/);
-        if (match) {
-            const jsonString = match[0];
-            const jsonResponse = JSON.parse(jsonString);
-            setSaudacaoSuggestions(jsonResponse);
-            setSaudacaoSuggestionModalOpen(true);
-        } else {
-            throw new Error("Nenhum array JSON válido encontrado na resposta da IA.");
-        }
+      const response = await geminiAPI.generateContent(prompt);
+      // More robust JSON extraction
+      const match = response.match(/\[((.|\n)*)\]/);
+      if (match) {
+        const jsonString = match[0];
+        const jsonResponse = JSON.parse(jsonString);
+        setSaudacaoSuggestions(jsonResponse);
+        setSaudacaoSuggestionModalOpen(true);
+      } else {
+        throw new Error("Nenhum array JSON válido encontrado na resposta da IA.");
+      }
     } catch (error) {
-        toast.error('Erro ao gerar sugestões de Saudação.');
-        console.error("Saudação suggestion error:", error);
+      toast.error('Erro ao gerar sugestões de Saudação.');
+      console.error("Saudação suggestion error:", error);
     } finally {
-        setLoadingSaudacaoSuggestions(false);
+      setLoadingSaudacaoSuggestions(false);
     }
   };
 
@@ -656,7 +656,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
           <Box sx={{ p: 2, minHeight: 400 }}>
             <Typography variant="h6" gutterBottom>Qual é o produto, serviço ou experiência da sua campanha?</Typography>
             <Grid container spacing={3}>
-               <Grid item xs={12}>
+              <Grid item xs={12}>
                 <Typography variant="subtitle1" gutterBottom>Link do Produto (Opcional)</Typography>
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                   <TextField
@@ -712,27 +712,27 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         );
       case 2: // Guia da Marca
         return (
-            <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
-                <Typography variant="h6" gutterBottom>Guia da Marca</Typography>
-                <Grid container spacing={3}>
-                    <Grid item xs={12}>
-                        <Typography variant="subtitle1" gutterBottom>Tom de Voz</Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Paper variant="outlined" sx={{ p: 1, display: 'flex', flexWrap: 'wrap', gap: 1, flexGrow: 1, minHeight: '40px' }}>
-                                {(briefingData.tom_de_voz || []).map((item) => <Chip key={item} label={item} />)}
-                                {(briefingData.tom_de_voz || []).length === 0 && <Typography sx={{p:1}} color="text.secondary">Nenhum tom selecionado</Typography>}
-                            </Paper>
-                            <Button onClick={() => setTomDeVozModalOpen(true)} variant="outlined">Selecionar</Button>
-                        </Box>
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <ChipInput label="FAÇA (DOs)" items={briefingData.faca || []} setItems={(v) => handleChipChange('faca', v)} suggestions={SUGESTOES_FACA} />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <ChipInput label="NÃO FAÇA (DON'Ts)" items={briefingData.nao_faca || []} setItems={(v) => handleChipChange('nao_faca', v)} suggestions={SUGESTOES_NAO_FACA} />
-                    </Grid>
-                </Grid>
-            </Box>
+          <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
+            <Typography variant="h6" gutterBottom>Guia da Marca</Typography>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" gutterBottom>Tom de Voz</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Paper variant="outlined" sx={{ p: 1, display: 'flex', flexWrap: 'wrap', gap: 1, flexGrow: 1, minHeight: '40px' }}>
+                    {(briefingData.tom_de_voz || []).map((item) => <Chip key={item} label={item} />)}
+                    {(briefingData.tom_de_voz || []).length === 0 && <Typography sx={{ p: 1 }} color="text.secondary">Nenhum tom selecionado</Typography>}
+                  </Paper>
+                  <Button onClick={() => setTomDeVozModalOpen(true)} variant="outlined">Selecionar</Button>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <ChipInput label="FAÇA (DOs)" items={briefingData.faca || []} setItems={(v) => handleChipChange('faca', v)} suggestions={SUGESTOES_FACA} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <ChipInput label="NÃO FAÇA (DON'Ts)" items={briefingData.nao_faca || []} setItems={(v) => handleChipChange('nao_faca', v)} suggestions={SUGESTOES_NAO_FACA} />
+              </Grid>
+            </Grid>
+          </Box>
         );
       case 3: // Saudação
         return (
@@ -747,7 +747,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                 label="Texto da Saudação"
                 fullWidth
                 multiline
-                rows={3}
+                rows={5}
                 value={briefingData.saudacao || ''}
                 onChange={handleChange}
                 inputProps={{ maxLength: 150 }}
@@ -770,247 +770,264 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         );
       case 4: // Entregas
         return (
-            <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="h6">Entregas</Typography>
-                    <Button startIcon={<Add />} onClick={handleAddEntrega} variant="contained">Adicionar Entrega</Button>
-                </Box>
-                <Grid container spacing={3}>
-                    {(briefingData.entregas || []).map((entrega, index) => (
-                        <Grid item xs={12} key={index}>
-                            <Paper variant="outlined" sx={{ p: 3, position: 'relative' }}>
-                                <IconButton
-                                    aria-label="delete"
-                                    onClick={() => handleRemoveEntrega(index)}
-                                    sx={{ position: 'absolute', top: 8, right: 8 }}
-                                    disabled={briefingData.entregas.length <= 1}
-                                >
-                                    <DeleteIcon />
-                                </IconButton>
-                                <Typography variant="h6" gutterBottom>Entrega #{index + 1}</Typography>
-                                <Grid container spacing={2}>
-                                    <Grid item xs={12} sm={4}>
-                                        <TextField
-                                            label="Quantidade"
-                                            type="number"
-                                            fullWidth
-                                            value={entrega.quantidade}
-                                            onChange={(e) => handleEntregaChange(index, 'quantidade', parseInt(e.target.value, 10))}
-                                            InputProps={{ inputProps: { min: 1 } }}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} sm={8}>
-                                        <TextField
-                                            label="Tipo"
-                                            fullWidth
-                                            value={entrega.tipo}
-                                            onChange={(e) => handleEntregaChange(index, 'tipo', e.target.value)}
-                                            inputProps={{ maxLength: 40 }}
-                                            helperText={`${(entrega.tipo || '').length}/40`}
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <FormControlLabel
-                                            control={
-                                                <Switch
-                                                    checked={entrega.envioProdutos}
-                                                    onChange={(e) => handleEntregaChange(index, 'envioProdutos', e.target.checked)}
-                                                />
-                                            }
-                                            label="Há envio de produtos para esta entrega?"
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                                            <TextField
-                                              label="Mensagem Principal"
-                                              fullWidth
-                                              multiline
-                                              rows={4}
-                                              value={entrega.mensagemPrincipal}
-                                              onChange={(e) => handleEntregaChange(index, 'mensagemPrincipal', e.target.value)}
-                                              placeholder="Digite o texto base aqui ou clique no botão para gerar sugestões com IA."
-                                            />
-                                            <Tooltip title="Gerar sugestões para a Mensagem Principal com IA">
-                                                <span>
-                                                    <IconButton
-                                                        color="primary"
-                                                        onClick={() => handleGenerateMessageSuggestions(index)}
-                                                        disabled={(loadingMessageSuggestions && activeEntregaIndex === index) || !entrega.mensagemPrincipal}
-                                                    >
-                                                        {loadingMessageSuggestions && activeEntregaIndex === index ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
-                                                    </IconButton>
-                                                </span>
-                                            </Tooltip>
-                                        </Box>
-                                    </Grid>
-                                    <Grid item xs={12}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <TextField
-                                              label="CTA (Call to Action)"
-                                              fullWidth
-                                              value={entrega.cta}
-                                              onChange={(e) => handleEntregaChange(index, 'cta', e.target.value)}
-                                            />
-                                            <Tooltip title="Gerar sugestões de CTA com IA">
-                                                <span>
-                                                    <IconButton
-                                                        color="primary"
-                                                        onClick={() => handleGenerateCtaSuggestions(index)}
-                                                        disabled={loadingCtaSuggestions && activeEntregaIndex === index}
-                                                    >
-                                                        {loadingCtaSuggestions && activeEntregaIndex === index ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
-                                                    </IconButton>
-                                                </span>
-                                            </Tooltip>
-                                        </Box>
-                                    </Grid>
-                                </Grid>
-                            </Paper>
-                        </Grid>
-                    ))}
-                </Grid>
+          <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">Entregas</Typography>
+              <Button startIcon={<Add />} onClick={handleAddEntrega} variant="contained">Adicionar Entrega</Button>
             </Box>
+            <Grid container spacing={3}>
+              {(briefingData.entregas || []).map((entrega, index) => (
+                <Grid item xs={12} key={index}>
+                  <Paper variant="outlined" sx={{ p: 3, position: 'relative' }}>
+                    <IconButton
+                      aria-label="delete"
+                      onClick={() => handleRemoveEntrega(index)}
+                      sx={{ position: 'absolute', top: 8, right: 8 }}
+                      disabled={briefingData.entregas.length <= 1}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                    <Typography variant="h6" gutterBottom>Entrega #{index + 1}</Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={4}>
+                        <TextField
+                          label="Quantidade"
+                          type="number"
+                          fullWidth
+                          value={entrega.quantidade}
+                          onChange={(e) => handleEntregaChange(index, 'quantidade', parseInt(e.target.value, 10))}
+                          InputProps={{ inputProps: { min: 1 } }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={8}>
+                        <TextField
+                          label="Tipo"
+                          fullWidth
+                          value={entrega.tipo}
+                          onChange={(e) => handleEntregaChange(index, 'tipo', e.target.value)}
+                          inputProps={{ maxLength: 40 }}
+                          helperText={`${(entrega.tipo || '').length}/40`}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={entrega.envioProdutos}
+                              onChange={(e) => handleEntregaChange(index, 'envioProdutos', e.target.checked)}
+                            />
+                          }
+                          label="Há envio de produtos para esta entrega?"
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                          <TextField
+                            label="Mensagem Principal"
+                            fullWidth
+                            multiline
+                            rows={4}
+                            value={entrega.mensagemPrincipal}
+                            onChange={(e) => handleEntregaChange(index, 'mensagemPrincipal', e.target.value)}
+                            placeholder="Digite o texto base aqui ou clique no botão para gerar sugestões com IA."
+                          />
+                          <Tooltip title="Gerar sugestões para a Mensagem Principal com IA">
+                            <span>
+                              <IconButton
+                                color="primary"
+                                onClick={() => handleGenerateMessageSuggestions(index)}
+                                disabled={(loadingMessageSuggestions && activeEntregaIndex === index) || !entrega.mensagemPrincipal}
+                              >
+                                {loadingMessageSuggestions && activeEntregaIndex === index ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <TextField
+                            label="CTA (Call to Action)"
+                            fullWidth
+                            value={entrega.cta}
+                            onChange={(e) => handleEntregaChange(index, 'cta', e.target.value)}
+                          />
+                          <Tooltip title="Gerar sugestões de CTA com IA">
+                            <span>
+                              <IconButton
+                                color="primary"
+                                onClick={() => handleGenerateCtaSuggestions(index)}
+                                disabled={loadingCtaSuggestions && activeEntregaIndex === index}
+                              >
+                                {loadingCtaSuggestions && activeEntregaIndex === index ? <CircularProgress size={24} /> : <AutoAwesomeIcon />}
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
         );
       case 5: // Inspiração
         return (
-            <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
-                <Typography variant="h6" gutterBottom>Inspirações</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Adicione links de conteúdos que servem como referência. A aplicação tentará gerar uma miniatura da página.</Typography>
-                <Grid container spacing={3}>
-                    {(briefingData.inspiracoes || []).map((inspiracao, index) => (
-                        <Grid item xs={12} key={index}>
-                            <Paper variant="outlined" sx={{ p: 2 }}>
-                                <Grid container spacing={2} alignItems="center">
-                                    <Grid item xs={12} md={9}>
-                                        <TextField
-                                            label="O que você quer usar de referência desse link? (opcional)"
-                                            fullWidth
-                                            value={inspiracao.description}
-                                            onChange={(e) => handleInspiracaoChange(index, 'description', e.target.value)}
-                                            inputProps={{ maxLength: 80 }}
-                                            helperText={`${(inspiracao.description || '').length}/80`}
-                                            sx={{ mb: 2 }}
-                                        />
-                                        <TextField
-                                            label="Link"
-                                            fullWidth
-                                            value={inspiracao.link}
-                                            onChange={(e) => handleInspiracaoChange(index, 'link', e.target.value)}
-                                            onBlur={(e) => handleLinkBlur(index, e.target.value)}
-                                            placeholder="https://exemplo.com"
-                                        />
-                                    </Grid>
-                                    <Grid item xs={12} md={3} sx={{ textAlign: 'center' }}>
-                                        <a href={inspiracao.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                                            <Box
-                                                component="img"
-                                                sx={{
-                                                    width: '100%',
-                                                    aspectRatio: '16/9',
-                                                    objectFit: 'cover',
-                                                    border: '1px solid',
-                                                    borderColor: 'divider',
-                                                    borderRadius: 1,
-                                                    cursor: inspiracao.link ? 'pointer' : 'default',
-                                                    backgroundColor: 'grey.200'
-                                                }}
-                                                src={inspiracao.screenshotUrl || noCameraSvg}
-                                                alt={inspiracao.screenshotUrl ? `Screenshot de ${inspiracao.link}` : 'Nenhuma imagem disponível'}
-                                                onError={(e) => { e.target.onerror = null; e.target.src = noCameraSvg; }}
-                                            />
-                                        </a>
-                                    </Grid>
-                                    <Grid item xs={12} sx={{ textAlign: 'right' }}>
-                                        <IconButton onClick={() => handleRemoveInspiracao(index)} color="error" size="small"><DeleteIcon /></IconButton>
-                                    </Grid>
-                                </Grid>
-                            </Paper>
-                        </Grid>
-                    ))}
-                    <Grid item xs={12}>
-                        <Button startIcon={<Add />} onClick={handleAddInspiracao} disabled={(briefingData.inspiracoes || []).length >= 3}>Adicionar Inspiração</Button>
+          <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
+            <Typography variant="h6" gutterBottom>Inspirações</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Adicione links de conteúdos que servem como referência. A aplicação tentará gerar uma miniatura da página.</Typography>
+            <Grid container spacing={3}>
+              {(briefingData.inspiracoes || []).map((inspiracao, index) => (
+                <Grid item xs={12} key={index}>
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Grid container spacing={2} alignItems="center">
+                      <Grid item xs={12} md={9}>
+                        <TextField
+                          label="O que você quer usar de referência desse link? (opcional)"
+                          fullWidth
+                          value={inspiracao.description}
+                          onChange={(e) => handleInspiracaoChange(index, 'description', e.target.value)}
+                          inputProps={{ maxLength: 80 }}
+                          helperText={`${(inspiracao.description || '').length}/80`}
+                          sx={{ mb: 2 }}
+                        />
+                        <TextField
+                          label="Link"
+                          fullWidth
+                          value={inspiracao.link}
+                          onChange={(e) => handleInspiracaoChange(index, 'link', e.target.value)}
+                          onBlur={(e) => handleLinkBlur(index, e.target.value)}
+                          placeholder="https://exemplo.com"
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={3} sx={{ textAlign: 'center' }}>
+                        <a href={inspiracao.link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                          <Box
+                            component="img"
+                            sx={{
+                              width: '100%',
+                              aspectRatio: '16/9',
+                              objectFit: 'cover',
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              borderRadius: 1,
+                              cursor: inspiracao.link ? 'pointer' : 'default',
+                              backgroundColor: 'grey.200'
+                            }}
+                            src={inspiracao.screenshotUrl || noCameraSvg}
+                            alt={inspiracao.screenshotUrl ? `Screenshot de ${inspiracao.link}` : 'Nenhuma imagem disponível'}
+                            onError={(e) => { e.target.onerror = null; e.target.src = noCameraSvg; }}
+                          />
+                        </a>
+                      </Grid>
+                      <Grid item xs={12} sx={{ textAlign: 'right' }}>
+                        <IconButton onClick={() => handleRemoveInspiracao(index)} color="error" size="small"><DeleteIcon /></IconButton>
+                      </Grid>
                     </Grid>
+                  </Paper>
                 </Grid>
-            </Box>
+              ))}
+              <Grid item xs={12}>
+                <Button startIcon={<Add />} onClick={handleAddInspiracao} disabled={(briefingData.inspiracoes || []).length >= 3}>Adicionar Inspiração</Button>
+              </Grid>
+            </Grid>
+          </Box>
         );
       case 6: { // Finalização
         const selectedMotivacao = MOTIVACOES.find(m => m.id === briefingData.motivacao);
+        const selectedToneName = (briefingData.tom_de_voz || [])[0];
+        const toneOfVoiceData = TONS_DE_VOZ_DATA.find(t => t.tom === selectedToneName);
+        const entregas = briefingData.entregas || [];
 
         const generateBriefingText = () => {
-            let text = `Saudação;\n${briefingData.saudacao || 'Não definida'}\n\n`;
-            text += `Objetivo;\n${selectedMotivacao ? selectedMotivacao.nome : 'Não definido'}\n\n`;
-            text += `Produto com sua descrição;\n${briefingData.produtoServico || 'N/A'}\n${briefingData.descricao || 'N/A'}\n\n`;
+          let text = `${briefingData.saudacao || 'Olá!'}\n\n`;
 
-            text += "Guia da Marca com os detalhes do tom de voz escolhido, os DO e os DONTS\n";
-            const selectedToneName = (briefingData.tom_de_voz || [])[0];
-            const toneOfVoiceData = TONS_DE_VOZ_DATA.find(t => t.tom === selectedToneName);
-            if (toneOfVoiceData) {
-                text += `Tom de Voz: ${toneOfVoiceData.tom}\n`;
-                text += `  - Quando usar: ${toneOfVoiceData.quando}\n`;
-                text += `  - Como soa: ${toneOfVoiceData.como}\n`;
-                text += `  - Exemplo: ${toneOfVoiceData.exemplo}\n`;
-            } else {
-                text += "Tom de Voz: Não definido\n";
+          text += `Nosso objetivo dessa campanha é ${selectedMotivacao ? selectedMotivacao.nome : 'esta ainda indefinido'}, de modo a ${selectedMotivacao.descricao}.\n\n`;
+
+          text += `O alvo da campanha é ${briefingData.produtoServico || 'N/A'}:\n\n`
+
+          text += `"${briefingData.descricao || 'N/A'}"\n\n`;
+
+          text += "Alguns detalhes importantes com seu conteúdo:\n\n";
+
+          if (toneOfVoiceData) {
+            text += `1. Tom de Voz: ${toneOfVoiceData.tom}\n\n`;
+            text += `  - Quando usar: ${toneOfVoiceData.quando}\n`;
+            text += `  - Como soa: ${toneOfVoiceData.como}\n`;
+            text += `  - Exemplo: ${toneOfVoiceData.exemplo}\n\n`;
+          } else {
+            text += "1. Tom de Voz: Não definido\n\n";
+          }
+          const formatListItems = (items) => {
+            if (!items || !items.length) {
+              return "  Nenhum.\n";
             }
-            const formatListItems = (items) => {
-                if (!items || !items.length) {
-                    return "  Nenhum.\n";
-                }
-                return items.map((item, index) => `  ${item}${index === items.length - 1 ? '.' : ';'}`).join('\n') + '\n';
-            };
+            return items.map((item, index) => `  ${item}${index === items.length - 1 ? '.' : ';'}`).join('\n') + '\n';
+          };
 
-            text += "\nDOs:\n";
-            text += formatListItems(briefingData.faca);
+          text += "2. O que Fazer (DOs):\n\n";
+          text += formatListItems(briefingData.faca);
+          text += "\n";
 
-            text += "DON'Ts:\n";
-            text += formatListItems(briefingData.nao_faca);
-            text += "\n";
+          text += "3. O que evitar (DON'Ts):\n\n";
+          text += formatListItems(briefingData.nao_faca);
+          text += "\n";
 
-            text += "Entregas;\n";
-            (briefingData.entregas || []).forEach((entrega, index) => {
-                text += `- Entrega No. ${index + 1}\n`;
-                text += `-- Quantidade: ${entrega.quantidade}, Tipo: ${entrega.tipo || 'N/A'}, Envio para entrega: ${entrega.envioProdutos ? 'Sim' : 'Não'}\n`;
-                text += `-- Mensagem Principal:\n   ${entrega.mensagemPrincipal || 'N/A'}\n`;
-                text += `-- CTA: ${entrega.cta || 'N/A'}\n`;
+          text += "** Entregas **\n\n";
+          text += entregas.length > 1
+            ? "As entregas previstas são:\n\n"
+            : "A entrega prevista é:\n\n";
+
+          entregas.forEach((entrega, index) => {
+            if (entregas.length > 1)
+              text += `- Entrega N° ${index + 1}\n`;
+
+            text += `📌 Quantidade de conteúdos: ${entrega.quantidade}`
+            text += `📌 Detalhes: ${entrega.tipo || 'N/A'}`
+            text += `📌 Envio de produtos: ${entrega.envioProdutos ? 'Sim, em até XX dias' : 'Não'}\n`;
+            text += `📌 Mensagem Principal:\n\n'
+            text += `${entrega.mensagemPrincipal || 'N/A'}\n\n``;
+            text += `📌 CTA: ${entrega.cta || 'N/A'}\n`;
+          });
+          text += "\n";
+
+          text += "** Inspirações **\n\n";
+
+          const inspirations = (briefingData.inspiracoes || []).filter(i => i.link);
+          if (inspirations.length > 0) {
+            inspirations.forEach(i => {
+              text += `${i.description ? `${i.description} (${i.link})` : i.link}\n`;
             });
-            text += "\n";
+          } else {
+            text += "Nenhuma inspiração fornecida.\n";
+          }
+          text += "\n";
 
-            text += "Inspirações;\n";
-            const inspirations = (briefingData.inspiracoes || []).filter(i => i.link);
-            if (inspirations.length > 0) {
-                inspirations.forEach(i => {
-                    text += `${i.description ? `${i.description} (${i.link})` : i.link}\n`;
-                });
-            } else {
-                text += "Nenhuma inspiração fornecida.\n";
-            }
-            text += "\n";
+          text += "** Próximos Passos**\n\n"; // Placeholder for next steps if any
 
-            text += "Próximos Passos;\n"; // Placeholder for next steps if any
-
-            return text;
+          return text;
         };
 
         const briefingText = generateBriefingText();
 
         return (
-            <Box sx={{ p: 2, maxHeight: '70vh', overflowY: 'auto' }}>
-                <Typography variant="h6" gutterBottom>Finalização e Revisão</Typography>
-                <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                        <TextField name="name" label="Nome do Briefing" fullWidth value={briefingData.name || ''} onChange={handleChange} required helperText="Dê um nome para identificar facilmente este briefing no futuro." />
-                    </Grid>
-                    <Grid item xs={12}>
-                        <Divider sx={{ my: 2 }}>Resumo do Briefing</Divider>
-                        <Paper variant="outlined" sx={{ p: 2, whiteSpace: 'pre-wrap', backgroundColor: 'grey.100' }}>
-                            <Typography variant="body1" component="pre">
-                                {briefingText}
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                </Grid>
-            </Box>
+          <Box sx={{ p: 2, maxHeight: '70vh', overflowY: 'auto' }}>
+            <Typography variant="h6" gutterBottom>Finalização e Revisão</Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField name="name" label="Nome do Briefing" fullWidth value={briefingData.name || ''} onChange={handleChange} required helperText="Dê um nome para identificar facilmente este briefing no futuro." />
+              </Grid>
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }}>Resumo do Briefing</Divider>
+                <Paper variant="outlined" sx={{ p: 2, whiteSpace: 'pre-wrap', backgroundColor: 'grey.100' }}>
+                  <Typography variant="body1" component="pre">
+                    {briefingText}
+                  </Typography>
+                </Paper>
+              </Grid>
+            </Grid>
+          </Box>
         );
       }
       default:
@@ -1023,11 +1040,11 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
       <DialogTitle>Assistente de Criação de Briefing</DialogTitle>
       <DialogContent>
         <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
-            {steps.map((label) => (
-                <Step key={label}>
-                    <StepLabel>{label}</StepLabel>
-                </Step>
-            ))}
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
         </Stepper>
         {renderStepContent(activeStep)}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
