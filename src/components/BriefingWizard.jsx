@@ -71,6 +71,7 @@ export const emptyBriefingWizardData = {
     quantidade: 1,
     tipo: '',
     envioProdutos: false,
+    prazoDias: '', // Prazo em dias para envio
     mensagemPrincipal: '',
     cta: '',
   }],
@@ -190,6 +191,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
       quantidade: 1,
       tipo: '',
       envioProdutos: false,
+      prazoDias: '',
       mensagemPrincipal: '',
       cta: '',
     }];
@@ -819,6 +821,19 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                           label="Há envio de produtos para esta entrega?"
                         />
                       </Grid>
+                      {entrega.envioProdutos && (
+                        <Grid item xs={12}>
+                          <TextField
+                            label="Prazo para envio (dias)"
+                            type="number"
+                            fullWidth
+                            value={entrega.prazoDias || ''}
+                            onChange={(e) => handleEntregaChange(index, 'prazoDias', e.target.value)}
+                            InputProps={{ inputProps: { min: 1 } }}
+                            helperText="Informe o prazo em dias para o envio do produto."
+                          />
+                        </Grid>
+                      )}
                       <Grid item xs={12}>
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
                           <TextField
@@ -829,6 +844,8 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                             value={entrega.mensagemPrincipal}
                             onChange={(e) => handleEntregaChange(index, 'mensagemPrincipal', e.target.value)}
                             placeholder="Digite o texto base aqui ou clique no botão para gerar sugestões com IA."
+                            inputProps={{ maxLength: 250 }}
+                            helperText={`${(entrega.mensagemPrincipal || '').length}/250`}
                           />
                           <Tooltip title="Gerar sugestões para a Mensagem Principal com IA">
                             <span>
@@ -850,6 +867,8 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                             fullWidth
                             value={entrega.cta}
                             onChange={(e) => handleEntregaChange(index, 'cta', e.target.value)}
+                            inputProps={{ maxLength: 100 }}
+                            helperText={`${(entrega.cta || '').length}/100`}
                           />
                           <Tooltip title="Gerar sugestões de CTA com IA">
                             <span>
@@ -984,7 +1003,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
 
             text += `📌 Quantidade de conteúdos: ${entrega.quantidade} \n`;
             text += `📌 Detalhes: ${entrega.tipo || 'N/A'} \n`;
-            text += `📌 Envio de produtos: ${entrega.envioProdutos ? 'Sim, em até XX dias' : 'Não'} \n`;
+            text += `📌 Envio de produtos: ${entrega.envioProdutos ? `Sim, em até ${entrega.prazoDias || 'a definir'} dias` : 'Não'} \n`;
             text += `📌 Mensagem Principal:\n\n`;
             text += `${entrega.mensagemPrincipal || 'N/A'} \n\n`;
             text += `📌 CTA: ${entrega.cta || 'N/A'}\n\n`;
@@ -1018,8 +1037,8 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
               </Grid>
               <Grid item xs={12}>
                 <Divider sx={{ my: 2 }}>Resumo do Briefing</Divider>
-                <Paper variant="outlined" sx={{ p: 2, whiteSpace: 'pre-wrap', backgroundColor: 'grey.100' }}>
-                  <Typography variant="body1" component="pre">
+                <Paper variant="outlined" sx={{ p: 2, whiteSpace: 'pre-wrap', backgroundColor: 'grey.100', wordBreak: 'break-word' }}>
+                  <Typography variant="body1" component="div">
                     {briefingText}
                   </Typography>
                 </Paper>
