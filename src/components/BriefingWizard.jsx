@@ -983,14 +983,13 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
             if (entregas.length > 1)
               text += `- Entrega N° ${index + 1}\n`;
 
-            text += `📌 Quantidade de conteúdos: ${entrega.quantidade}`
-            text += `📌 Detalhes: ${entrega.tipo || 'N/A'}`
-            text += `📌 Envio de produtos: ${entrega.envioProdutos ? 'Sim, em até XX dias' : 'Não'}\n`;
-            text += `📌 Mensagem Principal:\n\n'
-            text += `${entrega.mensagemPrincipal || 'N/A'}\n\n``;
-            text += `📌 CTA: ${entrega.cta || 'N/A'}\n`;
+            text += `📌 Quantidade de conteúdos: ${entrega.quantidade} \n`;
+            text += `📌 Detalhes: ${entrega.tipo || 'N/A'} \n`;
+            text += `📌 Envio de produtos: ${entrega.envioProdutos ? 'Sim, em até XX dias' : 'Não'} \n`;
+            text += `📌 Mensagem Principal:\n\n`;
+            text += `${entrega.mensagemPrincipal || 'N/A'} \n\n`;
+            text += `📌 CTA: ${entrega.cta || 'N/A'}\n\n`;
           });
-          text += "\n";
 
           text += "** Inspirações **\n\n";
 
