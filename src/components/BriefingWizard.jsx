@@ -12,6 +12,7 @@ import InfoBox from './InfoBox';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 import TextEditor from './TextEditor';
+import { diffChars } from 'diff';
 
 const ctaBestPractices = (
   <Box>
@@ -156,11 +157,94 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   const [saudacaoSuggestions, setSaudacaoSuggestions] = useState([]);
   const [loadingSaudacaoSuggestions, setLoadingSaudacaoSuggestions] = useState(false);
   const [activeEntregaIndex, setActiveEntregaIndex] = useState(null);
+  const [editedBriefingText, setEditedBriefingText] = useState('');
+  const [showDiff, setShowDiff] = useState(false);
+
+
+  const generateBriefingText = React.useCallback(() => {
+    if (!briefingData) return '';
+    const selectedMotivacao = MOTIVACOES.find(m => m.id === briefingData.motivacao);
+    const selectedToneName = (briefingData.tom_de_voz || [])[0];
+    const toneOfVoiceData = TONS_DE_VOZ_DATA.find(t => t.tom === selectedToneName);
+    const entregas = briefingData.entregas || [];
+
+    let text = `${briefingData.saudacao || 'Olá!'}\n\n`;
+
+    text += `Nosso objetivo dessa campanha é ${selectedMotivacao ? selectedMotivacao.nome : 'esta ainda indefinido'}, de modo a ${selectedMotivacao.descricao}.\n\n`;
+
+    text += `O alvo da campanha é ${briefingData.produtoServico || 'N/A'}:\n\n`
+
+    text += `"${briefingData.descricao || 'N/A'}"\n\n`;
+
+    text += "Alguns detalhes importantes com seu conteúdo:\n\n";
+
+    if (toneOfVoiceData) {
+      text += `1. Tom de Voz: ${toneOfVoiceData.tom}\n\n`;
+      text += `  - Quando usar: ${toneOfVoiceData.quando}\n`;
+      text += `  - Como soa: ${toneOfVoiceData.como}\n`;
+      text += `  - Exemplo: ${toneOfVoiceData.exemplo}\n\n`;
+    } else {
+      text += "1. Tom de Voz: Não definido\n\n";
+    }
+    const formatListItems = (items) => {
+      if (!items || !items.length) {
+        return "  Nenhum.\n";
+      }
+      return items.map((item, index) => `  ${item}${index === items.length - 1 ? '.' : ';'}`).join('\n') + '\n';
+    };
+
+    text += "2. O que Fazer (DOs):\n\n";
+    text += formatListItems(briefingData.faca);
+    text += "\n";
+
+    text += "3. O que evitar (DON'Ts):\n\n";
+    text += formatListItems(briefingData.nao_faca);
+    text += "\n";
+
+    text += "** Entregas **\n\n";
+    text += entregas.length > 1
+      ? "As entregas previstas são:\n\n"
+      : "A entrega prevista é:\n\n";
+
+    entregas.forEach((entrega, index) => {
+      if (entregas.length > 1)
+        text += `- Entrega N° ${index + 1}\n`;
+
+      text += `📌 Quantidade de conteúdos: ${entrega.quantidade} \n`;
+      text += `📌 Detalhes: ${entrega.tipo || 'N/A'} \n`;
+      text += `📌 Envio de produtos: ${entrega.envioProdutos ? `Sim, em até ${entrega.prazoDias || 'a definir'} dias` : 'Não'} \n`;
+      text += `📌 Mensagem Principal:\n\n`;
+      text += `${entrega.mensagemPrincipal || 'N/A'} \n\n`;
+      text += `📌 CTA: ${entrega.cta || 'N/A'}\n\n`;
+    });
+
+    text += "** Inspirações **\n\n";
+
+    const inspirations = (briefingData.inspiracoes || []).filter(i => i.link);
+    if (inspirations.length > 0) {
+      inspirations.forEach(i => {
+        text += `${i.description ? `${i.description} (${i.link})` : i.link}\n`;
+      });
+    } else {
+      text += "Nenhuma inspiração fornecida.\n";
+    }
+    text += "\n";
+
+    text += "** Próximos Passos**\n\n"; // Placeholder for next steps if any
+
+    return text;
+  }, [briefingData]);
 
 
   useEffect(() => {
     setActiveStep(initialStep);
   }, [initialStep]);
+
+  useEffect(() => {
+    if (activeStep === 6) {
+      setEditedBriefingText(generateBriefingText());
+    }
+  }, [activeStep, generateBriefingText]);
 
   const TOTAL_STEPS = 7;
 
@@ -953,81 +1037,6 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
           </Box>
         );
       case 6: { // Finalização
-        const selectedMotivacao = MOTIVACOES.find(m => m.id === briefingData.motivacao);
-        const selectedToneName = (briefingData.tom_de_voz || [])[0];
-        const toneOfVoiceData = TONS_DE_VOZ_DATA.find(t => t.tom === selectedToneName);
-        const entregas = briefingData.entregas || [];
-
-        const generateBriefingText = () => {
-          let text = `${briefingData.saudacao || 'Olá!'}\n\n`;
-
-          text += `Nosso objetivo dessa campanha é ${selectedMotivacao ? selectedMotivacao.nome : 'esta ainda indefinido'}, de modo a ${selectedMotivacao.descricao}.\n\n`;
-
-          text += `O alvo da campanha é ${briefingData.produtoServico || 'N/A'}:\n\n`
-
-          text += `"${briefingData.descricao || 'N/A'}"\n\n`;
-
-          text += "Alguns detalhes importantes com seu conteúdo:\n\n";
-
-          if (toneOfVoiceData) {
-            text += `1. Tom de Voz: ${toneOfVoiceData.tom}\n\n`;
-            text += `  - Quando usar: ${toneOfVoiceData.quando}\n`;
-            text += `  - Como soa: ${toneOfVoiceData.como}\n`;
-            text += `  - Exemplo: ${toneOfVoiceData.exemplo}\n\n`;
-          } else {
-            text += "1. Tom de Voz: Não definido\n\n";
-          }
-          const formatListItems = (items) => {
-            if (!items || !items.length) {
-              return "  Nenhum.\n";
-            }
-            return items.map((item, index) => `  ${item}${index === items.length - 1 ? '.' : ';'}`).join('\n') + '\n';
-          };
-
-          text += "2. O que Fazer (DOs):\n\n";
-          text += formatListItems(briefingData.faca);
-          text += "\n";
-
-          text += "3. O que evitar (DON'Ts):\n\n";
-          text += formatListItems(briefingData.nao_faca);
-          text += "\n";
-
-          text += "** Entregas **\n\n";
-          text += entregas.length > 1
-            ? "As entregas previstas são:\n\n"
-            : "A entrega prevista é:\n\n";
-
-          entregas.forEach((entrega, index) => {
-            if (entregas.length > 1)
-              text += `- Entrega N° ${index + 1}\n`;
-
-            text += `📌 Quantidade de conteúdos: ${entrega.quantidade} \n`;
-            text += `📌 Detalhes: ${entrega.tipo || 'N/A'} \n`;
-            text += `📌 Envio de produtos: ${entrega.envioProdutos ? `Sim, em até ${entrega.prazoDias || 'a definir'} dias` : 'Não'} \n`;
-            text += `📌 Mensagem Principal:\n\n`;
-            text += `${entrega.mensagemPrincipal || 'N/A'} \n\n`;
-            text += `📌 CTA: ${entrega.cta || 'N/A'}\n\n`;
-          });
-
-          text += "** Inspirações **\n\n";
-
-          const inspirations = (briefingData.inspiracoes || []).filter(i => i.link);
-          if (inspirations.length > 0) {
-            inspirations.forEach(i => {
-              text += `${i.description ? `${i.description} (${i.link})` : i.link}\n`;
-            });
-          } else {
-            text += "Nenhuma inspiração fornecida.\n";
-          }
-          text += "\n";
-
-          text += "** Próximos Passos**\n\n"; // Placeholder for next steps if any
-
-          return text;
-        };
-
-        const briefingText = generateBriefingText();
-
         return (
           <Box sx={{ p: 2, maxHeight: '70vh', overflowY: 'auto' }}>
             <Typography variant="h6" gutterBottom>Finalização e Revisão</Typography>
@@ -1037,11 +1046,47 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
               </Grid>
               <Grid item xs={12}>
                 <Divider sx={{ my: 2 }}>Resumo do Briefing</Divider>
-                <Paper variant="outlined" sx={{ p: 2, whiteSpace: 'pre-wrap', backgroundColor: 'grey.100', wordBreak: 'break-word' }}>
-                  <Typography variant="body1" component="div">
-                    {briefingText}
-                  </Typography>
-                </Paper>
+                <FormControlLabel
+                  control={<Switch checked={showDiff} onChange={(e) => setShowDiff(e.target.checked)} />}
+                  label="Destacar Alterações"
+                  sx={{ mb: 1 }}
+                />
+                {showDiff ? (
+                  <Paper variant="outlined" sx={{ p: 2, whiteSpace: 'pre-wrap', backgroundColor: 'grey.100', wordBreak: 'break-word', minHeight: '400px', fontFamily: 'monospace' }}>
+                    <Typography component="div" variant="body1">
+                      {diffChars(generateBriefingText(), editedBriefingText).map((part, index) => (
+                        <span
+                          key={index}
+                          style={{
+                            backgroundColor: part.added ? 'rgba(0, 255, 0, 0.2)' : part.removed ? 'rgba(255, 0, 0, 0.2)' : 'transparent',
+                            textDecoration: part.removed ? 'line-through' : 'none',
+                            color: part.added ? 'green' : part.removed ? 'red' : 'inherit',
+                          }}
+                        >
+                          {part.value}
+                        </span>
+                      ))}
+                    </Typography>
+                  </Paper>
+                ) : (
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={20}
+                    value={editedBriefingText}
+                    onChange={(e) => setEditedBriefingText(e.target.value)}
+                    variant="outlined"
+                    inputProps={{ maxLength: 1000 }}
+                    helperText={`${editedBriefingText.length}/1000`}
+                    sx={{
+                      '& .MuiOutlinedInput-input': {
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      },
+                      backgroundColor: 'grey.100'
+                    }}
+                  />
+                )}
               </Grid>
             </Grid>
           </Box>
