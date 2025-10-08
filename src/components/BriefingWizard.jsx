@@ -1087,6 +1087,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
           setCtaSuggestionModalOpen(false);
         }}
         onRegenerate={() => handleGenerateCtaSuggestions(activeEntregaIndex)}
+        bestPractices={ctaBestPractices}
       />
 
       <AISuggestionModal
