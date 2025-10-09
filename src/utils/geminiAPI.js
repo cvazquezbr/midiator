@@ -188,7 +188,8 @@ class GeminiAPI {
     console.log(`[${purpose}] Iniciando revisão de briefing.`);
 
     const prompt = `
-      Aja como um especialista em comunicação e marketing. Sua tarefa é revisar um "TEXTO BASE" de briefing usando um "MODELO DE REFERÊNCIA" e um conjunto de regras.
+      Aja como um especialista em comunicação e marketing. 
+      Sua tarefa é revisar um "TEXTO BASE" de briefing usando um "MODELO DE REFERÊNCIA" e um conjunto de regras.
 
       **CONTEXTO:**
       1.  **TEXTO BASE (Fornecido pelo usuário, em HTML):**
@@ -202,15 +203,33 @@ class GeminiAPI {
           \`\`\`
 
       **REGRAS DE REVISÃO:**
-      1.  **Estrutura Rígida:** O "BRIEFING REVISADO" deve conter APENAS os blocos de títulos (ex: "# Título") presentes no "MODELO DE REFERÊNCIA". Ignore qualquer bloco do "TEXTO BASE" que não exista no modelo.
-      2.  **Requisitos (DOs):** Encontre no "TEXTO BASE" qualquer frase que seja um requisito, uma ordem, ou uma sugestão imperativa (exceto as que estiverem no bloco "Próximos Passos"). Mova essas frases para o bloco "DOs" do "BRIEFING REVISADO", formatando-as como itens de lista (usando '-').
-      3.  **Restrições (DON'Ts):** Encontre no "TEXTO BASE" qualquer frase que indique uma restrição ou algo a ser evitado (exceto as que estiverem no bloco "Próximos Passos"). Mova essas frases para o bloco "DON'Ts" do "BRIEFING REVISADO", formatando-as como itens de lista (usando '-').
-      4.  **Mensagem Principal:** Este bloco deve ser um "Guia de Mensagens Chave", não um script.
+      1.  **Estrutura Rígida:** 
+
+          O "BRIEFING REVISADO" deve conter APENAS os blocos de títulos (ex: "# Título") presentes no "MODELO DE REFERÊNCIA". 
+          Qualquer bloco do "TEXTO BASE" que não exista no modelo, deve ter o seu conteúdo único avaliado quanto a melhor localização no "BRIEFING REVISADO".  .
+
+      2.  **Requisitos (DOs):** 
+      
+          Encontre no "TEXTO BASE" qualquer frase que seja um requisito, uma ordem, ou uma sugestão imperativa (exceto as que estiverem no bloco "Próximos Passos"). 
+          Mova essas frases para o bloco "DOs" do "BRIEFING REVISADO", formatando-as como itens de lista (usando '-').
+
+      3.  **Restrições (DON'Ts):** 
+      
+          Encontre no "TEXTO BASE" qualquer frase que indique uma restrição ou algo a ser evitado (exceto as que estiverem no bloco "Próximos Passos"). 
+          Mova essas frases para o bloco "DON'Ts" do "BRIEFING REVISADO", formatando-as como itens de lista (usando '-').
+
+      4.  **Mensagem Principal:** 
+      
+          Este bloco deve ser um "Guia de Mensagens Chave", não um script.
           - Use no máximo 3 tópicos (formato de lista com '-').
           - O conteúdo deve ser único e não repetir informações que pertencem aos blocos DOs, DON'Ts ou CTA.
-      5.  **Conteúdo Original:** Mantenha o conteúdo dos outros blocos do "TEXTO BASE" que correspondem ao "MODELO DE REFERÊNCIA", mas adapte-os para se encaixar na nova estrutura.
+
+      5.  **Conteúdo Original:** 
+      
+          Mantenha o conteúdo dos outros blocos do "TEXTO BASE" que correspondem ao "MODELO DE REFERÊNCIA", mas adapte-os para se encaixar na nova estrutura.
 
       **SAÍDA ESPERADA:**
+      
       Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto, markdown ou qualquer formatação adicional. Use EXATAMENTE a seguinte estrutura:
       {
         "revisedText": "O conteúdo completo do briefing revisado em formato Markdown.",
