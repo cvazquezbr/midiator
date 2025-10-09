@@ -43,7 +43,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             return;
         }
 
-        // Initialize Gemini API if not already done
         if (!geminiAPI.isInitialized) {
             const apiKey = getGeminiApiKey();
             if (!apiKey) {
@@ -54,7 +53,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         }
 
         setIsRevising(true);
-        setActiveStep((prev) => prev + 1); // Move to next step to show loading
+        setActiveStep((prev) => prev + 1);
 
         try {
             const result = await geminiAPI.reviseBriefing(briefingData.baseText, briefingData.referenceText);
@@ -66,7 +65,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             toast.success('Briefing revisado com sucesso pela IA.');
         } catch (error) {
             toast.error(`Erro na revisão com IA: ${error.message}`);
-            setActiveStep((prev) => prev - 1); // Go back to the editor on error
+            setActiveStep((prev) => prev - 1);
         } finally {
             setIsRevising(false);
         }
@@ -76,13 +75,8 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   };
 
   const handleBack = () => {
-      // Clear AI-generated content when going back to the editor
       if (activeStep === 1) {
-          onBriefingDataChange(prev => ({
-              ...prev,
-              revisedText: '',
-              revisionNotes: '',
-          }));
+          onBriefingDataChange(prev => ({ ...prev, revisedText: '', revisionNotes: '' }));
       }
       setActiveStep((prev) => prev - 1);
   };
@@ -115,12 +109,10 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
       toast.error(error.toString());
     } finally {
       setIsImporting(false);
-      // Reset the input value to allow importing the same file again
       event.target.value = null;
     }
   };
 
-  // A simpler text reader for the reference model
   const readTextFile = (file) => {
       return new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -131,121 +123,77 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   };
 
   const renderStepContent = (step) => {
-    switch (step) {
-      case 0:
-        return (
-          <Box sx={{ height: '60vh', display: 'flex', flexDirection: 'column' }}>
-            <Box>
-              <Typography variant="h6" gutterBottom>Editor de Briefing</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Cole ou escreva o texto base do seu briefing abaixo. Você pode usar as ferramentas de formatação e importar arquivos do Word ou PDF.
-              </Typography>
-            </Box>
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-              <TextEditor
-                value={briefingData.baseText}
-                onChange={handleTextChange}
-                html={true} // Enable rich text editor
-                placeholder="Digite ou cole o conteúdo do briefing aqui..."
-              />
-            </Box>
-            <Box>
-                <input
-                    type="file"
-                    ref={wordInputRef}
-                    hidden
-                    accept=".docx"
-                    onChange={(e) => handleFileImport(e, parseWordDocument, handleTextChange)}
-                />
-                <input
-                    type="file"
-                    ref={pdfInputRef}
-                    hidden
-                    accept=".pdf"
-                    onChange={(e) => handleFileImport(e, parsePdfDocument, handleTextChange)}
-                />
-                <input
-                    type="file"
-                    ref={referenceInputRef}
-                    hidden
-                    accept=".txt,.md"
-                    onChange={(e) => handleFileImport(e, readTextFile, handleReferenceTextChange)}
-                />
-                <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    <Button
-                        variant="outlined"
-                        onClick={(e) => { e.stopPropagation(); wordInputRef.current.click(); }}
-                        startIcon={<UploadFile />}
-                        disabled={isImporting}
-                    >
-                        Importar Word (.docx)
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        onClick={(e) => { e.stopPropagation(); pdfInputRef.current.click(); }}
-                        startIcon={<UploadFile />}
-                        disabled={isImporting}
-                    >
-                        Importar PDF
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        onClick={(e) => { e.stopPropagation(); referenceInputRef.current.click(); }}
-                        startIcon={<UploadFile />}
-                        disabled={isImporting}
-                        color={briefingData.referenceText ? "success" : "primary"}
-                    >
-                        {briefingData.referenceText ? "Modelo Carregado" : "Importar Modelo de Referência"}
-                    </Button>
-                </Box>
+    if (step === 0) {
+      return (
+        <Box sx={{ height: '60vh', display: 'flex', flexDirection: 'column' }}>
+          <Box>
+            <Typography variant="h6" gutterBottom>Editor de Briefing</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Cole ou escreva o texto base do seu briefing abaixo. Você pode usar as ferramentas de formatação e importar arquivos do Word ou PDF.
+            </Typography>
+          </Box>
+          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <TextEditor
+              value={briefingData.baseText}
+              onChange={handleTextChange}
+              html={true}
+              placeholder="Digite ou cole o conteúdo do briefing aqui..."
+            />
+          </Box>
+          <Box>
+            <input type="file" ref={wordInputRef} hidden accept=".docx" onChange={(e) => handleFileImport(e, parseWordDocument, handleTextChange)} />
+            <input type="file" ref={pdfInputRef} hidden accept=".pdf" onChange={(e) => handleFileImport(e, parsePdfDocument, handleTextChange)} />
+            <input type="file" ref={referenceInputRef} hidden accept=".txt,.md" onChange={(e) => handleFileImport(e, readTextFile, handleReferenceTextChange)} />
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Button variant="outlined" onClick={(e) => { e.stopPropagation(); wordInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isImporting}>
+                Importar Word (.docx)
+              </Button>
+              <Button variant="outlined" onClick={(e) => { e.stopPropagation(); pdfInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isImporting}>
+                Importar PDF
+              </Button>
+              <Button variant="outlined" onClick={(e) => { e.stopPropagation(); referenceInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isImporting} color={briefingData.referenceText ? "success" : "primary"}>
+                {briefingData.referenceText ? "Modelo Carregado" : "Importar Modelo de Referência"}
+              </Button>
             </Box>
           </Box>
-        );
-      case 1:
-        return (
-          <Box sx={{ height: '75vh', display: 'flex', flexDirection: 'column' }}>
-            {isRevising ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                <CircularProgress />
-                <Typography sx={{ mt: 2 }}>A IA está revisando seu briefing... Isso pode levar um momento.</Typography>
-              </Box>
-            ) : (
-                <Box sx={{ flexGrow: 1 }}>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12}>
-                            <TextField
-                                name="name"
-                            label="Nome do Briefing"
-                            fullWidth
-                            value={briefingData.name || ''}
-                            onChange={handleNameChange}
-                            required
-                            helperText="Dê um nome para identificar facilmente este briefing no futuro."
-                         />
-                    </Grid>
-                    <Grid item xs={12} sx={{ display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="h6" gutterBottom>Briefing Revisado</Typography>
-                        <Paper variant="outlined" sx={{ p: 2, overflowY: 'auto', minHeight: '200px' }}>
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {briefingData.revisedText}
-                            </ReactMarkdown>
-                        </Paper>
-                    </Grid>
-                    <Grid item xs={12} sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
-                        <Typography variant="h6" gutterBottom>Notas da Revisão</Typography>
-                        <Paper variant="outlined" sx={{ p: 2, overflowY: 'auto', backgroundColor: 'grey.50', minHeight: '100px' }}>
-                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                {briefingData.revisionNotes}
-                            </ReactMarkdown>
-                        </Paper>
-                    </Grid>
-                </Grid>
-            )}
-          </Box>
-        );
-      default:
-        return <Typography>Passo desconhecido</Typography>;
+        </Box>
+      );
     }
+
+    if (step === 1) {
+      return (
+        <Box sx={{ height: '75vh', display: 'flex', flexDirection: 'column' }}>
+          {isRevising ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+              <CircularProgress />
+              <Typography sx={{ mt: 2 }}>A IA está revisando seu briefing... Isso pode levar um momento.</Typography>
+            </Box>
+          ) : (
+            <Box sx={{ flexGrow: 1 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField name="name" label="Nome do Briefing" fullWidth value={briefingData.name || ''} onChange={handleNameChange} required helperText="Dê um nome para identificar facilmente este briefing no futuro." />
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="h6" gutterBottom>Briefing Revisado</Typography>
+                  <Paper variant="outlined" sx={{ p: 2, overflowY: 'auto', minHeight: '200px' }}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{briefingData.revisedText}</ReactMarkdown>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} sx={{ mt: 2 }}>
+                  <Typography variant="h6" gutterBottom>Notas da Revisão</Typography>
+                  <Paper variant="outlined" sx={{ p: 2, overflowY: 'auto', backgroundColor: 'grey.50', minHeight: '100px' }}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{briefingData.revisionNotes}</ReactMarkdown>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+        </Box>
+      );
+    }
+
+    return <Typography>Passo desconhecido</Typography>;
   };
 
   if (!open) {
