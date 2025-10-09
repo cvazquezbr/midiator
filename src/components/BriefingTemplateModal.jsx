@@ -22,9 +22,8 @@ const TEMPLATE_SECTIONS = [
 const sectionsToMarkdown = (sections) => {
     return Object.entries(sections)
         .map(([title, content]) => {
-            const cleanContent = content.replace(/<[^>]*>/g, '');
             const sectionTitle = TEMPLATE_SECTIONS.find(s => s.id === title)?.label || title;
-            return `## ${sectionTitle}\n\n${cleanContent}`;
+            return `## ${sectionTitle}\n\n${content}`;
         })
         .join('\n\n---\n\n');
 };

@@ -6,9 +6,9 @@ import { TextField, Box, Typography } from '@mui/material';
 const TextEditor = ({ value, onChange, html = false, variant = 'full', ...props }) => {
   if (html) {
     if (variant === 'simple') {
-      return <InlineEditor value={value} onChange={onChange} {...props} />;
+      return <InlineEditor value={value} onChange={onChange} html={html} {...props} />;
     }
-    return <AdvancedEditor value={value} onChange={onChange} {...props} />;
+    return <AdvancedEditor value={value} onChange={onChange} html={html} {...props} />;
   }
 
   const characterCount = value ? value.length : 0;
