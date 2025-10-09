@@ -23,6 +23,7 @@
     "@mui/x-data-grid": "^6.18.2",
     "@mui/x-date-pickers": "^8.10.0",
     "@react-oauth/google": "^0.12.2",
+    "@tiptap/core": "^3.6.6",
     "@tiptap/extension-bubble-menu": "^3.3.0",
     "@tiptap/extension-character-count": "^3.3.0",
     "@tiptap/extension-font-family": "^3.3.0",
