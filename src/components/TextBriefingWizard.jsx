@@ -174,7 +174,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                 <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     <Button
                         variant="outlined"
-                        onClick={() => wordInputRef.current.click()}
+                        onClick={(e) => { e.stopPropagation(); wordInputRef.current.click(); }}
                         startIcon={<UploadFile />}
                         disabled={isImporting}
                     >
@@ -182,7 +182,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                     </Button>
                     <Button
                         variant="outlined"
-                        onClick={() => pdfInputRef.current.click()}
+                        onClick={(e) => { e.stopPropagation(); pdfInputRef.current.click(); }}
                         startIcon={<UploadFile />}
                         disabled={isImporting}
                     >
@@ -190,7 +190,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                     </Button>
                     <Button
                         variant="outlined"
-                        onClick={() => referenceInputRef.current.click()}
+                        onClick={(e) => { e.stopPropagation(); referenceInputRef.current.click(); }}
                         startIcon={<UploadFile />}
                         disabled={isImporting}
                         color={briefingData.referenceText ? "success" : "primary"}

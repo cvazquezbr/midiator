@@ -1,8 +1,19 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { copy } from 'vite-plugin-copy'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    copy({
+      targets: [
+        {
+          src: 'node_modules/pdfjs-dist/build/pdf.worker.mjs',
+          dest: 'public/',
+        },
+      ],
+    }),
+  ],
   
   server: {
     proxy: {
