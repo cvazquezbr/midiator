@@ -12,6 +12,8 @@ export default defineConfig({
           dest: 'public/',
         },
       ],
+      // This ensures the copy happens during development as well
+      hook: 'buildStart'
     }),
   ],
   

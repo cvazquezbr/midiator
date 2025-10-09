@@ -1,11 +1,10 @@
 import React, { useState, useRef } from 'react';
 import {
-  Box, Button, Typography, Stepper, Step, StepLabel, Dialog, DialogTitle, DialogContent, Grid, CircularProgress, Paper, TextField, Divider
+  Box, Button, Typography, Stepper, Step, StepLabel, Dialog, DialogTitle, DialogContent, Grid, CircularProgress, TextField, useMediaQuery, Backdrop, DialogActions
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { ArrowBack, ArrowForward, UploadFile } from '@mui/icons-material';
 import { toast } from 'sonner';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 
 import TextEditor from './TextEditor';
 import { parseWordDocument, parsePdfDocument } from '../utils/fileImport';
@@ -23,11 +22,13 @@ export const emptyTextBriefingData = {
 const steps = ['Edição do Briefing', 'Revisão com IA'];
 
 const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataChange }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
   const [activeStep, setActiveStep] = useState(0);
   const [isImporting, setIsImporting] = useState(false);
   const [isRevising, setIsRevising] = useState(false);
 
-  // Refs for file inputs
   const wordInputRef = useRef(null);
   const pdfInputRef = useRef(null);
   const referenceInputRef = useRef(null);
@@ -85,6 +86,11 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
     onBriefingDataChange(prev => ({ ...prev, baseText: htmlContent }));
   };
 
+  const handleRevisedDataChange = (e) => {
+    const { name, value } = e.target;
+    onBriefingDataChange(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleReferenceTextChange = (textContent) => {
     onBriefingDataChange(prev => ({ ...prev, referenceText: textContent }));
     toast.success('Modelo de referência carregado com sucesso.');
@@ -99,7 +105,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
     if (!file) return;
 
     setIsImporting(true);
-    toast.info(`Importando ${file.name}...`);
 
     try {
       const content = await parser(file);
@@ -122,115 +127,128 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
       });
   };
 
-  const renderStepContent = (step) => {
-    if (step === 0) {
+  const renderStepContent = () => {
+    if (activeStep === 0) {
       return (
-        <Box sx={{ height: '60vh', display: 'flex', flexDirection: 'column' }}>
-          <Box>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" gutterBottom>Editor de Briefing</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Cole ou escreva o texto base do seu briefing abaixo. Você pode usar as ferramentas de formatação e importar arquivos do Word ou PDF.
             </Typography>
-          </Box>
-          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <TextEditor
-              value={briefingData.baseText}
-              onChange={handleTextChange}
-              html={true}
-              placeholder="Digite ou cole o conteúdo do briefing aqui..."
-            />
-          </Box>
-          <Box>
-            <input type="file" ref={wordInputRef} hidden accept=".docx" onChange={(e) => handleFileImport(e, parseWordDocument, handleTextChange)} />
-            <input type="file" ref={pdfInputRef} hidden accept=".pdf" onChange={(e) => handleFileImport(e, parsePdfDocument, handleTextChange)} />
-            <input type="file" ref={referenceInputRef} hidden accept=".txt,.md" onChange={(e) => handleFileImport(e, readTextFile, handleReferenceTextChange)} />
+            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+              <TextEditor
+                value={briefingData.baseText}
+                onChange={handleTextChange}
+                html={true}
+                placeholder="Digite ou cole o conteúdo do briefing aqui..."
+              />
+            </Box>
             <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Button variant="outlined" onClick={(e) => { e.stopPropagation(); wordInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isImporting}>
+              <input type="file" ref={wordInputRef} hidden accept=".docx" onChange={(e) => handleFileImport(e, parseWordDocument, handleTextChange)} />
+              <input type="file" ref={pdfInputRef} hidden accept=".pdf" onChange={(e) => handleFileImport(e, parsePdfDocument, handleTextChange)} />
+              <input type="file" ref={referenceInputRef} hidden accept=".txt,.md" onChange={(e) => handleFileImport(e, readTextFile, handleReferenceTextChange)} />
+              <Button variant="outlined" onClick={(e) => { e.stopPropagation(); wordInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isImporting || isRevising}>
                 Importar Word (.docx)
               </Button>
-              <Button variant="outlined" onClick={(e) => { e.stopPropagation(); pdfInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isImporting}>
+              <Button variant="outlined" onClick={(e) => { e.stopPropagation(); pdfInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isImporting || isRevising}>
                 Importar PDF
               </Button>
-              <Button variant="outlined" onClick={(e) => { e.stopPropagation(); referenceInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isImporting} color={briefingData.referenceText ? "success" : "primary"}>
+              <Button variant="outlined" onClick={(e) => { e.stopPropagation(); referenceInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isImporting || isRevising} color={briefingData.referenceText ? "success" : "primary"}>
                 {briefingData.referenceText ? "Modelo Carregado" : "Importar Modelo de Referência"}
               </Button>
             </Box>
-          </Box>
         </Box>
       );
     }
 
-    if (step === 1) {
+    if (activeStep === 1) {
       return (
-        <Box sx={{ height: '75vh', display: 'flex', flexDirection: 'column' }}>
-          {isRevising ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              <CircularProgress />
-              <Typography sx={{ mt: 2 }}>A IA está revisando seu briefing... Isso pode levar um momento.</Typography>
-            </Box>
-          ) : (
-            <Box sx={{ flexGrow: 1 }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <TextField name="name" label="Nome do Briefing" fullWidth value={briefingData.name || ''} onChange={handleNameChange} required helperText="Dê um nome para identificar facilmente este briefing no futuro." />
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <TextField name="name" label="Nome do Briefing" fullWidth value={briefingData.name || ''} onChange={handleNameChange} required helperText="Dê um nome para identificar facilmente este briefing no futuro." sx={{ mb: 2, flexShrink: 0 }}/>
+            <Grid container spacing={2} sx={{ flexGrow: 1, minHeight: 0 }}>
+                <Grid item xs={12} md={7} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <Typography variant="h6" gutterBottom>Briefing Revisado (Editável)</Typography>
+                    <TextField
+                        name="revisedText"
+                        multiline
+                        fullWidth
+                        value={briefingData.revisedText}
+                        onChange={handleRevisedDataChange}
+                        sx={{ flexGrow: 1, '& .MuiInputBase-root': { height: '100%', borderRadius: 1 }, '& .MuiInputBase-input': { height: '100% !important' } }}
+                        InputProps={{ sx: { height: '100%', alignItems: 'flex-start' } }}
+                    />
                 </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom>Briefing Revisado</Typography>
-                  <Paper variant="outlined" sx={{ p: 2, overflowY: 'auto', minHeight: '200px' }}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{briefingData.revisedText}</ReactMarkdown>
-                  </Paper>
+                <Grid item xs={12} md={5} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <Typography variant="h6" gutterBottom>Notas da Revisão (Editável)</Typography>
+                    <TextField
+                        name="revisionNotes"
+                        multiline
+                        fullWidth
+                        value={briefingData.revisionNotes}
+                        onChange={handleRevisedDataChange}
+                        sx={{ flexGrow: 1, '& .MuiInputBase-root': { height: '100%', backgroundColor: 'grey.50', borderRadius: 1 }, '& .MuiInputBase-input': { height: '100% !important' } }}
+                        InputProps={{ sx: { height: '100%', alignItems: 'flex-start' } }}
+                    />
                 </Grid>
-                <Grid item xs={12} sx={{ mt: 2 }}>
-                  <Typography variant="h6" gutterBottom>Notas da Revisão</Typography>
-                  <Paper variant="outlined" sx={{ p: 2, overflowY: 'auto', backgroundColor: 'grey.50', minHeight: '100px' }}>
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{briefingData.revisionNotes}</ReactMarkdown>
-                  </Paper>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
+            </Grid>
         </Box>
       );
     }
 
-    return <Typography>Passo desconhecido</Typography>;
+    return null;
   };
 
-  if (!open) {
-    return null;
-  }
+  if (!open) return null;
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
-      <DialogTitle>Novo Briefing a partir de Texto</DialogTitle>
-      <DialogContent>
-        <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
-          {steps.map((label) => (
-            <Step key={label}>
-              <StepLabel>{label}</StepLabel>
-            </Step>
-          ))}
-        </Stepper>
-        {renderStepContent(activeStep)}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-          <Button onClick={onClose} color="secondary">Cancelar</Button>
-          <Box>
-            <Button disabled={activeStep === 0} onClick={handleBack} startIcon={<ArrowBack />}>
-              Anterior
-            </Button>
-            {activeStep === steps.length - 1 ? (
-              <Button onClick={onSave} variant="contained" color="primary" sx={{ ml: 1 }}>
-                Salvar Briefing
-              </Button>
-            ) : (
-              <Button onClick={handleNext} endIcon={<ArrowForward />} sx={{ ml: 1 }}>
-                Próximo
-              </Button>
-            )}
+    <>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullWidth
+        maxWidth="xl"
+        fullScreen={isMobile}
+        PaperProps={{ sx: { height: isMobile ? '100%' : '90vh' } }}
+      >
+        <DialogTitle>Novo Briefing a partir de Texto</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', overflowY: 'hidden' }}>
+          <Stepper activeStep={activeStep} sx={{ mb: 2, flexShrink: 0 }}>
+            {steps.map((label) => ( <Step key={label}><StepLabel>{label}</StepLabel></Step> ))}
+          </Stepper>
+          <Box sx={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', p: 1 }}>
+            {isRevising ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                <CircularProgress />
+                <Typography sx={{ mt: 2 }}>A IA está revisando seu briefing... Isso pode levar um momento.</Typography>
+              </Box>
+            ) : renderStepContent()}
           </Box>
-        </Box>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose} color="secondary">Cancelar</Button>
+          <Box sx={{ flexGrow: 1 }} />
+          <Button disabled={activeStep === 0} onClick={handleBack} startIcon={<ArrowBack />}>
+            Anterior
+          </Button>
+          {activeStep === steps.length - 1 ? (
+            <Button onClick={onSave} variant="contained" color="primary" sx={{ ml: 1 }}>
+              Salvar Briefing
+            </Button>
+          ) : (
+            <Button onClick={handleNext} endIcon={<ArrowForward />} sx={{ ml: 1 }}>
+              Próximo
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+      <Backdrop
+        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 10 }}
+        open={isImporting}
+      >
+        <CircularProgress color="inherit" />
+        <Typography sx={{ ml: 2 }}>Importando arquivo...</Typography>
+      </Backdrop>
+    </>
   );
 };
 
