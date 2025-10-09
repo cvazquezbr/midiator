@@ -212,7 +212,7 @@ class GeminiAPI {
       Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto, markdown ou qualquer formatação adicional. Use EXATAMENTE a seguinte estrutura:
       {
         "revisedText": "O conteúdo completo do briefing revisado em formato Markdown. Use '##' para os títulos de cada seção.",
-        "revisionNotes": "Um resumo em formato de lista Markdown (usando '-') destacando as principais alterações que você fez. Cada nota deve estar em sua própria linha."
+        "revisionNotes": ["Uma nota de revisão aqui.", "Outra nota de revisão aqui.", "E uma terceira nota aqui."]
       }
     `;
 
