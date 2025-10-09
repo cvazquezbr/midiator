@@ -226,11 +226,15 @@ class GeminiAPI {
       
           Encontre no "TEXTO BASE" qualquer frase que seja um requisito, uma ordem, ou uma sugestão imperativa (exceto as que estiverem no bloco "Próximos Passos"). 
           Mova essas frases para o bloco "DOs" do "BRIEFING REVISADO", formatando-as como itens de lista (usando '-').
+          Os DOs do "MODELO DE REFERÊNCIA" devem ser mantidos e precedido de '-';
+          Os DOs adicionais devem ser precedidos de '•'.
 
       3.  **Restrições (DON'Ts):** 
       
           Encontre no "TEXTO BASE" qualquer frase que indique uma restrição ou algo a ser evitado (exceto as que estiverem no bloco "Próximos Passos"). 
           Mova essas frases para o bloco "DON'Ts" do "BRIEFING REVISADO", formatando-as como itens de lista (usando '-').
+          Os DON'Ts do "MODELO DE REFERÊNCIA" devem ser mantidos e precedido de '-';
+          Os DON'Ts adicionais devem ser precedidos de '•'.
 
       4.  **Mensagem Principal:** 
 
