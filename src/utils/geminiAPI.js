@@ -202,19 +202,17 @@ class GeminiAPI {
           \`\`\`
 
       **REGRAS DE REVISÃO:**
-      1.  **Estrutura Rígida:** O "BRIEFING REVISADO" deve conter APENAS os blocos de títulos (ex: "# Título") presentes no "MODELO DE REFERÊNCIA". Ignore qualquer bloco do "TEXTO BASE" que não exista no modelo.
+      1.  **Estrutura Rígida:** O "BRIEFING REVISADO" deve conter APENAS os blocos de títulos (ex: "## Título") presentes no "MODELO DE REFERÊNCIA". Ignore qualquer bloco do "TEXTO BASE" que não exista no modelo.
       2.  **Requisitos (DOs):** Encontre no "TEXTO BASE" qualquer frase que seja um requisito, uma ordem, ou uma sugestão imperativa (exceto as que estiverem no bloco "Próximos Passos"). Mova essas frases para o bloco "DOs" do "BRIEFING REVISADO", formatando-as como itens de lista (usando '-').
       3.  **Restrições (DON'Ts):** Encontre no "TEXTO BASE" qualquer frase que indique uma restrição ou algo a ser evitado (exceto as que estiverem no bloco "Próximos Passos"). Mova essas frases para o bloco "DON'Ts" do "BRIEFING REVISADO", formatando-as como itens de lista (usando '-').
-      4.  **Mensagem Principal:** Este bloco deve ser um "Guia de Mensagens Chave", não um script.
-          - Use no máximo 3 tópicos (formato de lista com '-').
-          - O conteúdo deve ser único e não repetir informações que pertencem aos blocos DOs, DON'Ts ou CTA.
-      5.  **Conteúdo Original:** Mantenha o conteúdo dos outros blocos do "TEXTO BASE" que correspondem ao "MODELO DE REFERÊNCIA", mas adapte-os para se encaixar na nova estrutura.
+      4.  **Mensagem Principal:** Este bloco deve ser um "Guia de Mensagens Chave", não um script. Use no máximo 3 tópicos.
+      5.  **Conteúdo Original:** Mantenha o conteúdo dos outros blocos do "TEXTO BASE" que correspondem ao "MODELO DE REFERÊNCIA", mas adapte-os para se encaixar na nova estrutura. Se um bloco do modelo não encontrar correspondente no texto base, deixe-o vazio.
 
       **SAÍDA ESPERADA:**
       Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto, markdown ou qualquer formatação adicional. Use EXATAMENTE a seguinte estrutura:
       {
-        "revisedText": "O conteúdo completo do briefing revisado em formato Markdown.",
-        "revisionNotes": "Um resumo em no máximo 5 tópicos destacando as principais alterações que você fez, como a realocação de requisitos para DOs/DON'Ts e a sintetização da Mensagem Principal."
+        "revisedText": "O conteúdo completo do briefing revisado em formato Markdown. Use '##' para os títulos de cada seção.",
+        "revisionNotes": "Um resumo em formato de lista Markdown (usando '-') destacando as principais alterações que você fez. Cada nota deve estar em sua própria linha."
       }
     `;
 
@@ -242,6 +240,33 @@ class GeminiAPI {
       console.error(`[${purpose}] String JSON que falhou:`, jsonString);
       throw new Error("A resposta da IA não continha um JSON válido.");
     }
+  }
+
+  async generateBlockSuggestion(title, context) {
+    const purpose = `Sugestão para Bloco: ${title}`;
+    console.log(`[${purpose}] Iniciando geração de sugestão.`);
+
+    const prompt = `
+      Aja como um especialista em comunicação e marketing. Sua tarefa é gerar o conteúdo para uma seção específica de um briefing de campanha.
+
+      **SEÇÃO A SER GERADA:**
+      ## ${title}
+
+      **CONTEXTO DO BRIEFING (Use como base para a sua sugestão):**
+      - **Sobre a campanha:** ${context.campaignInfo || 'Não informado.'}
+      - **Mensagem Principal:** ${context.mainMessage || 'Não informado.'}
+      - **O que FAZER (DOs):** ${context.dos || 'Não informado.'}
+      - **O que NÃO FAZER (DON'Ts):** ${context.donts || 'Não informado.'}
+
+      **REQUISITOS:**
+      - Gere um texto conciso e objetivo para a seção "${title}".
+      - O texto deve ser criativo e alinhado com o contexto fornecido.
+      - A resposta deve ser APENAS o texto sugerido para o bloco, em formato Markdown, sem qualquer outra explicação, título ou formatação.
+    `;
+
+    const responseText = await this.generateContent(prompt, purpose);
+    // The response is expected to be plain text/markdown, not JSON.
+    return responseText.trim();
   }
 }
 
