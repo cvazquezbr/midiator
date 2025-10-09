@@ -217,6 +217,7 @@ class GeminiAPI {
           \`\`\`
 
       **REGRAS DE REVISÃO:**
+
       1.  **Estrutura Rígida:** 
 
           O "BRIEFING REVISADO" deve conter APENAS os blocos de títulos (ex: "# Título") presentes no "MODELO DE REFERÊNCIA". 
@@ -256,8 +257,8 @@ class GeminiAPI {
 
       Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto, markdown ou qualquer formatação adicional. Use EXATAMENTE a seguinte estrutura:
       {
-        "revisedText": "O conteúdo completo do briefing revisado em formato Markdown.",
-        "revisionNotes": "Um resumo em no máximo 5 tópicos destacando as principais alterações que você fez, como a realocação de requisitos para DOs/DON'Ts e a sintetização da Mensagem Principal."
+        "revisedText": "O conteúdo completo do briefing revisado em formato Markdown. Use '##' para os títulos de cada seção.",
+        "revisionNotes": "Um resumo em formato de lista Markdown (usando '-') destacando as principais alterações que você fez. Cada nota deve estar em sua própria linha."
       }
     `;
 
@@ -285,6 +286,33 @@ class GeminiAPI {
       console.error(`[${purpose}] String JSON que falhou:`, jsonString);
       throw new Error("A resposta da IA não continha um JSON válido.");
     }
+  }
+
+  async generateBlockSuggestion(title, context) {
+    const purpose = `Sugestão para Bloco: ${title}`;
+    console.log(`[${purpose}] Iniciando geração de sugestão.`);
+
+    const prompt = `
+      Aja como um especialista em comunicação e marketing. Sua tarefa é gerar o conteúdo para uma seção específica de um briefing de campanha.
+
+      **SEÇÃO A SER GERADA:**
+      ## ${title}
+
+      **CONTEXTO DO BRIEFING (Use como base para a sua sugestão):**
+      - **Sobre a campanha:** ${context.campaignInfo || 'Não informado.'}
+      - **Mensagem Principal:** ${context.mainMessage || 'Não informado.'}
+      - **O que FAZER (DOs):** ${context.dos || 'Não informado.'}
+      - **O que NÃO FAZER (DON'Ts):** ${context.donts || 'Não informado.'}
+
+      **REQUISITOS:**
+      - Gere um texto conciso e objetivo para a seção "${title}".
+      - O texto deve ser criativo e alinhado com o contexto fornecido.
+      - A resposta deve ser APENAS o texto sugerido para o bloco, em formato Markdown, sem qualquer outra explicação, título ou formatação.
+    `;
+
+    const responseText = await this.generateContent(prompt, purpose);
+    // The response is expected to be plain text/markdown, not JSON.
+    return responseText.trim();
   }
 }
 
