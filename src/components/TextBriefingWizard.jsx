@@ -7,41 +7,12 @@ import { ArrowBack, ArrowForward, UploadFile, Edit, Check } from '@mui/icons-mat
 import { toast } from 'sonner';
 
 import TextEditor from './TextEditor';
+import BriefingTemplateModal from './BriefingTemplateModal'; // Import the modal
 import { parseWordDocument, parsePdfDocument } from '../utils/fileImport';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 
 // --- Helper Functions ---
-const parseRevisedTextToSections = (text) => {
-  if (!text) return {};
-  const sections = {};
-  const regex = /^##\s+(.*)$/gm;
-  let match;
-  let lastIndex = 0;
-
-  while ((match = regex.exec(text)) !== null) {
-    if (lastIndex > 0) {
-      const lastMatch = text.substring(0, lastIndex).match(/##\s+(.*)$/gm).pop();
-      const sectionTitle = lastMatch.replace('## ', '').trim();
-      const sectionContent = text.substring(lastIndex, match.index).trim();
-      sections[sectionTitle] = sectionContent;
-    }
-    lastIndex = match.index;
-  }
-
-  if (lastIndex > 0) {
-    const lastMatch = text.substring(0, lastIndex).match(/##\s+(.*)$/gm).pop();
-    const sectionTitle = lastMatch.replace('## ', '').trim();
-    const sectionContent = text.substring(lastIndex).replace(lastMatch, '').trim();
-    sections[sectionTitle] = sectionContent;
-  } else if (text) {
-      // Handle case with no sections
-      sections['Texto Completo'] = text;
-  }
-
-  return sections;
-};
-
 const sectionsToMarkdown = (sections) => {
     return Object.entries(sections)
         .map(([title, content]) => `## ${title}\n\n${content}`)
@@ -69,18 +40,24 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   const [activeStep, setActiveStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [isTemplateModalOpen, setTemplateModalOpen] = useState(false);
 
   // State for block completion step
   const [activeSuggestion, setActiveSuggestion] = useState({ title: null, content: '' });
 
   const wordInputRef = useRef(null);
   const pdfInputRef = useRef(null);
-  const referenceInputRef = useRef(null);
 
   useEffect(() => {
     if (activeStep === 3) { // When entering finalization step
-        const finalMarkdown = sectionsToMarkdown(briefingData.sections);
-        onBriefingDataChange(prev => ({ ...prev, finalText: finalMarkdown }));
+        setLoadingMessage('Gerando texto final...');
+        setIsLoading(true);
+        // Use a timeout to allow the loading indicator to render before the synchronous work
+        setTimeout(() => {
+            const finalMarkdown = sectionsToMarkdown(briefingData.sections);
+            onBriefingDataChange(prev => ({ ...prev, finalText: finalMarkdown }));
+            setIsLoading(false);
+        }, 100); // A small delay is sufficient
     }
   }, [activeStep, briefingData.sections, onBriefingDataChange]);
 
@@ -102,15 +79,19 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
 
         try {
             const result = await geminiAPI.reviseBriefing(briefingData.baseText, briefingData.referenceText);
-            const sections = parseRevisedTextToSections(result.revisedText);
-            // Format the array of notes into a single markdown list string
+
+            // The API now returns a `sections` object directly.
+            const sections = result.sections || {};
+            const revisedText = sectionsToMarkdown(sections); // Recreate markdown from sections for consistency.
+
+            // Format the array of notes into a single markdown list string with blank lines
             const formattedNotes = Array.isArray(result.revisionNotes)
-                ? result.revisionNotes.map(note => `- ${note}`).join('\n')
-                : result.revisionNotes; // Fallback for string response
+                ? result.revisionNotes.map(note => `- ${note}`).join('\n\n')
+                : result.revisionNotes || ''; // Fallback for string or undefined response
 
             onBriefingDataChange(prev => ({
                 ...prev,
-                revisedText: result.revisedText,
+                revisedText: revisedText,
                 revisionNotes: formattedNotes,
                 sections: sections,
             }));
@@ -158,6 +139,11 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
       setIsLoading(false);
       event.target.value = null;
     }
+  };
+
+  const handleSaveTemplate = (markdown) => {
+    handleBriefingDataChange('referenceText', markdown);
+    setTemplateModalOpen(false);
   };
 
   const handleGenerateSuggestion = async (title) => {
@@ -208,11 +194,16 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <input type="file" ref={wordInputRef} hidden accept=".docx" onChange={(e) => handleFileImport(e, parseWordDocument, (val) => handleBriefingDataChange('baseText', val))} />
           <input type="file" ref={pdfInputRef} hidden accept=".pdf" onChange={(e) => handleFileImport(e, parsePdfDocument, (val) => handleBriefingDataChange('baseText', val))} />
-          <input type="file" ref={referenceInputRef} hidden accept=".txt,.md" onChange={(e) => handleFileImport(e, readTextFile, (val) => handleBriefingDataChange('referenceText', val))} />
           <Button variant="outlined" onClick={(e) => { e.stopPropagation(); wordInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isLoading}>Importar Word (.docx)</Button>
           <Button variant="outlined" onClick={(e) => { e.stopPropagation(); pdfInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isLoading}>Importar PDF</Button>
-          <Button variant="outlined" onClick={(e) => { e.stopPropagation(); referenceInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isLoading} color={briefingData.referenceText ? "success" : "primary"}>
-            {briefingData.referenceText ? "Modelo Carregado" : "Importar Modelo"}
+          <Button
+            variant="outlined"
+            onClick={() => setTemplateModalOpen(true)}
+            startIcon={<Edit />}
+            disabled={isLoading}
+            color={briefingData.referenceText ? "success" : "primary"}
+          >
+            {briefingData.referenceText ? "Modelo Carregado" : "Gerenciar Modelo"}
           </Button>
         </Box>
     </Box>
@@ -334,6 +325,11 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         <CircularProgress color="inherit" />
         <Typography sx={{ ml: 2 }}>{loadingMessage}</Typography>
       </Backdrop>
+      <BriefingTemplateModal
+        open={isTemplateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
+        onSave={handleSaveTemplate}
+      />
     </>
   );
 };

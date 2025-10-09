@@ -3,11 +3,10 @@ import {
   Box, Button, Typography, Grid, FormControl, InputLabel, Select, MenuItem, TextField, Chip, IconButton, Tooltip, Paper, Dialog, DialogTitle, DialogContent, CircularProgress, Radio, RadioGroup, FormControlLabel, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Divider, useMediaQuery, Alert, Stepper, Step, StepLabel, Switch, Tabs, Tab
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { Add, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon, Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
+import { Add, ArrowBack, ArrowForward, AutoAwesome as AutoAwesomeIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import noCameraSvg from '../assets/no-camera.svg';
 import AISuggestionModal from './AISuggestionModal';
-import BriefingTemplateModal from './BriefingTemplateModal';
 import InfoBox from './InfoBox';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
@@ -170,7 +169,6 @@ const steps = [
   'Saudação',
   'Entregas',
   'Inspiração',
-  'Revisar e Refinar',
   'Finalização'
 ];
 
@@ -209,133 +207,80 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   const [editedBriefingText, setEditedBriefingText] = useState('');
   const [showDiff, setShowDiff] = useState(false);
   const [brandGuideTab, setBrandGuideTab] = useState(0);
-  const [templateModalOpen, setTemplateModalOpen] = useState(false);
-  const [reviewSuggestions, setReviewSuggestions] = useState(null);
-  const [loadingReview, setLoadingReview] = useState(false);
-  const [loadingSummary, setLoadingSummary] = useState(false);
 
 
-  const handleSaveTemplate = (templateData) => {
-    // This function receives the data from the modal and applies it to the current briefing.
-    onBriefingDataChange(prev => {
-      const newEntregas = [...prev.entregas];
-      // Ensure there's at least one "entrega" to apply the template to.
-      if (newEntregas.length === 0) {
-        newEntregas.push({ ...emptyBriefingWizardData.entregas[0] });
-      }
-
-      // Apply template data to the first "entrega" item.
-      if (templateData.mensagem_principal) {
-        newEntregas[0].mensagemPrincipal = templateData.mensagem_principal;
-      }
-      if (templateData.cta) {
-        newEntregas[0].cta = templateData.cta;
-      }
-
-      // Note: The template fields for DOs, DON'Ts, and Inspirations are TextEditors,
-      // while the briefing data expects arrays. A simple text-to-array conversion
-      // (e.g., splitting by lines) is brittle. For now, we are only applying
-      // the fields that have a direct 1-to-1 mapping.
-      // A future improvement would be to have structured fields in the template modal.
-
-      return {
-        ...prev,
-        name: templateData.titulo_missao || prev.name,
-        saudacao: templateData.saudacao || prev.saudacao,
-        entregas: newEntregas,
-        // The following are not applied due to data structure mismatch.
-        // faca: templateData.dos ? parseList(templateData.dos) : prev.faca,
-        // nao_faca: templateData.donts ? parseList(templateData.donts) : prev.nao_faca,
-      };
-    });
-
-    toast.success("Modelo aplicado ao seu briefing!");
-  };
-
-  const generateBriefingText = React.useCallback((asHtml = false) => {
+  const generateBriefingText = React.useCallback(() => {
     if (!briefingData) return '';
-
-    const e = (text) => text.replace(/</g, '&lt;').replace(/>/g, '&gt;'); // Basic escape for non-html content
-
     const selectedMotivacao = MOTIVACOES.find(m => m.id === briefingData.motivacao);
     const selectedToneName = (briefingData.tom_de_voz || [])[0];
     const toneOfVoiceData = TONS_DE_VOZ_DATA.find(t => t.tom === selectedToneName);
     const entregas = briefingData.entregas || [];
 
-    let sections = [];
+    let text = `${briefingData.saudacao || 'Olá!'}\n\n`;
 
-    // Helper to add sections
-    const addSection = (title, content, isHtml = false) => {
-        if (!content) return;
-        if (asHtml) {
-            sections.push(`<h2>${e(title)}</h2>${isHtml ? content : `<p>${e(content).replace(/\n/g, '<br>')}</p>`}`);
-        } else {
-            sections.push(`** ${title.toUpperCase()} **\n\n${content}\n`);
-        }
-    };
+    text += `Nosso objetivo dessa campanha é ${selectedMotivacao ? selectedMotivacao.nome : 'esta ainda indefinido'}, de modo a ${selectedMotivacao.descricao}.\n\n`;
 
-    addSection('TÍTULO DA MISSÃO', briefingData.name);
-    addSection('SAUDAÇÃO', briefingData.saudacao, true);
+    text += `O alvo da campanha é ${briefingData.produtoServico || 'N/A'}:\n\n`
 
-    let objetivoContent = selectedMotivacao ? `Nosso objetivo com esta campanha é <strong>${e(selectedMotivacao.nome)}</strong>, visando ${e(selectedMotivacao.descricao)}` : 'Não definido.';
-    addSection('OBJETIVO', objetivoContent);
+    text += `"${briefingData.descricao || 'N/A'}"\n\n`;
 
-    let produtoContent = `O foco da campanha é <strong>${e(briefingData.produtoServico || 'N/A')}</strong>. ${e(briefingData.descricao || '')}`;
-    addSection('PRODUTO/SERVIÇO', produtoContent);
+    text += "Alguns detalhes importantes com seu conteúdo:\n\n";
 
     if (toneOfVoiceData) {
-        let toneContent = asHtml
-            ? `<ul><li><strong>Quando usar:</strong> ${e(toneOfVoiceData.quando)}</li><li><strong>Como soa:</strong> ${e(toneOfVoiceData.como)}</li><li><strong>Exemplo:</strong> <em>${e(toneOfVoiceData.exemplo)}</em></li></ul>`
-            : `  - Quando usar: ${toneOfVoiceData.quando}\n  - Como soa: ${toneOfVoiceData.como}\n  - Exemplo: ${toneOfVoiceData.exemplo}`;
-        addSection(`TOM DE VOZ: ${toneOfVoiceData.tom}`, toneContent, true);
-    }
-
-    const formatListToHtml = (items) => `<ul>${items.map(item => `<li>${e(item)}</li>`).join('')}</ul>`;
-    if (briefingData.faca && briefingData.faca.length > 0) {
-        addSection('O QUE FAZER (DOs)', asHtml ? formatListToHtml(briefingData.faca) : briefingData.faca.join('\n'), asHtml);
-    }
-    if (briefingData.nao_faca && briefingData.nao_faca.length > 0) {
-        addSection('O QUE NÃO FAZER (DON\'Ts)', asHtml ? formatListToHtml(briefingData.nao_faca) : briefingData.nao_faca.join('\n'), asHtml);
-    }
-
-    let entregasContent = '';
-    if (asHtml) {
-        entregasContent = entregas.map((entrega, index) => `
-            <div style="border-left: 3px solid #ccc; padding-left: 15px; margin-bottom: 20px;">
-                <h4>Entrega #${index + 1}</h4>
-                <p><strong>Quantidade:</strong> ${e(String(entrega.quantidade))} | <strong>Tipo:</strong> ${e(entrega.tipo || 'N/A')}</p>
-                <p><strong>Envio de produtos:</strong> ${entrega.envioProdutos ? `Sim (prazo: ${e(entrega.prazoDias || 'N/A')} dias)` : 'Não'}</p>
-                <h5>Mensagem Principal</h5>
-                <div>${entrega.mensagemPrincipal || '<p>N/A</p>'}</div>
-                <h5>CTA (Call to Action)</h5>
-                <div>${entrega.cta || '<p>N/A</p>'}</div>
-            </div>
-        `).join('');
+      text += `1. Tom de Voz: ${toneOfVoiceData.tom}\n\n`;
+      text += `  - Quando usar: ${toneOfVoiceData.quando}\n`;
+      text += `  - Como soa: ${toneOfVoiceData.como}\n`;
+      text += `  - Exemplo: ${toneOfVoiceData.exemplo}\n\n`;
     } else {
-         entregasContent = entregas.map((entrega, index) => `
-- Entrega N° ${index + 1}
-  - Quantidade: ${entrega.quantidade}
-  - Detalhes: ${entrega.tipo || 'N/A'}
-  - Envio de produtos: ${entrega.envioProdutos ? `Sim, em até ${entrega.prazoDias || 'a definir'} dias` : 'Não'}
-  - Mensagem Principal: ${entrega.mensagemPrincipal || 'N/A'}
-  - CTA: ${entrega.cta || 'N/A'}
-        `).join('\n');
+      text += "1. Tom de Voz: Não definido\n\n";
     }
-    addSection('ENTREGAS', entregasContent, true);
+    const formatListItems = (items) => {
+      if (!items || !items.length) {
+        return "  Nenhum.\n";
+      }
+      return items.map((item, index) => `  ${item}${index === items.length - 1 ? '.' : ';'}`).join('\n') + '\n';
+    };
+
+    text += "2. O que Fazer (DOs):\n\n";
+    text += formatListItems(briefingData.faca);
+    text += "\n";
+
+    text += "3. O que evitar (DON'Ts):\n\n";
+    text += formatListItems(briefingData.nao_faca);
+    text += "\n";
+
+    text += "** Entregas **\n\n";
+    text += entregas.length > 1
+      ? "As entregas previstas são:\n\n"
+      : "A entrega prevista é:\n\n";
+
+    entregas.forEach((entrega, index) => {
+      if (entregas.length > 1)
+        text += `- Entrega N° ${index + 1}\n`;
+
+      text += `📌 Quantidade de conteúdos: ${entrega.quantidade} \n`;
+      text += `📌 Detalhes: ${entrega.tipo || 'N/A'} \n`;
+      text += `📌 Envio de produtos: ${entrega.envioProdutos ? `Sim, em até ${entrega.prazoDias || 'a definir'} dias` : 'Não'} \n`;
+      text += `📌 Mensagem Principal:\n\n`;
+      text += `${entrega.mensagemPrincipal || 'N/A'} \n\n`;
+      text += `📌 CTA: ${entrega.cta || 'N/A'}\n\n`;
+    });
+
+    text += "** Inspirações **\n\n";
 
     const inspirations = (briefingData.inspiracoes || []).filter(i => i.link);
     if (inspirations.length > 0) {
-        let inspoContent = asHtml
-            ? `<ul>${inspirations.map(i => `<li>${e(i.description)}: <a href="${e(i.link)}" target="_blank">${e(i.link)}</a></li>`).join('')}</ul>`
-            : inspirations.map(i => `${i.description ? `${i.description} (${i.link})` : i.link}`).join('\n');
-        addSection('INSPIRAÇÕES', inspoContent, asHtml);
+      inspirations.forEach(i => {
+        text += `${i.description ? `${i.description} (${i.link})` : i.link}\n`;
+      });
+    } else {
+      text += "Nenhuma inspiração fornecida.\n";
     }
+    text += "\n";
 
-    if (briefingData.proximos_passos) addSection('PRÓXIMOS PASSOS', briefingData.proximos_passos, true);
-    if (briefingData.hashtags) addSection('HASHTAGS', asHtml ? `<p><em>${e(briefingData.hashtags.join(', '))}</em></p>` : briefingData.hashtags.join(', '));
+    text += "** Próximos Passos**\n\n"; // Placeholder for next steps if any
 
-
-    return asHtml ? sections.join('') : sections.join('\n');
+    return text;
   }, [briefingData]);
 
 
@@ -344,18 +289,12 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
   }, [initialStep]);
 
   useEffect(() => {
-    if (activeStep === 7) {
-      setLoadingSummary(true);
-      // Simulate async generation to allow loader to show
-      setTimeout(() => {
-        const summaryHtml = generateBriefingText(true); // Pass true for HTML output
-        setEditedBriefingText(summaryHtml);
-        setLoadingSummary(false);
-      }, 100); // A short delay is enough
+    if (activeStep === 6) {
+      setEditedBriefingText(generateBriefingText());
     }
   }, [activeStep, generateBriefingText]);
 
-  const TOTAL_STEPS = 8; // Incremented from 7 to 8
+  const TOTAL_STEPS = 7;
 
   const handleNext = () => setActiveStep(prev => Math.min(prev + 1, TOTAL_STEPS - 1));
   const handleBack = () => setActiveStep(prev => Math.max(prev - 1, 0));
@@ -554,17 +493,15 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
 
       **REQUISITOS PARA AS SUGESTÕES GERADAS:**
       1.  **Aderência:** As sugestões devem estar fortemente alinhadas ao contexto fornecido (Objetivo, Tom de Voz, etc.).
-      2.  **Formato HTML:** Cada sugestão DEVE ser uma string contendo HTML simples e bem formado. Use `<p>` para parágrafos e `<ul>` com `<li>` para listas.
-      3.  **Clareza e Estrutura:** As sugestões devem ser claras, bem estruturadas e fáceis de ler.
-      4.  **Separação Visual:** No array de sugestões, cada item deve ser uma string HTML completa. A apresentação final na UI cuidará da separação, mas a IA deve gerar cada sugestão como um bloco de conteúdo independente.
+      2.  **Clareza:** Use uma estrutura de tópicos. As sugestões devem ser sintéticas, objetivas e sem repetições.
+      3.  **Simplicidade:** Cada sugestão deve ter no máximo 3 tópicos.
+
+      **** IMPORTANTE: Cada sugestão deve ser na forma de TÓPICOS, na qual cada tópico deve ser precedido de hífen '-'. NÂO DEVE SER UM PARÁGRAFO COMPLETO. ****
 
       **FORMATO DA RESPOSTA FINAL:**
       Sua resposta DEVE ser APENAS um objeto JSON válido, sem nenhum texto, markdown, ou qualquer formatação adicional antes ou depois. Use EXATAMENTE a seguinte estrutura:
       {
-        "sugestoes": [
-            "<h3>Opção 1: Foco em Emoção</h3><p>Conecte-se com a audiência mostrando como nosso produto se encaixa na vida deles. Use uma narrativa que desperte sentimentos.</p><ul><li>Mostre pessoas reais sorrindo.</li><li>Use uma música inspiradora.</li></ul>",
-            "<h3>Opção 2: Foco em Benefício</h3><p>Deixe claro como nosso produto resolve um problema. Seja direto e informativo.</p><p>Destaque os 3 principais benefícios de forma rápida e objetiva.</p>"
-        ]
+        "sugestoes": ["Sugestão 1 em formato de string", "Sugestão 2 em formato de string"]
       }
     `;
 
@@ -633,14 +570,19 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         - **Mensagem Principal:** ${entrega.mensagemPrincipal || 'Não definida'}
 
         **Requisitos para as sugestões de CTA:**
-        1.  Cada CTA deve ser claro, conciso e orientado para a ação, encapsulado em um parágrafo HTML (`<p>`).
+        1.  Cada CTA deve ser claro, conciso e orientado para a ação.
         2.  As sugestões devem ser variadas, explorando diferentes gatilhos (urgência, benefício, curiosidade, etc.).
         3.  O CTA deve estar alinhado com a motivação e o objetivo da campanha.
-        4.  O conteúdo dentro da tag `<p>` deve ter no mínimo 8 palavras e no máximo 15 palavras.
-        5.  Evite jargões ou termos muito técnicos.
-        6.  O formato da resposta deve ser um array JSON de strings, onde cada string é um CTA em HTML. Exemplo: ["<p>CTA 1</p>", "<p>CTA 2</p>", "<p>CTA 3</p>"]
+        4.  O CTA deve ter no mínimo 8 palavras e no máximo 15 palavras.
+        5.  Evite jargões ou termos muito técnicos; o CTA deve ser facilmente compreendido pelo público geral.
+        6.  Não use pontuação excessiva (ex: "Compre agora!!!" ou "Clique aqui...").
+        7.  Não repita palavras ou ideias entre os CTAs.
+        8.  Não use mais de um número em cada CTA (ex: "Compre 1 e ganhe 1" não é permitido).
+        9.  Não inclua nenhum elemento que não seja texto (ex: emojis, símbolos).
+        10. Não use frases que já foram usadas em outros CTAs famosos ou clichês.
+        11.  O formato da resposta deve ser um array JSON de strings. Exemplo: ["CTA 1", "CTA 2", "CTA 3"]
 
-        Gere o JSON com as 3 sugestões de CTA em HTML.
+        Gere o JSON com as 3 sugestões de CTA.
     `;
 
     try {
@@ -741,82 +683,6 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
     }
   };
 
-  const handleReviewBriefing = async () => {
-    if (!geminiAPI.isInitialized) {
-      const apiKey = getGeminiApiKey();
-      if (!apiKey) {
-        toast.error('Chave de API do Gemini não configurada.');
-        return;
-      }
-      geminiAPI.initialize(apiKey);
-    }
-
-    setLoadingReview(true);
-    setReviewSuggestions(null);
-
-    const fullBriefingText = generateBriefingText();
-
-    const prompt = `
-      Aja como um Diretor de Criação sênior. Sua tarefa é revisar o briefing de campanha completo fornecido abaixo e aprimorá-lo.
-      Para cada uma das seções listadas, gere um conteúdo revisado e melhorado, mantendo o tom de voz e o objetivo originais, mas aprimorando a clareza, o impacto e a criatividade.
-
-      **BRIEFING ATUAL:**
-      ---
-      ${fullBriefingText}
-      ---
-
-      **SEÇÕES PARA REVISAR:**
-      - TÍTULO DA MISSÃO (baseado no nome do briefing)
-      - SAUDAÇÃO
-      - MENSAGEM PRINCIPAL (para a primeira entrega)
-      - CTA (para a primeira entrega)
-      - INSPIRAÇÕES (sugira 1-2 novas inspirações com links fictícios se necessário)
-      - PRÓXIMOS PASSOS (sugira os próximos passos para o criador)
-      - DOs (sugira 2-3 DOs adicionais)
-      - DON'Ts (sugira 2-3 DON'Ts adicionais)
-      - HASHTAGS (sugira 3-5 hashtags relevantes)
-
-      **REQUISITOS DA RESPOSTA:**
-      - A resposta DEVE ser um objeto JSON válido, sem nenhum texto ou formatação fora dele.
-      - As chaves do JSON devem ser: "titulo_missao", "saudacao", "mensagem_principal", "cta", "inspiracoes", "proximos_passos", "dos", "donts", "hashtags".
-      - O conteúdo de "mensagem_principal" e "cta" deve ser em HTML simples (usando <p>, <ul>, <li>).
-      - O conteúdo de "dos", "donts", e "hashtags" deve ser um array de strings.
-      - O conteúdo de "inspiracoes" deve ser um array de objetos com "description" e "link".
-
-      Exemplo da estrutura JSON de resposta:
-      {
-        "titulo_missao": "Campanha de Lançamento Verão Solar",
-        "saudacao": "<p>Olá, squad criativo!</p><p>Estamos prontos para fazer barulho juntos?</p>",
-        "mensagem_principal": "<p>Nossa nova coleção é sobre celebrar a energia do sol. Queremos vídeos que capturem essa vibe vibrante e autêntica.</p><ul><li>Mostre o produto em uso ao ar livre.</li><li>Foque em closes que exaltem a qualidade.</li></ul>",
-        "cta": "<p>Use a hashtag #VeraoSolar e marque nosso perfil para aparecer em nossas redes!</p>",
-        "inspiracoes": [
-          { "description": "Referência de tom e ritmo", "link": "https://vimeo.com/123456" }
-        ],
-        "proximos_passos": "<p>1. Grave seus vídeos até a próxima sexta-feira.</p><p>2. Submeta o conteúdo na plataforma para aprovação.</p>",
-        "dos": ["Usar luz natural", "Manter a energia lá em cima"],
-        "donts": ["Usar filtros que alterem a cor real do produto", "Gravar em ambientes escuros"],
-        "hashtags": ["#VeraoSolar", "#ModaPraia", "#EnergiaPositiva"]
-      }
-    `;
-
-    try {
-      const response = await geminiAPI.generateContent(prompt);
-      const match = response.match(/\{[\s\S]*\}/);
-      if (match) {
-        const jsonString = match[0];
-        const jsonResponse = JSON.parse(jsonString);
-        setReviewSuggestions(jsonResponse);
-      } else {
-        throw new Error("Nenhum JSON válido encontrado na resposta da IA.");
-      }
-    } catch (error) {
-      toast.error('Erro ao revisar o briefing.');
-      console.error("Briefing review error:", error);
-    } finally {
-      setLoadingReview(false);
-    }
-  };
-
   if (!open || !briefingData) return null;
 
   const renderStepContent = (step) => {
@@ -850,16 +716,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
         }
         return (
           <Box sx={{ p: 2, minHeight: 400 }}>
-             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" gutterBottom>Qual é o principal objetivo da sua campanha?</Typography>
-                <Button
-                    startIcon={<EditIcon />}
-                    onClick={() => setTemplateModalOpen(true)}
-                    variant="outlined"
-                >
-                    Gerenciar Modelo
-                </Button>
-            </Box>
+            <Typography variant="h6" gutterBottom>Qual é o principal objetivo da sua campanha?</Typography>
             <TableContainer component={Paper}>
               <Table aria-label="tabela de motivações">
                 <TableHead>
@@ -1119,15 +976,18 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                         </Grid>
                       )}
                       <Grid item xs={12}>
-                        <Typography variant="subtitle1" gutterBottom>Mensagem Principal</Typography>
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                          <Box sx={{ flexGrow: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
-                            <TextEditor
-                              content={entrega.mensagemPrincipal}
-                              onUpdate={(newContent) => handleEntregaChange(index, 'mensagemPrincipal', newContent)}
-                              placeholder="Digite o texto base aqui ou clique no botão para gerar sugestões com IA."
-                            />
-                          </Box>
+                          <TextField
+                            label="Mensagem Principal"
+                            fullWidth
+                            multiline
+                            rows={4}
+                            value={entrega.mensagemPrincipal}
+                            onChange={(e) => handleEntregaChange(index, 'mensagemPrincipal', e.target.value)}
+                            placeholder="Digite o texto base aqui ou clique no botão para gerar sugestões com IA."
+                            inputProps={{ maxLength: 4000 }}
+                            helperText={`${(entrega.mensagemPrincipal || '').length}/4000`}
+                          />
                           <Tooltip title="Gerar sugestões para a Mensagem Principal com IA">
                             <span>
                               <IconButton
@@ -1142,14 +1002,15 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
                         </Box>
                       </Grid>
                       <Grid item xs={12}>
-                         <Typography variant="subtitle1" gutterBottom>CTA (Call to Action)</Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                           <Box sx={{ flexGrow: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
-                            <TextEditor
-                              content={entrega.cta}
-                              onUpdate={(newContent) => handleEntregaChange(index, 'cta', newContent)}
-                            />
-                          </Box>
+                          <TextField
+                            label="CTA (Call to Action)"
+                            fullWidth
+                            value={entrega.cta}
+                            onChange={(e) => handleEntregaChange(index, 'cta', e.target.value)}
+                            inputProps={{ maxLength: 100 }}
+                            helperText={`${(entrega.cta || '').length}/100`}
+                          />
                           <Tooltip title="Gerar sugestões de CTA com IA">
                             <span>
                               <IconButton
@@ -1232,91 +1093,7 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
             </Grid>
           </Box>
         );
-      case 6: // Revisar e Refinar
-        return (
-          <Box sx={{ p: 2, minHeight: 400, maxHeight: '70vh', overflowY: 'auto' }}>
-            <Typography variant="h6" gutterBottom>Revisar e Refinar com IA</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Clique no botão abaixo para que a IA analise todo o seu briefing e sugira melhorias em todas as seções para torná-lo ainda mais claro, criativo e impactante.
-            </Typography>
-            <Box sx={{ textAlign: 'center', mb: 3 }}>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<AutoAwesomeIcon />}
-                onClick={handleReviewBriefing}
-                disabled={loadingReview}
-              >
-                {loadingReview ? 'Analisando Briefing...' : 'Revisar Briefing com IA'}
-              </Button>
-            </Box>
-
-            {loadingReview && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 4 }}>
-                <CircularProgress />
-              </Box>
-            )}
-
-            {reviewSuggestions && (
-              <Box>
-                <Typography variant="h5" sx={{ my: 2 }}>Sugestões de Melhoria</Typography>
-                <Grid container spacing={3}>
-                  {Object.entries(reviewSuggestions).map(([key, value]) => (
-                    <Grid item xs={12} md={6} key={key}>
-                      <Paper variant="outlined" sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <Box>
-                            <Typography variant="overline" color="text.secondary">{key.replace(/_/g, ' ').toUpperCase()}</Typography>
-                            {Array.isArray(value) ? (
-                            <Box component="ul" sx={{ pl: 2, mt: 1, '& li': { mb: 0.5 } }}>
-                                {value.map((item, index) => (
-                                <Typography component="li" key={index} variant="body2">
-                                    {typeof item === 'object' ? `${item.description} (${item.link})` : item}
-                                </Typography>
-                                ))}
-                            </Box>
-                            ) : (
-                            <Box dangerouslySetInnerHTML={{ __html: value }} sx={{ mt: 1, wordBreak: 'break-word', '& p': {m:0} }}/>
-                            )}
-                        </Box>
-                        <Button
-                          size="small"
-                          onClick={() => {
-                            let update = {};
-                            if (key === 'titulo_missao') update.name = value;
-                            else if (key === 'saudacao') update.saudacao = value;
-                            else if (key === 'mensagem_principal') {
-                                const newEntregas = [...briefingData.entregas];
-                                if(newEntregas.length > 0) newEntregas[0].mensagemPrincipal = value;
-                                update.entregas = newEntregas;
-                            }
-                             else if (key === 'cta') {
-                                const newEntregas = [...briefingData.entregas];
-                                if(newEntregas.length > 0) newEntregas[0].cta = value;
-                                update.entregas = newEntregas;
-                            }
-                            else if (key === 'dos') update.faca = [...new Set([...briefingData.faca, ...value])];
-                            else if (key === 'donts') update.nao_faca = [...new Set([...briefingData.nao_faca, ...value])];
-                            else if (key === 'inspiracoes') update.inspiracoes = [...briefingData.inspiracoes, ...value.filter(item => item.link)]; // Filter out empty inspirations
-                            else {
-                                // For keys that don't exist yet like 'proximos_passos', 'hashtags'
-                                update[key] = value;
-                            }
-                            onBriefingDataChange(prev => ({...prev, ...update}));
-                            toast.success(`'${key.replace(/_/g, ' ')}' atualizado com a sugestão da IA.`);
-                          }}
-                          sx={{alignSelf: 'flex-end', mt: 1}}
-                        >
-                          Aplicar Sugestão
-                        </Button>
-                      </Paper>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            )}
-          </Box>
-        );
-      case 7: { // Finalização
+      case 6: { // Finalização
         return (
           <Box sx={{ p: 2, maxHeight: '70vh', overflowY: 'auto' }}>
             <Typography variant="h6" gutterBottom>Finalização e Revisão</Typography>
@@ -1326,21 +1103,46 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
               </Grid>
               <Grid item xs={12}>
                 <Divider sx={{ my: 2 }}>Resumo do Briefing</Divider>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  Abaixo está o resumo completo do seu briefing. Você pode fazer edições finais diretamente no texto antes de salvar.
-                </Typography>
-                {loadingSummary ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-                    <CircularProgress />
-                    <Typography sx={{ ml: 2 }}>Gerando resumo final...</Typography>
-                  </Box>
+                <FormControlLabel
+                  control={<Switch checked={showDiff} onChange={(e) => setShowDiff(e.target.checked)} />}
+                  label="Destacar Alterações"
+                  sx={{ mb: 1 }}
+                />
+                {showDiff ? (
+                  <Paper variant="outlined" sx={{ p: 2, whiteSpace: 'pre-wrap', backgroundColor: 'grey.100', wordBreak: 'break-word', minHeight: '400px', fontFamily: 'monospace' }}>
+                    <Typography component="div" variant="body1">
+                      {diffChars(generateBriefingText(), editedBriefingText).map((part, index) => (
+                        <span
+                          key={index}
+                          style={{
+                            backgroundColor: part.added ? 'rgba(0, 255, 0, 0.2)' : part.removed ? 'rgba(255, 0, 0, 0.2)' : 'transparent',
+                            textDecoration: part.removed ? 'line-through' : 'none',
+                            color: part.added ? 'green' : part.removed ? 'red' : 'inherit',
+                          }}
+                        >
+                          {part.value}
+                        </span>
+                      ))}
+                    </Typography>
+                  </Paper>
                 ) : (
-                  <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, minHeight: '400px' }}>
-                    <TextEditor
-                      content={editedBriefingText}
-                      onUpdate={(newContent) => setEditedBriefingText(newContent)}
-                    />
-                  </Box>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={20}
+                    value={editedBriefingText}
+                    onChange={(e) => setEditedBriefingText(e.target.value)}
+                    variant="outlined"
+                    inputProps={{ maxLength: 1000 }}
+                    helperText={`${editedBriefingText.length}/1000`}
+                    sx={{
+                      '& .MuiOutlinedInput-input': {
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      },
+                      backgroundColor: 'grey.100'
+                    }}
+                  />
                 )}
               </Grid>
             </Grid>
@@ -1430,11 +1232,6 @@ const BriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataCha
           setSaudacaoSuggestionModalOpen(false);
         }}
         onRegenerate={handleGenerateSaudacaoSuggestions}
-      />
-       <BriefingTemplateModal
-        open={templateModalOpen}
-        onClose={() => setTemplateModalOpen(false)}
-        onSave={handleSaveTemplate}
       />
     </Dialog>
   );
