@@ -32,9 +32,26 @@ const AISuggestionModal = ({
         </>
       );
     }
+
+    // Default suggestion type is a string, potentially containing HTML
+    if (typeof suggestion === 'string') {
+        return (
+            <Box
+                dangerouslySetInnerHTML={{ __html: suggestion }}
+                sx={{
+                    wordBreak: 'break-word',
+                    '& p': { marginBlockStart: '0.5em', marginBlockEnd: '0.5em' },
+                    '& ul, & ol': { paddingLeft: '20px', marginBlockStart: '0.5em' },
+                    '& li': { mb: 1 },
+                }}
+            />
+        );
+    }
+
+    // Fallback for any other type
     return (
       <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-        {suggestion}
+        {String(suggestion)}
       </Typography>
     );
   };
