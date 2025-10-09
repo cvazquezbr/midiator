@@ -242,7 +242,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                 </Grid>
             )}
           </Box>
-        );
+        )
       default:
         return <Typography>Passo desconhecido</Typography>;
     }
