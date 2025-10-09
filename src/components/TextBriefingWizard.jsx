@@ -103,11 +103,16 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         try {
             const result = await geminiAPI.reviseBriefing(briefingData.baseText, briefingData.referenceText);
             const sections = parseRevisedTextToSections(result.revisedText);
+            // Format the array of notes into a single markdown list string
+            const formattedNotes = Array.isArray(result.revisionNotes)
+                ? result.revisionNotes.map(note => `- ${note}`).join('\n')
+                : result.revisionNotes; // Fallback for string response
+
             onBriefingDataChange(prev => ({
                 ...prev,
-                revisedText: result.revisedText, // keep original markdown
-                revisionNotes: result.revisionNotes,
-                sections: sections, // store structured data
+                revisedText: result.revisedText,
+                revisionNotes: formattedNotes,
+                sections: sections,
             }));
             toast.success('Briefing revisado com sucesso!');
             setActiveStep(1);
