@@ -75,8 +75,8 @@ const BriefingTemplateModal = ({ open, onClose, onSave }) => {
               <Typography variant="h6" gutterBottom>{section.label}</Typography>
               <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, minHeight: '200px' }}>
                 <TextEditor
-                  value={templateData[section.id] || ''}
-                  onChange={(newContent) => handleContentChange(section.id, newContent)}
+                  content={templateData[section.id] || ''}
+                  onUpdate={(newContent) => handleContentChange(section.id, newContent)}
                   html={true}
                 />
               </Box>
