@@ -6,7 +6,6 @@ import { Save as SaveIcon, Close as CloseIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
 import TextEditor from './TextEditor';
 
-// Define the sections for the template as requested
 const TEMPLATE_SECTIONS = [
     { id: 'titulo_missao', label: 'TÍTULO DA MISSÃO' },
     { id: 'saudacao', label: 'SAUDAÇÃO' },
@@ -20,17 +19,15 @@ const TEMPLATE_SECTIONS = [
     { id: 'hashtags', label: 'HASHTAGS' },
 ];
 
-// Helper to convert the structured data into a single markdown string
 const sectionsToMarkdown = (sections) => {
     return Object.entries(sections)
         .map(([title, content]) => {
-            const cleanContent = content.replace(/<[^>]*>/g, ''); // Basic HTML strip
+            const cleanContent = content.replace(/<[^>]*>/g, '');
             const sectionTitle = TEMPLATE_SECTIONS.find(s => s.id === title)?.label || title;
             return `## ${sectionTitle}\n\n${cleanContent}`;
         })
         .join('\n\n---\n\n');
 };
-
 
 const BriefingTemplateModal = ({ open, onClose, onSave }) => {
   const [templateName, setTemplateName] = useState('Modelo Padrão');
@@ -38,7 +35,6 @@ const BriefingTemplateModal = ({ open, onClose, onSave }) => {
 
   useEffect(() => {
     const initialData = TEMPLATE_SECTIONS.reduce((acc, section) => {
-        // Pre-populate with placeholder text
         acc[section.id] = `<p>Defina o conteúdo para <strong>${section.label}</strong> aqui.</p>`;
         return acc;
     }, {});
@@ -75,8 +71,8 @@ const BriefingTemplateModal = ({ open, onClose, onSave }) => {
               <Typography variant="h6" gutterBottom>{section.label}</Typography>
               <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1, minHeight: '200px' }}>
                 <TextEditor
-                  content={templateData[section.id] || ''}
-                  onUpdate={(newContent) => handleContentChange(section.id, newContent)}
+                  value={templateData[section.id] || ''}
+                  onChange={(newContent) => handleContentChange(section.id, newContent)}
                   html={true}
                 />
               </Box>
