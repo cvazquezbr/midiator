@@ -248,6 +248,10 @@ class GeminiAPI {
       
           Mantenha o conteúdo dos outros blocos do "TEXTO BASE" que correspondem ao "MODELO DE REFERÊNCIA", mas adapte-os para se encaixar na nova estrutura.
 
+      6.  **Hashtags** 
+
+        Os hashtags devem ser precedidos de '#' e separados por vírgula.
+
       **SAÍDA ESPERADA:**
 
       Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto, markdown ou qualquer formatação adicional. Use EXATAMENTE a seguinte estrutura:
