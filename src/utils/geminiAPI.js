@@ -185,79 +185,47 @@ class GeminiAPI {
    */
   async reviseBriefing(baseText, referenceText) {
     const purpose = 'Revisão de Briefing';
-    console.log(`[${purpose}] Iniciando revisão de briefing.`);
+    console.log(`[${purpose}] Iniciando revisão de briefing com modelo.`);
 
     const prompt = `
-     Aja como um especialista em comunicação e marketing. 
-      Sua tarefa é revisar um "TEXTO BASE" de briefing usando um "MODELO DE REFERÊNCIA" e um conjunto de regras.
+      Aja como um Diretor de Criação especialista. Sua tarefa é analisar um "TEXTO BASE" de um briefing e reestruturá-lo completamente com base em um "MODELO DE REFERÊNCIA".
 
-      **CONTEXTO:**
-      1.  **TEXTO BASE (Fornecido pelo usuário, em HTML):**
-          \`\`\`html
-          ${baseText}
-          \`\`\`
+      **1. MODELO DE REFERÊNCIA (Define a estrutura e os blocos obrigatórios):**
+      O conteúdo deste modelo define as seções que você DEVE criar. Use os títulos das seções (linhas que começam com '##') como as chaves para o objeto "sections" no seu JSON de saída.
+      \`\`\`markdown
+      ${referenceText}
+      \`\`\`
 
-      2.  **MODELO DE REFERÊNCIA (Define a estrutura e os blocos obrigatórios):**
+      **2. TEXTO BASE (Fornecido pelo usuário, pode estar em HTML ou texto simples):**
+      Este é o conteúdo que você precisa analisar e reorganizar.
+      \`\`\`html
+      ${baseText}
+      \`\`\`
 
-        Os blocos obrigatórios são:
-        - TÍTULO DA MISSÃO
-        - SAUDAÇÃO
-        - ENTREGAS
-        - MENSAGEM PRINCIPAL
-        - CTA
-        - INSPIRAÇÕES
-        - PRÓXIMOS PASSOS
-        - DOs
-        - DON'Ts
-        - HASHTAGS
+      **SUA TAREFA:**
+      1.  **Leia o TEXTO BASE** e entenda o conteúdo de cada parte.
+      2.  **Use os TÍTULOS do MODELO DE REFERÊNCIA** como as chaves para o objeto "sections" na sua resposta JSON.
+      3.  **Preencha cada seção** no JSON com o conteúdo correspondente do TEXTO BASE. Se uma seção do modelo não tiver conteúdo correspondente no texto base, deixe o valor como uma string vazia ("").
+      4.  **Consolide o conteúdo:** Mova todo o conteúdo relevante do TEXTO BASE para as seções apropriadas definidas pelo MODELO. Não deixe conteúdo para trás. O conteúdo deve ser em HTML simples.
+      5.  **Crie Notas de Revisão:** Com base na sua análise, crie uma lista de 3 a 5 notas (em um array de strings) sobre o que foi alterado, o que pode ser melhorado ou o que estava faltando no briefing original.
 
-        O modelo de exemplo é:
-          \`\`\`text
-          ${referenceText}
-          \`\`\`
-
-      **REGRAS DE REVISÃO:**
-
-      1.  **Estrutura Rígida:** 
-
-          O "BRIEFING REVISADO" deve conter APENAS os blocos de títulos (ex: "# Título") presentes no "MODELO DE REFERÊNCIA". 
-          Qualquer bloco do "TEXTO BASE" que não exista no modelo, deve ter o seu conteúdo único avaliado quanto a melhor localização no "BRIEFING REVISADO".  
-
-      2.  **Requisitos (DOs):** 
-      
-          Encontre no "TEXTO BASE" qualquer frase que seja um requisito, uma ordem, ou uma sugestão imperativa (exceto as que estiverem no bloco "Próximos Passos"). 
-          Mova essas frases para o bloco "DOs" do "BRIEFING REVISADO", formatando-as como itens de lista (usando '-').
-          Os DOs do "MODELO DE REFERÊNCIA" devem ser mantidos e precedido de '-';
-          Os DOs adicionais devem ser precedidos de '•'.
-
-      3.  **Restrições (DON'Ts):** 
-      
-          Encontre no "TEXTO BASE" qualquer frase que indique uma restrição ou algo a ser evitado (exceto as que estiverem no bloco "Próximos Passos"). 
-          Mova essas frases para o bloco "DON'Ts" do "BRIEFING REVISADO", formatando-as como itens de lista (usando '-').
-          Os DON'Ts do "MODELO DE REFERÊNCIA" devem ser mantidos e precedido de '-';
-          Os DON'Ts adicionais devem ser precedidos de '•'.
-
-      4.  **Mensagem Principal:** 
-
-          O limite de caracteres é de 250 posições. 
-          Este bloco deve ser um "Guia de Mensagens Chave", não um script.
-          - Use no máximo 3 tópicos (formato de lista com '-').
-          - O conteúdo deve ser único e não repetir informações que pertencem aos blocos DOs, DON'Ts ou CTA.
-          - Se o "TEXTO BASE" já atender a essas regras, deve-se priorizar mantê-lo inalterado.
-
-      5.  **Conteúdo Original:** 
-      
-          Mantenha o conteúdo dos outros blocos do "TEXTO BASE" que correspondem ao "MODELO DE REFERÊNCIA", mas adapte-os para se encaixar na nova estrutura.
-
-      6.  **Hashtags** 
-
-        Os hashtags devem ser precedidos de '#' e separados por vírgula.
-
-      **SAÍDA ESPERADA:**
-      Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto, markdown ou qualquer formatação adicional. Use EXATAMENTE a seguinte estrutura:
+      **REQUISITOS DE SAÍDA:**
+      - Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto ou formatação adicional fora dele.
+      - A estrutura do JSON deve ser EXATAMENTE a seguinte:
       {
-        "revisedText": "O conteúdo completo do briefing revisado em formato Markdown. Use '##' para os títulos de cada seção.",
-        "revisionNotes": ["Uma nota de revisão aqui.", "Outra nota de revisão aqui.", "E uma terceira nota aqui."]
+        "sections": {
+          "TÍTULO DA MISSÃO": "<p>Conteúdo extraído e adaptado do texto base para esta seção.</p>",
+          "SAUDAÇÃO": "<p>Conteúdo da saudação...</p>",
+          "ENTREGAS": "<p>Conteúdo das entregas...</p>",
+          "MENSAGEM PRINCIPAL": "<p>Conteúdo da mensagem principal...</p>",
+          "CTA": "<p>Conteúdo do CTA...</p>",
+          "INSPIRAÇÕES": "<p>Conteúdo das inspirações...</p>",
+          "PRÓXIMOS PASSOS": "<p>Conteúdo dos próximos passos...</p>",
+          "DOs": "<ul><li>Item 1</li><li>Item 2</li></ul>",
+          "DON'Ts": "<ul><li>Item 1</li><li>Item 2</li></ul>",
+          "HASHTAGS": "<p>#hashtag1, #hashtag2</p>"
+        },
+        "revisionNotes": ["Nota de revisão 1.", "Nota de revisão 2.", "Nota de revisão 3."]
       }
     `;
 
