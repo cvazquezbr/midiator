@@ -3,26 +3,21 @@ import AdvancedEditor from './AdvancedEditor';
 import InlineEditor from './InlineEditor';
 import { TextField, Box, Typography } from '@mui/material';
 
-// CORRECTED: The component now uses `content` and `onUpdate` as its primary props
-// to avoid conflicts and align with a more explicit data flow.
-// It internally maps these to the `value`/`onChange` props expected by the child editors.
-const TextEditor = ({ content, onUpdate, html = false, variant = 'full', ...props }) => {
+const TextEditor = ({ value, onChange, html = false, variant = 'full', ...props }) => {
   if (html) {
     if (variant === 'simple') {
-      // Pass the correct props down
-      return <InlineEditor value={content} onChange={onUpdate} {...props} />;
+      return <InlineEditor value={value} onChange={onChange} {...props} />;
     }
-    // Pass the correct props down
-    return <AdvancedEditor value={content} onChange={onUpdate} {...props} />;
+    return <AdvancedEditor value={value} onChange={onChange} {...props} />;
   }
 
-  const characterCount = content ? content.length : 0;
+  const characterCount = value ? value.length : 0;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <TextField
-        value={content}
-        onChange={(e) => onUpdate(e.target.value)}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         multiline
         fullWidth
         variant="outlined"

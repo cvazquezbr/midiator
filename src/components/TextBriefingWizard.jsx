@@ -7,20 +7,17 @@ import { ArrowBack, ArrowForward, UploadFile, Edit, Check } from '@mui/icons-mat
 import { toast } from 'sonner';
 
 import TextEditor from './TextEditor';
-import BriefingTemplateModal from './BriefingTemplateModal'; // Import the modal
+import BriefingTemplateModal from './BriefingTemplateModal';
 import { parseWordDocument, parsePdfDocument } from '../utils/fileImport';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 
-// --- Helper Functions ---
 const sectionsToMarkdown = (sections) => {
     return Object.entries(sections)
         .map(([title, content]) => `## ${title}\n\n${content}`)
         .join('\n\n');
 };
 
-
-// --- Main Component ---
 export const emptyTextBriefingData = {
   name: '',
   baseText: '',
@@ -41,30 +38,27 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [isTemplateModalOpen, setTemplateModalOpen] = useState(false);
-  const [isRevising, setIsRevising] = useState(false); // State for the next button loading
+  const [isRevising, setIsRevising] = useState(false);
 
-  // State for block completion step
   const [activeSuggestion, setActiveSuggestion] = useState({ title: null, content: '' });
 
   const wordInputRef = useRef(null);
   const pdfInputRef = useRef(null);
 
   useEffect(() => {
-    if (activeStep === 3) { // When entering finalization step
+    if (activeStep === 3) {
         setLoadingMessage('Gerando texto final...');
         setIsLoading(true);
-        // Use a timeout to allow the loading indicator to render before the synchronous work
         setTimeout(() => {
             const finalMarkdown = sectionsToMarkdown(briefingData.sections);
             onBriefingDataChange(prev => ({ ...prev, finalText: finalMarkdown }));
             setIsLoading(false);
-        }, 100); // A small delay is sufficient
+        }, 100);
     }
   }, [activeStep, briefingData.sections, onBriefingDataChange]);
 
-
   const handleNext = async () => {
-    if (activeStep === 0) { // Edição -> Revisão
+    if (activeStep === 0) {
         if (!briefingData.baseText || !briefingData.referenceText) {
             toast.error('O texto base e o modelo de referência são obrigatórios.');
             return;
@@ -75,14 +69,12 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             geminiAPI.initialize(apiKey);
         }
 
-        setIsRevising(true); // Set loading state for the button
+        setIsRevising(true);
 
         try {
             const result = await geminiAPI.reviseBriefing(briefingData.baseText, briefingData.referenceText);
-
             const sections = result.sections || {};
             const revisedText = sectionsToMarkdown(sections);
-
             const formattedNotes = Array.isArray(result.revisionNotes)
                 ? result.revisionNotes.map(note => `<p>- ${note}</p>`).join('')
                 : result.revisionNotes || '';
@@ -98,7 +90,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         } catch (error) {
             toast.error(`Erro na revisão com IA: ${error.message}`);
         } finally {
-            setIsRevising(false); // Reset loading state for the button
+            setIsRevising(false);
         }
     } else {
        setActiveStep(prev => prev + 1);
@@ -147,8 +139,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   const handleGenerateSuggestion = async (title) => {
       setLoadingMessage(`Gerando sugestão para "${title}"...`);
       setIsLoading(true);
-      // Do not set intermediate state, wait for the API call to complete
-
       try {
           const context = {
               dos: briefingData.sections['DOs'] || '',
@@ -173,8 +163,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
       setActiveSuggestion({ title: null, content: '' });
   };
 
-  // --- Render Functions for Each Step ---
-
   const renderStep0_Edit = () => (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Typography variant="h6" gutterBottom>Editor de Briefing</Typography>
@@ -183,8 +171,8 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         </Typography>
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
           <TextEditor
-            content={briefingData.baseText}
-            onUpdate={(val) => handleBriefingDataChange('baseText', val)}
+            value={briefingData.baseText}
+            onChange={(val) => handleBriefingDataChange('baseText', val)}
             html={true}
             placeholder="Digite ou cole o conteúdo do briefing aqui..."
           />
@@ -214,13 +202,13 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             <Grid item xs={12} md={7} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <Typography variant="h6" gutterBottom>Briefing Revisado (Editável)</Typography>
                 <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                    <TextEditor content={briefingData.revisedText} onUpdate={(val) => handleBriefingDataChange('revisedText', val)} html={true} />
+                    <TextEditor value={briefingData.revisedText} onChange={(val) => handleBriefingDataChange('revisedText', val)} html={true} />
                 </Box>
             </Grid>
             <Grid item xs={12} md={5} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <Typography variant="h6" gutterBottom>Notas da Revisão (Editável)</Typography>
                 <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1, backgroundColor: 'grey.50' }}>
-                    <TextEditor content={briefingData.revisionNotes} onUpdate={(val) => handleBriefingDataChange('revisionNotes', val)} html={true} />
+                    <TextEditor value={briefingData.revisionNotes} onChange={(val) => handleBriefingDataChange('revisionNotes', val)} html={true} />
                 </Box>
             </Grid>
         </Grid>
@@ -260,7 +248,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <Typography variant="h6" gutterBottom>Sugestão para: "{activeSuggestion.title}"</Typography>
                         <Box sx={{ flexGrow: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                            <TextEditor content={activeSuggestion.content} onUpdate={(val) => setActiveSuggestion(prev => ({ ...prev, content: val }))} html={true} />
+                            <TextEditor value={activeSuggestion.content} onChange={(val) => setActiveSuggestion(prev => ({ ...prev, content: val }))} html={true} />
                         </Box>
                         <Button onClick={handleAcceptSuggestion} variant="contained" startIcon={<Check />} sx={{ mt: 2 }}>Aceitar e Usar este Texto</Button>
                     </Box>
@@ -281,7 +269,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
           Revise e faça os ajustes finais no documento completo antes de salvar.
         </Typography>
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-            <TextEditor content={briefingData.finalText} onUpdate={(val) => handleBriefingDataChange('finalText', val)} html={true} />
+            <TextEditor value={briefingData.finalText} onChange={(val) => handleBriefingDataChange('finalText', val)} html={true} />
         </Box>
     </Box>
   );
