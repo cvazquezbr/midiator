@@ -1,7 +1,0 @@
-Vercel CLI 48.2.9
-> NOTE: The Vercel CLI now collects telemetry regarding usage of the CLI.
-> This information is used to shape the CLI roadmap and prioritize features.
-> You can learn more, including how to opt-out if you'd not like to participate in this program, by visiting the following URL:
-> https://vercel.com/docs/cli/about-telemetry
-Error: No existing credentials found. Please run `vercel login` or pass "--token"
-Learn More: https://err.sh/vercel/no-credentials-found
