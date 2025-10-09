@@ -28,7 +28,7 @@ const TextEditor = ({ value, onChange, html = false, variant = 'full', ...props 
             height: '100%',
             alignItems: 'flex-start',
           },
-          '& .MuiInputBase-input': {
+          '& .MMuiInputBase-input': {
             height: '100% !important',
             overflowY: 'auto !important',
           }

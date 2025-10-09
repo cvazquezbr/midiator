@@ -3,7 +3,8 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import CharacterCount from '@tiptap/extension-character-count';
 import FontFamily from '@tiptap/extension-font-family';
-import { TextStyle, LineHeight } from '@tiptap/extension-text-style';
+import { TextStyle } from '@tiptap/extension-text-style';
+import LineHeight from '../lib/tiptap-line-height'; // Assuming this custom extension exists
 import { Box, Typography } from '@mui/material';
 import Toolbar from './Toolbar';
 
@@ -11,7 +12,7 @@ const AdvancedEditor = ({ value, onChange, html = false }) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        // Let StarterKit handle basic marks
+        // configure starter kit options if needed
       }),
       TextStyle,
       FontFamily,
@@ -35,15 +36,8 @@ const AdvancedEditor = ({ value, onChange, html = false }) => {
     }
   }, [value, editor]);
 
-  if (!editor) {
+  if (!editor || !html) {
     return null;
-  }
-
-  // Do not render the advanced editor if HTML editing is disabled
-  if (!html) {
-      // In the parent component, this case is handled by rendering a simple TextField.
-      // However, as a fallback, we can render a message or null.
-      return null;
   }
 
   return (
@@ -55,7 +49,16 @@ const AdvancedEditor = ({ value, onChange, html = false }) => {
       height: '100%',
     }}>
       <Toolbar editor={editor} />
-      <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
+      <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2,
+        // Basic ProseMirror styling
+        '.ProseMirror': {
+            minHeight: '100%',
+            outline: 'none',
+            'p, h1, h2, h3, ul, ol': {
+                margin: '0.5em 0',
+            },
+        }
+      }}>
         <EditorContent editor={editor} />
       </Box>
       <Box sx={{
