@@ -5,6 +5,7 @@ import {
 import { useTheme } from '@mui/material/styles';
 import { ArrowBack, ArrowForward, UploadFile, Edit, Check } from '@mui/icons-material';
 import { toast } from 'sonner';
+import { marked } from 'marked';
 
 import TextEditor from './TextEditor';
 import { parseWordDocument, parsePdfDocument } from '../utils/fileImport';
@@ -18,36 +19,31 @@ const parseRevisedTextToSections = (text) => {
   const regex = /^##\s+(.*)$/gm;
   let match;
   let lastIndex = 0;
+  let titles = [];
 
   while ((match = regex.exec(text)) !== null) {
-    if (lastIndex > 0) {
-      const lastMatch = text.substring(0, lastIndex).match(/##\s+(.*)$/gm).pop();
-      const sectionTitle = lastMatch.replace('## ', '').trim();
-      const sectionContent = text.substring(lastIndex, match.index).trim();
-      sections[sectionTitle] = sectionContent;
-    }
-    lastIndex = match.index;
+      titles.push({title: match[1].trim(), index: match.index});
   }
 
-  if (lastIndex > 0) {
-    const lastMatch = text.substring(0, lastIndex).match(/##\s+(.*)$/gm).pop();
-    const sectionTitle = lastMatch.replace('## ', '').trim();
-    const sectionContent = text.substring(lastIndex).replace(lastMatch, '').trim();
-    sections[sectionTitle] = sectionContent;
-  } else if (text) {
-      // Handle case with no sections
-      sections['Texto Completo'] = text;
+  if (titles.length === 0 && text) {
+      sections['Texto Completo'] = marked(text);
+      return sections;
   }
+
+  titles.forEach((current, i) => {
+      const next = titles[i+1];
+      const contentMarkdown = text.substring(current.index + `## ${current.title}`.length, next ? next.index : text.length).trim();
+      sections[current.title] = marked(contentMarkdown);
+  });
 
   return sections;
 };
 
-const sectionsToMarkdown = (sections) => {
+const sectionsToHtml = (sections) => {
     return Object.entries(sections)
-        .map(([title, content]) => `## ${title}\n\n${content}`)
+        .map(([title, content]) => `<h2>${title}</h2>\n${content}`)
         .join('\n\n');
 };
-
 
 // --- Main Component ---
 export const emptyTextBriefingData = {
@@ -70,7 +66,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
 
-  // State for block completion step
   const [activeSuggestion, setActiveSuggestion] = useState({ title: null, content: '' });
 
   const wordInputRef = useRef(null);
@@ -78,15 +73,15 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   const referenceInputRef = useRef(null);
 
   useEffect(() => {
-    if (activeStep === 3) { // When entering finalization step
-        const finalMarkdown = sectionsToMarkdown(briefingData.sections);
-        onBriefingDataChange(prev => ({ ...prev, finalText: finalMarkdown }));
+    if (activeStep === 3) {
+        const finalHtml = sectionsToHtml(briefingData.sections);
+        onBriefingDataChange(prev => ({ ...prev, finalText: finalHtml }));
     }
   }, [activeStep, briefingData.sections, onBriefingDataChange]);
 
 
   const handleNext = async () => {
-    if (activeStep === 0) { // Edição -> Revisão
+    if (activeStep === 0) {
         if (!briefingData.baseText || !briefingData.referenceText) {
             toast.error('O texto base e o modelo de referência são obrigatórios.');
             return;
@@ -103,15 +98,15 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         try {
             const result = await geminiAPI.reviseBriefing(briefingData.baseText, briefingData.referenceText);
             const sections = parseRevisedTextToSections(result.revisedText);
-            // Format the array of notes into a single markdown list string
+
             const formattedNotes = Array.isArray(result.revisionNotes)
-                ? result.revisionNotes.map(note => `- ${note}`).join('\n')
-                : result.revisionNotes; // Fallback for string response
+                ? result.revisionNotes.map(note => `<li>${note}</li>`).join('')
+                : marked(result.revisionNotes || '');
 
             onBriefingDataChange(prev => ({
                 ...prev,
-                revisedText: result.revisedText,
-                revisionNotes: formattedNotes,
+                revisedText: marked(result.revisedText || ''),
+                revisionNotes: `<ul>${formattedNotes}</ul>`,
                 sections: sections,
             }));
             toast.success('Briefing revisado com sucesso!');
@@ -163,7 +158,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   const handleGenerateSuggestion = async (title) => {
       setLoadingMessage(`Gerando sugestão para "${title}"...`);
       setIsLoading(true);
-      // Do not set intermediate state, wait for the API call to complete
 
       try {
           const context = {
@@ -173,10 +167,10 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
               campaignInfo: briefingData.sections['Sobre a campanha'] || '',
           };
           const suggestion = await geminiAPI.generateBlockSuggestion(title, context);
-          setActiveSuggestion({ title, content: suggestion });
+          setActiveSuggestion({ title, content: marked(suggestion) });
       } catch (error) {
           toast.error(`Erro ao gerar sugestão: ${error.message}`);
-          setActiveSuggestion({ title, content: `Falha ao gerar sugestão: ${error.message}` });
+          setActiveSuggestion({ title, content: `<p>Falha ao gerar sugestão: ${error.message}</p>` });
       } finally {
           setIsLoading(false);
       }
@@ -247,7 +241,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         <Grid container spacing={2} sx={{ flexGrow: 1, minHeight: 0 }}>
             <Grid item xs={12} md={5} sx={{ height: '100%', overflowY: 'auto' }}>
                 {Object.entries(briefingData.sections).map(([title, content]) => {
-                    const isEmpty = !content || content.trim() === '';
+                    const isEmpty = !content || content.trim() === '<p></p>' || content.trim() === '';
                     return (
                         <Card key={title} variant="outlined" sx={{ mb: 2, borderColor: isEmpty ? 'error.main' : 'divider' }}>
                             <CardContent>
@@ -255,11 +249,11 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                                 {isEmpty ? (
                                     <Alert severity="warning" sx={{ mt: 1 }}>Este bloco está vazio.</Alert>
                                 ) : (
-                                    <Typography variant="body2" color="text.secondary" sx={{ maxHeight: 100, overflow: 'hidden', textOverflow: 'ellipsis' }} dangerouslySetInnerHTML={{ __html: content }} />
+                                    <Typography variant="body2" color="text.secondary" sx={{ maxHeight: 100, overflow: 'hidden', textOverflow: 'ellipsis', '& *': { margin: 0 } }} dangerouslySetInnerHTML={{ __html: content }} />
                                 )}
                             </CardContent>
                             <CardActions>
-                                <Button size="small" startIcon={<Edit />} onClick={() => setActiveSuggestion({ title, content: content || '' })}>Editar</Button>
+                                <Button size="small" startIcon={<Edit />} onClick={() => setActiveSuggestion({ title, content: briefingData.sections[title] || '' })}>Editar</Button>
                                 {isEmpty && <Button size="small" onClick={() => handleGenerateSuggestion(title)}>Sugerir</Button>}
                             </CardActions>
                         </Card>
@@ -269,11 +263,11 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             <Grid item xs={12} md={7} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 {activeSuggestion.title ? (
                     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="h6" gutterBottom>Sugestão para: "{activeSuggestion.title}"</Typography>
+                        <Typography variant="h6" gutterBottom>Editando Bloco: "{activeSuggestion.title}"</Typography>
                         <Box sx={{ flexGrow: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                             <TextEditor value={activeSuggestion.content} onChange={(val) => setActiveSuggestion(prev => ({ ...prev, content: val }))} html={true} />
                         </Box>
-                        <Button onClick={handleAcceptSuggestion} variant="contained" startIcon={<Check />} sx={{ mt: 2 }}>Aceitar e Usar este Texto</Button>
+                        <Button onClick={handleAcceptSuggestion} variant="contained" startIcon={<Check />} sx={{ mt: 2 }}>Confirmar Alteração</Button>
                     </Box>
                 ) : (
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', border: '2px dashed', borderColor: 'divider', borderRadius: 2 }}>
