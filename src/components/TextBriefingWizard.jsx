@@ -185,8 +185,8 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         </Typography>
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
           <TextEditor
-            value={briefingData.baseText}
-            onChange={(val) => handleBriefingDataChange('baseText', val)}
+            content={briefingData.baseText}
+            onUpdate={(val) => handleBriefingDataChange('baseText', val)}
             html={true}
             placeholder="Digite ou cole o conteúdo do briefing aqui..."
           />
@@ -216,13 +216,13 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             <Grid item xs={12} md={7} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <Typography variant="h6" gutterBottom>Briefing Revisado (Editável)</Typography>
                 <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                    <TextEditor value={briefingData.revisedText} onChange={(val) => handleBriefingDataChange('revisedText', val)} html={true} />
+                    <TextEditor content={briefingData.revisedText} onUpdate={(val) => handleBriefingDataChange('revisedText', val)} html={true} />
                 </Box>
             </Grid>
             <Grid item xs={12} md={5} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <Typography variant="h6" gutterBottom>Notas da Revisão (Editável)</Typography>
                 <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1, backgroundColor: 'grey.50' }}>
-                    <TextEditor value={briefingData.revisionNotes} onChange={(val) => handleBriefingDataChange('revisionNotes', val)} html={true} />
+                    <TextEditor content={briefingData.revisionNotes} onUpdate={(val) => handleBriefingDataChange('revisionNotes', val)} html={true} />
                 </Box>
             </Grid>
         </Grid>
@@ -262,7 +262,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <Typography variant="h6" gutterBottom>Sugestão para: "{activeSuggestion.title}"</Typography>
                         <Box sx={{ flexGrow: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                            <TextEditor value={activeSuggestion.content} onChange={(val) => setActiveSuggestion(prev => ({ ...prev, content: val }))} html={true} />
+                            <TextEditor content={activeSuggestion.content} onUpdate={(val) => setActiveSuggestion(prev => ({ ...prev, content: val }))} html={true} />
                         </Box>
                         <Button onClick={handleAcceptSuggestion} variant="contained" startIcon={<Check />} sx={{ mt: 2 }}>Aceitar e Usar este Texto</Button>
                     </Box>
@@ -283,7 +283,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
           Revise e faça os ajustes finais no documento completo antes de salvar.
         </Typography>
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-            <TextEditor value={briefingData.finalText} onChange={(val) => handleBriefingDataChange('finalText', val)} html={true} />
+            <TextEditor content={briefingData.finalText} onUpdate={(val) => handleBriefingDataChange('finalText', val)} html={true} />
         </Box>
     </Box>
   );
