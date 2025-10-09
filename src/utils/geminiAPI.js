@@ -200,7 +200,8 @@ class GeminiAPI {
       2.  **MODELO DE REFERÊNCIA (Define a estrutura e os blocos obrigatórios):**
 
         Os blocos obrigatórios são:
-
+        - TÍTULO DA MISSÃO
+        - SAUDAÇÃO
         - ENTREGAS
         - MENSAGEM PRINCIPAL
         - CTA
@@ -219,7 +220,7 @@ class GeminiAPI {
       1.  **Estrutura Rígida:** 
 
           O "BRIEFING REVISADO" deve conter APENAS os blocos de títulos (ex: "# Título") presentes no "MODELO DE REFERÊNCIA". 
-          Qualquer bloco do "TEXTO BASE" que não exista no modelo, deve ter o seu conteúdo único avaliado quanto a melhor localização no "BRIEFING REVISADO".  .
+          Qualquer bloco do "TEXTO BASE" que não exista no modelo, deve ter o seu conteúdo único avaliado quanto a melhor localização no "BRIEFING REVISADO".  
 
       2.  **Requisitos (DOs):** 
       
@@ -232,10 +233,12 @@ class GeminiAPI {
           Mova essas frases para o bloco "DON'Ts" do "BRIEFING REVISADO", formatando-as como itens de lista (usando '-').
 
       4.  **Mensagem Principal:** 
-      
+
+          O limite de caracteres é de 250 posições. 
           Este bloco deve ser um "Guia de Mensagens Chave", não um script.
           - Use no máximo 3 tópicos (formato de lista com '-').
           - O conteúdo deve ser único e não repetir informações que pertencem aos blocos DOs, DON'Ts ou CTA.
+          - Se o "TEXTO BASE" já atender a essas regras, deve-se priorizar mantê-lo inalterado.
 
       5.  **Conteúdo Original:** 
       
