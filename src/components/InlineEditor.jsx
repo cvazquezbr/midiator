@@ -1,5 +1,6 @@
 import React from 'react';
-import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/extension-bubble-menu';
 import StarterKit from '@tiptap/starter-kit';
 import { Box, IconButton, Tooltip, Paper } from '@mui/material';
 import { FormatBold, FormatItalic, StrikethroughS } from '@mui/icons-material';
