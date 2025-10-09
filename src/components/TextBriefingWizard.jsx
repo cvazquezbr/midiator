@@ -84,9 +84,9 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             const sections = result.sections || {};
             const revisedText = sectionsToMarkdown(sections); // Recreate markdown from sections for consistency.
 
-            // Format the array of notes into a single markdown list string with blank lines
+            // Format the array of notes into a single HTML string with each note in a paragraph
             const formattedNotes = Array.isArray(result.revisionNotes)
-                ? result.revisionNotes.map(note => `- ${note}`).join('\n\n')
+                ? result.revisionNotes.map(note => `<p>- ${note}</p>`).join('')
                 : result.revisionNotes || ''; // Fallback for string or undefined response
 
             onBriefingDataChange(prev => ({
