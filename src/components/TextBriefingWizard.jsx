@@ -134,22 +134,22 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
     switch (step) {
       case 0:
         return (
-          <Grid container spacing={2} sx={{ height: '60vh', display: 'flex', flexDirection: 'column' }}>
-            <Grid item>
+          <Box sx={{ height: '60vh', display: 'flex', flexDirection: 'column' }}>
+            <Box>
               <Typography variant="h6" gutterBottom>Editor de Briefing</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                 Cole ou escreva o texto base do seu briefing abaixo. Você pode usar as ferramentas de formatação e importar arquivos do Word ou PDF.
               </Typography>
-            </Grid>
-            <Grid item sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+            </Box>
+            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <TextEditor
                 value={briefingData.baseText}
                 onChange={handleTextChange}
                 html={true} // Enable rich text editor
                 placeholder="Digite ou cole o conteúdo do briefing aqui..."
               />
-            </Grid>
-            <Grid item>
+            </Box>
+            <Box>
                 <input
                     type="file"
                     ref={wordInputRef}
@@ -198,8 +198,8 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                         {briefingData.referenceText ? "Modelo Carregado" : "Importar Modelo de Referência"}
                     </Button>
                 </Box>
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
         );
       case 1:
         return (
@@ -210,10 +210,11 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                 <Typography sx={{ mt: 2 }}>A IA está revisando seu briefing... Isso pode levar um momento.</Typography>
               </Box>
             ) : (
-                <Grid container spacing={2} sx={{ flexGrow: 1, height: '100%' }}>
-                    <Grid item xs={12}>
-                         <TextField
-                            name="name"
+                <Box sx={{ flexGrow: 1 }}>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                            <TextField
+                                name="name"
                             label="Nome do Briefing"
                             fullWidth
                             value={briefingData.name || ''}
@@ -222,17 +223,17 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                             helperText="Dê um nome para identificar facilmente este briefing no futuro."
                          />
                     </Grid>
-                    <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <Grid item xs={12} sx={{ display: 'flex', flexDirection: 'column' }}>
                         <Typography variant="h6" gutterBottom>Briefing Revisado</Typography>
-                        <Paper variant="outlined" sx={{ p: 2, flexGrow: 1, overflowY: 'auto' }}>
+                        <Paper variant="outlined" sx={{ p: 2, overflowY: 'auto', minHeight: '200px' }}>
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                 {briefingData.revisedText}
                             </ReactMarkdown>
                         </Paper>
                     </Grid>
-                    <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <Grid item xs={12} sx={{ display: 'flex', flexDirection: 'column', mt: 2 }}>
                         <Typography variant="h6" gutterBottom>Notas da Revisão</Typography>
-                        <Paper variant="outlined" sx={{ p: 2, flexGrow: 1, overflowY: 'auto', backgroundColor: 'grey.50' }}>
+                        <Paper variant="outlined" sx={{ p: 2, overflowY: 'auto', backgroundColor: 'grey.50', minHeight: '100px' }}>
                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                 {briefingData.revisionNotes}
                             </ReactMarkdown>
