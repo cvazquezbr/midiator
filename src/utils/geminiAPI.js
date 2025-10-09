@@ -207,7 +207,14 @@ class GeminiAPI {
       2.  **Use os TÍTULOS do MODELO DE REFERÊNCIA** como as chaves para o objeto "sections" na sua resposta JSON.
       3.  **Preencha cada seção** no JSON com o conteúdo correspondente do TEXTO BASE. Se uma seção do modelo não tiver conteúdo correspondente no texto base, deixe o valor como uma string vazia ("").
       4.  **Consolide o conteúdo:** Mova todo o conteúdo relevante do TEXTO BASE para as seções apropriadas definidas pelo MODELO. Não deixe conteúdo para trás. O conteúdo deve ser em HTML simples.
-      5.  **Crie Notas de Revisão:** Com base na sua análise, crie uma lista de 3 a 5 notas (em um array de strings) sobre o que foi alterado, o que pode ser melhorado ou o que estava faltando no briefing original.
+      5.  **Regra Especial para DOs e DON'Ts:**
+          - Identifique os itens de lista nas seções "DOs" e "DON'Ts" do **MODELO DE REFERÊNCIA**. Estes são os itens padrão.
+          - Identifique quaisquer diretrizes, regras ou sugestões no **TEXTO BASE** que funcionem como um "DO" ou "DON'T". Estes são os itens específicos do briefing.
+          - Na sua resposta JSON, para as seções "DOs" e "DON'Ts", você deve combinar ambos.
+          - Para os itens que vieram do **MODELO**, use um marcador de lista padrão (ex: `<li>Item do Modelo</li>`).
+          - Para os itens que você extraiu do **TEXTO BASE**, use um emoji para diferenciação: `<li>✅ Item específico do Briefing</li>` para DOs, e `<li>❌ Item específico do Briefing</li>` para DON'Ts.
+          - O resultado final para "DOs" e "DON'Ts" deve ser uma única string HTML contendo uma lista `<ul>`.
+      6.  **Crie Notas de Revisão:** Com base na sua análise, crie uma lista de 3 a 5 notas (em um array de strings) sobre o que foi alterado, o que pode ser melhorado ou o que estava faltando no briefing original.
 
       **REQUISITOS DE SAÍDA:**
       - Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto ou formatação adicional fora dele.
@@ -221,8 +228,8 @@ class GeminiAPI {
           "CTA": "<p>Conteúdo do CTA...</p>",
           "INSPIRAÇÕES": "<p>Conteúdo das inspirações...</p>",
           "PRÓXIMOS PASSOS": "<p>Conteúdo dos próximos passos...</p>",
-          "DOs": "<ul><li>Item 1</li><li>Item 2</li></ul>",
-          "DON'Ts": "<ul><li>Item 1</li><li>Item 2</li></ul>",
+          "DOs": "<ul><li>Item do Modelo 1</li><li>✅ Item específico do Briefing 1</li></ul>",
+          "DON'Ts": "<ul><li>Item do Modelo 1</li><li>❌ Item específico do Briefing 1</li></ul>",
           "HASHTAGS": "<p>#hashtag1, #hashtag2</p>"
         },
         "revisionNotes": ["Nota de revisão 1.", "Nota de revisão 2.", "Nota de revisão 3."]
