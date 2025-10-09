@@ -168,27 +168,23 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             <Grid container spacing={2} sx={{ flexGrow: 1, minHeight: 0 }}>
                 <Grid item xs={12} md={7} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                     <Typography variant="h6" gutterBottom>Briefing Revisado (Editável)</Typography>
-                    <TextField
-                        name="revisedText"
-                        multiline
-                        fullWidth
-                        value={briefingData.revisedText}
-                        onChange={handleRevisedDataChange}
-                        sx={{ flexGrow: 1, '& .MuiInputBase-root': { height: '100%', borderRadius: 1 }, '& .MuiInputBase-input': { height: '100% !important' } }}
-                        InputProps={{ sx: { height: '100%', alignItems: 'flex-start' } }}
-                    />
+                    <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                        <TextEditor
+                            value={briefingData.revisedText}
+                            onChange={(content) => handleRevisedDataChange({ target: { name: 'revisedText', value: content } })}
+                            html={true}
+                        />
+                    </Box>
                 </Grid>
                 <Grid item xs={12} md={5} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                     <Typography variant="h6" gutterBottom>Notas da Revisão (Editável)</Typography>
-                    <TextField
-                        name="revisionNotes"
-                        multiline
-                        fullWidth
-                        value={briefingData.revisionNotes}
-                        onChange={handleRevisedDataChange}
-                        sx={{ flexGrow: 1, '& .MuiInputBase-root': { height: '100%', backgroundColor: 'grey.50', borderRadius: 1 }, '& .MuiInputBase-input': { height: '100% !important' } }}
-                        InputProps={{ sx: { height: '100%', alignItems: 'flex-start' } }}
-                    />
+                     <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1, backgroundColor: 'grey.50' }}>
+                        <TextEditor
+                            value={briefingData.revisionNotes}
+                            onChange={(content) => handleRevisedDataChange({ target: { name: 'revisionNotes', value: content } })}
+                            html={true}
+                        />
+                    </Box>
                 </Grid>
             </Grid>
         </Box>
