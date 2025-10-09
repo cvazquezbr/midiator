@@ -158,7 +158,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   const handleGenerateSuggestion = async (title) => {
       setLoadingMessage(`Gerando sugestão para "${title}"...`);
       setIsLoading(true);
-      setActiveSuggestion({ title, content: 'Gerando...' });
+      // Do not set intermediate state, wait for the API call to complete
 
       try {
           const context = {
