@@ -41,6 +41,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [isTemplateModalOpen, setTemplateModalOpen] = useState(false);
+  const [isRevising, setIsRevising] = useState(false); // State for the next button loading
 
   // State for block completion step
   const [activeSuggestion, setActiveSuggestion] = useState({ title: null, content: '' });
@@ -74,20 +75,17 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             geminiAPI.initialize(apiKey);
         }
 
-        setLoadingMessage('A IA está revisando seu briefing...');
-        setIsLoading(true);
+        setIsRevising(true); // Set loading state for the button
 
         try {
             const result = await geminiAPI.reviseBriefing(briefingData.baseText, briefingData.referenceText);
 
-            // The API now returns a `sections` object directly.
             const sections = result.sections || {};
-            const revisedText = sectionsToMarkdown(sections); // Recreate markdown from sections for consistency.
+            const revisedText = sectionsToMarkdown(sections);
 
-            // Format the array of notes into a single HTML string with each note in a paragraph
             const formattedNotes = Array.isArray(result.revisionNotes)
                 ? result.revisionNotes.map(note => `<p>- ${note}</p>`).join('')
-                : result.revisionNotes || ''; // Fallback for string or undefined response
+                : result.revisionNotes || '';
 
             onBriefingDataChange(prev => ({
                 ...prev,
@@ -100,7 +98,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         } catch (error) {
             toast.error(`Erro na revisão com IA: ${error.message}`);
         } finally {
-            setIsLoading(false);
+            setIsRevising(false); // Reset loading state for the button
         }
     } else {
        setActiveStep(prev => prev + 1);
@@ -317,7 +315,13 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
           {activeStep === steps.length - 1 ? (
             <Button onClick={() => onSave(briefingData)} variant="contained" color="primary">Salvar Briefing</Button>
           ) : (
-            <Button onClick={handleNext} endIcon={<ArrowForward />}>Próximo</Button>
+            <Button
+              onClick={handleNext}
+              endIcon={isRevising ? <CircularProgress size={20} color="inherit" /> : <ArrowForward />}
+              disabled={isRevising}
+            >
+              {isRevising && activeStep === 0 ? 'Revisando...' : 'Próximo'}
+            </Button>
           )}
         </DialogActions>
       </Dialog>
