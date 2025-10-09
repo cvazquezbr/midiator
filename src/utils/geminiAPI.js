@@ -198,6 +198,19 @@ class GeminiAPI {
           \`\`\`
 
       2.  **MODELO DE REFERÊNCIA (Define a estrutura e os blocos obrigatórios):**
+
+        Os blocos obrigatórios são:
+
+        - ENTREGAS
+        - MENSAGEM PRINCIPAL
+        - CTA
+        - INSPIRAÇÕES
+        - PRÓXIMOS PASSOS
+        - DOs
+        - DON'Ts
+        - HASHTAGS
+
+        O modelo de exemplo é:
           \`\`\`text
           ${referenceText}
           \`\`\`
@@ -229,7 +242,7 @@ class GeminiAPI {
           Mantenha o conteúdo dos outros blocos do "TEXTO BASE" que correspondem ao "MODELO DE REFERÊNCIA", mas adapte-os para se encaixar na nova estrutura.
 
       **SAÍDA ESPERADA:**
-      
+
       Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto, markdown ou qualquer formatação adicional. Use EXATAMENTE a seguinte estrutura:
       {
         "revisedText": "O conteúdo completo do briefing revisado em formato Markdown.",
