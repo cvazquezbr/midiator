@@ -14,19 +14,29 @@ import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 
 const sectionsToHtml = (sections) => {
-    // Extract special sections
-    const missionTitle = sections['Título da Missão'] || '';
-    const greeting = sections['Saudação'] || '';
-    let dos = sections['DOs'] || '';
-    let donts = sections["DON'Ts"] || '';
+    // Helper to find a section's value and original key, case-insensitively
+    const findSection = (sectionsObject, keyName) => {
+        const lowerCaseKeyName = keyName.toLowerCase();
+        const foundKey = Object.keys(sectionsObject).find(key => key.toLowerCase() === lowerCaseKeyName);
+        return {
+            value: foundKey ? sectionsObject[foundKey] : '',
+            originalKey: foundKey || null
+        };
+    };
+
+    // Extract special sections using the case-insensitive helper
+    const { value: missionTitle, originalKey: missionTitleKey } = findSection(sections, 'Título da Missão');
+    const { value: greeting, originalKey: greetingKey } = findSection(sections, 'Saudação');
+    const { value: dos, originalKey: dosKey } = findSection(sections, 'DOs');
+    const { value: donts, originalKey: dontsKey } = findSection(sections, "DON'Ts");
 
     // Create a copy of sections to modify
     const otherSections = { ...sections };
-    // Remove special sections to avoid duplication
-    delete otherSections['Título da Missão'];
-    delete otherSections['Saudação'];
-    delete otherSections['DOs'];
-    delete otherSections["DON'Ts"];
+    // Remove special sections using their original keys to avoid duplication
+    if (missionTitleKey) delete otherSections[missionTitleKey];
+    if (greetingKey) delete otherSections[greetingKey];
+    if (dosKey) delete otherSections[dosKey];
+    if (dontsKey) delete otherSections[dontsKey];
 
     // Helper to parse list items from HTML content
     const parseList = (htmlContent) => {
