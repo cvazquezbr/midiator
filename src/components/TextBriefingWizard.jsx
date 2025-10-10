@@ -108,6 +108,68 @@ const sectionsToHtml = (sections) => {
     return mainContent + (dosList.length > 0 || dontsList.length > 0 ? dosAndDontsTable : '');
 };
 
+const htmlToSections = (html) => {
+    const sections = {};
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    // Handle Título da Missão (h2)
+    const missionTitleElement = doc.querySelector('h2');
+    if (missionTitleElement) {
+        sections['Título da Missão'] = missionTitleElement.innerHTML;
+    }
+
+    // Handle Saudação (div with data-section)
+    const greetingElement = doc.querySelector('div[data-section="Saudação"]');
+    if (greetingElement) {
+        sections['Saudação'] = greetingElement.innerHTML;
+    }
+
+    // Handle other sections (h3)
+    const otherSectionElements = doc.querySelectorAll('h3');
+    otherSectionElements.forEach(h3 => {
+        const title = h3.textContent.trim();
+        let content = '';
+        let nextElement = h3.nextSibling;
+        while (nextElement && nextElement.nodeName !== 'H3' && nextElement.nodeName !== 'TABLE') {
+            // Preserve HTML content by using outerHTML for elements and data for text nodes
+            content += nextElement.outerHTML || nextElement.data || '';
+            nextElement = nextElement.nextSibling;
+        }
+        sections[title] = content.trim();
+    });
+
+    // Handle DOs and DON'Ts from the table
+    const table = doc.querySelector('table');
+    if (table) {
+        const dosList = [];
+        const dontsList = [];
+
+        // Assuming the structure from sectionsToHtml: first <ul> is DOs, second is DON'Ts
+        const dosItems = table.querySelectorAll('tbody tr td:first-child ul li');
+        dosItems.forEach(li => {
+            // Recreate the <p> tag structure expected by the editor
+            dosList.push(`<p>${li.textContent.replace('→ ', '').trim()}</p>`);
+        });
+
+        const dontsItems = table.querySelectorAll('tbody tr td:last-child ul li');
+        dontsItems.forEach(li => {
+            dontsList.push(`<p>${li.textContent.replace('→ ', '').trim()}</p>`);
+        });
+
+        // Join list items into a single HTML string for each section
+        if (dosList.length > 0) {
+            sections['DOs'] = dosList.join('');
+        }
+        if (dontsList.length > 0) {
+            sections["DON'Ts"] = dontsList.join('');
+        }
+    }
+
+
+    return sections;
+};
+
 export const emptyTextBriefingData = {
   name: '',
   baseText: '',
@@ -209,6 +271,14 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         } finally {
             setIsRevising(false);
         }
+    } else if (activeStep === 1) {
+        // When leaving the review step, parse the edited HTML back into sections
+        const updatedSections = htmlToSections(briefingData.revisedText);
+        onBriefingDataChange(prev => ({
+            ...prev,
+            sections: updatedSections,
+        }));
+        setActiveStep(prev => prev + 1);
     } else {
        setActiveStep(prev => prev + 1);
     }
