@@ -260,9 +260,9 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         <TextField name="name" label="Nome do Briefing" fullWidth value={briefingData.name || ''} onChange={(e) => handleBriefingDataChange('name', e.target.value)} required sx={{ mb: 2, flexShrink: 0 }}/>
         <Grid container spacing={2} sx={{ flexGrow: 1, minHeight: 0 }}>
             <Grid item xs={12} md={7} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <Typography variant="h6" gutterBottom>Briefing Revisado (Editável)</Typography>
-                <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                    <TextEditor value={briefingData.revisedText} onChange={(val) => handleBriefingDataChange('revisedText', val)} html={true} />
+                <Typography variant="h6" gutterBottom>Briefing Revisado</Typography>
+                <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                    <HtmlDisplay htmlContent={briefingData.revisedText} />
                 </Box>
             </Grid>
             <Grid item xs={12} md={5} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
