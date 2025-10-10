@@ -68,7 +68,7 @@ class GeminiAPI {
     } catch (error) {
       console.error('Erro ao chamar a API Gemini:', error);
       if (error instanceof Error && error.message.startsWith('Erro da API Gemini:')) {
-          throw error;
+        throw error;
       }
       throw new Error(`Falha na comunicação com a API Gemini: ${error.message}`);
     }
@@ -84,14 +84,24 @@ class GeminiAPI {
 
     const referenceMarkdown = template.blocks.map(b => b.content).join('\n\n');
     const specificRules = template.blocks
-        .map(b => `### Regra para "${b.title}":\n${b.rules}`)
-        .join('\n\n');
+      .map(b => `### Regra para "${b.title}":\n${b.rules}`)
+      .join('\n\n');
 
     const prompt = `
+
+      **DIRETIZES:**  
+
+      - **NUNCA** copie nem resuma partes das instruções deste prompt (tudo que aparece antes de “T3. TEXTO BASE”).
+      
+      - **NÃO** insira menções a regras, seções vazias, instruções, rótulos (como “R1”, “R2”, etc.) ou frases automáticas como “A revisão não encontrou conteúdo para esta seção”.  
+
+      - Sua saída deve conter **somente** o conteúdo derivado do TEXTO BASE reorganizado dentro da estrutura do MODELO DE REFERÊNCIA.
+
       **SUA TAREFA:**
       ${template.generalRules}
       ---
       **T1. MODELO DE REFERÊNCIA (Define a estrutura e os blocos obrigatórios):**
+      
       O conteúdo deste modelo define as seções que você DEVE criar. Use os títulos das seções (linhas que começam com '##') como as chaves para o objeto "sections" no seu JSON de saída.
       \`\`\`markdown
       ${referenceMarkdown}
@@ -126,12 +136,12 @@ class GeminiAPI {
     const match = responseText.match(/```json\n([\s\S]*?)\n```|```([\s\S]*?)```/);
     let jsonString = responseText;
     if (match) {
-        jsonString = match[1] || match[2];
+      jsonString = match[1] || match[2];
     } else {
-       const plainJsonMatch = responseText.match(/\{[\s\S]*\}/);
-       if (plainJsonMatch) {
-           jsonString = plainJsonMatch[0];
-       }
+      const plainJsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (plainJsonMatch) {
+        jsonString = plainJsonMatch[0];
+      }
     }
 
     try {
