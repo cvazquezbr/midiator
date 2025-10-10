@@ -7,15 +7,71 @@ import { ArrowBack, ArrowForward, UploadFile, Edit, Check } from '@mui/icons-mat
 import { toast } from 'sonner';
 
 import TextEditor from './TextEditor';
+import HtmlDisplay from './HtmlDisplay';
 import BriefingTemplateModal from './BriefingTemplateModal';
 import { parseWordDocument, parsePdfDocument } from '../utils/fileImport';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 
-const sectionsToMarkdown = (sections) => {
-    return Object.entries(sections)
-        .map(([title, content]) => `## ${title}\n\n${content}`)
+const sectionsToHtml = (sections) => {
+    let dos = sections['DOs'] || '';
+    let donts = sections["DON'Ts"] || '';
+
+    // Remove DOs and DON'Ts from the main sections object to avoid duplication
+    const otherSections = { ...sections };
+    delete otherSections['DOs'];
+    delete otherSections["DON'Ts"];
+
+    const parseList = (htmlContent) => {
+        const doc = new DOMParser().parseFromString(htmlContent, 'text/html');
+        // Look for list items or paragraphs
+        const items = Array.from(doc.body.querySelectorAll('li, p'));
+        if (items.length > 0) {
+            return items.map(item => item.textContent.trim()).filter(text => text);
+        }
+        // Fallback for plain text with newlines
+        return htmlContent.split('<br>').map(s => s.trim()).filter(Boolean);
+    };
+
+    const dosList = parseList(dos);
+    const dontsList = parseList(donts);
+
+    const mainContent = Object.entries(otherSections)
+        .map(([title, content]) => {
+            if (title.toUpperCase() === 'TÍTULO DA MISSÃO') {
+                return `<h3>${title}</h3>\n${content}`;
+            }
+            return `<h2>${title}</h2>\n${content}`;
+        })
         .join('\n\n');
+
+    const dosAndDontsTable = `
+        <br><br>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd; font-size: 1.5em;">DO'S</th>
+                    <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd; font-size: 1.5em;">DON'TS</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="vertical-align: top; padding: 8px; width: 50%;">
+                        <ul style="list-style-type: none; padding-left: 0;">
+                            ${dosList.map(item => `<li style="margin-bottom: 8px;">→ ${item}</li>`).join('')}
+                        </ul>
+                    </td>
+                    <td style="vertical-align: top; padding: 8px; width: 50%;">
+                        <ul style="list-style-type: none; padding-left: 0;">
+                            ${dontsList.map(item => `<li style="margin-bottom: 8px;">→ ${item}</li>`).join('')}
+                        </ul>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    `;
+
+    return mainContent + (dosList.length > 0 || dontsList.length > 0 ? dosAndDontsTable : '');
 };
 
 export const emptyTextBriefingData = {
@@ -50,8 +106,8 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         setLoadingMessage('Gerando texto final...');
         setIsLoading(true);
         setTimeout(() => {
-            const finalMarkdown = sectionsToMarkdown(briefingData.sections);
-            onBriefingDataChange(prev => ({ ...prev, finalText: finalMarkdown }));
+            const finalHtml = sectionsToHtml(briefingData.sections);
+            onBriefingDataChange(prev => ({ ...prev, finalText: finalHtml }));
             setIsLoading(false);
         }, 100);
     }
@@ -74,7 +130,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         try {
             const result = await geminiAPI.reviseBriefing(briefingData.baseText, briefingData.referenceText);
             const sections = result.sections || {};
-            const revisedText = sectionsToMarkdown(sections);
+            const revisedText = sectionsToHtml(sections);
             const formattedNotes = Array.isArray(result.revisionNotes)
                 ? result.revisionNotes.map(note => `<p>- ${note}</p>`).join('')
                 : result.revisionNotes || '';
@@ -270,10 +326,10 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Typography variant="h6" gutterBottom>Finalização</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Revise e faça os ajustes finais no documento completo antes de salvar.
+          Revise o documento final. Para fazer ajustes, volte às etapas anteriores.
         </Typography>
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-            <TextEditor value={briefingData.finalText} onChange={(val) => handleBriefingDataChange('finalText', val)} html={true} />
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <HtmlDisplay htmlContent={briefingData.finalText} />
         </Box>
     </Box>
   );
