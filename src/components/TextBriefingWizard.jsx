@@ -185,7 +185,7 @@ const defaultBlockOrder = [
 ];
 
 const extractBlockOrder = (rules) => {
-    const pattern = /EXATAMENTE nesta ordem:([\s\S]*)/i;
+    const pattern = /EXATAMENTE nesta ordem:((?:\n[ \t]*\S+.*)+)/i;
     const match = rules.match(pattern);
 
     if (match && match[1]) {
