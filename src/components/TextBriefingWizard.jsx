@@ -38,10 +38,7 @@ const sectionsToHtml = (sections) => {
 
     const mainContent = Object.entries(otherSections)
         .map(([title, content]) => {
-            if (title.toUpperCase() === 'TÍTULO DA MISSÃO') {
-                return `<h3>${title}</h3>\n${content}`;
-            }
-            return `<h2>${title}</h2>\n${content}`;
+            return `<h3>${title}</h3>\n${content}`;
         })
         .join('\n\n');
 
