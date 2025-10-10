@@ -147,7 +147,11 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
               campaignInfo: briefingData.sections['Sobre a campanha'] || '',
           };
           const suggestion = await geminiAPI.generateBlockSuggestion(title, context);
-          setActiveSuggestion({ title, content: suggestion });
+          if (suggestion && suggestion.trim() !== '') {
+            setActiveSuggestion({ title, content: suggestion });
+          } else {
+            toast.info('A IA não conseguiu gerar uma sugestão para este bloco. Tente editar manualmente.');
+          }
       } catch (error) {
           toast.error(`Erro ao gerar sugestão: ${error.message}`);
           setActiveSuggestion({ title, content: `Falha ao gerar sugestão: ${error.message}` });
