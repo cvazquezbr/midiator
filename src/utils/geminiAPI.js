@@ -78,18 +78,28 @@ class GeminiAPI {
     // Implementation omitted for brevity
   }
 
-  async reviseBriefing(baseText, referenceText) {
+  async reviseBriefing(baseText, template) {
     const purpose = 'Revisão de Briefing';
-    console.log(`[${purpose}] Iniciando revisão de briefing com modelo.`);
+    console.log(`[${purpose}] Iniciando revisão de briefing com modelo estruturado.`);
+
+    const referenceMarkdown = template.blocks.map(b => b.content).join('\n\n');
+    const specificRules = template.blocks
+        .map(b => `### Regra para "${b.title}":\n${b.rules}`)
+        .join('\n\n');
 
     const prompt = `
-      Aja como um Diretor de Criação especialista. Sua tarefa é analisar um "TEXTO BASE" de um briefing e reestruturá-lo completamente com base em um "MODELO DE REFERÊNCIA".
+      **SUA TAREFA:**
+      ${template.generalRules}
+
+      ---
 
       **1. MODELO DE REFERÊNCIA (Define a estrutura e os blocos obrigatórios):**
       O conteúdo deste modelo define as seções que você DEVE criar. Use os títulos das seções (linhas que começam com '##') como as chaves para o objeto "sections" no seu JSON de saída.
       \`\`\`markdown
-      ${referenceText}
+      ${referenceMarkdown}
       \`\`\`
+
+      ---
 
       **2. TEXTO BASE (Fornecido pelo usuário, pode estar em HTML ou texto simples):**
       Este é o conteúdo que você precisa analisar e reorganizar.
@@ -97,35 +107,23 @@ class GeminiAPI {
       ${baseText}
       \`\`\`
 
-      **SUA TAREFA:**
-      1.  **Leia o TEXTO BASE** e entenda o conteúdo de cada parte.
-      2.  **Use os TÍTULOS do MODELO DE REFERÊNCIA** como as chaves para o objeto "sections" na sua resposta JSON.
-      3.  **Preencha cada seção** no JSON com o conteúdo correspondente do TEXTO BASE. Se uma seção do modelo não tiver conteúdo correspondente no texto base, deixe o valor como uma string vazia ("").
-      4.  **Consolide o conteúdo:** Mova todo o conteúdo relevante do TEXTO BASE para as seções apropriadas definidas pelo MODELO. Não deixe conteúdo para trás. O conteúdo deve ser em HTML simples.
-      5.  **Regra Especial para DOs e DON'Ts:**
-          - Identifique os itens de lista nas seções "DOs" e "DON'Ts" do **MODELO DE REFERÊNCIA**. Estes são os itens padrão.
-          - Identifique quaisquer diretrizes, regras ou sugestões no **TEXTO BASE** que funcionem como um "DO" ou "DON'T". Estes são os itens específicos do briefing.
-          - Na sua resposta JSON, para as seções "DOs" e "DON'Ts", você deve combinar ambos.
-          - Para os itens que vieram do **MODELO**, use um marcador de lista padrão (ex: '<li>Item do Modelo</li>').
-          - Para os itens que você extraiu do **TEXTO BASE**, use um emoji para diferenciação: '<li>✅ Item específico do Briefing</li>' para DOs, e '<li>❌ Item específico do Briefing</li>' para DON'Ts.
-          - O resultado final para "DOs" e "DON'Ts" deve ser uma única string HTML contendo uma lista '<ul>'.
-      6.  **Crie Notas de Revisão:** Com base na sua análise, crie uma lista de 3 a 5 notas (em um array de strings) sobre o que foi alterado, o que pode ser melhorado ou o que estava faltando no briefing original.
+      ---
+
+      **3. REGRAS ESPECÍFICAS (Instruções detalhadas por bloco):**
+      Use estas regras para guiar o preenchimento de cada bloco.
+      ${specificRules}
+
+      ---
 
       **REQUISITOS DE SAÍDA:**
       - Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto ou formatação adicional fora dele.
       - A estrutura do JSON deve ser EXATAMENTE a seguinte:
       {
         "sections": {
-          "TÍTULO DA MISSÃO": "<p>Conteúdo extraído e adaptado do texto base para esta seção.</p>",
-          "SAUDAÇÃO": "<p>Conteúdo da saudação...</p>",
-          "ENTREGAS": "<p>Conteúdo das entregas...</p>",
-          "MENSAGEM PRINCIPAL": "<p>Conteúdo da mensagem principal...</p>",
-          "CTA": "<p>Conteúdo do CTA...</p>",
-          "INSPIRAÇÕES": "<p>Conteúdo das inspirações...</p>",
-          "PRÓXIMOS PASSOS": "<p>Conteúdo dos próximos passos...</p>",
-          "DOs": "<ul><li>Item do Modelo 1</li><li>✅ Item específico do Briefing 1</li></ul>",
-          "DON'Ts": "<ul><li>Item do Modelo 1</li><li>❌ Item específico do Briefing 1</li></ul>",
-          "HASHTAGS": "<p>#hashtag1, #hashtag2</p>"
+          // As chaves aqui devem corresponder aos títulos dos blocos do modelo
+          "Título da Missão": "<p>Conteúdo...</p>",
+          "Saudação": "<p>Conteúdo...</p>",
+          // etc...
         },
         "revisionNotes": ["Nota de revisão 1.", "Nota de revisão 2.", "Nota de revisão 3."]
       }

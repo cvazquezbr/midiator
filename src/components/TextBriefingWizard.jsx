@@ -5,10 +5,11 @@ import {
 import { useTheme } from '@mui/material/styles';
 import { ArrowBack, ArrowForward, UploadFile, Edit, Check, Notes as NotesIcon, Fullscreen, FullscreenExit } from '@mui/icons-material';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
 
 import TextEditor from './TextEditor';
 import HtmlDisplay from './HtmlDisplay';
-import BriefingTemplateModal from './BriefingTemplateModal';
+import { defaultBriefingTemplate } from '../utils/defaultBriefingTemplate';
 import { parseWordDocument, parsePdfDocument } from '../utils/fileImport';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
@@ -59,8 +60,8 @@ const sectionsToHtml = (sections) => {
         mainContent += `<h2>${cleanedTitle}</h2>\n`;
     }
     if (greeting) {
-        // Greeting follows directly after the title
-        mainContent += `${greeting}\n\n`;
+        // Wrap greeting for easier parsing later
+        mainContent += `<div data-section="Saudação">${greeting}</div>\n\n`;
     }
 
     // Append the rest of the sections with a generic format
@@ -107,7 +108,7 @@ const sectionsToHtml = (sections) => {
 export const emptyTextBriefingData = {
   name: '',
   baseText: '',
-  referenceText: '',
+  template: defaultBriefingTemplate,
   revisedText: '',
   revisionNotes: '',
   sections: {},
@@ -123,10 +124,10 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   const [activeStep, setActiveStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
-  const [isTemplateModalOpen, setTemplateModalOpen] = useState(false);
   const [isRevising, setIsRevising] = useState(false);
   const [isNotesDrawerOpen, setNotesDrawerOpen] = useState(false);
   const [focusModeTarget, setFocusModeTarget] = useState(null); // null | 'baseText' | 'revisedText'
+  const [editingBlock, setEditingBlock] = useState(null); // State to manage which block is being edited
 
   const [activeSuggestion, setActiveSuggestion] = useState({ title: null, content: '' });
 
@@ -147,7 +148,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
 
   const handleNext = async () => {
     if (activeStep === 0) {
-        if (!briefingData.baseText || !briefingData.referenceText) {
+        if (!briefingData.baseText || !briefingData.template) {
             toast.error('O texto base e o modelo de referência são obrigatórios.');
             return;
         }
@@ -160,7 +161,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         setIsRevising(true);
 
         try {
-            const result = await geminiAPI.reviseBriefing(briefingData.baseText, briefingData.referenceText);
+            const result = await geminiAPI.reviseBriefing(briefingData.baseText, briefingData.template);
             const sections = result.sections || {};
             const revisedText = sectionsToHtml(sections);
             const formattedNotes = Array.isArray(result.revisionNotes)
@@ -180,6 +181,11 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         } finally {
             setIsRevising(false);
         }
+    } else if (activeStep === 1) {
+        // When leaving the review step, parse the edited HTML back into sections
+        const updatedSections = htmlToSections(briefingData.revisedText);
+        onBriefingDataChange(prev => ({ ...prev, sections: updatedSections }));
+        setActiveStep(prev => prev + 1);
     } else {
        setActiveStep(prev => prev + 1);
     }
@@ -191,6 +197,25 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
 
   const handleBriefingDataChange = (field, value) => {
     onBriefingDataChange(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleTemplateChange = (field, value) => {
+      onBriefingDataChange(prev => ({
+          ...prev,
+          template: { ...prev.template, [field]: value }
+      }));
+  };
+
+  const handleBlockChange = (blockId, field, value) => {
+      onBriefingDataChange(prev => ({
+          ...prev,
+          template: {
+              ...prev.template,
+              blocks: prev.template.blocks.map(b =>
+                  b.id === blockId ? { ...b, [field]: value } : b
+              )
+          }
+      }));
   };
 
   const handleSectionChange = (title, content) => {
@@ -219,10 +244,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
     }
   };
 
-  const handleSaveTemplate = (markdown) => {
-    handleBriefingDataChange('referenceText', markdown);
-    setTemplateModalOpen(false);
-  };
 
   const handleGenerateSuggestion = async (title) => {
       setLoadingMessage(`Gerando sugestão para "${title}"...`);
@@ -256,44 +277,68 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   };
 
   const renderStep0_Edit = () => (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Box>
-                <Typography variant="h6" gutterBottom mb={0}>Editor de Briefing</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Cole, digite ou importe o texto base do seu briefing.
-                </Typography>
+    <Grid container spacing={3} sx={{ height: '100%' }}>
+        {/* Coluna do Texto Base */}
+        <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Box>
+                    <Typography variant="h6" gutterBottom mb={0}>Editor de Briefing</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Cole, digite ou importe o texto base do seu briefing.
+                    </Typography>
+                </Box>
+                <Tooltip title="Edição Focada">
+                    <IconButton onClick={() => setFocusModeTarget('baseText')}>
+                        <Fullscreen />
+                    </IconButton>
+                </Tooltip>
             </Box>
-            <Tooltip title="Edição Focada">
-                <IconButton onClick={() => setFocusModeTarget('baseText')}>
-                    <Fullscreen />
-                </IconButton>
-            </Tooltip>
-        </Box>
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-          <TextEditor
-            value={briefingData.baseText}
-            onChange={(val) => handleBriefingDataChange('baseText', val)}
-            html={true}
-            placeholder="Digite ou cole o conteúdo do briefing aqui..."
-          />
-        </Box>
-        <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <input type="file" ref={wordInputRef} hidden accept=".docx" onChange={(e) => handleFileImport(e, parseWordDocument, (val) => handleBriefingDataChange('baseText', val))} />
-          <input type="file" ref={pdfInputRef} hidden accept=".pdf" onChange={(e) => handleFileImport(e, parsePdfDocument, (val) => handleBriefingDataChange('baseText', val))} />
-          <Button variant="outlined" onClick={(e) => { e.stopPropagation(); wordInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isLoading}>Importar Word (.docx)</Button>
-          <Button variant="outlined" onClick={(e) => { e.stopPropagation(); pdfInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isLoading}>Importar PDF</Button>
-          <Button
-            variant="outlined"
-            onClick={() => setTemplateModalOpen(true)}
-            startIcon={<Edit />}
-            disabled={isLoading}
-            color={briefingData.referenceText ? "success" : "primary"}
-          >
-            {briefingData.referenceText ? "Modelo Carregado" : "Gerenciar Modelo"}
-          </Button>
-        </Box>
-    </Box>
+            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                <TextEditor
+                    value={briefingData.baseText}
+                    onChange={(val) => handleBriefingDataChange('baseText', val)}
+                    html={true}
+                    placeholder="Digite ou cole o conteúdo do briefing aqui..."
+                />
+            </Box>
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <input type="file" ref={wordInputRef} hidden accept=".docx" onChange={(e) => handleFileImport(e, parseWordDocument, (val) => handleBriefingDataChange('baseText', val))} />
+                <input type="file" ref={pdfInputRef} hidden accept=".pdf" onChange={(e) => handleFileImport(e, parsePdfDocument, (val) => handleBriefingDataChange('baseText', val))} />
+                <Button variant="outlined" onClick={(e) => { e.stopPropagation(); wordInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isLoading}>Importar Word (.docx)</Button>
+                <Button variant="outlined" onClick={(e) => { e.stopPropagation(); pdfInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isLoading}>Importar PDF</Button>
+            </Box>
+        </Grid>
+
+        {/* Coluna do Modelo */}
+        <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Typography variant="h6" gutterBottom>Editor de Modelo</Typography>
+            <Paper variant="outlined" sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2, overflow: 'hidden' }}>
+              <TextField
+                  label="Regras Gerais para a IA"
+                  multiline
+                  rows={4}
+                  fullWidth
+                  variant="outlined"
+                  value={briefingData.template.generalRules}
+                  onChange={(e) => handleTemplateChange('generalRules', e.target.value)}
+                  sx={{ mb: 2, flexShrink: 0 }}
+              />
+              <Typography variant="subtitle1" gutterBottom>Blocos do Modelo</Typography>
+              <Box sx={{ overflowY: 'auto', flexGrow: 1 }}>
+                  {briefingData.template.blocks.map((block) => (
+                      <Card key={block.id} variant="outlined" sx={{ mb: 1 }}>
+                          <CardContent sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: '12px !important' }}>
+                              <Typography variant="body1">{block.title}</Typography>
+                              <Button size="small" startIcon={<Edit />} onClick={() => setEditingBlock(block)}>
+                                  Editar
+                              </Button>
+                          </CardContent>
+                      </Card>
+                  ))}
+              </Box>
+            </Paper>
+        </Grid>
+    </Grid>
   );
 
   const renderStep1_Review = () => (
@@ -436,11 +481,49 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         <CircularProgress color="inherit" />
         <Typography sx={{ ml: 2 }}>{loadingMessage}</Typography>
       </Backdrop>
-      <BriefingTemplateModal
-        open={isTemplateModalOpen}
-        onClose={() => setTemplateModalOpen(false)}
-        onSave={handleSaveTemplate}
-      />
+      {editingBlock && (
+          <Dialog open={Boolean(editingBlock)} onClose={() => setEditingBlock(null)} fullWidth maxWidth="lg">
+              <DialogTitle>Editando Bloco: "{editingBlock.title}"</DialogTitle>
+              <DialogContent>
+                  <Grid container spacing={2} sx={{ mt: 1 }}>
+                      <Grid item xs={12} md={6}>
+                          <Typography variant="h6" gutterBottom>Conteúdo do Bloco (Modelo)</Typography>
+                           <Box sx={{ height: 400, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                              <TextEditor
+                                  value={editingBlock.content}
+                                  onChange={(val) => setEditingBlock(prev => ({ ...prev, content: val }))}
+                                  html={false}
+                              />
+                           </Box>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                          <Typography variant="h6" gutterBottom>Instruções para a IA (Regras)</Typography>
+                          <Box sx={{ height: 400, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                              <TextEditor
+                                  value={editingBlock.rules}
+                                  onChange={(val) => setEditingBlock(prev => ({ ...prev, rules: val }))}
+                                  html={false}
+                              />
+                          </Box>
+                      </Grid>
+                  </Grid>
+              </DialogContent>
+              <DialogActions>
+                  <Button onClick={() => setEditingBlock(null)}>Cancelar</Button>
+                  <Button
+                      onClick={() => {
+                          handleBlockChange(editingBlock.id, 'content', editingBlock.content);
+                          handleBlockChange(editingBlock.id, 'rules', editingBlock.rules);
+                          setEditingBlock(null);
+                          toast.success(`Bloco "${editingBlock.title}" atualizado.`);
+                      }}
+                      variant="contained"
+                  >
+                      Salvar Alterações
+                  </Button>
+              </DialogActions>
+          </Dialog>
+      )}
       <Drawer
         anchor="right"
         open={isNotesDrawerOpen}
@@ -492,6 +575,61 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
       </Dialog>
     </>
   );
+};
+
+const htmlToSections = (htmlString) => {
+    if (!htmlString) return {};
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlString, 'text/html');
+    const body = doc.body;
+    const sections = {};
+
+    // 1. Handle DOs and DON'Ts table first and remove it
+    const dosTh = Array.from(body.querySelectorAll('th')).find(th => th.textContent.trim().toUpperCase() === "DO'S");
+    const table = dosTh ? dosTh.closest('table') : null;
+    if (table) {
+        const rows = table.querySelectorAll('tbody tr');
+        if (rows.length > 0) {
+            const cells = rows[0].querySelectorAll('td');
+            if (cells.length === 2) {
+                sections["DOs"] = cells[0].querySelector('ul')?.innerHTML || '';
+                sections["DON'Ts"] = cells[1].querySelector('ul')?.innerHTML || '';
+            }
+        }
+        table.remove();
+    }
+
+    // 2. Handle Greeting and remove its wrapper
+    const greetingWrapper = body.querySelector('[data-section="Saudação"]');
+    if (greetingWrapper) {
+        sections['Saudação'] = greetingWrapper.innerHTML;
+        greetingWrapper.remove();
+    }
+
+    // 3. Handle H2 and H3 sections
+    const headings = Array.from(body.querySelectorAll('h2, h3'));
+    headings.forEach((heading, index) => {
+        const title = heading.textContent.trim();
+        let contentHtml = '';
+        let currentNode = heading.nextSibling;
+        const nextHeading = headings[index + 1];
+
+        while (currentNode && currentNode !== nextHeading) {
+            contentHtml += currentNode.nodeType === 1 ? currentNode.outerHTML : currentNode.textContent;
+            currentNode = currentNode.nextSibling;
+        }
+
+        if (heading.tagName === 'H2') {
+            sections['Título da Missão'] = heading.innerHTML;
+            // Any content between H2 and the next heading that is NOT the greeting div is discarded for now.
+            // This assumes the greeting is the only meaningful content at this level.
+        } else { // H3
+            sections[title] = contentHtml.trim();
+        }
+    });
+
+    return sections;
 };
 
 // Helper function to read text files
