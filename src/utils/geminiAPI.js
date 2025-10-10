@@ -90,32 +90,24 @@ class GeminiAPI {
     const prompt = `
       **SUA TAREFA:**
       ${template.generalRules}
-
       ---
-
-      **1. MODELO DE REFERÊNCIA (Define a estrutura e os blocos obrigatórios):**
+      **T1. MODELO DE REFERÊNCIA (Define a estrutura e os blocos obrigatórios):**
       O conteúdo deste modelo define as seções que você DEVE criar. Use os títulos das seções (linhas que começam com '##') como as chaves para o objeto "sections" no seu JSON de saída.
       \`\`\`markdown
       ${referenceMarkdown}
       \`\`\`
-
       ---
-
-      **2. TEXTO BASE (Fornecido pelo usuário, pode estar em HTML ou texto simples):**
+      **T2. REGRAS ESPECÍFICAS (Instruções detalhadas por bloco):**
+      Use estas regras para guiar o preenchimento de cada bloco.
+      ${specificRules}
+      ---
+      **T3. TEXTO BASE (Fornecido pelo usuário, pode estar em HTML ou texto simples):**
       Este é o conteúdo que você precisa analisar e reorganizar.
       \`\`\`html
       ${baseText}
       \`\`\`
-
       ---
-
-      **3. REGRAS ESPECÍFICAS (Instruções detalhadas por bloco):**
-      Use estas regras para guiar o preenchimento de cada bloco.
-      ${specificRules}
-
-      ---
-
-      **REQUISITOS DE SAÍDA:**
+      **T4. REQUISITOS DE SAÍDA:**
       - Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto ou formatação adicional fora dele.
       - A estrutura do JSON deve ser EXATAMENTE a seguinte:
       {
