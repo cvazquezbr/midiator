@@ -134,7 +134,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
 
   const wordInputRef = useRef(null);
   const pdfInputRef = useRef(null);
-  const isInitialMount = useRef(true);
 
   // Fetch user's saved template on component mount
   useEffect(() => {
@@ -161,40 +160,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
     if (open) { // Only fetch when the dialog is opened
         fetchTemplate();
     }
-
-  }, [open]);
-
-  // Debounced auto-save for the template
-  useEffect(() => {
-      const handler = setTimeout(() => {
-          // Don't save on the very first render cycle.
-          if (isInitialMount.current) {
-              isInitialMount.current = false;
-              return;
-          }
-
-          const saveTemplate = async () => {
-              try {
-                  const response = await fetch('/api/briefing-template', {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ template_data: briefingData.template }),
-                  });
-                  if (!response.ok) throw new Error('Falha ao salvar o modelo.');
-                  // Maybe a subtle toast here? Or just save silently.
-                  // toast.success('Modelo salvo automaticamente.');
-                  console.log("Template auto-saved successfully.");
-              } catch (error) {
-                  toast.error(`Erro ao salvar o modelo: ${error.message}`);
-              }
-          };
-          saveTemplate();
-      }, 1500); // Debounce delay of 1.5 seconds
-
-      return () => {
-          clearTimeout(handler);
-      };
-  }, [briefingData.template]);
+  }, [open, onBriefingDataChange]);
 
   useEffect(() => {
     if (activeStep === 3) {
