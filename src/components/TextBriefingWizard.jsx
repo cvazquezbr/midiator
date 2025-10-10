@@ -170,6 +170,40 @@ const htmlToSections = (html) => {
     return sections;
 };
 
+const defaultBlockOrder = [
+    'Título da Missão',
+    'Saudação',
+    'Entregas',
+    'Mensagem Principal',
+    'CTA',
+    'DOs',
+    "DON'Ts",
+    'Hashtags',
+    'Inspirações',
+    'Premiação',
+    'Próximos Passos'
+];
+
+const extractBlockOrder = (rules) => {
+    const pattern = /EXATAMENTE nesta ordem:([\s\S]*)/i;
+    const match = rules.match(pattern);
+
+    if (match && match[1]) {
+        const blockList = match[1]
+            .split('\n')
+            .map(item => item.trim())
+            .filter(item => item && !item.startsWith('//')); // Filter out empty lines and comments
+        if (blockList.length > 0) {
+            console.log('Ordem dos blocos extraída das regras:', blockList);
+            return blockList;
+        }
+    }
+
+    console.log('Nenhuma ordem de blocos encontrada nas regras, usando a ordem padrão.');
+    return defaultBlockOrder;
+};
+
+
 export const emptyTextBriefingData = {
   name: '',
   baseText: '',
@@ -252,8 +286,21 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
 
         try {
             const result = await geminiAPI.reviseBriefing(briefingData.baseText, briefingData.template);
-            const sections = result.sections || {};
-            const revisedText = sectionsToHtml(sections);
+            const aiSections = result.sections || {};
+
+            const blockOrder = extractBlockOrder(briefingData.template.generalRules);
+
+            const finalSections = {};
+            blockOrder.forEach(title => {
+                const aiKey = Object.keys(aiSections).find(k => k.toLowerCase() === title.toLowerCase());
+                if (aiKey && aiSections[aiKey] && aiSections[aiKey].trim() !== '') {
+                    finalSections[title] = aiSections[aiKey];
+                } else {
+                    finalSections[title] = "<p>A revisão não encontrou conteúdo para esta seção.</p>";
+                }
+            });
+
+            const revisedText = sectionsToHtml(finalSections);
             const formattedNotes = Array.isArray(result.revisionNotes)
                 ? result.revisionNotes.map(note => `<p>- ${note}</p>`).join('')
                 : result.revisionNotes || '';
@@ -262,7 +309,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                 ...prev,
                 revisedText: revisedText,
                 revisionNotes: formattedNotes,
-                sections: sections,
+                sections: finalSections,
             }));
             toast.success('Briefing revisado com sucesso!');
             setActiveStep(1);

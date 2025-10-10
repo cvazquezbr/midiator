@@ -13,6 +13,25 @@ import { defaultBriefingTemplate } from '../utils/defaultBriefingTemplate';
 import TextEditor from '../components/TextEditor';
 import LoadingDialog from '../components/LoadingDialog';
 
+const highlightOrderRule = (text) => {
+    if (!text) return null;
+    const pattern = /(EXATAMENTE nesta ordem:[\s\S]*?)(?=\n\n|\n*$)/i;
+    const match = text.match(pattern);
+
+    if (match && match[0]) {
+        const parts = text.split(match[0]);
+        return (
+            <>
+                {parts[0]}
+                <span style={{ backgroundColor: 'yellow' }}>{match[0]}</span>
+                {parts.slice(1).join(match[0])}
+            </>
+        );
+    }
+
+    return text;
+};
+
 const BriefingTemplatePage = () => {
   const [template, setTemplate] = useState(defaultBriefingTemplate);
   const [isLoading, setIsLoading] = useState(true);
@@ -175,7 +194,7 @@ const BriefingTemplatePage = () => {
               sx={{ p: 2, mb: 4, cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' } }}
             >
               <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                {template.generalRules || 'Clique para editar...'}
+                {highlightOrderRule(template.generalRules) || 'Clique para editar...'}
               </Typography>
             </Paper>
 
