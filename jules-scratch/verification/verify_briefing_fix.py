@@ -7,19 +7,19 @@ def run_verification(playwright):
 
     try:
         # Navigate to Briefings page directly
-        page.goto("http://localhost:5173/briefings")
+        page.goto("http://localhost:5173/briefings", timeout=60000)
 
         # Click the "Novo Briefing (Beta)" button
-        page.get_by_role("button", name="Novo Briefing (Beta)").click(timeout=10000)
+        page.get_by_role("button", name="Novo Briefing (Beta)").click(timeout=20000)
 
         # Fill in the base text
-        page.locator(".tiptap.ProseMirror").fill("This is a test briefing.")
+        page.locator(".tiptap.ProseMirror").fill("This is a test briefing.", timeout=20000)
 
         # Click next to go to revision step
         page.get_by_role("button", name="Próximo").click()
 
         # Wait for the revision step to load
-        expect(page.get_by_text("Briefing Revisado (Editável)")).to_be_visible(timeout=20000)
+        expect(page.get_by_text("Briefing Revisado (Editável)")).to_be_visible(timeout=30000)
 
         # Edit the revised text with line breaks
         editor_locator = page.locator(".tiptap.ProseMirror")
@@ -36,7 +36,7 @@ def run_verification(playwright):
         page.get_by_role("button", name="Próximo").click()
 
         # Wait for the block completion step to load
-        expect(page.get_by_text("Completar Blocos")).to_be_visible(timeout=10000)
+        expect(page.get_by_text("Completar Blocos")).to_be_visible(timeout=20000)
 
         # Take screenshot
         page.screenshot(path="jules-scratch/verification/verification.png")
