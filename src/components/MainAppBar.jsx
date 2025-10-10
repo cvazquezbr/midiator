@@ -37,6 +37,7 @@ const MainAppBar = ({
   onShowAutores,
   onShowPalettes,
   onShowBriefings,
+  onShowBriefingTemplate,
   onShowCampaigns,
   setShowSetupModal,
   onMenuClick,
@@ -93,6 +94,8 @@ const MainAppBar = ({
         return 'Paletas de Cores';
       case 'briefings':
         return 'Briefings';
+      case 'briefingTemplate':
+        return 'Modelo de Briefing';
       default:
         return 'Midiator';
     }
@@ -192,6 +195,10 @@ const MainAppBar = ({
           <MenuItem onClick={() => { handleUserMenuClose(); onShowBriefings(); }}>
             <ArticleIcon sx={{ mr: 1 }} />
             Briefings
+          </MenuItem>
+          <MenuItem onClick={() => { handleUserMenuClose(); onShowBriefingTemplate(); }}>
+            <Edit sx={{ mr: 1 }} />
+            Modelo de Briefing
           </MenuItem>
           <Divider />
           <MenuItem onClick={() => { handleUserMenuClose(); setShowSetupModal(true); }}>

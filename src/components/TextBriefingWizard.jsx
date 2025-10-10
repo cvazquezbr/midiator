@@ -130,8 +130,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   const [isRevising, setIsRevising] = useState(false);
   const [isNotesDrawerOpen, setNotesDrawerOpen] = useState(false);
   const [focusModeTarget, setFocusModeTarget] = useState(null); // null | 'baseText' | 'revisedText'
-  const [editingBlock, setEditingBlock] = useState(null); // State to manage which block is being edited
-
   const [activeSuggestion, setActiveSuggestion] = useState({ title: null, content: '' });
 
   const wordInputRef = useRef(null);
@@ -144,60 +142,25 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             const response = await fetch('/api/briefing-template');
             if (response.ok) {
                 const savedTemplate = await response.json();
-                handleTemplateChange(savedTemplate); // Assuming handleTemplateChange can take a full template object
+                onBriefingDataChange(prev => ({ ...prev, template: savedTemplate }));
                 toast.info('Seu modelo de briefing foi carregado.');
             } else if (response.status === 404) {
-                // No saved template, use the default. No action needed.
+                // No saved template, use the default.
+                onBriefingDataChange(prev => ({ ...prev, template: defaultBriefingTemplate }));
                 console.log('Nenhum modelo salvo encontrado, usando o padrão.');
             } else {
                 throw new Error(`Falha ao buscar o modelo: ${response.statusText}`);
             }
         } catch (error) {
             toast.error(`Erro ao carregar seu modelo de briefing: ${error.message}`);
+            // Fallback to default template on error
+            onBriefingDataChange(prev => ({ ...prev, template: defaultBriefingTemplate }));
         }
     };
     if (open) { // Only fetch when the dialog is opened
         fetchTemplate();
     }
-  }, [open]);
-
-  // Debounced auto-save for the template
-  useEffect(() => {
-      // Don't save the initial default template on first render.
-      // We can check if it's the default by looking for a property that a saved template would have, like an ID from the DB,
-      // but for simplicity, we'll just use a flag or check if it's deeply equal to the default.
-      // Or, more simply, just don't save on the very first load. A ref can track this.
-      const isInitialMount = useRef(true);
-
-      const handler = setTimeout(() => {
-          if (isInitialMount.current) {
-              isInitialMount.current = false;
-              return;
-          }
-
-          const saveTemplate = async () => {
-              try {
-                  const response = await fetch('/api/briefing-template', {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ template_data: briefingData.template }),
-                  });
-                  if (!response.ok) throw new Error('Falha ao salvar o modelo.');
-                  // Maybe a subtle toast here? Or just save silently.
-                  // toast.success('Modelo salvo automaticamente.');
-                  console.log("Template auto-saved successfully.");
-              } catch (error) {
-                  toast.error(`Erro ao salvar o modelo: ${error.message}`);
-              }
-          };
-          saveTemplate();
-      }, 1500); // Debounce delay of 1.5 seconds
-
-      return () => {
-          clearTimeout(handler);
-      };
-  }, [briefingData.template]);
-
+  }, [open, onBriefingDataChange]);
 
   useEffect(() => {
     if (activeStep === 3) {
@@ -257,90 +220,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
 
   const handleBriefingDataChange = (field, value) => {
     onBriefingDataChange(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleTemplateChange = (fieldOrTemplate, value) => {
-      if (typeof fieldOrTemplate === 'object' && fieldOrTemplate !== null) {
-          // Overwrite the entire template object
-          onBriefingDataChange(prev => ({
-              ...prev,
-              template: fieldOrTemplate
-          }));
-      } else {
-          // Update a specific field in the template
-          onBriefingDataChange(prev => ({
-              ...prev,
-              template: { ...prev.template, [fieldOrTemplate]: value }
-          }));
-      }
-  };
-
-  const handleBlockChange = (blockId, field, value) => {
-      onBriefingDataChange(prev => ({
-          ...prev,
-          template: {
-              ...prev.template,
-              blocks: prev.template.blocks.map(b =>
-                  b.id === blockId ? { ...b, [field]: value } : b
-              )
-          }
-      }));
-  };
-
-  const handleExportToWord = () => {
-    const { template } = briefingData;
-    const doc = new Document({
-        sections: [{
-            children: [
-                new Paragraph({
-                    text: "Modelo de Briefing",
-                    heading: HeadingLevel.TITLE,
-                }),
-                new Paragraph({
-                    text: "Regras Gerais para a IA:",
-                    heading: HeadingLevel.HEADING_1,
-                }),
-                new Paragraph({
-                    text: template.generalRules,
-                    style: "Normal",
-                }),
-                ...template.blocks.flatMap(block => [
-                    new Paragraph({
-                        text: block.title,
-                        heading: HeadingLevel.HEADING_2,
-                        spacing: { before: 400 },
-                    }),
-                    new Paragraph({
-                        text: "Conteúdo do Exemplo:",
-                        style: "Normal",
-                    }),
-                    ...block.content.split('\n').map(line => new Paragraph({ text: line.replace(/##\s.*$/, '') })), // Remove markdown headings
-                    new Paragraph({
-                        text: "Instruções para a IA:",
-                        style: "Normal",
-                        spacing: { before: 200 },
-                    }),
-                    ...block.rules.split('\n').map(line => new Paragraph({
-                        children: [
-                            new TextRun({
-                                text: line,
-                                italics: true,
-                                color: "000080", // Navy Blue
-                                size: 20, // 10pt
-                            }),
-                        ],
-                    })),
-                ]),
-            ],
-        }],
-    });
-
-    Packer.toBlob(doc).then(blob => {
-        saveAs(blob, "modelo_de_briefing.docx");
-        toast.success("Modelo exportado para Word com sucesso!");
-    }).catch(err => {
-        toast.error(`Erro ao exportar para Word: ${err.message}`);
-    });
   };
 
   const handleSectionChange = (title, content) => {
@@ -404,12 +283,12 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   const renderStep0_Edit = () => (
     <Grid container spacing={3} sx={{ height: '100%' }}>
         {/* Coluna do Texto Base */}
-        <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <Grid item xs={12} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Box>
                     <Typography variant="h6" gutterBottom mb={0}>Editor de Briefing</Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Cole, digite ou importe o texto base do seu briefing.
+                      Cole, digite ou importe o texto base do seu briefing. O modelo de briefing será carregado e usado na próxima etapa.
                     </Typography>
                 </Box>
                 <Tooltip title="Edição Focada">
@@ -432,45 +311,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                 <Button variant="outlined" onClick={(e) => { e.stopPropagation(); wordInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isLoading}>Importar Word (.docx)</Button>
                 <Button variant="outlined" onClick={(e) => { e.stopPropagation(); pdfInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isLoading}>Importar PDF</Button>
             </Box>
-        </Grid>
-
-        {/* Coluna do Modelo */}
-        <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <Typography variant="h6" gutterBottom>Editor de Modelo</Typography>
-            <Paper variant="outlined" sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2, overflow: 'hidden' }}>
-              <TextField
-                  label="Regras Gerais para a IA"
-                  multiline
-                  rows={4}
-                  fullWidth
-                  variant="outlined"
-                  value={briefingData.template.generalRules}
-                  onChange={(e) => handleTemplateChange('generalRules', e.target.value)}
-                  sx={{ mb: 2, flexShrink: 0 }}
-              />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle1" gutterBottom>Blocos do Modelo</Typography>
-                <Button
-                    startIcon={<Download />}
-                    onClick={handleExportToWord}
-                    size="small"
-                >
-                    Exportar para Word
-                </Button>
-              </Box>
-              <Box sx={{ overflowY: 'auto', flexGrow: 1 }}>
-                  {briefingData.template.blocks.map((block) => (
-                      <Card key={block.id} variant="outlined" sx={{ mb: 1 }}>
-                          <CardContent sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: '12px !important' }}>
-                              <Typography variant="body1">{block.title}</Typography>
-                              <Button size="small" startIcon={<Edit />} onClick={() => setEditingBlock(block)}>
-                                  Editar
-                              </Button>
-                          </CardContent>
-                      </Card>
-                  ))}
-              </Box>
-            </Paper>
         </Grid>
     </Grid>
   );
@@ -615,49 +455,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         <CircularProgress color="inherit" />
         <Typography sx={{ ml: 2 }}>{loadingMessage}</Typography>
       </Backdrop>
-      {editingBlock && (
-          <Dialog open={Boolean(editingBlock)} onClose={() => setEditingBlock(null)} fullWidth maxWidth="lg">
-              <DialogTitle>Editando Bloco: "{editingBlock.title}"</DialogTitle>
-              <DialogContent>
-                  <Grid container spacing={2} sx={{ mt: 1 }}>
-                      <Grid item xs={12} md={6}>
-                          <Typography variant="h6" gutterBottom>Conteúdo do Bloco (Modelo)</Typography>
-                           <Box sx={{ height: 400, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                              <TextEditor
-                                  value={editingBlock.content}
-                                  onChange={(val) => setEditingBlock(prev => ({ ...prev, content: val }))}
-                                  html={false}
-                              />
-                           </Box>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                          <Typography variant="h6" gutterBottom>Instruções para a IA (Regras)</Typography>
-                          <Box sx={{ height: 400, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                              <TextEditor
-                                  value={editingBlock.rules}
-                                  onChange={(val) => setEditingBlock(prev => ({ ...prev, rules: val }))}
-                                  html={false}
-                              />
-                          </Box>
-                      </Grid>
-                  </Grid>
-              </DialogContent>
-              <DialogActions>
-                  <Button onClick={() => setEditingBlock(null)}>Cancelar</Button>
-                  <Button
-                      onClick={() => {
-                          handleBlockChange(editingBlock.id, 'content', editingBlock.content);
-                          handleBlockChange(editingBlock.id, 'rules', editingBlock.rules);
-                          setEditingBlock(null);
-                          toast.success(`Bloco "${editingBlock.title}" atualizado.`);
-                      }}
-                      variant="contained"
-                  >
-                      Salvar Alterações
-                  </Button>
-              </DialogActions>
-          </Dialog>
-      )}
       <Drawer
         anchor="right"
         open={isNotesDrawerOpen}
