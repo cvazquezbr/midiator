@@ -14,34 +14,56 @@ import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 
 const sectionsToHtml = (sections) => {
+    // Extract special sections
+    const missionTitle = sections['Título da Missão'] || '';
+    const greeting = sections['Saudação'] || '';
     let dos = sections['DOs'] || '';
     let donts = sections["DON'Ts"] || '';
 
-    // Remove DOs and DON'Ts from the main sections object to avoid duplication
+    // Create a copy of sections to modify
     const otherSections = { ...sections };
+    // Remove special sections to avoid duplication
+    delete otherSections['Título da Missão'];
+    delete otherSections['Saudação'];
     delete otherSections['DOs'];
     delete otherSections["DON'Ts"];
 
+    // Helper to parse list items from HTML content
     const parseList = (htmlContent) => {
         const doc = new DOMParser().parseFromString(htmlContent, 'text/html');
-        // Look for list items or paragraphs
         const items = Array.from(doc.body.querySelectorAll('li, p'));
         if (items.length > 0) {
             return items.map(item => item.textContent.trim()).filter(text => text);
         }
-        // Fallback for plain text with newlines
         return htmlContent.split('<br>').map(s => s.trim()).filter(Boolean);
     };
 
     const dosList = parseList(dos);
     const dontsList = parseList(donts);
 
-    const mainContent = Object.entries(otherSections)
+    // Build the main content with special formatting for title and greeting
+    let mainContent = '';
+    if (missionTitle) {
+        // The AI might wrap the title in <p> tags, let's remove them for clean <h2>
+        const cleanedTitle = missionTitle.replace(/^<p>|<\/p>$/g, '');
+        mainContent += `<h2>${cleanedTitle}</h2>\n`;
+    }
+    if (greeting) {
+        // Greeting follows directly after the title
+        mainContent += `${greeting}\n\n`;
+    }
+
+    // Append the rest of the sections with a generic format
+    mainContent += Object.entries(otherSections)
         .map(([title, content]) => {
+            // Skip empty sections
+            if (!content || content.trim() === '') return '';
             return `<h3>${title}</h3>\n${content}`;
         })
+        .filter(Boolean)
         .join('\n\n');
 
+    // Build the DOs and DON'Ts table if they exist
     const dosAndDontsTable = `
         <br><br>
         <table style="width: 100%; border-collapse: collapse;">
@@ -68,6 +90,7 @@ const sectionsToHtml = (sections) => {
         </table>
     `;
 
+    // Append the table only if there is content for it
     return mainContent + (dosList.length > 0 || dontsList.length > 0 ? dosAndDontsTable : '');
 };
 
@@ -412,6 +435,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         anchor="right"
         open={isNotesDrawerOpen}
         onClose={() => setNotesDrawerOpen(false)}
+        sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }}
         PaperProps={{
             sx: {
                 width: isMobile ? '90%' : 450,

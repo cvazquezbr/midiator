@@ -19,6 +19,13 @@ import {
   FontDownload,
   FormatSize,
   LineWeight,
+  TableChart,
+  PlaylistAdd,
+  PlaylistRemove,
+  Add,
+  Remove,
+  DeleteForever,
+  Grading,
 } from '@mui/icons-material';
 
 const FONT_FAMILIES = [
@@ -177,6 +184,56 @@ const Toolbar = ({ editor }) => {
           <FormatClear />
         </IconButton>
       </Tooltip>
+
+      <Divider orientation="vertical" flexItem />
+
+      {/* Table Formatting */}
+      <Tooltip title="Insert Table">
+        <IconButton onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} size="small">
+          <TableChart />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Add Column Before">
+        <IconButton onClick={() => editor.chain().focus().addColumnBefore().run()} disabled={!editor.can().addColumnBefore()} size="small">
+          <PlaylistAdd sx={{ transform: 'rotate(270deg)' }} />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Add Column After">
+        <IconButton onClick={() => editor.chain().focus().addColumnAfter().run()} disabled={!editor.can().addColumnAfter()} size="small">
+         <PlaylistAdd sx={{ transform: 'rotate(90deg)' }} />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Delete Column">
+        <IconButton onClick={() => editor.chain().focus().deleteColumn().run()} disabled={!editor.can().deleteColumn()} size="small">
+          <PlaylistRemove sx={{ transform: 'rotate(90deg)' }} />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Add Row Before">
+        <IconButton onClick={() => editor.chain().focus().addRowBefore().run()} disabled={!editor.can().addRowBefore()} size="small">
+          <PlaylistAdd />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Add Row After">
+        <IconButton onClick={() => editor.chain().focus().addRowAfter().run()} disabled={!editor.can().addRowAfter()} size="small">
+          <Add />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Delete Row">
+        <IconButton onClick={() => editor.chain().focus().deleteRow().run()} disabled={!editor.can().deleteRow()} size="small">
+          <Remove />
+        </IconButton>
+      </Tooltip>
+       <Tooltip title="Toggle Header Cell">
+        <IconButton onClick={() => editor.chain().focus().toggleHeaderCell().run()} disabled={!editor.can().toggleHeaderCell()} size="small">
+          <Grading />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Delete Table">
+        <IconButton onClick={() => editor.chain().focus().deleteTable().run()} disabled={!editor.can().deleteTable()} size="small">
+          <DeleteForever />
+        </IconButton>
+      </Tooltip>
+
     </Box>
   );
 };
