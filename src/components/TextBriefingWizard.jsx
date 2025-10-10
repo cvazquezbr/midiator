@@ -97,20 +97,6 @@ const sectionsToHtml = (sections) => {
     return htmlContent;
 };
 
-const defaultBlockOrder = [
-    'Título da Missão',
-    'Saudação',
-    'Entregas',
-    'Mensagem Principal',
-    'CTA',
-    'DOs',
-    "DON'Ts",
-    'Hashtags',
-    'Inspirações',
-    'Premiação',
-    'Próximos Passos'
-];
-
 const htmlToSections = (html) => {
     const sections = {};
     const parser = new DOMParser();
@@ -166,20 +152,6 @@ const htmlToSections = (html) => {
 
     return sections;
 };
-
-const defaultBlockOrder = [
-    'Título da Missão',
-    'Saudação',
-    'Entregas',
-    'Mensagem Principal',
-    'CTA',
-    'DOs',
-    "DON'Ts",
-    'Hashtags',
-    'Inspirações',
-    'Premiação',
-    'Próximos Passos'
-];
 
 const extractBlockOrder = (rules) => {
     const pattern = /EXATAMENTE nesta ordem:((?:\n[ \t]*\S+.*)+)/i;
