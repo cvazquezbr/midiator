@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Box, Button, Typography, Stepper, Step, StepLabel, Dialog, DialogTitle, DialogContent, Grid, CircularProgress, TextField, useMediaQuery, Backdrop, DialogActions, Paper, Card, CardContent, CardActions, Alert
+  Box, Button, Typography, Stepper, Step, StepLabel, Dialog, DialogTitle, DialogContent, Grid, CircularProgress, TextField, useMediaQuery, Backdrop, DialogActions, Paper, Card, CardContent, CardActions, Alert, Drawer, Tooltip, IconButton
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { ArrowBack, ArrowForward, UploadFile, Edit, Check } from '@mui/icons-material';
+import { ArrowBack, ArrowForward, UploadFile, Edit, Check, Notes as NotesIcon, Fullscreen, FullscreenExit } from '@mui/icons-material';
 import { toast } from 'sonner';
 
 import TextEditor from './TextEditor';
@@ -95,6 +95,8 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   const [loadingMessage, setLoadingMessage] = useState('');
   const [isTemplateModalOpen, setTemplateModalOpen] = useState(false);
   const [isRevising, setIsRevising] = useState(false);
+  const [isNotesDrawerOpen, setNotesDrawerOpen] = useState(false);
+  const [isFocusMode, setFocusMode] = useState(false);
 
   const [activeSuggestion, setActiveSuggestion] = useState({ title: null, content: '' });
 
@@ -257,21 +259,52 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
 
   const renderStep1_Review = () => (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <TextField name="name" label="Nome do Briefing" fullWidth value={briefingData.name || ''} onChange={(e) => handleBriefingDataChange('name', e.target.value)} required sx={{ mb: 2, flexShrink: 0 }}/>
-        <Grid container spacing={2} sx={{ flexGrow: 1, minHeight: 0 }}>
-            <Grid item xs={12} md={7} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <Typography variant="h6" gutterBottom>Briefing Revisado</Typography>
-                <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                    <HtmlDisplay htmlContent={briefingData.revisedText} />
-                </Box>
-            </Grid>
-            <Grid item xs={12} md={5} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <Typography variant="h6" gutterBottom>Notas da Revisão (Editável)</Typography>
-                <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1, backgroundColor: 'grey.50' }}>
-                    <TextEditor value={briefingData.revisionNotes} onChange={(val) => handleBriefingDataChange('revisionNotes', val)} html={true} />
-                </Box>
-            </Grid>
+      <Grid container spacing={2} sx={{ flexGrow: 1, minHeight: 0 }}>
+        <Grid item xs={12} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Typography variant="h6" gutterBottom mb={0}>
+              Briefing Revisado (Editável)
+            </Typography>
+            <Box>
+                <Tooltip title="Edição Focada">
+                    <IconButton onClick={() => setFocusMode(true)}>
+                        <Fullscreen />
+                    </IconButton>
+                </Tooltip>
+                <Tooltip title="Ver Notas da Revisão">
+                  <Button startIcon={<NotesIcon />} onClick={() => setNotesDrawerOpen(true)}>
+                    Ver Notas
+                  </Button>
+                </Tooltip>
+            </Box>
+          </Box>
+          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <TextEditor value={briefingData.revisedText} onChange={(val) => handleBriefingDataChange('revisedText', val)} html={true} />
+          </Box>
         </Grid>
+      </Grid>
+      <Drawer
+        anchor="right"
+        open={isNotesDrawerOpen}
+        onClose={() => setNotesDrawerOpen(false)}
+        PaperProps={{
+            sx: {
+                width: isMobile ? '90%' : 450,
+                p: 2,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+            }
+        }}
+      >
+        <Typography variant="h6" gutterBottom>Notas da Revisão (Editável)</Typography>
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1, backgroundColor: 'grey.50' }}>
+          <TextEditor value={briefingData.revisionNotes} onChange={(val) => handleBriefingDataChange('revisionNotes', val)} html={true} />
+        </Box>
+        <Button onClick={() => setNotesDrawerOpen(false)} sx={{ mt: 2 }}>
+          Fechar
+        </Button>
+      </Drawer>
     </Box>
   );
 
@@ -326,8 +359,17 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Typography variant="h6" gutterBottom>Finalização</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Revise o documento final. Para fazer ajustes, volte às etapas anteriores.
+          Defina um nome para o seu briefing e revise o documento final. Para fazer ajustes, volte às etapas anteriores.
         </Typography>
+        <TextField
+          name="name"
+          label="Nome do Briefing"
+          fullWidth
+          value={briefingData.name || ''}
+          onChange={(e) => handleBriefingDataChange('name', e.target.value)}
+          required
+          sx={{ mb: 2, flexShrink: 0 }}
+        />
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <HtmlDisplay htmlContent={briefingData.finalText} />
         </Box>
@@ -382,6 +424,26 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         onClose={() => setTemplateModalOpen(false)}
         onSave={handleSaveTemplate}
       />
+      <Dialog open={isFocusMode} onClose={() => setFocusMode(false)} fullScreen>
+        <DialogTitle>
+            Edição Focada
+            <IconButton
+                aria-label="close"
+                onClick={() => setFocusMode(false)}
+                sx={{
+                    position: 'absolute',
+                    right: 8,
+                    top: 8,
+                    color: (theme) => theme.palette.grey[500],
+                }}
+            >
+                <FullscreenExit />
+            </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, m: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <TextEditor value={briefingData.revisedText} onChange={(val) => handleBriefingDataChange('revisedText', val)} html={true} />
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
