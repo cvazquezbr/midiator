@@ -109,7 +109,7 @@ const MainAppBar = ({
       }}
     >
       <Toolbar>
-        {(currentView !== 'campaigns' || isMobile) && (
+        {(currentView !== 'campaigns' || isMobile) && currentView !== 'briefingTemplate' && (
           <IconButton
             color="inherit"
             aria-label="open drawer"
