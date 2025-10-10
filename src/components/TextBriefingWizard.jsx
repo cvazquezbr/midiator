@@ -50,8 +50,7 @@ const sectionsToHtml = (sections) => {
 
                 if (dosList.length > 0 || dontsList.length > 0) {
                     sectionHtml = `
-                        <h3>DOs e DON'Ts</h3>
-                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; table-layout: fixed;">
                             <thead>
                                 <tr>
                                     <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd; font-size: 1.2em;">DO'S</th>
@@ -97,6 +96,20 @@ const sectionsToHtml = (sections) => {
 
     return htmlContent;
 };
+
+const defaultBlockOrder = [
+    'Título da Missão',
+    'Saudação',
+    'Entregas',
+    'Mensagem Principal',
+    'CTA',
+    'DOs',
+    "DON'Ts",
+    'Hashtags',
+    'Inspirações',
+    'Premiação',
+    'Próximos Passos'
+];
 
 const htmlToSections = (html) => {
     const sections = {};
@@ -445,18 +458,27 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
     </Box>
   );
 
-  const renderStep2_CompleteBlocks = () => (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Typography variant="h6" gutterBottom>Completar Blocos</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Complete as seções que a IA não conseguiu preencher ou edite as existentes.
-        </Typography>
-        <Grid container spacing={2} sx={{ flexGrow: 1, minHeight: 0 }}>
-            <Grid item xs={12} md={5} sx={{ height: '100%', overflowY: 'auto' }}>
-                {Object.entries(briefingData.sections).map(([title, content]) => {
-                    const isEmpty = !content || content.trim() === '';
-                    return (
-                        <Card key={title} variant="outlined" sx={{ mb: 2, borderColor: isEmpty ? 'error.main' : 'divider' }}>
+  const renderStep2_CompleteBlocks = () => {
+    const sortedSections = Object.entries(briefingData.sections).sort(([a], [b]) => {
+        const indexA = defaultBlockOrder.indexOf(a);
+        const indexB = defaultBlockOrder.indexOf(b);
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+    });
+
+    return (
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="h6" gutterBottom>Completar Blocos</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Complete as seções que a IA não conseguiu preencher ou edite as existentes.
+            </Typography>
+            <Grid container spacing={2} sx={{ flexGrow: 1, minHeight: 0 }}>
+                <Grid item xs={12} md={5} sx={{ height: '100%', overflowY: 'auto' }}>
+                    {sortedSections.map(([title, content]) => {
+                        const isEmpty = !content || content.trim() === '';
+                        return (
+                            <Card key={title} variant="outlined" sx={{ mb: 2, borderColor: isEmpty ? 'error.main' : 'divider' }}>
                             <CardContent>
                                 <Typography variant="h6" component="div">{title}</Typography>
                                 {isEmpty ? (
