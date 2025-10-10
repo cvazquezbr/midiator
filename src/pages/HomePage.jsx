@@ -29,6 +29,7 @@ import PersonasPage from './PersonasPage';
 import AutoresPage from './AutoresPage';
 import PalettesPage from './PalettesPage';
 import BriefingPage from './BriefingPage';
+import BriefingTemplatePage from './BriefingTemplatePage';
 import MainAppBar from '../components/MainAppBar';
 import Sidebar from '../components/Sidebar';
 import FieldPositioner from '../components/FieldPositioner';
@@ -1475,6 +1476,7 @@ function HomePage() {
           onShowAutores={() => handleNavigation(() => setCurrentView('autores'))}
           onShowPalettes={() => handleNavigation(() => setCurrentView('palettes'))}
           onShowBriefings={() => handleNavigation(() => setCurrentView('briefings'))}
+          onShowBriefingTemplate={() => handleNavigation(() => setCurrentView('briefingTemplate'))}
           onShowCampaigns={() => handleNavigation(() => setCurrentView('campaigns'))}
           currentView={currentView}
           onPersonaMenuClick={() => setPersonaDrawerOpen(!personaDrawerOpen)}
@@ -1726,6 +1728,7 @@ function HomePage() {
           {currentView === 'autores' && <AutoresPage autorDrawerOpen={autorDrawerOpen} setAutorDrawerOpen={setAutorDrawerOpen} onNoAutorSelected={() => setAutorDrawerOpen(true)} onUpdate={fetchAutoresForCampaign} startInCreateMode={startAutoresInCreate} onAutorCreated={handleAutorCreated} onCreationCancelled={() => handleCreationDone('autores')} />}
           {currentView === 'palettes' && <PalettesPage paletteDrawerOpen={paletteDrawerOpen} setPaletteDrawerOpen={setPaletteDrawerOpen} onNoPaletteSelected={() => setPaletteDrawerOpen(true)} />}
           {currentView === 'briefings' && <BriefingPage briefingDrawerOpen={briefingDrawerOpen} setBriefingDrawerOpen={setBriefingDrawerOpen} onNoBriefingSelected={() => setBriefingDrawerOpen(true)} />}
+          {currentView === 'briefingTemplate' && <BriefingTemplatePage />}
         </Box>
       </Box>
       <UnsavedChangesDialog
