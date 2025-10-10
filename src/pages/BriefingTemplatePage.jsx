@@ -13,6 +13,20 @@ import { defaultBriefingTemplate } from '../utils/defaultBriefingTemplate';
 import TextEditor from '../components/TextEditor';
 import LoadingDialog from '../components/LoadingDialog';
 
+const defaultBlockOrder = [
+    'Título da Missão',
+    'Saudação',
+    'Entregas',
+    'Mensagem Principal',
+    'CTA',
+    'DOs',
+    "DON'Ts",
+    'Hashtags',
+    'Inspirações',
+    'Premiação',
+    'Próximos Passos'
+];
+
 const highlightOrderRule = (text) => {
     if (!text) return null;
     const pattern = /(EXATAMENTE nesta ordem:[\s\S]*?)(?=\n\n|\n*$)/i;
@@ -81,25 +95,41 @@ const BriefingTemplatePage = () => {
       setIsLoading(true);
       try {
         const response = await fetch('/api/briefing-template');
+        let templateData;
+
         if (response.ok) {
-          const savedTemplate = await response.json();
-          // Ensure the loaded template has the same structure as the default
-          const mergedTemplate = {
-            ...defaultBriefingTemplate,
-            ...savedTemplate,
-            blocks: Array.isArray(savedTemplate.blocks) ? savedTemplate.blocks : defaultBriefingTemplate.blocks
-          };
-          setTemplate(mergedTemplate);
-          toast.info('Seu modelo de briefing foi carregado.');
+          templateData = await response.json();
         } else if (response.status === 404) {
-          setTemplate(defaultBriefingTemplate);
+          templateData = defaultBriefingTemplate;
           console.log('Nenhum modelo salvo encontrado, usando o padrão.');
         } else {
           throw new Error(`Falha ao buscar o modelo: ${response.statusText}`);
         }
+
+        // Ensure all default blocks exist, adding any that are missing.
+        const existingBlockTitles = new Set(templateData.blocks.map(b => b.title));
+        const updatedBlocks = [...templateData.blocks];
+
+        defaultBlockOrder.forEach(title => {
+          if (!existingBlockTitles.has(title)) {
+            updatedBlocks.push({
+              id: uuidv4(),
+              title: title,
+              content: '',
+              rules: ''
+            });
+          }
+        });
+
+        setTemplate({ ...templateData, blocks: updatedBlocks });
+        if (response.ok) {
+            toast.info('Seu modelo de briefing foi carregado e atualizado.');
+        }
+
       } catch (error) {
         toast.error(`Erro ao carregar seu modelo de briefing: ${error.message}`);
         setError(error.message);
+        setTemplate(defaultBriefingTemplate); // Fallback on error
       } finally {
         setIsLoading(false);
       }
@@ -169,6 +199,17 @@ const BriefingTemplatePage = () => {
     return <Typography color="error">Erro ao carregar o modelo: {error}</Typography>;
   }
 
+  const sortedBlocks = [...template.blocks].sort((a, b) => {
+    const indexA = defaultBlockOrder.indexOf(a.title);
+    const indexB = defaultBlockOrder.indexOf(b.title);
+
+    // Handle cases where a title might not be in the default order list
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+
+    return indexA - indexB;
+  });
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Paper elevation={3} sx={{ p: { xs: 2, md: 4 } }}>
@@ -206,7 +247,7 @@ const BriefingTemplatePage = () => {
                 </Button>
             </Box>
 
-            {template.blocks.map((block) => (
+            {sortedBlocks.map((block) => (
                 <Accordion key={block.id} sx={{ mb: 1 }}>
                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                         <Typography sx={{ flexGrow: 1 }}>{block.title}</Typography>
