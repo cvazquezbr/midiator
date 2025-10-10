@@ -51,7 +51,7 @@ const sectionsToHtml = (sections) => {
                 if (dosList.length > 0 || dontsList.length > 0) {
                     sectionHtml = `
                         <h3>DOs e DON'Ts</h3>
-                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; table-layout: fixed;">
                             <thead>
                                 <tr>
                                     <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd; font-size: 1.2em;">DO'S</th>
