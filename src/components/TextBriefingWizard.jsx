@@ -3,7 +3,7 @@ import {
   Box, Button, Typography, Stepper, Step, StepLabel, Dialog, DialogTitle, DialogContent, Grid, CircularProgress, TextField, useMediaQuery, Backdrop, DialogActions, Paper, Card, CardContent, CardActions, Alert, Drawer, Tooltip, IconButton
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { ArrowBack, ArrowForward, UploadFile, Edit, Check, Notes as NotesIcon, Fullscreen, FullscreenExit } from '@mui/icons-material';
+import { ArrowBack, ArrowForward, UploadFile, Edit, Check, Notes as NotesIcon, Fullscreen, FullscreenExit, Download } from '@mui/icons-material';
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -11,6 +11,9 @@ import TextEditor from './TextEditor';
 import HtmlDisplay from './HtmlDisplay';
 import { defaultBriefingTemplate } from '../utils/defaultBriefingTemplate';
 import { parseWordDocument, parsePdfDocument } from '../utils/fileImport';
+import { Packer } from 'docx';
+import { saveAs } from 'file-saver';
+import { Document, Paragraph, TextRun, HeadingLevel } from 'docx';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 
@@ -134,6 +137,68 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   const wordInputRef = useRef(null);
   const pdfInputRef = useRef(null);
 
+  // Fetch user's saved template on component mount
+  useEffect(() => {
+    const fetchTemplate = async () => {
+        try {
+            const response = await fetch('/api/briefing-template');
+            if (response.ok) {
+                const savedTemplate = await response.json();
+                handleTemplateChange(savedTemplate); // Assuming handleTemplateChange can take a full template object
+                toast.info('Seu modelo de briefing foi carregado.');
+            } else if (response.status === 404) {
+                // No saved template, use the default. No action needed.
+                console.log('Nenhum modelo salvo encontrado, usando o padrão.');
+            } else {
+                throw new Error(`Falha ao buscar o modelo: ${response.statusText}`);
+            }
+        } catch (error) {
+            toast.error(`Erro ao carregar seu modelo de briefing: ${error.message}`);
+        }
+    };
+    if (open) { // Only fetch when the dialog is opened
+        fetchTemplate();
+    }
+  }, [open]);
+
+  // Debounced auto-save for the template
+  useEffect(() => {
+      // Don't save the initial default template on first render.
+      // We can check if it's the default by looking for a property that a saved template would have, like an ID from the DB,
+      // but for simplicity, we'll just use a flag or check if it's deeply equal to the default.
+      // Or, more simply, just don't save on the very first load. A ref can track this.
+      const isInitialMount = useRef(true);
+
+      const handler = setTimeout(() => {
+          if (isInitialMount.current) {
+              isInitialMount.current = false;
+              return;
+          }
+
+          const saveTemplate = async () => {
+              try {
+                  const response = await fetch('/api/briefing-template', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ template_data: briefingData.template }),
+                  });
+                  if (!response.ok) throw new Error('Falha ao salvar o modelo.');
+                  // Maybe a subtle toast here? Or just save silently.
+                  // toast.success('Modelo salvo automaticamente.');
+                  console.log("Template auto-saved successfully.");
+              } catch (error) {
+                  toast.error(`Erro ao salvar o modelo: ${error.message}`);
+              }
+          };
+          saveTemplate();
+      }, 1500); // Debounce delay of 1.5 seconds
+
+      return () => {
+          clearTimeout(handler);
+      };
+  }, [briefingData.template]);
+
+
   useEffect(() => {
     if (activeStep === 3) {
         setLoadingMessage('Gerando texto final...');
@@ -181,11 +246,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         } finally {
             setIsRevising(false);
         }
-    } else if (activeStep === 1) {
-        // When leaving the review step, parse the edited HTML back into sections
-        const updatedSections = htmlToSections(briefingData.revisedText);
-        onBriefingDataChange(prev => ({ ...prev, sections: updatedSections }));
-        setActiveStep(prev => prev + 1);
     } else {
        setActiveStep(prev => prev + 1);
     }
@@ -199,11 +259,20 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
     onBriefingDataChange(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleTemplateChange = (field, value) => {
-      onBriefingDataChange(prev => ({
-          ...prev,
-          template: { ...prev.template, [field]: value }
-      }));
+  const handleTemplateChange = (fieldOrTemplate, value) => {
+      if (typeof fieldOrTemplate === 'object' && fieldOrTemplate !== null) {
+          // Overwrite the entire template object
+          onBriefingDataChange(prev => ({
+              ...prev,
+              template: fieldOrTemplate
+          }));
+      } else {
+          // Update a specific field in the template
+          onBriefingDataChange(prev => ({
+              ...prev,
+              template: { ...prev.template, [fieldOrTemplate]: value }
+          }));
+      }
   };
 
   const handleBlockChange = (blockId, field, value) => {
@@ -216,6 +285,62 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
               )
           }
       }));
+  };
+
+  const handleExportToWord = () => {
+    const { template } = briefingData;
+    const doc = new Document({
+        sections: [{
+            children: [
+                new Paragraph({
+                    text: "Modelo de Briefing",
+                    heading: HeadingLevel.TITLE,
+                }),
+                new Paragraph({
+                    text: "Regras Gerais para a IA:",
+                    heading: HeadingLevel.HEADING_1,
+                }),
+                new Paragraph({
+                    text: template.generalRules,
+                    style: "Normal",
+                }),
+                ...template.blocks.flatMap(block => [
+                    new Paragraph({
+                        text: block.title,
+                        heading: HeadingLevel.HEADING_2,
+                        spacing: { before: 400 },
+                    }),
+                    new Paragraph({
+                        text: "Conteúdo do Exemplo:",
+                        style: "Normal",
+                    }),
+                    ...block.content.split('\n').map(line => new Paragraph({ text: line.replace(/##\s.*$/, '') })), // Remove markdown headings
+                    new Paragraph({
+                        text: "Instruções para a IA:",
+                        style: "Normal",
+                        spacing: { before: 200 },
+                    }),
+                    ...block.rules.split('\n').map(line => new Paragraph({
+                        children: [
+                            new TextRun({
+                                text: line,
+                                italics: true,
+                                color: "000080", // Navy Blue
+                                size: 20, // 10pt
+                            }),
+                        ],
+                    })),
+                ]),
+            ],
+        }],
+    });
+
+    Packer.toBlob(doc).then(blob => {
+        saveAs(blob, "modelo_de_briefing.docx");
+        toast.success("Modelo exportado para Word com sucesso!");
+    }).catch(err => {
+        toast.error(`Erro ao exportar para Word: ${err.message}`);
+    });
   };
 
   const handleSectionChange = (title, content) => {
@@ -323,7 +448,16 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                   onChange={(e) => handleTemplateChange('generalRules', e.target.value)}
                   sx={{ mb: 2, flexShrink: 0 }}
               />
-              <Typography variant="subtitle1" gutterBottom>Blocos do Modelo</Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle1" gutterBottom>Blocos do Modelo</Typography>
+                <Button
+                    startIcon={<Download />}
+                    onClick={handleExportToWord}
+                    size="small"
+                >
+                    Exportar para Word
+                </Button>
+              </Box>
               <Box sx={{ overflowY: 'auto', flexGrow: 1 }}>
                   {briefingData.template.blocks.map((block) => (
                       <Card key={block.id} variant="outlined" sx={{ mb: 1 }}>
@@ -577,60 +711,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   );
 };
 
-const htmlToSections = (htmlString) => {
-    if (!htmlString) return {};
-
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlString, 'text/html');
-    const body = doc.body;
-    const sections = {};
-
-    // 1. Handle DOs and DON'Ts table first and remove it
-    const dosTh = Array.from(body.querySelectorAll('th')).find(th => th.textContent.trim().toUpperCase() === "DO'S");
-    const table = dosTh ? dosTh.closest('table') : null;
-    if (table) {
-        const rows = table.querySelectorAll('tbody tr');
-        if (rows.length > 0) {
-            const cells = rows[0].querySelectorAll('td');
-            if (cells.length === 2) {
-                sections["DOs"] = cells[0].querySelector('ul')?.innerHTML || '';
-                sections["DON'Ts"] = cells[1].querySelector('ul')?.innerHTML || '';
-            }
-        }
-        table.remove();
-    }
-
-    // 2. Handle Greeting and remove its wrapper
-    const greetingWrapper = body.querySelector('[data-section="Saudação"]');
-    if (greetingWrapper) {
-        sections['Saudação'] = greetingWrapper.innerHTML;
-        greetingWrapper.remove();
-    }
-
-    // 3. Handle H2 and H3 sections
-    const headings = Array.from(body.querySelectorAll('h2, h3'));
-    headings.forEach((heading, index) => {
-        const title = heading.textContent.trim();
-        let contentHtml = '';
-        let currentNode = heading.nextSibling;
-        const nextHeading = headings[index + 1];
-
-        while (currentNode && currentNode !== nextHeading) {
-            contentHtml += currentNode.nodeType === 1 ? currentNode.outerHTML : currentNode.textContent;
-            currentNode = currentNode.nextSibling;
-        }
-
-        if (heading.tagName === 'H2') {
-            sections['Título da Missão'] = heading.innerHTML;
-            // Any content between H2 and the next heading that is NOT the greeting div is discarded for now.
-            // This assumes the greeting is the only meaningful content at this level.
-        } else { // H3
-            sections[title] = contentHtml.trim();
-        }
-    });
-
-    return sections;
-};
 
 // Helper function to read text files
 const readTextFile = (file) => {
