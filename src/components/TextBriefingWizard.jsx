@@ -18,94 +18,84 @@ import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 
 const sectionsToHtml = (sections) => {
-    // Helper to find a section's value and original key, case-insensitively
-    const findSection = (sectionsObject, keyName) => {
-        const lowerCaseKeyName = keyName.toLowerCase();
-        const foundKey = Object.keys(sectionsObject).find(key => key.toLowerCase() === lowerCaseKeyName);
-        return {
-            value: foundKey ? sectionsObject[foundKey] : '',
-            originalKey: foundKey || null
-        };
-    };
+    let htmlContent = '';
+    const processedTitles = new Set();
 
-    // Extract special sections using the case-insensitive helper
-    const { value: missionTitle, originalKey: missionTitleKey } = findSection(sections, 'Título da Missão');
-    const { value: greeting, originalKey: greetingKey } = findSection(sections, 'Saudação');
-    const { value: dos, originalKey: dosKey } = findSection(sections, 'DOs');
-    const { value: donts, originalKey: dontsKey } = findSection(sections, "DON'Ts");
-
-    // Create a copy of sections to modify
-    const otherSections = { ...sections };
-    // Remove special sections using their original keys to avoid duplication
-    if (missionTitleKey) delete otherSections[missionTitleKey];
-    if (greetingKey) delete otherSections[greetingKey];
-    if (dosKey) delete otherSections[dosKey];
-    if (dontsKey) delete otherSections[dontsKey];
-
-    // Helper to parse list items from HTML content
-    const parseList = (htmlContent) => {
-        const doc = new DOMParser().parseFromString(htmlContent, 'text/html');
+    const parseList = (html) => {
+        if (!html) return [];
+        const doc = new DOMParser().parseFromString(html, 'text/html');
         const items = Array.from(doc.body.querySelectorAll('li, p'));
-        if (items.length > 0) {
-            return items.map(item => item.textContent.trim()).filter(text => text);
-        }
-        return htmlContent.split('<br>').map(s => s.trim()).filter(Boolean);
+        return items.map(item => item.textContent.trim()).filter(text => text);
     };
 
-    const dosList = parseList(dos);
-    const dontsList = parseList(donts);
+    Object.entries(sections).forEach(([title, content]) => {
+        if (processedTitles.has(title.toLowerCase())) {
+            return;
+        }
 
-    // Build the main content with special formatting for title and greeting
-    let mainContent = '';
-    if (missionTitle) {
-        // The AI might wrap the title in <p> tags, let's remove them for clean <h2>
-        const cleanedTitle = missionTitle.replace(/^<p>|<\/p>$/g, '');
-        mainContent += `<h2>${cleanedTitle}</h2>\n`;
-    }
-    if (greeting) {
-        // Wrap greeting for easier parsing later
-        mainContent += `<div data-section="Saudação">${greeting}</div>\n\n`;
-    }
+        let sectionHtml = '';
+        const lowerCaseTitle = title.toLowerCase();
 
-    // Append the rest of the sections with a generic format
-    mainContent += Object.entries(otherSections)
-        .map(([title, content]) => {
-            // Skip empty sections
-            if (!content || content.trim() === '') return '';
-            return `<h3>${title}</h3>\n${content}`;
-        })
-        .filter(Boolean)
-        .join('\n\n');
+        switch (lowerCaseTitle) {
+            case 'título da missão':
+                const cleanedTitle = content.replace(/^<p>|<\/p>$/g, '');
+                sectionHtml = `<h2>${cleanedTitle}</h2>\n`;
+                break;
 
-    // Build the DOs and DON'Ts table if they exist
-    const dosAndDontsTable = `
-        <br><br>
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-                <tr>
-                    <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd; font-size: 1.5em;">DO'S</th>
-                    <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd; font-size: 1.5em;">DON'TS</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td style="vertical-align: top; padding: 8px; width: 50%;">
-                        <ul style="list-style-type: none; padding-left: 0;">
-                            ${dosList.map(item => `<li style="margin-bottom: 8px;">→ ${item}</li>`).join('')}
-                        </ul>
-                    </td>
-                    <td style="vertical-align: top; padding: 8px; width: 50%;">
-                        <ul style="list-style-type: none; padding-left: 0;">
-                            ${dontsList.map(item => `<li style="margin-bottom: 8px;">→ ${item}</li>`).join('')}
-                        </ul>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    `;
+            case 'dos':
+                const dosContent = sections['DOs'] || sections['dos'] || '';
+                const dontsContent = sections["DON'Ts"] || sections["don'ts"] || '';
+                const dosList = parseList(dosContent);
+                const dontsList = parseList(dontsContent);
 
-    // Append the table only if there is content for it
-    return mainContent + (dosList.length > 0 || dontsList.length > 0 ? dosAndDontsTable : '');
+                if (dosList.length > 0 || dontsList.length > 0) {
+                    sectionHtml = `
+                        <h3>DOs e DON'Ts</h3>
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px;">
+                            <thead>
+                                <tr>
+                                    <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd; font-size: 1.2em;">DO'S</th>
+                                    <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd; font-size: 1.2em;">DON'TS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="vertical-align: top; padding: 8px; width: 50%;">
+                                        <ul style="list-style-type: none; padding-left: 0; margin: 0;">
+                                            ${dosList.map(item => `<li style="margin-bottom: 8px;">→ ${item}</li>`).join('')}
+                                        </ul>
+                                    </td>
+                                    <td style="vertical-align: top; padding: 8px; width: 50%;">
+                                        <ul style="list-style-type: none; padding-left: 0; margin: 0;">
+                                            ${dontsList.map(item => `<li style="margin-bottom: 8px;">→ ${item}</li>`).join('')}
+                                        </ul>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    `;
+                }
+                processedTitles.add('dos');
+                processedTitles.add("don'ts");
+                break;
+
+            case "don'ts":
+                // This is handled by the 'dos' case to ensure they are always together.
+                // If 'dos' is not in the sections, it will be skipped, so we do nothing here.
+                return;
+
+            default:
+                if (content && content.trim() !== '') {
+                    sectionHtml = `<h3>${title}</h3>\n${content}\n\n`;
+                }
+                break;
+        }
+
+        htmlContent += sectionHtml;
+        processedTitles.add(lowerCaseTitle);
+    });
+
+    return htmlContent;
 };
 
 const htmlToSections = (html) => {
@@ -117,12 +107,6 @@ const htmlToSections = (html) => {
     const missionTitleElement = doc.querySelector('h2');
     if (missionTitleElement) {
         sections['Título da Missão'] = missionTitleElement.innerHTML;
-    }
-
-    // Handle Saudação (div with data-section)
-    const greetingElement = doc.querySelector('div[data-section="Saudação"]');
-    if (greetingElement) {
-        sections['Saudação'] = greetingElement.innerHTML;
     }
 
     // Handle other sections (h3)
