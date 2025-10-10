@@ -136,6 +136,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
 
   const wordInputRef = useRef(null);
   const pdfInputRef = useRef(null);
+  const isInitialMount = useRef(true);
 
   // Fetch user's saved template on component mount
   useEffect(() => {
@@ -163,13 +164,8 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
 
   // Debounced auto-save for the template
   useEffect(() => {
-      // Don't save the initial default template on first render.
-      // We can check if it's the default by looking for a property that a saved template would have, like an ID from the DB,
-      // but for simplicity, we'll just use a flag or check if it's deeply equal to the default.
-      // Or, more simply, just don't save on the very first load. A ref can track this.
-      const isInitialMount = useRef(true);
-
       const handler = setTimeout(() => {
+          // Don't save on the very first render cycle.
           if (isInitialMount.current) {
               isInitialMount.current = false;
               return;
