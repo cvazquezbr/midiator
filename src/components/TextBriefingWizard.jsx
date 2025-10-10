@@ -96,7 +96,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   const [isTemplateModalOpen, setTemplateModalOpen] = useState(false);
   const [isRevising, setIsRevising] = useState(false);
   const [isNotesDrawerOpen, setNotesDrawerOpen] = useState(false);
-  const [isFocusMode, setFocusMode] = useState(false);
+  const [focusModeTarget, setFocusModeTarget] = useState(null); // null | 'baseText' | 'revisedText'
 
   const [activeSuggestion, setActiveSuggestion] = useState({ title: null, content: '' });
 
@@ -227,10 +227,19 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
 
   const renderStep0_Edit = () => (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Typography variant="h6" gutterBottom>Editor de Briefing</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Cole, digite ou importe o texto base do seu briefing.
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Box>
+                <Typography variant="h6" gutterBottom mb={0}>Editor de Briefing</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Cole, digite ou importe o texto base do seu briefing.
+                </Typography>
+            </Box>
+            <Tooltip title="Edição Focada">
+                <IconButton onClick={() => setFocusModeTarget('baseText')}>
+                    <Fullscreen />
+                </IconButton>
+            </Tooltip>
+        </Box>
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
           <TextEditor
             value={briefingData.baseText}
@@ -267,7 +276,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             </Typography>
             <Box>
                 <Tooltip title="Edição Focada">
-                    <IconButton onClick={() => setFocusMode(true)}>
+                    <IconButton onClick={() => setFocusModeTarget('revisedText')}>
                         <Fullscreen />
                     </IconButton>
                 </Tooltip>
@@ -283,28 +292,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
           </Box>
         </Grid>
       </Grid>
-      <Drawer
-        anchor="right"
-        open={isNotesDrawerOpen}
-        onClose={() => setNotesDrawerOpen(false)}
-        PaperProps={{
-            sx: {
-                width: isMobile ? '90%' : 450,
-                p: 2,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column'
-            }
-        }}
-      >
-        <Typography variant="h6" gutterBottom>Notas da Revisão (Editável)</Typography>
-        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1, backgroundColor: 'grey.50' }}>
-          <TextEditor value={briefingData.revisionNotes} onChange={(val) => handleBriefingDataChange('revisionNotes', val)} html={true} />
-        </Box>
-        <Button onClick={() => setNotesDrawerOpen(false)} sx={{ mt: 2 }}>
-          Fechar
-        </Button>
-      </Drawer>
     </Box>
   );
 
@@ -424,12 +411,34 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         onClose={() => setTemplateModalOpen(false)}
         onSave={handleSaveTemplate}
       />
-      <Dialog open={isFocusMode} onClose={() => setFocusMode(false)} fullScreen>
+      <Drawer
+        anchor="right"
+        open={isNotesDrawerOpen}
+        onClose={() => setNotesDrawerOpen(false)}
+        PaperProps={{
+            sx: {
+                width: isMobile ? '90%' : 450,
+                p: 2,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+            }
+        }}
+      >
+        <Typography variant="h6" gutterBottom>Notas da Revisão (Editável)</Typography>
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1, backgroundColor: 'grey.50' }}>
+          <TextEditor value={briefingData.revisionNotes} onChange={(val) => handleBriefingDataChange('revisionNotes', val)} html={true} />
+        </Box>
+        <Button onClick={() => setNotesDrawerOpen(false)} sx={{ mt: 2 }}>
+          Fechar
+        </Button>
+      </Drawer>
+      <Dialog open={Boolean(focusModeTarget)} onClose={() => setFocusModeTarget(null)} fullScreen>
         <DialogTitle>
             Edição Focada
             <IconButton
                 aria-label="close"
-                onClick={() => setFocusMode(false)}
+                onClick={() => setFocusModeTarget(null)}
                 sx={{
                     position: 'absolute',
                     right: 8,
@@ -441,7 +450,13 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             </IconButton>
         </DialogTitle>
         <DialogContent sx={{ p: 0, m: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <TextEditor value={briefingData.revisedText} onChange={(val) => handleBriefingDataChange('revisedText', val)} html={true} />
+            {focusModeTarget && (
+                <TextEditor
+                    value={briefingData[focusModeTarget]}
+                    onChange={(val) => handleBriefingDataChange(focusModeTarget, val)}
+                    html={true}
+                />
+            )}
         </DialogContent>
       </Dialog>
     </>
