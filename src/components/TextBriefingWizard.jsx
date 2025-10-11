@@ -604,4 +604,5 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   );
 }
 
+export { emptyTextBriefingData };
 export default TextBriefingWizard;
