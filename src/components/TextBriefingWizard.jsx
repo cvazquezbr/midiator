@@ -602,5 +602,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
       </Dialog>
     </>
   );
+}
 
 export default TextBriefingWizard;
