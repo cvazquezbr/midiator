@@ -5,15 +5,12 @@ import {
 import { useTheme } from '@mui/material/styles';
 import { ArrowBack, ArrowForward, UploadFile, Edit, Check, Notes as NotesIcon, Fullscreen, FullscreenExit, Download } from '@mui/icons-material';
 import { toast } from 'sonner';
-import { v4 as uuidv4 } from 'uuid';
 
 import TextEditor from './TextEditor';
 import HtmlDisplay from './HtmlDisplay';
 import { defaultBriefingTemplate } from '../utils/defaultBriefingTemplate';
 import { parseWordDocument, parsePdfDocument } from '../utils/fileImport';
-import { Packer } from 'docx';
 import { saveAs } from 'file-saver';
-import { Document, Paragraph, TextRun, HeadingLevel } from 'docx';
 import geminiAPI from '../utils/geminiAPI';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 
@@ -173,9 +170,7 @@ const extractBlockOrder = (rules, defaultOrder) => {
 
 const steps = ['Edição', 'Revisão', 'Completar Blocos', 'Finalização'];
 
-const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataChange }) => {
-
-  const emptyTextBriefingData = {
+const emptyTextBriefingData = {
   name: '',
   baseText: '',
   template: defaultBriefingTemplate,
@@ -184,6 +179,8 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   sections: {},
   finalText: '',
 };
+
+const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataChange }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -600,6 +597,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
       </Dialog>
     </>
   );
+}
 }
 
 export { emptyTextBriefingData };
