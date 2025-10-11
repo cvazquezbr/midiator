@@ -356,8 +356,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             <Grid item xs={12} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                     <Box>
-                        <Typography variant="h6" gutterBottom mb={0}>Editor de Briefing</Typography>
-                        <Typography variant="body2" color="text.secondary">
+=                        <Typography variant="body2" color="text.secondary">
                             Cole, digite ou importe o texto base do seu briefing. O modelo de briefing será carregado e usado na próxima etapa.
                         </Typography>
                     </Box>

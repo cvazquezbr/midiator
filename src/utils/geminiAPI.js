@@ -92,9 +92,7 @@ class GeminiAPI {
       **DIRETIZES:**  
 
       - **NUNCA** copie nem resuma partes das instruções deste prompt (tudo que aparece antes de “T3. TEXTO BASE”).
-      
       - **NÃO** insira menções a regras, seções vazias, instruções, rótulos (como “R1”, “R2”, etc.) ou frases automáticas como “A revisão não encontrou conteúdo para esta seção”.  
-
       - Sua saída deve conter **somente** o conteúdo derivado do TEXTO BASE reorganizado dentro da estrutura do MODELO DE REFERÊNCIA.
 
       **SUA TAREFA:**
