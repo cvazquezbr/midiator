@@ -471,7 +471,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             <Grid item xs={12} md={7} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 {activeSuggestion.title ? (
                     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="h6" gutterBottom>Sugestão para: "${activeSuggestion.title}"</Typography>
+                        <Typography variant="h6" gutterBottom>{`Sugestão para: "${activeSuggestion.title}"`}</Typography>
                         <Box sx={{ flexGrow: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                             <TextEditor value={activeSuggestion.content} onChange={(val) => setActiveSuggestion(prev => ({ ...prev, content: val }))} html={true} />
                         </Box>

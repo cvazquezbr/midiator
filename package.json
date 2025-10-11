@@ -99,12 +99,5 @@
     "vite": "^5.0.0",
     "vite-plugin-copy": "^0.1.6",
     "vitest": "^3.2.4"
-  },
-  "pnpm": {
-    "allowed-build-scripts": [
-      "canvas",
-      "esbuild",
-      "sharp"
-    ]
   }
 }
