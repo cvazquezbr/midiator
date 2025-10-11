@@ -167,7 +167,6 @@ const extractBlockOrder = (rules, defaultOrder) => {
     return defaultOrder;
 };
 
-
 const steps = ['Edição', 'Revisão', 'Completar Blocos', 'Finalização'];
 
 const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataChange }) => {
