@@ -148,8 +148,6 @@ const htmlToSections = (html) => {
             sections["DON'Ts"] = dontsList.join('');
         }
     }
-
-
     return sections;
 };
 
@@ -173,7 +171,11 @@ const extractBlockOrder = (rules, defaultOrder) => {
 };
 
 
-export const emptyTextBriefingData = {
+const steps = ['Edição', 'Revisão', 'Completar Blocos', 'Finalização'];
+
+const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataChange }) => {
+
+  const emptyTextBriefingData = {
   name: '',
   baseText: '',
   template: defaultBriefingTemplate,
@@ -182,10 +184,6 @@ export const emptyTextBriefingData = {
   sections: {},
   finalText: '',
 };
-
-const steps = ['Edição', 'Revisão', 'Completar Blocos', 'Finalização'];
-
-const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDataChange }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
