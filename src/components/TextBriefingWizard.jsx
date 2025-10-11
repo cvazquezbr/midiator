@@ -153,7 +153,7 @@ const htmlToSections = (html) => {
     return sections;
 };
 
-const extractBlockOrder = (rules) => {
+const extractBlockOrder = (rules, defaultOrder) => {
     const pattern = /EXATAMENTE nesta ordem:((?:\n[ \t]*\S+.*)+)/i;
     const match = rules.match(pattern);
 
@@ -169,7 +169,7 @@ const extractBlockOrder = (rules) => {
     }
 
     console.log('Nenhuma ordem de blocos encontrada nas regras, usando a ordem padrão.');
-    return defaultBlockOrder;
+    return defaultOrder;
 };
 
 
@@ -257,7 +257,7 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
             const result = await geminiAPI.reviseBriefing(briefingData.baseText, briefingData.template);
             const aiSections = result.sections || {};
 
-            const blockOrder = extractBlockOrder(briefingData.template.generalRules);
+            const blockOrder = extractBlockOrder(briefingData.template.generalRules, briefingData.template.blocks.map(b => b.title));
 
             const finalSections = {};
             blockOrder.forEach(title => {
@@ -431,9 +431,10 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
   );
 
   const renderStep2_CompleteBlocks = () => {
+    const blockOrder = briefingData.template?.blocks?.map(b => b.title) || [];
     const sortedSections = Object.entries(briefingData.sections).sort(([a], [b]) => {
-        const indexA = defaultBlockOrder.indexOf(a);
-        const indexB = defaultBlockOrder.indexOf(b);
+        const indexA = blockOrder.indexOf(a);
+        const indexB = blockOrder.indexOf(b);
         if (indexA === -1) return 1;
         if (indexB === -1) return -1;
         return indexA - indexB;
@@ -601,8 +602,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
       </Dialog>
     </>
   );
-};
-
-
 }
+
 export default TextBriefingWizard;
