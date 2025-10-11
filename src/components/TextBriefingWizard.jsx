@@ -57,12 +57,12 @@ const sectionsToHtml = (sections) => {
                                 <tr>
                                     <td style="vertical-align: top; padding: 8px; width: 50%;">
                                         <ul style="list-style-type: none; padding-left: 0; margin: 0;">
-                                            ${dosList.map(item => `<li style="margin-bottom: 8px;">→ ${item}</li>`).join('')}
+                                            ${dosList.map(item => `<li style="margin-bottom: 8px;">${item}</li>`).join('')}
                                         </ul>
                                     </td>
                                     <td style="vertical-align: top; padding: 8px; width: 50%;">
                                         <ul style="list-style-type: none; padding-left: 0; margin: 0;">
-                                            ${dontsList.map(item => `<li style="margin-bottom: 8px;">→ ${item}</li>`).join('')}
+                                            ${dontsList.map(item => `<li style="margin-bottom: 8px;">${item}</li>`).join('')}
                                         </ul>
                                     </td>
                                 </tr>
