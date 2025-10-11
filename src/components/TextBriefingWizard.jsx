@@ -400,9 +400,11 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                             Briefing Revisado (Editável)
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', ml: 'auto' }}>
-                            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
-                                Altere o texto ou importe um novo.
-                            </Typography>
+                            <Tooltip title="Edição Focada">
+                                <IconButton onClick={() => setFocusModeTarget('revisedText')}>
+                                    <Fullscreen />
+                                </IconButton>
+                            </Tooltip>
 
                             {/* Botões de Importação */}
                             <Button
@@ -424,11 +426,10 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                                 PDF
                             </Button>
 
-                            <Tooltip title="Edição Focada">
-                                <IconButton onClick={() => setFocusModeTarget('revisedText')}>
-                                    <Fullscreen />
-                                </IconButton>
-                            </Tooltip>
+                            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
+                                Altere o texto ou importe um novo.
+                            </Typography>
+
                             <Tooltip title="Ver Notas da Revisão">
                                 <Button startIcon={<NotesIcon />} onClick={() => setNotesDrawerOpen(true)}>
                                     Ver Notas
