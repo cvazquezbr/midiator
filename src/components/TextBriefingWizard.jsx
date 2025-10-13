@@ -361,31 +361,45 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         <Grid container spacing={3} sx={{ height: '100%' }}>
             {/* Coluna do Texto Base */}
             <Grid item xs={12} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Box>
-                        <Typography variant="body2" color="text.secondary">
-                            Cole, digite ou importe o texto base do seu briefing. O modelo de briefing será carregado e usado na próxima etapa.
-                        </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1 }}>
+                        Cole, digite ou importe o texto base do seu briefing. O modelo de briefing será carregado e usado na próxima etapa.
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                        <Tooltip title="Edição Focada">
+                            <IconButton onClick={() => setFocusModeTarget('baseText')}>
+                                <Fullscreen />
+                            </IconButton>
+                        </Tooltip>
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => wordInputRef.current.click()}
+                            startIcon={<UploadFile />}
+                            disabled={isLoading}
+                        >
+                            Word
+                        </Button>
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => pdfInputRef.current.click()}
+                            startIcon={<UploadFile />}
+                            disabled={isLoading}
+                        >
+                            PDF
+                        </Button>
                     </Box>
-                    <Tooltip title="Edição Focada">
-                        <IconButton onClick={() => setFocusModeTarget('baseText')}>
-                            <Fullscreen />
-                        </IconButton>
-                    </Tooltip>
                 </Box>
                 <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                    <input type="file" ref={wordInputRef} hidden accept=".docx" onChange={(e) => handleFileImport(e, parseWordDocument, (val) => handleBriefingDataChange('baseText', val))} />
+                    <input type="file" ref={pdfInputRef} hidden accept=".pdf" onChange={(e) => handleFileImport(e, parsePdfDocument, (val) => handleBriefingDataChange('baseText', val))} />
                     <TextEditor
                         value={briefingData.baseText}
                         onChange={(val) => handleBriefingDataChange('baseText', val)}
                         html={true}
                         placeholder="Digite ou cole o conteúdo do briefing aqui..."
                     />
-                </Box>
-                <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    <input type="file" ref={wordInputRef} hidden accept=".docx" onChange={(e) => handleFileImport(e, parseWordDocument, (val) => handleBriefingDataChange('baseText', val))} />
-                    <input type="file" ref={pdfInputRef} hidden accept=".pdf" onChange={(e) => handleFileImport(e, parsePdfDocument, (val) => handleBriefingDataChange('baseText', val))} />
-                    <Button variant="outlined" onClick={(e) => { e.stopPropagation(); wordInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isLoading}>Importar Word (.docx)</Button>
-                    <Button variant="outlined" onClick={(e) => { e.stopPropagation(); pdfInputRef.current.click(); }} startIcon={<UploadFile />} disabled={isLoading}>Importar PDF</Button>
                 </Box>
             </Grid>
         </Grid>
@@ -395,41 +409,16 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Grid container spacing={2} sx={{ flexGrow: 1, minHeight: 0 }}>
                 <Grid item xs={12} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 1 }}>
-                        <Typography variant="h6" gutterBottom mb={0} sx={{ alignSelf: 'center' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="h6" gutterBottom mb={0}>
                             Briefing Revisado (Editável)
                         </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', ml: 'auto' }}>
+                        <Box>
                             <Tooltip title="Edição Focada">
                                 <IconButton onClick={() => setFocusModeTarget('revisedText')}>
                                     <Fullscreen />
                                 </IconButton>
                             </Tooltip>
-
-                            {/* Botões de Importação */}
-                            <Button
-                                size="small"
-                                variant="outlined"
-                                onClick={(e) => { e.stopPropagation(); wordInputRef.current.click(); }}
-                                startIcon={<UploadFile />}
-                                disabled={isLoading}
-                            >
-                                Word
-                            </Button>
-                            <Button
-                                size="small"
-                                variant="outlined"
-                                onClick={(e) => { e.stopPropagation(); pdfInputRef.current.click(); }}
-                                startIcon={<UploadFile />}
-                                disabled={isLoading}
-                            >
-                                PDF
-                            </Button>
-
-                            <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', md: 'block' } }}>
-                                Altere o texto ou importe um novo.
-                            </Typography>
-
                             <Tooltip title="Ver Notas da Revisão">
                                 <Button startIcon={<NotesIcon />} onClick={() => setNotesDrawerOpen(true)}>
                                     Ver Notas
@@ -438,9 +427,6 @@ const TextBriefingWizard = ({ open, onClose, onSave, briefingData, onBriefingDat
                         </Box>
                     </Box>
                     <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                        {/* Inputs de arquivo ficam aqui para poderem ser acionados pelos botões */}
-                        <input type="file" ref={wordInputRef} hidden accept=".docx" onChange={(e) => handleFileImport(e, parseWordDocument, (val) => handleBriefingDataChange('revisedText', val))} />
-                        <input type="file" ref={pdfInputRef} hidden accept=".pdf" onChange={(e) => handleFileImport(e, parsePdfDocument, (val) => handleBriefingDataChange('revisedText', val))} />
                         <TextEditor value={briefingData.revisedText} onChange={(val) => handleBriefingDataChange('revisedText', val)} html={true} />
                     </Box>
                 </Grid>
