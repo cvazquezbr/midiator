@@ -1398,7 +1398,6 @@ function HomePage() {
           aspectRatio,
           pageTemplate: effectivePageTemplate,
           fontScale,
-          pendingAssets, // Pass pending assets down
         }
       });
 
@@ -1408,25 +1407,26 @@ function HomePage() {
         throw new Error("Failed to create managed URL for final page image.");
       }
 
+      const newPageDataObject = {
+        ...generatedPagesData.find(p => p.index === index),
+        ...finalPageData,
+        ...pageUpdateData,
+        url: tempUrl,
+        dataUrl: null,
+      };
+      delete newPageDataObject.blob;
+
       setGeneratedPagesData(currentPagesData => {
         const newPagesData = [...currentPagesData];
-        const existingPageData = newPagesData[index] || {};
-
-        const newPageDataObject = {
-          ...existingPageData,
-          ...finalPageData,
-          ...pageUpdateData,
-          url: tempUrl,
-          dataUrl: null,
-        };
-        delete newPageDataObject.blob;
-
-        newPagesData[index] = newPageDataObject;
+        const pageIndex = newPagesData.findIndex(p => p.index === index);
+        if (pageIndex !== -1) {
+          newPagesData[pageIndex] = newPageDataObject;
+        }
         return newPagesData;
       });
 
       toast.success(`Página final para o post #${index + 1} gerada.`);
-      return true;
+      return newPageDataObject;
     } catch (error) {
       console.error(`Error during page generation for post ${index + 1}:`, error);
       toast.error(error.message);
@@ -1628,7 +1628,6 @@ function HomePage() {
                   fontScale={fontScale}
                   handleGenerateSinglePage={handleGenerateSinglePage}
                   aspectRatio={aspectRatio}
-                  generatedPagesData={generatedPagesData}
                   handleImageUpload={handleImageUpload}
                   onOpenImageGallery={handleOpenImageGallery}
                   pendingAssets={pendingAssets}

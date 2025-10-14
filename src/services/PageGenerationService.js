@@ -22,7 +22,6 @@ const PageGenerationService = {
       fieldStyles: globalFieldStyles,
       aspectRatio: globalAspectRatio,
       pageTemplate: globalPageTemplate,
-      pendingAssets: globalPendingAssets, // Extract pendingAssets
     } = campaignContext;
 
     // Prioritize page-specific customizations over global campaign settings
@@ -41,7 +40,6 @@ const PageGenerationService = {
         fieldStyles,
         aspectRatio: aspectRatio || '1:1', // Fallback
         pageTemplate,
-        pendingAssets: globalPendingAssets, // Pass it down
       });
       return finalPageData;
     } catch (error) {

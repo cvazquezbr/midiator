@@ -49,7 +49,7 @@ import { safeDeepClone } from '../lib/utils';
 
 const PageGeneratorFrontendOnly = ({
   colorPalette,
-  initialGeneratedPagesData,
+  initialGeneratedPagesData: initialGeneratedPagesDataProp,
   onThumbnailRecordTextUpdate,
   originalImageSize,
   onBrandElementsChange,
@@ -59,7 +59,6 @@ const PageGeneratorFrontendOnly = ({
   handleImageUpload, // New prop
   onOpenImageGallery,
   imagePalette,
-  pendingAssets,
   addPendingAsset,
 }) => {
   const {
@@ -69,8 +68,15 @@ const PageGeneratorFrontendOnly = ({
     csvHeaders,
     brandElements,
     pageTemplate,
-    setGeneratedPagesData,
+    setGeneratedPagesData: setGlobalGeneratedPagesData,
+    pendingAssets,
   } = useCampaign();
+
+  const [generatedPages, setGeneratedPages] = useState(initialGeneratedPagesDataProp);
+
+  useEffect(() => {
+    setGeneratedPages(initialGeneratedPagesDataProp);
+  }, [initialGeneratedPagesDataProp]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -107,12 +113,12 @@ const PageGeneratorFrontendOnly = ({
   }, []);
 
   useEffect(() => {
-    if (initialGeneratedPagesData && initialGeneratedPagesData.length > 0 && fontsLoaded) {
+    if (generatedPages && generatedPages.length > 0 && fontsLoaded) {
       const regenerateMissingThumbnails = async () => {
-        const pagesToRegenerate = initialGeneratedPagesData.filter(img => img.record && !img.url);
+        const pagesToRegenerate = generatedPages.filter(img => img.record && !img.url);
         if (pagesToRegenerate.length === 0) return;
 
-        const pagePromises = initialGeneratedPagesData.map(pageData => {
+        const pagePromises = generatedPages.map(pageData => {
           if (pageData.url || !pagesToRegenerate.some(r => r.index === pageData.index)) {
             return Promise.resolve(pageData);
           }
@@ -139,22 +145,23 @@ const PageGeneratorFrontendOnly = ({
 
         const regeneratedPages = await Promise.all(pagePromises.map(async (promise, index) => {
           const newPageData = await promise;
-          const originalPageData = initialGeneratedPagesData[index];
+          const originalPageData = generatedPages[index];
           if (newPageData === originalPageData) return originalPageData;
           return { ...originalPageData, ...newPageData };
         }));
 
-        if (JSON.stringify(regeneratedPages) !== JSON.stringify(initialGeneratedPagesData)) {
-          setGeneratedPagesData(regeneratedPages);
+        if (JSON.stringify(regeneratedPages) !== JSON.stringify(generatedPages)) {
+          setGeneratedPages(regeneratedPages);
+          setGlobalGeneratedPagesData(regeneratedPages);
         }
       };
       regenerateMissingThumbnails();
     }
-  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, pageTemplate, brandElements, setGeneratedPagesData, aspectRatio]);
+  }, [generatedPages, fontsLoaded, fieldPositions, fieldStyles, pageTemplate, brandElements, setGlobalGeneratedPagesData, aspectRatio]);
 
   const generatePages = async () => {
     if (isGenerating) return;
-    if (initialGeneratedPagesData.some(img => img.url)) {
+    if (generatedPages.some(img => img.url)) {
       handleRegenerateAll();
       return;
     }
@@ -203,7 +210,8 @@ const PageGeneratorFrontendOnly = ({
     try {
       const pages = (await Promise.all(pagePromises)).filter(Boolean);
       if (!isCancelledRef.current) {
-        setGeneratedPagesData(pages);
+        setGeneratedPages(pages);
+        setGlobalGeneratedPagesData(pages);
       }
     } catch (error) {
       console.error('Erro geral durante a geração de páginas em lote:', error);
@@ -226,9 +234,14 @@ const PageGeneratorFrontendOnly = ({
     for (let i = 0; i < csvData.length; i++) {
       if (isCancelledRef.current) break;
       const record = csvData[i];
-      const pageData = initialGeneratedPagesData.find(p => p.index === i);
+      const pageData = generatedPages.find(p => p.index === i);
       const fontScaleToUse = pageData?.fontScale || 1;
-      await handleGenerateSinglePage(record, i, fontScaleToUse);
+      const newPageData = await handleGenerateSinglePage(record, i, fontScaleToUse);
+      if (newPageData) {
+        setGeneratedPages(currentPages =>
+          currentPages.map(p => (p.index === i ? { ...p, ...newPageData } : p))
+        );
+      }
       setProgress(p => p + 1);
     }
     setIsGenerating(false);
@@ -256,7 +269,7 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const handleResetPage = async (index) => {
-    const pageToReset = initialGeneratedPagesData.find(img => img.index === index);
+    const pageToReset = generatedPages.find(img => img.index === index);
     if (pageToReset) {
       try {
         const newPageData = await regenerateSinglePage(
@@ -269,7 +282,7 @@ const PageGeneratorFrontendOnly = ({
           fontScale,
           pendingAssets
         );
-        setGeneratedPagesData(currentPages => currentPages.map(p => {
+        const newPages = generatedPages.map(p => {
           if (p.index === index) {
             // Reset custom fields and apply new generated data
             return {
@@ -283,7 +296,9 @@ const PageGeneratorFrontendOnly = ({
             };
           }
           return p;
-        }));
+        });
+        setGeneratedPages(newPages);
+        setGlobalGeneratedPagesData(newPages);
       } catch (error) {
         alert(`Não foi possível resetar a página: ${error.message}`);
       }
@@ -369,7 +384,7 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const downloadAllPages = async () => {
-    for (const [index, pageData] of initialGeneratedPagesData.entries()) {
+    for (const [index, pageData] of generatedPages.entries()) {
       try {
         // Stagger downloads to avoid browser limitations/throttling
         await new Promise(resolve => setTimeout(resolve, index * 250));
@@ -428,22 +443,22 @@ const PageGeneratorFrontendOnly = ({
         1, // Always use a scale of 1 for the final render, as per user feedback.
         pendingAssets
       );
-      setGeneratedPagesData(currentPages =>
-        currentPages.map(page => {
-          if (page.index !== pageIndex) return page;
-          // Persist the changes
-          return {
-            ...page, // Keep old data like blob, url
-            ...newPageImageData, // Overwrite with new image data
-            record: modifiedPageData.record,
-            customFieldPositions: modifiedPageData.customFieldPositions,
-            customFieldStyles: modifiedPageData.customFieldStyles,
-            customBrandElements: modifiedPageData.customBrandElements,
-            customPageTemplate: modifiedPageData.customPageTemplate,
-            fontScale: 1, // Always save the scale as 1 for consistency.
-          };
-        })
-      );
+      const newPages = generatedPages.map(page => {
+        if (page.index !== pageIndex) return page;
+        // Persist the changes
+        return {
+          ...page, // Keep old data like blob, url
+          ...newPageImageData, // Overwrite with new image data
+          record: modifiedPageData.record,
+          customFieldPositions: modifiedPageData.customFieldPositions,
+          customFieldStyles: modifiedPageData.customFieldStyles,
+          customBrandElements: modifiedPageData.customBrandElements,
+          customPageTemplate: modifiedPageData.customPageTemplate,
+          fontScale: 1, // Always save the scale as 1 for consistency.
+        };
+      });
+      setGeneratedPages(newPages);
+      setGlobalGeneratedPagesData(newPages);
       if (onThumbnailRecordTextUpdate) {
         onThumbnailRecordTextUpdate(pageIndex, modifiedPageData.record);
       }
@@ -465,7 +480,7 @@ const PageGeneratorFrontendOnly = ({
       const reader = new FileReader();
       reader.onload = async (e) => {
         const newImageUrl = e.target.result;
-        const pageToUpdate = initialGeneratedPagesData.find(img => img.index === replacingImageIndex);
+        const pageToUpdate = generatedPages.find(img => img.index === replacingImageIndex);
         if (pageToUpdate) {
           const templateToUpdate = pageToUpdate.customPageTemplate || pageTemplate;
           const newImageElement = createNewImageElement(newImageUrl);
@@ -487,12 +502,14 @@ const PageGeneratorFrontendOnly = ({
               pageToUpdate.fontScale || 1,
               pendingAssets
             );
-            setGeneratedPagesData(currentPages => currentPages.map(p => {
+            const newPages = generatedPages.map(p => {
               if (p.index === replacingImageIndex) {
                 return { ...p, ...newPageData, customPageTemplate: updatedTemplate };
               }
               return p;
-            }));
+            });
+            setGeneratedPages(newPages);
+            setGlobalGeneratedPagesData(newPages);
           } catch (error) {
             alert(`Falha ao substituir o fundo da página: ${error.message}`);
           }
@@ -511,7 +528,7 @@ const PageGeneratorFrontendOnly = ({
       alert('Por favor, digite um nome para o projeto.');
       return;
     }
-    if (initialGeneratedPagesData.length === 0) {
+    if (generatedPages.length === 0) {
       alert('Nenhuma página foi gerada ainda.');
       return;
     }
@@ -526,9 +543,9 @@ const PageGeneratorFrontendOnly = ({
       const contentFolder = await createFolder('Conteúdo', folder.id);
       const uploadResults = [];
       const sheetData = [];
-      const allHeaders = Array.from(new Set(initialGeneratedPagesData.flatMap(p => Object.keys(p.record))));
+      const allHeaders = Array.from(new Set(generatedPages.flatMap(p => Object.keys(p.record))));
 
-      for (const pageData of initialGeneratedPagesData) {
+      for (const pageData of generatedPages) {
         try {
           const blob = dataURLtoBlob(pageData.dataUrl);
           const result = await uploadFile(blob, pageData.filename, contentFolder.id);
@@ -550,14 +567,14 @@ const PageGeneratorFrontendOnly = ({
     }
   };
 
-  const pageToEdit = initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex);
+  const pageToEdit = generatedPages.find(p => p.index === editingGeneratedPageIndex);
 
   useEffect(() => {
     // This effect synchronizes the editor's template with the parent's state.
-    // When an image is added from the gallery, `initialGeneratedPagesData` changes.
+    // When an image is added from the gallery, `generatedPages` changes.
     // This effect ensures the open `PageEditor` receives the updated template.
     if (editingGeneratedPageIndex !== null) {
-      const updatedPageData = initialGeneratedPagesData.find(p => p.index === editingGeneratedPageIndex);
+      const updatedPageData = generatedPages.find(p => p.index === editingGeneratedPageIndex);
       if (updatedPageData) {
         const finalTemplate = {
           ...pageTemplate,
@@ -569,7 +586,7 @@ const PageGeneratorFrontendOnly = ({
         setPageTemplateForEditor(finalTemplate);
       }
     }
-  }, [initialGeneratedPagesData, editingGeneratedPageIndex, pageTemplate]);
+  }, [generatedPages, editingGeneratedPageIndex, pageTemplate]);
 
   return (
     <Box sx={{ mt: 3 }}>
@@ -578,16 +595,16 @@ const PageGeneratorFrontendOnly = ({
           <Typography variant="h5" gutterBottom><ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />Geração de Páginas</Typography>
           {!fontsLoaded && <Alert severity="info" sx={{ mb: 2 }}>Carregando fontes...</Alert>}
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={initialGeneratedPagesData.some(img => img.url) ? 4 : 12}>
+            <Grid item xs={12} sm={generatedPages.some(img => img.url) ? 4 : 12}>
               <Button variant="contained" color="primary" onClick={generatePages} disabled={isGenerating || !fontsLoaded} startIcon={<ImageIcon />} fullWidth>
-                {initialGeneratedPagesData.some(img => img.url) ? 'Regerar páginas' : 'Gerar Páginas'}
+                {generatedPages.some(img => img.url) ? 'Regerar páginas' : 'Gerar Páginas'}
               </Button>
             </Grid>
-            {initialGeneratedPagesData.some(img => img.url) && (
+            {generatedPages.some(img => img.url) && (
               <>
                 <Grid item xs={12} sm={4}>
                   <Button variant="outlined" onClick={downloadAllPages} startIcon={<Download />} fullWidth>
-                    Download Todas ({initialGeneratedPagesData.filter(img => img.url).length})
+                    Download Todas ({generatedPages.filter(img => img.url).length})
                   </Button>
                 </Grid>
                 <Grid item xs={12} sm={4}>
@@ -611,7 +628,8 @@ const PageGeneratorFrontendOnly = ({
             <DialogActions>
               <Button onClick={() => setShowDeleteConfirm(false)}>Cancelar</Button>
               <Button onClick={() => {
-                setGeneratedPagesData([]);
+                setGeneratedPages([]);
+                setGlobalGeneratedPagesData([]);
                 setShowDeleteConfirm(false);
               }} color="error">
                 Excluir
@@ -619,7 +637,7 @@ const PageGeneratorFrontendOnly = ({
             </DialogActions>
           </Dialog>
 
-          {initialGeneratedPagesData.length > 0 && (
+          {generatedPages.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="h6" gutterBottom><Google sx={{ mr: 1, verticalAlign: 'middle' }} />Integração Google Drive</Typography>
@@ -642,13 +660,13 @@ const PageGeneratorFrontendOnly = ({
             </Box>
           )}
 
-          {initialGeneratedPagesData.length > 0 && (
+          {generatedPages.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} />
-              <Typography variant="h6" gutterBottom>Páginas Geradas ({initialGeneratedPagesData.length})</Typography>
+              <Typography variant="h6" gutterBottom>Páginas Geradas ({generatedPages.length})</Typography>
               <Grid container spacing={2}>
-                {initialGeneratedPagesData.map((pageData, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={index}>
+                {generatedPages.map((pageData, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={pageData.index}>
                     <Card variant="outlined">
                       <CardContent>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
