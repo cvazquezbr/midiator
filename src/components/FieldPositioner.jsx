@@ -391,7 +391,7 @@ const FieldPositioner = ({
         aspectRatio: aspectRatio,
         width: '100%',
         maxWidth: '100%',
-        maxHeight: '100%',
+maxHeight: '80vh',
         border: '2px solid #ddd',
         borderRadius: 2,
         overflow: 'hidden',
