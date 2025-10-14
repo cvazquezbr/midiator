@@ -1416,15 +1416,8 @@ function HomePage() {
       };
       delete newPageDataObject.blob;
 
-      setGeneratedPagesData(currentPagesData => {
-        const newPagesData = [...currentPagesData];
-        const pageIndex = newPagesData.findIndex(p => p.index === index);
-        if (pageIndex !== -1) {
-          newPagesData[pageIndex] = newPageDataObject;
-        }
-        return newPagesData;
-      });
-
+      // The state update is now handled by the child component.
+      // We just return the new data object.
       toast.success(`Página final para o post #${index + 1} gerada.`);
       return newPageDataObject;
     } catch (error) {
@@ -1629,7 +1622,7 @@ function HomePage() {
                   handleGenerateSinglePage={handleGenerateSinglePage}
                   aspectRatio={aspectRatio}
                   handleImageUpload={handleImageUpload}
-                  onOpenImageGallery={handleOpenImageGallery}
+                  onOpenImageGallery={onOpenImageGallery}
                   addPendingAsset={addPendingAsset}
                 />
               )}
