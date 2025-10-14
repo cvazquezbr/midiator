@@ -1325,109 +1325,6 @@ function HomePage() {
     }
   };
 
-  const handleGenerateSinglePage = async (record, index, fontScale = 1) => {
-    const imagePrompt = record.prompt_imagem_carrossel;
-    let pageUpdateData = {};
-
-    // 1. Determine the effective styles and template for this specific page
-    const pageData = generatedPagesData.find(p => p.index === index);
-    const effectiveBrandElements = pageData?.customBrandElements || brandElements;
-    const effectiveFieldPositions = pageData?.customFieldPositions || fieldPositions;
-    const effectiveFieldStyles = pageData?.customFieldStyles || fieldStyles;
-    let effectivePageTemplate = pageData?.customPageTemplate || pageTemplate;
-
-    // 2. Handle image generation from prompt (if any)
-    if (imagePrompt && imagePrompt.trim() !== '') {
-      setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
-      try {
-        // Use a simple default style for the new image.
-        // The complex logic of finding another page's image style was brittle.
-        let sourceStyle = { x: 0, y: 0, width: 100, height: 100, zIndex: -1, objectFit: 'cover' };
-        const firstImage = effectivePageTemplate.images?.[0];
-        if (firstImage) {
-          // If the current page template already has an image, use its style.
-          const { id, src, ...style } = firstImage;
-          sourceStyle = style;
-        }
-
-        const oldImage = (effectivePageTemplate.images || [])[0];
-
-        // Generate the image and get the base64 data URL.
-        const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
-        if (!base64Data) {
-          throw new Error("A IA não conseguiu gerar a imagem.");
-        }
-
-        // Revoke the old image's blob URL if it exists to prevent memory leaks.
-        if (oldImage && oldImage.src && oldImage.src.startsWith('blob:')) {
-          removePendingAsset(oldImage.src);
-        }
-
-        // Use the self-contained data: URL directly. This is robust and avoids lifecycle issues.
-        // The serialization process is already equipped to handle data: URLs on save.
-        const newImage = { ...createNewImageElement(base64Data), ...sourceStyle, visible: true };
-        const pageImages = effectivePageTemplate.images || [];
-
-        // Se houver imagens, substitui a primeira. Caso contrário, adiciona a nova imagem.
-        const finalImages = pageImages.length > 0
-          ? [newImage, ...pageImages.slice(1)]
-          : [newImage];
-
-        const tempPageTemplate = { ...effectivePageTemplate, images: finalImages };
-        effectivePageTemplate = tempPageTemplate; // Update for this generation pass
-        pageUpdateData.customPageTemplate = tempPageTemplate; // Persist this change
-      } catch (error) {
-        if (error.message && error.message.includes('503')) {
-          toast.error(`O serviço de geração de imagem está indisponível no momento. Tente novamente mais tarde para o post #${index + 1}.`);
-        } else {
-          toast.error(`Falha ao gerar imagem para o post #${index + 1}: ${error.message}`);
-        }
-      }
-    }
-
-    setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
-    try {
-      // 3. Use the new generation service with the effective styles
-      const finalPageData = await PageGenerationService.generatePageImage({
-        record,
-        index,
-        campaignContext: {
-          brandElements: effectiveBrandElements,
-          fieldPositions: effectiveFieldPositions,
-          fieldStyles: effectiveFieldStyles,
-          aspectRatio,
-          pageTemplate: effectivePageTemplate,
-          fontScale,
-        }
-      });
-
-      const { blob } = finalPageData;
-      const tempUrl = addPendingAsset(blob);
-      if (!tempUrl) {
-        throw new Error("Failed to create managed URL for final page image.");
-      }
-
-      const newPageDataObject = {
-        ...generatedPagesData.find(p => p.index === index),
-        ...finalPageData,
-        ...pageUpdateData,
-        url: tempUrl,
-        dataUrl: null,
-      };
-      delete newPageDataObject.blob;
-
-      // The state update is now handled by the child component.
-      // We just return the new data object.
-      toast.success(`Página final para o post #${index + 1} gerada.`);
-      return newPageDataObject;
-    } catch (error) {
-      console.error(`Error during page generation for post ${index + 1}:`, error);
-      toast.error(error.message);
-      return false;
-    } finally {
-      setGenerationStatus('');
-    }
-  };
   const currentTheme = darkMode ? darkTheme : lightTheme;
 
   const memorialColors = useMemo(() => {
@@ -1619,10 +1516,10 @@ function HomePage() {
                   originalImageSize={originalImageSize}
                   onBrandElementsChange={setBrandElements}
                   fontScale={fontScale}
-                  handleGenerateSinglePage={handleGenerateSinglePage}
                   aspectRatio={aspectRatio}
                   handleImageUpload={handleImageUpload}
                   onOpenImageGallery={handleOpenImageGallery}
+                  pendingAssets={pendingAssets}
                   addPendingAsset={addPendingAsset}
                 />
               )}
