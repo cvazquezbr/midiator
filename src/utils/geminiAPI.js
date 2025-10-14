@@ -92,18 +92,10 @@ class GeminiAPI {
       **DIRETIZES:**  
 
       - **NUNCA** copie nem resuma partes das instruções deste prompt (tudo que aparece antes de “T3. TEXTO BASE”).
+      
       - **NÃO** insira menções a regras, seções vazias, instruções, rótulos (como “R1”, “R2”, etc.) ou frases automáticas como “A revisão não encontrou conteúdo para esta seção”.  
-      - Sua resposta **DEVE** ser um objeto JSON válido, sem nenhum texto ou formatação adicional fora dele.
-      - A estrutura do JSON deve ser **EXATAMENTE** a seguinte:
-      {
-        "sections": {
-          // As chaves aqui devem corresponder aos títulos dos blocos do modelo
-          "Título da Missão": "<p>Conteúdo...</p>",
-          "Saudação": "<p>Conteúdo...</p>",
-          // etc...
-        },
-        "revisionNotes": ["Nota descrevendo revisão 1.", "Nota descrevendo revisão 2.", "Nota descrevendo revisão 3."]
-      }
+
+      - Sua saída deve conter **somente** o conteúdo derivado do TEXTO BASE reorganizado dentro da estrutura do MODELO DE REFERÊNCIA.
 
       **SUA TAREFA:**
       ${template.generalRules}
@@ -120,10 +112,23 @@ class GeminiAPI {
       ${specificRules}
       ---
       **T3. TEXTO BASE (Fornecido pelo usuário, pode estar em HTML ou texto simples):**
-      Este é o conteúdo que você DEVE analisar e reorganizar conforme as instruções.
+      Este é o conteúdo que você precisa analisar e reorganizar.
       \`\`\`html
       ${baseText}
       \`\`\`
+      ---
+      **T4. REQUISITOS DE SAÍDA:**
+      - Sua resposta DEVE ser um objeto JSON válido, sem nenhum texto ou formatação adicional fora dele.
+      - A estrutura do JSON deve ser EXATAMENTE a seguinte:
+      {
+        "sections": {
+          // As chaves aqui devem corresponder aos títulos dos blocos do modelo
+          "Título da Missão": "<p>Conteúdo...</p>",
+          "Saudação": "<p>Conteúdo...</p>",
+          // etc...
+        },
+        "revisionNotes": ["Nota de revisão 1.", "Nota de revisão 2.", "Nota de revisão 3."]
+      }
     `;
 
     const responseText = await this.generateContent(prompt, purpose);
