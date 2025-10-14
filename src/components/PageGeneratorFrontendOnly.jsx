@@ -234,7 +234,7 @@ const PageGeneratorFrontendOnly = ({
     for (let i = 0; i < csvData.length; i++) {
       if (isCancelledRef.current) break;
       const record = csvData[i];
-      const pageData = initialGeneratedPagesData.find(p => p.index === i);
+      const pageData = generatedPages.find(p => p.index === i);
       const fontScaleToUse = pageData?.fontScale || 1;
       const newPageData = await handleGenerateSinglePage(record, i, fontScaleToUse);
       if (newPageData) {
@@ -725,7 +725,12 @@ const PageGeneratorFrontendOnly = ({
                                     onClick={async () => {
                                         setRegeneratingIndex(index);
                                         try {
-                                            await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1);
+                                            const newPageData = await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1);
+                                            if (newPageData) {
+                                                setGeneratedPages(currentPages =>
+                                                    currentPages.map(p => (p.index === index ? { ...p, ...newPageData } : p))
+                                                );
+                                            }
                                         } finally {
                                             setRegeneratingIndex(null);
                                         }
