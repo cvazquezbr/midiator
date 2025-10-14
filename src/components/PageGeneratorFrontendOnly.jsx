@@ -51,17 +51,15 @@ import { safeDeepClone } from '../lib/utils';
 
 const PageGeneratorFrontendOnly = ({
   colorPalette,
-  initialGeneratedPagesData,
+  initialGeneratedPagesData: initialGeneratedPagesDataProp,
   onThumbnailRecordTextUpdate,
   originalImageSize,
   onBrandElementsChange,
   fontScale = 1,
-  handleGenerateSinglePage,
   aspectRatio,
   handleImageUpload, // New prop
   onOpenImageGallery,
   imagePalette,
-  pendingAssets,
   addPendingAsset,
 }) => {
   const {
@@ -71,8 +69,15 @@ const PageGeneratorFrontendOnly = ({
     csvHeaders,
     brandElements,
     pageTemplate,
-    setGeneratedPagesData,
+    setGeneratedPagesData: setGlobalGeneratedPagesData,
+    pendingAssets,
   } = useCampaign();
+
+  const [generatedPages, setGeneratedPages] = useState(initialGeneratedPagesDataProp);
+
+  useEffect(() => {
+    setGeneratedPages(initialGeneratedPagesDataProp);
+  }, [initialGeneratedPagesDataProp]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -83,11 +88,6 @@ const PageGeneratorFrontendOnly = ({
   const [showGeneratedPageEditor, setShowGeneratedPageEditor] = useState(false);
   const [pageTemplateForEditor, setPageTemplateForEditor] = useState(null);
   const { googleAccessToken } = useUserAuth();
-  const {
-    addPendingAsset: addPendingAssetFromContext,
-    removePendingAsset,
-    memorialColors,
-  } = useCampaign();
   const isGoogleDriveConnected = !!googleAccessToken;
   const [projectName, setProjectName] = useState('');
   const [isUploadingToDrive, setIsUploadingToDrive] = useState(false);
@@ -175,7 +175,7 @@ const PageGeneratorFrontendOnly = ({
       });
 
       const { blob } = finalPageData;
-      const tempUrl = addPendingAssetFromContext(blob);
+      const tempUrl = addPendingAsset(blob);
       if (!tempUrl) {
         throw new Error("Failed to create managed URL for final page image.");
       }

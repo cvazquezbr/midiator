@@ -1517,10 +1517,9 @@ function HomePage() {
                   onBrandElementsChange={setBrandElements}
                   fontScale={fontScale}
                   aspectRatio={aspectRatio}
+                  onPagesUpdate={setGeneratedPagesData}
                   handleImageUpload={handleImageUpload}
                   onOpenImageGallery={handleOpenImageGallery}
-                  pendingAssets={pendingAssets}
-                  addPendingAsset={addPendingAsset}
                 />
               )}
               {activeStep === 5 && (
