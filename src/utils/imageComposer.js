@@ -130,18 +130,42 @@ export const drawTextWithEffects = async (ctx, text, x, y, style, maxWidth, maxH
     }
 };
 
-const loadImage = (src) => {
+const loadImage = (src, pendingAssets = {}) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    // Adiciona o proxy para imagens do Vercel Blob Storage para evitar problemas de CORS no canvas
     let finalSrc = src;
-    if (src && src.includes('blob.vercel-storage.com')) {
+
+    // Check if the source is a key in our pending assets (which maps to a Blob object)
+    if (src && pendingAssets[src]) {
+      console.log(`[loadImage] Resolved pending asset for: ${src}`);
+      const blob = pendingAssets[src];
+      finalSrc = URL.createObjectURL(blob);
+      // No crossOrigin needed for blob URLs, and we can revoke it later.
+      img.onload = () => {
+        URL.revokeObjectURL(finalSrc); // Clean up the object URL after load
+        resolve(img);
+      };
+    } else if (src && src.includes('blob.vercel-storage.com')) {
+      // Use proxy for Vercel Blob Storage to avoid CORS issues on canvas
       finalSrc = `/api/image-proxy?url=${encodeURIComponent(src)}`;
-    } else if (src && src.startsWith('http')) {
+      img.onload = () => resolve(img);
+    } else if (src && (src.startsWith('http') || src.startsWith('data:'))) {
+      // Standard handling for remote or data URLs
       img.crossOrigin = 'Anonymous';
+      img.onload = () => resolve(img);
+    } else {
+      // Fallback for any other case (e.g., local file paths during development)
+      img.onload = () => resolve(img);
     }
-    img.onload = () => resolve(img);
-    img.onerror = (err) => reject(new Error(`Failed to load image: ${src}`, { cause: err }));
+
+    img.onerror = (err) => {
+      // If we created an object URL, we still need to clean it up on error.
+      if (finalSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(finalSrc);
+      }
+      reject(new Error(`Failed to load image: ${src}`, { cause: err }));
+    };
+
     img.src = finalSrc;
   });
 };
@@ -159,12 +183,12 @@ export const getDimensionsFromAspectRatio = (aspectRatio) => {
   }
 };
 
-const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight) => {
+const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight, pendingAssets) => {
     const src = element.src || element.url;
     if (!src) return;
 
     try {
-        const img = await loadImage(src);
+        const img = await loadImage(src, pendingAssets);
         ctx.save();
 
         const {
@@ -313,6 +337,7 @@ export const drawAndComposeImage = async ({
     fieldStyles = {},
     aspectRatio,
     pageTemplate,
+    pendingAssets = {}, // Accept pendingAssets
 }) => {
 
     const finalCanvas = document.createElement('canvas');
@@ -409,7 +434,7 @@ export const drawAndComposeImage = async ({
     // 3. Draw sorted elements
     for (const element of elementsToDraw) {
         if (element.type === 'image') {
-            await drawImageWithEffects(ctx, element, finalCanvas.width, finalCanvas.height);
+            await drawImageWithEffects(ctx, element, finalCanvas.width, finalCanvas.height, pendingAssets);
         } else if (element.type === 'text') {
             ctx.save();
             const { content, position, style } = element;

@@ -1398,6 +1398,7 @@ function HomePage() {
           aspectRatio,
           pageTemplate: effectivePageTemplate,
           fontScale,
+          pendingAssets, // Pass pending assets down
         }
       });
 
