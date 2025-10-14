@@ -1630,7 +1630,6 @@ function HomePage() {
                   aspectRatio={aspectRatio}
                   handleImageUpload={handleImageUpload}
                   onOpenImageGallery={handleOpenImageGallery}
-                  pendingAssets={pendingAssets}
                   addPendingAsset={addPendingAsset}
                 />
               )}

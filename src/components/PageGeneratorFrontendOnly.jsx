@@ -234,7 +234,7 @@ const PageGeneratorFrontendOnly = ({
     for (let i = 0; i < csvData.length; i++) {
       if (isCancelledRef.current) break;
       const record = csvData[i];
-      const pageData = generatedPages.find(p => p.index === i);
+      const pageData = initialGeneratedPagesData.find(p => p.index === i);
       const fontScaleToUse = pageData?.fontScale || 1;
       const newPageData = await handleGenerateSinglePage(record, i, fontScaleToUse);
       if (newPageData) {
