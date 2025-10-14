@@ -51,17 +51,15 @@ import { safeDeepClone } from '../lib/utils';
 
 const PageGeneratorFrontendOnly = ({
   colorPalette,
-  initialGeneratedPagesData,
+  initialGeneratedPagesData: initialGeneratedPagesDataProp,
   onThumbnailRecordTextUpdate,
   originalImageSize,
   onBrandElementsChange,
   fontScale = 1,
-  handleGenerateSinglePage,
   aspectRatio,
   handleImageUpload, // New prop
   onOpenImageGallery,
   imagePalette,
-  pendingAssets,
   addPendingAsset,
 }) => {
   const {
@@ -71,8 +69,15 @@ const PageGeneratorFrontendOnly = ({
     csvHeaders,
     brandElements,
     pageTemplate,
-    setGeneratedPagesData,
+    setGeneratedPagesData: setGlobalGeneratedPagesData,
+    pendingAssets,
   } = useCampaign();
+
+  const [generatedPages, setGeneratedPages] = useState(initialGeneratedPagesDataProp);
+
+  useEffect(() => {
+    setGeneratedPages(initialGeneratedPagesDataProp);
+  }, [initialGeneratedPagesDataProp]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
