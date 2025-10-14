@@ -83,11 +83,6 @@ const PageGeneratorFrontendOnly = ({
   const [showGeneratedPageEditor, setShowGeneratedPageEditor] = useState(false);
   const [pageTemplateForEditor, setPageTemplateForEditor] = useState(null);
   const { googleAccessToken } = useUserAuth();
-  const {
-    addPendingAsset: addPendingAssetFromContext,
-    removePendingAsset,
-    memorialColors,
-  } = useCampaign();
   const isGoogleDriveConnected = !!googleAccessToken;
   const [projectName, setProjectName] = useState('');
   const [isUploadingToDrive, setIsUploadingToDrive] = useState(false);
@@ -175,7 +170,7 @@ const PageGeneratorFrontendOnly = ({
       });
 
       const { blob } = finalPageData;
-      const tempUrl = addPendingAssetFromContext(blob);
+      const tempUrl = addPendingAsset(blob);
       if (!tempUrl) {
         throw new Error("Failed to create managed URL for final page image.");
       }
