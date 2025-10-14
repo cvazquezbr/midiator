@@ -1622,7 +1622,7 @@ function HomePage() {
                   handleGenerateSinglePage={handleGenerateSinglePage}
                   aspectRatio={aspectRatio}
                   handleImageUpload={handleImageUpload}
-                  onOpenImageGallery={onOpenImageGallery}
+                  onOpenImageGallery={handleOpenImageGallery}
                   addPendingAsset={addPendingAsset}
                 />
               )}
