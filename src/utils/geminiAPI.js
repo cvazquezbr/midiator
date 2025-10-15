@@ -75,7 +75,58 @@ class GeminiAPI {
   }
 
   async generateImage(promptString, purpose = 'Geração de Imagem') {
-    // Implementation omitted for brevity
+    if (!this.isInitialized) {
+      throw new Error('GeminiAPI não foi inicializada. Chame initialize() primeiro.');
+    }
+    if (!promptString) {
+      throw new Error('O prompt não pode ser vazio.');
+    }
+
+    const model = getGeminiImageModel() || 'imagen-fogo'; // A reasonable default
+    console.log(`[${purpose}] Iniciando chamada à API de Imagem Gemini com o modelo ${model}.`);
+    console.log(`[${purpose}] Prompt:`, promptString);
+
+    // This uses a different endpoint for image generation
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateImage?key=${this.apiKey}`;
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: {
+            text: promptString,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: { message: response.statusText } }));
+        const errorMessage = errorData.error?.message || `Erro ${response.status}`;
+        console.error('Erro da API de Imagem Gemini:', errorData);
+        throw new Error(`Erro da API de Imagem Gemini: ${errorMessage}`);
+      }
+
+      const responseData = await response.json();
+      console.log(`[${purpose}] Resposta da API de Imagem Gemini (bruta):`, responseData);
+
+      if (responseData.images && responseData.images[0]?.image?.b64_json) {
+        const base64String = responseData.images[0].image.b64_json;
+        console.log(`[${purpose}] String Base64 da imagem extraída com sucesso.`);
+        return base64String;
+      } else {
+        console.error('Formato de resposta inesperado da API de Imagem Gemini:', responseData);
+        throw new Error('Formato de resposta inesperado da API de Imagem Gemini.');
+      }
+    } catch (error) {
+      console.error('Erro ao chamar a API de Imagem Gemini:', error);
+      if (error instanceof Error && error.message.startsWith('Erro da API de Imagem Gemini:')) {
+        throw error;
+      }
+      throw new Error(`Falha na comunicação com a API de Imagem Gemini: ${error.message}`);
+    }
   }
 
   async reviseBriefing(baseText, template) {
