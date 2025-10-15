@@ -10,19 +10,7 @@ import isEqual from 'lodash.isequal';
 
 import { getBriefings, saveBriefing, updateBriefing, deleteBriefing } from '../utils/briefingState';
 import BriefingWizard, { emptyBriefingWizardData } from '../components/BriefingWizard';
-import TextBriefingWizard from '../components/TextBriefingWizard';
 import UnsavedChangesDialog from '../components/UnsavedChangesDialog';
-import { defaultBriefingTemplate } from '../utils/defaultBriefingTemplate';
-
-const emptyTextBriefingData = {
-  name: '',
-  baseText: '',
-  template: defaultBriefingTemplate,
-  revisedText: '',
-  revisionNotes: '',
-  sections: {},
-  finalText: '',
-};
 const BriefingPage = ({ briefingDrawerOpen, setBriefingDrawerOpen, onNoBriefingSelected, onUpdate, startInCreateMode, onBriefingCreated, onCreationCancelled }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -37,10 +25,6 @@ const BriefingPage = ({ briefingDrawerOpen, setBriefingDrawerOpen, onNoBriefingS
   const [isBriefingDirty, setIsBriefingDirty] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [navigationTarget, setNavigationTarget] = useState(null);
-
-  // State for the new Text-based Briefing Wizard
-  const [textWizardOpen, setTextWizardOpen] = useState(false);
-  const [textBriefingFormData, setTextBriefingFormData] = useState(null);
 
   useEffect(() => {
     if (selectedBriefing && briefingFormData) {
@@ -96,12 +80,6 @@ const BriefingPage = ({ briefingDrawerOpen, setBriefingDrawerOpen, onNoBriefingS
     if (isMobile) setBriefingDrawerOpen(false);
   };
 
-  const handleNewTextBriefing = () => {
-    setTextBriefingFormData({ ...emptyTextBriefingData, type: 'text' });
-    setTextWizardOpen(true);
-    if (isMobile) setBriefingDrawerOpen(false);
-  };
-
   const handleSaveBriefing = async () => {
     if (!briefingFormData) {
       toast.error('Não há dados de briefing para salvar.');
@@ -134,36 +112,6 @@ const BriefingPage = ({ briefingDrawerOpen, setBriefingDrawerOpen, onNoBriefingS
     } catch (err) {
       toast.error(`Falha ao salvar briefing: ${err.message}`);
       return false; // Indicate failure
-    }
-  };
-
-  const handleSaveTextBriefing = async () => {
-    if (!textBriefingFormData) {
-      toast.error('Não há dados de briefing para salvar.');
-      return;
-    }
-    if (!textBriefingFormData.name) {
-      toast.error('O nome do briefing é obrigatório.');
-      return;
-    }
-
-    try {
-      // Here we save the entire textBriefingFormData object into the briefing_data field
-      const saved = await saveBriefing(textBriefingFormData.name, textBriefingFormData);
-      toast.success("Briefing (Beta) salvo com sucesso!");
-
-      if (onBriefingCreated) {
-        onBriefingCreated(saved);
-      }
-
-      await fetchBriefings();
-      if (onUpdate) onUpdate();
-
-      // Close the wizard and reset state
-      setTextWizardOpen(false);
-      setTextBriefingFormData(null);
-    } catch (err) {
-      toast.error(`Falha ao salvar briefing (Beta): ${err.message}`);
     }
   };
 
@@ -223,8 +171,7 @@ const BriefingPage = ({ briefingDrawerOpen, setBriefingDrawerOpen, onNoBriefingS
         <Typography variant="h6">Briefings</Typography>
       </Box>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-        <Button variant="contained" startIcon={<Add />} onClick={handleNewBriefing} fullWidth>Novo Briefing (Wizard)</Button>
-        <Button variant="outlined" startIcon={<Add />} onClick={handleNewTextBriefing} fullWidth>Novo Briefing (Beta)</Button>
+        <Button variant="contained" startIcon={<Add />} onClick={handleNewBriefing} fullWidth>Novo Briefing</Button>
       </Box>
       <Divider sx={{ my: 2 }} />
       {briefingsLoading && <CircularProgress />}
@@ -243,16 +190,9 @@ const BriefingPage = ({ briefingDrawerOpen, setBriefingDrawerOpen, onNoBriefingS
             >
               <ListItemButton
                 selected={selectedBriefing?.id === p.id}
-                onClick={() => {
-                  // Don't open text-based briefings in the old wizard.
-                  if (p.briefing_data?.type === 'text') {
-                    toast.info('A edição de briefings criados a partir de texto será implementada em breve.');
-                    return;
-                  }
-                  handleNavigation(() => handleSelectBriefing(p));
-                }}
+                onClick={() => handleNavigation(() => handleSelectBriefing(p))}
               >
-                <ListItemText primary={p.name} secondary={p.briefing_data?.type === 'text' ? 'Beta' : null} />
+                <ListItemText primary={p.name} />
               </ListItemButton>
             </ListItem>
           ))}
@@ -302,7 +242,7 @@ const BriefingPage = ({ briefingDrawerOpen, setBriefingDrawerOpen, onNoBriefingS
           }}
         >
           <Box>
-            {selectedBriefing && briefingFormData?.type !== 'text' ? (
+            {selectedBriefing ? (
               <Paper elevation={2} sx={{ p: 3 }}>
                 <BriefingWizard
                   key={selectedBriefing.id || 'new'}
@@ -319,7 +259,7 @@ const BriefingPage = ({ briefingDrawerOpen, setBriefingDrawerOpen, onNoBriefingS
                   initialStep={initialWizardStep}
                 />
               </Paper>
-            ) : !textWizardOpen && (
+            ) : (
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}>
                 <Typography variant="h6" color="text.secondary">
                   Selecione um briefing para editar ou crie um novo.
@@ -329,16 +269,6 @@ const BriefingPage = ({ briefingDrawerOpen, setBriefingDrawerOpen, onNoBriefingS
           </Box>
         </Box>
       </Box>
-
-      {textWizardOpen && (
-        <TextBriefingWizard
-          open={textWizardOpen}
-          onClose={() => setTextWizardOpen(false)}
-          onSave={handleSaveTextBriefing}
-          briefingData={textBriefingFormData}
-          onBriefingDataChange={setTextBriefingFormData}
-        />
-      )}
 
       <UnsavedChangesDialog
         open={showUnsavedDialog}

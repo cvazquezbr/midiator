@@ -37,7 +37,6 @@ const MainAppBar = ({
   onShowAutores,
   onShowPalettes,
   onShowBriefings,
-  onShowBriefingTemplate,
   onShowCampaigns,
   setShowSetupModal,
   onMenuClick,
@@ -94,8 +93,6 @@ const MainAppBar = ({
         return 'Paletas de Cores';
       case 'briefings':
         return 'Briefings';
-      case 'briefingTemplate':
-        return 'Modelo de Briefing';
       default:
         return 'Midiator';
     }
@@ -109,7 +106,7 @@ const MainAppBar = ({
       }}
     >
       <Toolbar>
-        {(currentView !== 'campaigns' || isMobile) && currentView !== 'briefingTemplate' && (
+        {(currentView !== 'campaigns' || isMobile) && (
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -195,10 +192,6 @@ const MainAppBar = ({
           <MenuItem onClick={() => { handleUserMenuClose(); onShowBriefings(); }}>
             <ArticleIcon sx={{ mr: 1 }} />
             Briefings
-          </MenuItem>
-          <MenuItem onClick={() => { handleUserMenuClose(); onShowBriefingTemplate(); }}>
-            <Edit sx={{ mr: 1 }} />
-            Modelo de Briefing
           </MenuItem>
           <Divider />
           <MenuItem onClick={() => { navigate('/config'); handleUserMenuClose(); }}>
