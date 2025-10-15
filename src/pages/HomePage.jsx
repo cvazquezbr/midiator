@@ -28,7 +28,6 @@ import MyCampaignsStep from '../components/MyCampaignsStep';
 import PersonasPage from './PersonasPage';
 import AutoresPage from './AutoresPage';
 import PalettesPage from './PalettesPage';
-import BriefingTemplatePage from './BriefingTemplatePage';
 import MainAppBar from '../components/MainAppBar';
 import Sidebar from '../components/Sidebar';
 import FieldPositioner from '../components/FieldPositioner';
@@ -1483,7 +1482,6 @@ function HomePage() {
           onShowPersonas={() => handleNavigation(() => setCurrentView('personas'))}
           onShowAutores={() => handleNavigation(() => setCurrentView('autores'))}
           onShowPalettes={() => handleNavigation(() => setCurrentView('palettes'))}
-          onShowBriefingTemplate={() => handleNavigation(() => setCurrentView('briefingTemplate'))}
           onShowCampaigns={() => handleNavigation(() => setCurrentView('campaigns'))}
           currentView={currentView}
           onPersonaMenuClick={() => setPersonaDrawerOpen(!personaDrawerOpen)}
@@ -1732,7 +1730,6 @@ function HomePage() {
           {currentView === 'personas' && <PersonasPage personaDrawerOpen={personaDrawerOpen} setPersonaDrawerOpen={setPersonaDrawerOpen} onNoPersonaSelected={() => setPersonaDrawerOpen(true)} onUpdate={fetchPersonasForCampaign} startInCreateMode={startPersonasInCreate} onPersonaCreated={handlePersonaCreated} onCreationCancelled={() => handleCreationDone('personas')} />}
           {currentView === 'autores' && <AutoresPage autorDrawerOpen={autorDrawerOpen} setAutorDrawerOpen={setAutorDrawerOpen} onNoAutorSelected={() => setAutorDrawerOpen(true)} onUpdate={fetchAutoresForCampaign} startInCreateMode={startAutoresInCreate} onAutorCreated={handleAutorCreated} onCreationCancelled={() => handleCreationDone('autores')} />}
           {currentView === 'palettes' && <PalettesPage paletteDrawerOpen={paletteDrawerOpen} setPaletteDrawerOpen={setPaletteDrawerOpen} onNoPaletteSelected={() => setPaletteDrawerOpen(true)} />}
-          {currentView === 'briefingTemplate' && <BriefingTemplatePage />}
         </Box>
       </Box>
       <UnsavedChangesDialog
