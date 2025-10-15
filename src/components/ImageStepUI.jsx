@@ -50,7 +50,7 @@ const ImageStepUI = ({
   isCropping,
   setIsCropping,
   onFontScaleChange,
-  addPendingAsset, 
+  addPendingAsset,
 }) => {
   const {
     csvData,

@@ -81,25 +81,30 @@ const DraggableElementInternal = ({
   // useEffect para renderização do canvas foi REMOVIDO
   useEffect(() => {
     let objectUrl = null;
+    console.log(`[DraggableElement Effect] content: ${content}, pendingAssets keys:`, pendingAssets ? Object.keys(pendingAssets) : 'null');
 
     // Case 1: The content is a key for a blob in our pendingAssets map.
     if (pendingAssets && pendingAssets[content]) {
+      console.log(`[DraggableElement Effect] Case 1: Found key in pendingAssets. Creating object URL.`);
       const blob = pendingAssets[content];
       objectUrl = URL.createObjectURL(blob);
       setDisplayUrl(objectUrl);
     }
     // Case 2: The content is already a valid, directly usable URL.
     else if (content && (content.startsWith('http') || content.startsWith('blob:') || content.startsWith('data:'))) {
+      console.log(`[DraggableElement Effect] Case 2: Content is a direct URL.`);
       setDisplayUrl(content);
     }
     // Case 3: The content is not a valid key yet (race condition) or is invalid. Show nothing.
     else {
+      console.log(`[DraggableElement Effect] Case 3: No valid source found. Setting URL to null.`);
       setDisplayUrl(null);
     }
 
     return () => {
       // If we created a temporary object URL, we must revoke it to avoid memory leaks.
       if (objectUrl) {
+        console.log(`[DraggableElement Cleanup] Revoking object URL: ${objectUrl}`);
         URL.revokeObjectURL(objectUrl);
       }
     };

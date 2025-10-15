@@ -247,21 +247,24 @@ export const loadCampaign = async (id) => {
   }
   const campaign = await res.json();
 
-  if (campaign.campaign_data) {
-    // The deserialize function now returns an object containing the modified state
-    // and a map of any newly created local assets (blobs).
-    const { finalState, newlyCreatedAssets } = await deserializeCampaignData(campaign.campaign_data);
+  let finalState = {};
+  let newlyCreatedAssets = {};
 
-    // Replace the campaign data with the state that has local blob URLs.
-    campaign.campaign_data = finalState;
-    // Attach the newly created assets so the UI can update its pendingAssets state.
-    campaign.pendingAssets = newlyCreatedAssets;
-  } else {
-    // Ensure pendingAssets is initialized even if there's no campaign data.
-    campaign.pendingAssets = {};
+  if (campaign.campaign_data) {
+    const deserialized = await deserializeCampaignData(campaign.campaign_data);
+    finalState = deserialized.finalState;
+    newlyCreatedAssets = deserialized.newlyCreatedAssets;
   }
 
-  return campaign;
+  // Return a single, consolidated object with all the necessary state for the UI.
+  return {
+    campaign: { id: campaign.id, name: campaign.name },
+    campaignData: finalState,
+    pendingAssets: newlyCreatedAssets,
+    autorId: campaign.autor_id || '',
+    personaId: campaign.persona_id || '',
+    paletteId: campaign.palette_id || null,
+  };
 };
 
 export const saveCampaign = async (name, campaignData, pendingAssets, setProgress, userId, autorId, personaId, paletteId) => {
