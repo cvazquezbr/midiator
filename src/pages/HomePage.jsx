@@ -272,155 +272,7 @@ function HomePage() {
   };
 
 
-  const _applyLoadedCampaignState = (loaded) => {
-    if (!loaded || !loaded.campaignData) {
-      console.warn("Attempted to apply null or invalid campaign state.");
-      return;
-    }
-    console.log("Applying loaded campaign state:", loaded);
-    const { campaignData: state, pendingAssets: newPendingAssets, autorId, personaId, paletteId: newPaletteId } = loaded;
-
-    setPendingAssets(newPendingAssets || {});
-    setCurrentCampaign(loaded.campaign);
-    setSelectedAutorForCampaign(autorId);
-    setSelectedPersonaForCampaign(personaId);
-    setPaletteId(newPaletteId);
-
-    setActiveStep(state.activeStep ?? 1); // Default to step 1 if not specified
-    setSidebarOpen(state.sidebarOpen ?? !isMobile);
-
-    setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
-    setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
-    setImageColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
-    setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
-    const sanitizedPagesData = (Array.isArray(state.generatedPagesData) ? state.generatedPagesData : [])
-      .filter(page => {
-        if (!page || page.record === null || page.record === undefined) {
-          console.warn('Filtering out invalid page data on load:', page);
-          return false;
-        }
-        return true;
-      });
-    setGeneratedPagesData(sanitizedPagesData);
-
-    // Mantém o áudio carregado se ele tiver uma URL, a duração será calculada depois.
-    setGeneratedAudioData(
-      Array.isArray(state.generatedAudioData)
-        ? state.generatedAudioData.filter(a => a && a.url)
-        : []
-    );
-    setGeneratedVideos(Array.isArray(state.generatedVideos) ? state.generatedVideos : []);
-    setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
-
-    if (state.pageTemplate) {
-      // New format: Deep merge to ensure new properties are not lost on load
-      const loadedTemplate = state.pageTemplate;
-      setPageTemplate({
-        ...defaultPageTemplate,
-        ...loadedTemplate,
-        images: (loadedTemplate.images || []).map(img => ({
-          ...createNewImageElement(null), // Get all default keys
-          ...img
-        }))
-      });
-    } else {
-      // Legacy format, convert it
-      const newPageTemplate = { ...defaultPageTemplate };
-      const legacyBg = state.backgroundElement;
-      if (legacyBg) {
-        newPageTemplate.backgroundColor = legacyBg.backgroundColor || '#FFFFFF';
-        newPageTemplate.gradient = legacyBg.gradient || null;
-        if (legacyBg.src) {
-          const image = { ...legacyBg };
-          delete image.backgroundColor;
-          delete image.gradient;
-          delete image.backgroundType;
-          image.type = 'image';
-          if (!image.id || image.id === '__background__') {
-            image.id = createNewImageElement(null).id;
-          }
-          newPageTemplate.images = [image];
-        }
-      } else if (state.backgroundImage) {
-        // Even older legacy format
-        newPageTemplate.images = [createNewImageElement(state.backgroundImage)];
-      }
-      setPageTemplate(newPageTemplate);
-    }
-
-    // When loading, if there's an image, we need to set the originalImageSize for the editor to work correctly
-    const firstImageSrc = state.pageTemplate?.images?.[0]?.src || state.backgroundElement?.src || state.backgroundImage;
-    if (firstImageSrc) {
-      const img = new Image();
-      img.crossOrigin = 'Anonymous';
-      img.onload = () => {
-        setOriginalImageSize({ width: img.width, height: img.height });
-        // Also extract colors from this loaded image
-        extractColorPalette(firstImageSrc, setImageColorPalette);
-      };
-      img.onerror = () => {
-        setOriginalImageSize(DEFAULT_IMAGE_SIZE);
-        setImageColorPalette([]);
-      };
-      img.src = firstImageSrc;
-    }
-
-    setProblema(state.problema ?? '');
-    setSolucao(state.solucao ?? '');
-    setObjetivo(state.objetivo ?? '');
-    setTomDeVoz(state.tomDeVoz ?? '');
-    setCampaignContent(state.campaignContent ?? null);
-    setAspectRatio(state.aspectRatio ?? '1:1');
-    setGeneratedPageUrl(state.generatedPageUrl ?? null);
-    setFollowupPostsQuantity(state.followupPostsQuantity ?? 10);
-    setIsScheduled(state.isScheduled ?? false);
-    setScheduleDate(state.scheduleDate ? new Date(state.scheduleDate) : new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
-    setWeeklySchedule(state.weeklySchedule ?? {});
-    setSelectedProfile(state.selectedProfile ?? '');
-    setSelectedImages(state.selectedImages ?? {});
-    setSelectedVideos(state.selectedVideos ?? {});
-    setInputMethod(state.inputMethod ?? 'ia');
-    // Default to 10, which matches the slider's max value in PostsCurtosStep.
-    setPromptNumRecords(state.promptNumRecords ?? 10);
-    // Logic for setting the base text for short posts.
-    // Priority: 1. Use saved promptText. 2. Derive from campaign content. 3. Default to empty.
-    if (state.promptText) {
-      setPromptText(state.promptText);
-    } else if (state.campaignContent) {
-      const { titulo, conteudo, cta } = state.campaignContent;
-      setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
-    } else {
-      setPromptText('');
-    }
-    setFieldPositions(state.fieldPositions ?? {});
-    setTemplateFieldStyles(state.templateFieldStyles ?? {});
-    setCustomPalette(state.customPalette ?? null);
-
-    const loadedStyles = state.fieldStyles ?? {};
-    const completeStyles = {};
-    const defaultStylesBase = {
-      fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
-      textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
-      strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
-      shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
-      textAlign: 'left', verticalAlign: 'top',
-      backgroundColor: 'rgba(0,0,0,0)', borderColor: '#000000', borderWidth: 0,
-      borderRadius: 0, padding: 5, backgroundOpacity: 0,
-    };
-    if (state.csvHeaders && Array.isArray(state.csvHeaders)) {
-      state.csvHeaders.forEach(header => {
-        completeStyles[header] = {
-          ...defaultStylesBase,
-          ...(loadedStyles[header] || {}),
-        };
-      });
-    }
-    setFieldStyles(completeStyles);
-    setInitialFieldStyles(completeStyles);
-
-    setDisplayedImageSize(state.displayedImageSize ?? { width: 0, height: 0 });
-    setOriginalImageSize(state.originalImageSize ?? DEFAULT_IMAGE_SIZE);
-  };
+  const { applyLoadedCampaign } = useCampaign();
 
   const handleSaveCampaign = async (name) => {
     console.log(`[HomePage] Attempting to save campaign: "${name}"`);
@@ -852,6 +704,8 @@ function HomePage() {
     setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     setActiveStep(1);
   };
+  const { applyLoadedCampaign } = useCampaign();
+
   const handleEditCampaign = async (campaign) => {
     toast.info(`Carregando "${campaign.name}" para edição...`);
     try {
@@ -865,10 +719,45 @@ function HomePage() {
     try {
       const completeState = await loadCampaign(campaign.id);
 
-      React.startTransition(() => {
-        _applyLoadedCampaignState(completeState);
-        setActiveStep(3); // Navigate to the editor after state is applied
-      });
+      // The context will handle setting all of its state.
+      applyLoadedCampaign(completeState);
+
+      // Now, set the state that is local to HomePage.
+      const { campaignData: state, autorId, personaId } = completeState;
+      setSelectedAutorForCampaign(autorId);
+      setSelectedPersonaForCampaign(personaId);
+      setActiveStep(3);
+
+      const firstImageSrc = state.pageTemplate?.images?.[0]?.src;
+      if (firstImageSrc) {
+          const img = new Image();
+          img.crossOrigin = 'Anonymous';
+          img.onload = () => {
+              setOriginalImageSize({ width: img.width, height: img.height });
+              extractColorPalette(firstImageSrc, setImageColorPalette);
+          };
+          img.onerror = () => {
+              setOriginalImageSize(DEFAULT_IMAGE_SIZE);
+              setImageColorPalette([]);
+          };
+          const blob = completeState.pendingAssets[firstImageSrc];
+          if (blob) {
+            img.src = URL.createObjectURL(blob);
+          } else {
+            img.src = firstImageSrc;
+          }
+      } else {
+          setOriginalImageSize(getDimensionsFromAspectRatio(state.aspectRatio) || DEFAULT_IMAGE_SIZE);
+      }
+
+      setProblema(state.problema ?? '');
+      setSolucao(state.solucao ?? '');
+      setObjetivo(state.objetivo ?? '');
+      setTomDeVoz(state.tomDeVoz ?? '');
+      setCampaignContent(state.campaignContent ?? null);
+      setFollowupPosts(state.followupPosts ?? []);
+      setFollowupPostsQuantity(state.followupPostsQuantity ?? 10);
+      setPromptText(state.promptText ?? '');
 
       toast.success(`Campanha "${completeState.campaign.name}" carregada com sucesso!`);
     } catch (err) {

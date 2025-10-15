@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
+import { createNewImageElement } from '../utils/elementFactory';
 
 const defaultPageTemplate = {
     backgroundColor: '#FFFFFF',
@@ -42,6 +43,49 @@ export const CampaignProvider = ({ children }) => {
   const [paletteId, setPaletteId] = useState(null);
   const [customPalette, setCustomPalette] = useState(null);
   const [imageColorPalette, setImageColorPalette] = useState([]);
+
+  const applyLoadedCampaign = useCallback((loaded) => {
+    if (!loaded || !loaded.campaignData) {
+      console.warn("[CampaignContext] applyLoadedCampaign received invalid data.");
+      return;
+    }
+    console.log("[CampaignContext] Applying loaded campaign state:", loaded);
+    const { campaignData: state, pendingAssets: newPendingAssets, autorId, personaId, paletteId: newPaletteId, campaign } = loaded;
+
+    React.startTransition(() => {
+        setPendingAssets(newPendingAssets || {});
+        setCurrentCampaign(campaign);
+        // setSelectedAutorForCampaign(autorId); // This state lives in HomePage
+        // setSelectedPersonaForCampaign(personaId); // This state lives in HomePage
+        setPaletteId(newPaletteId);
+
+        // setActiveStep(state.activeStep ?? 1); // This state lives in HomePage
+        // setSidebarOpen(state.sidebarOpen ?? !isMobile); // This state lives in HomePage
+
+        setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
+        setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
+        setGeneratedPagesData(Array.isArray(state.generatedPagesData) ? state.generatedPagesData : []);
+        setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
+
+        if (state.pageTemplate) {
+            const loadedTemplate = state.pageTemplate;
+            setPageTemplate({
+                ...defaultPageTemplate,
+                ...loadedTemplate,
+                images: (loadedTemplate.images || []).map(img => ({
+                    ...createNewImageElement(null),
+                    ...img
+                }))
+            });
+        } else {
+            setPageTemplate(defaultPageTemplate);
+        }
+
+        setAspectRatio(state.aspectRatio ?? '1:1');
+        setFieldPositions(state.fieldPositions ?? {});
+        setFieldStyles(state.fieldStyles ?? {});
+    });
+  }, []);
 
   // Centralized asset handlers
   const addPendingAsset = useCallback((blob) => {
@@ -136,6 +180,7 @@ export const CampaignProvider = ({ children }) => {
     addPendingAsset,
     addPendingAssetMap,
     removePendingAsset,
+    applyLoadedCampaign,
 
     // Constants
     defaultPageTemplate,
