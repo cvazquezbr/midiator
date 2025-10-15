@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import ProgressModal from './ProgressModal';
 import {
-  Box, Button, Typography, Card, CardContent, Grid, LinearProgress, Alert, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Chip, TextField, Tooltip, CircularProgress,
+  Box, Button, Typography, Card, CardContent, Grid, LinearProgress, Alert, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Chip, TextField, Tooltip, CircularProgress, Divider,
 } from '@mui/material';
 import {
   Download, Close, Image as ImageIcon, CloudUpload, Google, Edit, SwapHoriz, Share, AutoAwesomeOutlined as GeminiIcon, SettingsBackupRestore, Delete,
