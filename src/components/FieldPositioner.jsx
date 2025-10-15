@@ -283,7 +283,7 @@ const FieldPositioner = ({
 
     // Add page images
     (pageTemplate.images || []).forEach(image => {
-        const imageUrl = image.src || image.imageUrl;
+        const imageUrl = image.src || image.url || image.imageUrl;
         if (image.visible === false || !imageUrl) return;
         const elementType = image.type === 'background' ? 'image' : image.type;
 
