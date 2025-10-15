@@ -1213,10 +1213,15 @@ function HomePage() {
       return true;
 
     } catch (imageError) {
-      if (imageError.message && imageError.message.includes('503')) {
-        toast.error('O serviço de geração de imagem está indisponível no momento. Tente novamente mais tarde.');
+      const errorMessage = imageError.message || 'An unknown error occurred.';
+      if (errorMessage.includes('503') || errorMessage.toLowerCase().includes('service unavailable')) {
+        toast.error('Serviço indisponível (503)', {
+          description: 'O serviço de geração de imagem está sobrecarregado ou temporariamente indisponível. Por favor, tente novamente em alguns minutos.',
+        });
       } else {
-        toast.error(`Ocorreu um erro ao gerar a imagem da campanha: ${imageError.message}`);
+        toast.error('Erro na Geração da Imagem', {
+          description: `Ocorreu um erro ao gerar a imagem da campanha: ${errorMessage}`,
+        });
       }
       console.log('[HomePage] DIAGNOSTIC: handleGenerateImage failed. Setting generatedPageUrl to null.');
       setGeneratedPageUrl(null);
@@ -1377,10 +1382,15 @@ function HomePage() {
         effectivePageTemplate = tempPageTemplate; // Update for this generation pass
         pageUpdateData.customPageTemplate = tempPageTemplate; // Persist this change
       } catch (error) {
-        if (error.message && error.message.includes('503')) {
-          toast.error(`O serviço de geração de imagem está indisponível no momento. Tente novamente mais tarde para o post #${index + 1}.`);
+        const errorMessage = error.message || 'An unknown error occurred.';
+        if (errorMessage.includes('503') || errorMessage.toLowerCase().includes('service unavailable')) {
+          toast.error(`Serviço indisponível (Post #${index + 1})`, {
+            description: 'O serviço de geração de imagem está sobrecarregado. Por favor, tente gerar esta imagem novamente em alguns minutos.',
+          });
         } else {
-          toast.error(`Falha ao gerar imagem para o post #${index + 1}: ${error.message}`);
+          toast.error(`Falha na Imagem (Post #${index + 1})`, {
+            description: `Não foi possível gerar a imagem: ${errorMessage}`,
+          });
         }
       }
     }
