@@ -136,7 +136,7 @@ const ConfigPage = () => {
                                 {imageModels.map((model) => (
                                     <MenuItem key={model.name} value={model.name}>
                                         {model.displayName} ({model.name.replace('models/', '')})
-                                    </Ite`m>
+                                    </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
