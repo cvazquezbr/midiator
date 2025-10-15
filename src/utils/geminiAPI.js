@@ -75,19 +75,103 @@ class GeminiAPI {
   }
 
   async generateImage(promptString, purpose = 'Geração de Imagem') {
-    // Implementation omitted for brevity
+    if (!this.isInitialized) {
+      throw new Error('GeminiAPI não foi inicializada. Chame initialize() primeiro.');
+    }
+    if (!promptString) {
+      throw new Error('O prompt não pode ser vazio.');
+    }
+
+    const model = getGeminiImageModel() || 'gemini-2.0-flash-preview-image-generation';
+    console.log(`[${purpose}] Iniciando chamada à API de Imagem Gemini com o modelo ${model}.`);
+    console.log(`[${purpose}] Prompt:`, promptString);
+
+    const apiUrl = `${GEMINI_API_BASE_URL}/${model}:generateContent?key=${this.apiKey}`;
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: promptString
+            }]
+          }],
+          generationConfig: {
+            responseModalities: ["TEXT", "IMAGE"]
+          },
+          safetySettings: [
+            {
+              category: 'HARM_CATEGORY_HARASSMENT',
+              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+            },
+            {
+              category: 'HARM_CATEGORY_HATE_SPEECH',
+              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+            },
+            {
+              category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+            },
+            {
+              category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+              threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: { message: response.statusText } }));
+        const errorMessage = errorData.error?.message || `Erro ${response.status}`;
+        console.error('Erro da API Gemini (Imagem):', errorData);
+        throw new Error(`Erro da API Gemini (Imagem): ${errorMessage}`);
+      }
+
+      const responseData = await response.json();
+      console.log(`[${purpose}] Resposta da API de Imagem Gemini (bruta):`, responseData);
+
+      // Check for prompt feedback which indicates a safety block
+      if (responseData.promptFeedback && responseData.promptFeedback.blockReason) {
+        const blockReason = responseData.promptFeedback.blockReason;
+        const safetyRatings = responseData.promptFeedback.safetyRatings;
+        console.error(`[${purpose}] A solicitação foi bloqueada pela API Gemini. Razão: ${blockReason}`);
+        console.error(`[${purpose}] Detalhes de Segurança:`, safetyRatings);
+        throw new Error(`A geração de imagem foi bloqueada por questões de segurança: ${blockReason}. Verifique o conteúdo do seu prompt.`);
+      }
+
+      const imagePart = responseData.candidates?.[0]?.content?.parts?.find(part => part.inlineData);
+      if (imagePart) {
+        console.log(`[${purpose}] Imagem Base64 recebida (tamanho: ${imagePart.inlineData.data.length} bytes).`);
+        return imagePart.inlineData.data;
+      } else {
+        // This case handles when there are no candidates, but it wasn't explicitly blocked.
+        console.error('Formato de resposta inesperado da API Gemini (Imagem). Nenhum candidato ou parte de imagem encontrada:', responseData);
+        throw new Error('Nenhuma imagem foi retornada pela API. A resposta não continha dados de imagem.');
+      }
+    } catch (error) {
+      console.error('Erro ao chamar a API de imagem Gemini:', error);
+      if (error instanceof Error && error.message.startsWith('Erro da API Gemini')) {
+        throw error;
+      }
+      throw new Error(`Falha na comunicação com a API de imagem Gemini: ${error.message}`);
+    }
   }
+}
 
   async reviseBriefing(baseText, template) {
-    const purpose = 'Revisão de Briefing';
-    console.log(`[${purpose}] Iniciando revisão de briefing com modelo estruturado.`);
+  const purpose = 'Revisão de Briefing';
+  console.log(`[${purpose}] Iniciando revisão de briefing com modelo estruturado.`);
 
-    const referenceMarkdown = template.blocks.map(b => b.content).join('\n\n');
-    const specificRules = template.blocks
-      .map(b => `### Regra para "${b.title}":\n${b.rules}`)
-      .join('\n\n');
+  const referenceMarkdown = template.blocks.map(b => b.content).join('\n\n');
+  const specificRules = template.blocks
+    .map(b => `### Regra para "${b.title}":\n${b.rules}`)
+    .join('\n\n');
 
-    const prompt = `
+  const prompt = `
 
       **DIRETIZES:**  
 
@@ -126,33 +210,33 @@ class GeminiAPI {
       \`\`\`
     `;
 
-    const responseText = await this.generateContent(prompt, purpose);
+  const responseText = await this.generateContent(prompt, purpose);
 
-    const match = responseText.match(/```json\n([\s\S]*?)\n```|```([\s\S]*?)```/);
-    let jsonString = responseText;
-    if (match) {
-      jsonString = match[1] || match[2];
-    } else {
-      const plainJsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (plainJsonMatch) {
-        jsonString = plainJsonMatch[0];
-      }
-    }
-
-    try {
-      const parsed = JSON.parse(jsonString);
-      console.log(`[${purpose}] JSON extraído e parseado com sucesso.`);
-      return parsed;
-    } catch (e) {
-      console.error(`[${purpose}] Falha ao parsear JSON da resposta da IA:`, e);
-      console.error(`[${purpose}] String JSON que falhou:`, jsonString);
-      throw new Error("A resposta da IA não continha um JSON válido.");
+  const match = responseText.match(/```json\n([\s\S]*?)\n```|```([\s\S]*?)```/);
+  let jsonString = responseText;
+  if (match) {
+    jsonString = match[1] || match[2];
+  } else {
+    const plainJsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (plainJsonMatch) {
+      jsonString = plainJsonMatch[0];
     }
   }
+
+  try {
+    const parsed = JSON.parse(jsonString);
+    console.log(`[${purpose}] JSON extraído e parseado com sucesso.`);
+    return parsed;
+  } catch (e) {
+    console.error(`[${purpose}] Falha ao parsear JSON da resposta da IA:`, e);
+    console.error(`[${purpose}] String JSON que falhou:`, jsonString);
+    throw new Error("A resposta da IA não continha um JSON válido.");
+  }
+}
 
   async generateBlockSuggestion(title, context) {
-    // Implementation omitted for brevity
-  }
+  // Implementation omitted for brevity
+}
 }
 
 const geminiAPI = new GeminiAPI();
