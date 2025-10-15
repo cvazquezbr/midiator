@@ -1,5 +1,3 @@
-import {Pool} from '@vercel/postgres';
-
 export const config = {
     runtime: 'edge',
 };
