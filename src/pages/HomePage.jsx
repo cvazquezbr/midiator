@@ -704,7 +704,6 @@ function HomePage() {
     setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     setActiveStep(1);
   };
-  const { applyLoadedCampaign } = useCampaign();
 
   const handleEditCampaign = async (campaign) => {
     toast.info(`Carregando "${campaign.name}" para edição...`);
