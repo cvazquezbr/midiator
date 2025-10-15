@@ -77,11 +77,8 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
   const uniqueUrlsToUpload = new Map(); // Map<string, { blob: Blob }>
   traverseState(workingState, (key, value) => {
     if (typeof value === 'string' && value.startsWith('blob:')) {
-      const blob = allPendingAssets[value];
-      if (blob) {
-        if (!uniqueUrlsToUpload.has(value)) {
-          uniqueUrlsToUpload.set(value, { blob });
-        }
+      if (allPendingAssets[value] && !uniqueUrlsToUpload.has(value)) {
+        uniqueUrlsToUpload.set(value, { blob: allPendingAssets[value] });
       }
     }
   });
