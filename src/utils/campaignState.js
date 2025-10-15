@@ -82,8 +82,6 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
         if (!uniqueUrlsToUpload.has(value)) {
           uniqueUrlsToUpload.set(value, { blob });
         }
-      } else {
-        console.warn(`[serializeCampaignData] Found blob URL ${value} in state, but it was not in the pendingAssets map. It will not be uploaded.`);
       }
     }
   });
