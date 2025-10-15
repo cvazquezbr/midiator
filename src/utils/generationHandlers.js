@@ -229,6 +229,9 @@ export const generateCampaignImage = async ({ prompt, aspectRatio, colors = [] }
   }
 
   const base64Image = await geminiAPI.generateImage(finalImagePrompt, 'Geração de Imagem de Campanha');
+  if (typeof base64Image !== 'string' || base64Image.trim() === '') {
+    throw new Error('A API de geração de imagem retornou uma resposta vazia ou inválida.');
+  }
   return `data:image/png;base64,${base64Image}`;
 };
 
