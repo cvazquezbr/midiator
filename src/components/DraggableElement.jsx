@@ -80,24 +80,19 @@ const DraggableElementInternal = ({
 
   // useEffect para renderização do canvas foi REMOVIDO
   useEffect(() => {
-    // This effect resolves blob URLs to a displayable format.
     let objectUrl = null;
-    if (content && content.startsWith('blob:') && pendingAssets) {
+    // If content is a key in pendingAssets, it's a new blob; create a URL for it.
+    if (pendingAssets && pendingAssets[content]) {
       const blob = pendingAssets[content];
-      if (blob) {
-        objectUrl = URL.createObjectURL(blob);
-        setDisplayUrl(objectUrl);
-      } else {
-        // Blob not found, maybe it's from a previous session and now invalid.
-        // Show a placeholder or a broken image indicator.
-        setDisplayUrl(null); // Or a path to a broken image asset
-      }
+      objectUrl = URL.createObjectURL(blob);
+      setDisplayUrl(objectUrl);
     } else {
+      // Otherwise, assume content is already a valid URL (http, or a blob: URL from restoration).
       setDisplayUrl(content);
     }
 
     return () => {
-      // Clean up the created object URL to prevent memory leaks.
+      // If we created an object URL, we must revoke it to avoid memory leaks.
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
       }
