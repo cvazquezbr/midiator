@@ -132,14 +132,12 @@ export const drawTextWithEffects = async (ctx, text, x, y, style, maxWidth, maxH
 
 const loadImage = (src, pendingAssets = {}) => {
   return new Promise((resolve, reject) => {
-    console.log(`[loadImage] src: ${src}, pendingAssets keys:`, pendingAssets ? Object.keys(pendingAssets) : 'null');
     const img = new Image();
     let finalSrc = src;
 
     // Check if the src is a key in our pendingAssets map.
     const pendingBlob = pendingAssets[src];
     if (pendingBlob) {
-      console.log(`[loadImage] Found key in pendingAssets. Creating object URL.`);
       // If it is, create a temporary object URL for the canvas to use.
       finalSrc = URL.createObjectURL(pendingBlob);
       // No cross-origin needed for blob URLs.
