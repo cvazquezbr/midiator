@@ -319,7 +319,7 @@ const PageEditor = ({
       </DialogTitle>
       <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column' }}>
         <Grid container spacing={2} sx={{ flexGrow: 1 }}>
-          <Grid item xs={12} md={isMobile ? 12 : 8} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Grid item xs={12} md={isMobile ? 12 : 8} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
             <FieldPositioner
               aspectRatio={aspectRatio}
               csvHeaders={csvHeaders}
