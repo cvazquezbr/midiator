@@ -131,6 +131,7 @@ const PageGeneratorFrontendOnly = ({
             fieldStyles: stylesToUse,
             fontScale: pageData.fontScale || 1,
             aspectRatio,
+            pendingAssets,
           }).catch(error => {
             console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${pageData.index}:`, error);
             return pageData;
@@ -186,6 +187,7 @@ const PageGeneratorFrontendOnly = ({
         fontScale,
         pageTemplate: pageTemplate,
         aspectRatio,
+        pendingAssets,
       })
       .then(pageData => {
         setProgress(p => p + 1);
