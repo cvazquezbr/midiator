@@ -272,12 +272,21 @@ function HomePage() {
   };
 
 
-  const applyAppState = (state) => {
-    if (!state) return;
+  const _applyLoadedCampaignState = (loaded) => {
+    if (!loaded || !loaded.campaignData) {
+      console.warn("Attempted to apply null or invalid campaign state.");
+      return;
+    }
+    console.log("Applying loaded campaign state:", loaded);
+    const { campaignData: state, pendingAssets: newPendingAssets, autorId, personaId, paletteId: newPaletteId } = loaded;
 
-    console.log("Applying loaded state:", state);
+    setPendingAssets(newPendingAssets || {});
+    setCurrentCampaign(loaded.campaign);
+    setSelectedAutorForCampaign(autorId);
+    setSelectedPersonaForCampaign(personaId);
+    setPaletteId(newPaletteId);
 
-    setActiveStep(state.activeStep ?? 0);
+    setActiveStep(state.activeStep ?? 1); // Default to step 1 if not specified
     setSidebarOpen(state.sidebarOpen ?? !isMobile);
 
     setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
@@ -854,41 +863,14 @@ function HomePage() {
 
     setIsLoading(true);
     try {
-      const loadedCampaign = await loadCampaign(campaign.id);
-      console.log("Loaded campaign data from DB:", loadedCampaign);
+      const completeState = await loadCampaign(campaign.id);
 
-      // When a campaign is loaded, it now comes with a 'pendingAssets' map
-      // containing the blobs for any images that were downloaded.
-      if (loadedCampaign.pendingAssets) {
-        setPendingAssets(loadedCampaign.pendingAssets);
-      }
+      React.startTransition(() => {
+        _applyLoadedCampaignState(completeState);
+        setActiveStep(3); // Navigate to the editor after state is applied
+      });
 
-      // Set the current campaign first to ensure its state is updated before any navigation
-      // or re-rendering is triggered by applyAppState.
-      setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
-
-      // Apply the rest of the general state from campaign_data
-      applyAppState(loadedCampaign.campaign_data);
-
-      // Explicitly set the author and persona IDs from the top-level of the loaded campaign
-      setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
-      setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
-
-      // Set palette ID: if a DB-level palette_id exists, use it. Otherwise,
-      // check if a custom palette exists in the loaded data and set the ID to "custom".
-      const dbPaletteId = loadedCampaign.palette_id;
-      const hasCustomPalette = loadedCampaign.campaign_data?.customPalette?.colors?.length > 0;
-
-      if (dbPaletteId) {
-        setPaletteId(dbPaletteId);
-      } else if (hasCustomPalette) {
-        setPaletteId('custom');
-      } else {
-        setPaletteId(null);
-      }
-      toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
-      // Navigate directly to the page editor step after loading
-      setActiveStep(3);
+      toast.success(`Campanha "${completeState.campaign.name}" carregada com sucesso!`);
     } catch (err) {
       toast.error(err.message);
     } finally {
