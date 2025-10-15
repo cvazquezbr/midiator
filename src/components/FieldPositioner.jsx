@@ -283,7 +283,7 @@ const FieldPositioner = ({
 
     // Add page images
     (pageTemplate.images || []).forEach(image => {
-        const imageUrl = image.src || image.url || image.imageUrl;
+        const imageUrl = image.src || image.imageUrl;
         if (image.visible === false || !imageUrl) return;
         const elementType = image.type === 'background' ? 'image' : image.type;
 
@@ -317,7 +317,7 @@ const FieldPositioner = ({
 
     const textElements = (csvHeaders || [])
       .map(header => {
-        const position = fieldPositions ? fieldPositions[header] : null;
+        const position = fieldPositions[header];
         const style = completeFieldStyles[header];
         if (!position || !position.visible) return null;
 

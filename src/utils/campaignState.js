@@ -1,5 +1,6 @@
 import { toast } from 'sonner';
 import { upload } from '@vercel/blob/client';
+import { v4 as uuidv4 } from 'uuid';
 import fetchWithAuth from './fetchWithAuth';
 import { traverseState } from './stateTraversal';
 
@@ -72,12 +73,14 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
   await Promise.all(dataUriConversionPromises);
   console.log('[serializeCampaignData] Step 1 COMPLETE.');
 
-  // --- Step 2: Collect all unique `blob:` URLs to be uploaded ---
-  console.log('[serializeCampaignData] Step 2: Collecting unique blob URLs...');
+  // --- Step 2: Collect all unique asset keys to be uploaded ---
+  console.log('[serializeCampaignData] Step 2: Collecting unique asset keys from state...');
   const uniqueUrlsToUpload = new Map(); // Map<string, { blob: Blob }>
   traverseState(workingState, (key, value) => {
-    if (typeof value === 'string' && value.startsWith('blob:')) {
-      if (allPendingAssets[value] && !uniqueUrlsToUpload.has(value)) {
+    // An asset is considered "pending" if its URL/key exists in the allPendingAssets map.
+    // This correctly identifies both new assets (with blob: URLs) and hydrated assets (with hydrated_uuid keys).
+    if (typeof value === 'string' && allPendingAssets[value]) {
+      if (!uniqueUrlsToUpload.has(value)) {
         uniqueUrlsToUpload.set(value, { blob: allPendingAssets[value] });
       }
     }
@@ -195,10 +198,12 @@ export const deserializeCampaignData = async (loadedState) => {
       .then(blob => {
         const filename = downloadUrl.split('/').pop().split('?')[0] || `downloaded_asset_${Date.now()}`;
         const file = new File([blob], filename, { type: blob.type });
-        const tempUrl = URL.createObjectURL(file);
 
-        newlyCreatedAssets[tempUrl] = file; // For the UI's pendingAssets state
-        permanentToTempUrlMap.set(downloadUrl, tempUrl); // For replacement in the next step
+        // Generate a unique, stable key for the asset. This is the crucial change.
+        const assetKey = `hydrated_${uuidv4()}`;
+
+        newlyCreatedAssets[assetKey] = file; // Use the stable key for the pendingAssets map
+        permanentToTempUrlMap.set(downloadUrl, assetKey); // Map the permanent URL to the stable key
       })
       .catch(error => {
         console.error(`[deserializeCampaignData] Failed to download asset: ${downloadUrl}`, error);
