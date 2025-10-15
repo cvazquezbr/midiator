@@ -201,7 +201,7 @@ const MainAppBar = ({
             Modelo de Briefing
           </MenuItem>
           <Divider />
-          <MenuItem onClick={() => { handleUserMenuClose(); setShowSetupModal(true); }}>
+          <MenuItem onClick={() => { navigate('/config'); handleUserMenuClose(); }}>
             <Settings sx={{ mr: 1 }} />
             Configurações
           </MenuItem>
