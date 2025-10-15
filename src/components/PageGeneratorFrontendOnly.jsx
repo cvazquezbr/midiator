@@ -105,6 +105,17 @@ const PageGeneratorFrontendOnly = ({
 
         effectivePageTemplate = tempPageTemplate;
         pageUpdateData.customPageTemplate = tempPageTemplate;
+
+        // Explicitly update the local state to ensure the new template is used
+        setGeneratedPages(currentPages => currentPages.map(p => {
+          if (p.index === index) {
+            return {
+              ...p,
+              customPageTemplate: tempPageTemplate,
+            };
+          }
+          return p;
+        }));
       } catch (error) {
         const errorMessage = error.message || "Um erro desconhecido ocorreu.";
         toast.error(`Falha ao gerar imagem para o post #${index + 1}: ${errorMessage}`);
