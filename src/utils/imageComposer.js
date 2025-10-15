@@ -18,19 +18,31 @@ export const urlToBlob = async (url) => {
 };
 
 export const dataURLtoBlob = (dataurl) => {
-    if (!dataurl) return null;
-    const arr = dataurl.split(',');
-    if (arr.length < 2) return null;
-    const mimeMatch = arr[0].match(/:(.*?);/);
-    if (!mimeMatch) return null;
-    const mime = mimeMatch[1];
-    const bstr = atob(arr[1].split(';base64,').pop());
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while(n--){
-        u8arr[n] = bstr.charCodeAt(n);
+    if (!dataurl || typeof dataurl !== 'string') {
+        throw new Error('Invalid input: dataurl must be a non-empty string.');
     }
-    return new Blob([u8arr], {type:mime});
+
+    const match = dataurl.match(/^data:(.*?);base64,(.*)$/);
+    if (!match) {
+        const preview = dataurl.substring(0, 100);
+        throw new Error(`Invalid data:URL format. The provided string is not a valid Base64 data URL. Content starts with: "${preview}...".`);
+    }
+
+    const mime = match[1];
+    const base64Data = match[2];
+
+    try {
+        const bstr = atob(base64Data);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while(n--){
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], {type:mime});
+    } catch (e) {
+        // This will catch the "not correctly encoded" error
+        throw new Error(`Failed to decode Base64 string: ${e.message}`, { cause: e });
+    }
 };
 
 export const wrapTextInArea = (ctx, text, style, maxWidth, maxHeight) => {
