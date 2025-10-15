@@ -81,18 +81,24 @@ const DraggableElementInternal = ({
   // useEffect para renderização do canvas foi REMOVIDO
   useEffect(() => {
     let objectUrl = null;
-    // If content is a key in pendingAssets, it's a new blob; create a URL for it.
+
+    // Case 1: The content is a key for a blob in our pendingAssets map.
     if (pendingAssets && pendingAssets[content]) {
       const blob = pendingAssets[content];
       objectUrl = URL.createObjectURL(blob);
       setDisplayUrl(objectUrl);
-    } else {
-      // Otherwise, assume content is already a valid URL (http, or a blob: URL from restoration).
+    }
+    // Case 2: The content is already a valid, directly usable URL.
+    else if (content && (content.startsWith('http') || content.startsWith('blob:') || content.startsWith('data:'))) {
       setDisplayUrl(content);
+    }
+    // Case 3: The content is not a valid key yet (race condition) or is invalid. Show nothing.
+    else {
+      setDisplayUrl(null);
     }
 
     return () => {
-      // If we created an object URL, we must revoke it to avoid memory leaks.
+      // If we created a temporary object URL, we must revoke it to avoid memory leaks.
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
       }
