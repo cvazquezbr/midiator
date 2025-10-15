@@ -106,7 +106,8 @@ const PageGeneratorFrontendOnly = ({
         effectivePageTemplate = tempPageTemplate;
         pageUpdateData.customPageTemplate = tempPageTemplate;
       } catch (error) {
-        toast.error(`Falha ao gerar imagem para o post #${index + 1}: ${error.message}`);
+        const errorMessage = error.message || "Um erro desconhecido ocorreu.";
+        toast.error(`Falha ao gerar imagem para o post #${index + 1}: ${errorMessage}`);
       }
     }
 
