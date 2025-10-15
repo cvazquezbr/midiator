@@ -317,7 +317,7 @@ const FieldPositioner = ({
 
     const textElements = (csvHeaders || [])
       .map(header => {
-        const position = fieldPositions[header];
+        const position = fieldPositions ? fieldPositions[header] : null;
         const style = completeFieldStyles[header];
         if (!position || !position.visible) return null;
 

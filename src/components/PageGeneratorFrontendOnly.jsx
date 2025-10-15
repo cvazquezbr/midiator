@@ -151,7 +151,7 @@ const PageGeneratorFrontendOnly = ({
       };
       regenerateMissingThumbnails();
     }
-  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, pageTemplate, brandElements, setGeneratedPagesData, aspectRatio]);
+  }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, pageTemplate, brandElements, setGeneratedPagesData, aspectRatio, pendingAssets]);
 
   const generatePages = async () => {
     if (isGenerating) return;
