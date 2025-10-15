@@ -40,8 +40,8 @@ export const dataURLtoBlob = (dataurl) => {
         }
         return new Blob([u8arr], {type:mime});
     } catch (e) {
-        // This will catch the "not correctly encoded" error
-        throw new Error(`Failed to decode Base64 string: ${e.message}`, { cause: e });
+        const preview = String(base64Data).substring(0, 100);
+        throw new Error(`Failed to decode Base64 string. The string may be corrupted or not Base64. Preview: "${preview}..."`, { cause: e });
     }
 };
 
