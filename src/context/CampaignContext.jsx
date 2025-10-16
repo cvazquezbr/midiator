@@ -17,32 +17,27 @@ export const useCampaign = () => {
   return context;
 };
 
+const initialCampaignState = {
+  csvData: [],
+  csvHeaders: [],
+  fieldPositions: {},
+  fieldStyles: {},
+  brandElements: [],
+  pageTemplate: defaultPageTemplate,
+  selectedField: null,
+  currentCampaign: null,
+  generatedPagesData: [],
+  generatedVideos: [],
+  aspectRatio: '1:1',
+  pendingAssets: {},
+  colors: [],
+  paletteId: null,
+  customPalette: null,
+  imageColorPalette: [],
+};
+
 export const CampaignProvider = ({ children }) => {
-  // Estado da Campanha
-  const [csvData, setCsvData] = useState([]);
-  const [csvHeaders, setCsvHeaders] = useState([]);
-  const [fieldPositions, setFieldPositions] = useState({});
-  const [fieldStyles, setFieldStyles] = useState({});
-  const [brandElements, setBrandElements] = useState([]);
-  const [pageTemplate, setPageTemplate] = useState(defaultPageTemplate);
-  const [selectedField, setSelectedField] = useState(null);
-  const [currentCampaign, setCurrentCampaign] = useState(null);
-  const [generatedPagesData, setGeneratedPagesData] = useState([]);
-  const [generatedVideos, setGeneratedVideos] = useState([]);
-  const [aspectRatio, setAspectRatio] = useState('1:1');
-  /**
-   * @type {[Object<string, Blob>, Function]}
-   * @description Holds a map of local `blob:` URLs to their corresponding Blob objects.
-   * This state is the single source of truth for all temporary assets that have been
-   * generated or uploaded by the user but not yet saved to the backend.
-   * The `blob:` URL is created via `URL.createObjectURL()` and must be manually revoked
-   * using `URL.revokeObjectURL()` when the asset is no longer needed to prevent memory leaks.
-   */
-  const [pendingAssets, setPendingAssets] = useState({});
-  const [colors, setColors] = useState([]);
-  const [paletteId, setPaletteId] = useState(null);
-  const [customPalette, setCustomPalette] = useState(null);
-  const [imageColorPalette, setImageColorPalette] = useState([]);
+  const [campaignState, setCampaignState] = useState(initialCampaignState);
 
   const applyLoadedCampaign = useCallback((loaded) => {
     if (!loaded || !loaded.campaignData) {
@@ -50,39 +45,33 @@ export const CampaignProvider = ({ children }) => {
       return;
     }
     console.log("[CampaignContext] Applying loaded campaign state:", loaded);
-    const { campaignData: state, pendingAssets: newPendingAssets, autorId, personaId, paletteId: newPaletteId, campaign } = loaded;
+    const { campaignData: state, pendingAssets: newPendingAssets, campaign } = loaded;
 
-    setPendingAssets(newPendingAssets || {});
-    setCurrentCampaign(campaign);
-    // setSelectedAutorForCampaign(autorId); // This state lives in HomePage
-    // setSelectedPersonaForCampaign(personaId); // This state lives in HomePage
-    setPaletteId(newPaletteId);
+    const newPageTemplate = state.pageTemplate
+      ? {
+          ...defaultPageTemplate,
+          ...state.pageTemplate,
+          images: (state.pageTemplate.images || []).map(img => ({
+              ...createNewImageElement(null),
+              ...img
+          })),
+        }
+      : defaultPageTemplate;
 
-    // setActiveStep(state.activeStep ?? 1); // This state lives in HomePage
-    // setSidebarOpen(state.sidebarOpen ?? !isMobile); // This state lives in HomePage
-
-    setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
-    setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
-    setGeneratedPagesData(Array.isArray(state.generatedPagesData) ? state.generatedPagesData : []);
-    setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
-
-    if (state.pageTemplate) {
-        const loadedTemplate = state.pageTemplate;
-        setPageTemplate({
-            ...defaultPageTemplate,
-            ...loadedTemplate,
-            images: (loadedTemplate.images || []).map(img => ({
-                ...createNewImageElement(null),
-                ...img
-            }))
-        });
-    } else {
-        setPageTemplate(defaultPageTemplate);
-    }
-
-    setAspectRatio(state.aspectRatio ?? '1:1');
-    setFieldPositions(state.fieldPositions ?? {});
-    setFieldStyles(state.fieldStyles ?? {});
+    setCampaignState({
+      ...initialCampaignState, // Start from a clean slate
+      pendingAssets: newPendingAssets || {},
+      currentCampaign: campaign,
+      csvData: Array.isArray(state.csvData) ? state.csvData : [],
+      csvHeaders: Array.isArray(state.csvHeaders) ? state.csvHeaders : [],
+      generatedPagesData: Array.isArray(state.generatedPagesData) ? state.generatedPagesData : [],
+      brandElements: Array.isArray(state.brandElements) ? state.brandElements : [],
+      pageTemplate: newPageTemplate,
+      aspectRatio: state.aspectRatio ?? '1:1',
+      fieldPositions: state.fieldPositions ?? {},
+      fieldStyles: state.fieldStyles ?? {},
+      // Note: paletteId, autorId, personaId are managed in HomePage state, not context
+    });
   }, []);
 
   // Centralized asset handlers
@@ -92,18 +81,18 @@ export const CampaignProvider = ({ children }) => {
       return null;
     }
     const blobUrl = URL.createObjectURL(blob);
-    setPendingAssets(prev => ({
+    setCampaignState(prev => ({
       ...prev,
-      [blobUrl]: blob,
+      pendingAssets: { ...prev.pendingAssets, [blobUrl]: blob },
     }));
     console.log(`[CampaignContext] Synchronously added new asset: ${blobUrl}`);
     return blobUrl;
   }, []);
 
   const addPendingAssetMap = useCallback((assetMap) => {
-    setPendingAssets(prev => ({
+    setCampaignState(prev => ({
       ...prev,
-      ...assetMap,
+      pendingAssets: { ...prev.pendingAssets, ...assetMap },
     }));
     console.log('[CampaignContext] Synchronously added asset map.');
   }, []);
@@ -113,92 +102,42 @@ export const CampaignProvider = ({ children }) => {
       console.error("[removePendingAsset] Invalid argument. Expected a blob URL string.", blobUrl);
       return;
     }
-    setPendingAssets(prev => {
-      const newAssets = { ...prev };
+    setCampaignState(prev => {
+      const newAssets = { ...prev.pendingAssets };
       if (newAssets[blobUrl]) {
         URL.revokeObjectURL(blobUrl);
         delete newAssets[blobUrl];
         console.log(`[CampaignContext] Removed and revoked asset: ${blobUrl}`);
       }
-      return newAssets;
+      return { ...prev, pendingAssets: newAssets };
     });
   }, []);
 
   // Effect to clean up all blob URLs on unmount
   useEffect(() => {
     return () => {
-      setPendingAssets(currentAssets => {
-        Object.keys(currentAssets).forEach(url => {
+      setCampaignState(prev => {
+        Object.keys(prev.pendingAssets).forEach(url => {
           console.log(`[CampaignContext] Revoking blob URL on unmount: ${url}`);
           URL.revokeObjectURL(url);
         });
-        return {}; // Return an empty object to clear the state
+        return { ...prev, pendingAssets: {} };
       });
     };
   }, []);
 
   const value = useMemo(() => ({
-    // State
-    csvData,
-    csvHeaders,
-    fieldPositions,
-    fieldStyles,
-    brandElements,
-    pageTemplate,
-    selectedField,
-    currentCampaign,
-    generatedPagesData,
-    generatedVideos,
-    aspectRatio,
-    pendingAssets,
-    colors,
-    paletteId,
-    customPalette,
-    imageColorPalette,
-
-    // Setters
-    setCsvData,
-    setCsvHeaders,
-    setFieldPositions,
-    setFieldStyles,
-    setBrandElements,
-    setPageTemplate,
-    setSelectedField,
-    setCurrentCampaign,
-    setGeneratedPagesData,
-    setGeneratedVideos,
-    setAspectRatio,
-    setPendingAssets, // Kept for direct manipulation if needed, e.g., on load
-    setColors,
-    setPaletteId,
-    setCustomPalette,
-    setImageColorPalette,
-
-    // Asset Management
+    ...campaignState,
+    setCampaignState, // Expose the unified setter
+    // Asset Management - these can remain as they modify a part of the unified state
     addPendingAsset,
     addPendingAssetMap,
     removePendingAsset,
     applyLoadedCampaign,
-
     // Constants
     defaultPageTemplate,
   }), [
-    csvData,
-    csvHeaders,
-    fieldPositions,
-    fieldStyles,
-    brandElements,
-    pageTemplate,
-    selectedField,
-    currentCampaign,
-    generatedPagesData,
-    generatedVideos,
-    aspectRatio,
-    pendingAssets,
-    colors,
-    paletteId,
-    customPalette,
-    imageColorPalette,
+    campaignState,
     addPendingAsset,
     addPendingAssetMap,
     removePendingAsset,
