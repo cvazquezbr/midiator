@@ -711,48 +711,34 @@ function HomePage() {
     setActiveStep(1);
   };
 
-  const handleEditCampaign = async (campaign) => {
-    toast.info(`Carregando "${campaign.name}" para edição...`);
-    try {
-      await checkAuthStatus();
-    } catch (error) {
-      toast.error(error.message);
-      return;
-    }
+  useEffect(() => {
+    if (currentCampaign && campaignState.campaignData) {
+      const { campaignData: state, autorId, personaId } = campaignState;
 
-    setIsLoading(true);
-    try {
-      const completeState = await loadCampaign(campaign.id);
-
-      // The context will handle setting all of its state.
-      applyLoadedCampaign(completeState);
-
-      // Now, set the state that is local to HomePage.
-      const { campaignData: state, autorId, personaId } = completeState;
       setSelectedAutorForCampaign(autorId);
       setSelectedPersonaForCampaign(personaId);
       setActiveStep(3);
 
       const firstImageSrc = state.pageTemplate?.images?.[0]?.src;
       if (firstImageSrc) {
-          const img = new Image();
-          img.crossOrigin = 'Anonymous';
-          img.onload = () => {
-              setOriginalImageSize({ width: img.width, height: img.height });
-              extractColorPalette(firstImageSrc, setImageColorPalette);
-          };
-          img.onerror = () => {
-              setOriginalImageSize(DEFAULT_IMAGE_SIZE);
-              setImageColorPalette([]);
-          };
-          const blob = completeState.pendingAssets[firstImageSrc];
-          if (blob) {
-            img.src = URL.createObjectURL(blob);
-          } else {
-            img.src = firstImageSrc;
-          }
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+          setOriginalImageSize({ width: img.width, height: img.height });
+          extractColorPalette(firstImageSrc, (palette) => setCampaignState(prev => ({ ...prev, imageColorPalette: palette })));
+        };
+        img.onerror = () => {
+          setOriginalImageSize(DEFAULT_IMAGE_SIZE);
+          setCampaignState(prev => ({ ...prev, imageColorPalette: [] }));
+        };
+        const blob = campaignState.pendingAssets[firstImageSrc];
+        if (blob) {
+          img.src = URL.createObjectURL(blob);
+        } else {
+          img.src = firstImageSrc;
+        }
       } else {
-          setOriginalImageSize(getDimensionsFromAspectRatio(state.aspectRatio) || DEFAULT_IMAGE_SIZE);
+        setOriginalImageSize(getDimensionsFromAspectRatio(state.aspectRatio) || DEFAULT_IMAGE_SIZE);
       }
 
       setProblema(state.problema ?? '');
@@ -764,10 +750,20 @@ function HomePage() {
       setFollowupPostsQuantity(state.followupPostsQuantity ?? 10);
       setPromptText(state.promptText ?? '');
 
-      toast.success(`Campanha "${completeState.campaign.name}" carregada com sucesso!`);
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
+      toast.success(`Campanha "${currentCampaign.name}" carregada com sucesso!`);
+      setIsLoading(false);
+    }
+  }, [currentCampaign, campaignState, setCampaignState, extractColorPalette]);
+
+  const handleEditCampaign = async (campaign) => {
+    toast.info(`Carregando "${campaign.name}" para edição...`);
+    setIsLoading(true);
+    try {
+      await checkAuthStatus();
+      const completeState = await loadCampaign(campaign.id);
+      applyLoadedCampaign(completeState);
+    } catch (error) {
+      toast.error(error.message);
       setIsLoading(false);
     }
   };
