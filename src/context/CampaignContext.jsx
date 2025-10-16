@@ -52,39 +52,37 @@ export const CampaignProvider = ({ children }) => {
     console.log("[CampaignContext] Applying loaded campaign state:", loaded);
     const { campaignData: state, pendingAssets: newPendingAssets, autorId, personaId, paletteId: newPaletteId, campaign } = loaded;
 
-    React.startTransition(() => {
-        setPendingAssets(newPendingAssets || {});
-        setCurrentCampaign(campaign);
-        // setSelectedAutorForCampaign(autorId); // This state lives in HomePage
-        // setSelectedPersonaForCampaign(personaId); // This state lives in HomePage
-        setPaletteId(newPaletteId);
+    setPendingAssets(newPendingAssets || {});
+    setCurrentCampaign(campaign);
+    // setSelectedAutorForCampaign(autorId); // This state lives in HomePage
+    // setSelectedPersonaForCampaign(personaId); // This state lives in HomePage
+    setPaletteId(newPaletteId);
 
-        // setActiveStep(state.activeStep ?? 1); // This state lives in HomePage
-        // setSidebarOpen(state.sidebarOpen ?? !isMobile); // This state lives in HomePage
+    // setActiveStep(state.activeStep ?? 1); // This state lives in HomePage
+    // setSidebarOpen(state.sidebarOpen ?? !isMobile); // This state lives in HomePage
 
-        setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
-        setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
-        setGeneratedPagesData(Array.isArray(state.generatedPagesData) ? state.generatedPagesData : []);
-        setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
+    setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
+    setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
+    setGeneratedPagesData(Array.isArray(state.generatedPagesData) ? state.generatedPagesData : []);
+    setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
 
-        if (state.pageTemplate) {
-            const loadedTemplate = state.pageTemplate;
-            setPageTemplate({
-                ...defaultPageTemplate,
-                ...loadedTemplate,
-                images: (loadedTemplate.images || []).map(img => ({
-                    ...createNewImageElement(null),
-                    ...img
-                }))
-            });
-        } else {
-            setPageTemplate(defaultPageTemplate);
-        }
+    if (state.pageTemplate) {
+        const loadedTemplate = state.pageTemplate;
+        setPageTemplate({
+            ...defaultPageTemplate,
+            ...loadedTemplate,
+            images: (loadedTemplate.images || []).map(img => ({
+                ...createNewImageElement(null),
+                ...img
+            }))
+        });
+    } else {
+        setPageTemplate(defaultPageTemplate);
+    }
 
-        setAspectRatio(state.aspectRatio ?? '1:1');
-        setFieldPositions(state.fieldPositions ?? {});
-        setFieldStyles(state.fieldStyles ?? {});
-    });
+    setAspectRatio(state.aspectRatio ?? '1:1');
+    setFieldPositions(state.fieldPositions ?? {});
+    setFieldStyles(state.fieldStyles ?? {});
   }, []);
 
   // Centralized asset handlers
