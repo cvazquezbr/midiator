@@ -3,6 +3,7 @@ import { Box, CircularProgress, Typography } from '@mui/material';
 import styles from './DraggableElement.module.css';
 import { wrapTextInArea } from '../utils/imageComposer';
 import { applyColorHighlight } from '../utils/filterUtils';
+import { useCampaign } from '../context/CampaignContext';
 
 const hexToRgba = (hex, alpha) => {
   if (!hex || hex.length < 4) {
@@ -35,8 +36,8 @@ const DraggableElementInternal = ({
   enableHtmlRendering = false,
   darkMode,
   onDoubleClick,
-  pendingAssets,
 }) => {
+  const { pendingAssets } = useCampaign();
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
