@@ -272,8 +272,6 @@ function HomePage() {
   };
 
 
-  const { applyLoadedCampaign } = useCampaign();
-
   const handleSaveCampaign = async (name) => {
     console.log(`[HomePage] Attempting to save campaign: "${name}"`);
 
