@@ -18,6 +18,7 @@ export const useCampaign = () => {
 };
 
 const initialCampaignState = {
+  campaignData: null, // This will hold the raw campaign data object
   csvData: [],
   csvHeaders: [],
   fieldPositions: {},
@@ -60,6 +61,7 @@ export const CampaignProvider = ({ children }) => {
 
     setCampaignState({
       ...initialCampaignState, // Start from a clean slate
+      campaignData: state, // Set the raw campaign data
       pendingAssets: newPendingAssets || {},
       currentCampaign: campaign,
       csvData: Array.isArray(state.csvData) ? state.csvData : [],
