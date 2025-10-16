@@ -523,13 +523,13 @@ function HomePage() {
   useEffect(() => {
     const firstImage = pageTemplate?.images?.[0];
     if (firstImage?.src) {
-      extractColorPalette(firstImage.src, setImageColorPalette);
+      extractColorPalette(firstImage.src, (palette) => setCampaignState(prev => ({ ...prev, imageColorPalette: palette })));
     } else {
       // If there's no image, ensure the image palette is empty.
       // The fallback to the campaign palette will be handled by the UI components.
-      setImageColorPalette([]);
+      setCampaignState(prev => ({ ...prev, imageColorPalette: [] }));
     }
-  }, [pageTemplate?.images?.[0]?.src, extractColorPalette, setImageColorPalette]);
+  }, [pageTemplate?.images?.[0]?.src, extractColorPalette, setCampaignState]);
 
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
