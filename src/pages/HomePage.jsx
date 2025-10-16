@@ -114,6 +114,7 @@ function HomePage() {
     addPendingAsset,
     addPendingAssetMap,
     removePendingAsset,
+    applyLoadedCampaign,
     defaultPageTemplate,
     paletteId, setPaletteId,
     customPalette, setCustomPalette,

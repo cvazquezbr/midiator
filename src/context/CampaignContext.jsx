@@ -204,6 +204,7 @@ export const CampaignProvider = ({ children }) => {
     addPendingAsset,
     addPendingAssetMap,
     removePendingAsset,
+    applyLoadedCampaign,
   ]);
 
   return (
