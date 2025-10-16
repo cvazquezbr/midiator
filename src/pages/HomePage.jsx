@@ -1442,7 +1442,7 @@ function HomePage() {
                   initialGeneratedPagesData={generatedPagesData}
                   onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
                   originalImageSize={originalImageSize}
-                  onBrandElementsChange={setBrandElements}
+                  onBrandElementsChange={(newBrandElements) => setCampaignState(prev => ({ ...prev, brandElements: newBrandElements }))}
                   fontScale={fontScale}
                   handleGenerateSinglePage={handleGenerateSinglePage}
                   aspectRatio={aspectRatio}
