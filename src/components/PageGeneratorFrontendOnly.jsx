@@ -107,50 +107,69 @@ const PageGeneratorFrontendOnly = ({
   }, []);
 
   useEffect(() => {
-    if (initialGeneratedPagesData && initialGeneratedPagesData.length > 0 && fontsLoaded) {
-      const regenerateMissingThumbnails = async () => {
-        const pagesToRegenerate = initialGeneratedPagesData.filter(img => img.record && !img.url);
-        if (pagesToRegenerate.length === 0) return;
+    // This effect is now the definitive solution for thumbnail regeneration on load.
+    // It is robust against race conditions by checking asset availability before rendering.
+    if (!initialGeneratedPagesData || initialGeneratedPagesData.length === 0 || !fontsLoaded || !pendingAssets) {
+      return;
+    }
 
-        const pagePromises = initialGeneratedPagesData.map(pageData => {
-          if (pageData.url || !pagesToRegenerate.some(r => r.index === pageData.index)) {
-            return Promise.resolve(pageData);
-          }
+    let didUpdate = false;
+    const newPagesData = [...initialGeneratedPagesData];
 
-          const positionsToUse = pageData.customFieldPositions || fieldPositions;
-          const stylesToUse = pageData.customFieldStyles || fieldStyles;
-          const elementsToUse = pageData.customBrandElements !== undefined ? pageData.customBrandElements : brandElements;
-          const pageTemplateToUse = pageData.customPageTemplate || pageTemplate;
+    const regenerationPromises = newPagesData.map(async (pageData, index) => {
+      // If the thumbnail URL already exists, or there's no record to generate from, skip.
+      if (pageData.url || !pageData.record) {
+        return;
+      }
 
-          return drawAndComposeImage({
-            record: pageData.record,
-            index: pageData.index,
-            pageTemplate: pageTemplateToUse,
-            brandElements: elementsToUse,
-            fieldPositions: positionsToUse,
-            fieldStyles: stylesToUse,
-            fontScale: pageData.fontScale || 1,
-            aspectRatio,
-            pendingAssets,
-          }).catch(error => {
-            console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${pageData.index}:`, error);
-            return pageData;
-          });
+      const pageTemplateToUse = pageData.customPageTemplate || pageTemplate;
+      const imagesInTemplate = pageTemplateToUse.images || [];
+
+      // Check if all required assets for THIS page are available in pendingAssets.
+      const allAssetsReady = imagesInTemplate.every(img => {
+        if (img.src.startsWith('hydrated_')) {
+          return !!pendingAssets[img.src];
+        }
+        return true; // Assume other URLs (blob:, http, data:) are fine.
+      });
+
+      // If assets are not ready, skip this page for now. The effect will re-run when pendingAssets updates.
+      if (!allAssetsReady) {
+        return;
+      }
+
+      try {
+        const positionsToUse = pageData.customFieldPositions || fieldPositions;
+        const stylesToUse = pageData.customFieldStyles || fieldStyles;
+        const elementsToUse = pageData.customBrandElements !== undefined ? pageData.customBrandElements : brandElements;
+
+        const regeneratedData = await drawAndComposeImage({
+          record: pageData.record,
+          index: pageData.index,
+          pageTemplate: pageTemplateToUse,
+          brandElements: elementsToUse,
+          fieldPositions: positionsToUse,
+          fieldStyles: stylesToUse,
+          fontScale: pageData.fontScale || 1,
+          aspectRatio,
+          pendingAssets, // Pass the full map down
         });
 
-        const regeneratedPages = await Promise.all(pagePromises.map(async (promise, index) => {
-          const newPageData = await promise;
-          const originalPageData = initialGeneratedPagesData[index];
-          if (newPageData === originalPageData) return originalPageData;
-          return { ...originalPageData, ...newPageData };
-        }));
+        // Replace the placeholder data with the newly generated thumbnail data.
+        newPagesData[index] = { ...pageData, ...regeneratedData };
+        didUpdate = true;
+      } catch (error) {
+        console.error(`[Thumbnail-Regen] Failed to regenerate thumbnail for index ${pageData.index}:`, error);
+        // Keep the original data on error to avoid losing it.
+      }
+    });
 
-        if (JSON.stringify(regeneratedPages) !== JSON.stringify(initialGeneratedPagesData)) {
-          setGeneratedPagesData(regeneratedPages);
-        }
-      };
-      regenerateMissingThumbnails();
-    }
+    Promise.all(regenerationPromises).then(() => {
+      if (didUpdate) {
+        setGeneratedPagesData(newPagesData);
+      }
+    });
+
   }, [initialGeneratedPagesData, fontsLoaded, fieldPositions, fieldStyles, pageTemplate, brandElements, setGeneratedPagesData, aspectRatio, pendingAssets]);
 
   const generatePages = async () => {

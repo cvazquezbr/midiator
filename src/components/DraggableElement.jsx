@@ -81,30 +81,44 @@ const DraggableElementInternal = ({
   // useEffect para renderização do canvas foi REMOVIDO
   useEffect(() => {
     let objectUrl = null;
-    console.log(`[DraggableElement Effect] content: ${content}, pendingAssets keys:`, pendingAssets ? Object.keys(pendingAssets) : 'null');
+    // Initialize to null at the start of every run.
+    setDisplayUrl(null);
 
-    // Case 1: The content is a key for a blob in our pendingAssets map.
-    if (pendingAssets && pendingAssets[content]) {
-      console.log(`[DraggableElement Effect] Case 1: Found key in pendingAssets. Creating object URL.`);
-      const blob = pendingAssets[content];
-      objectUrl = URL.createObjectURL(blob);
-      setDisplayUrl(objectUrl);
+    // Case 1: The content is a key for a hydrated asset. We MUST find it in pendingAssets.
+    if (content && content.startsWith('hydrated_')) {
+        if (pendingAssets && pendingAssets[content]) {
+            const blob = pendingAssets[content];
+            objectUrl = URL.createObjectURL(blob);
+            setDisplayUrl(objectUrl);
+        } else {
+            // The asset is expected but not yet available. Wait for re-render.
+            // setDisplayUrl(null) is already called, so we just wait.
+        }
     }
-    // Case 2: The content is already a valid, directly usable URL.
-    else if (content && (content.startsWith('http') || content.startsWith('blob:') || content.startsWith('data:'))) {
-      console.log(`[DraggableElement Effect] Case 2: Content is a direct URL.`);
-      setDisplayUrl(content);
+    // Case 2: The content is a temporary blob URL from a new upload in this session.
+    else if (content && content.startsWith('blob:')) {
+        // Find the corresponding blob in pendingAssets to create a new, stable object URL for this component instance.
+        // This is safer than assuming the incoming blob URL is still valid.
+        const blob = pendingAssets ? Object.values(pendingAssets).find(b => b instanceof Blob && URL.createObjectURL(b) === content) : null;
+        if (blob) {
+            objectUrl = URL.createObjectURL(blob);
+            setDisplayUrl(objectUrl);
+        } else if (pendingAssets && pendingAssets[content]) {
+            // Fallback for cases where the blob URL itself is used as the key
+            const directBlob = pendingAssets[content];
+            objectUrl = URL.createObjectURL(directBlob);
+            setDisplayUrl(objectUrl);
+        }
     }
-    // Case 3: The content is not a valid key yet (race condition) or is invalid. Show nothing.
-    else {
-      console.log(`[DraggableElement Effect] Case 3: No valid source found. Setting URL to null.`);
-      setDisplayUrl(null);
+    // Case 3: The content is a permanent URL (http) or an inline data URL.
+    else if (content && (content.startsWith('http') || content.startsWith('data:'))) {
+        setDisplayUrl(content);
     }
+    // Case 4: No valid source. displayUrl remains null.
 
     return () => {
       // If we created a temporary object URL, we must revoke it to avoid memory leaks.
       if (objectUrl) {
-        console.log(`[DraggableElement Cleanup] Revoking object URL: ${objectUrl}`);
         URL.revokeObjectURL(objectUrl);
       }
     };
@@ -119,10 +133,18 @@ const DraggableElementInternal = ({
     }
     if (element.type === 'image') {
        if (!displayUrl) {
-        // Render a placeholder or an error message if the URL is invalid
-        return <Box sx={{ width: '100%', height: '100%', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Typography variant="caption" color="error">Erro Imagem</Typography></Box>;
+        // If content suggests an image is coming, show a loader. Otherwise, show an error.
+        const showLoader = content && (content.startsWith('hydrated_') || content.startsWith('blob:'));
+        return (
+          <Box sx={{ width: '100%', height: '100%', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {showLoader
+              ? <CircularProgress size={24} />
+              : <Typography variant="caption" color="error">Erro Imagem</Typography>
+            }
+          </Box>
+        );
       }
-      return <img src={displayUrl} alt="Elemento de imagem" style={{ objectFit: style.objectFit || 'fill' }} />;
+      return <img src={displayUrl} alt="Elemento de imagem" style={{ width: '100%', height: '100%', objectFit: style.objectFit || 'fill' }} />;
     }
 
     if (element.type === 'cropbox') {
