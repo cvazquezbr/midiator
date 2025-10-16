@@ -279,6 +279,10 @@ const FieldPositioner = ({
   }, [csvHeaders, fieldStyles]);
 
   const renderableElements = React.useMemo(() => {
+    // Defensive check: If fieldPositions is not ready, don't try to render elements.
+    if (!fieldPositions) {
+        return [];
+    }
     const elements = [];
 
     // Add page images

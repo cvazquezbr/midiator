@@ -37,7 +37,6 @@ const DraggableElementInternal = ({
   onDoubleClick,
   pendingAssets,
 }) => {
-  console.log('[DraggableElement] PROPS RECEIVED:', { element, content });
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
@@ -84,15 +83,28 @@ const DraggableElementInternal = ({
     // Initialize to null at the start of every run.
     setDisplayUrl(null);
 
+    // --- Start of Diagnostic Logging ---
+    const hasPendingAssets = !!pendingAssets;
+    const pendingAssetKeys = hasPendingAssets ? Object.keys(pendingAssets) : [];
+    const logPayload = {
+        elementId: element.id,
+        contentType: typeof content,
+        contentValue: content,
+        hasPendingAssets,
+        pendingAssetCount: pendingAssetKeys.length,
+    };
+    // --- End of Diagnostic Logging ---
+
     // Case 1: The content is a key for a hydrated asset. We MUST find it in pendingAssets.
     if (content && content.startsWith('hydrated_')) {
-        if (pendingAssets && pendingAssets[content]) {
+        if (hasPendingAssets && pendingAssets[content]) {
+            console.log('[DraggableElement LOG] Case 1: Hydrated asset FOUND in pendingAssets.', logPayload);
             const blob = pendingAssets[content];
             objectUrl = URL.createObjectURL(blob);
             setDisplayUrl(objectUrl);
         } else {
             // The asset is expected but not yet available. Wait for re-render.
-            // setDisplayUrl(null) is already called, so we just wait.
+            console.log('[DraggableElement LOG] Case 1: Hydrated asset NOT YET in pendingAssets. Waiting.', logPayload);
         }
     }
     // Case 2: The content is a temporary blob URL from a new upload in this session.
@@ -112,9 +124,15 @@ const DraggableElementInternal = ({
     }
     // Case 3: The content is a permanent URL (http) or an inline data URL.
     else if (content && (content.startsWith('http') || content.startsWith('data:'))) {
+        console.log('[DraggableElement LOG] Case 3: Content is a direct URL.', logPayload);
         setDisplayUrl(content);
     }
-    // Case 4: No valid source. displayUrl remains null.
+    // Case 4: No valid source or content is not image-like.
+    else {
+        if (element.type === 'image') {
+            console.log('[DraggableElement LOG] Case 4: No valid image source found.', logPayload);
+        }
+    }
 
     return () => {
       // If we created a temporary object URL, we must revoke it to avoid memory leaks.
