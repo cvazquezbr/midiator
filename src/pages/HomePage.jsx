@@ -717,7 +717,6 @@ function HomePage() {
 
       setSelectedAutorForCampaign(autorId);
       setSelectedPersonaForCampaign(personaId);
-      setActiveStep(3);
 
       const firstImageSrc = state.pageTemplate?.images?.[0]?.src;
       if (firstImageSrc) {
@@ -725,11 +724,9 @@ function HomePage() {
         img.crossOrigin = 'Anonymous';
         img.onload = () => {
           setOriginalImageSize({ width: img.width, height: img.height });
-          extractColorPalette(firstImageSrc, (palette) => setCampaignState(prev => ({ ...prev, imageColorPalette: palette })));
         };
         img.onerror = () => {
           setOriginalImageSize(DEFAULT_IMAGE_SIZE);
-          setCampaignState(prev => ({ ...prev, imageColorPalette: [] }));
         };
         const blob = campaignState.pendingAssets[firstImageSrc];
         if (blob) {
@@ -750,10 +747,11 @@ function HomePage() {
       setFollowupPostsQuantity(state.followupPostsQuantity ?? 10);
       setPromptText(state.promptText ?? '');
 
+      setActiveStep(3);
       toast.success(`Campanha "${currentCampaign.name}" carregada com sucesso!`);
       setIsLoading(false);
     }
-  }, [currentCampaign, campaignState, setCampaignState, extractColorPalette]);
+  }, [currentCampaign]);
 
   const handleEditCampaign = async (campaign) => {
     toast.info(`Carregando "${campaign.name}" para edição...`);
