@@ -115,6 +115,10 @@ function HomePage() {
   } = campaignState;
 
   const setImageColorPalette = (palette) => setCampaignState({ imageColorPalette: palette });
+  const setGeneratedVideos = (updater) => {
+    const newVideos = typeof updater === 'function' ? updater(campaignState.generatedVideos) : updater;
+    setCampaignState({ generatedVideos: newVideos });
+  };
 
   // Component State
   const [palettes, setPalettes] = useState([]);
