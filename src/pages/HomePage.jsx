@@ -114,6 +114,8 @@ function HomePage() {
     imageColorPalette,
   } = campaignState;
 
+  const setImageColorPalette = (palette) => setCampaignState({ imageColorPalette: palette });
+
   // Component State
   const [palettes, setPalettes] = useState([]);
   const [personaList, setPersonaList] = useState([]);
