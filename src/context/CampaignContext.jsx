@@ -34,7 +34,6 @@ export const CampaignProvider = ({ children }) => {
     paletteId: null,
     customPalette: null,
     imageColorPalette: [],
-    // New state to track unsaved changes
     isDirty: false,
   });
 
@@ -48,7 +47,6 @@ export const CampaignProvider = ({ children }) => {
   const applyLoadedCampaign = useCallback((loadedState) => {
     setCampaignStateInternal(currentState => {
       const finalState = {
-        // Start with a clean slate based on the default structure
         ...{
           csvData: [], csvHeaders: [], fieldPositions: {}, fieldStyles: {},
           brandElements: [], pageTemplate: defaultPageTemplate, selectedField: null,
@@ -56,10 +54,8 @@ export const CampaignProvider = ({ children }) => {
           aspectRatio: '1:1', pendingAssets: {}, colors: [], paletteId: null,
           customPalette: null, imageColorPalette: [], isDirty: false,
         },
-        // Apply the loaded state on top
         ...loadedState,
       };
-      // Revoke any old pending assets that are not in the new state
       Object.keys(currentState.pendingAssets).forEach(url => {
         if (!finalState.pendingAssets[url]) {
           URL.revokeObjectURL(url);

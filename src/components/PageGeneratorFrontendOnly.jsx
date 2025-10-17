@@ -49,28 +49,39 @@ import { safeDeepClone } from '../lib/utils';
 
 const PageGeneratorFrontendOnly = ({
   colorPalette,
-  initialGeneratedPagesData,
-  onThumbnailRecordTextUpdate,
   originalImageSize,
-  onBrandElementsChange,
   fontScale = 1,
   handleGenerateSinglePage,
   aspectRatio,
-  handleImageUpload, // New prop
   onOpenImageGallery,
   imagePalette,
-  pendingAssets,
-  addPendingAsset,
 }) => {
+  const { campaignState, setCampaignState } = useCampaign();
   const {
     csvData,
     fieldPositions,
     fieldStyles,
-    csvHeaders,
     brandElements,
     pageTemplate,
-    setGeneratedPagesData,
-  } = useCampaign();
+    generatedPagesData: initialGeneratedPagesData,
+    pendingAssets,
+  } = campaignState;
+
+  const setGeneratedPagesData = (updater) => {
+    const newPages = typeof updater === 'function' ? updater(campaignState.generatedPagesData) : updater;
+    setCampaignState({ generatedPagesData: newPages });
+  };
+  const addPendingAsset = (blob) => {
+    const url = URL.createObjectURL(blob);
+    setCampaignState(prev => ({
+        ...prev,
+        pendingAssets: {
+            ...prev.pendingAssets,
+            [url]: blob,
+        }
+    }));
+    return url;
+  };
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -421,32 +432,28 @@ const PageGeneratorFrontendOnly = ({
       const newPageImageData = await regenerateSinglePage(
         pageIndex,
         modifiedPageData.record,
-        modifiedPageData.customPageTemplate, // Use the correct prop name
+        modifiedPageData.customPageTemplate,
         modifiedPageData.customFieldPositions,
         modifiedPageData.customFieldStyles,
         modifiedPageData.customBrandElements,
-        1, // Always use a scale of 1 for the final render, as per user feedback.
+        1, // Always use a scale of 1 for the final render
         pendingAssets
       );
       setGeneratedPagesData(currentPages =>
         currentPages.map(page => {
           if (page.index !== pageIndex) return page;
-          // Persist the changes
           return {
-            ...page, // Keep old data like blob, url
-            ...newPageImageData, // Overwrite with new image data
+            ...page,
+            ...newPageImageData,
             record: modifiedPageData.record,
             customFieldPositions: modifiedPageData.customFieldPositions,
             customFieldStyles: modifiedPageData.customFieldStyles,
             customBrandElements: modifiedPageData.customBrandElements,
             customPageTemplate: modifiedPageData.customPageTemplate,
-            fontScale: 1, // Always save the scale as 1 for consistency.
+            fontScale: 1,
           };
         })
       );
-      if (onThumbnailRecordTextUpdate) {
-        onThumbnailRecordTextUpdate(pageIndex, modifiedPageData.record);
-      }
     } catch (error) {
       alert(`Falha ao regenerar a página: ${error.message}`);
     }

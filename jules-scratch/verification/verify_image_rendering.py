@@ -9,18 +9,9 @@ def run(playwright):
     try:
         # 1. Login
         page.goto("http://localhost:5173/login")
-
-        email_field = page.get_by_label("Email")
-        expect(email_field).to_be_editable()
-        email_field.fill("test@test.com")
-
-        print(page.content())
-
-        password_field = page.get_by_label("Senha")
-        expect(password_field).to_be_editable()
-        password_field.fill("password")
-
-        page.get_by_role("button", name="Entrar").click()
+        page.get_by_label("Email").fill("test@test.com")
+        page.get_by_label("Password").fill("password")
+        page.get_by_role("button", name="Login").click()
         expect(page).to_have_url("http://localhost:5173/")
 
         # 2. Load a campaign
