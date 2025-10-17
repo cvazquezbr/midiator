@@ -83,11 +83,11 @@ function TabPanel(props) {
   );
 }
 
-import { useCampaign } from '../context/CampaignContext.jsx';
-
 const Publisher = ({
   settings,
   campaignContent,
+  generatedPagesData = [],
+  generatedVideosData = [],
   followupPosts = [],
   isScheduled,
   setIsScheduled,
@@ -99,26 +99,10 @@ const Publisher = ({
   setSelectedImages,
   selectedVideos,
   setSelectedVideos,
+  currentCampaign,
+  pendingAssets,
+  setPendingAssets,
 }) => {
-  const {
-    generatedPagesData = [],
-    generatedVideosData = [],
-    currentCampaign,
-    pendingAssets,
-    setCampaignState,
-  } = useCampaign();
-
-  const setPendingAssets = (updater) => {
-    if (typeof updater === 'function') {
-      setCampaignState(prevState => ({
-        ...prevState,
-        pendingAssets: updater(prevState.pendingAssets)
-      }));
-    } else {
-      setCampaignState(prevState => ({ ...prevState, pendingAssets: updater }));
-    }
-  };
-
   const [tabValue, setTabValue] = React.useState(0);
   const [mySchedules, setMySchedules] = useState([]);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
