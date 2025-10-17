@@ -49,28 +49,33 @@ import { safeDeepClone } from '../lib/utils';
 
 const PageGeneratorFrontendOnly = ({
   colorPalette,
-  initialGeneratedPagesData,
   onThumbnailRecordTextUpdate,
   originalImageSize,
-  onBrandElementsChange,
   fontScale = 1,
   handleGenerateSinglePage,
-  aspectRatio,
-  handleImageUpload, // New prop
   onOpenImageGallery,
   imagePalette,
-  pendingAssets,
-  addPendingAsset,
 }) => {
   const {
     csvData,
     fieldPositions,
     fieldStyles,
-    csvHeaders,
     brandElements,
     pageTemplate,
-    setGeneratedPagesData,
+    aspectRatio,
+    setCampaignState,
+    pendingAssets,
+    addPendingAsset,
+    generatedPagesData: initialGeneratedPagesData, // Rename for clarity within this component
   } = useCampaign();
+
+  const setGeneratedPagesData = (newPages) => {
+    setCampaignState(prevState => ({ ...prevState, generatedPagesData: newPages }));
+  };
+
+  const onBrandElementsChange = (newBrandElements) => {
+    setCampaignState(prevState => ({ ...prevState, brandElements: newBrandElements }));
+  };
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
@@ -418,32 +423,37 @@ const PageGeneratorFrontendOnly = ({
     const { index: pageIndex } = modifiedPageData;
     handleCloseGeneratedPageEditor();
     try {
+      // The `addPendingAsset` function is now from the context and will update the
+      // pendingAssets in the single state object atomically.
       const newPageImageData = await regenerateSinglePage(
         pageIndex,
         modifiedPageData.record,
-        modifiedPageData.customPageTemplate, // Use the correct prop name
+        modifiedPageData.customPageTemplate,
         modifiedPageData.customFieldPositions,
         modifiedPageData.customFieldStyles,
         modifiedPageData.customBrandElements,
-        1, // Always use a scale of 1 for the final render, as per user feedback.
-        pendingAssets
+        1, // Always use a scale of 1 for the final render.
+        pendingAssets // Pass the most recent pendingAssets from the context
       );
-      setGeneratedPagesData(currentPages =>
-        currentPages.map(page => {
+
+      // Use the unified state setter to update the generated pages data
+      setCampaignState(prevState => {
+        const newPages = prevState.generatedPagesData.map(page => {
           if (page.index !== pageIndex) return page;
-          // Persist the changes
           return {
-            ...page, // Keep old data like blob, url
-            ...newPageImageData, // Overwrite with new image data
+            ...page,
+            ...newPageImageData,
             record: modifiedPageData.record,
             customFieldPositions: modifiedPageData.customFieldPositions,
             customFieldStyles: modifiedPageData.customFieldStyles,
             customBrandElements: modifiedPageData.customBrandElements,
             customPageTemplate: modifiedPageData.customPageTemplate,
-            fontScale: 1, // Always save the scale as 1 for consistency.
+            fontScale: 1,
           };
-        })
-      );
+        });
+        return { ...prevState, generatedPagesData: newPages };
+      });
+
       if (onThumbnailRecordTextUpdate) {
         onThumbnailRecordTextUpdate(pageIndex, modifiedPageData.record);
       }

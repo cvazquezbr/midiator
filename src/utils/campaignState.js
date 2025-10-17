@@ -195,10 +195,10 @@ export const deserializeCampaignData = async (loadedState) => {
       .then(blob => {
         const filename = downloadUrl.split('/').pop().split('?')[0] || `downloaded_asset_${Date.now()}`;
         const file = new File([blob], filename, { type: blob.type });
-        const blobUrl = URL.createObjectURL(file); // Gera uma URL blob: válida
+        const tempUrl = URL.createObjectURL(file);
 
-        newlyCreatedAssets[blobUrl] = file; // Mapeia a URL blob: para o File object
-        permanentToTempUrlMap.set(downloadUrl, blobUrl); // Mapeia a URL permanente para a URL blob:
+        newlyCreatedAssets[tempUrl] = file; // For the UI's pendingAssets state
+        permanentToTempUrlMap.set(downloadUrl, tempUrl); // For replacement in the next step
       })
       .catch(error => {
         console.error(`[deserializeCampaignData] Failed to download asset: ${downloadUrl}`, error);
@@ -215,13 +215,7 @@ export const deserializeCampaignData = async (loadedState) => {
   console.log('[deserializeCampaignData] Step 3: Replacing permanent URLs with local blob URLs...');
   traverseState(finalState, (key, value, owner) => {
     if (typeof value === 'string' && permanentToTempUrlMap.has(value)) {
-      const tempBlobUrl = permanentToTempUrlMap.get(value);
-      if (tempBlobUrl) {
-        owner[key] = tempBlobUrl;
-      } else {
-        // Caso o download tenha falhado, manter a URL permanente ou usar um placeholder
-        owner[key] = value;
-      }
+      owner[key] = permanentToTempUrlMap.get(value);
     }
   });
   console.log('[deserializeCampaignData] Step 3 COMPLETE.');

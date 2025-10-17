@@ -1,9 +1,30 @@
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
+import { toast } from 'sonner';
 
 const defaultPageTemplate = {
     backgroundColor: '#FFFFFF',
     gradient: null,
     images: [],
+};
+
+// Define the initial structure of our campaign state
+const initialState = {
+  csvData: [],
+  csvHeaders: [],
+  fieldPositions: {},
+  fieldStyles: {},
+  brandElements: [],
+  pageTemplate: defaultPageTemplate,
+  selectedField: null,
+  currentCampaign: null,
+  generatedPagesData: [],
+  generatedVideos: [],
+  aspectRatio: '1:1',
+  pendingAssets: {}, // Holds temporary blob: URLs and their corresponding File/Blob objects
+  colors: [],
+  paletteId: null,
+  customPalette: null,
+  imageColorPalette: [],
 };
 
 export const CampaignContext = createContext(null);
@@ -17,145 +38,107 @@ export const useCampaign = () => {
 };
 
 export const CampaignProvider = ({ children }) => {
-  // Estado da Campanha
-  const [csvData, setCsvData] = useState([]);
-  const [csvHeaders, setCsvHeaders] = useState([]);
-  const [fieldPositions, setFieldPositions] = useState({});
-  const [fieldStyles, setFieldStyles] = useState({});
-  const [brandElements, setBrandElements] = useState([]);
-  const [pageTemplate, setPageTemplate] = useState(defaultPageTemplate);
-  const [selectedField, setSelectedField] = useState(null);
-  const [currentCampaign, setCurrentCampaign] = useState(null);
-  const [generatedPagesData, setGeneratedPagesData] = useState([]);
-  const [generatedVideos, setGeneratedVideos] = useState([]);
-  const [aspectRatio, setAspectRatio] = useState('1:1');
-  /**
-   * @type {[Object<string, Blob>, Function]}
-   * @description Holds a map of local `blob:` URLs to their corresponding Blob objects.
-   * This state is the single source of truth for all temporary assets that have been
-   * generated or uploaded by the user but not yet saved to the backend.
-   * The `blob:` URL is created via `URL.createObjectURL()` and must be manually revoked
-   * using `URL.revokeObjectURL()` when the asset is no longer needed to prevent memory leaks.
-   */
-  const [pendingAssets, setPendingAssets] = useState({});
-  const [colors, setColors] = useState([]);
-  const [paletteId, setPaletteId] = useState(null);
-  const [customPalette, setCustomPalette] = useState(null);
-  const [imageColorPalette, setImageColorPalette] = useState([]);
+  // A single state object to hold all campaign-related data
+  const [campaignState, setCampaignStateInternal] = useState(initialState);
 
-  // Centralized asset handlers
+  // A unified function to update parts of the campaign state.
+  // This ensures that updates are merged into the existing state.
+  const setCampaignState = useCallback((newState) => {
+    setCampaignStateInternal(prev => ({ ...prev, ...newState }));
+  }, []);
+
+  // A dedicated function to load a complete campaign state, replacing the old one.
+  // This is the key to atomic state updates when loading from the database.
+  const applyLoadedCampaign = useCallback((loadedState) => {
+    console.log('[CampaignContext] Applying loaded campaign state:', loadedState);
+    // IMPORTANT: Before applying the new state, revoke all blob URLs from the *previous* state
+    // to prevent memory leaks when switching campaigns.
+    Object.keys(campaignState.pendingAssets).forEach(url => {
+        if (url.startsWith('blob:')) {
+            console.log(`[CampaignContext] Revoking old asset upon new campaign load: ${url}`);
+            URL.revokeObjectURL(url);
+        }
+    });
+    // Now, set the new, complete state.
+    setCampaignStateInternal(loadedState);
+  }, [campaignState.pendingAssets]); // Dependency ensures we have the latest pendingAssets to clean up.
+
+  // --- Refactored Asset Handlers ---
+
   const addPendingAsset = useCallback((blob) => {
     if (!(blob instanceof Blob)) {
       console.error("[addPendingAsset] Invalid argument. Expected a Blob.", blob);
       return null;
     }
     const blobUrl = URL.createObjectURL(blob);
-    setPendingAssets(prev => ({
+    setCampaignStateInternal(prev => ({
       ...prev,
-      [blobUrl]: blob,
+      pendingAssets: {
+        ...prev.pendingAssets,
+        [blobUrl]: blob,
+      }
     }));
     console.log(`[CampaignContext] Synchronously added new asset: ${blobUrl}`);
     return blobUrl;
   }, []);
 
   const addPendingAssetMap = useCallback((assetMap) => {
-    setPendingAssets(prev => ({
+    setCampaignStateInternal(prev => ({
       ...prev,
-      ...assetMap,
+      pendingAssets: {
+        ...prev.pendingAssets,
+        ...assetMap,
+      }
     }));
     console.log('[CampaignContext] Synchronously added asset map.');
   }, []);
 
   const removePendingAsset = useCallback((blobUrl) => {
     if (typeof blobUrl !== 'string' || !blobUrl.startsWith('blob:')) {
-      console.error("[removePendingAsset] Invalid argument. Expected a blob URL string.", blobUrl);
+      toast.error(`Internal error: Attempted to remove an invalid asset URL: ${blobUrl}`);
       return;
     }
-    setPendingAssets(prev => {
-      const newAssets = { ...prev };
+    setCampaignStateInternal(prev => {
+      const newAssets = { ...prev.pendingAssets };
       if (newAssets[blobUrl]) {
         URL.revokeObjectURL(blobUrl);
         delete newAssets[blobUrl];
         console.log(`[CampaignContext] Removed and revoked asset: ${blobUrl}`);
       }
-      return newAssets;
+      return { ...prev, pendingAssets: newAssets };
     });
   }, []);
 
-  // Effect to clean up all blob URLs on unmount
+  // Effect to clean up all remaining blob URLs when the provider itself unmounts.
+  // This is a final safety net.
   useEffect(() => {
     return () => {
-      // Quando o componente for desmontado ou a campanha for trocada/descarregada
-      for (const blobUrl in pendingAssets) {
-        if (blobUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(blobUrl);
-          console.log(`[Cleanup] Revoked blob URL: ${blobUrl}`);
+      Object.keys(campaignState.pendingAssets).forEach(url => {
+        if (url.startsWith('blob:')) {
+          console.log(`[CampaignContext] Revoking blob URL on unmount: ${url}`);
+          URL.revokeObjectURL(url);
         }
-      }
+      });
     };
-  }, [pendingAssets]); // Dependência para re-executar a limpeza se pendingAssets mudar
+  }, [campaignState.pendingAssets]);
 
+  // The value provided to consumers of the context.
   const value = useMemo(() => ({
-    // State
-    csvData,
-    csvHeaders,
-    fieldPositions,
-    fieldStyles,
-    brandElements,
-    pageTemplate,
-    selectedField,
-    currentCampaign,
-    generatedPagesData,
-    generatedVideos,
-    aspectRatio,
-    pendingAssets,
-    colors,
-    paletteId,
-    customPalette,
-    imageColorPalette,
-
-    // Setters
-    setCsvData,
-    setCsvHeaders,
-    setFieldPositions,
-    setFieldStyles,
-    setBrandElements,
-    setPageTemplate,
-    setSelectedField,
-    setCurrentCampaign,
-    setGeneratedPagesData,
-    setGeneratedVideos,
-    setAspectRatio,
-    setPendingAssets, // Kept for direct manipulation if needed, e.g., on load
-    setColors,
-    setPaletteId,
-    setCustomPalette,
-    setImageColorPalette,
-
-    // Asset Management
+    // Spread the entire state object
+    ...campaignState,
+    // Provide the new state management functions
+    setCampaignState,
+    applyLoadedCampaign,
+    // Asset handlers
     addPendingAsset,
     addPendingAssetMap,
     removePendingAsset,
-
     // Constants
     defaultPageTemplate,
   }), [
-    csvData,
-    csvHeaders,
-    fieldPositions,
-    fieldStyles,
-    brandElements,
-    pageTemplate,
-    selectedField,
-    currentCampaign,
-    generatedPagesData,
-    generatedVideos,
-    aspectRatio,
-    pendingAssets,
-    colors,
-    paletteId,
-    customPalette,
-    imageColorPalette,
+    campaignState,
+    setCampaignState,
+    applyLoadedCampaign,
     addPendingAsset,
     addPendingAssetMap,
     removePendingAsset,
