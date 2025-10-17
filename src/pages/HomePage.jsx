@@ -751,7 +751,7 @@ function HomePage() {
       toast.success(`Campanha "${currentCampaign.name}" carregada com sucesso!`);
       setIsLoading(false);
     }
-  }, [currentCampaign]);
+  }, [currentCampaign, campaignState.campaignData]);
 
   const handleEditCampaign = async (campaign) => {
     toast.info(`Carregando "${campaign.name}" para edição...`);
