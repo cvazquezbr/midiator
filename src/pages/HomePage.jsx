@@ -99,25 +99,19 @@ function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
   const {
-    csvData, setCsvData,
-    csvHeaders, setCsvHeaders,
-    fieldPositions, setFieldPositions,
-    fieldStyles, setFieldStyles,
-    brandElements, setBrandElements,
-    pageTemplate, setPageTemplate,
-    selectedField, setSelectedField,
-    currentCampaign, setCurrentCampaign,
-    generatedPagesData, setGeneratedPagesData,
-    generatedVideos, setGeneratedVideos,
-    aspectRatio, setAspectRatio,
-    pendingAssets, setPendingAssets,
+    // State values from the context
+    csvData, csvHeaders, fieldPositions, fieldStyles, brandElements,
+    pageTemplate, selectedField, currentCampaign, generatedPagesData,
+    generatedVideos, aspectRatio, pendingAssets, paletteId, customPalette,
+    imageColorPalette,
+
+    // State management functions from the context
+    setCampaignState,
+    applyLoadedCampaign,
     addPendingAsset,
     addPendingAssetMap,
     removePendingAsset,
     defaultPageTemplate,
-    paletteId, setPaletteId,
-    customPalette, setCustomPalette,
-    imageColorPalette, setImageColorPalette,
   } = useCampaign();
 
   // Component State
@@ -272,173 +266,24 @@ function HomePage() {
   };
 
 
-  const applyAppState = (state) => {
-    if (!state) return;
-
-    console.log("Applying loaded state:", state);
-
-    setActiveStep(state.activeStep ?? 0);
-    setSidebarOpen(state.sidebarOpen ?? !isMobile);
-
-    setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
-    setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
-    setImageColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
-    setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
-    const sanitizedPagesData = (Array.isArray(state.generatedPagesData) ? state.generatedPagesData : [])
-      .filter(page => {
-        if (!page || page.record === null || page.record === undefined) {
-          console.warn('Filtering out invalid page data on load:', page);
-          return false;
-        }
-        return true;
-      });
-    setGeneratedPagesData(sanitizedPagesData);
-
-    // Mantém o áudio carregado se ele tiver uma URL, a duração será calculada depois.
-    setGeneratedAudioData(
-      Array.isArray(state.generatedAudioData)
-        ? state.generatedAudioData.filter(a => a && a.url)
-        : []
-    );
-    setGeneratedVideos(Array.isArray(state.generatedVideos) ? state.generatedVideos : []);
-    setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
-
-    if (state.pageTemplate) {
-      // New format: Deep merge to ensure new properties are not lost on load
-      const loadedTemplate = state.pageTemplate;
-      setPageTemplate({
-        ...defaultPageTemplate,
-        ...loadedTemplate,
-        images: (loadedTemplate.images || []).map(img => ({
-          ...createNewImageElement(null), // Get all default keys
-          ...img
-        }))
-      });
-    } else {
-      // Legacy format, convert it
-      const newPageTemplate = { ...defaultPageTemplate };
-      const legacyBg = state.backgroundElement;
-      if (legacyBg) {
-        newPageTemplate.backgroundColor = legacyBg.backgroundColor || '#FFFFFF';
-        newPageTemplate.gradient = legacyBg.gradient || null;
-        if (legacyBg.src) {
-          const image = { ...legacyBg };
-          delete image.backgroundColor;
-          delete image.gradient;
-          delete image.backgroundType;
-          image.type = 'image';
-          if (!image.id || image.id === '__background__') {
-            image.id = createNewImageElement(null).id;
-          }
-          newPageTemplate.images = [image];
-        }
-      } else if (state.backgroundImage) {
-        // Even older legacy format
-        newPageTemplate.images = [createNewImageElement(state.backgroundImage)];
-      }
-      setPageTemplate(newPageTemplate);
-    }
-
-    // When loading, if there's an image, we need to set the originalImageSize for the editor to work correctly
-    const firstImageSrc = state.pageTemplate?.images?.[0]?.src || state.backgroundElement?.src || state.backgroundImage;
-    if (firstImageSrc) {
-      const img = new Image();
-      img.crossOrigin = 'Anonymous';
-      img.onload = () => {
-        setOriginalImageSize({ width: img.width, height: img.height });
-        // Also extract colors from this loaded image
-        extractColorPalette(firstImageSrc, setImageColorPalette);
-      };
-      img.onerror = () => {
-        setOriginalImageSize(DEFAULT_IMAGE_SIZE);
-        setImageColorPalette([]);
-      };
-      img.src = firstImageSrc;
-    }
-
-    setProblema(state.problema ?? '');
-    setSolucao(state.solucao ?? '');
-    setObjetivo(state.objetivo ?? '');
-    setTomDeVoz(state.tomDeVoz ?? '');
-    setCampaignContent(state.campaignContent ?? null);
-    setAspectRatio(state.aspectRatio ?? '1:1');
-    setGeneratedPageUrl(state.generatedPageUrl ?? null);
-    setFollowupPostsQuantity(state.followupPostsQuantity ?? 10);
-    setIsScheduled(state.isScheduled ?? false);
-    setScheduleDate(state.scheduleDate ? new Date(state.scheduleDate) : new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
-    setWeeklySchedule(state.weeklySchedule ?? {});
-    setSelectedProfile(state.selectedProfile ?? '');
-    setSelectedImages(state.selectedImages ?? {});
-    setSelectedVideos(state.selectedVideos ?? {});
-    setInputMethod(state.inputMethod ?? 'ia');
-    // Default to 10, which matches the slider's max value in PostsCurtosStep.
-    setPromptNumRecords(state.promptNumRecords ?? 10);
-    // Logic for setting the base text for short posts.
-    // Priority: 1. Use saved promptText. 2. Derive from campaign content. 3. Default to empty.
-    if (state.promptText) {
-      setPromptText(state.promptText);
-    } else if (state.campaignContent) {
-      const { titulo, conteudo, cta } = state.campaignContent;
-      setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
-    } else {
-      setPromptText('');
-    }
-    setFieldPositions(state.fieldPositions ?? {});
-    setTemplateFieldStyles(state.templateFieldStyles ?? {});
-    setCustomPalette(state.customPalette ?? null);
-
-    const loadedStyles = state.fieldStyles ?? {};
-    const completeStyles = {};
-    const defaultStylesBase = {
-      fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
-      textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
-      strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
-      shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
-      textAlign: 'left', verticalAlign: 'top',
-      backgroundColor: 'rgba(0,0,0,0)', borderColor: '#000000', borderWidth: 0,
-      borderRadius: 0, padding: 5, backgroundOpacity: 0,
-    };
-    if (state.csvHeaders && Array.isArray(state.csvHeaders)) {
-      state.csvHeaders.forEach(header => {
-        completeStyles[header] = {
-          ...defaultStylesBase,
-          ...(loadedStyles[header] || {}),
-        };
-      });
-    }
-    setFieldStyles(completeStyles);
-    setInitialFieldStyles(completeStyles);
-
-    setDisplayedImageSize(state.displayedImageSize ?? { width: 0, height: 0 });
-    setOriginalImageSize(state.originalImageSize ?? DEFAULT_IMAGE_SIZE);
-  };
-
   const handleSaveCampaign = async (name) => {
     console.log(`[HomePage] Attempting to save campaign: "${name}"`);
 
+    // Consolidate local state into the campaign data object from the context
     const campaignDataToSave = {
+      ...campaignState, // Start with the base from context
       activeStep,
       problema,
       solucao,
       objetivo,
       tomDeVoz,
       campaignContent,
-      aspectRatio,
       promptText,
       followupPosts,
       followupPostsQuantity,
-      fieldPositions,
-      fieldStyles,
       templateFieldStyles,
-      brandElements,
-      pageTemplate,
-      generatedPageUrl,
-      generatedPagesData,
-      generatedAudioData,
-      generatedVideos,
-      csvData,
-      csvHeaders,
-      customPalette,
+      generatedAudioData, // This is still local state, should be moved to context if needed
+      generatedVideos, // This is still local state, should be moved to context if needed
     };
 
     try {
@@ -490,28 +335,20 @@ function HomePage() {
         toast.success(`Campaign "${name}" saved.`);
       }
 
-      // After a successful save, the 'result' contains the fully re-hydrated campaign data
-      // and the new pendingAssets map. We must apply this new state to the context.
       const { campaign: rehydratedCampaign, pendingAssets: newPendingAssets } = result;
 
       if (rehydratedCampaign && rehydratedCampaign.campaign_data) {
-        console.log("[HomePage] Save successful. Synchronizing component state with re-hydrated data.");
-
-        // 1. Update the context with the new map of pending assets
-        setPendingAssets(newPendingAssets || {});
-
-        // 2. Update the rest of the UI state using the hydrated campaign data
-        applyAppState(rehydratedCampaign.campaign_data);
-
-        // 3. Update the top-level currentCampaign object to keep it in sync
-        setCurrentCampaign(rehydratedCampaign);
-
+        const fullStateToApply = {
+          ...rehydratedCampaign.campaign_data,
+          pendingAssets: newPendingAssets || {},
+          currentCampaign: rehydratedCampaign,
+        };
+        applyLoadedCampaign(fullStateToApply);
+        console.log("[HomePage] Save successful. Synchronizing context with re-hydrated data.");
       } else {
         console.warn("[HomePage] Save operation did not return a re-hydrated state to synchronize.");
-        setPendingAssets({}); // Clear pending assets as a fallback
+        applyLoadedCampaign({ pendingAssets: {} });
       }
-
-      console.log("[HomePage] Save/Update operation completed successfully.");
     } catch (err) {
       console.error("[HomePage] Error during save/update campaign:", err);
       toast.error(err.message || 'An unknown error occurred while saving the campaign.');
@@ -837,64 +674,92 @@ function HomePage() {
 
   const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Modelo de Página', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Edição de Páginas', description: 'Gere as páginas finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish }, { label: 'Monitorar', description: 'Acompanhe as estatísticas de suas publicações.', icon: BarChart } ];
   const handleCreateNewCampaign = () => {
-    applyAppState({}); // This will reset most state
-    setCurrentCampaign(null);
-    setPageTemplate(defaultPageTemplate); // Explicitly reset page template
-    setOriginalImageSize(DEFAULT_IMAGE_SIZE);
+    // Reset the entire campaign state by applying the initial default state
+    applyLoadedCampaign({
+      ...defaultPageTemplate,
+      pendingAssets: {},
+      currentCampaign: null
+    });
+    setProblema('');
+    setSolucao('');
+    setObjetivo('');
+    setTomDeVoz('');
+    setCampaignContent(null);
+    setFollowupPosts([]);
     setActiveStep(1);
   };
+
   const handleEditCampaign = async (campaign) => {
     toast.info(`Carregando "${campaign.name}" para edição...`);
-    try {
-      await checkAuthStatus();
-    } catch (error) {
-      toast.error(error.message);
-      return;
-    }
-
     setIsLoading(true);
     try {
+      await checkAuthStatus();
       const loadedCampaign = await loadCampaign(campaign.id);
       console.log("Loaded campaign data from DB:", loadedCampaign);
 
-      // When a campaign is loaded, it now comes with a 'pendingAssets' map
-      // containing the blobs for any images that were downloaded.
-      if (loadedCampaign.pendingAssets) {
-        setPendingAssets(loadedCampaign.pendingAssets);
-      }
+      // The `loadCampaign` function now returns the fully prepared state,
+      // including the `pendingAssets` map. We can apply it in one atomic operation.
+      const fullStateToApply = {
+        ...(loadedCampaign.campaign_data || {}),
+        pendingAssets: loadedCampaign.pendingAssets || {},
+        currentCampaign: { id: loadedCampaign.id, name: loadedCampaign.name },
+        paletteId: loadedCampaign.palette_id || (loadedCampaign.campaign_data?.customPalette ? 'custom' : null),
+      };
 
-      // Set the current campaign first to ensure its state is updated before any navigation
-      // or re-rendering is triggered by applyAppState.
-      setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
+      applyLoadedCampaign(fullStateToApply);
+      // The useEffect below will handle the rest of the setup once the state is applied.
 
-      // Apply the rest of the general state from campaign_data
-      applyAppState(loadedCampaign.campaign_data);
-
-      // Explicitly set the author and persona IDs from the top-level of the loaded campaign
-      setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
-      setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
-
-      // Set palette ID: if a DB-level palette_id exists, use it. Otherwise,
-      // check if a custom palette exists in the loaded data and set the ID to "custom".
-      const dbPaletteId = loadedCampaign.palette_id;
-      const hasCustomPalette = loadedCampaign.campaign_data?.customPalette?.colors?.length > 0;
-
-      if (dbPaletteId) {
-        setPaletteId(dbPaletteId);
-      } else if (hasCustomPalette) {
-        setPaletteId('custom');
-      } else {
-        setPaletteId(null);
-      }
-      toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
-      // Navigate directly to the page editor step after loading
-      setActiveStep(3);
     } catch (err) {
       toast.error(err.message);
-    } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Ensure loading is stopped on error
     }
   };
+
+  // This effect runs after a campaign is loaded and the context state is updated.
+  // It handles asynchronous actions and final UI setup.
+  useEffect(() => {
+    // This effect should only run when a campaign is loaded, which we can detect
+    // by checking if currentCampaign has been set.
+    if (!currentCampaign || !campaignData) return;
+
+    // Set local component state that is not part of the unified campaign state
+    setProblema(campaignData.problema || '');
+    setSolucao(campaignData.solucao || '');
+    setObjetivo(campaignData.objetivo || '');
+    setTomDeVoz(campaignData.tomDeVoz || '');
+    setCampaignContent(campaignData.campaignContent || null);
+    setFollowupPosts(campaignData.followupPosts || []);
+    setSelectedAutorForCampaign(currentCampaign.autor_id || '');
+    setSelectedPersonaForCampaign(currentCampaign.persona_id || '');
+
+    // Asynchronously update image-dependent state (size and color palette)
+    const firstImageSrc = pageTemplate?.images?.[0]?.src;
+    if (firstImageSrc) {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        setOriginalImageSize({ width: img.width, height: img.height });
+        extractColorPalette(firstImageSrc, (colors) => setCampaignState({ imageColorPalette: colors }));
+        setIsLoading(false); // Finish loading now that image-dependent state is ready
+        toast.success(`Campanha "${currentCampaign.name}" carregada com sucesso!`);
+        setActiveStep(3); // Navigate to the editor
+      };
+      img.onerror = () => {
+        setOriginalImageSize(DEFAULT_IMAGE_SIZE);
+        setCampaignState({ imageColorPalette: [] });
+        setIsLoading(false); // Finish loading even on error
+        toast.warning(`Imagem de fundo da campanha "${currentCampaign.name}" não pôde ser carregada.`);
+        setActiveStep(3);
+      };
+      img.src = firstImageSrc.startsWith('blob:') ? firstImageSrc : `/api/asset-proxy?url=${encodeURIComponent(firstImageSrc)}`;
+    } else {
+      // If there's no image, we can finish loading immediately.
+      setOriginalImageSize(DEFAULT_IMAGE_SIZE);
+      setIsLoading(false);
+      toast.success(`Campanha "${currentCampaign.name}" carregada com sucesso!`);
+      setActiveStep(3);
+    }
+  }, [currentCampaign, campaignData]); // This effect depends on the core campaign objects
   const parseCsvFile = async (file) => {
     if (!file) return;
     try {
