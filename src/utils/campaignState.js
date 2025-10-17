@@ -1,6 +1,5 @@
 import { toast } from 'sonner';
 import { upload } from '@vercel/blob/client';
-import { v4 as uuidv4 } from 'uuid';
 import fetchWithAuth from './fetchWithAuth';
 import { traverseState } from './stateTraversal';
 
@@ -73,14 +72,12 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
   await Promise.all(dataUriConversionPromises);
   console.log('[serializeCampaignData] Step 1 COMPLETE.');
 
-  // --- Step 2: Collect all unique asset keys to be uploaded ---
-  console.log('[serializeCampaignData] Step 2: Collecting unique asset keys from state...');
+  // --- Step 2: Collect all unique `blob:` URLs to be uploaded ---
+  console.log('[serializeCampaignData] Step 2: Collecting unique blob URLs...');
   const uniqueUrlsToUpload = new Map(); // Map<string, { blob: Blob }>
   traverseState(workingState, (key, value) => {
-    // An asset is considered "pending" if its URL/key exists in the allPendingAssets map.
-    // This correctly identifies both new assets (with blob: URLs) and hydrated assets (with hydrated_uuid keys).
-    if (typeof value === 'string' && allPendingAssets[value]) {
-      if (!uniqueUrlsToUpload.has(value)) {
+    if (typeof value === 'string' && value.startsWith('blob:')) {
+      if (allPendingAssets[value] && !uniqueUrlsToUpload.has(value)) {
         uniqueUrlsToUpload.set(value, { blob: allPendingAssets[value] });
       }
     }
@@ -198,12 +195,10 @@ export const deserializeCampaignData = async (loadedState) => {
       .then(blob => {
         const filename = downloadUrl.split('/').pop().split('?')[0] || `downloaded_asset_${Date.now()}`;
         const file = new File([blob], filename, { type: blob.type });
+        const blobUrl = URL.createObjectURL(file); // Gera uma URL blob: válida
 
-        // Generate a unique, stable key for the asset. This is the crucial change.
-        const assetKey = `hydrated_${uuidv4()}`;
-
-        newlyCreatedAssets[assetKey] = file; // Use the stable key for the pendingAssets map
-        permanentToTempUrlMap.set(downloadUrl, assetKey); // Map the permanent URL to the stable key
+        newlyCreatedAssets[blobUrl] = file; // Mapeia a URL blob: para o File object
+        permanentToTempUrlMap.set(downloadUrl, blobUrl); // Mapeia a URL permanente para a URL blob:
       })
       .catch(error => {
         console.error(`[deserializeCampaignData] Failed to download asset: ${downloadUrl}`, error);
@@ -220,7 +215,13 @@ export const deserializeCampaignData = async (loadedState) => {
   console.log('[deserializeCampaignData] Step 3: Replacing permanent URLs with local blob URLs...');
   traverseState(finalState, (key, value, owner) => {
     if (typeof value === 'string' && permanentToTempUrlMap.has(value)) {
-      owner[key] = permanentToTempUrlMap.get(value);
+      const tempBlobUrl = permanentToTempUrlMap.get(value);
+      if (tempBlobUrl) {
+        owner[key] = tempBlobUrl;
+      } else {
+        // Caso o download tenha falhado, manter a URL permanente ou usar um placeholder
+        owner[key] = value;
+      }
     }
   });
   console.log('[deserializeCampaignData] Step 3 COMPLETE.');
@@ -247,24 +248,21 @@ export const loadCampaign = async (id) => {
   }
   const campaign = await res.json();
 
-  let finalState = {};
-  let newlyCreatedAssets = {};
-
   if (campaign.campaign_data) {
-    const deserialized = await deserializeCampaignData(campaign.campaign_data);
-    finalState = deserialized.finalState;
-    newlyCreatedAssets = deserialized.newlyCreatedAssets;
+    // The deserialize function now returns an object containing the modified state
+    // and a map of any newly created local assets (blobs).
+    const { finalState, newlyCreatedAssets } = await deserializeCampaignData(campaign.campaign_data);
+
+    // Replace the campaign data with the state that has local blob URLs.
+    campaign.campaign_data = finalState;
+    // Attach the newly created assets so the UI can update its pendingAssets state.
+    campaign.pendingAssets = newlyCreatedAssets;
+  } else {
+    // Ensure pendingAssets is initialized even if there's no campaign data.
+    campaign.pendingAssets = {};
   }
 
-  // Return a single, consolidated object with all the necessary state for the UI.
-  return {
-    campaign: { id: campaign.id, name: campaign.name },
-    campaignData: finalState,
-    pendingAssets: newlyCreatedAssets,
-    autorId: campaign.autor_id || '',
-    personaId: campaign.persona_id || '',
-    paletteId: campaign.palette_id || null,
-  };
+  return campaign;
 };
 
 export const saveCampaign = async (name, campaignData, pendingAssets, setProgress, userId, autorId, personaId, paletteId) => {
