@@ -99,32 +99,26 @@ function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
   const {
-    setCampaignState,
+    csvData, setCsvData,
+    csvHeaders, setCsvHeaders,
+    fieldPositions, setFieldPositions,
+    fieldStyles, setFieldStyles,
+    brandElements, setBrandElements,
+    pageTemplate, setPageTemplate,
+    selectedField, setSelectedField,
+    currentCampaign, setCurrentCampaign,
+    generatedPagesData, setGeneratedPagesData,
+    generatedVideos, setGeneratedVideos,
+    aspectRatio, setAspectRatio,
+    pendingAssets, setPendingAssets,
     addPendingAsset,
     addPendingAssetMap,
     removePendingAsset,
-    applyLoadedCampaign,
     defaultPageTemplate,
-    ...campaignState
+    paletteId, setPaletteId,
+    customPalette, setCustomPalette,
+    imageColorPalette, setImageColorPalette,
   } = useCampaign();
-
-  const {
-    csvData,
-    csvHeaders,
-    fieldPositions,
-    fieldStyles,
-    brandElements,
-    pageTemplate,
-    selectedField,
-    currentCampaign,
-    generatedPagesData,
-    generatedVideos,
-    aspectRatio,
-    pendingAssets,
-    paletteId,
-    customPalette,
-    imageColorPalette,
-  } = campaignState;
 
   // Component State
   const [palettes, setPalettes] = useState([]);
@@ -277,6 +271,147 @@ function HomePage() {
     setCurrentView('campaigns');
   };
 
+
+  const applyAppState = (state) => {
+    if (!state) return;
+
+    console.log("Applying loaded state:", state);
+
+    setActiveStep(state.activeStep ?? 0);
+    setSidebarOpen(state.sidebarOpen ?? !isMobile);
+
+    setCsvData(Array.isArray(state.csvData) ? state.csvData : []);
+    setCsvHeaders(Array.isArray(state.csvHeaders) ? state.csvHeaders : []);
+    setImageColorPalette(Array.isArray(state.colorPalette) ? state.colorPalette : []);
+    setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
+    const sanitizedPagesData = (Array.isArray(state.generatedPagesData) ? state.generatedPagesData : [])
+      .filter(page => {
+        if (!page || page.record === null || page.record === undefined) {
+          console.warn('Filtering out invalid page data on load:', page);
+          return false;
+        }
+        return true;
+      });
+    setGeneratedPagesData(sanitizedPagesData);
+
+    // Mantém o áudio carregado se ele tiver uma URL, a duração será calculada depois.
+    setGeneratedAudioData(
+      Array.isArray(state.generatedAudioData)
+        ? state.generatedAudioData.filter(a => a && a.url)
+        : []
+    );
+    setGeneratedVideos(Array.isArray(state.generatedVideos) ? state.generatedVideos : []);
+    setBrandElements(Array.isArray(state.brandElements) ? state.brandElements : []);
+
+    if (state.pageTemplate) {
+      // New format: Deep merge to ensure new properties are not lost on load
+      const loadedTemplate = state.pageTemplate;
+      setPageTemplate({
+        ...defaultPageTemplate,
+        ...loadedTemplate,
+        images: (loadedTemplate.images || []).map(img => ({
+          ...createNewImageElement(null), // Get all default keys
+          ...img
+        }))
+      });
+    } else {
+      // Legacy format, convert it
+      const newPageTemplate = { ...defaultPageTemplate };
+      const legacyBg = state.backgroundElement;
+      if (legacyBg) {
+        newPageTemplate.backgroundColor = legacyBg.backgroundColor || '#FFFFFF';
+        newPageTemplate.gradient = legacyBg.gradient || null;
+        if (legacyBg.src) {
+          const image = { ...legacyBg };
+          delete image.backgroundColor;
+          delete image.gradient;
+          delete image.backgroundType;
+          image.type = 'image';
+          if (!image.id || image.id === '__background__') {
+            image.id = createNewImageElement(null).id;
+          }
+          newPageTemplate.images = [image];
+        }
+      } else if (state.backgroundImage) {
+        // Even older legacy format
+        newPageTemplate.images = [createNewImageElement(state.backgroundImage)];
+      }
+      setPageTemplate(newPageTemplate);
+    }
+
+    // When loading, if there's an image, we need to set the originalImageSize for the editor to work correctly
+    const firstImageSrc = state.pageTemplate?.images?.[0]?.src || state.backgroundElement?.src || state.backgroundImage;
+    if (firstImageSrc) {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.onload = () => {
+        setOriginalImageSize({ width: img.width, height: img.height });
+        // Also extract colors from this loaded image
+        extractColorPalette(firstImageSrc, setImageColorPalette);
+      };
+      img.onerror = () => {
+        setOriginalImageSize(DEFAULT_IMAGE_SIZE);
+        setImageColorPalette([]);
+      };
+      img.src = firstImageSrc;
+    }
+
+    setProblema(state.problema ?? '');
+    setSolucao(state.solucao ?? '');
+    setObjetivo(state.objetivo ?? '');
+    setTomDeVoz(state.tomDeVoz ?? '');
+    setCampaignContent(state.campaignContent ?? null);
+    setAspectRatio(state.aspectRatio ?? '1:1');
+    setGeneratedPageUrl(state.generatedPageUrl ?? null);
+    setFollowupPostsQuantity(state.followupPostsQuantity ?? 10);
+    setIsScheduled(state.isScheduled ?? false);
+    setScheduleDate(state.scheduleDate ? new Date(state.scheduleDate) : new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
+    setWeeklySchedule(state.weeklySchedule ?? {});
+    setSelectedProfile(state.selectedProfile ?? '');
+    setSelectedImages(state.selectedImages ?? {});
+    setSelectedVideos(state.selectedVideos ?? {});
+    setInputMethod(state.inputMethod ?? 'ia');
+    // Default to 10, which matches the slider's max value in PostsCurtosStep.
+    setPromptNumRecords(state.promptNumRecords ?? 10);
+    // Logic for setting the base text for short posts.
+    // Priority: 1. Use saved promptText. 2. Derive from campaign content. 3. Default to empty.
+    if (state.promptText) {
+      setPromptText(state.promptText);
+    } else if (state.campaignContent) {
+      const { titulo, conteudo, cta } = state.campaignContent;
+      setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
+    } else {
+      setPromptText('');
+    }
+    setFieldPositions(state.fieldPositions ?? {});
+    setTemplateFieldStyles(state.templateFieldStyles ?? {});
+    setCustomPalette(state.customPalette ?? null);
+
+    const loadedStyles = state.fieldStyles ?? {};
+    const completeStyles = {};
+    const defaultStylesBase = {
+      fontFamily: 'Inter', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
+      textDecoration: 'none', color: darkMode ? '#FFFFFF' : '#000000', textStroke: false,
+      strokeColor: darkMode ? '#000000' : '#FFFFFF', strokeWidth: 2, textShadow: false,
+      shadowColor: '#000000', shadowBlur: 4, shadowOffsetX: 2, shadowOffsetY: 2,
+      textAlign: 'left', verticalAlign: 'top',
+      backgroundColor: 'rgba(0,0,0,0)', borderColor: '#000000', borderWidth: 0,
+      borderRadius: 0, padding: 5, backgroundOpacity: 0,
+    };
+    if (state.csvHeaders && Array.isArray(state.csvHeaders)) {
+      state.csvHeaders.forEach(header => {
+        completeStyles[header] = {
+          ...defaultStylesBase,
+          ...(loadedStyles[header] || {}),
+        };
+      });
+    }
+    setFieldStyles(completeStyles);
+    setInitialFieldStyles(completeStyles);
+
+    setDisplayedImageSize(state.displayedImageSize ?? { width: 0, height: 0 });
+    setOriginalImageSize(state.originalImageSize ?? DEFAULT_IMAGE_SIZE);
+  };
 
   const handleSaveCampaign = async (name) => {
     console.log(`[HomePage] Attempting to save campaign: "${name}"`);
@@ -523,13 +658,13 @@ function HomePage() {
   useEffect(() => {
     const firstImage = pageTemplate?.images?.[0];
     if (firstImage?.src) {
-      extractColorPalette(firstImage.src, (palette) => setCampaignState(prev => ({ ...prev, imageColorPalette: palette })));
+      extractColorPalette(firstImage.src, setImageColorPalette);
     } else {
       // If there's no image, ensure the image palette is empty.
       // The fallback to the campaign palette will be handled by the UI components.
-      setCampaignState(prev => ({ ...prev, imageColorPalette: [] }));
+      setImageColorPalette([]);
     }
-  }, [pageTemplate?.images?.[0]?.src, extractColorPalette, setCampaignState]);
+  }, [pageTemplate?.images?.[0]?.src, extractColorPalette, setImageColorPalette]);
 
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
@@ -617,20 +752,20 @@ function HomePage() {
 
       const processedVideos = await Promise.all(promises);
 
-      setCampaignState(prev => {
-        const newCurrentVideos = [...prev.generatedVideos];
+      setGeneratedVideos(currentVideos => {
+        const newCurrentVideos = [...currentVideos];
         processedVideos.forEach(processedVideo => {
           const index = newCurrentVideos.findIndex(v => v.url === processedVideo.url);
           if (index !== -1) {
             newCurrentVideos[index] = processedVideo;
           }
         });
-        return { ...prev, generatedVideos: newCurrentVideos };
+        return newCurrentVideos;
       });
     };
 
     processVideos();
-  }, [generatedVideos, setCampaignState]);
+  }, [generatedVideos, setGeneratedVideos]);
 
   // Processes audio files that are loaded or generated to calculate their duration,
   // which is needed for video generation. Disables the UI while processing.
@@ -682,12 +817,12 @@ function HomePage() {
       try {
         const processedAudios = await Promise.all(promises);
 
-        const updatedAudios = campaignState.generatedAudioData.map(originalAudio => {
+        const updatedAudios = generatedAudioData.map(originalAudio => {
           const processed = processedAudios.find(p => p.url === originalAudio.url);
           return processed || originalAudio;
         });
 
-        setCampaignState(prev => ({ ...prev, generatedAudioData: updatedAudios }));
+        setGeneratedAudioData(updatedAudios);
         toast.success("Durações de áudio calculadas com sucesso!");
       } catch (error) {
         toast.error("Ocorreu um erro ao processar os áudios.");
@@ -702,66 +837,61 @@ function HomePage() {
 
   const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Modelo de Página', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Edição de Páginas', description: 'Gere as páginas finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish }, { label: 'Monitorar', description: 'Acompanhe as estatísticas de suas publicações.', icon: BarChart } ];
   const handleCreateNewCampaign = () => {
-    setCampaignState(prev => ({
-      ...initialCampaignState,
-      // Preserve settings that shouldn't be reset
-      pendingAssets: prev.pendingAssets,
-    }));
+    applyAppState({}); // This will reset most state
+    setCurrentCampaign(null);
+    setPageTemplate(defaultPageTemplate); // Explicitly reset page template
     setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     setActiveStep(1);
   };
-
-  useEffect(() => {
-    if (currentCampaign && campaignState.campaignData) {
-      const { campaignData: state, autorId, personaId } = campaignState;
-
-      setSelectedAutorForCampaign(autorId);
-      setSelectedPersonaForCampaign(personaId);
-
-      const firstImageSrc = state.pageTemplate?.images?.[0]?.src;
-      if (firstImageSrc) {
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.onload = () => {
-          setOriginalImageSize({ width: img.width, height: img.height });
-        };
-        img.onerror = () => {
-          setOriginalImageSize(DEFAULT_IMAGE_SIZE);
-        };
-        const blob = campaignState.pendingAssets[firstImageSrc];
-        if (blob) {
-          img.src = URL.createObjectURL(blob);
-        } else {
-          img.src = firstImageSrc;
-        }
-      } else {
-        setOriginalImageSize(getDimensionsFromAspectRatio(state.aspectRatio) || DEFAULT_IMAGE_SIZE);
-      }
-
-      setProblema(state.problema ?? '');
-      setSolucao(state.solucao ?? '');
-      setObjetivo(state.objetivo ?? '');
-      setTomDeVoz(state.tomDeVoz ?? '');
-      setCampaignContent(state.campaignContent ?? null);
-      setFollowupPosts(state.followupPosts ?? []);
-      setFollowupPostsQuantity(state.followupPostsQuantity ?? 10);
-      setPromptText(state.promptText ?? '');
-
-      setActiveStep(3);
-      toast.success(`Campanha "${currentCampaign.name}" carregada com sucesso!`);
-      setIsLoading(false);
-    }
-  }, [currentCampaign, campaignState.campaignData]);
-
   const handleEditCampaign = async (campaign) => {
     toast.info(`Carregando "${campaign.name}" para edição...`);
-    setIsLoading(true);
     try {
       await checkAuthStatus();
-      const completeState = await loadCampaign(campaign.id);
-      applyLoadedCampaign(completeState);
     } catch (error) {
       toast.error(error.message);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const loadedCampaign = await loadCampaign(campaign.id);
+      console.log("Loaded campaign data from DB:", loadedCampaign);
+
+      // When a campaign is loaded, it now comes with a 'pendingAssets' map
+      // containing the blobs for any images that were downloaded.
+      if (loadedCampaign.pendingAssets) {
+        setPendingAssets(loadedCampaign.pendingAssets);
+      }
+
+      // Set the current campaign first to ensure its state is updated before any navigation
+      // or re-rendering is triggered by applyAppState.
+      setCurrentCampaign({ id: loadedCampaign.id, name: loadedCampaign.name });
+
+      // Apply the rest of the general state from campaign_data
+      applyAppState(loadedCampaign.campaign_data);
+
+      // Explicitly set the author and persona IDs from the top-level of the loaded campaign
+      setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
+      setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
+
+      // Set palette ID: if a DB-level palette_id exists, use it. Otherwise,
+      // check if a custom palette exists in the loaded data and set the ID to "custom".
+      const dbPaletteId = loadedCampaign.palette_id;
+      const hasCustomPalette = loadedCampaign.campaign_data?.customPalette?.colors?.length > 0;
+
+      if (dbPaletteId) {
+        setPaletteId(dbPaletteId);
+      } else if (hasCustomPalette) {
+        setPaletteId('custom');
+      } else {
+        setPaletteId(null);
+      }
+      toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
+      // Navigate directly to the page editor step after loading
+      setActiveStep(3);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -770,6 +900,9 @@ function HomePage() {
     try {
       const { data: newCsvData, headers: newHeaders } = await parseCsv(file);
       if (newCsvData && newCsvData.length > 0) {
+        setCsvData(newCsvData);
+        setCsvHeaders(newHeaders);
+
         const { newPositions, newStyles } = autoArrangeFields({
           csvHeaders: newHeaders,
           fieldPositions: {},
@@ -778,15 +911,10 @@ function HomePage() {
           effectiveImageSize: originalImageSize,
         });
 
-        setCampaignState(prev => ({
-          ...prev,
-          csvData: newCsvData,
-          csvHeaders: newHeaders,
-          fieldPositions: newPositions,
-          fieldStyles: newStyles,
-        }));
-        setInitialFieldStyles(newStyles); // This is local HomePage state
-        setInputMethod('manual'); // This is local HomePage state
+        setFieldPositions(newPositions);
+        setFieldStyles(newStyles);
+        setInitialFieldStyles(newStyles);
+        setInputMethod('manual');
       }
     } catch (error) {
       toast.error(error.message || 'Ocorreu um erro desconhecido ao processar o arquivo CSV.');
@@ -810,46 +938,53 @@ function HomePage() {
   const addNewImageToCanvas = useCallback((imageUrl) => {
     console.log(`[HomePage] addNewImageToCanvas called. Target index: ${imageGalleryTargetIndex}`);
     const newImage = createNewImageElement(imageUrl);
+    setSelectedField(newImage.id);
 
-    setCampaignState(prev => {
-      const newState = { ...prev, selectedField: newImage.id };
-
-      if (typeof imageGalleryTargetIndex === 'number') {
+    // If target index is a number, we are on the "Page Editing" step for a specific page.
+    if (typeof imageGalleryTargetIndex === 'number') {
+      setGeneratedPagesData(prevPages => {
         const pageIndex = imageGalleryTargetIndex;
-        if (pageIndex < 0 || pageIndex >= prev.generatedPagesData.length) {
+        if (pageIndex < 0 || pageIndex >= prevPages.length) {
           console.error("Invalid page index for custom template update:", pageIndex);
           toast.error(`Falha ao adicionar imagem: índice de página inválido (${pageIndex}).`);
-          return prev;
+          return prevPages;
         }
 
-        const newGeneratedPagesData = prev.generatedPagesData.map((page, index) => {
-          if (index !== pageIndex) return page;
+        return prevPages.map((page, index) => {
+          if (index !== pageIndex) {
+            return page;
+          }
 
-          const baseTemplate = page.customPageTemplate || JSON.parse(JSON.stringify(prev.pageTemplate));
+          // Use the existing custom template or create a new one from the main template.
+          // The flawed `pageTemplateUsed` is no longer used.
+          const baseTemplate = page.customPageTemplate || JSON.parse(JSON.stringify(pageTemplate));
+
           const newCustomTemplate = {
             ...baseTemplate,
             images: [...(baseTemplate.images || []), newImage],
           };
-          return { ...page, customPageTemplate: newCustomTemplate };
+
+          // Return a new object for the updated page to ensure React detects the change.
+          return {
+            ...page,
+            customPageTemplate: newCustomTemplate,
+          };
         });
-
-        toast.success(`Imagem adicionada à página ${imageGalleryTargetIndex + 1}.`);
-        return { ...newState, generatedPagesData: newGeneratedPagesData };
-
-      } else {
-        const newPageTemplate = {
-          ...prev.pageTemplate,
-          images: [...(prev.pageTemplate.images || []), newImage],
-        };
-        console.log('[HomePage] Image added to global page template.');
-        toast.success('Imagem adicionada ao modelo.');
-        return { ...newState, pageTemplate: newPageTemplate };
-      }
-    });
+      });
+      toast.success(`Imagem adicionada à página ${imageGalleryTargetIndex + 1}.`);
+    } else {
+      // Otherwise, update the global template (likely on Step 3).
+      setPageTemplate(prevTemplate => ({
+        ...prevTemplate,
+        images: [...(prevTemplate.images || []), newImage],
+      }));
+      console.log('[HomePage] Image added to global page template.');
+      toast.success('Imagem adicionada ao modelo.');
+    }
 
     // The color palette logic can remain global as it's a UI hint.
-    extractColorPalette(imageUrl, (palette) => setCampaignState(prev => ({ ...prev, imageColorPalette: palette })));
-  }, [imageGalleryTargetIndex, setCampaignState, extractColorPalette]);
+    extractColorPalette(imageUrl, setImageColorPalette);
+  }, [imageGalleryTargetIndex, pageTemplate, setPageTemplate, setGeneratedPagesData, setImageColorPalette, extractColorPalette]);
 
   const parseImageFile = (file) => {
     if (!file) return;
@@ -930,40 +1065,7 @@ function HomePage() {
   };
   const getFieldStats = () => { const visibleFields = Object.values(fieldPositions).filter(pos => pos.visible).length; const totalFields = csvHeaders.length; const styledFields = Object.keys(fieldStyles).length; return { visibleFields, totalFields, styledFields }; };
   const { visibleFields, totalFields, styledFields } = getFieldStats();
-  const handleZIndexChange = (elementId, action) => {
-    if (!elementId) return;
-    setCampaignState(prev => {
-      let allElements = [
-        ...Object.entries(prev.fieldPositions).map(([id, pos]) => ({ id, zIndex: pos.zIndex, isBrand: false })),
-        ...prev.brandElements.map(el => ({ id: el.id, zIndex: el.zIndex, isBrand: true })),
-      ];
-      allElements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-      const currentIndex = allElements.findIndex(el => el.id === elementId);
-      if (currentIndex === -1) return prev;
-
-      const [currentElement] = allElements.splice(currentIndex, 1);
-      switch (action) {
-        case 'front': allElements.push(currentElement); break;
-        case 'back': allElements.unshift(currentElement); break;
-        case 'forward': allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement); break;
-        case 'backward': allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement); break;
-        default: allElements.splice(currentIndex, 0, currentElement); return prev;
-      }
-
-      const newPositions = { ...prev.fieldPositions };
-      const newBrandElements = [...prev.brandElements];
-      allElements.forEach((el, index) => {
-        el.zIndex = index;
-        if (el.isBrand) {
-          const brandEl = newBrandElements.find(b => b.id === el.id);
-          if (brandEl) brandEl.zIndex = index;
-        } else {
-          if (newPositions[el.id]) newPositions[el.id].zIndex = index;
-        }
-      });
-      return { ...prev, fieldPositions: newPositions, brandElements: newBrandElements };
-    });
-  };
+  const handleZIndexChange = (elementId, action) => { if (!elementId) return; let allElements = [ ...Object.entries(fieldPositions).map(([id, pos]) => ({ id, zIndex: pos.zIndex, isBrand: false })), ...brandElements.map(el => ({ id: el.id, zIndex: el.zIndex, isBrand: true })), ]; allElements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0)); const currentIndex = allElements.findIndex(el => el.id === elementId); if (currentIndex === -1) return; const [currentElement] = allElements.splice(currentIndex, 1); switch (action) { case 'front': allElements.push(currentElement); break; case 'back': allElements.unshift(currentElement); break; case 'forward': allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement); break; case 'backward': allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement); break; default: allElements.splice(currentIndex, 0, currentElement); return; } const newPositions = { ...fieldPositions }; const newBrandElements = [...brandElements]; allElements.forEach((el, index) => { el.zIndex = index; if (el.isBrand) { const brandEl = newBrandElements.find(b => b.id === el.id); if (brandEl) brandEl.zIndex = index; } else { if (newPositions[el.id]) { newPositions[el.id].zIndex = index; } } }); setFieldPositions(newPositions); setBrandElements(newBrandElements); };
   const handleSidebarStepClick = (index) => {
     handleNavigation(() => {
       setActiveStep(index);
@@ -973,47 +1075,67 @@ function HomePage() {
     });
   };
   const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
-    setCampaignState(prev => {
-      const newState = { ...prev, csvData: novosRegistros };
-      if (JSON.stringify(novasColunas) !== JSON.stringify(prev.csvHeaders)) {
-        newState.csvHeaders = novasColunas;
-      }
-      newState.generatedPagesData = novosRegistros.map((record, index) => {
-        const existingPage = prev.generatedPagesData.find(img => img.index === index);
-        if (existingPage) return { ...existingPage, record: record };
+    setCsvData(novosRegistros);
+    // A atualização de colunas é mantida para o caso de adição/remoção de colunas.
+    if (JSON.stringify(novasColunas) !== JSON.stringify(csvHeaders)) {
+      setCsvHeaders(novasColunas);
+    }
+
+    // A lógica de reposicionamento e re-estilização foi removida daqui
+    // para evitar que a edição de um simples campo de texto reorganize a UI inteira.
+    // Essa lógica agora deve ser chamada explicitamente quando as colunas mudam.
+
+    // A atualização dos dados das páginas geradas é mantida para consistência.
+    setGeneratedPagesData(prevGeneratedPages => {
+      const newGeneratedPages = novosRegistros.map((record, index) => {
+        const existingPage = prevGeneratedPages.find(img => img.index === index);
+        if (existingPage) {
+          return { ...existingPage, record: record };
+        }
         return {
-          index, record, blob: null, url: null,
+          index,
+          record,
+          blob: null,
+          url: null,
           filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-          customFieldPositions: null, customFieldStyles: null,
-          customBrandElements: null, customImageFilters: null, fontScale: 1,
+          customFieldPositions: null,
+          customFieldStyles: null,
+          customBrandElements: null,
+          customImageFilters: null,
+          fontScale: 1,
         };
       });
-      return newState;
+      return newGeneratedPages;
     });
-  }, [setCampaignState]);
+  }, [csvHeaders]);
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
-    setCampaignState(prev => ({
-      ...prev,
-      csvData: newCsvData,
-      generatedPagesData: newCsvData.map((record, index) => {
-        const existingPage = prev.generatedPagesData.find(img => img.index === index);
-        if (existingPage) return { ...existingPage, record: record };
+    setCsvData(newCsvData);
+    // Esta função é chamada ao editar texto diretamente na thumbnail (ImageStep)
+    // e precisa atualizar os dados das páginas também.
+    setGeneratedPagesData(prevGeneratedPages => {
+      const newGeneratedPages = newCsvData.map((record, index) => {
+        const existingPage = prevGeneratedPages.find(img => img.index === index);
+        if (existingPage) {
+          return { ...existingPage, record: record };
+        }
+        // Retorna um novo objeto se não houver página existente.
         return {
-          index, record, blob: null, url: null,
+          index,
+          record,
+          blob: null,
+          url: null,
           filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-          customFieldPositions: null, customFieldStyles: null,
-          customBrandElements: null, customImageFilters: null, fontScale: 1,
+          customFieldPositions: null,
+          customFieldStyles: null,
+          customBrandElements: null,
+          customImageFilters: null,
+          fontScale: 1,
         };
-      }),
-    }));
-  }, [setCampaignState]);
-  const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => {
-    setCampaignState(prev => {
-      if (recordIndex < 0 || recordIndex >= prev.csvData.length) return prev;
-      const newCsvData = prev.csvData.map((row, idx) => (idx === recordIndex ? updatedRecord : row));
-      return { ...prev, csvData: newCsvData };
+      });
+      return newGeneratedPages;
     });
-  }, [setCampaignState]);
+  }, []);
+  const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => { setCsvData(prevCsvData => { if (recordIndex < 0 || recordIndex >= prevCsvData.length) { return prevCsvData; } return prevCsvData.map((row, idx) => { if (idx === recordIndex) { return updatedRecord; } return row; }); }); }, [setCsvData]);
 
   const handleGenerateCampaignContent = async (regenerate = false) => {
     setIsGeneratingCampaign(true);
@@ -1030,7 +1152,7 @@ function HomePage() {
       if (!normalizedContent) {
         throw new Error("A geração do conteúdo principal falhou e não retornou dados.");
       }
-      setCampaignState(prev => ({ ...prev, campaignContent: normalizedContent }));
+      setCampaignContent(normalizedContent);
       const { titulo, conteudo, cta } = normalizedContent;
       setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
 
@@ -1039,7 +1161,7 @@ function HomePage() {
         return;
       }
 
-      setCampaignState(prev => ({ ...prev, followupPosts: [] }));
+      setFollowupPosts([]);
 
       setGenerationStatus('Gerando resumos...');
       await Promise.all([
@@ -1052,7 +1174,7 @@ function HomePage() {
     } catch (error) {
       const errorMessage = error.message || 'Ocorreu um erro desconhecido.';
       toast.error(`Ocorreu um erro ao gerar o conteúdo da campanha: ${errorMessage}`);
-      setCampaignState(prev => ({ ...prev, campaignContent: null }));
+      setCampaignContent(null);
       setCampaignGenerationFailed(true);
       setGenerationError(errorMessage);
     } finally {
@@ -1073,99 +1195,129 @@ function HomePage() {
 
       const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: palette?.colors || [] });
       const blob = dataURLtoBlob(base64Data);
-      if (!blob) throw new Error("Failed to convert generated image data to a Blob.");
+      if (!blob) {
+        throw new Error("Failed to convert generated image data to a Blob.");
+      }
 
       const tempUrl = addPendingAsset(blob);
-      if (!tempUrl) throw new Error("Failed to create a managed URL for the generated image.");
+      if (!tempUrl) {
+        throw new Error("Failed to create a managed URL for the generated image.");
+      }
 
-      setGeneratedPageUrl(tempUrl); // This is local state, can remain
+      console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Using managed blob URL:', tempUrl);
+      setGeneratedPageUrl(tempUrl);
       addNewImageToCanvas(tempUrl);
       return true;
 
     } catch (imageError) {
       const errorMessage = imageError.message || 'An unknown error occurred.';
       if (errorMessage.includes('503') || errorMessage.toLowerCase().includes('service unavailable')) {
-        toast.error('Serviço indisponível (503)', { description: 'O serviço de geração de imagem está sobrecarregado. Por favor, tente novamente em alguns minutos.' });
+        toast.error('Serviço indisponível (503)', {
+          description: 'O serviço de geração de imagem está sobrecarregado ou temporariamente indisponível. Por favor, tente novamente em alguns minutos.',
+        });
       } else {
-        toast.error('Erro na Geração da Imagem', { description: `Ocorreu um erro ao gerar a imagem da campanha: ${errorMessage}` });
+        toast.error('Erro na Geração da Imagem', {
+          description: `Ocorreu um erro ao gerar a imagem da campanha: ${errorMessage}`,
+        });
       }
-      setGeneratedPageUrl(null); // This is local state, can remain
+      console.log('[HomePage] DIAGNOSTIC: handleGenerateImage failed. Setting generatedPageUrl to null.');
+      setGeneratedPageUrl(null);
       return false;
     } finally {
       setIsGeneratingImage(false);
     }
   }, [aspectRatio, addNewImageToCanvas, addPendingAsset, autorList, selectedAutorForCampaign]);
-
-  const handleGenerateSummary = async (targetLength, content = campaignState.campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignState(prev => ({ ...prev, campaignContent: { ...prev.campaignContent, [fieldName]: summary } })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
-  const handleGenerateFormattedContent = async (content = campaignState.campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignState(prev => ({ ...prev, campaignContent: { ...prev.campaignContent, conteudoFormatado: finalContent } })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
-
-  const handleGenerateFollowupPosts = async (content = campaignState.campaignContent) => {
+  const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
+  const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
+  const handleGenerateFollowupPosts = async (content = campaignContent) => {
     if (!content?.conteudo) {
       toast.error("Por favor, gere o conteúdo principal primeiro.");
       return;
     }
-    if (campaignState.followupPosts.length >= followupPostsQuantity) {
+
+    if (followupPosts.length >= followupPostsQuantity) {
       toast.info('A quantidade de posts desejada já foi atingida ou superada.');
       return;
     }
+
     setIsGeneratingFollowup(true);
     try {
       const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign);
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
-      const neededQuantity = followupPostsQuantity - campaignState.followupPosts.length;
-      const plan = await generateFollowupPlan({ content, neededQuantity, existingPosts: campaignState.followupPosts, persona: finalPersona, autor: finalAutor });
-      const newPosts = await generateFollowupPosts({ content, plan, persona: finalPersona, autor: finalAutor });
-      setCampaignState(prev => ({ ...prev, followupPosts: [...prev.followupPosts, ...newPosts] }));
+      const neededQuantity = followupPostsQuantity - followupPosts.length;
+      const plan = await generateFollowupPlan({
+        content,
+        neededQuantity,
+        existingPosts: followupPosts,
+        persona: finalPersona,
+        autor: finalAutor,
+      });
+      const newPosts = await generateFollowupPosts({
+        content,
+        plan,
+        persona: finalPersona,
+        autor: finalAutor,
+      });
+      setFollowupPosts(prevPosts => [...prevPosts, ...newPosts]);
     } catch (error) {
       toast.error(`Ocorreu um erro ao gerar os posts de follow-up: ${error.message}`);
     } finally {
       setIsGeneratingFollowup(false);
     }
   };
-
   const handleResetCampaign = () => {
-    setCampaignState(prev => ({ ...prev, campaignContent: null, followupPosts: [] }));
-    setGeneratedPageUrl(null); // Local state
-    setFollowupPostsQuantity(10); // Local state
+    console.log('[HomePage] DIAGNOSTIC: handleResetCampaign called. Setting generatedPageUrl to null.');
+    setCampaignContent(null);
+    setGeneratedPageUrl(null);
+    setFollowupPosts([]);
+    setFollowupPostsQuantity(10);
   };
-
   const handleEditFollowup = (index, content) => { setEditingFollowup({ index, content }); };
-
-  const handleSaveFollowup = (newContent) => {
-    if (editingFollowup === null) return;
-    setCampaignState(prev => {
-      const updatedPosts = prev.followupPosts.map((post, index) => {
-        if (index === editingFollowup.index) return { ...post, conteudo: newContent };
-        return post;
-      });
-      return { ...prev, followupPosts: updatedPosts };
-    });
-    setEditingFollowup(null);
-  };
-
+  const handleSaveFollowup = (newContent) => { if (editingFollowup === null) return; const updatedPosts = followupPosts.map((post, index) => { if (index === editingFollowup.index) { return { ...post, conteudo: newContent }; } return post; }); setFollowupPosts(updatedPosts); setEditingFollowup(null); };
   const handleGenerateIAContent = async () => {
     setIsGenerating(true);
     setGenerationStatus('Gerando texto para os posts...');
     try {
       const iaResponseText = await generateIAContent({ promptText, promptNumRecords });
       const parsedResult = parseIaResponseToCsvData(iaResponseText);
-      if (!parsedResult || !parsedResult.data || !parsedResult.data.length > 0) {
-        toast.error('Não foi possível processar a resposta da IA para o formato de tabela.'); return;
-      }
-      const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
-      const { newPositions, newStyles } = autoArrangeFields({ csvHeaders: csvHeadersResult, fieldPositions: {}, fieldStyles: {}, csvData: csvDataResult, effectiveImageSize: originalImageSize });
-      const newGeneratedPagesData = csvDataResult.map((record, index) => ({ index, record, blob: null, url: null, filename: `midiator_${String(index + 1).padStart(3, '0')}.png`, customFieldPositions: null, customFieldStyles: null, customBrandElements: null, customImageFilters: null, fontScale: 1 }));
 
-      setCampaignState(prev => ({
-        ...prev,
-        csvData: csvDataResult,
+      if (!parsedResult || !parsedResult.data || !parsedResult.data.length > 0) {
+        toast.error('Não foi possível processar a resposta da IA para o formato de tabela.');
+        return;
+      }
+
+      const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
+
+      const { newPositions: updatedFieldPositions, newStyles: updatedFieldStyles } = autoArrangeFields({
         csvHeaders: csvHeadersResult,
-        fieldPositions: newPositions,
-        fieldStyles: newStyles,
-        generatedPagesData: newGeneratedPagesData,
+        fieldPositions: {},
+        fieldStyles: {},
+        csvData: csvDataResult,
+        effectiveImageSize: originalImageSize,
+      });
+
+      const newGeneratedPagesData = csvDataResult.map((record, index) => ({
+        index,
+        record,
+        blob: null,
+        url: null,
+        filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+        customFieldPositions: null,
+        customFieldStyles: null,
+        customBrandElements: null,
+        customImageFilters: null,
+        fontScale: 1,
       }));
-      setInitialFieldStyles(newStyles);
+
+      setCsvData(csvDataResult);
+      setCsvHeaders(csvHeadersResult);
+      setFieldPositions(updatedFieldPositions);
+      setFieldStyles(updatedFieldStyles);
+      setInitialFieldStyles(updatedFieldStyles);
+      setGeneratedPagesData(newGeneratedPagesData);
       setInputMethod('manual');
+
+      // A geração de imagens foi movida para a etapa "Edição de Páginas" a pedido do usuário.
       toast.success('Geração de posts concluída. Prossiga para a próxima etapa para gerar as imagens.');
     } catch (error) {
       toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
@@ -1179,66 +1331,104 @@ function HomePage() {
     const imagePrompt = record.prompt_imagem_carrossel;
     let pageUpdateData = {};
 
-    let effectivePageTemplate = campaignState.pageTemplate;
-    const pageData = campaignState.generatedPagesData.find(p => p.index === index);
-    if (pageData?.customPageTemplate) {
-      effectivePageTemplate = pageData.customPageTemplate;
-    }
+    // 1. Determine the effective styles and template for this specific page
+    const pageData = generatedPagesData.find(p => p.index === index);
+    const effectiveBrandElements = pageData?.customBrandElements || brandElements;
+    const effectiveFieldPositions = pageData?.customFieldPositions || fieldPositions;
+    const effectiveFieldStyles = pageData?.customFieldStyles || fieldStyles;
+    let effectivePageTemplate = pageData?.customPageTemplate || pageTemplate;
 
+    // 2. Handle image generation from prompt (if any)
     if (imagePrompt && imagePrompt.trim() !== '') {
       setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
       try {
+        // Use a simple default style for the new image.
+        // The complex logic of finding another page's image style was brittle.
         let sourceStyle = { x: 0, y: 0, width: 100, height: 100, zIndex: -1, objectFit: 'cover' };
         const firstImage = effectivePageTemplate.images?.[0];
         if (firstImage) {
+          // If the current page template already has an image, use its style.
           const { id, src, ...style } = firstImage;
           sourceStyle = style;
         }
-        const oldImage = (effectivePageTemplate.images || [])[0];
-        const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
-        if (!base64Data) throw new Error("A IA não conseguiu gerar a imagem.");
-        if (oldImage && oldImage.src && oldImage.src.startsWith('blob:')) removePendingAsset(oldImage.src);
 
+        const oldImage = (effectivePageTemplate.images || [])[0];
+
+        // Generate the image and get the base64 data URL.
+        const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
+        if (!base64Data) {
+          throw new Error("A IA não conseguiu gerar a imagem.");
+        }
+
+        // Revoke the old image's blob URL if it exists to prevent memory leaks.
+        if (oldImage && oldImage.src && oldImage.src.startsWith('blob:')) {
+          removePendingAsset(oldImage.src);
+        }
+
+        // Use the self-contained data: URL directly. This is robust and avoids lifecycle issues.
+        // The serialization process is already equipped to handle data: URLs on save.
         const newImage = { ...createNewImageElement(base64Data), ...sourceStyle, visible: true };
         const pageImages = effectivePageTemplate.images || [];
-        const finalImages = pageImages.length > 0 ? [newImage, ...pageImages.slice(1)] : [newImage];
+
+        // Se houver imagens, substitui a primeira. Caso contrário, adiciona a nova imagem.
+        const finalImages = pageImages.length > 0
+          ? [newImage, ...pageImages.slice(1)]
+          : [newImage];
 
         const tempPageTemplate = { ...effectivePageTemplate, images: finalImages };
-        effectivePageTemplate = tempPageTemplate;
-        pageUpdateData.customPageTemplate = tempPageTemplate;
+        effectivePageTemplate = tempPageTemplate; // Update for this generation pass
+        pageUpdateData.customPageTemplate = tempPageTemplate; // Persist this change
       } catch (error) {
         const errorMessage = error.message || 'An unknown error occurred.';
         if (errorMessage.includes('503') || errorMessage.toLowerCase().includes('service unavailable')) {
-          toast.error(`Serviço indisponível (Post #${index + 1})`, { description: 'O serviço de geração de imagem está sobrecarregado. Por favor, tente gerar esta imagem novamente em alguns minutos.' });
+          toast.error(`Serviço indisponível (Post #${index + 1})`, {
+            description: 'O serviço de geração de imagem está sobrecarregado. Por favor, tente gerar esta imagem novamente em alguns minutos.',
+          });
         } else {
-          toast.error(`Falha na Imagem (Post #${index + 1})`, { description: `Não foi possível gerar a imagem: ${errorMessage}` });
+          toast.error(`Falha na Imagem (Post #${index + 1})`, {
+            description: `Não foi possível gerar a imagem: ${errorMessage}`,
+          });
         }
       }
     }
 
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
+      // 3. Use the new generation service with the effective styles
       const finalPageData = await PageGenerationService.generatePageImage({
-        record, index,
+        record,
+        index,
         campaignContext: {
-          brandElements: pageData?.customBrandElements || campaignState.brandElements,
-          fieldPositions: pageData?.customFieldPositions || campaignState.fieldPositions,
-          fieldStyles: pageData?.customFieldStyles || campaignState.fieldStyles,
-          aspectRatio, pageTemplate: effectivePageTemplate, fontScale,
+          brandElements: effectiveBrandElements,
+          fieldPositions: effectiveFieldPositions,
+          fieldStyles: effectiveFieldStyles,
+          aspectRatio,
+          pageTemplate: effectivePageTemplate,
+          fontScale,
         }
       });
 
       const { blob } = finalPageData;
       const tempUrl = addPendingAsset(blob);
-      if (!tempUrl) throw new Error("Failed to create managed URL for final page image.");
+      if (!tempUrl) {
+        throw new Error("Failed to create managed URL for final page image.");
+      }
 
-      setCampaignState(prev => {
-        const newPagesData = [...prev.generatedPagesData];
+      setGeneratedPagesData(currentPagesData => {
+        const newPagesData = [...currentPagesData];
         const existingPageData = newPagesData[index] || {};
-        const newPageDataObject = { ...existingPageData, ...finalPageData, ...pageUpdateData, url: tempUrl, dataUrl: null };
+
+        const newPageDataObject = {
+          ...existingPageData,
+          ...finalPageData,
+          ...pageUpdateData,
+          url: tempUrl,
+          dataUrl: null,
+        };
         delete newPageDataObject.blob;
+
         newPagesData[index] = newPageDataObject;
-        return { ...prev, generatedPagesData: newPagesData };
+        return newPagesData;
       });
 
       toast.success(`Página final para o post #${index + 1} gerada.`);
@@ -1436,7 +1626,7 @@ function HomePage() {
                   initialGeneratedPagesData={generatedPagesData}
                   onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
                   originalImageSize={originalImageSize}
-                  onBrandElementsChange={(newBrandElements) => setCampaignState(prev => ({ ...prev, brandElements: newBrandElements }))}
+                  onBrandElementsChange={setBrandElements}
                   fontScale={fontScale}
                   handleGenerateSinglePage={handleGenerateSinglePage}
                   aspectRatio={aspectRatio}

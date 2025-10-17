@@ -75,6 +75,7 @@ const FieldPositioner = ({
   onFontScaleChange,
   isCropping,
   setIsCropping,
+  pendingAssets,
 }) => {
   console.log('[FieldPositioner] props:', { pageTemplate, fieldStyles });
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
@@ -278,10 +279,6 @@ const FieldPositioner = ({
   }, [csvHeaders, fieldStyles]);
 
   const renderableElements = React.useMemo(() => {
-    // Defensive check: If fieldPositions is not ready, don't try to render elements.
-    if (!fieldPositions) {
-        return [];
-    }
     const elements = [];
 
     // Add page images
@@ -320,7 +317,7 @@ const FieldPositioner = ({
 
     const textElements = (csvHeaders || [])
       .map(header => {
-        const position = fieldPositions ? fieldPositions[header] : null;
+        const position = fieldPositions[header];
         const style = completeFieldStyles[header];
         if (!position || !position.visible) return null;
 
@@ -451,6 +448,7 @@ const FieldPositioner = ({
             fontScale={element.fontScale}
             enableHtmlRendering={element.enableHtmlRendering}
             darkMode={darkMode}
+            pendingAssets={pendingAssets}
           />
         ))}
       </Box>

@@ -3,7 +3,6 @@ import { Box, CircularProgress, Typography } from '@mui/material';
 import styles from './DraggableElement.module.css';
 import { wrapTextInArea } from '../utils/imageComposer';
 import { applyColorHighlight } from '../utils/filterUtils';
-import { useCampaign } from '../context/CampaignContext';
 
 const hexToRgba = (hex, alpha) => {
   if (!hex || hex.length < 4) {
@@ -36,14 +35,15 @@ const DraggableElementInternal = ({
   enableHtmlRendering = false,
   darkMode,
   onDoubleClick,
+  pendingAssets,
 }) => {
-  const { pendingAssets } = useCampaign();
+  console.log('[DraggableElement] PROPS RECEIVED:', { element, content });
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(content);
-  const [displayUrl, setDisplayUrl] = useState(null);
+  const [displayUrl, setDisplayUrl] = useState(content);
   const [resizeHandle, setResizeHandle] = useState(null);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [initialPosition, setInitialPosition] = useState({ x: 0, y: 0 });
@@ -80,63 +80,24 @@ const DraggableElementInternal = ({
 
   // useEffect para renderização do canvas foi REMOVIDO
   useEffect(() => {
+    // This effect resolves blob URLs to a displayable format.
     let objectUrl = null;
-    // Initialize to null at the start of every run.
-    setDisplayUrl(null);
-
-    // --- Start of Diagnostic Logging ---
-    const hasPendingAssets = !!pendingAssets;
-    const pendingAssetKeys = hasPendingAssets ? Object.keys(pendingAssets) : [];
-    const logPayload = {
-        elementId: element.id,
-        contentType: typeof content,
-        contentValue: content,
-        hasPendingAssets,
-        pendingAssetCount: pendingAssetKeys.length,
-    };
-    // --- End of Diagnostic Logging ---
-
-    // Case 1: The content is a key for a hydrated asset. We MUST find it in pendingAssets.
-    if (content && content.startsWith('hydrated_')) {
-        if (hasPendingAssets && pendingAssets[content]) {
-            console.log('[DraggableElement LOG] Case 1: Hydrated asset FOUND in pendingAssets.', logPayload);
-            const blob = pendingAssets[content];
-            objectUrl = URL.createObjectURL(blob);
-            setDisplayUrl(objectUrl);
-        } else {
-            // The asset is expected but not yet available. Wait for re-render.
-            console.log('[DraggableElement LOG] Case 1: Hydrated asset NOT YET in pendingAssets. Waiting.', logPayload);
-        }
-    }
-    // Case 2: The content is a temporary blob URL from a new upload in this session.
-    else if (content && content.startsWith('blob:')) {
-        // Find the corresponding blob in pendingAssets to create a new, stable object URL for this component instance.
-        // This is safer than assuming the incoming blob URL is still valid.
-        const blob = pendingAssets ? Object.values(pendingAssets).find(b => b instanceof Blob && URL.createObjectURL(b) === content) : null;
-        if (blob) {
-            objectUrl = URL.createObjectURL(blob);
-            setDisplayUrl(objectUrl);
-        } else if (pendingAssets && pendingAssets[content]) {
-            // Fallback for cases where the blob URL itself is used as the key
-            const directBlob = pendingAssets[content];
-            objectUrl = URL.createObjectURL(directBlob);
-            setDisplayUrl(objectUrl);
-        }
-    }
-    // Case 3: The content is a permanent URL (http) or an inline data URL.
-    else if (content && (content.startsWith('http') || content.startsWith('data:'))) {
-        console.log('[DraggableElement LOG] Case 3: Content is a direct URL.', logPayload);
-        setDisplayUrl(content);
-    }
-    // Case 4: No valid source or content is not image-like.
-    else {
-        if (element.type === 'image') {
-            console.log('[DraggableElement LOG] Case 4: No valid image source found.', logPayload);
-        }
+    if (content && content.startsWith('blob:') && pendingAssets) {
+      const blob = pendingAssets[content];
+      if (blob) {
+        objectUrl = URL.createObjectURL(blob);
+        setDisplayUrl(objectUrl);
+      } else {
+        // Blob not found, maybe it's from a previous session and now invalid.
+        // Show a placeholder or a broken image indicator.
+        setDisplayUrl(null); // Or a path to a broken image asset
+      }
+    } else {
+      setDisplayUrl(content);
     }
 
     return () => {
-      // If we created a temporary object URL, we must revoke it to avoid memory leaks.
+      // Clean up the created object URL to prevent memory leaks.
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
       }
@@ -152,18 +113,10 @@ const DraggableElementInternal = ({
     }
     if (element.type === 'image') {
        if (!displayUrl) {
-        // If content suggests an image is coming, show a loader. Otherwise, show an error.
-        const showLoader = content && (content.startsWith('hydrated_') || content.startsWith('blob:'));
-        return (
-          <Box sx={{ width: '100%', height: '100%', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {showLoader
-              ? <CircularProgress size={24} />
-              : <Typography variant="caption" color="error">Erro Imagem</Typography>
-            }
-          </Box>
-        );
+        // Render a placeholder or an error message if the URL is invalid
+        return <Box sx={{ width: '100%', height: '100%', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Typography variant="caption" color="error">Erro Imagem</Typography></Box>;
       }
-      return <img src={displayUrl} alt="Elemento de imagem" style={{ width: '100%', height: '100%', objectFit: style.objectFit || 'fill' }} />;
+      return <img src={displayUrl} alt="Elemento de imagem" style={{ objectFit: style.objectFit || 'fill' }} />;
     }
 
     if (element.type === 'cropbox') {
