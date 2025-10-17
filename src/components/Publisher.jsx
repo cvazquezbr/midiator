@@ -83,7 +83,7 @@ function TabPanel(props) {
   );
 }
 
-import { useCampaign } from '../context/CampaignContext.js';
+import { useCampaign } from '../context/CampaignContext.jsx';
 
 const Publisher = ({
   settings,
@@ -115,7 +115,7 @@ const Publisher = ({
         pendingAssets: updater(prevState.pendingAssets)
       }));
     } else {
-      setCampaignState({ pendingAssets: updater });
+      setCampaignState(prevState => ({ ...prevState, pendingAssets: updater }));
     }
   };
 
