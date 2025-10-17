@@ -83,26 +83,37 @@ function TabPanel(props) {
   );
 }
 
-const Publisher = ({
-  settings,
-  campaignContent,
-  generatedPagesData = [],
-  generatedVideosData = [],
-  followupPosts = [],
-  isScheduled,
-  setIsScheduled,
-  scheduleDate,
-  setScheduleDate,
-  weeklySchedule,
-  setWeeklySchedule,
-  selectedImages,
-  setSelectedImages,
-  selectedVideos,
-  setSelectedVideos,
-  currentCampaign,
-  pendingAssets,
-  setPendingAssets,
-}) => {
+const Publisher = ({ settings }) => {
+  const { campaignState, setCampaignState } = useCampaign();
+  const {
+    campaignContent,
+    generatedPagesData = [],
+    generatedVideosData = [],
+    followupPosts = [],
+    isScheduled,
+    scheduleDate,
+    weeklySchedule,
+    selectedImages,
+    selectedVideos,
+    currentCampaign,
+    pendingAssets,
+  } = campaignState;
+
+  const setIsScheduled = (value) => setCampaignState({ isScheduled: value });
+  const setScheduleDate = (value) => setCampaignState({ scheduleDate: value });
+  const setWeeklySchedule = (value) => setCampaignState({ weeklySchedule: value });
+  const setSelectedImages = (updater) => {
+    const newSelectedImages = typeof updater === 'function' ? updater(campaignState.selectedImages) : updater;
+    setCampaignState({ selectedImages: newSelectedImages });
+  };
+  const setSelectedVideos = (updater) => {
+    const newSelectedVideos = typeof updater === 'function' ? updater(campaignState.selectedVideos) : updater;
+    setCampaignState({ selectedVideos: newSelectedVideos });
+  };
+  const setPendingAssets = (updater) => {
+    const newPendingAssets = typeof updater === 'function' ? updater(campaignState.pendingAssets) : updater;
+    setCampaignState({ pendingAssets: newPendingAssets });
+  };
   const [tabValue, setTabValue] = React.useState(0);
   const [mySchedules, setMySchedules] = useState([]);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);

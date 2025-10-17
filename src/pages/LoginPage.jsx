@@ -25,7 +25,7 @@ const LoginPage = () => {
 
   // If the user is already logged in, redirect them to the home page.
   useEffect(() => {
-    if (user !== null) {
+    if (user) {
       navigate('/', { replace: true });
     }
   }, [user, navigate]);

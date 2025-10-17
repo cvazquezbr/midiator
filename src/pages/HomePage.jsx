@@ -99,26 +99,20 @@ function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
   const {
-    csvData, setCsvData,
-    csvHeaders, setCsvHeaders,
-    fieldPositions, setFieldPositions,
-    fieldStyles, setFieldStyles,
-    brandElements, setBrandElements,
-    pageTemplate, setPageTemplate,
-    selectedField, setSelectedField,
-    currentCampaign, setCurrentCampaign,
-    generatedPagesData, setGeneratedPagesData,
-    generatedVideos, setGeneratedVideos,
-    aspectRatio, setAspectRatio,
-    pendingAssets, setPendingAssets,
+    campaignState,
+    setCampaignState,
+    applyLoadedCampaign,
     addPendingAsset,
     addPendingAssetMap,
     removePendingAsset,
     defaultPageTemplate,
-    paletteId, setPaletteId,
-    customPalette, setCustomPalette,
-    imageColorPalette, setImageColorPalette,
   } = useCampaign();
+  const {
+    csvData, csvHeaders, fieldPositions, fieldStyles, brandElements,
+    pageTemplate, selectedField, currentCampaign, generatedPagesData,
+    generatedVideos, aspectRatio, pendingAssets, paletteId, customPalette,
+    imageColorPalette,
+  } = campaignState;
 
   // Component State
   const [palettes, setPalettes] = useState([]);
@@ -335,28 +329,19 @@ function HomePage() {
     console.log(`[HomePage] Attempting to save campaign: "${name}"`);
 
     const campaignDataToSave = {
+      ...campaignState,
       activeStep,
       problema,
       solucao,
       objetivo,
       tomDeVoz,
       campaignContent,
-      aspectRatio,
       promptText,
       followupPosts,
       followupPostsQuantity,
-      fieldPositions,
-      fieldStyles,
       templateFieldStyles,
-      brandElements,
-      pageTemplate,
-      generatedPageUrl,
-      generatedPagesData,
       generatedAudioData,
       generatedVideos,
-      csvData,
-      csvHeaders,
-      customPalette,
     };
 
     try {
@@ -786,11 +771,11 @@ function HomePage() {
       const hasCustomPalette = loadedCampaignData.campaign_data?.customPalette?.colors?.length > 0;
 
       if (dbPaletteId) {
-        setPaletteId(dbPaletteId);
+        setCampaignState({ paletteId: dbPaletteId });
       } else if (hasCustomPalette) {
-        setPaletteId('custom');
+        setCampaignState({ paletteId: 'custom' });
       } else {
-        setPaletteId(null);
+        setCampaignState({ paletteId: null });
       }
 
       toast.success(`Campanha "${loadedCampaignData.name}" carregada com sucesso!`);
