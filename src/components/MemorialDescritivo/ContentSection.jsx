@@ -76,7 +76,7 @@ const ContentSection = ({
           <Typography variant="h4" component="h2" sx={{ mb: 4 }}>
             Posts de Acompanhamento
           </Typography>
-          {followupPosts.map((post, index) => (
+          {followupPosts.filter(Boolean).map((post, index) => (
             <Paper key={index} variant="outlined" sx={{ p: 2, mb: 2 }}>
                 <Typography variant="h6" component="h5" gutterBottom>
                     {post.titulo || `Post ${index + 1}`}

@@ -36,7 +36,7 @@ const RecordsTable = ({ registros = [], colunas = [], onEditar, onExcluir, darkM
                 </thead>
                 <tbody>
                     {registros.length > 0 ? (
-                        registros.map(reg => (
+                        registros.filter(Boolean).map(reg => (
                             <RecordRow
                                 key={reg.id !== undefined ? reg.id : JSON.stringify(reg)}
                                 registro={reg}
