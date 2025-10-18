@@ -29,7 +29,7 @@ const ImageManager = ({ pageTemplate, setPageTemplate, setSelectedField, selecte
   return (
     <Box>
       <List dense>
-        {pageTemplate.images.map((image, index) => (
+        {pageTemplate?.images.map((image, index) => (
           <ListItem
             key={image.id}
             secondaryAction={
