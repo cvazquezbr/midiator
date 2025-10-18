@@ -79,6 +79,7 @@ const PageGeneratorFrontendOnly = ({
             fieldPositions: pageData.customFieldPositions || fieldPositions,
             fieldStyles: pageData.customFieldStyles || fieldStyles,
             fontScale: pageData.fontScale || 1,
+            pendingAssets: pendingAssets,
           };
           return drawAndComposeImage(regenContext).catch(error => {
             console.error(`[Thumbnail-Regen] Failed for index ${pageData.index}:`, error);
@@ -125,7 +126,8 @@ const PageGeneratorFrontendOnly = ({
 
     const pagePromises = csvData.filter(Boolean).map((record, i) => {
       if (isCancelledRef.current) return Promise.resolve(null);
-      return drawAndComposeImage({ ...campaignState, record, index: i })
+      const recordWithTitle = { ...record, Título: record.Título || '' };
+      return drawAndComposeImage({ ...campaignState, record: recordWithTitle, index: i, pendingAssets })
         .then(pageData => { setProgress(p => p + 1); return pageData; })
         .catch(error => { toast.error(`Erro ao gerar página ${i}: ${error.message}`); return null; });
     });
@@ -168,7 +170,8 @@ const PageGeneratorFrontendOnly = ({
     if (!pageDataForRegen.pageTemplate || !pageDataForRegen.record || !fontsLoaded) {
       throw new Error('Pré-requisitos para regeneração não atendidos.');
     }
-    return drawAndComposeImage(pageDataForRegen);
+    // Ensure pendingAssets is passed through for regeneration.
+    return drawAndComposeImage({ ...pageDataForRegen, pendingAssets });
   };
 
   const handleResetPage = async (index) => {

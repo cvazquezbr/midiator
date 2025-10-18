@@ -59,7 +59,7 @@ import { parseIaResponseToCsvData } from '../utils/iaResponseParser.js';
 import { parseCsv } from '../utils/csvParser.js';
 import { lightTheme, darkTheme } from '../theme.js';
 import ColorThief from 'colorthief';
-import { getDimensionsFromAspectRatio } from '../utils/imageComposer.js';
+import { getDimensionsFromAspectRatio, dataURLtoBlob } from '../utils/imageComposer.js';
 import { autoArrangeFields } from '../utils/autoArrange.js';
 import PageGenerationService from '../services/PageGenerationService.js';
 
@@ -617,7 +617,13 @@ function HomePage() {
         const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
         if (!base64Data) throw new Error("A IA não conseguiu gerar a imagem.");
         if (oldImage?.src?.startsWith('blob:')) removePendingAsset(oldImage.src);
-        const newImage = { ...createNewImageElement(base64Data), ...sourceStyle, visible: true };
+
+        // Convert base64 to a managed blob URL
+        const imageBlob = dataURLtoBlob(base64Data);
+        const managedImageUrl = addPendingAsset(imageBlob);
+        if (!managedImageUrl) throw new Error("Falha ao registrar a imagem gerada.");
+
+        const newImage = { ...createNewImageElement(managedImageUrl), ...sourceStyle, visible: true };
         const finalImages = (effectivePageTemplate.images?.length > 0) ? [newImage, ...effectivePageTemplate.images.slice(1)] : [newImage];
         effectivePageTemplate = { ...effectivePageTemplate, images: finalImages };
         pageUpdateData.customPageTemplate = effectivePageTemplate;
