@@ -89,7 +89,7 @@ const FieldPositioner = ({
   const handleContentChange = useCallback((field, newText) => {
     if (!csvData || csvData.length === 0) return;
 
-    const updatedCsvData = csvData.map((row, index) => {
+    const updatedCsvData = csvData.filter(Boolean).map((row, index) => {
       if (index === currentPreviewIndex) {
         return {
           ...row,
@@ -211,7 +211,7 @@ const FieldPositioner = ({
       csvHeaders,
       fieldPositions,
       fieldStyles,
-      csvData,
+      csvData: csvData.filter(Boolean),
       effectiveImageSize,
       currentPreviewIndex,
     });
@@ -321,7 +321,7 @@ const FieldPositioner = ({
         const style = completeFieldStyles[header];
         if (!position || !position.visible) return null;
 
-        const record = csvData[currentPreviewIndex] || {};
+        const record = (csvData.filter(Boolean) || [])[currentPreviewIndex] || {};
         const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
 
         return {

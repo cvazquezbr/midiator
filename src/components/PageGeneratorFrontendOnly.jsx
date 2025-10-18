@@ -123,7 +123,7 @@ const PageGeneratorFrontendOnly = ({
     setProgress(0);
     isCancelledRef.current = false;
 
-    const pagePromises = csvData.map((record, i) => {
+    const pagePromises = csvData.filter(Boolean).map((record, i) => {
       if (isCancelledRef.current) return Promise.resolve(null);
       return drawAndComposeImage({ ...campaignState, record, index: i })
         .then(pageData => { setProgress(p => p + 1); return pageData; })
@@ -150,9 +150,10 @@ const PageGeneratorFrontendOnly = ({
     setIsGenerating(true);
     setProgress(0);
     isCancelledRef.current = false;
-    for (let i = 0; i < csvData.length; i++) {
+    const validCsvData = csvData.filter(Boolean);
+    for (let i = 0; i < validCsvData.length; i++) {
       if (isCancelledRef.current) break;
-      const record = csvData[i];
+      const record = validCsvData[i];
       const pageData = generatedPagesData.find(p => p.index === i);
       await handleGenerateSinglePage(record, i, pageData?.fontScale || 1);
       setProgress(p => p + 1);
