@@ -25,7 +25,7 @@ export const usePageData = (pageIndex) => {
 
     return {
       isCustom,
-      effectivePageTemplate: pageData?.customPageTemplate || pageTemplate,
+      effectivePageTemplate: pageData?.customPageTemplate || pageTemplate || {},
       effectiveFieldPositions: pageData?.customFieldPositions || fieldPositions,
       effectiveFieldStyles: pageData?.customFieldStyles || fieldStyles,
       effectiveBrandElements: pageData?.customBrandElements || brandElements,
