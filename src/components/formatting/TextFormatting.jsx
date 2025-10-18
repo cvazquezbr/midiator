@@ -55,7 +55,6 @@ const fonts = [
 import { useCampaign } from '../../context/CampaignContext';
 
 const TextFormatting = ({
-  colorPalette,
   currentElement,
   updateFieldStyle,
   resetFieldStyle,
@@ -65,7 +64,7 @@ const TextFormatting = ({
   selectedField,
 }) => {
   const { campaignState } = useCampaign();
-  const { imageColorPalette: imagePalette } = campaignState;
+  const { imageColorPalette: imagePalette, colors: colorPalette } = campaignState;
   if (!currentElement) return null;
 
   return (

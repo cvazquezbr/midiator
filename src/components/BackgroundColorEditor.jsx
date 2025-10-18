@@ -16,9 +16,9 @@ import ColorSwatches from './common/ColorSwatches';
 import { useCampaign } from '../context/CampaignContext';
 
 
-const BackgroundColorEditor = ({ pageTemplate, onUpdate, colorPalette }) => {
+const BackgroundColorEditor = ({ pageTemplate, onUpdate }) => {
   const { campaignState } = useCampaign();
-  const { imageColorPalette: imagePalette } = campaignState;
+  const { imageColorPalette: imagePalette, colors: colorPalette } = campaignState;
   if (!pageTemplate) return null;
 
   const initialMode = pageTemplate?.gradient ? 'gradient' : 'solid';

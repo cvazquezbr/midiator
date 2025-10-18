@@ -22,7 +22,6 @@ import { useCampaign } from '../context/CampaignContext';
 const ImageStepUI = ({
   onOpenImageGallery,
   onImageDisplayedSizeChange,
-  colorPalette,
   onCsvDataUpdate,
   originalImageSize,
   onZIndexChange,

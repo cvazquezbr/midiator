@@ -6,7 +6,6 @@ import FormattingPanel from './FormattingPanel';
 const FormattingDrawer = ({
   open,
   onClose,
-  colorPalette,
   selectedField,
   setSelectedField, // <-- Add this
   fieldStyles,
@@ -39,7 +38,6 @@ const FormattingDrawer = ({
           </IconButton>
         </Box>
         <FormattingPanel
-          colorPalette={colorPalette}
           selectedField={selectedField}
           setSelectedField={setSelectedField} // <-- Pass it down
           fieldStyles={fieldStyles}

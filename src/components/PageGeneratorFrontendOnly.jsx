@@ -16,7 +16,6 @@ import { safeDeepClone } from '../lib/utils';
 import { toast } from 'sonner';
 
 const PageGeneratorFrontendOnly = ({
-  colorPalette,
   originalImageSize,
   handleGenerateSinglePage,
   aspectRatio,
@@ -393,7 +392,6 @@ const PageGeneratorFrontendOnly = ({
           onClose={handleCloseGeneratedPageEditor}
           pageData={safeDeepClone(pageToEdit)}
           onSave={handleSaveIndividualModifications}
-          colorPalette={colorPalette}
           aspectRatio={aspectRatio}
           originalImageSize={originalImageSize}
           onOpenImageGallery={() => onOpenImageGallery(editingGeneratedPageIndex)}
