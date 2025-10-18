@@ -322,7 +322,7 @@ const PageGeneratorFrontendOnly = ({
     setEditingGeneratedPageIndex(null);
   };
 
-  const pageToEdit = generatedPagesData.find(p => p.index === editingGeneratedPageIndex);
+  const pageToEdit = (generatedPagesData || []).find(p => p.index === editingGeneratedPageIndex);
 
   return (
     <Box sx={{ mt: 3 }}>
