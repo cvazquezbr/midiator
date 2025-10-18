@@ -329,7 +329,7 @@ export const drawAndComposeImage = async ({
 
     // 1. Draw background color or gradient
     ctx.save();
-    if (pageTemplate.gradient && pageTemplate.gradient.type === 'linear') {
+    if (pageTemplate?.gradient && pageTemplate.gradient.type === 'linear') {
         const angle = pageTemplate.gradient.angle || 0;
         const radians = (angle - 90) * (Math.PI / 180);
         const x0 = finalCanvas.width / 2;
@@ -341,23 +341,23 @@ export const drawAndComposeImage = async ({
         const y2 = y0 - Math.sin(radians) * length / 2;
 
         const gradient = ctx.createLinearGradient(x2, y2, x1, y1);
-        const colors = pageTemplate.gradient.colors || ['#FFFFFF', '#000000'];
+        const colors = pageTemplate.gradient?.colors || ['#FFFFFF', '#000000'];
         colors.forEach((color, idx) => {
             gradient.addColorStop(idx / (colors.length - 1), color);
         });
         ctx.fillStyle = gradient;
 
-    } else if (pageTemplate.gradient && pageTemplate.gradient.type === 'radial') {
+    } else if (pageTemplate?.gradient && pageTemplate.gradient.type === 'radial') {
         const gradient = ctx.createRadialGradient(
             finalCanvas.width / 2, finalCanvas.height / 2, 0,
             finalCanvas.width / 2, finalCanvas.height / 2, Math.max(finalCanvas.width, finalCanvas.height) / 2
         );
-        const colors = pageTemplate.gradient.colors || ['#FFFFFF', '#000000'];
+        const colors = pageTemplate.gradient?.colors || ['#FFFFFF', '#000000'];
         colors.forEach((color, idx) => {
             gradient.addColorStop(idx / (colors.length - 1), color);
         });
         ctx.fillStyle = gradient;
-    } else if (pageTemplate.backgroundColor) {
+    } else if (pageTemplate?.backgroundColor) {
         ctx.fillStyle = pageTemplate.backgroundColor;
     } else {
         ctx.fillStyle = 'white';

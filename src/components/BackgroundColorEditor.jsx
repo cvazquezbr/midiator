@@ -18,7 +18,7 @@ import ColorSwatches from './common/ColorSwatches';
 const BackgroundColorEditor = ({ pageTemplate, onUpdate, colorPalette, imagePalette }) => {
   if (!pageTemplate) return null;
 
-  const initialMode = pageTemplate.gradient ? 'gradient' : 'solid';
+  const initialMode = pageTemplate?.gradient ? 'gradient' : 'solid';
   const [colorMode, setColorMode] = React.useState(initialMode);
   const [selectedGradientColorIndex, setSelectedGradientColorIndex] = React.useState(0);
 
@@ -27,7 +27,7 @@ const BackgroundColorEditor = ({ pageTemplate, onUpdate, colorPalette, imagePale
   };
 
   const handleGradientUpdate = (property, value) => {
-    const currentGradient = pageTemplate.gradient || { type: 'linear', angle: 90, colors: ['#ffffff', '#000000'] };
+    const currentGradient = pageTemplate?.gradient || { type: 'linear', angle: 90, colors: ['#ffffff', '#000000'] };
     onUpdate({
       ...pageTemplate,
       gradient: { ...currentGradient, [property]: value },
@@ -90,7 +90,7 @@ const BackgroundColorEditor = ({ pageTemplate, onUpdate, colorPalette, imagePale
 
       {colorMode === 'solid' && (
         <Box sx={{ mt: 2 }}>
-          <TextField type="color" value={pageTemplate.backgroundColor || '#ffffff'} onChange={(e) => handleUpdate('backgroundColor', e.target.value)} fullWidth />
+          <TextField type="color" value={pageTemplate?.backgroundColor || '#ffffff'} onChange={(e) => handleUpdate('backgroundColor', e.target.value)} fullWidth />
           <ColorSwatches title="Paleta da Campanha" palette={colorPalette} onColorSelect={handleSolidColorSelect} />
           <ColorSwatches title="Paleta da Imagem" palette={imagePalette} onColorSelect={handleSolidColorSelect} />
         </Box>
