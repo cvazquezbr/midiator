@@ -238,9 +238,9 @@ const PostsCurtosStep = ({
               registros={csvData}
               colunas={csvHeaders}
               onDadosAlterados={(action) => {
-                  let novosRegistros = [...csvData];
+                  let novosRegistros = [...csvData.filter(Boolean)];
                   let novasColunas = [...csvHeaders];
-                  let proximoId = (csvData.length > 0 ? Math.max(...csvData.map(r => parseInt(String(r.id).replace('reg-', ''), 10) || 0)) : 0) + 1;
+                  let proximoId = (novosRegistros.length > 0 ? Math.max(...novosRegistros.map(r => parseInt(String(r.id).replace('reg-', ''), 10) || 0)) : 0) + 1;
 
                   switch (action.type) {
                       case 'ADD_RECORD':
