@@ -17,7 +17,7 @@ export const usePageData = (pageIndex) => {
   } = useCampaign();
 
   const pageData = useMemo(() => {
-    return generatedPagesData.find(p => p.index === pageIndex);
+    return (generatedPagesData || []).find(p => p.index === pageIndex);
   }, [generatedPagesData, pageIndex]);
 
   const data = useMemo(() => {
