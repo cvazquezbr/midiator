@@ -4,7 +4,7 @@ import {
   Box, Button, Typography, Card, CardContent, Grid, LinearProgress, Alert, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Chip, TextField, Tooltip, CircularProgress, Divider,
 } from '@mui/material';
 import {
-  Download, Close, ImageIcon, CloudUpload, Google, Edit, SwapHoriz, Share, AutoAwesomeOutlined as GeminiIcon, SettingsBackupRestore, Delete,
+  Download, Close, Image, CloudUpload, Google, Edit, SwapHoriz, Share, AutoAwesomeOutlined as GeminiIcon, SettingsBackupRestore, Delete,
 } from '@mui/icons-material';
 import PageEditor from './PageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
@@ -330,11 +330,11 @@ const PageGeneratorFrontendOnly = ({
     <Box sx={{ mt: 3 }}>
       <Card>
         <CardContent>
-          <Typography variant="h5" gutterBottom><ImageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />Geração de Páginas</Typography>
+          <Typography variant="h5" gutterBottom><Image sx={{ mr: 1, verticalAlign: 'middle' }} />Geração de Páginas</Typography>
           {!fontsLoaded && <Alert severity="info" sx={{ mb: 2 }}>Carregando fontes...</Alert>}
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} sm={generatedPagesData.some(img => img.url) ? 4 : 12}>
-              <Button variant="contained" color="primary" onClick={generatePages} disabled={isGenerating || !fontsLoaded} startIcon={<ImageIcon />} fullWidth>
+              <Button variant="contained" color="primary" onClick={generatePages} disabled={isGenerating || !fontsLoaded} startIcon={<Image />} fullWidth>
                 {generatedPagesData.some(img => img.url) ? 'Regerar páginas' : 'Gerar Páginas'}
               </Button>
             </Grid>
