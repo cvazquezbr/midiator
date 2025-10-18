@@ -1144,7 +1144,7 @@ const Publisher = ({
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {mySchedules.map((row) => (
+                                {mySchedules.filter(row => row.post_content).map((row) => (
                                     <TableRow key={row.id}>
                                         <TableCell>
                                             {row.campaign_data?.pageTemplate?.images?.[0]?.url && (
