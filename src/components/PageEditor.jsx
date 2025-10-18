@@ -88,7 +88,8 @@ const PageEditor = ({
       const templateToEdit = safeDeepClone(pageData.customPageTemplate || globalPageTemplate);
       setEditedPositions(safeDeepClone(effectiveFieldPositions));
       setEditedBrandElements(safeDeepClone(effectiveBrandElements));
-      setEditedRecord(safeDeepClone(record));
+      // Ensure record is an object before cloning to prevent crashes.
+      setEditedRecord(safeDeepClone(record || {}));
       setEditedPageTemplate(templateToEdit);
       const newEditedStyles = {};
       (csvHeaders || []).forEach(field => {
