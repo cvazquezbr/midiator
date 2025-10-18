@@ -21,7 +21,6 @@ const PageGeneratorFrontendOnly = ({
   handleGenerateSinglePage,
   aspectRatio,
   onOpenImageGallery,
-  imagePalette,
 }) => {
   const { campaignState, setCampaignState, addPendingAsset } = useCampaign();
   const {
@@ -395,7 +394,6 @@ const PageGeneratorFrontendOnly = ({
           pageData={safeDeepClone(pageToEdit)}
           onSave={handleSaveIndividualModifications}
           colorPalette={colorPalette}
-          imagePalette={imagePalette}
           aspectRatio={aspectRatio}
           originalImageSize={originalImageSize}
           onOpenImageGallery={() => onOpenImageGallery(editingGeneratedPageIndex)}

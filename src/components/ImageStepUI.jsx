@@ -23,7 +23,6 @@ const ImageStepUI = ({
   onOpenImageGallery,
   onImageDisplayedSizeChange,
   colorPalette,
-  imagePalette,
   onCsvDataUpdate,
   originalImageSize,
   onZIndexChange,

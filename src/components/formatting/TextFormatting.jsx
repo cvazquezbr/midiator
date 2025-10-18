@@ -52,9 +52,10 @@ const fonts = [
     'Courier New',
 ];
 
+import { useCampaign } from '../../context/CampaignContext';
+
 const TextFormatting = ({
   colorPalette,
-  imagePalette,
   currentElement,
   updateFieldStyle,
   resetFieldStyle,
@@ -63,6 +64,8 @@ const TextFormatting = ({
   handleAccordionChange,
   selectedField,
 }) => {
+  const { campaignState } = useCampaign();
+  const { imageColorPalette: imagePalette } = campaignState;
   if (!currentElement) return null;
 
   return (
