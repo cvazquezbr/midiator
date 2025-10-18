@@ -162,6 +162,18 @@ export const deserializeCampaignData = async (loadedState) => {
   const finalState = JSON.parse(JSON.stringify(loadedState)); // Deep copy to modify
   const newlyCreatedAssets = {}; // This will become the new `pendingAssets` map in the UI
 
+  // --- Data Sanitization ---
+  // Filter out any null or undefined entries from critical arrays.
+  if (finalState.csvData && Array.isArray(finalState.csvData)) {
+    finalState.csvData = finalState.csvData.filter(Boolean);
+  }
+  if (finalState.generatedPagesData && Array.isArray(finalState.generatedPagesData)) {
+    finalState.generatedPagesData = finalState.generatedPagesData.filter(Boolean);
+  }
+  if (finalState.followupPosts && Array.isArray(finalState.followupPosts)) {
+    finalState.followupPosts = finalState.followupPosts.filter(Boolean);
+  }
+
   const isVercelUrl = (url) => typeof url === 'string' && url.includes('blob.vercel-storage.com');
 
   // --- Step 1: Collect all unique Vercel URLs to download ---
