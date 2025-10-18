@@ -1,15 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Typography,
   Box,
-  Button,
   Fab,
   Stack,
   Tooltip,
   IconButton,
 } from '@mui/material';
 import {
-  Image as ImageIcon,
   Edit as EditIcon,
   SkipPrevious,
   ArrowLeft,
@@ -22,16 +20,7 @@ import FormattingDrawer from './FormattingDrawer';
 import { useCampaign } from '../context/CampaignContext';
 
 const ImageStepUI = ({
-  steps,
-  isDraggingOverImage,
-  handleImageDrop,
-  handleImageDragOver,
-  handleImageDragEnter,
-  handleImageDragLeave,
-  imageInputRef,
-  handleImageUpload,
   onOpenImageGallery,
-  initialFieldStyles,
   onImageDisplayedSizeChange,
   colorPalette,
   imagePalette,
@@ -39,29 +28,29 @@ const ImageStepUI = ({
   originalImageSize,
   onZIndexChange,
   isMobile,
-  onDeselectField,
   onOpenHtmlEditor,
   currentPreviewIndex,
   setCurrentPreviewIndex,
-  templateFieldStyles,
   activeStep,
-  isDrawerOpen,
-  setIsDrawerOpen,
-  isCropping,
-  setIsCropping,
-  onFontScaleChange,
-  addPendingAsset,
+  handleImageUpload,
 }) => {
+  const { campaignState, setCampaignState } = useCampaign();
   const {
     csvData,
     csvHeaders,
-    fieldPositions, setFieldPositions,
-    fieldStyles, setFieldStyles,
-    brandElements, setBrandElements,
-    pageTemplate, setPageTemplate,
-    selectedField, setSelectedField,
+    fieldPositions,
+    fieldStyles,
+    brandElements,
+    pageTemplate,
+    selectedField,
     imageColorPalette,
-  } = useCampaign();
+    initialFieldStyles,
+    templateFieldStyles,
+    fontScale,
+  } = campaignState;
+
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isCropping, setIsCropping] = useState(false);
 
   const handleNextPreview = () => {
     setCurrentPreviewIndex(prevIndex => Math.min(prevIndex + 1, csvData.length - 1));
@@ -81,50 +70,35 @@ const ImageStepUI = ({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, height: { xs: 'calc(100dvh - 140px)', md: 'calc(100vh - 150px)' } }}>
-
-      {/* Main Content: Editor Area */}
-      <Box sx={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: 0,
-      }}>
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <Typography variant="h6" sx={{ flexShrink: 0, textAlign: 'center', my: 2 }}>
           Editor de Página
         </Typography>
-        <Box
-          sx={{
-            flexGrow: 1,
-            minHeight: 0, // Allow shrinking
-            display: 'flex',
-            p: 1,
-          }}
-        >
+        <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', p: 1 }}>
           <FieldPositioner
             csvHeaders={csvHeaders}
             fieldPositions={fieldPositions}
-            setFieldPositions={setFieldPositions}
+            setFieldPositions={(value) => setCampaignState({ fieldPositions: value })}
             fieldStyles={fieldStyles}
-            setFieldStyles={setFieldStyles}
+            setFieldStyles={(value) => setCampaignState({ fieldStyles: value })}
             csvData={csvData}
             onImageDisplayedSizeChange={onImageDisplayedSizeChange}
             colorPalette={imageColorPalette}
             onCsvDataUpdate={onCsvDataUpdate}
             selectedField={selectedField}
-            setSelectedField={setSelectedField}
+            setSelectedField={(value) => setCampaignState({ selectedField: value })}
             originalImageSize={originalImageSize}
             brandElements={brandElements}
-            setBrandElements={setBrandElements}
+            setBrandElements={(value) => setCampaignState({ brandElements: value })}
             pageTemplate={pageTemplate}
-            setPageTemplate={setPageTemplate}
+            setPageTemplate={(value) => setCampaignState({ pageTemplate: value })}
             onZIndexChange={onZIndexChange}
             onOpenHtmlEditor={onOpenHtmlEditor}
             currentPreviewIndex={currentPreviewIndex}
             setCurrentPreviewIndex={setCurrentPreviewIndex}
-            onFontScaleChange={onFontScaleChange}
+            onFontScaleChange={(value) => setCampaignState({ fontScale: value })}
             isCropping={isCropping}
             setIsCropping={setIsCropping}
-            addPendingAsset={addPendingAsset} 
           />
         </Box>
         {imageColorPalette && imageColorPalette.length > 0 && (
@@ -133,25 +107,17 @@ const ImageStepUI = ({
               <Box
                 key={index}
                 sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '50%',
-                  backgroundColor: color,
-                  cursor: 'pointer',
-                  border: '2px solid #fff',
-                  boxShadow: '0 0 5px rgba(0,0,0,0.2)',
-                  touchAction: 'manipulation',
-                  '&:active': { transform: 'scale(0.95)' }
+                  width: 28, height: 28, borderRadius: '50%', backgroundColor: color, cursor: 'pointer',
+                  border: '2px solid #fff', boxShadow: '0 0 5px rgba(0,0,0,0.2)',
                 }}
                 onClick={() => {
                   if (selectedField) {
-                    setFieldStyles(prev => ({
-                      ...prev,
-                      [selectedField]: {
-                        ...(prev[selectedField] || {}),
-                        color: color
+                    setCampaignState({
+                      fieldStyles: {
+                        ...fieldStyles,
+                        [selectedField]: { ...(fieldStyles[selectedField] || {}), color: color }
                       }
-                    }));
+                    });
                   }
                 }}
               />
@@ -169,15 +135,8 @@ const ImageStepUI = ({
         )}
       </Box>
 
-      {/* Sidebar: Formatting Panel (Desktop Only) */}
       {!isMobile && (
-        <Box sx={{
-          flex: '0 0 320px', // Don't grow, don't shrink, base width 320px
-          p: 1,
-          borderLeft: 1,
-          borderColor: 'divider',
-          overflowY: 'auto'
-        }}>
+        <Box sx={{ flex: '0 0 320px', p: 1, borderLeft: 1, borderColor: 'divider', overflowY: 'auto' }}>
           <Stack spacing={2}>
             <FormattingPanel
               colorPalette={colorPalette}
@@ -186,17 +145,17 @@ const ImageStepUI = ({
               handleImageUpload={handleImageUpload}
               onOpenImageGallery={onOpenImageGallery}
               selectedField={selectedField}
-              setSelectedField={setSelectedField}
+              setSelectedField={(value) => setCampaignState({ selectedField: value })}
               fieldStyles={fieldStyles}
               initialFieldStyles={initialFieldStyles}
-              setFieldStyles={setFieldStyles}
+              setFieldStyles={(value) => setCampaignState({ fieldStyles: value })}
               fieldPositions={fieldPositions}
-              setFieldPositions={setFieldPositions}
+              setFieldPositions={(value) => setCampaignState({ fieldPositions: value })}
               csvHeaders={csvHeaders}
               brandElements={brandElements}
-              setBrandElements={setBrandElements}
+              setBrandElements={(value) => setCampaignState({ brandElements: value })}
               pageTemplate={pageTemplate}
-              setPageTemplate={setPageTemplate}
+              setPageTemplate={(value) => setCampaignState({ pageTemplate: value })}
               onZIndexChange={onZIndexChange}
               onOpenHtmlEditor={onOpenHtmlEditor}
               templateFieldStyles={templateFieldStyles}
@@ -208,32 +167,29 @@ const ImageStepUI = ({
         </Box>
       )}
 
-      {/* Mobile FAB and Drawer */}
       {isMobile && (
         <>
           <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 1300 }} onClick={() => {
             if (!selectedField) {
-              // If nothing is selected, default to selecting the page background for editing.
-              setSelectedField('__page_background__');
+              setCampaignState({ selectedField: '__page_background__' });
             }
-            // Always open the drawer.
             setIsDrawerOpen(true);
           }}><EditIcon /></Fab>
           <FormattingDrawer
             open={isDrawerOpen}
             onClose={() => setIsDrawerOpen(false)}
             selectedField={selectedField}
-            setSelectedField={setSelectedField}
+            setSelectedField={(value) => setCampaignState({ selectedField: value })}
             fieldStyles={fieldStyles}
             initialFieldStyles={initialFieldStyles}
-            setFieldStyles={setFieldStyles}
+            setFieldStyles={(value) => setCampaignState({ fieldStyles: value })}
             fieldPositions={fieldPositions}
-            setFieldPositions={setFieldPositions}
+            setFieldPositions={(value) => setCampaignState({ fieldPositions: value })}
             csvHeaders={csvHeaders}
             brandElements={brandElements}
-            setBrandElements={setBrandElements}
+            setBrandElements={(value) => setCampaignState({ brandElements: value })}
             pageTemplate={pageTemplate}
-            setPageTemplate={setPageTemplate}
+            setPageTemplate={(value) => setCampaignState({ pageTemplate: value })}
             onZIndexChange={onZIndexChange}
             onOpenHtmlEditor={onOpenHtmlEditor}
             templateFieldStyles={templateFieldStyles}

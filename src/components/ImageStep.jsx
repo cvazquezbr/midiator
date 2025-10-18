@@ -1,24 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import ImageStepUI from './ImageStepUI';
 
+// This component is now a simple pass-through container.
+// All logic has been moved to ImageStepUI to directly use the context.
 const ImageStep = (props) => {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isCropping, setIsCropping] = useState(false);
-
-  // Note: currentPreviewIndex and setCurrentPreviewIndex are still passed from HomePage
-  // as they are used by other components (like the TextEditorDialog).
-  // This could be further refactored into the context if needed.
-  const { aspectRatio, ...rest } = props;
-
-  return (
-    <ImageStepUI
-      {...rest}
-      isDrawerOpen={isDrawerOpen}
-      setIsDrawerOpen={setIsDrawerOpen}
-      isCropping={isCropping}
-      setIsCropping={setIsCropping}
-    />
-  );
+  return <ImageStepUI {...props} />;
 };
 
 export default ImageStep;
