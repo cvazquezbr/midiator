@@ -1148,7 +1148,7 @@ const Publisher = ({
                                     <TableRow key={row.id}>
                                         <TableCell>
                                             {row.campaign_data?.pageTemplate?.images?.[0]?.url && (
-                                                <img src={row.campaign_data.pageTemplate.images[0].url} alt="Campaign" style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }} />
+                                                <img src={row.campaign_data?.pageTemplate?.images[0]?.url} alt="Campaign" style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }} />
                                             )}
                                         </TableCell>
                                         <TableCell component="th" scope="row">
