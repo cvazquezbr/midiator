@@ -376,9 +376,9 @@ const FieldPositioner = ({
     return 'none';
   };
 
-  const backgroundValue = pageTemplate.gradient
+  const backgroundValue = pageTemplate?.gradient
     ? getGradientCss(pageTemplate.gradient)
-    : pageTemplate.backgroundColor || '#FFFFFF';
+    : pageTemplate?.backgroundColor || '#FFFFFF';
 
   return (
     <Box

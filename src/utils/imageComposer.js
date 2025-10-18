@@ -369,7 +369,7 @@ export const drawAndComposeImage = async ({
     // 2. Collect and sort all elements by zIndex
     const elementsToDraw = [];
 
-    (pageTemplate.images || []).forEach(img => {
+    (pageTemplate?.images || []).forEach(img => {
         if (img.visible !== false) {
             elementsToDraw.push({
                 type: 'image',
