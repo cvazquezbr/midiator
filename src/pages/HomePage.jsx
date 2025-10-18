@@ -1,4 +1,3 @@
-// Re-submitting the fix for the persona saving bug.
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -30,14 +29,10 @@ import AutoresPage from './AutoresPage';
 import PalettesPage from './PalettesPage';
 import MainAppBar from '../components/MainAppBar';
 import Sidebar from '../components/Sidebar';
-import FieldPositioner from '../components/FieldPositioner';
-import FormattingPanel from '../components/FormattingPanel';
-import FormattingDrawer from '../components/FormattingDrawer';
 import PageGeneratorFrontendOnly from '../components/PageGeneratorFrontendOnly';
 import AudioGenerator from '../components/AudioGenerator';
 import VideoGenerator2 from '../components/VideoGenerator2';
 import PostsCurtosStep from '../components/PostsCurtosStep';
-import CsvInfobox from '../components/CsvInfobox';
 import Publisher from '../components/Publisher';
 import Monitor from '../components/Monitor';
 import SetupModal from '../components/SetupModal';
@@ -64,36 +59,18 @@ import { parseIaResponseToCsvData } from '../utils/iaResponseParser.js';
 import { parseCsv } from '../utils/csvParser.js';
 import { lightTheme, darkTheme } from '../theme.js';
 import ColorThief from 'colorthief';
-import { drawAndComposeImage, getDimensionsFromAspectRatio } from '../utils/imageComposer.js';
+import { getDimensionsFromAspectRatio } from '../utils/imageComposer.js';
 import { autoArrangeFields } from '../utils/autoArrange.js';
 import PageGenerationService from '../services/PageGenerationService.js';
 
-import { setGoogleApiToken, setGoogleApiTokenSetter, findFolderByName, createFolder, uploadFile } from '../utils/googleApi';
+import { setGoogleApiToken, setGoogleApiTokenSetter } from '../utils/googleApi';
 
 const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
   const hex = x.toString(16);
   return hex.length === 1 ? '0' + hex : hex;
 }).join('');
 
-import { createNewImageElement } from '../utils/elementFactory.js';
-
 const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
-
-const dataURLtoBlob = (dataurl) => {
-  if (!dataurl) return null;
-  const arr = dataurl.split(',');
-  if (arr.length < 2) return null;
-  const mimeMatch = arr[0].match(/:(.*?);/);
-  if (!mimeMatch) return null;
-  const mime = mimeMatch[1];
-  const bstr = atob(arr[1].split(';base64,').pop());
-  let n = bstr.length;
-  const u8arr = new Uint8Array(n);
-  while(n--){
-    u8arr[n] = bstr.charCodeAt(n);
-  }
-  return new Blob([u8arr], {type:mime});
-};
 
 function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
@@ -107,6 +84,8 @@ function HomePage() {
     removePendingAsset,
     defaultPageTemplate,
   } = useCampaign();
+
+  // Destructure state from the unified campaignState object
   const {
     csvData, csvHeaders, fieldPositions, fieldStyles, brandElements,
     pageTemplate, selectedField, currentCampaign, generatedPagesData,
@@ -114,13 +93,7 @@ function HomePage() {
     imageColorPalette,
   } = campaignState;
 
-  const setImageColorPalette = (palette) => setCampaignState({ imageColorPalette: palette });
-  const setGeneratedVideos = (updater) => {
-    const newVideos = typeof updater === 'function' ? updater(campaignState.generatedVideos) : updater;
-    setCampaignState({ generatedVideos: newVideos });
-  };
-
-  // Component State
+  // Local UI State - not part of the campaign data model
   const [palettes, setPalettes] = useState([]);
   const [personaList, setPersonaList] = useState([]);
   const [autorList, setAutorList] = useState([]);
@@ -136,46 +109,24 @@ function HomePage() {
   const [personaDrawerOpen, setPersonaDrawerOpen] = useState(!isMobile);
   const [autorDrawerOpen, setAutorDrawerOpen] = useState(!isMobile);
   const [paletteDrawerOpen, setPaletteDrawerOpen] = useState(!isMobile);
-  const [problema, setProblema] = useState('');
-  const [solucao, setSolucao] = useState('');
-  const [objetivo, setObjetivo] = useState('');
-  const [tomDeVoz, setTomDeVoz] = useState('');
   const [isGeneratingCampaign, setIsGeneratingCampaign] = useState(false);
   const [generationStatus, setGenerationStatus] = useState('');
-  const [campaignContent, setCampaignContent] = useState(null);
   const [campaignGenerationFailed, setCampaignGenerationFailed] = useState(false);
   const [generationError, setGenerationError] = useState('');
   const [editingField, setEditingField] = useState(null);
   const [isHtmlField, setIsHtmlField] = useState(false);
-  const [generatedPageUrl, setGeneratedPageUrl] = useState(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isGeneratingSummaryMedio, setIsGeneratingSummaryMedio] = useState(false);
   const [isGeneratingSummaryPequeno, setIsGeneratingSummaryPequeno] = useState(false);
   const [isGeneratingConteudoFormatado, setIsGeneratingConteudoFormatado] = useState(false);
-  const [followupPosts, setFollowupPosts] = useState([]);
-  const [isGeneratingFollowup, setIsGeneratingFollowup] = useState(false);
-  const [followupPostsQuantity, setFollowupPostsQuantity] = useState(10);
   const [editingFollowup, setEditingFollowup] = useState(null);
-  const [isScheduled, setIsScheduled] = useState(false);
-  const [scheduleDate, setScheduleDate] = useState(new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
-  const [weeklySchedule, setWeeklySchedule] = useState({});
-  const [selectedProfile, setSelectedProfile] = useState('');
-  const [selectedImages, setSelectedImages] = useState({});
-  const [selectedVideos, setSelectedVideos] = useState({});
   const [inputMethod, setInputMethod] = useState('ia');
-  const [promptNumRecords, setPromptNumRecords] = useState(10);
-  const [promptText, setPromptText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // Manages the main loading dialog
   const [isFetchingCampaigns, setIsFetchingCampaigns] = useState(true);
-  const [initialFieldStyles, setInitialFieldStyles] = useState({});
-  const [templateFieldStyles, setTemplateFieldStyles] = useState({});
-  const [displayedImageSize, setDisplayedImageSize] = useState({ width: 0, height: 0 });
   const [originalImageSize, setOriginalImageSize] = useState(DEFAULT_IMAGE_SIZE);
-  const [generatedAudioData, setGeneratedAudioData] = useState([]);
   const [isProcessingAudio, setIsProcessingAudio] = useState(false);
-  const [isDraggingOverImage, setIsDraggingOverImage] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [initialSetupTab, setInitialSetupTab] = useState(0);
   const [showMemorialDescritivoModal, setShowMemorialDescritivoModal] = useState(false);
@@ -184,8 +135,8 @@ function HomePage() {
   const [imageGalleryTargetIndex, setImageGalleryTargetIndex] = useState(null);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
-  const [fontScale, setFontScale] = useState(1);
 
+  // Local state for campaign-specific settings that don't belong in the main data model
   const [selectedPersonaForCampaign, setSelectedPersonaForCampaign] = useState('');
   const [selectedAutorForCampaign, setSelectedAutorForCampaign] = useState('');
   const [startAutoresInCreate, setStartAutoresInCreate] = useState(false);
@@ -195,195 +146,57 @@ function HomePage() {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [navigationTarget, setNavigationTarget] = useState(null);
 
-
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
+  const campaignContentRef = useRef(campaignState.campaignContent);
+  campaignContentRef.current = campaignState.campaignContent;
 
-  // Use a ref to hold the latest campaignContent to avoid stale state in callbacks.
-  const campaignContentRef = useRef(campaignContent);
-  campaignContentRef.current = campaignContent;
+  const handleNavigation = (targetAction) => targetAction();
+  const handleDialogClose = () => { setShowUnsavedDialog(false); setNavigationTarget(null); };
+  const handleDialogDiscard = () => { setShowUnsavedDialog(false); if (navigationTarget) navigationTarget(); setNavigationTarget(null); };
+  const handleDialogSaveAndNavigate = async () => { setShowUnsavedDialog(false); setNavigationTarget(null); };
+  const handleRequestNewAutor = () => { setStartAutoresInCreate(true); setCurrentView('autores'); };
+  const handleRequestNewPersona = () => { setStartPersonasInCreate(true); setCurrentView('personas'); };
+  const handleCreationDone = (view) => { if (view === 'autores') setStartAutoresInCreate(false); else if (view === 'personas') setStartPersonasInCreate(false); setCurrentView('campaigns'); };
+  const handleAutorCreated = (newAutor) => { fetchAutoresForCampaign(); if (newAutor?.id) setSelectedAutorForCampaign(newAutor.id); setStartAutoresInCreate(false); setCurrentView('campaigns'); };
+  const handlePersonaCreated = (newPersona) => { fetchPersonasForCampaign(); if (newPersona?.id) setSelectedPersonaForCampaign(newPersona.id); setStartPersonasInCreate(false); setCurrentView('campaigns'); };
 
-  // --- Navigation Guard Logic ---
-  const handleNavigation = (targetAction) => {
-    // TODO: This guard should be adapted to handle unsaved changes in the campaign view as well.
-    // For now, it only blocks navigation away from the persona page.
-    // A more robust solution would involve a context or a more generic dirty flag.
-    targetAction();
-  };
-
-  const handleDialogClose = () => {
-    setShowUnsavedDialog(false);
-    setNavigationTarget(null);
-  };
-
-  const handleDialogDiscard = () => {
-    setShowUnsavedDialog(false);
-    if (navigationTarget) {
-      navigationTarget();
-    }
-    setNavigationTarget(null);
-  };
-
-  const handleDialogSaveAndNavigate = async () => {
-    // This needs to be implemented for the campaign saving logic if we adapt the dialog.
-    // const success = await handleSaveCampaign();
-    setShowUnsavedDialog(false);
-    // if (success && navigationTarget) {
-    //     navigationTarget();
-    // }
-    setNavigationTarget(null);
-  };
-
-  const handleRequestNewAutor = () => {
-    setStartAutoresInCreate(true);
-    setCurrentView('autores');
-  };
-
-  const handleRequestNewPersona = () => {
-    setStartPersonasInCreate(true);
-    setCurrentView('personas');
-  };
-
-  const handleCreationDone = (view) => {
-    if (view === 'autores') {
-      setStartAutoresInCreate(false);
-    } else if (view === 'personas') {
-      setStartPersonasInCreate(false);
-    }
-    setCurrentView('campaigns');
-  };
-
-  const handleAutorCreated = (newAutor) => {
-    fetchAutoresForCampaign();
-    if (newAutor && newAutor.id) {
-      setSelectedAutorForCampaign(newAutor.id);
-    }
-    setStartAutoresInCreate(false);
-    setCurrentView('campaigns');
-  };
-
-  const handlePersonaCreated = (newPersona) => {
-    fetchPersonasForCampaign();
-    if (newPersona && newPersona.id) {
-      setSelectedPersonaForCampaign(newPersona.id);
-    }
-    setStartPersonasInCreate(false);
-    setCurrentView('campaigns');
-  };
-
-
+  // This effect synchronizes the UI state after a campaign is loaded into the context
   useEffect(() => {
-    if (!currentCampaign || !campaignState.campaignData) {
+    if (!currentCampaign || !campaignState) {
       setIsLoading(false);
       return;
     }
-
-    const state = campaignState.campaignData;
-    console.log("Syncing HomePage state with loaded campaign data:", state);
-
-    // Sync local state with the data from the context
-    setActiveStep(state.activeStep ?? 0);
-    setSidebarOpen(state.sidebarOpen ?? !isMobile);
-    setProblema(state.problema ?? '');
-    setSolucao(state.solucao ?? '');
-    setObjetivo(state.objetivo ?? '');
-    setTomDeVoz(state.tomDeVoz ?? '');
-    setCampaignContent(state.campaignContent ?? null);
-    setFollowupPosts(Array.isArray(state.followupPosts) ? state.followupPosts : []);
-    setFollowupPostsQuantity(state.followupPostsQuantity ?? 10);
-    setIsScheduled(state.isScheduled ?? false);
-    setScheduleDate(state.scheduleDate ? new Date(state.scheduleDate) : new Date(new Date().getTime() + 24 * 60 * 60 * 1000));
-    setWeeklySchedule(state.weeklySchedule ?? {});
-    setSelectedProfile(state.selectedProfile ?? '');
-    setInputMethod(state.inputMethod ?? 'ia');
-    setPromptNumRecords(state.promptNumRecords ?? 10);
-
-    if (state.promptText) {
-      setPromptText(state.promptText);
-    } else if (state.campaignContent) {
-      const { titulo, conteudo, cta } = state.campaignContent;
-      setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
-    } else {
-      setPromptText('');
-    }
-
-    setTemplateFieldStyles(state.templateFieldStyles ?? {});
-
-    // This logic needs to stay here as it depends on the loaded campaign's image
-    const firstImageSrc = state.pageTemplate?.images?.[0]?.src || state.backgroundElement?.src || state.backgroundImage;
+    console.log("Syncing HomePage UI with loaded campaign data:", campaignState);
+    setActiveStep(campaignState.activeStep ?? 0);
+    setInputMethod(campaignState.inputMethod ?? 'ia');
+    const firstImageSrc = campaignState.pageTemplate?.images?.[0]?.src;
     if (firstImageSrc) {
       const img = new Image();
       img.crossOrigin = 'Anonymous';
-      img.onload = () => {
-        setOriginalImageSize({ width: img.width, height: img.height });
-      };
-      img.onerror = () => {
-        setOriginalImageSize(DEFAULT_IMAGE_SIZE);
-      };
+      img.onload = () => setOriginalImageSize({ width: img.width, height: img.height });
+      img.onerror = () => setOriginalImageSize(DEFAULT_IMAGE_SIZE);
       img.src = firstImageSrc;
     } else {
       setOriginalImageSize(DEFAULT_IMAGE_SIZE);
     }
-
-    // Once all local state is synced, we can stop loading
     setIsLoading(false);
-    console.log("HomePage state sync complete. isLoading set to false.");
-
-  }, [currentCampaign, campaignState.campaignData, isMobile]);
+    console.log("HomePage UI sync complete. isLoading set to false.");
+  }, [currentCampaign, campaignState]);
 
   const handleSaveCampaign = async (name) => {
     console.log(`[HomePage] Attempting to save campaign: "${name}"`);
-
-    const campaignDataToSave = {
-      ...campaignState,
-      activeStep,
-      problema,
-      solucao,
-      objetivo,
-      tomDeVoz,
-      campaignContent,
-      promptText,
-      followupPosts,
-      followupPostsQuantity,
-      templateFieldStyles,
-      generatedAudioData,
-      generatedVideos,
-    };
-
+    const campaignDataToSave = { ...campaignState, activeStep };
     try {
       await checkAuthStatus();
     } catch (error) {
       toast.error(error.message || "Could not verify your session.");
       return;
     }
-
-    if (!user || !user.uuid) {
+    if (!user?.uuid) {
       toast.error("Your session appears to be invalid. Please try logging out and logging back in.");
       return;
     }
-
-    const sanitizeMediaArray = (arr) => {
-      if (!Array.isArray(arr)) return [];
-      return arr.map(item => {
-        const sanitizedItem = { ...item };
-        delete sanitizedItem.blob;
-        delete sanitizedItem.file;
-        delete sanitizedItem.thumbnailBlob;
-        return sanitizedItem;
-      });
-    };
-
-    const sanitizedCampaignData = {
-      ...campaignDataToSave,
-      generatedPagesData: sanitizeMediaArray(campaignDataToSave.generatedPagesData),
-      brandElements: sanitizeMediaArray(campaignDataToSave.brandElements),
-      generatedAudioData: sanitizeMediaArray(campaignDataToSave.generatedAudioData),
-      generatedVideos: sanitizeMediaArray(campaignDataToSave.generatedVideos),
-      pageTemplate: {
-        ...campaignDataToSave.pageTemplate,
-        images: sanitizeMediaArray(campaignDataToSave.pageTemplate.images),
-      },
-    };
 
     setIsSaving(true);
     setUploadProgress({ current: 0, total: 0 });
@@ -391,36 +204,17 @@ function HomePage() {
       let result;
       if (currentCampaign) {
         console.log(`[HomePage] Updating existing campaign, ID: ${currentCampaign.id}`);
-        result = await updateCampaign(currentCampaign.id, name, sanitizedCampaignData, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign, paletteId);
+        result = await updateCampaign(currentCampaign.id, name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign, paletteId);
         toast.success(`Campaign "${name}" updated.`);
       } else {
         console.log(`[HomePage] Saving new campaign.`);
-        result = await saveCampaign(name, sanitizedCampaignData, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign, paletteId);
+        result = await saveCampaign(name, campaignDataToSave, pendingAssets, setUploadProgress, user.uuid, selectedAutorForCampaign, selectedPersonaForCampaign, paletteId);
         toast.success(`Campaign "${name}" saved.`);
       }
-
-      // After a successful save, the 'result' contains the fully re-hydrated campaign data
-      // and the new pendingAssets map. We must apply this new state to the context.
-      const { campaign: rehydratedCampaign, pendingAssets: newPendingAssets } = result;
-
-      if (rehydratedCampaign && rehydratedCampaign.campaign_data) {
-        console.log("[HomePage] Save successful. Synchronizing component state with re-hydrated data.");
-
-        // 1. Update the context with the new map of pending assets
-        setPendingAssets(newPendingAssets || {});
-
-        // 2. Update the rest of the UI state using the hydrated campaign data
-        applyAppState(rehydratedCampaign.campaign_data);
-
-        // 3. Update the top-level currentCampaign object to keep it in sync
-        setCurrentCampaign(rehydratedCampaign);
-
-      } else {
-        console.warn("[HomePage] Save operation did not return a re-hydrated state to synchronize.");
-        setPendingAssets({}); // Clear pending assets as a fallback
-      }
-
-      console.log("[HomePage] Save/Update operation completed successfully.");
+      applyLoadedCampaign({
+        ...result.campaign,
+        pendingAssets: result.pendingAssets || {},
+      });
     } catch (err) {
       console.error("[HomePage] Error during save/update campaign:", err);
       toast.error(err.message || 'An unknown error occurred while saving the campaign.');
@@ -434,35 +228,11 @@ function HomePage() {
     if (apiKey) geminiAPI.initialize(apiKey);
   }, []);
 
-  const fetchPersonasForCampaign = useCallback(() => {
-    return getPersonas()
-      .then(setPersonaList)
-      .catch(err => {
-        console.error("Failed to fetch personas for campaign step:", err);
-        toast.error('Could not load personas for campaign dropdown.');
-      });
-  }, []);
-
-  const fetchAutoresForCampaign = useCallback(() => {
-    return getAutores()
-      .then(setAutorList)
-      .catch(err => {
-        console.error("Failed to fetch autores for campaign step:", err);
-        toast.error('Could not load autores for campaign dropdown.');
-      });
-  }, []);
-
-  const fetchPalettesForCampaign = useCallback(() => {
-    return getPalettes()
-      .then(setPalettes)
-      .catch(err => {
-        console.error("Failed to fetch palettes for campaign step:", err);
-        toast.error('Could not load palettes for campaign dropdown.');
-      });
-  }, []);
+  const fetchPersonasForCampaign = useCallback(() => getPersonas().then(setPersonaList).catch(err => toast.error('Could not load personas.')), []);
+  const fetchAutoresForCampaign = useCallback(() => getAutores().then(setAutorList).catch(err => toast.error('Could not load autores.')), []);
+  const fetchPalettesForCampaign = useCallback(() => getPalettes().then(setPalettes).catch(err => toast.error('Could not load palettes.')), []);
 
   useEffect(() => {
-    // Fetch personas, autores, and palettes for the campaign step dropdown
     if (user) {
       fetchPersonasForCampaign();
       fetchAutoresForCampaign();
@@ -474,51 +244,30 @@ function HomePage() {
     const checkCampaignsAndSetInitialStep = async () => {
       try {
         const existingCampaigns = await getCampaigns();
-        if (existingCampaigns && existingCampaigns.length > 0) {
-          setActiveStep(0);
-        } else {
-          setActiveStep(1);
-        }
+        setActiveStep(existingCampaigns?.length > 0 ? 0 : 1);
       } catch (error) {
-        toast.error("Could not check for existing campaigns. Starting fresh.");
-        console.error("Failed to fetch initial campaigns:", error);
+        toast.error("Could not check for existing campaigns.");
         setActiveStep(1);
       } finally {
         setIsFetchingCampaigns(false);
       }
     };
-
-    if (user) {
-      checkCampaignsAndSetInitialStep();
-    } else {
-      setActiveStep(null);
-      setIsFetchingCampaigns(false);
-    }
+    if (user) checkCampaignsAndSetInitialStep();
+    else { setActiveStep(null); setIsFetchingCampaigns(false); }
   }, [user]);
 
 
   useEffect(() => {
     if (googleAccessToken) {
-      console.log("[HomePage] googleAccessToken updated, configuring googleApi module.");
       setGoogleApiToken(googleAccessToken);
       setGoogleApiTokenSetter(setGoogleAccessToken);
     }
   }, [googleAccessToken, setGoogleAccessToken]);
 
   useEffect(() => {
-    const loadInitialSettings = async () => {
-      if (user) {
-        try {
-          await loadSettingsFromDb();
-          const apiKey = getGeminiApiKey();
-          if (apiKey) geminiAPI.initialize(apiKey);
-          toast.info("Your cloud settings have been loaded.");
-        } catch (error) {
-          toast.error(`Could not load your settings: ${error.message}`);
-        }
-      }
-    };
-    loadInitialSettings();
+    if (user) {
+      loadSettingsFromDb().catch(err => toast.error(`Could not load settings: ${err.message}`));
+    }
   }, [user?.uuid]);
 
   useEffect(() => {
@@ -526,1207 +275,418 @@ function HomePage() {
     document.documentElement.classList.toggle('dark-mode-active', darkMode);
   }, [darkMode]);
 
-  useEffect(() => {
-    console.log('[HomePage] pageTemplate state changed:', pageTemplate);
-    // When the last image is removed, reset the originalImageSize.
-    if (!pageTemplate.images || pageTemplate.images.length === 0) {
-      setOriginalImageSize(DEFAULT_IMAGE_SIZE);
-    }
-  }, [pageTemplate]);
-
   const extractColorPalette = useCallback((url, setter) => {
-    let finalUrl = url;
-    if (url && url.includes('blob.vercel-storage.com')) {
-      finalUrl = `/api/image-proxy?url=${encodeURIComponent(url)}`;
-    }
+    if (!url) { setter([]); return; }
+    let finalUrl = url.includes('blob.vercel-storage.com') ? `/api/image-proxy?url=${encodeURIComponent(url)}` : url;
     const img = new Image();
-    if (!finalUrl.startsWith('/api/')) {
-      img.crossOrigin = 'Anonymous';
-    }
+    if (!finalUrl.startsWith('/api/')) img.crossOrigin = 'Anonymous';
     img.onload = () => {
       try {
         const colorThief = new ColorThief();
-        const palette = colorThief.getPalette(img, 5);
-        setter(palette ? palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])) : []);
-      } catch (e) {
-        console.error("Error extracting palette from image:", e);
-        setter([]);
-      }
+        setter(colorThief.getPalette(img, 5)?.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])) || []);
+      } catch (e) { setter([]); }
     };
-    img.onerror = () => {
-      console.error("Failed to load image for color extraction, clearing swatches.");
-      setter([]);
-    }
+    img.onerror = () => setter([]);
     img.src = finalUrl;
-    if (img.complete) {
-      img.onload();
-    }
+    if (img.complete) img.onload();
   }, []);
 
-  // Effect to extract color palette from the primary image
   useEffect(() => {
-    const firstImage = pageTemplate?.images?.[0];
-    if (firstImage?.src) {
-      extractColorPalette(firstImage.src, setImageColorPalette);
-    } else {
-      // If there's no image, ensure the image palette is empty.
-      // The fallback to the campaign palette will be handled by the UI components.
-      setImageColorPalette([]);
-    }
-  }, [pageTemplate?.images?.[0]?.src, extractColorPalette, setImageColorPalette]);
+    extractColorPalette(pageTemplate?.images?.[0]?.src, (p) => setCampaignState({ imageColorPalette: p }));
+  }, [pageTemplate?.images?.[0]?.src, extractColorPalette, setCampaignState]);
+
+  useEffect(() => { if (isMobile) setSidebarOpen(false); }, [isMobile]);
+  useEffect(() => { setOriginalImageSize(getDimensionsFromAspectRatio(aspectRatio) || DEFAULT_IMAGE_SIZE); }, [aspectRatio]);
 
   useEffect(() => {
-    if (isMobile) setSidebarOpen(false);
-  }, [isMobile]);
-
-  useEffect(() => {
-    const newSize = getDimensionsFromAspectRatio(aspectRatio) || DEFAULT_IMAGE_SIZE;
-    setOriginalImageSize(newSize);
-  }, [aspectRatio]);
-
-  useEffect(() => {
-    const handleLinkedInRedirect = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-
-      if (code) {
-        window.history.replaceState({}, document.title, "/");
-        toast.loading('Finalizando conexão com o LinkedIn...');
-
-        try {
-          const response = await fetch('/api/linkedin-proxy', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'tokenExchange',
-              code: code,
-              redirectUri: window.location.origin
-            }),
-          });
-
-          toast.dismiss();
-          const data = await response.json();
-
-          if (response.ok) {
-            const currentLinkedinConfig = settings.linkedin || {};
-            const newConfig = {
-              ...currentLinkedinConfig,
-              accessToken: data.access_token,
-              expiry: Date.now() + data.expires_in * 1000,
-            };
-            updateSetting('linkedin', newConfig);
-            await saveSettings();
-            toast.success('Conexão com o LinkedIn estabelecida com sucesso!');
-            setInitialSetupTab(4);
-            setShowSetupModal(true);
-          } else {
-            throw new Error(data.error_description || data.error || 'Falha na troca de token do LinkedIn.');
-          }
-        } catch (error) {
-          toast.dismiss();
-          toast.error(`Erro ao conectar com o LinkedIn: ${error.message}`);
-        }
-      }
-    };
-
-    handleLinkedInRedirect();
-  }, [settings.linkedin, updateSetting, saveSettings]);
-
-  useEffect(() => {
-    const processVideos = async () => {
-      const videosToProcess = generatedVideos.filter(v => v.url && !v.duration);
-      if (videosToProcess.length === 0) return;
-
-      const promises = videosToProcess.map(videoData => {
-        return new Promise((resolve) => {
-          const videoElement = document.createElement('video');
-          videoElement.preload = 'metadata';
-
-          videoElement.onloadedmetadata = () => {
-            resolve({
-              ...videoData,
-              duration: videoElement.duration
-            });
-          };
-
-          videoElement.onerror = (e) => {
-            console.error('Error loading video metadata for', videoData.url, e);
-            // Resolve with original data so we don't lose the video
-            resolve(videoData);
-          };
-
-          videoElement.src = videoData.url;
+    const processMedia = async (mediaArray, onUpdate) => {
+      const itemsToProcess = mediaArray.filter(item => item.url && !item.duration);
+      if (itemsToProcess.length === 0) return;
+      const promises = itemsToProcess.map(itemData => new Promise(resolve => {
+        const mediaElement = document.createElement(itemData.type === 'video' ? 'video' : 'audio');
+        mediaElement.preload = 'metadata';
+        mediaElement.onloadedmetadata = () => resolve({ ...itemData, duration: mediaElement.duration });
+        mediaElement.onerror = () => resolve(itemData);
+        mediaElement.src = itemData.url;
+      }));
+      const processedItems = await Promise.all(promises);
+      onUpdate(currentItems => {
+        const newItems = [...currentItems];
+        processedItems.forEach(processed => {
+          const index = newItems.findIndex(v => v.url === processed.url);
+          if (index !== -1) newItems[index] = processed;
         });
-      });
-
-      const processedVideos = await Promise.all(promises);
-
-      setGeneratedVideos(currentVideos => {
-        const newCurrentVideos = [...currentVideos];
-        processedVideos.forEach(processedVideo => {
-          const index = newCurrentVideos.findIndex(v => v.url === processedVideo.url);
-          if (index !== -1) {
-            newCurrentVideos[index] = processedVideo;
-          }
-        });
-        return newCurrentVideos;
+        return newItems;
       });
     };
-
-    processVideos();
-  }, [generatedVideos, setGeneratedVideos]);
-
-  // Processes audio files that are loaded or generated to calculate their duration,
-  // which is needed for video generation. Disables the UI while processing.
-  useEffect(() => {
-    const processAudios = async () => {
-      const audiosToProcess = generatedAudioData.filter(a => a && a.url && !a.duration);
-      if (audiosToProcess.length === 0) {
-        setIsProcessingAudio(false);
-        return;
-      }
-
-      setIsProcessingAudio(true);
-      toast.info(`Processando ${audiosToProcess.length} áudio(s) para calcular a duração...`);
-
-      const promises = audiosToProcess.map(audioData => {
-        return new Promise((resolve) => {
-          const audioElement = document.createElement('audio');
-          audioElement.preload = 'metadata';
-
-          audioElement.onloadedmetadata = () => {
-            resolve({ ...audioData, duration: audioElement.duration });
-          };
-
-          audioElement.onerror = (e) => {
-            console.error('Error loading audio metadata for', audioData.url, e);
-            resolve(audioData); // Resolve with original data on error
-          };
-
-          // Use the blob from pendingAssets if available, otherwise use the URL
-          const blob = pendingAssets[audioData.url];
-          let tempUrl = null;
-          try {
-            if (blob) {
-              tempUrl = URL.createObjectURL(blob);
-              audioElement.src = tempUrl;
-            } else {
-              audioElement.src = audioData.url;
-            }
-          } finally {
-            // Ensure the temporary URL is revoked after the metadata is loaded or an error occurs.
-            if (tempUrl) {
-              audioElement.addEventListener('loadedmetadata', () => URL.revokeObjectURL(tempUrl), { once: true });
-              audioElement.addEventListener('error', () => URL.revokeObjectURL(tempUrl), { once: true });
-            }
-          }
-        });
-      });
-
-      try {
-        const processedAudios = await Promise.all(promises);
-
-        const updatedAudios = generatedAudioData.map(originalAudio => {
-          const processed = processedAudios.find(p => p.url === originalAudio.url);
-          return processed || originalAudio;
-        });
-
-        setGeneratedAudioData(updatedAudios);
-        toast.success("Durações de áudio calculadas com sucesso!");
-      } catch (error) {
-        toast.error("Ocorreu um erro ao processar os áudios.");
-        console.error("Audio processing failed:", error);
-      } finally {
-        setIsProcessingAudio(false);
-      }
-    };
-
-    processAudios();
-  }, [generatedAudioData]);
+    processMedia(generatedVideos, (updater) => setCampaignState({ generatedVideos: updater(campaignState.generatedVideos) }));
+    processMedia(campaignState.generatedAudioData || [], (updater) => setCampaignState({ generatedAudioData: updater(campaignState.generatedAudioData) }));
+  }, [generatedVideos, campaignState.generatedAudioData, setCampaignState]);
 
   const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Modelo de Página', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Edição de Páginas', description: 'Gere as páginas finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish }, { label: 'Monitorar', description: 'Acompanhe as estatísticas de suas publicações.', icon: BarChart } ];
+
   const handleCreateNewCampaign = () => {
-    applyAppState({}); // This will reset most state
-    setCurrentCampaign(null);
-    setPageTemplate(defaultPageTemplate); // Explicitly reset page template
-    setOriginalImageSize(DEFAULT_IMAGE_SIZE);
+    applyLoadedCampaign({});
     setActiveStep(1);
   };
-  const handleEditCampaign = async (campaign) => {
-    toast.info(`Carregando "${campaign.name}" para edição...`);
-    setIsLoading(true); // Set loading to true to show loading indicator
 
+  const handleEditCampaign = async (campaign) => {
+    toast.info(`Carregando "${campaign.name}"...`);
+    setIsLoading(true);
     try {
       await checkAuthStatus();
-      const loadedCampaignData = await loadCampaign(campaign.id);
-
-      console.log("Loaded campaign data from DB:", loadedCampaignData);
-
-      // Use the new atomic state update function
+      const loadedCampaign = await loadCampaign(campaign.id);
       applyLoadedCampaign({
-        ...loadedCampaignData.campaign_data,
-        currentCampaign: { id: loadedCampaignData.id, name: loadedCampaignData.name },
-        pendingAssets: loadedCampaignData.pendingAssets || {},
+        ...loadedCampaign,
+        currentCampaign: { id: loadedCampaign.id, name: loadedCampaign.name },
       });
-
-      // Set local state that is not part of the main campaign data blob
-      setSelectedAutorForCampaign(loadedCampaignData.autor_id || '');
-      setSelectedPersonaForCampaign(loadedCampaignData.persona_id || '');
-
-      const dbPaletteId = loadedCampaignData.palette_id;
-      const hasCustomPalette = loadedCampaignData.campaign_data?.customPalette?.colors?.length > 0;
-
-      if (dbPaletteId) {
-        setCampaignState({ paletteId: dbPaletteId });
-      } else if (hasCustomPalette) {
-        setCampaignState({ paletteId: 'custom' });
-      } else {
-        setCampaignState({ paletteId: null });
-      }
-
-      toast.success(`Campanha "${loadedCampaignData.name}" carregada com sucesso!`);
-      setActiveStep(3); // Navigate after state is set
+      setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
+      setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
+      const dbPaletteId = loadedCampaign.palette_id;
+      const hasCustomPalette = loadedCampaign.campaign_data?.customPalette?.colors?.length > 0;
+      if (dbPaletteId) setCampaignState({ paletteId: dbPaletteId });
+      else if (hasCustomPalette) setCampaignState({ paletteId: 'custom' });
+      else setCampaignState({ paletteId: null });
+      toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
+      setActiveStep(3);
     } catch (err) {
       toast.error(`Falha ao carregar campanha: ${err.message}`);
-      setIsLoading(false); // Ensure loading is turned off on error
+      setIsLoading(false);
     }
-    // Do not set isLoading to false here. The useEffect will handle it.
   };
+
   const parseCsvFile = async (file) => {
     if (!file) return;
     try {
       const { data: newCsvData, headers: newHeaders } = await parseCsv(file);
-      if (newCsvData && newCsvData.length > 0) {
-        setCsvData(newCsvData);
-        setCsvHeaders(newHeaders);
-
+      if (newCsvData?.length > 0) {
         const { newPositions, newStyles } = autoArrangeFields({
-          csvHeaders: newHeaders,
-          fieldPositions: {},
-          fieldStyles: {},
-          csvData: newCsvData,
-          effectiveImageSize: originalImageSize,
+          csvHeaders: newHeaders, fieldPositions: {}, fieldStyles: {}, csvData: newCsvData, effectiveImageSize: originalImageSize,
         });
-
-        setFieldPositions(newPositions);
-        setFieldStyles(newStyles);
-        setInitialFieldStyles(newStyles);
+        setCampaignState({
+          csvData: newCsvData, csvHeaders: newHeaders, fieldPositions: newPositions, fieldStyles: newStyles, initialFieldStyles: newStyles,
+        });
         setInputMethod('manual');
       }
     } catch (error) {
-      toast.error(error.message || 'Ocorreu um erro desconhecido ao processar o arquivo CSV.');
+      toast.error(error.message || 'Ocorreu um erro ao processar o arquivo CSV.');
     }
   };
-  const handleCSVUpload = (event) => { const file = event.target.files[0]; parseCsvFile(file); };
-  const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); const file = event.dataTransfer.files[0]; parseCsvFile(file); };
+  const handleCSVUpload = (event) => parseCsvFile(event.target.files[0]);
+  const handleDrop = (event) => { event.preventDefault(); event.stopPropagation(); parseCsvFile(event.dataTransfer.files[0]); };
   const handleDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
 
-  const handleOpenImageGallery = (index = null) => {
-    console.log(`[HomePage] Opening image gallery for index: ${index}`);
-    setImageGalleryTargetIndex(index);
-    setShowImageGallery(true);
-  };
-
-  const handleCloseImageGallery = () => {
-    setShowImageGallery(false);
-    setImageGalleryTargetIndex(null);
-  };
+  const handleOpenImageGallery = (index = null) => { setImageGalleryTargetIndex(index); setShowImageGallery(true); };
+  const handleCloseImageGallery = () => { setShowImageGallery(false); setImageGalleryTargetIndex(null); };
 
   const addNewImageToCanvas = useCallback((imageUrl) => {
-    console.log(`[HomePage] addNewImageToCanvas called. Target index: ${imageGalleryTargetIndex}`);
-    const newImage = createNewImageElement(imageUrl);
-    setSelectedField(newImage.id);
-
-    // If target index is a number, we are on the "Page Editing" step for a specific page.
+    const newImage = { ...createNewImageElement(imageUrl), zIndex: -1 };
+    setCampaignState({ selectedField: newImage.id });
     if (typeof imageGalleryTargetIndex === 'number') {
-      setGeneratedPagesData(prevPages => {
-        const pageIndex = imageGalleryTargetIndex;
-        if (pageIndex < 0 || pageIndex >= prevPages.length) {
-          console.error("Invalid page index for custom template update:", pageIndex);
-          toast.error(`Falha ao adicionar imagem: índice de página inválido (${pageIndex}).`);
-          return prevPages;
-        }
-
-        return prevPages.map((page, index) => {
-          if (index !== pageIndex) {
-            return page;
-          }
-
-          // Use the existing custom template or create a new one from the main template.
-          // The flawed `pageTemplateUsed` is no longer used.
-          const baseTemplate = page.customPageTemplate || JSON.parse(JSON.stringify(pageTemplate));
-
-          const newCustomTemplate = {
-            ...baseTemplate,
-            images: [...(baseTemplate.images || []), newImage],
-          };
-
-          // Return a new object for the updated page to ensure React detects the change.
-          return {
-            ...page,
-            customPageTemplate: newCustomTemplate,
-          };
+      setCampaignState(prev => {
+        const newPages = prev.generatedPagesData.map((page, index) => {
+          if (index !== imageGalleryTargetIndex) return page;
+          const baseTemplate = page.customPageTemplate || JSON.parse(JSON.stringify(prev.pageTemplate));
+          const newCustomTemplate = { ...baseTemplate, images: [...(baseTemplate.images || []), newImage] };
+          return { ...page, customPageTemplate: newCustomTemplate };
         });
+        return { generatedPagesData: newPages };
       });
       toast.success(`Imagem adicionada à página ${imageGalleryTargetIndex + 1}.`);
     } else {
-      // Otherwise, update the global template (likely on Step 3).
-      setPageTemplate(prevTemplate => ({
-        ...prevTemplate,
-        images: [...(prevTemplate.images || []), newImage],
-      }));
-      console.log('[HomePage] Image added to global page template.');
+      setCampaignState(prev => ({ pageTemplate: { ...prev.pageTemplate, images: [...(prev.pageTemplate.images || []), newImage] } }));
       toast.success('Imagem adicionada ao modelo.');
     }
-
-    // The color palette logic can remain global as it's a UI hint.
-    extractColorPalette(imageUrl, setImageColorPalette);
-  }, [imageGalleryTargetIndex, pageTemplate, setPageTemplate, setGeneratedPagesData, setImageColorPalette, extractColorPalette]);
-
-  const parseImageFile = (file) => {
-    if (!file) return;
-    handleImageSelected(file);
-  };
-  const handleImageUpload = (event) => { const file = event.target.files[0]; parseImageFile(file); };
-  const handleImageDrop = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(false); const file = event.dataTransfer.files[0]; parseImageFile(file); };
-  const handleImageDragOver = (event) => { event.preventDefault(); event.stopPropagation(); };
-  const handleImageDragEnter = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(true); };
-  const handleImageDragLeave = (event) => { event.preventDefault(); event.stopPropagation(); setIsDraggingOverImage(false); };
-
-  const handleForegroundImageUpload = useCallback((event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const tempUrl = addPendingAsset(file);
-    if (tempUrl) {
-      addNewImageToCanvas(tempUrl);
-    } else {
-      toast.error("Não foi possível criar uma URL local para a imagem carregada.");
-    }
-  }, [addNewImageToCanvas, addPendingAsset]);
+    extractColorPalette(imageUrl, p => setCampaignState({ imageColorPalette: p }));
+  }, [imageGalleryTargetIndex, setCampaignState, extractColorPalette]);
 
   const handleImageSelected = useCallback((file) => {
-    if (!file) {
-      toast.warning("Nenhum arquivo de imagem foi selecionado.");
-      return;
-    }
-
-    // The file object from the gallery or local upload is used directly.
+    if (!file) return;
     const managedUrl = addPendingAsset(file);
-
-    if (managedUrl) {
-      // addNewImageToCanvas correctly appends the new image to the template
-      // or to the specific page being edited.
-      addNewImageToCanvas(managedUrl);
-    } else {
-      toast.error("Houve um erro ao registrar a imagem como um ativo pendente.");
-    }
+    if (managedUrl) addNewImageToCanvas(managedUrl);
+    else toast.error("Houve um erro ao registrar a imagem.");
   }, [addPendingAsset, addNewImageToCanvas]);
 
-  const handleNext = () => {
-    handleNavigation(() => {
-      if (activeStep === 3) {
-        console.log("[HomePage] Snapshotting styles from step 3 to templateFieldStyles");
-        setTemplateFieldStyles(fieldStyles);
-      }
-      setActiveStep((prevActiveStep) => prevActiveStep + 1);
-    });
-  };
-  const handleBack = () => {
-    handleNavigation(() => setActiveStep((prevActiveStep) => prevActiveStep - 1));
-  };
+  const handleForegroundImageUpload = useCallback((event) => handleImageSelected(event.target.files[0]), [handleImageSelected]);
+  const handleNext = () => { if (activeStep === 3) setCampaignState({ templateFieldStyles: fieldStyles }); setActiveStep(p => p + 1); };
+  const handleBack = () => setActiveStep(p => p - 1);
   const canProceedToStep = (step) => {
     switch (step) {
       case 1: return true;
-      case 2: return campaignContent !== null;
+      case 2: return campaignState.campaignContent !== null;
       case 3: return csvData.length > 0;
-      case 4: return true; // Always allow proceeding to formatting step
-      case 5:
-        if (generatedPagesData.length === 0 || !generatedPagesData.every(img => img.blob || img.url)) {
-          toast.error("Por favor, gere todas as páginas na etapa 4 antes de prosseguir.");
-          return false;
-        }
-        return true;
-      case 6: // From Audio to Video
-        if (generatedAudioData.length === 0 && csvData.length > 0) {
-          toast.error("Por favor, gere os áudios na etapa 5 antes de prosseguir.");
-          return false;
-        }
-        if (generatedAudioData.some(audio => !audio.duration || audio.duration <= 0)) {
-          toast.error("Aguarde o cálculo da duração de todos os áudios antes de prosseguir.");
-          return false;
-        }
-        return true;
+      case 4: return true;
+      case 5: if (generatedPagesData.length === 0 || !generatedPagesData.every(img => img.url)) { toast.error("Gere todas as páginas antes de prosseguir."); return false; } return true;
+      case 6: if (campaignState.generatedAudioData?.length === 0 && csvData.length > 0) { toast.error("Gere os áudios antes de prosseguir."); return false; } if (campaignState.generatedAudioData?.some(a => !a.duration)) { toast.error("Aguarde o cálculo da duração de todos os áudios."); return false; } return true;
       default: return true;
     }
   };
-  const getFieldStats = () => { const visibleFields = Object.values(fieldPositions).filter(pos => pos.visible).length; const totalFields = csvHeaders.length; const styledFields = Object.keys(fieldStyles).length; return { visibleFields, totalFields, styledFields }; };
-  const { visibleFields, totalFields, styledFields } = getFieldStats();
-  const handleZIndexChange = (elementId, action) => { if (!elementId) return; let allElements = [ ...Object.entries(fieldPositions).map(([id, pos]) => ({ id, zIndex: pos.zIndex, isBrand: false })), ...brandElements.map(el => ({ id: el.id, zIndex: el.zIndex, isBrand: true })), ]; allElements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0)); const currentIndex = allElements.findIndex(el => el.id === elementId); if (currentIndex === -1) return; const [currentElement] = allElements.splice(currentIndex, 1); switch (action) { case 'front': allElements.push(currentElement); break; case 'back': allElements.unshift(currentElement); break; case 'forward': allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement); break; case 'backward': allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement); break; default: allElements.splice(currentIndex, 0, currentElement); return; } const newPositions = { ...fieldPositions }; const newBrandElements = [...brandElements]; allElements.forEach((el, index) => { el.zIndex = index; if (el.isBrand) { const brandEl = newBrandElements.find(b => b.id === el.id); if (brandEl) brandEl.zIndex = index; } else { if (newPositions[el.id]) { newPositions[el.id].zIndex = index; } } }); setFieldPositions(newPositions); setBrandElements(newBrandElements); };
-  const handleSidebarStepClick = (index) => {
-    handleNavigation(() => {
-      setActiveStep(index);
-      if (isMobile) {
-        setSidebarOpen(false);
-      }
-    });
-  };
-  const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
-    setCsvData(novosRegistros);
-    // A atualização de colunas é mantida para o caso de adição/remoção de colunas.
-    if (JSON.stringify(novasColunas) !== JSON.stringify(csvHeaders)) {
-      setCsvHeaders(novasColunas);
+  const { visibleFields, totalFields, styledFields } = useMemo(() => ({
+    visibleFields: Object.values(fieldPositions).filter(pos => pos.visible).length,
+    totalFields: csvHeaders.length,
+    styledFields: Object.keys(fieldStyles).length
+  }), [fieldPositions, csvHeaders, fieldStyles]);
+
+  const handleZIndexChange = (elementId, action) => {
+    if (!elementId) return;
+    let allElements = [ ...Object.entries(fieldPositions).map(([id, pos]) => ({ id, zIndex: pos.zIndex, isBrand: false })), ...brandElements.map(el => ({ id: el.id, zIndex: el.zIndex, isBrand: true })), ];
+    allElements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+    const currentIndex = allElements.findIndex(el => el.id === elementId);
+    if (currentIndex === -1) return;
+    const [currentElement] = allElements.splice(currentIndex, 1);
+    switch (action) {
+      case 'front': allElements.push(currentElement); break;
+      case 'back': allElements.unshift(currentElement); break;
+      case 'forward': allElements.splice(Math.min(currentIndex + 1, allElements.length), 0, currentElement); break;
+      case 'backward': allElements.splice(Math.max(currentIndex - 1, 0), 0, currentElement); break;
+      default: allElements.splice(currentIndex, 0, currentElement); return;
     }
-
-    // A lógica de reposicionamento e re-estilização foi removida daqui
-    // para evitar que a edição de um simples campo de texto reorganize a UI inteira.
-    // Essa lógica agora deve ser chamada explicitamente quando as colunas mudam.
-
-    // A atualização dos dados das páginas geradas é mantida para consistência.
-    setGeneratedPagesData(prevGeneratedPages => {
-      const newGeneratedPages = novosRegistros.map((record, index) => {
-        const existingPage = prevGeneratedPages.find(img => img.index === index);
-        if (existingPage) {
-          return { ...existingPage, record: record };
-        }
-        return {
-          index,
-          record,
-          blob: null,
-          url: null,
-          filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-          customFieldPositions: null,
-          customFieldStyles: null,
-          customBrandElements: null,
-          customImageFilters: null,
-          fontScale: 1,
-        };
-      });
-      return newGeneratedPages;
+    const newPositions = { ...fieldPositions };
+    const newBrandElements = [...brandElements];
+    allElements.forEach((el, index) => {
+      el.zIndex = index;
+      if (el.isBrand) { const brandEl = newBrandElements.find(b => b.id === el.id); if (brandEl) brandEl.zIndex = index; }
+      else { if (newPositions[el.id]) newPositions[el.id].zIndex = index; }
     });
-  }, [csvHeaders]);
+    setCampaignState({ fieldPositions: newPositions, brandElements: newBrandElements });
+  };
+
+  const handleSidebarStepClick = (index) => { if (isMobile) setSidebarOpen(false); setActiveStep(index); };
+
+  const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
+    setCampaignState(prev => {
+      const updates = { csvData: novosRegistros };
+      if (JSON.stringify(novasColunas) !== JSON.stringify(prev.csvHeaders)) {
+        updates.csvHeaders = novasColunas;
+      }
+      updates.generatedPagesData = novosRegistros.map((record, index) => {
+        const existingPage = prev.generatedPagesData.find(img => img.index === index) || {};
+        return { ...existingPage, index, record, url: null, blob: null };
+      });
+      return updates;
+    });
+  }, [setCampaignState]);
+
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
-    setCsvData(newCsvData);
-    // Esta função é chamada ao editar texto diretamente na thumbnail (ImageStep)
-    // e precisa atualizar os dados das páginas também.
-    setGeneratedPagesData(prevGeneratedPages => {
-      const newGeneratedPages = newCsvData.map((record, index) => {
-        const existingPage = prevGeneratedPages.find(img => img.index === index);
-        if (existingPage) {
-          return { ...existingPage, record: record };
-        }
-        // Retorna um novo objeto se não houver página existente.
-        return {
-          index,
-          record,
-          blob: null,
-          url: null,
-          filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-          customFieldPositions: null,
-          customFieldStyles: null,
-          customBrandElements: null,
-          customImageFilters: null,
-          fontScale: 1,
-        };
-      });
-      return newGeneratedPages;
-    });
-  }, []);
-  const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => { setCsvData(prevCsvData => { if (recordIndex < 0 || recordIndex >= prevCsvData.length) { return prevCsvData; } return prevCsvData.map((row, idx) => { if (idx === recordIndex) { return updatedRecord; } return row; }); }); }, [setCsvData]);
+    setCampaignState(prev => ({
+      csvData: newCsvData,
+      generatedPagesData: newCsvData.map((record, index) => {
+        const existingPage = prev.generatedPagesData.find(img => img.index === index) || {};
+        return { ...existingPage, index, record };
+      })
+    }));
+  }, [setCampaignState]);
+
+  const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => {
+    setCampaignState(prev => ({
+      csvData: prev.csvData.map((row, idx) => idx === recordIndex ? updatedRecord : row)
+    }));
+  }, [setCampaignState]);
 
   const handleGenerateCampaignContent = async (regenerate = false) => {
-    setIsGeneratingCampaign(true);
-    setCampaignGenerationFailed(false);
-    setGenerationError('');
-    setGenerationStatus('Iniciando geração de campanha...');
-
+    setIsGeneratingCampaign(true); setCampaignGenerationFailed(false); setGenerationError(''); setGenerationStatus('Iniciando...');
     try {
       const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-
-      setGenerationStatus('Criando o conteúdo geral da campanha...');
-      const normalizedContent = await generateCampaignContent({ problema, solucao, objetivo, tomDeVoz, persona: finalPersona, autor: finalAutor });
-      if (!normalizedContent) {
-        throw new Error("A geração do conteúdo principal falhou e não retornou dados.");
-      }
-      setCampaignContent(normalizedContent);
-      const { titulo, conteudo, cta } = normalizedContent;
-      setPromptText(`${titulo || ''}\n\n${conteudo || ''}\n\n${cta || ''}`);
-
-      if (regenerate) {
-        toast.success("Conteúdo principal da campanha foi regenerado.");
-        return;
-      }
-
-      setFollowupPosts([]);
-
-      setGenerationStatus('Gerando resumos...');
-      await Promise.all([
-        handleGenerateSummary(1800, normalizedContent),
-        handleGenerateSummary(130, normalizedContent),
-      ]);
-
+      const content = await generateCampaignContent({ problema: campaignState.problema, solucao: campaignState.solucao, objetivo: campaignState.objetivo, tomDeVoz: campaignState.tomDeVoz, persona: finalPersona, autor: finalAutor });
+      setCampaignState({ campaignContent: content, promptText: `${content.titulo || ''}\n\n${content.conteudo || ''}\n\n${content.cta || ''}` });
+      if (regenerate) { toast.success("Conteúdo principal regenerado."); return; }
+      setCampaignState({ followupPosts: [] });
+      await Promise.all([ handleGenerateSummary(1800, content), handleGenerateSummary(130, content) ]);
       toast.success("Campanha gerada com sucesso!");
-
     } catch (error) {
-      const errorMessage = error.message || 'Ocorreu um erro desconhecido.';
-      toast.error(`Ocorreu um erro ao gerar o conteúdo da campanha: ${errorMessage}`);
-      setCampaignContent(null);
-      setCampaignGenerationFailed(true);
-      setGenerationError(errorMessage);
+      toast.error(`Erro ao gerar conteúdo: ${error.message}`);
+      setCampaignState({ campaignContent: null }); setCampaignGenerationFailed(true); setGenerationError(error.message);
     } finally {
-      setIsGeneratingCampaign(false);
-      setGenerationStatus('');
+      setIsGeneratingCampaign(false); setGenerationStatus('');
     }
   };
+
   const handleGenerateImage = useCallback(async (content, palette = null) => {
     const finalContent = content || campaignContentRef.current;
-    if (!finalContent) {
-      toast.error("Por favor, gere o conteúdo do texto primeiro.");
-      return false;
-    }
+    if (!finalContent) { toast.error("Gere o conteúdo do texto primeiro."); return false; }
     setIsGeneratingImage(true);
     try {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
       const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor, palette });
-
       const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: palette?.colors || [] });
-      const blob = dataURLtoBlob(base64Data);
-      if (!blob) {
-        throw new Error("Failed to convert generated image data to a Blob.");
-      }
-
-      const tempUrl = addPendingAsset(blob);
-      if (!tempUrl) {
-        throw new Error("Failed to create a managed URL for the generated image.");
-      }
-
-      console.log('[HomePage] DIAGNOSTIC: handleGenerateImage succeeded. Using managed blob URL:', tempUrl);
-      setGeneratedPageUrl(tempUrl);
+      const tempUrl = addPendingAsset(dataURLtoBlob(base64Data));
+      if (!tempUrl) throw new Error("Falha ao criar URL para a imagem gerada.");
+      setCampaignState({ generatedPageUrl: tempUrl });
       addNewImageToCanvas(tempUrl);
       return true;
-
     } catch (imageError) {
-      const errorMessage = imageError.message || 'An unknown error occurred.';
-      if (errorMessage.includes('503') || errorMessage.toLowerCase().includes('service unavailable')) {
-        toast.error('Serviço indisponível (503)', {
-          description: 'O serviço de geração de imagem está sobrecarregado ou temporariamente indisponível. Por favor, tente novamente em alguns minutos.',
-        });
-      } else {
-        toast.error('Erro na Geração da Imagem', {
-          description: `Ocorreu um erro ao gerar a imagem da campanha: ${errorMessage}`,
-        });
-      }
-      console.log('[HomePage] DIAGNOSTIC: handleGenerateImage failed. Setting generatedPageUrl to null.');
-      setGeneratedPageUrl(null);
+      toast.error(`Erro na geração da imagem: ${imageError.message}`);
+      setCampaignState({ generatedPageUrl: null });
       return false;
     } finally {
       setIsGeneratingImage(false);
     }
-  }, [aspectRatio, addNewImageToCanvas, addPendingAsset, autorList, selectedAutorForCampaign]);
-  const handleGenerateSummary = async (targetLength, content = campaignContent) => { if (!content?.conteudo) { alert("Por favor, gere o conteúdo principal primeiro."); return; } const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno; setLoading(true); if (!geminiAPI.isInitialized) { const apiKey = getGeminiApiKey(); if (!apiKey) { alert('Por favor, configure sua chave de API Gemini primeiro.'); setLoading(false); return; } geminiAPI.initialize(apiKey); } try { const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`; const summary = await geminiAPI.generateContent(summaryPrompt); const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno'; setCampaignContent(prev => ({ ...prev, [fieldName]: summary })); } catch (error) { alert(`Ocorreu um erro ao gerar o resumo. Verifique o console.`); } finally { setLoading(false); } };
-  const handleGenerateFormattedContent = async (content = campaignContent) => { if (!content?.conteudo) { toast.error("Por favor, gere o conteúdo principal primeiro."); return; } setIsGeneratingConteudoFormatado(true); try { const finalContent = await generateFormattedContent({ content }); setCampaignContent(prev => ({ ...prev, conteudoFormatado: finalContent })); } catch (error) { toast.error(`Ocorreu um erro ao gerar o conteúdo formatado: ${error.message}`); } finally { setIsGeneratingConteudoFormatado(false); } };
-  const handleGenerateFollowupPosts = async (content = campaignContent) => {
-    if (!content?.conteudo) {
-      toast.error("Por favor, gere o conteúdo principal primeiro.");
-      return;
-    }
+  }, [aspectRatio, addNewImageToCanvas, addPendingAsset, autorList, selectedAutorForCampaign, setCampaignState]);
 
-    if (followupPosts.length >= followupPostsQuantity) {
-      toast.info('A quantidade de posts desejada já foi atingida ou superada.');
-      return;
+  const handleGenerateSummary = async (targetLength, content) => {
+    const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno;
+    setLoading(true);
+    try {
+      const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`;
+      const summary = await geminiAPI.generateContent(summaryPrompt);
+      const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno';
+      setCampaignState({ campaignContent: { ...content, [fieldName]: summary } });
+    } catch (error) {
+      toast.error(`Erro ao gerar resumo: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setIsGeneratingFollowup(true);
+  const handleGenerateFormattedContent = async (content = campaignState.campaignContent) => {
+    if (!content?.conteudo) { toast.error("Gere o conteúdo principal primeiro."); return; }
+    setIsGeneratingConteudoFormatado(true);
+    try {
+      const finalContent = await generateFormattedContent({ content });
+      setCampaignState({ campaignContent: { ...content, conteudoFormatado: finalContent } });
+    } catch (error) {
+      toast.error(`Erro ao formatar conteúdo: ${error.message}`);
+    } finally {
+      setIsGeneratingConteudoFormatado(false);
+    }
+  };
+
+  const handleGenerateFollowupPosts = async (content = campaignState.campaignContent) => {
+    if (!content?.conteudo) { toast.error("Gere o conteúdo principal primeiro."); return; }
+    const { followupPosts, followupPostsQuantity } = campaignState;
+    if (followupPosts.length >= followupPostsQuantity) { toast.info('Quantidade de posts desejada já atingida.'); return; }
+    setCampaignState({ isGeneratingFollowup: true });
     try {
       const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign);
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
       const neededQuantity = followupPostsQuantity - followupPosts.length;
-      const plan = await generateFollowupPlan({
-        content,
-        neededQuantity,
-        existingPosts: followupPosts,
-        persona: finalPersona,
-        autor: finalAutor,
-      });
-      const newPosts = await generateFollowupPosts({
-        content,
-        plan,
-        persona: finalPersona,
-        autor: finalAutor,
-      });
-      setFollowupPosts(prevPosts => [...prevPosts, ...newPosts]);
+      const plan = await generateFollowupPlan({ content, neededQuantity, existingPosts: followupPosts, persona: finalPersona, autor: finalAutor });
+      const newPosts = await generateFollowupPosts({ content, plan, persona: finalPersona, autor: finalAutor });
+      setCampaignState({ followupPosts: [...followupPosts, ...newPosts] });
     } catch (error) {
-      toast.error(`Ocorreu um erro ao gerar os posts de follow-up: ${error.message}`);
+      toast.error(`Erro ao gerar posts de follow-up: ${error.message}`);
     } finally {
-      setIsGeneratingFollowup(false);
+      setCampaignState({ isGeneratingFollowup: false });
     }
   };
-  const handleResetCampaign = () => {
-    console.log('[HomePage] DIAGNOSTIC: handleResetCampaign called. Setting generatedPageUrl to null.');
-    setCampaignContent(null);
-    setGeneratedPageUrl(null);
-    setFollowupPosts([]);
-    setFollowupPostsQuantity(10);
+
+  const handleResetCampaign = () => setCampaignState({ campaignContent: null, generatedPageUrl: null, followupPosts: [], followupPostsQuantity: 10 });
+  const handleEditFollowup = (index, content) => setEditingFollowup({ index, content });
+  const handleSaveFollowup = (newContent) => {
+    if (editingFollowup === null) return;
+    setCampaignState({
+      followupPosts: campaignState.followupPosts.map((post, index) => index === editingFollowup.index ? { ...post, conteudo: newContent } : post)
+    });
+    setEditingFollowup(null);
   };
-  const handleEditFollowup = (index, content) => { setEditingFollowup({ index, content }); };
-  const handleSaveFollowup = (newContent) => { if (editingFollowup === null) return; const updatedPosts = followupPosts.map((post, index) => { if (index === editingFollowup.index) { return { ...post, conteudo: newContent }; } return post; }); setFollowupPosts(updatedPosts); setEditingFollowup(null); };
+
   const handleGenerateIAContent = async () => {
-    setIsGenerating(true);
-    setGenerationStatus('Gerando texto para os posts...');
+    setIsGenerating(true); setGenerationStatus('Gerando posts...');
     try {
+      const { promptText, promptNumRecords } = campaignState;
       const iaResponseText = await generateIAContent({ promptText, promptNumRecords });
       const parsedResult = parseIaResponseToCsvData(iaResponseText);
-
-      if (!parsedResult || !parsedResult.data || !parsedResult.data.length > 0) {
-        toast.error('Não foi possível processar a resposta da IA para o formato de tabela.');
-        return;
-      }
-
+      if (!parsedResult?.data?.length) { toast.error('Não foi possível processar a resposta da IA.'); return; }
       const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
-
-      const { newPositions: updatedFieldPositions, newStyles: updatedFieldStyles } = autoArrangeFields({
-        csvHeaders: csvHeadersResult,
-        fieldPositions: {},
-        fieldStyles: {},
-        csvData: csvDataResult,
-        effectiveImageSize: originalImageSize,
-      });
-
-      const newGeneratedPagesData = csvDataResult.map((record, index) => ({
-        index,
-        record,
-        blob: null,
-        url: null,
-        filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        customFieldPositions: null,
-        customFieldStyles: null,
-        customBrandElements: null,
-        customImageFilters: null,
-        fontScale: 1,
-      }));
-
-      setCsvData(csvDataResult);
-      setCsvHeaders(csvHeadersResult);
-      setFieldPositions(updatedFieldPositions);
-      setFieldStyles(updatedFieldStyles);
-      setInitialFieldStyles(updatedFieldStyles);
-      setGeneratedPagesData(newGeneratedPagesData);
+      const { newPositions, newStyles } = autoArrangeFields({ csvHeaders: csvHeadersResult, fieldPositions: {}, fieldStyles: {}, csvData: csvDataResult, effectiveImageSize: originalImageSize });
+      const newGeneratedPagesData = csvDataResult.map((record, index) => ({ index, record, blob: null, url: null, filename: `midiator_${String(index + 1).padStart(3, '0')}.png` }));
+      setCampaignState({ csvData: csvDataResult, csvHeaders: csvHeadersResult, fieldPositions: newPositions, fieldStyles: newStyles, initialFieldStyles: newStyles, generatedPagesData: newGeneratedPagesData });
       setInputMethod('manual');
-
-      // A geração de imagens foi movida para a etapa "Edição de Páginas" a pedido do usuário.
-      toast.success('Geração de posts concluída. Prossiga para a próxima etapa para gerar as imagens.');
+      toast.success('Geração de posts concluída.');
     } catch (error) {
       toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
     } finally {
-      setIsGenerating(false);
-      setGenerationStatus('');
+      setIsGenerating(false); setGenerationStatus('');
     }
   };
 
   const handleGenerateSinglePage = async (record, index, fontScale = 1) => {
     const imagePrompt = record.prompt_imagem_carrossel;
     let pageUpdateData = {};
-
-    // 1. Determine the effective styles and template for this specific page
     const pageData = generatedPagesData.find(p => p.index === index);
-    const effectiveBrandElements = pageData?.customBrandElements || brandElements;
-    const effectiveFieldPositions = pageData?.customFieldPositions || fieldPositions;
-    const effectiveFieldStyles = pageData?.customFieldStyles || fieldStyles;
     let effectivePageTemplate = pageData?.customPageTemplate || pageTemplate;
-
-    // 2. Handle image generation from prompt (if any)
-    if (imagePrompt && imagePrompt.trim() !== '') {
+    if (imagePrompt?.trim()) {
       setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
       try {
-        // Use a simple default style for the new image.
-        // The complex logic of finding another page's image style was brittle.
-        let sourceStyle = { x: 0, y: 0, width: 100, height: 100, zIndex: -1, objectFit: 'cover' };
-        const firstImage = effectivePageTemplate.images?.[0];
-        if (firstImage) {
-          // If the current page template already has an image, use its style.
-          const { id, src, ...style } = firstImage;
-          sourceStyle = style;
-        }
-
+        const sourceStyle = effectivePageTemplate.images?.[0] ? (({ id, src, ...style }) => style)(effectivePageTemplate.images[0]) : { x: 0, y: 0, width: 100, height: 100, zIndex: -1, objectFit: 'cover' };
         const oldImage = (effectivePageTemplate.images || [])[0];
-
-        // Generate the image and get the base64 data URL.
         const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
-        if (!base64Data) {
-          throw new Error("A IA não conseguiu gerar a imagem.");
-        }
-
-        // Revoke the old image's blob URL if it exists to prevent memory leaks.
-        if (oldImage && oldImage.src && oldImage.src.startsWith('blob:')) {
-          removePendingAsset(oldImage.src);
-        }
-
-        // Use the self-contained data: URL directly. This is robust and avoids lifecycle issues.
-        // The serialization process is already equipped to handle data: URLs on save.
+        if (!base64Data) throw new Error("A IA não conseguiu gerar a imagem.");
+        if (oldImage?.src?.startsWith('blob:')) removePendingAsset(oldImage.src);
         const newImage = { ...createNewImageElement(base64Data), ...sourceStyle, visible: true };
-        const pageImages = effectivePageTemplate.images || [];
-
-        // Se houver imagens, substitui a primeira. Caso contrário, adiciona a nova imagem.
-        const finalImages = pageImages.length > 0
-          ? [newImage, ...pageImages.slice(1)]
-          : [newImage];
-
-        const tempPageTemplate = { ...effectivePageTemplate, images: finalImages };
-        effectivePageTemplate = tempPageTemplate; // Update for this generation pass
-        pageUpdateData.customPageTemplate = tempPageTemplate; // Persist this change
+        const finalImages = (effectivePageTemplate.images?.length > 0) ? [newImage, ...effectivePageTemplate.images.slice(1)] : [newImage];
+        effectivePageTemplate = { ...effectivePageTemplate, images: finalImages };
+        pageUpdateData.customPageTemplate = effectivePageTemplate;
       } catch (error) {
-        const errorMessage = error.message || 'An unknown error occurred.';
-        if (errorMessage.includes('503') || errorMessage.toLowerCase().includes('service unavailable')) {
-          toast.error(`Serviço indisponível (Post #${index + 1})`, {
-            description: 'O serviço de geração de imagem está sobrecarregado. Por favor, tente gerar esta imagem novamente em alguns minutos.',
-          });
-        } else {
-          toast.error(`Falha na Imagem (Post #${index + 1})`, {
-            description: `Não foi possível gerar a imagem: ${errorMessage}`,
-          });
-        }
+        toast.error(`Falha na Imagem (Post #${index + 1}): ${error.message}`);
       }
     }
-
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
-      // 3. Use the new generation service with the effective styles
-      const finalPageData = await PageGenerationService.generatePageImage({
-        record,
-        index,
-        campaignContext: {
-          brandElements: effectiveBrandElements,
-          fieldPositions: effectiveFieldPositions,
-          fieldStyles: effectiveFieldStyles,
-          aspectRatio,
-          pageTemplate: effectivePageTemplate,
-          fontScale,
-        }
-      });
-
-      const { blob } = finalPageData;
-      const tempUrl = addPendingAsset(blob);
-      if (!tempUrl) {
-        throw new Error("Failed to create managed URL for final page image.");
-      }
-
-      setGeneratedPagesData(currentPagesData => {
-        const newPagesData = [...currentPagesData];
-        const existingPageData = newPagesData[index] || {};
-
-        const newPageDataObject = {
-          ...existingPageData,
-          ...finalPageData,
-          ...pageUpdateData,
-          url: tempUrl,
-          dataUrl: null,
-        };
-        delete newPageDataObject.blob;
-
-        newPagesData[index] = newPageDataObject;
-        return newPagesData;
-      });
-
-      toast.success(`Página final para o post #${index + 1} gerada.`);
+      const finalPageData = await PageGenerationService.generatePageImage({ ...campaignState, record, index, pageTemplate: effectivePageTemplate, fontScale });
+      const tempUrl = addPendingAsset(finalPageData.blob);
+      if (!tempUrl) throw new Error("Falha ao criar URL para a página final.");
+      setCampaignState(prev => ({
+        generatedPagesData: prev.generatedPagesData.map(p => p.index === index ? { ...(p || {}), ...finalPageData, ...pageUpdateData, url: tempUrl, dataUrl: null, blob: undefined } : p)
+      }));
+      toast.success(`Página #${index + 1} gerada.`);
       return true;
     } catch (error) {
-      console.error(`Error during page generation for post ${index + 1}:`, error);
-      toast.error(error.message);
+      toast.error(`Erro na geração da página ${index + 1}: ${error.message}`);
       return false;
     } finally {
       setGenerationStatus('');
     }
   };
+
   const currentTheme = darkMode ? darkTheme : lightTheme;
-
-  const memorialColors = useMemo(() => {
-    if (paletteId && paletteId !== 'custom') {
-      const selectedPalette = palettes.find(p => p.id === paletteId);
-      return selectedPalette ? selectedPalette.colors : [];
-    }
-    if (customPalette) {
-      return customPalette.colors;
-    }
-    return [];
-  }, [paletteId, customPalette, palettes]);
-
-  const campaignData = {
-    problema,
-    solucao,
-    objetivo,
-    tomDeVoz,
-    campaignContent,
-    aspectRatio,
-    followupPosts,
-    colors: memorialColors,
-    generatedPagesData,
-    persona: personaList.find(p => p.id === selectedPersonaForCampaign),
-    autor: autorList.find(a => a.id === selectedAutorForCampaign),
-  };
+  const memorialColors = useMemo(() => palettes.find(p => p.id === paletteId)?.colors || customPalette?.colors || [], [paletteId, customPalette, palettes]);
+  const memorialCampaignData = { ...campaignState, colors: memorialColors, persona: personaList.find(p => p.id === selectedPersonaForCampaign), autor: autorList.find(a => a.id === selectedAutorForCampaign) };
 
   return (
     <ThemeProvider theme={currentTheme}>
       <CssBaseline />
       <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-        <MainAppBar
-          darkMode={darkMode}
-          setDarkMode={setDarkMode}
-          setShowSetupModal={setShowSetupModal}
-          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-          isMobile={isMobile}
-          onSaveCampaign={() => setShowSaveModal(true)}
-          onShowPersonas={() => handleNavigation(() => setCurrentView('personas'))}
-          onShowAutores={() => handleNavigation(() => setCurrentView('autores'))}
-          onShowPalettes={() => handleNavigation(() => setCurrentView('palettes'))}
-          onShowCampaigns={() => handleNavigation(() => setCurrentView('campaigns'))}
-          currentView={currentView}
-          onPersonaMenuClick={() => setPersonaDrawerOpen(!personaDrawerOpen)}
-          onAutorMenuClick={() => setAutorDrawerOpen(!autorDrawerOpen)}
-          onPaletteMenuClick={() => setPaletteDrawerOpen(!paletteDrawerOpen)}
-          isDrawerOpen={
-            currentView === 'personas' ? personaDrawerOpen :
-              currentView === 'autores' ? autorDrawerOpen :
-                currentView === 'palettes' ? paletteDrawerOpen :
-                    sidebarOpen
-          }
-          onShowMemorial={() => setShowMemorialDescritivoModal(true)}
-          isCampaignOpen={currentCampaign !== null}
-        />
+        <MainAppBar {...{ darkMode, setDarkMode, setShowSetupModal, onMenuClick: () => setSidebarOpen(!sidebarOpen), isMobile, onSaveCampaign: () => setShowSaveModal(true), onShowPersonas: () => handleNavigation(() => setCurrentView('personas')), onShowAutores: () => handleNavigation(() => setCurrentView('autores')), onShowPalettes: () => handleNavigation(() => setCurrentView('palettes')), onShowCampaigns: () => handleNavigation(() => setCurrentView('campaigns')), currentView, onPersonaMenuClick: () => setPersonaDrawerOpen(!personaDrawerOpen), onAutorMenuClick: () => setAutorDrawerOpen(!autorDrawerOpen), onPaletteMenuClick: () => setPaletteDrawerOpen(!paletteDrawerOpen), isDrawerOpen: currentView === 'personas' ? personaDrawerOpen : currentView === 'autores' ? autorDrawerOpen : currentView === 'palettes' ? paletteDrawerOpen : sidebarOpen, onShowMemorial: () => setShowMemorialDescritivoModal(true), isCampaignOpen: currentCampaign !== null }} />
         {currentView === 'campaigns' && (
           <>
-            <Sidebar sidebarOpen={sidebarOpen} darkMode={darkMode} steps={steps} activeStep={activeStep} setActiveStep={setActiveStep} csvData={csvData} backgroundImageSrc={pageTemplate.images[0]?.src} visibleFields={visibleFields} totalFields={totalFields} styledFields={styledFields} variant={isMobile ? 'temporary' : 'persistent'} onClose={() => setSidebarOpen(false)} onStepClick={handleSidebarStepClick} />
-            {!isMobile && <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Fechar barra lateral' : 'Abrir barra lateral'} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out', backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', '&:hover': { backgroundColor: 'background.default' } }} >{sidebarOpen ? <ChevronLeft /> : <ChevronRight />}</Fab>}
+            <Sidebar {...{ sidebarOpen, darkMode, steps, activeStep, csvData, backgroundImageSrc: pageTemplate.images[0]?.src, visibleFields, totalFields, styledFields, variant: isMobile ? 'temporary' : 'persistent', onClose: () => setSidebarOpen(false), onStepClick: handleSidebarStepClick }} />
+            {!isMobile && <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out' }} >{sidebarOpen ? <ChevronLeft /> : <ChevronRight />}</Fab>}
           </>
         )}
         <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, transition: theme.transitions.create('margin', { easing: theme.transitions.easing.sharp, duration: theme.transitions.duration.leavingScreen }) }} >
           <Toolbar />
           {currentView === 'campaigns' && (
             <>
-              {activeStep === 0 && (
-                <MyCampaignsStep
-                  onEditCampaign={handleEditCampaign}
-                  onCreateNew={handleCreateNewCampaign}
-                  autorList={autorList}
-                  personaList={personaList}
-                />
-              )}
-              {activeStep === 1 && (
-                <Campaign
-                  steps={steps}
-                  activeStep={activeStep}
-                  {...campaignData}
-                  setProblema={setProblema}
-                  setSolucao={setSolucao}
-                  objetivo={objetivo}
-                  setObjetivo={setObjetivo}
-                  tomDeVoz={tomDeVoz}
-                  setTomDeVoz={setTomDeVoz}
-                  isGeneratingCampaign={isGeneratingCampaign}
-                  campaignGenerationFailed={campaignGenerationFailed}
-                  generationError={generationError}
-                  handleGenerateCampaignContent={handleGenerateCampaignContent}
-                  handleResetCampaign={handleResetCampaign}
-                  handleExportHtml={() => exportHtml(campaignData)}
-                  editingField={editingField}
-                  setEditingField={(field) => {
-                    setEditingField(field);
-                    setIsHtmlField(field === 'conteudoFormatado');
-                  }}
-                  isGeneratingSummaryMedio={isGeneratingSummaryMedio}
-                  handleGenerateSummary={handleGenerateSummary}
-                  isGeneratingSummaryPequeno={isGeneratingSummaryPequeno}
-                  isGeneratingConteudoFormatado={isGeneratingConteudoFormatado}
-                  handleGenerateFormattedContent={handleGenerateFormattedContent}
-                  isGeneratingFollowup={isGeneratingFollowup}
-                  handleGenerateFollowupPosts={handleGenerateFollowupPosts}
-                  generatedPageUrl={generatedPageUrl}
-                  isGeneratingImage={isGeneratingImage}
-                  handleGenerateImage={handleGenerateImage}
-                  setCampaignContent={setCampaignContent}
-                  onEditFollowup={handleEditFollowup}
-                  followupPostsQuantity={followupPostsQuantity}
-                  setFollowupPostsQuantity={setFollowupPostsQuantity}
-                  setAspectRatio={setAspectRatio}
-                  autorList={autorList}
-                  selectedAutorForCampaign={selectedAutorForCampaign}
-                  setSelectedAutorForCampaign={setSelectedAutorForCampaign}
-                  personaList={personaList}
-                  selectedPersonaForCampaign={selectedPersonaForCampaign}
-                  setSelectedPersonaForCampaign={setSelectedPersonaForCampaign}
-                  palettes={palettes}
-                  onRequestNewAutor={handleRequestNewAutor}
-                  onRequestNewPersona={handleRequestNewPersona}
-                />
-              )}
-              {activeStep === 2 && (
-                <PostsCurtosStep
-                  steps={steps}
-                  inputMethod={inputMethod}
-                  setInputMethod={setInputMethod}
-                  handleDrop={handleDrop}
-                  handleDragOver={handleDragOver}
-                  fileInputRef={fileInputRef}
-                  handleCSVUpload={handleCSVUpload}
-                  downloadExampleCsv={downloadExampleCsv}
-                  setShowSetupModal={setShowSetupModal}
-                  promptNumRecords={promptNumRecords}
-                  setPromptNumRecords={setPromptNumRecords}
-                  promptText={promptText}
-                  setPromptText={setPromptText}
-                  handleGenerateIAContent={handleGenerateIAContent}
-                  isGenerating={isGenerating}
-                  csvData={csvData}
-                  csvHeaders={csvHeaders}
-                  onDadosAlterados={handleDadosAlterados}
-                  darkMode={darkMode}
-                  exportCsv={exportCsv}
-                  aspectRatio={aspectRatio}
-                  setAspectRatio={setAspectRatio}
-                  sidebarOpen={sidebarOpen}
-                />
-              )}
-              {activeStep === 3 && (
-                <ImageStep
-                  steps={steps}
-                  isDraggingOverImage={isDraggingOverImage}
-                  handleImageDrop={handleImageDrop}
-                  handleImageDragOver={handleImageDragOver}
-                  handleImageDragEnter={handleImageDragEnter}
-                  handleImageDragLeave={handleImageDragLeave}
-                  imageInputRef={imageInputRef}
-                  handleImageUpload={handleForegroundImageUpload} // Use new handler for foreground
-                  onOpenImageGallery={handleOpenImageGallery}
-                  initialFieldStyles={initialFieldStyles}
-                  onImageDisplayedSizeChange={setDisplayedImageSize}
-                  colorPalette={memorialColors}
-                  onCsvDataUpdate={handleCsvRecordContentUpdate}
-                  originalImageSize={originalImageSize}
-                  onZIndexChange={handleZIndexChange}
-                  isMobile={isMobile}
-                  onDeselectField={() => setSelectedField(null)}
-                  onOpenHtmlEditor={(fieldId) => {
-                    setEditingField(fieldId);
-                  }}
-                  currentPreviewIndex={currentPreviewIndex}
-                  setCurrentPreviewIndex={setCurrentPreviewIndex}
-                  onFontScaleChange={setFontScale}
-                  templateFieldStyles={templateFieldStyles}
-                  activeStep={activeStep}
-                  addPendingAsset={addPendingAsset}
-                />
-              )}
-              {activeStep === 4 && (
-                <PageGeneratorFrontendOnly
-                  displayedImageSize={displayedImageSize}
-                  colorPalette={memorialColors}
-                  initialGeneratedPagesData={generatedPagesData}
-                  onThumbnailRecordTextUpdate={handleThumbnailRecordTextUpdate}
-                  originalImageSize={originalImageSize}
-                  onBrandElementsChange={setBrandElements}
-                  fontScale={fontScale}
-                  handleGenerateSinglePage={handleGenerateSinglePage}
-                  aspectRatio={aspectRatio}
-                  generatedPagesData={generatedPagesData}
-                  handleImageUpload={handleImageUpload}
-                  onOpenImageGallery={handleOpenImageGallery}
-                  pendingAssets={pendingAssets}
-                  addPendingAsset={addPendingAsset}
-                />
-              )}
-              {activeStep === 5 && (
-                <AudioGenerator
-                  csvData={csvData}
-                  fieldPositions={fieldPositions}
-                  onAudiosGenerated={setGeneratedAudioData}
-                  initialAudioData={generatedAudioData}
-                />
-              )}
-              {activeStep === 6 && (
-                <VideoGenerator2
-                  generatedPages={generatedPagesData}
-                  generatedAudioData={generatedAudioData}
-                  generatedVideos={generatedVideos}
-                  pendingAssets={pendingAssets}
-                  onVideoGenerated={(newVideoAssets) => {
-                    // newVideoAssets is an array of video asset objects
-                    setGeneratedVideos(prev => [...prev, ...newVideoAssets]);
-
-                    const newAssetMap = {};
-                    newVideoAssets.forEach(asset => {
-                      // Add main video blob
-                      if (asset.blob && asset.url) {
-                        newAssetMap[asset.url] = asset.blob;
-                      }
-                      // Add thumbnail blob if it exists
-                      if (asset.thumbnailBlob && asset.thumbnailUrl) {
-                        newAssetMap[asset.thumbnailUrl] = asset.thumbnailBlob;
-                      }
-                    });
-                    addPendingAssetMap(newAssetMap);
-                  }}
-                  onUpdateVideos={setGeneratedVideos}
-                  onNewAsset={(blob) => addPendingAsset(blob)}
-                />
-              )}
-              {activeStep === 7 && (
-                <Publisher
-                  settings={settings}
-                  campaignContent={campaignContent}
-                  generatedPagesData={generatedPagesData}
-                  generatedVideosData={generatedVideos}
-                  followupPosts={followupPosts}
-                  isScheduled={isScheduled}
-                  setIsScheduled={setIsScheduled}
-                  scheduleDate={scheduleDate}
-                  setScheduleDate={setScheduleDate}
-                  weeklySchedule={weeklySchedule}
-                  setWeeklySchedule={setWeeklySchedule}
-                  selectedProfile={selectedProfile}
-                  setSelectedProfile={setSelectedProfile}
-                  selectedImages={selectedImages}
-                  setSelectedImages={setSelectedImages}
-                  selectedVideos={selectedVideos}
-                  setSelectedVideos={setSelectedVideos}
-                  currentCampaign={currentCampaign}
-                  pendingAssets={pendingAssets}
-                  setPendingAssets={setPendingAssets}
-                />
-              )}
-              {activeStep === 8 && <Monitor currentCampaign={currentCampaign} />}
-
+              {activeStep === 0 && <MyCampaignsStep {...{ onEditCampaign: handleEditCampaign, onCreateNew: handleCreateNewCampaign, autorList, personaList }} />}
+              {activeStep === 1 && <Campaign {...{ steps, activeStep, ...campaignState, setCampaignState, isGeneratingCampaign, campaignGenerationFailed, generationError, handleGenerateCampaignContent, handleResetCampaign, handleExportHtml: () => exportHtml(memorialCampaignData), editingField, setEditingField: (field) => { setEditingField(field); setIsHtmlField(field === 'conteudoFormatado'); }, isGeneratingSummaryMedio, handleGenerateSummary, isGeneratingSummaryPequeno, isGeneratingConteudoFormatado, handleGenerateFormattedContent, isGeneratingFollowup: campaignState.isGeneratingFollowup, handleGenerateFollowupPosts, isGeneratingImage, handleGenerateImage, onEditFollowup: handleEditFollowup, palettes, selectedAutorForCampaign, setSelectedAutorForCampaign, selectedPersonaForCampaign, setSelectedPersonaForCampaign, onRequestNewAutor: handleRequestNewAutor, onRequestNewPersona: handleRequestNewPersona }} />}
+              {activeStep === 2 && <PostsCurtosStep {...{ steps, inputMethod, setInputMethod, handleDrop, handleDragOver, fileInputRef, handleCSVUpload, downloadExampleCsv, setShowSetupModal, promptNumRecords: campaignState.promptNumRecords, setPromptNumRecords: (v) => setCampaignState({ promptNumRecords: v }), promptText: campaignState.promptText, setPromptText: (v) => setCampaignState({ promptText: v }), handleGenerateIAContent, isGenerating, csvData, csvHeaders, onDadosAlterados: handleDadosAlterados, darkMode, exportCsv: () => exportCsv(csvData, csvHeaders), aspectRatio, setAspectRatio: (v) => setCampaignState({ aspectRatio: v }), sidebarOpen }} />}
+              {activeStep === 3 && <ImageStep {...{ steps, isDraggingOverImage: false, handleImageDrop: (e) => handleImageSelected(e.dataTransfer.files[0]), handleImageDragOver, handleImageDragEnter: () => {}, handleImageDragLeave: () => {}, imageInputRef, handleImageUpload: handleForegroundImageUpload, onOpenImageGallery: handleOpenImageGallery, initialFieldStyles: campaignState.initialFieldStyles, onImageDisplayedSizeChange: () => {}, colorPalette: memorialColors, onCsvDataUpdate: handleCsvRecordContentUpdate, originalImageSize, onZIndexChange: handleZIndexChange, isMobile, onDeselectField: () => setCampaignState({ selectedField: null }), onOpenHtmlEditor: (fieldId) => setEditingField(fieldId), currentPreviewIndex, setCurrentPreviewIndex, onFontScaleChange: (v) => setCampaignState({ fontScale: v }), templateFieldStyles: campaignState.templateFieldStyles, activeStep, addPendingAsset }} />}
+              {activeStep === 4 && <PageGeneratorFrontendOnly {...{ colorPalette: memorialColors, originalImageSize, fontScale: campaignState.fontScale, handleGenerateSinglePage, aspectRatio, onOpenImageGallery: handleOpenImageGallery, imagePalette }} />}
+              {activeStep === 5 && <AudioGenerator onAudiosGenerated={(audios) => setCampaignState({ generatedAudioData: audios })} initialAudioData={campaignState.generatedAudioData} />}
+              {activeStep === 6 && <VideoGenerator2 onVideoGenerated={(assets) => { setCampaignState(p => ({ generatedVideos: [...p.generatedVideos, ...assets] })); addPendingAssetMap(Object.fromEntries(assets.flatMap(a => [[a.url, a.blob], [a.thumbnailUrl, a.thumbnailBlob]]).filter(e => e[0]))); }} onUpdateVideos={(videos) => setCampaignState({ generatedVideos: videos })} onNewAsset={addPendingAsset} />}
+              {activeStep === 7 && <Publisher {...{ settings, ...campaignState, onUpdateScheduledPosts: (posts) => setCampaignState({ followupPosts: posts }) }} />}
+              {activeStep === 8 && <Monitor {...{ currentCampaign }} />}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} >
-                <Button onClick={handleBack} disabled={activeStep === 0} variant="outlined" sx={{ borderRadius: 2, px: 3, py: 1.5 }} >Anterior</Button>
-                <Box sx={{ flexGrow: 1, display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300', transition: 'all 0.3s ease' }} />))}</Box>
-                <Tooltip title={
-                  activeStep === 5 && isProcessingAudio
-                    ? "Processando durações de áudio, por favor aguarde..."
-                    : activeStep === 5 && generatedAudioData.some(a => !a.duration || a.duration <= 0)
-                      ? "Aguardando o cálculo da duração de todos os áudios antes de prosseguir."
-                      : ""
-                }>
-                  <span>
-                    <Button
-                      onClick={handleNext}
-                      disabled={
-                        isGenerating ||
-                        activeStep === steps.length - 1 ||
-                        !canProceedToStep(activeStep + 1) ||
-                        (activeStep === 5 && isProcessingAudio)
-                      }
-                      variant="contained"
-                      sx={{ borderRadius: 2, px: 3, py: 1.5 }}
-                    >
-                      Próximo
-                    </Button>
-                  </span>
-                </Tooltip>
+                <Button onClick={handleBack} disabled={activeStep === 0} variant="outlined">Anterior</Button>
+                <Box sx={{ flexGrow: 1, display: 'flex', gap: 1, justifyContent: 'center', mx: 2 }}>{steps.map((_, index) => (<Box key={index} sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: index === activeStep ? 'primary.main' : index < activeStep ? 'success.main' : 'grey.300' }} />))}</Box>
+                <Tooltip title={isProcessingAudio ? "Processando áudios..." : ""}><Box component="span"><Button onClick={handleNext} disabled={isGenerating || activeStep === steps.length - 1 || !canProceedToStep(activeStep + 1) || isProcessingAudio} variant="contained">Próximo</Button></Box></Tooltip>
               </Box>
             </>
           )}
-          {currentView === 'personas' && <PersonasPage personaDrawerOpen={personaDrawerOpen} setPersonaDrawerOpen={setPersonaDrawerOpen} onNoPersonaSelected={() => setPersonaDrawerOpen(true)} onUpdate={fetchPersonasForCampaign} startInCreateMode={startPersonasInCreate} onPersonaCreated={handlePersonaCreated} onCreationCancelled={() => handleCreationDone('personas')} />}
-          {currentView === 'autores' && <AutoresPage autorDrawerOpen={autorDrawerOpen} setAutorDrawerOpen={setAutorDrawerOpen} onNoAutorSelected={() => setAutorDrawerOpen(true)} onUpdate={fetchAutoresForCampaign} startInCreateMode={startAutoresInCreate} onAutorCreated={handleAutorCreated} onCreationCancelled={() => handleCreationDone('autores')} />}
-          {currentView === 'palettes' && <PalettesPage paletteDrawerOpen={paletteDrawerOpen} setPaletteDrawerOpen={setPaletteDrawerOpen} onNoPaletteSelected={() => setPaletteDrawerOpen(true)} />}
+          {currentView === 'personas' && <PersonasPage {...{ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected: () => setPersonaDrawerOpen(true), onUpdate: fetchPersonasForCampaign, startInCreateMode: startPersonasInCreate, onPersonaCreated: handlePersonaCreated, onCreationCancelled: () => handleCreationDone('personas') }} />}
+          {currentView === 'autores' && <AutoresPage {...{ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected: () => setAutorDrawerOpen(true), onUpdate: fetchAutoresForCampaign, startInCreateMode: startAutoresInCreate, onAutorCreated: handleAutorCreated, onCreationCancelled: () => handleCreationDone('autores') }} />}
+          {currentView === 'palettes' && <PalettesPage {...{ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSelected: () => setPaletteDrawerOpen(true) }} />}
         </Box>
       </Box>
-      <UnsavedChangesDialog
-        open={showUnsavedDialog}
-        onClose={handleDialogClose}
-        onConfirmDiscard={handleDialogDiscard}
-        onConfirmSave={handleDialogSaveAndNavigate}
-      />
-      <SetupModal open={showSetupModal} onClose={() => setShowSetupModal(false)} initialTab={initialSetupTab} />
-      <SaveCampaignModal open={showSaveModal} onClose={() => setShowSaveModal(false)} onSave={handleSaveCampaign} campaignToEdit={currentCampaign} isSaving={isSaving} />
-      <MemorialDescritivoModal open={showMemorialDescritivoModal} onClose={() => setShowMemorialDescritivoModal(false)} campaignData={campaignData} />
-      <ImageGallerySelector
-        open={showImageGallery}
-        onClose={handleCloseImageGallery}
-        onSelect={handleImageSelected}
-        onLocalUpload={parseImageFile}
-      />
-      <LoadingDialog
-        open={isGeneratingCampaign || isSaving || isLoading || isGenerating || isFetchingCampaigns}
-        title={
-          isFetchingCampaigns
-            ? "Carregando campanhas..."
-            : generationStatus ||
-            (isSaving
-              ? `Salvando Campanha... (${uploadProgress.current}/${uploadProgress.total})`
-              : isLoading
-                ? "Carregando configuração..."
-                : "Gerando conteúdo...")
-        }
-        description={
-          isFetchingCampaigns
-            ? "Aguarde enquanto buscamos suas campanhas."
-            : generationStatus
-              ? "A IA está trabalhando. Isso pode levar alguns instantes."
-              : isSaving
-                ? "Aguarde um momento, estamos fazendo o upload dos seus arquivos."
-                : isLoading
-                  ? "Estamos desempacotando sua configuração. Quase pronto!"
-                  : "A IA está pensando e escrevendo. Isso pode levar alguns segundos."
-        }
-        progress={isSaving ? (uploadProgress.total > 0 ? (uploadProgress.current / uploadProgress.total) * 100 : 0) : null}
-      />
-      <TextEditorDialog
-        open={editingField !== null || editingFollowup !== null}
-        html={isHtmlField}
-        title={
-          editingFollowup !== null
-            ? `Editar Post de Follow-up ${editingFollowup.index + 1}`
-            : `Editar ${
-              {
-              conteudo: 'Conteúdo',
-              conteudoMedio: 'Conteúdo Médio',
-              conteudoPequeno: 'Conteúdo Pequeno',
-              conteudoFormatado: 'Conteúdo Formatado',
-              cta: 'CTA',
-            }[editingField] || editingField || 'Conteúdo'
-            }`
-        }
-        content={
-          (() => {
-            if (editingFollowup) return editingFollowup.content;
-            if (!editingField) return '';
-
-            if (activeStep === 1) {
-              return campaignContent ? campaignContent[editingField] || '' : '';
-            }
-
-            if (activeStep === 3) {
-              const currentRecord = csvData[currentPreviewIndex];
-              return currentRecord ? currentRecord[editingField] || '' : '';
-            }
-
-            return '';
-          })()
-        }
-        onSave={
-          (newContent) => {
-            if (editingFollowup) {
-              handleSaveFollowup(newContent);
-            } else if (editingField) {
-              if (activeStep === 1) {
-                setCampaignContent((prev) => ({ ...prev, [editingField]: newContent }));
-              } else if (activeStep === 3) {
-                const updatedCsvData = csvData.map((row, index) => {
-                  if (index === currentPreviewIndex) {
-                    return { ...row, [editingField]: newContent };
-                  }
-                  return row;
-                });
-                handleCsvRecordContentUpdate(updatedCsvData);
-              }
-            }
-          }
-        }
-        onClose={() => {
-          setEditingField(null);
-          setEditingFollowup(null);
-          setIsHtmlField(false);
-        }}
-      />
+      <UnsavedChangesDialog {...{ open: showUnsavedDialog, onClose: handleDialogClose, onConfirmDiscard: handleDialogDiscard, onConfirmSave: handleDialogSaveAndNavigate }} />
+      <SetupModal {...{ open: showSetupModal, onClose: () => setShowSetupModal(false), initialTab: initialSetupTab }} />
+      <SaveCampaignModal {...{ open: showSaveModal, onClose: () => setShowSaveModal(false), onSave: handleSaveCampaign, campaignToEdit: currentCampaign, isSaving }} />
+      <MemorialDescritivoModal {...{ open: showMemorialDescritivoModal, onClose: () => setShowMemorialDescritivoModal(false), campaignData: memorialCampaignData }} />
+      <ImageGallerySelector {...{ open: showImageGallery, onClose: handleCloseImageGallery, onSelect: handleImageSelected, onLocalUpload: (e) => handleImageSelected(e.target.files[0]) }} />
+      <LoadingDialog {...{ open: isGeneratingCampaign || isSaving || isLoading || isGenerating || isFetchingCampaigns, title: isFetchingCampaigns ? "Carregando campanhas..." : generationStatus || (isSaving ? `Salvando... (${uploadProgress.current}/${uploadProgress.total})` : isLoading ? "Carregando..." : "Gerando..."), progress: isSaving ? (uploadProgress.total > 0 ? (uploadProgress.current / uploadProgress.total) * 100 : 0) : null }} />
+      <TextEditorDialog {...{ open: editingField !== null || editingFollowup !== null, html: isHtmlField, title: `Editar ${editingFollowup ? `Follow-up ${editingFollowup.index + 1}` : editingField}`, content: editingFollowup ? editingFollowup.content : (activeStep === 1 ? campaignState.campaignContent?.[editingField] : (activeStep === 3 ? csvData[currentPreviewIndex]?.[editingField] : '')), onSave: (newContent) => { if (editingFollowup) handleSaveFollowup(newContent); else if (editingField) { if (activeStep === 1) setCampaignState({ campaignContent: { ...campaignState.campaignContent, [editingField]: newContent } }); else if (activeStep === 3) handleCsvRecordContentUpdate(csvData.map((row, i) => i === currentPreviewIndex ? { ...row, [editingField]: newContent } : row)); } setEditingField(null); setEditingFollowup(null); setIsHtmlField(false); }, onClose: () => { setEditingField(null); setEditingFollowup(null); setIsHtmlField(false); } }} />
       <Toaster richColors theme={darkMode ? 'dark' : 'light'} />
     </ThemeProvider>
   );

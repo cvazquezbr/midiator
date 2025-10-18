@@ -1,9 +1,30 @@
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
+import { safeDeepClone } from '../lib/utils';
 
 const defaultPageTemplate = {
-    backgroundColor: '#FFFFFF',
-    gradient: null,
-    images: [],
+  backgroundColor: '#FFFFFF',
+  gradient: null,
+  images: [],
+};
+
+const initialState = {
+  csvData: [],
+  csvHeaders: [],
+  fieldPositions: {},
+  fieldStyles: {},
+  brandElements: [],
+  pageTemplate: defaultPageTemplate,
+  selectedField: null,
+  currentCampaign: null,
+  generatedPagesData: [],
+  generatedVideos: [],
+  aspectRatio: '1:1',
+  pendingAssets: {},
+  paletteId: null,
+  customPalette: null,
+  imageColorPalette: [],
+  // Keep non-campaign-data specific state separate if needed
+  // For example, UI state could live here, but for now, we keep it all together.
 };
 
 export const CampaignContext = createContext(null);
@@ -17,54 +38,33 @@ export const useCampaign = () => {
 };
 
 export const CampaignProvider = ({ children }) => {
-  const [campaignState, setCampaignStateInternal] = useState({
-    csvData: [],
-    csvHeaders: [],
-    fieldPositions: {},
-    fieldStyles: {},
-    brandElements: [],
-    pageTemplate: defaultPageTemplate,
-    selectedField: null,
-    currentCampaign: null,
-    generatedPagesData: [],
-    generatedVideos: [],
-    aspectRatio: '1:1',
-    pendingAssets: {},
-    colors: [],
-    paletteId: null,
-    customPalette: null,
-    imageColorPalette: [],
-    isDirty: false,
-  });
+  const [campaignState, setCampaignStateInternal] = useState(initialState);
 
-  const setCampaignState = useCallback((updater) => {
-    setCampaignStateInternal(currentState => {
-      const newState = typeof updater === 'function' ? updater(currentState) : updater;
-      return { ...currentState, ...newState, isDirty: true };
+  const setCampaignState = useCallback((newState) => {
+    setCampaignStateInternal(prevState => {
+      const updatedState = { ...prevState, ...newState };
+      console.log('[CampaignContext] State updated:', { prevState, newState, updatedState });
+      return updatedState;
     });
   }, []);
 
-  const applyLoadedCampaign = useCallback((loadedState) => {
-    setCampaignStateInternal(currentState => {
-      const finalState = {
-        ...{
-          csvData: [], csvHeaders: [], fieldPositions: {}, fieldStyles: {},
-          brandElements: [], pageTemplate: defaultPageTemplate, selectedField: null,
-          currentCampaign: null, generatedPagesData: [], generatedVideos: [],
-          aspectRatio: '1:1', pendingAssets: {}, colors: [], paletteId: null,
-          customPalette: null, imageColorPalette: [], isDirty: false,
-        },
-        ...loadedState,
-      };
-      Object.keys(currentState.pendingAssets).forEach(url => {
-        if (!finalState.pendingAssets[url]) {
-          URL.revokeObjectURL(url);
-        }
-      });
-      return finalState;
-    });
-  }, []);
+  const applyLoadedCampaign = useCallback((loadedData) => {
+    console.log('[CampaignContext] Applying loaded campaign data:', loadedData);
+    const newState = {
+      ...initialState, // Start from a clean slate
+      ...safeDeepClone(loadedData.campaign_data || {}), // Apply campaign-specific data
+      currentCampaign: loadedData.currentCampaign || null,
+      pendingAssets: loadedData.pendingAssets || {},
+    };
+    // Ensure essential fields are arrays if they are missing from loaded data
+    newState.generatedPagesData = newState.generatedPagesData || [];
+    newState.generatedVideos = newState.generatedVideos || [];
+    newState.brandElements = newState.brandElements || [];
+    newState.pageTemplate = newState.pageTemplate || defaultPageTemplate;
 
+    setCampaignStateInternal(newState);
+    console.log('[CampaignContext] State after applying loaded campaign:', newState);
+  }, []);
 
   const addPendingAsset = useCallback((blob) => {
     if (!(blob instanceof Blob)) {
@@ -72,41 +72,53 @@ export const CampaignProvider = ({ children }) => {
       return null;
     }
     const blobUrl = URL.createObjectURL(blob);
-    setCampaignState(prev => ({
+    setCampaignStateInternal(prev => ({
       ...prev,
-      pendingAssets: { ...prev.pendingAssets, [blobUrl]: blob },
+      pendingAssets: {
+        ...prev.pendingAssets,
+        [blobUrl]: blob,
+      }
     }));
+    console.log(`[CampaignContext] Synchronously added new asset: ${blobUrl}`);
     return blobUrl;
-  }, [setCampaignState]);
+  }, []);
 
   const addPendingAssetMap = useCallback((assetMap) => {
-    setCampaignState(prev => ({
+    setCampaignStateInternal(prev => ({
       ...prev,
-      pendingAssets: { ...prev.pendingAssets, ...assetMap },
+      pendingAssets: {
+        ...prev.pendingAssets,
+        ...assetMap,
+      }
     }));
-  }, [setCampaignState]);
+    console.log('[CampaignContext] Synchronously added asset map.');
+  }, []);
 
   const removePendingAsset = useCallback((blobUrl) => {
-    setCampaignState(prev => {
+    if (typeof blobUrl !== 'string' || !blobUrl.startsWith('blob:')) {
+      console.error("[removePendingAsset] Invalid argument. Expected a blob URL string.", blobUrl);
+      return;
+    }
+    setCampaignStateInternal(prev => {
       const newAssets = { ...prev.pendingAssets };
       if (newAssets[blobUrl]) {
         URL.revokeObjectURL(blobUrl);
         delete newAssets[blobUrl];
+        console.log(`[CampaignContext] Removed and revoked asset: ${blobUrl}`);
       }
       return { ...prev, pendingAssets: newAssets };
     });
-  }, [setCampaignState]);
+  }, []);
 
   useEffect(() => {
     return () => {
-      setCampaignStateInternal(currentAssets => {
-        Object.keys(currentAssets.pendingAssets).forEach(url => {
-          URL.revokeObjectURL(url);
-        });
-        return { ...currentAssets, pendingAssets: {} };
+      const currentAssets = campaignState.pendingAssets;
+      Object.keys(currentAssets).forEach(url => {
+        console.log(`[CampaignContext] Revoking blob URL on unmount: ${url}`);
+        URL.revokeObjectURL(url);
       });
     };
-  }, []);
+  }, [campaignState.pendingAssets]);
 
   const value = useMemo(() => ({
     campaignState,
