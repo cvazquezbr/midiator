@@ -896,7 +896,7 @@ const Campaign = ({
                                     {isGeneratingFollowup ? 'Gerando...' : 'Regerar Posts'}
                                 </Button>
                             </Box>
-                            {(followupPosts || []).map((post, index) => (
+                            {(followupPosts || []).filter(Boolean).map((post, index) => (
                                 <Accordion key={index}>
                                     <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
