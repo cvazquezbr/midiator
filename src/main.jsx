@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
 // Existing Providers
-import { TemplateProvider } from './context/TemplateContext.jsx';
+import { CampaignProvider } from './context/CampaignContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 // New Auth Provider for Application Users
@@ -29,9 +29,9 @@ createRoot(document.getElementById('root')).render(
         <BrowserRouter>
           <UserAuthContextProvider>
             <SettingsProvider>
-              <TemplateProvider>
+              <CampaignProvider>
                 <App />
-              </TemplateProvider>
+              </CampaignProvider>
             </SettingsProvider>
           </UserAuthContextProvider>
         </BrowserRouter>

@@ -1,21 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Box,
-  Grid,
-  IconButton,
-  Tooltip,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Grid, IconButton, Tooltip, Fab,
 } from '@mui/material';
 import { Close, Edit, ContentCopy, ContentPaste } from '@mui/icons-material';
 import { useIsMobile } from '../hooks/use-mobile';
 import FieldPositioner from './FieldPositioner';
 import FormattingPanel from './FormattingPanel';
 import FormattingDrawer from './FormattingDrawer';
-import { Fab } from '@mui/material';
 import TextEditorDialog from './TextEditorDialog';
 import { createNewImageElement } from '../utils/elementFactory';
 import { usePageData } from '../hooks/usePageData';
@@ -30,44 +21,27 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
 }).join('');
 
 const extractColorPalette = (imageUrl, paletteSetter) => {
-  let finalImageUrl = imageUrl;
-  if (imageUrl && imageUrl.includes('blob.vercel-storage.com')) {
-    finalImageUrl = `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`;
+  if (!imageUrl) {
+    paletteSetter([]);
+    return;
   }
-
+  let finalImageUrl = imageUrl.includes('blob.vercel-storage.com') ? `/api/image-proxy?url=${encodeURIComponent(imageUrl)}` : imageUrl;
   const img = new Image();
-  if (!finalImageUrl.startsWith('/api/')) {
-    img.crossOrigin = 'Anonymous';
-  }
-
+  if (!finalImageUrl.startsWith('/api/')) img.crossOrigin = 'Anonymous';
   const processImage = () => {
     try {
       const colorThief = new ColorThief();
       const palette = colorThief.getPalette(img, 5);
-      if (palette) {
-        const hexPalette = palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2]));
-        paletteSetter(hexPalette);
-      } else {
-        paletteSetter([]);
-      }
+      paletteSetter(palette ? palette.map(rgb => rgbToHex(rgb[0], rgb[1], rgb[2])) : []);
     } catch (error) {
-      console.error("Error extracting color palette:", error);
       paletteSetter([]);
     }
   };
-
   img.onload = processImage;
-  img.onerror = (err) => {
-    console.error("Error loading image for color extraction:", err);
-    paletteSetter([]);
-  };
+  img.onerror = () => paletteSetter([]);
   img.src = finalImageUrl;
-
-  if (img.complete) {
-    processImage();
-  }
+  if (img.complete) processImage();
 };
-
 
 const COMPLETE_DEFAULT_STYLE = {
   fontFamily: 'Arial', fontSize: 24, fontWeight: 'normal', fontStyle: 'normal',
@@ -88,18 +62,17 @@ const PageEditor = ({
   originalImageSize,
   aspectRatio,
   onOpenImageGallery,
-  editedPageTemplate,
-  setEditedPageTemplate,
   addPendingAsset,
-  pendingAssets,
 }) => {
-  const { csvHeaders } = useCampaign();
+  const { campaignState } = useCampaign();
+  const { csvHeaders, pageTemplate: globalPageTemplate, pendingAssets } = campaignState;
   const pageDataFromHook = usePageData(pageData?.index);
 
   const [editedPositions, setEditedPositions] = useState(null);
   const [editedStyles, setEditedStyles] = useState(null);
   const [editedBrandElements, setEditedBrandElements] = useState(null);
   const [editedRecord, setEditedRecord] = useState(null);
+  const [editedPageTemplate, setEditedPageTemplate] = useState(null);
   const [selectedFieldInternal, setSelectedFieldInternal] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
@@ -112,171 +85,61 @@ const PageEditor = ({
   }, []);
 
   useEffect(() => {
-    // Sincronizar paleta de cores da imagem
-    const firstImage = editedPageTemplate?.images?.[0];
-    if (firstImage?.src) {
-      extractColorPalette(firstImage.src, setImageSwatches);
-    } else {
-      setImageSwatches(colorPalette || []);
-    }
-
-    // Lógica para detectar e selecionar a nova imagem
-    const currentImages = editedPageTemplate?.images || [];
-    const previousImages = prevImagesRef.current || [];
-
-    if (currentImages.length > previousImages.length) {
-      const newImage = currentImages.find(
-        (img) => !previousImages.some((prevImg) => prevImg.id === img.id)
-      );
-      if (newImage) {
-        handleInternalFieldSelection(newImage.id);
-      }
-    }
-
-    // Atualizar a referência para o próximo render
-    prevImagesRef.current = currentImages;
-  }, [editedPageTemplate?.images, colorPalette, handleInternalFieldSelection]);
-  
-
-  const handleOpenHtmlEditor = (fieldId) => {
-    setEditingField(fieldId);
-  };
-
-  const handleCopyStyle = () => {
-    copyStyleToClipboard(editedStyles, editedPositions, editedBrandElements, editedPageTemplate);
-  };
-
-  const handlePasteStyle = async () => {
-    await pasteStyleFromClipboard(
-      setEditedStyles,
-      setEditedPositions,
-      setEditedBrandElements,
-      setEditedPageTemplate
-    );
-  };
-
-  // 🔧 CORREÇÃO PRINCIPAL: Esta função agora usa addPendingAsset
-  const handleImageSelection = async (file) => {
-    if (!file) return;
-
-    console.log('[PageEditor] CORREÇÃO: handleImageSelection chamado com file:', file.name);
-
-    // Processar a imagem (redimensionar se necessário)
-    const tempUrl = URL.createObjectURL(file);
-    const img = new Image();
-
-    img.onload = () => {
-      const MAX_DIMENSION = 720;
-      let { width, height } = img;
-
-      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-        if (width > height) {
-          height = Math.round(height * (MAX_DIMENSION / width));
-          width = MAX_DIMENSION;
-        } else {
-          width = Math.round(width * (MAX_DIMENSION / height));
-          height = MAX_DIMENSION;
-        }
-      }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // Revogar URL temporária
-      URL.revokeObjectURL(tempUrl);
-
-      canvas.toBlob((blob) => {
-        if (blob) {
-          console.log('[PageEditor] CORREÇÃO: Blob criado, adicionando ao pendingAssets');
-
-          // 🎯 CORREÇÃO CRÍTICA: Adicionar ao pendingAssets
-          const managedUrl = addPendingAsset ? addPendingAsset(blob) : null;
-
-          if (managedUrl) {
-            console.log('[PageEditor] CORREÇÃO: URL gerenciada criada:', managedUrl);
-            const newImage = createNewImageElement(managedUrl);
-
-            setEditedPageTemplate(prevTemplate => ({
-              ...prevTemplate,
-              images: [...(prevTemplate.images || []), newImage],
-            }));
-
-            handleInternalFieldSelection(newImage.id);
-          } else {
-            console.error('[PageEditor] ERRO: addPendingAsset não disponível ou falhou');
-            // Fallback para data URL (menos ideal mas funcional)
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const dataUrl = e.target.result;
-              const newImage = createNewImageElement(dataUrl);
-              setEditedPageTemplate(prevTemplate => ({
-                ...prevTemplate,
-                images: [...(prevTemplate.images || []), newImage],
-              }));
-              handleInternalFieldSelection(newImage.id);
-            };
-            reader.readAsDataURL(blob);
-          }
-        } else {
-          console.error('[PageEditor] ERRO: Falha ao criar blob da imagem processada');
-        }
-      }, file.type);
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(tempUrl);
-      console.error('[PageEditor] ERRO: Falha ao carregar imagem');
-    };
-
-    img.src = tempUrl;
-  };
-
-  const handleLocalImageUpload = (event) => {
-    handleImageSelection(event.target.files[0]);
-  };
-
-  const handleFieldPositionerCsvDataUpdate = useCallback((updatedDataArray) => {
-    if (updatedDataArray && updatedDataArray.length > 0) {
-      setEditedRecord(updatedDataArray[0]);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Only initialize state if the dialog is opening and the state is not already populated
     if (open && pageData && !editedPositions) {
-      const {
-        effectiveFieldPositions,
-        effectiveFieldStyles,
-        effectiveBrandElements,
-        record,
-      } = pageDataFromHook;
-
-      setEditedPositions(JSON.parse(JSON.stringify(effectiveFieldPositions)));
+      const { effectiveFieldPositions, effectiveFieldStyles, effectiveBrandElements, record } = pageDataFromHook;
+      const templateToEdit = safeDeepClone(pageData.customPageTemplate || globalPageTemplate);
+      setEditedPositions(safeDeepClone(effectiveFieldPositions));
       setEditedBrandElements(safeDeepClone(effectiveBrandElements));
-      setEditedRecord(JSON.parse(JSON.stringify(record)));
-
+      setEditedRecord(safeDeepClone(record));
+      setEditedPageTemplate(templateToEdit);
       const newEditedStyles = {};
       (csvHeaders || []).forEach(field => {
         newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(effectiveFieldStyles[field] || {}) };
       });
       setEditedStyles(newEditedStyles);
     } else if (!open) {
-      // Reset state when dialog is closed to ensure it's fresh on next open
       setEditedPositions(null);
       setEditedStyles(null);
       setEditedBrandElements(null);
       setEditedRecord(null);
+      setEditedPageTemplate(null);
       setSelectedFieldInternal(null);
     }
-  }, [open, pageData, pageDataFromHook, csvHeaders, editedPositions]);
+  }, [open, pageData, pageDataFromHook, csvHeaders, globalPageTemplate, editedPositions]);
 
-  if (!open || !pageData || !editedPageTemplate) {
-    // Render nothing or a loader until the state is initialized by the effect
-    return null;
-  }
+  useEffect(() => {
+    const firstImage = editedPageTemplate?.images?.[0];
+    extractColorPalette(firstImage?.src, setImageSwatches);
+    const currentImages = editedPageTemplate?.images || [];
+    const previousImages = prevImagesRef.current || [];
+    if (currentImages.length > previousImages.length) {
+      const newImage = currentImages.find(img => !previousImages.some(prevImg => prevImg.id === img.id));
+      if (newImage) handleInternalFieldSelection(newImage.id);
+    }
+    prevImagesRef.current = currentImages;
+  }, [editedPageTemplate?.images, colorPalette, handleInternalFieldSelection]);
+  
+  const handleOpenHtmlEditor = (fieldId) => setEditingField(fieldId);
+  const handleCopyStyle = () => copyStyleToClipboard(editedStyles, editedPositions, editedBrandElements, editedPageTemplate);
+  const handlePasteStyle = async () => pasteStyleFromClipboard(setEditedStyles, setEditedPositions, setEditedBrandElements, setEditedPageTemplate);
+
+  const handleImageSelection = async (file) => {
+    if (!file) return;
+    const managedUrl = addPendingAsset(file);
+    if (managedUrl) {
+      const newImage = createNewImageElement(managedUrl);
+      setEditedPageTemplate(prev => ({ ...prev, images: [...(prev.images || []), newImage] }));
+      handleInternalFieldSelection(newImage.id);
+    }
+  };
+
+  const handleLocalImageUpload = (event) => handleImageSelection(event.target.files[0]);
+
+  const handleFieldPositionerCsvDataUpdate = useCallback((updatedDataArray) => {
+    if (updatedDataArray?.length > 0) setEditedRecord(updatedDataArray[0]);
+  }, []);
+
+  if (!open || !pageData || !editedPageTemplate) return null;
 
   const handleSave = () => {
     const savedData = {
@@ -287,13 +150,11 @@ const PageEditor = ({
       customBrandElements: editedBrandElements,
       customPageTemplate: editedPageTemplate,
     };
-    console.log('[PageEditor] handleSave called. Data being passed up:', savedData);
-    console.log('[PageEditor] Images before save:', editedPageTemplate.images);
     onSave(savedData);
     onClose();
   };
 
-  const editorCsvData = editedRecord ? [editedRecord] : (pageData && pageData.record ? [pageData.record] : []);
+  const editorCsvData = editedRecord ? [editedRecord] : [];
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="paper" fullScreen={isMobile}>
@@ -301,19 +162,9 @@ const PageEditor = ({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>Editar Página Gerada #{pageData.index + 1}</span>
           <Box>
-            <Tooltip title="Copiar estilo">
-              <IconButton onClick={handleCopyStyle}>
-                <ContentCopy />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Colar estilo">
-              <IconButton onClick={handlePasteStyle}>
-                <ContentPaste />
-              </IconButton>
-            </Tooltip>
-            <IconButton onClick={onClose} sx={{ ml: 2 }}>
-              <Close />
-            </IconButton>
+            <Tooltip title="Copiar estilo"><IconButton onClick={handleCopyStyle}><ContentCopy /></IconButton></Tooltip>
+            <Tooltip title="Colar estilo"><IconButton onClick={handlePasteStyle}><ContentPaste /></IconButton></Tooltip>
+            <IconButton onClick={onClose} sx={{ ml: 2 }}><Close /></IconButton>
           </Box>
         </Box>
       </DialogTitle>
@@ -399,7 +250,7 @@ const PageEditor = ({
       <TextEditorDialog
         open={editingField !== null}
         title={`Editar "${editingField}"`}
-        content={editedRecord && editingField ? editedRecord[editingField] : ''}
+        content={editedRecord?.[editingField] || ''}
         onSave={(newContent) => {
           if (editedRecord && editingField) {
             setEditedRecord(prev => ({ ...prev, [editingField]: newContent }));
