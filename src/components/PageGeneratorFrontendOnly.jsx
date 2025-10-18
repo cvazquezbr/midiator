@@ -16,12 +16,10 @@ import { safeDeepClone } from '../lib/utils';
 import { toast } from 'sonner';
 
 const PageGeneratorFrontendOnly = ({
-  colorPalette,
   originalImageSize,
   handleGenerateSinglePage,
   aspectRatio,
   onOpenImageGallery,
-  imagePalette,
 }) => {
   const { campaignState, setCampaignState, addPendingAsset } = useCampaign();
   const {
@@ -394,8 +392,6 @@ const PageGeneratorFrontendOnly = ({
           onClose={handleCloseGeneratedPageEditor}
           pageData={safeDeepClone(pageToEdit)}
           onSave={handleSaveIndividualModifications}
-          colorPalette={colorPalette}
-          imagePalette={imagePalette}
           aspectRatio={aspectRatio}
           originalImageSize={originalImageSize}
           onOpenImageGallery={() => onOpenImageGallery(editingGeneratedPageIndex)}

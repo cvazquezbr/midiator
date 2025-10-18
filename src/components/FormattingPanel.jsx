@@ -44,7 +44,6 @@ import BackgroundFormatting from './formatting/BackgroundFormatting';
 import PositionSizeFormatting from './formatting/PositionSizeFormatting';
 
 const FormattingPanel = ({
-  colorPalette,
   initialFieldStyles,
   onOpenHtmlEditor,
   templateFieldStyles,

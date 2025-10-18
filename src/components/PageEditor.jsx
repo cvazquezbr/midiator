@@ -57,8 +57,6 @@ const PageEditor = ({
   onClose,
   pageData,
   onSave,
-  colorPalette,
-  imagePalette,
   originalImageSize,
   aspectRatio,
   onOpenImageGallery,

@@ -13,9 +13,12 @@ import {
 } from '@mui/material';
 import { Add, Delete, Gradient } from '@mui/icons-material';
 import ColorSwatches from './common/ColorSwatches';
+import { useCampaign } from '../context/CampaignContext';
 
 
-const BackgroundColorEditor = ({ pageTemplate, onUpdate, colorPalette, imagePalette }) => {
+const BackgroundColorEditor = ({ pageTemplate, onUpdate }) => {
+  const { campaignState } = useCampaign();
+  const { imageColorPalette: imagePalette, colors: colorPalette } = campaignState;
   if (!pageTemplate) return null;
 
   const initialMode = pageTemplate?.gradient ? 'gradient' : 'solid';
