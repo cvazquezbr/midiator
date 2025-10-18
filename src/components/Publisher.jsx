@@ -457,7 +457,7 @@ const Publisher = ({
       const dayIndex = date.getDay();
       return weeklySchedule[dayIndex] || 'N/A';
     };
-    const preview = followupPosts.map((post, index) => {
+    const preview = (followupPosts || []).filter(Boolean).map((post, index) => {
       const postDate = new Date(scheduleDate);
       postDate.setDate(postDate.getDate() + index + 1);
       return {
