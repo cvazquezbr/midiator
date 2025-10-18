@@ -65,7 +65,7 @@ const FormattingPanel = ({
   setSelectedField: setSelectedFieldProp,
 }) => {
   const context = useCampaign();
-  const { imageColorPalette: imagePalette } = context; // Get image palette from context
+  const { imageColorPalette: imagePalette, colors: colorPalette } = context; // Get image palette from context
 
   // Use props if provided (controlled mode), otherwise use context (standalone mode)
   const fieldStyles = fieldStylesProp ?? context.fieldStyles;
@@ -269,7 +269,6 @@ const FormattingPanel = ({
             {isTextField && (
               <>
                 <TextFormatting
-                  colorPalette={colorPalette}
                   imagePalette={imagePalette}
                   currentElement={currentElement}
                   updateFieldStyle={updateFieldStyle}
@@ -319,7 +318,6 @@ const FormattingPanel = ({
                 setPageTemplate={setPageTemplate}
                 expandedPanel={expandedPanel}
                 handleAccordionChange={handleAccordionChange}
-                colorPalette={colorPalette}
                 imagePalette={imagePalette}
               />
             )}
