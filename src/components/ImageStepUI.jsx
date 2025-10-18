@@ -137,8 +137,6 @@ const ImageStepUI = ({
         <Box sx={{ flex: '0 0 320px', p: 1, borderLeft: 1, borderColor: 'divider', overflowY: 'auto' }}>
           <Stack spacing={2}>
             <FormattingPanel
-              colorPalette={colorPalette}
-              imagePalette={imagePalette}
               showImageLoaders={true}
               handleImageUpload={handleImageUpload}
               onOpenImageGallery={onOpenImageGallery}

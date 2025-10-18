@@ -63,7 +63,7 @@ const PageEditor = ({
   addPendingAsset,
 }) => {
   const { campaignState } = useCampaign();
-  const { csvHeaders, pageTemplate: globalPageTemplate, pendingAssets } = campaignState;
+  const { csvHeaders, pageTemplate: globalPageTemplate, pendingAssets, colors: colorPalette } = campaignState;
   const pageDataFromHook = usePageData(pageData?.index);
 
   const [editedPositions, setEditedPositions] = useState(null);
@@ -115,7 +115,7 @@ const PageEditor = ({
       if (newImage) handleInternalFieldSelection(newImage.id);
     }
     prevImagesRef.current = currentImages;
-  }, [editedPageTemplate?.images, colorPalette, handleInternalFieldSelection]);
+  }, [editedPageTemplate?.images, handleInternalFieldSelection]);
   
   const handleOpenHtmlEditor = (fieldId) => setEditingField(fieldId);
   const handleCopyStyle = () => copyStyleToClipboard(editedStyles, editedPositions, editedBrandElements, editedPageTemplate);
@@ -193,7 +193,6 @@ const PageEditor = ({
           {!isMobile && (
             <Grid item xs={12} md={4}>
               <FormattingPanel
-                colorPalette={colorPalette}
                 imagePalette={imageSwatches}
                 selectedField={selectedFieldInternal}
                 setSelectedField={setSelectedFieldInternal}
@@ -225,7 +224,6 @@ const PageEditor = ({
           <FormattingDrawer
             open={isDrawerOpen}
             onClose={() => setIsDrawerOpen(false)}
-            colorPalette={colorPalette}
             imagePalette={imageSwatches}
             selectedField={selectedFieldInternal}
             setSelectedField={setSelectedFieldInternal}

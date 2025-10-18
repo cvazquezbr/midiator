@@ -269,7 +269,6 @@ const FormattingPanel = ({
             {isTextField && (
               <>
                 <TextFormatting
-                  imagePalette={imagePalette}
                   currentElement={currentElement}
                   updateFieldStyle={updateFieldStyle}
                   resetFieldStyle={resetFieldStyle}
@@ -318,7 +317,6 @@ const FormattingPanel = ({
                 setPageTemplate={setPageTemplate}
                 expandedPanel={expandedPanel}
                 handleAccordionChange={handleAccordionChange}
-                imagePalette={imagePalette}
               />
             )}
           </>
