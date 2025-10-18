@@ -61,6 +61,7 @@ import { lightTheme, darkTheme } from '../theme.js';
 import ColorThief from 'colorthief';
 import { getDimensionsFromAspectRatio, dataURLtoBlob } from '../utils/imageComposer.js';
 import { autoArrangeFields } from '../utils/autoArrange.js';
+import { createNewImageElement } from '../utils/elementFactory.js';
 import PageGenerationService from '../services/PageGenerationService.js';
 
 import { setGoogleApiToken, setGoogleApiTokenSetter } from '../utils/googleApi';
@@ -633,7 +634,12 @@ function HomePage() {
     }
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
-      const finalPageData = await PageGenerationService.generatePageImage({ ...campaignState, record, index, pageTemplate: effectivePageTemplate, fontScale });
+      const finalPageData = await PageGenerationService.generatePageImage({
+        record,
+        index,
+        campaignContext: campaignState,
+        pageData: { ...(pageData || {}), customPageTemplate: effectivePageTemplate, fontScale },
+      });
       const tempUrl = addPendingAsset(finalPageData.blob);
       if (!tempUrl) throw new Error("Falha ao criar URL para a página final.");
       setCampaignState(prev => ({

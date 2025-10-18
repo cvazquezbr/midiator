@@ -169,17 +169,30 @@ export const deserializeCampaignData = async (loadedState) => {
   }
   if (finalState.generatedPagesData && Array.isArray(finalState.generatedPagesData)) {
     const sanitizedCsvData = finalState.csvData || [];
+    const headers = finalState.csvHeaders || [];
+    const defaultRecord = headers.reduce((acc, header) => {
+      acc[header] = '';
+      return acc;
+    }, {});
+
     finalState.generatedPagesData = finalState.generatedPagesData.map((page, index) => {
       if (!page) {
+        // Se a página for nula, crie uma página de placeholder completa.
         return {
           index: index,
-          record: sanitizedCsvData[index] || {},
+          record: sanitizedCsvData[index] || { ...defaultRecord },
           url: null,
           blob: null,
           filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
         };
       }
-      return { ...page, index: index };
+      // Se a página existir, mas o registro estiver ausente, preencha-o.
+      if (!page.record) {
+        page.record = sanitizedCsvData[index] || { ...defaultRecord };
+      }
+      // Garanta que o índice esteja sempre correto.
+      page.index = index;
+      return page;
     });
   }
   if (finalState.followupPosts && Array.isArray(finalState.followupPosts)) {
