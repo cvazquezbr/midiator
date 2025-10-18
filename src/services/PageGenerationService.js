@@ -28,7 +28,7 @@ const PageGenerationService = {
     const brandElements = pageData.customBrandElements !== undefined ? pageData.customBrandElements : globalBrandElements;
     const fieldPositions = pageData.customFieldPositions || globalFieldPositions;
     const fieldStyles = pageData.customFieldStyles || globalFieldStyles;
-    const pageTemplate = pageData.customPageTemplate || globalPageTemplate;
+    const pageTemplate = pageData?.customPageTemplate || globalPageTemplate;
     const aspectRatio = globalAspectRatio; // Aspect ratio is likely always global for a campaign
 
     try {
