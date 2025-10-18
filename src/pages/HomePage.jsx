@@ -408,6 +408,9 @@ function HomePage() {
   }, [addPendingAsset, addNewImageToCanvas]);
 
   const handleForegroundImageUpload = useCallback((event) => handleImageSelected(event.target.files[0]), [handleImageSelected]);
+  const handleImageDragOver = (event) => event.preventDefault();
+  const handleImageDragEnter = (event) => event.preventDefault();
+  const handleImageDragLeave = (event) => event.preventDefault();
   const handleNext = () => { if (activeStep === 3) setCampaignState({ templateFieldStyles: fieldStyles }); setActiveStep(p => p + 1); };
   const handleBack = () => setActiveStep(p => p - 1);
   const canProceedToStep = (step) => {
