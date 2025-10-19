@@ -15,11 +15,13 @@ const createWrapper = (mockContextValue) => ({ children }) => (
 describe('usePageData', () => {
   it('should return global data when no custom page data exists', () => {
     const mockContext = {
-      generatedPagesData: [],
-      pageTemplate: { backgroundColor: '#FFFFFF', images: [] },
-      fieldPositions: { title: { x: 10, y: 10 } },
-      fieldStyles: { title: { fontSize: 24 } },
-      brandElements: [{ id: 'brand1', src: 'logo.png' }],
+      campaignState: {
+        generatedPagesData: [],
+        pageTemplate: { backgroundColor: '#FFFFFF', images: [] },
+        fieldPositions: { title: { x: 10, y: 10 } },
+        fieldStyles: { title: { fontSize: 24 } },
+        brandElements: [{ id: 'brand1', src: 'logo.png' }],
+      },
     };
 
     const wrapper = createWrapper(mockContext);
@@ -34,20 +36,22 @@ describe('usePageData', () => {
 
   it('should return custom data when it exists for a page', () => {
     const mockContext = {
-      generatedPagesData: [
-        {
-          index: 0,
-          record: { title: 'Custom Title' },
-          customPageTemplate: { backgroundColor: '#000000' },
-          customFieldPositions: { title: { x: 20, y: 20 } },
-          customFieldStyles: { title: { fontSize: 48 } },
-          customBrandElements: [{ id: 'brand2', src: 'custom.png' }],
-        },
-      ],
-      pageTemplate: { backgroundColor: '#FFFFFF' },
-      fieldPositions: { title: { x: 10, y: 10 } },
-      fieldStyles: { title: { fontSize: 24 } },
-      brandElements: [{ id: 'brand1', src: 'logo.png' }],
+      campaignState: {
+        generatedPagesData: [
+          {
+            index: 0,
+            record: { title: 'Custom Title' },
+            customPageTemplate: { backgroundColor: '#000000' },
+            customFieldPositions: { title: { x: 20, y: 20 } },
+            customFieldStyles: { title: { fontSize: 48 } },
+            customBrandElements: [{ id: 'brand2', src: 'custom.png' }],
+          },
+        ],
+        pageTemplate: { backgroundColor: '#FFFFFF' },
+        fieldPositions: { title: { x: 10, y: 10 } },
+        fieldStyles: { title: { fontSize: 24 } },
+        brandElements: [{ id: 'brand1', src: 'logo.png' }],
+      },
     };
 
     const wrapper = createWrapper(mockContext);
