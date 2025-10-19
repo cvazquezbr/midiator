@@ -52,32 +52,43 @@ export const CampaignProvider = ({ children }) => {
   const applyLoadedCampaign = useCallback((loadedData) => {
     console.log('[CampaignContext] Applying loaded campaign data:', loadedData);
 
+    // Start with a clean slate to avoid merging with old, unrelated campaign data
+    const newCampaignState = safeDeepClone(initialState);
+
+    // Merge the loaded campaign data (from campaign_data blob)
     const campaignData = safeDeepClone(loadedData.campaign_data || {});
+    Object.assign(newCampaignState, campaignData);
 
-    // Ensure csvData is always a valid array of objects
-    const sanitizedCsvData = (campaignData.csvData || []).map(record => record || {});
+    // --- CRITICAL DATA SYNCHRONIZATION ---
 
-    // Synchronize generatedPagesData with csvData
+    // 1. Ensure `csvData` is always a valid array.
+    // This is the source of truth for page records.
+    const sanitizedCsvData = (newCampaignState.csvData || []).map(record => record || {});
+    newCampaignState.csvData = sanitizedCsvData;
+
+    // 2. Synchronize `generatedPagesData` with the sanitized `csvData`.
+    // This guarantees that for every record in `csvData`, there is a corresponding page entry.
     const synchronizedPages = sanitizedCsvData.map((record, index) => {
-      const existingPage = (campaignData.generatedPagesData || [])[index] || {};
+      const existingPage = (newCampaignState.generatedPagesData || [])[index] || {};
       return {
         ...existingPage,
         index,
-        record,
+        record, // Overwrite the record to ensure consistency with csvData
       };
     });
+    newCampaignState.generatedPagesData = synchronizedPages;
 
-    const newState = {
-      ...initialState,
-      ...campaignData,
-      csvData: sanitizedCsvData,
-      generatedPagesData: synchronizedPages,
-      currentCampaign: loadedData.id ? { id: loadedData.id, name: loadedData.name } : null,
-      pendingAssets: {}, // Always start fresh on load
-    };
+    // --- FINAL STATE ASSEMBLY ---
 
-    setCampaignStateInternal(newState);
-    console.log('[CampaignContext] State after applying loaded campaign:', newState);
+    // Set campaign metadata
+    newCampaignState.currentCampaign = loadedData.id ? { id: loadedData.id, name: loadedData.name } : null;
+
+    // Always clear pending assets on load to prevent cross-campaign contamination
+    newCampaignState.pendingAssets = {};
+
+    // Atomically update the state
+    setCampaignStateInternal(newCampaignState);
+    console.log('[CampaignContext] State after applying loaded campaign:', newCampaignState);
   }, []);
 
   const addPendingAsset = useCallback((blob) => {
