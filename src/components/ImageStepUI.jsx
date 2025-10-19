@@ -67,23 +67,13 @@ const ImageStepUI = ({
     setCurrentPreviewIndex(csvData.length - 1);
   };
 
-  const areDataRequirementsMet = () => {
-    return (
-      !isCampaignLoading &&
-      csvData &&
-      csvData.length > 0 &&
-      pageTemplate &&
-      csvData[currentPreviewIndex] !== undefined
-    );
-  };
-
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, height: { xs: 'calc(100dvh - 140px)', md: 'calc(100vh - 150px)' } }}>
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <Typography variant="h6" sx={{ flexShrink: 0, textAlign: 'center', my: 2 }}>
           Editor de Página
         </Typography>
-        {areDataRequirementsMet() ? (
+        {csvData && csvData.length > 0 ? (
           <>
             <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', p: 1 }}>
               <FieldPositioner
@@ -146,16 +136,10 @@ const ImageStepUI = ({
             )}
           </>
         ) : (
-          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-            {isCampaignLoading ? (
-              <CircularProgress />
-            ) : (
-              <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', p: 2 }}>
-                Os dados da campanha ainda não estão prontos.
-                <br />
-                Por favor, certifique-se de que carregou um arquivo CSV com dados na etapa "Posts Curtos".
-              </Typography>
-            )}
+          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography variant="body1" color="text.secondary">
+              Por favor, carregue os dados na etapa "Posts Curtos" para começar a editar o modelo.
+            </Typography>
           </Box>
         )}
       </Box>

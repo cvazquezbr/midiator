@@ -153,8 +153,6 @@ const PageEditor = ({
 
   if (!open) return null;
 
-  const isLoading = isCampaignLoading || !pageData || !editedPageTemplate || !editedRecord || !editedPositions;
-
   const handleSave = () => {
     const savedData = {
       ...pageData,
@@ -176,20 +174,16 @@ const PageEditor = ({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>Editar Página Gerada #{(pageData?.index ?? -1) + 1}</span>
           <Box>
-            <Tooltip title="Copiar estilo"><IconButton onClick={handleCopyStyle} disabled={isLoading}><ContentCopy /></IconButton></Tooltip>
-            <Tooltip title="Colar estilo"><IconButton onClick={handlePasteStyle} disabled={isLoading}><ContentPaste /></IconButton></Tooltip>
+            <Tooltip title="Copiar estilo"><IconButton onClick={handleCopyStyle}><ContentCopy /></IconButton></Tooltip>
+            <Tooltip title="Colar estilo"><IconButton onClick={handlePasteStyle}><ContentPaste /></IconButton></Tooltip>
             <IconButton onClick={onClose} sx={{ ml: 2 }}><Close /></IconButton>
           </Box>
         </Box>
       </DialogTitle>
       <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column' }}>
-        {isLoading ? (
-          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <Grid container spacing={2} sx={{ flexGrow: 1 }}>
-            <Grid item xs={12} md={isMobile ? 12 : 8} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Grid container spacing={2} sx={{ flexGrow: 1 }}>
+          <Grid item xs={12} md={isMobile ? 12 : 8} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {editedPositions && editedStyles && editedRecord && editedPageTemplate && (
               <FieldPositioner
                 aspectRatio={aspectRatio}
                 csvHeaders={csvHeaders}
@@ -210,6 +204,7 @@ const PageEditor = ({
                 currentPreviewIndex={0}
                 pendingAssets={pendingAssets}
               />
+            )}
             </Grid>
             {!isMobile && (
               <Grid item xs={12} md={4}>
@@ -234,13 +229,12 @@ const PageEditor = ({
               </Grid>
             )}
           </Grid>
-        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleSave} color="primary" variant="contained" disabled={isLoading}>Salvar Alterações</Button>
+        <Button onClick={handleSave} color="primary" variant="contained">Salvar Alterações</Button>
       </DialogActions>
-      {!isLoading && isMobile && (
+      {isMobile && (
         <>
           <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16 }} onClick={() => setIsDrawerOpen(true)}><Edit /></Fab>
           <FormattingDrawer
@@ -266,7 +260,7 @@ const PageEditor = ({
         </>
       )}
       <TextEditorDialog
-        open={!isLoading && editingField !== null && editedRecord && editedRecord[editingField] !== undefined}
+        open={editingField !== null && editedRecord && editedRecord[editingField] !== undefined}
         title={`Editar "${editingField || ''}"`}
         content={editedRecord?.[editingField] || ''}
         onSave={(newContent) => {
