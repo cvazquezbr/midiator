@@ -77,7 +77,7 @@ const FieldPositioner = ({
   setIsCropping,
   pendingAssets,
 }) => {
-  console.log('[FieldPositioner] Rendering. Props received:', { csvHeaders, fieldPositions, fieldStyles, csvData, currentPreviewIndex, pageTemplate });
+  console.log('[FieldPositioner] props:', { pageTemplate, fieldStyles });
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);

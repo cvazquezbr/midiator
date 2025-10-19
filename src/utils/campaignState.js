@@ -158,7 +158,7 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
  * blob: URLs. This "hydrates" the state for use in the UI.
  */
 export const deserializeCampaignData = async (loadedState) => {
-  console.log('[deserializeCampaignData] Starting deserialization. Input state:', JSON.stringify(loadedState, null, 2));
+  console.log('[deserializeCampaignData] Starting refactored deserialization and asset download...');
   const finalState = JSON.parse(JSON.stringify(loadedState)); // Deep copy to modify
   const newlyCreatedAssets = {}; // This will become the new `pendingAssets` map in the UI
 
@@ -280,7 +280,7 @@ export const deserializeCampaignData = async (loadedState) => {
   });
   console.log('[deserializeCampaignData] Step 3 COMPLETE.');
 
-  console.log(`[deserializeCampaignData] Deserialization complete. ${Object.keys(newlyCreatedAssets).length} assets downloaded. Final state:`, JSON.stringify(finalState, null, 2));
+  console.log(`[deserializeCampaignData] Deserialization complete. ${Object.keys(newlyCreatedAssets).length} assets downloaded.`);
   return { finalState, newlyCreatedAssets };
 };
 
@@ -301,7 +301,6 @@ export const loadCampaign = async (id) => {
     throw new Error(err.error || 'Failed to load campaign.');
   }
   const campaign = await res.json();
-  console.log('[loadCampaign] Raw data from API:', JSON.stringify(campaign, null, 2));
 
   if (campaign.campaign_data) {
     // The deserialize function now returns an object containing the modified state
