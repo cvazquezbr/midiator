@@ -62,7 +62,10 @@ export const CampaignProvider = ({ children }) => {
       return {
         ...existingPage,
         index,
-        record,
+        record: { // Ensure record has 'Título' property
+          ...record,
+          Título: record.Título || `Página ${index + 1}`, // Fallback for 'Título'
+        },
       };
     });
 
