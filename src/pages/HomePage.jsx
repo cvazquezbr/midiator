@@ -459,26 +459,35 @@ function HomePage() {
 
   const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
     setCampaignState(prev => {
-      const updates = { csvData: novosRegistros };
+      const sanitizedRegistros = novosRegistros.map((record, index) => ({
+        ...(record || {}),
+        Título: (record || {}).Título || `Página ${index + 1}`,
+      }));
+
+      const updates = { csvData: sanitizedRegistros };
       if (JSON.stringify(novasColunas) !== JSON.stringify(prev.csvHeaders)) {
         updates.csvHeaders = novasColunas;
       }
-      updates.generatedPagesData = novosRegistros.map((record, index) => {
+
+      updates.generatedPagesData = sanitizedRegistros.map((record, index) => {
         const existingPage = prev.generatedPagesData.find(img => img.index === index) || {};
-        const sanitizedRecord = { ...record, Título: record.Título || `Página ${index + 1}` };
-        return { ...existingPage, index, record: sanitizedRecord, url: null, blob: null };
+        return { ...existingPage, index, record, url: null, blob: null };
       });
       return updates;
     });
   }, [setCampaignState]);
 
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
+    const sanitizedCsvData = newCsvData.map((record, index) => ({
+      ...(record || {}),
+      Título: (record || {}).Título || `Página ${index + 1}`,
+    }));
+
     setCampaignState(prev => ({
-      csvData: newCsvData,
-      generatedPagesData: newCsvData.map((record, index) => {
+      csvData: sanitizedCsvData,
+      generatedPagesData: sanitizedCsvData.map((record, index) => {
         const existingPage = prev.generatedPagesData.find(img => img.index === index) || {};
-        const sanitizedRecord = { ...record, Título: record.Título || `Página ${index + 1}` };
-        return { ...existingPage, index, record: sanitizedRecord };
+        return { ...existingPage, index, record };
       })
     }));
   }, [setCampaignState]);
