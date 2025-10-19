@@ -279,6 +279,7 @@ const FieldPositioner = ({
   }, [csvHeaders, fieldStyles]);
 
   const renderableElements = React.useMemo(() => {
+    console.log('[FieldPositioner] Calculando renderableElements.', { csvData, currentPreviewIndex, pageTemplate, fieldPositions, completeFieldStyles, brandElements });
     const elements = [];
 
     // Add page images
@@ -321,9 +322,9 @@ const FieldPositioner = ({
         const style = completeFieldStyles[header];
         if (!position || !position.visible) return null;
 
-        const record = csvData[currentPreviewIndex];
+        const record = csvData ? csvData[currentPreviewIndex] : undefined;
         if (!record) {
-          console.error(`[FieldPositioner] Tentativa de acesso a um registro inválido. Índice: ${currentPreviewIndex}`, csvData);
+          console.error(`[FieldPositioner] Safeguard: record not found at index ${currentPreviewIndex}.`, { csvData });
           return null;
         }
         const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
