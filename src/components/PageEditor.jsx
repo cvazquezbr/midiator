@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { toast } from 'sonner';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Grid, IconButton, Tooltip, Fab,
 } from '@mui/material';
@@ -84,26 +83,19 @@ const PageEditor = ({
   }, []);
 
   useEffect(() => {
-    if (open && pageData) {
-      if (!pageData.record) {
-        toast.error("Não é possível editar a página: dados do registro ausentes ou corrompidos.");
-        onClose();
-        return;
-      }
-
-      if (!editedPositions) {
-        const { effectiveFieldPositions, effectiveFieldStyles, effectiveBrandElements, record } = pageDataFromHook;
-        const templateToEdit = safeDeepClone(pageData.customPageTemplate || globalPageTemplate);
-        setEditedPositions(safeDeepClone(effectiveFieldPositions));
-        setEditedBrandElements(safeDeepClone(effectiveBrandElements));
-        setEditedRecord(safeDeepClone(record || {}));
-        setEditedPageTemplate(templateToEdit);
-        const newEditedStyles = {};
-        (csvHeaders || []).forEach(field => {
-          newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(effectiveFieldStyles[field] || {}) };
-        });
-        setEditedStyles(newEditedStyles);
-      }
+    if (open && pageData && !editedPositions) {
+      const { effectiveFieldPositions, effectiveFieldStyles, effectiveBrandElements, record } = pageDataFromHook;
+      const templateToEdit = safeDeepClone(pageData.customPageTemplate || globalPageTemplate);
+      setEditedPositions(safeDeepClone(effectiveFieldPositions));
+      setEditedBrandElements(safeDeepClone(effectiveBrandElements));
+      // Ensure record is an object before cloning to prevent crashes.
+      setEditedRecord(safeDeepClone(record || {}));
+      setEditedPageTemplate(templateToEdit);
+      const newEditedStyles = {};
+      (csvHeaders || []).forEach(field => {
+        newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(effectiveFieldStyles[field] || {}) };
+      });
+      setEditedStyles(newEditedStyles);
     } else if (!open) {
       setEditedPositions(null);
       setEditedStyles(null);
@@ -112,7 +104,7 @@ const PageEditor = ({
       setEditedPageTemplate(null);
       setSelectedFieldInternal(null);
     }
-  }, [open, pageData, pageDataFromHook, csvHeaders, globalPageTemplate, editedPositions, onClose]);
+  }, [open, pageData, pageDataFromHook, csvHeaders, globalPageTemplate, editedPositions]);
 
   useEffect(() => {
     const firstImage = editedPageTemplate?.images?.[0];

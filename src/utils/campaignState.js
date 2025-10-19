@@ -169,28 +169,51 @@ export const deserializeCampaignData = async (loadedState) => {
   }
   if (finalState.generatedPagesData && Array.isArray(finalState.generatedPagesData)) {
     const sanitizedCsvData = finalState.csvData || [];
-    const headers = finalState.csvHeaders || [];
+
+    // Defensive header generation: If headers are missing, derive them from the data.
+    let headers = finalState.csvHeaders || [];
+    if (headers.length === 0 && sanitizedCsvData.length > 0) {
+      // Create a set of all possible keys from all records.
+      const allKeys = sanitizedCsvData.reduce((keys, record) => {
+        if (record) {
+          Object.keys(record).forEach(key => keys.add(key));
+        }
+        return keys;
+      }, new Set());
+      headers = Array.from(allKeys);
+      // Persist the derived headers back into the state.
+      finalState.csvHeaders = headers;
+    }
+
     const defaultRecord = headers.reduce((acc, header) => {
       acc[header] = '';
       return acc;
     }, {});
 
     finalState.generatedPagesData = finalState.generatedPagesData.map((page, index) => {
+      const baseRecord = sanitizedCsvData[index] || { ...defaultRecord };
+
       if (!page) {
-        // Se a página for nula, crie uma página de placeholder completa.
         return {
           index: index,
-          record: sanitizedCsvData[index] || { ...defaultRecord },
+          record: baseRecord,
           url: null,
           blob: null,
           filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
         };
       }
-      // Se a página existir, mas o registro estiver ausente, preencha-o.
+
       if (!page.record) {
-        page.record = sanitizedCsvData[index] || { ...defaultRecord };
+        page.record = baseRecord;
+      } else {
+        // Ensure all header fields exist on the record to prevent crashes.
+        headers.forEach(header => {
+          if (!(header in page.record)) {
+            page.record[header] = '';
+          }
+        });
       }
-      // Garanta que o índice esteja sempre correto.
+
       page.index = index;
       return page;
     });
