@@ -83,35 +83,40 @@ const PageEditor = ({
   }, []);
 
   useEffect(() => {
-    if (open && pageData && !editedPositions) {
-      const { effectiveFieldPositions, effectiveFieldStyles, effectiveBrandElements, record } = pageDataFromHook;
+    // This effect now exclusively handles the initialization and reset of the editor's state.
+    if (open) {
+      // Only initialize if the state is not already set.
+      if (pageData && !editedPositions) {
+        const { effectiveFieldPositions, effectiveFieldStyles, effectiveBrandElements, record } = pageDataFromHook;
 
-      // Robustness: Ensure record is a valid object before proceeding.
-      if (!record || typeof record !== 'object') {
-        console.error("PageEditor: record is invalid. Aborting state initialization.", record);
-        onClose(); // Close the editor to prevent a crash.
-        // Consider showing a toast message to the user here.
-        return;
+        // CRITICAL CHECK: Do not proceed with initialization if the core `record` object is missing.
+        // This prevents the editor from opening in a broken or inconsistent state.
+        if (!record || typeof record !== 'object') {
+          console.warn("PageEditor: `record` from usePageData is not ready. Waiting for data.", { pageData, pageDataFromHook });
+          return; // Abort initialization for this render cycle.
+        }
+
+        console.log("PageEditor: Initializing state with valid data.", { pageDataFromHook });
+        const templateToEdit = safeDeepClone(pageData.customPageTemplate || globalPageTemplate);
+        setEditedPositions(safeDeepClone(effectiveFieldPositions));
+        setEditedBrandElements(safeDeepClone(effectiveBrandElements));
+
+        const sanitizedRecord = {
+          ...record,
+          Título: record.Título || `Página ${pageData.index + 1}`,
+        };
+        setEditedRecord(safeDeepClone(sanitizedRecord));
+
+        setEditedPageTemplate(templateToEdit);
+
+        const newEditedStyles = {};
+        (csvHeaders || []).forEach(field => {
+          newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(effectiveFieldStyles[field] || {}) };
+        });
+        setEditedStyles(newEditedStyles);
       }
-
-      const templateToEdit = safeDeepClone(pageData.customPageTemplate || globalPageTemplate);
-      setEditedPositions(safeDeepClone(effectiveFieldPositions));
-      setEditedBrandElements(safeDeepClone(effectiveBrandElements));
-
-      // Sanitize the record to ensure 'Título' is always present.
-      const sanitizedRecord = {
-        ...record,
-        Título: record.Título || `Página ${pageData.index + 1}`,
-      };
-      setEditedRecord(safeDeepClone(sanitizedRecord));
-
-      setEditedPageTemplate(templateToEdit);
-      const newEditedStyles = {};
-      (csvHeaders || []).forEach(field => {
-        newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(effectiveFieldStyles[field] || {}) };
-      });
-      setEditedStyles(newEditedStyles);
-    } else if (!open) {
+    } else {
+      // Reset state when the dialog is closed.
       setEditedPositions(null);
       setEditedStyles(null);
       setEditedBrandElements(null);
