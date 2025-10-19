@@ -85,11 +85,26 @@ const PageEditor = ({
   useEffect(() => {
     if (open && pageData && !editedPositions) {
       const { effectiveFieldPositions, effectiveFieldStyles, effectiveBrandElements, record } = pageDataFromHook;
+
+      // Robustness: Ensure record is a valid object before proceeding.
+      if (!record || typeof record !== 'object') {
+        console.error("PageEditor: record is invalid. Aborting state initialization.", record);
+        onClose(); // Close the editor to prevent a crash.
+        // Consider showing a toast message to the user here.
+        return;
+      }
+
       const templateToEdit = safeDeepClone(pageData.customPageTemplate || globalPageTemplate);
       setEditedPositions(safeDeepClone(effectiveFieldPositions));
       setEditedBrandElements(safeDeepClone(effectiveBrandElements));
-      // Ensure record is an object before cloning to prevent crashes.
-      setEditedRecord(safeDeepClone(record || {}));
+
+      // Sanitize the record to ensure 'Título' is always present.
+      const sanitizedRecord = {
+        ...record,
+        Título: record.Título || `Página ${pageData.index + 1}`,
+      };
+      setEditedRecord(safeDeepClone(sanitizedRecord));
+
       setEditedPageTemplate(templateToEdit);
       const newEditedStyles = {};
       (csvHeaders || []).forEach(field => {
