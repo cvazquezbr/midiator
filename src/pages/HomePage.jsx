@@ -463,22 +463,52 @@ function HomePage() {
       if (JSON.stringify(novasColunas) !== JSON.stringify(prev.csvHeaders)) {
         updates.csvHeaders = novasColunas;
       }
+
+      // Create a map of existing pages by index for efficient lookup.
+      const existingPagesMap = new Map(prev.generatedPagesData.map(page => [page.index, page]));
+
       updates.generatedPagesData = novosRegistros.map((record, index) => {
-        const existingPage = prev.generatedPagesData.find(img => img.index === index) || {};
-        return { ...existingPage, index, record, url: null, blob: null };
+        const existingPage = existingPagesMap.get(index) || {};
+        const defaultRecord = prev.csvHeaders.reduce((acc, header) => {
+          acc[header] = '';
+          return acc;
+        }, {});
+
+        return {
+          ...existingPage,
+          index,
+          record: record || defaultRecord,
+          url: null, // Always invalidate the URL when data changes
+          blob: null,
+          filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+        };
       });
+
       return updates;
     });
   }, [setCampaignState]);
 
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
-    setCampaignState(prev => ({
-      csvData: newCsvData,
-      generatedPagesData: newCsvData.map((record, index) => {
-        const existingPage = prev.generatedPagesData.find(img => img.index === index) || {};
-        return { ...existingPage, index, record };
-      })
-    }));
+    setCampaignState(prev => {
+      const existingPagesMap = new Map(prev.generatedPagesData.map(page => [page.index, page]));
+
+      const newGeneratedPagesData = newCsvData.map((record, index) => {
+        const existingPage = existingPagesMap.get(index) || {};
+        return {
+          ...existingPage,
+          index,
+          record,
+          // Invalidate URL because the record content has changed.
+          url: null,
+          blob: null,
+        };
+      });
+
+      return {
+        csvData: newCsvData,
+        generatedPagesData: newGeneratedPagesData,
+      };
+    });
   }, [setCampaignState]);
 
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => {
