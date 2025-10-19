@@ -77,7 +77,7 @@ const FieldPositioner = ({
   setIsCropping,
   pendingAssets,
 }) => {
-  console.log('[FieldPositioner] props:', { pageTemplate, fieldStyles });
+  console.log('[FieldPositioner] Rendering. Props received:', { csvHeaders, fieldPositions, fieldStyles, csvData, currentPreviewIndex, pageTemplate });
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
@@ -321,11 +321,7 @@ const FieldPositioner = ({
         const style = completeFieldStyles[header];
         if (!position || !position.visible) return null;
 
-        const record = csvData ? csvData[currentPreviewIndex] : undefined;
-        if (!record) {
-          console.error(`[FieldPositioner] Safeguard: record not found at index ${currentPreviewIndex}.`, { csvData });
-          return null;
-        }
+        const record = (csvData.filter(Boolean) || [])[currentPreviewIndex] || {};
         const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
 
         return {

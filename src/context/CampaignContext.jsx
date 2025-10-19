@@ -49,7 +49,7 @@ export const CampaignProvider = ({ children }) => {
   }, []);
 
   const applyLoadedCampaign = useCallback((loadedData) => {
-    console.log('[CampaignContext] Applying loaded campaign data:', loadedData);
+    console.log('[CampaignContext] Applying loaded campaign. Input data:', JSON.stringify(loadedData, null, 2));
     const newState = {
       ...initialState, // Start from a clean slate
       ...safeDeepClone(loadedData.campaign_data || {}), // Apply campaign-specific data
@@ -62,6 +62,7 @@ export const CampaignProvider = ({ children }) => {
     newState.brandElements = newState.brandElements || [];
     newState.pageTemplate = newState.pageTemplate || defaultPageTemplate;
 
+    console.log('[CampaignContext] Final state before setting internal state:', JSON.stringify(newState, null, 2));
     setCampaignStateInternal(newState);
     console.log('[CampaignContext] State after applying loaded campaign:', newState);
   }, []);

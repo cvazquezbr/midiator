@@ -50,6 +50,8 @@ const ImageStepUI = ({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
 
+  console.log('[ImageStepUI] Rendering. campaignState:', { csvData, csvHeaders, fieldPositions, fieldStyles, brandElements, pageTemplate, selectedField, imageColorPalette, initialFieldStyles, templateFieldStyles, fontScale });
+
   const handleNextPreview = () => {
     setCurrentPreviewIndex(prevIndex => Math.min(prevIndex + 1, csvData.length - 1));
   };
@@ -66,14 +68,6 @@ const ImageStepUI = ({
     setCurrentPreviewIndex(csvData.length - 1);
   };
 
-  if (!csvData || csvData.length === 0) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h6">Carregando Dados...</Typography>
-        <Typography>Não há dados para exibir. Por favor, verifique a etapa de "Posts Curtos".</Typography>
-      </Box>
-    );
-  }
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, height: { xs: 'calc(100dvh - 140px)', md: 'calc(100vh - 150px)' } }}>
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
