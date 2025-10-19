@@ -8,13 +8,14 @@ import { useCampaign } from '../context/CampaignContext';
  * @returns {object} - Um objeto contendo os dados corretos para a página.
  */
 export const usePageData = (pageIndex) => {
+  const { campaignState } = useCampaign();
   const {
     generatedPagesData,
     pageTemplate,
     fieldPositions,
     fieldStyles,
     brandElements,
-  } = useCampaign();
+  } = campaignState;
 
   const pageData = useMemo(() => {
     const foundPageData = (generatedPagesData || []).find(p => p.index === pageIndex);
@@ -39,7 +40,7 @@ export const usePageData = (pageIndex) => {
     };
     console.log(`%c[usePageData] Computed data for index ${pageIndex}:`, 'color: orange; font-weight: bold;', result);
     return result;
-  }, [pageData, pageTemplate, fieldPositions, fieldStyles, brandElements]);
+  }, [pageData, pageTemplate, fieldPositions, fieldStyles, brandElements, pageIndex]);
 
   return data;
 };

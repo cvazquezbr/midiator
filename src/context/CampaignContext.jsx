@@ -39,18 +39,11 @@ export const useCampaign = () => {
 
 export const CampaignProvider = ({ children }) => {
   const [campaignState, setCampaignStateInternal] = useState(initialState);
-  const [isCampaignLoading, setCampaignIsLoading] = useState(true);
 
-  const setCampaignState = useCallback((arg) => {
+  const setCampaignState = useCallback((newState) => {
     setCampaignStateInternal(prevState => {
-      const newState = typeof arg === 'function' ? arg(prevState) : arg;
       const updatedState = { ...prevState, ...newState };
-      console.log('%c[CampaignContext] State Update:', 'color: blue; font-weight: bold;', {
-        prevState: safeDeepClone(prevState),
-        updateArg: safeDeepClone(arg),
-        newState: safeDeepClone(newState),
-        finalState: safeDeepClone(updatedState),
-      });
+      console.log('[CampaignContext] State updated:', { prevState, newState, updatedState });
       return updatedState;
     });
   }, []);
@@ -58,47 +51,32 @@ export const CampaignProvider = ({ children }) => {
   const applyLoadedCampaign = useCallback((loadedData) => {
     console.log('[CampaignContext] Applying loaded campaign data:', loadedData);
 
-    // Start with a clean slate to avoid merging with old, unrelated campaign data
-    const newCampaignState = safeDeepClone(initialState);
-
-    // Merge the loaded campaign data (from campaign_data blob)
     const campaignData = safeDeepClone(loadedData.campaign_data || {});
-    Object.assign(newCampaignState, campaignData);
 
-    // --- CRITICAL DATA SYNCHRONIZATION ---
+    // Ensure csvData is always a valid array of objects
+    const sanitizedCsvData = (campaignData.csvData || []).map(record => record || {});
 
-    // 1. Ensure `csvData` is always a valid array.
-    // This is the source of truth for page records.
-    const sanitizedCsvData = (newCampaignState.csvData || []).map(record => record || {});
-    newCampaignState.csvData = sanitizedCsvData;
-
-    // 2. Synchronize `generatedPagesData` with the sanitized `csvData`.
-    // This guarantees that for every record in `csvData`, there is a corresponding page entry.
+    // Synchronize generatedPagesData with csvData
     const synchronizedPages = sanitizedCsvData.map((record, index) => {
-      const existingPage = (newCampaignState.generatedPagesData || [])[index] || {};
+      const existingPage = (campaignData.generatedPagesData || [])[index] || {};
       return {
         ...existingPage,
         index,
-        record, // Overwrite the record to ensure consistency with csvData
+        record,
       };
     });
-    newCampaignState.generatedPagesData = synchronizedPages;
 
-    // --- FINAL STATE ASSEMBLY ---
+    const newState = {
+      ...initialState,
+      ...campaignData,
+      csvData: sanitizedCsvData,
+      generatedPagesData: synchronizedPages,
+      currentCampaign: loadedData.id ? { id: loadedData.id, name: loadedData.name } : null,
+      pendingAssets: {}, // Always start fresh on load
+    };
 
-    // Set campaign metadata
-    newCampaignState.currentCampaign = loadedData.id ? { id: loadedData.id, name: loadedData.name } : null;
-
-    // Always clear pending assets on load to prevent cross-campaign contamination
-    newCampaignState.pendingAssets = {};
-
-    // Atomically update the state
-    console.log('%c[CampaignContext] Applying Loaded Campaign:', 'color: green; font-weight: bold;', {
-      loadedData: safeDeepClone(loadedData),
-      initialState: safeDeepClone(initialState),
-      mergedState: safeDeepClone(newCampaignState),
-    });
-    setCampaignStateInternal(newCampaignState);
+    setCampaignStateInternal(newState);
+    console.log('[CampaignContext] State after applying loaded campaign:', newState);
   }, []);
 
   const addPendingAsset = useCallback((blob) => {
@@ -163,8 +141,6 @@ export const CampaignProvider = ({ children }) => {
     addPendingAssetMap,
     removePendingAsset,
     defaultPageTemplate,
-    isCampaignLoading,
-    setCampaignIsLoading,
   }), [
     campaignState,
     setCampaignState,
@@ -172,7 +148,6 @@ export const CampaignProvider = ({ children }) => {
     addPendingAsset,
     addPendingAssetMap,
     removePendingAsset,
-    isCampaignLoading,
   ]);
 
   return (
