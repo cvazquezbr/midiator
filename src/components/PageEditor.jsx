@@ -83,24 +83,17 @@ const PageEditor = ({
   }, []);
 
   useEffect(() => {
-    // This effect now exclusively handles the initialization and reset of the editor's state.
-    if (open) {
-      // Only initialize if the state is not already set.
-      if (pageData && !editedPositions) {
-        const { effectiveFieldPositions, effectiveFieldStyles, effectiveBrandElements, record } = pageDataFromHook;
+    if (open && pageData) {
+      const { effectiveFieldPositions, effectiveFieldStyles, effectiveBrandElements, record } = pageDataFromHook;
 
-        // CRITICAL CHECK: Do not proceed with initialization if the core `record` object is missing.
-        // This prevents the editor from opening in a broken or inconsistent state.
-        if (!record || typeof record !== 'object') {
-          console.warn("PageEditor: `record` from usePageData is not ready. Waiting for data.", { pageData, pageDataFromHook });
-          return; // Abort initialization for this render cycle.
-        }
-
-        console.log("PageEditor: Initializing state with valid data.", { pageDataFromHook });
+      // Now that HomePage guarantees a valid record, we can initialize more directly.
+      // We still check for record to be safe, but we no longer need to abort.
+      if (record) {
         const templateToEdit = safeDeepClone(pageData.customPageTemplate || globalPageTemplate);
         setEditedPositions(safeDeepClone(effectiveFieldPositions));
         setEditedBrandElements(safeDeepClone(effectiveBrandElements));
 
+        // Sanitization is still a good practice here as a fallback.
         const sanitizedRecord = {
           ...record,
           Título: record.Título || `Página ${pageData.index + 1}`,
@@ -115,8 +108,8 @@ const PageEditor = ({
         });
         setEditedStyles(newEditedStyles);
       }
-    } else {
-      // Reset state when the dialog is closed.
+    } else if (!open) {
+      // Reset state when the dialog is closed to ensure a clean slate for the next opening.
       setEditedPositions(null);
       setEditedStyles(null);
       setEditedBrandElements(null);
@@ -124,7 +117,7 @@ const PageEditor = ({
       setEditedPageTemplate(null);
       setSelectedFieldInternal(null);
     }
-  }, [open, pageData, pageDataFromHook, csvHeaders, globalPageTemplate, editedPositions]);
+  }, [open, pageData, pageDataFromHook, csvHeaders, globalPageTemplate]);
 
   useEffect(() => {
     const firstImage = editedPageTemplate?.images?.[0];
