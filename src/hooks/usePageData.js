@@ -21,13 +21,7 @@ export const usePageData = (pageIndex) => {
   }, [generatedPagesData, pageIndex]);
 
   const data = useMemo(() => {
-    console.log(`[usePageData] Recalculando para pageIndex: ${pageIndex}`, { pageData });
     const isCustom = Boolean(pageData?.customPageTemplate || pageData?.customFieldPositions || pageData?.customFieldStyles);
-
-    const record = pageData?.record;
-    if (!record) {
-      console.error(`[usePageData] ALERTA: 'record' está indefinido para pageIndex: ${pageIndex}.`, { pageData });
-    }
 
     return {
       isCustom,

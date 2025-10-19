@@ -279,7 +279,6 @@ const FieldPositioner = ({
   }, [csvHeaders, fieldStyles]);
 
   const renderableElements = React.useMemo(() => {
-    console.log('[FieldPositioner] Calculando renderableElements.', { csvData, currentPreviewIndex, pageTemplate, fieldPositions, completeFieldStyles, brandElements });
     const elements = [];
 
     // Add page images

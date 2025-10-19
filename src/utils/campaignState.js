@@ -163,62 +163,37 @@ export const deserializeCampaignData = async (loadedState) => {
   const newlyCreatedAssets = {}; // This will become the new `pendingAssets` map in the UI
 
   // --- Data Sanitization ---
-  // Replace null/undefined entries in critical arrays to preserve indexing.
-  if (finalState.csvData && Array.isArray(finalState.csvData)) {
-    finalState.csvData = finalState.csvData.map(record => record || {});
+  // This is the definitive fix. The logic is simplified to be more robust.
+  const sanitizedCsvData = Array.from(finalState.csvData || [], record => record || {});
+  finalState.csvData = sanitizedCsvData;
+
+  let headers = finalState.csvHeaders || [];
+  if (headers.length === 0 && sanitizedCsvData.length > 0) {
+      const allKeys = sanitizedCsvData.reduce((keys, record) => {
+          if (record) Object.keys(record).forEach(key => keys.add(key));
+          return keys;
+      }, new Set());
+      headers = Array.from(allKeys);
+      finalState.csvHeaders = headers;
   }
-  if (finalState.generatedPagesData && Array.isArray(finalState.generatedPagesData)) {
-    // Ensure csvData is a sane array to prevent downstream errors.
-    const sanitizedCsvData = Array.from(finalState.csvData || [], record => record || {});
 
+  const defaultRecord = headers.reduce((acc, header) => ({ ...acc, [header]: '' }), {});
 
-    // Defensive header generation: If headers are missing, derive them from the data.
-    let headers = finalState.csvHeaders || [];
-    if (headers.length === 0 && sanitizedCsvData.length > 0) {
-        const allKeys = sanitizedCsvData.reduce((keys, record) => {
-            if (record) Object.keys(record).forEach(key => keys.add(key));
-            return keys;
-        }, new Set());
-        headers = Array.from(allKeys);
-        finalState.csvHeaders = headers;
-    }
-
-    // Create a default record structure based on the final headers.
-    const defaultRecord = headers.reduce((acc, header) => ({ ...acc, [header]: '' }), {});
-
-    // Synchronize generatedPagesData with csvData.
-    const numCsvRecords = sanitizedCsvData.length;
-    const synchronizedPages = [];
-    const maxRecords = Math.max(numCsvRecords, finalState.generatedPagesData.length);
-
-    for (let i = 0; i < maxRecords; i++) {
-        const csvRecord = sanitizedCsvData[i] || { ...defaultRecord };
-        const pageData = finalState.generatedPagesData[i] || {};
-
-        // Ensure every key from headers exists in the final record.
-        const finalRecord = { ...defaultRecord, ...csvRecord };
-        if (pageData.record) {
-            Object.assign(finalRecord, pageData.record);
-        }
-
-        synchronizedPages[i] = {
-            ...pageData, // Keep existing page data like URL, custom templates, etc.
-            index: i,
-            record: finalRecord,
-            filename: pageData.filename || `midiator_${String(i + 1).padStart(3, '0')}.png`,
-        };
-    }
-
-    finalState.generatedPagesData = synchronizedPages;
-
-    // Also, ensure csvData itself has the full length to match.
-    if (numCsvRecords < maxRecords) {
-        for (let i = numCsvRecords; i < maxRecords; i++) {
-            sanitizedCsvData[i] = { ...defaultRecord };
-        }
-        finalState.csvData = sanitizedCsvData;
-    }
-  }
+  // Create a new, correctly synchronized generatedPagesData array.
+  const synchronizedPages = sanitizedCsvData.map((csvRecord, index) => {
+      const existingPageData = (finalState.generatedPagesData || [])[index] || {};
+      const finalRecord = { ...defaultRecord, ...csvRecord };
+      if (existingPageData.record) {
+          Object.assign(finalRecord, existingPageData.record);
+      }
+      return {
+          ...existingPageData,
+          index: index,
+          record: finalRecord,
+          filename: existingPageData.filename || `midiator_${String(index + 1).padStart(3, '0')}.png`,
+      };
+  });
+  finalState.generatedPagesData = synchronizedPages;
   if (finalState.followupPosts && Array.isArray(finalState.followupPosts)) {
     finalState.followupPosts = finalState.followupPosts.map(post => post || {});
   }
