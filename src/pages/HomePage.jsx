@@ -461,6 +461,7 @@ function HomePage() {
 
   const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
     setCampaignState(prev => {
+      // 1. Sanitize the incoming records and ensure 'Título' exists.
       const sanitizedRegistros = novosRegistros.map((record, index) => ({
         ...(record || {}),
         Título: (record || {}).Título || `Página ${index + 1}`,
@@ -471,27 +472,48 @@ function HomePage() {
         updates.csvHeaders = novasColunas;
       }
 
+      // 2. Synchronize generatedPagesData with the newly sanitized csvData.
       updates.generatedPagesData = sanitizedRegistros.map((record, index) => {
-        const existingPage = prev.generatedPagesData.find(img => img.index === index) || {};
-        return { ...existingPage, index, record, url: null, blob: null };
+        const existingPage = (prev.generatedPagesData || []).find(p => p.index === index) || {};
+        return {
+          ...existingPage,
+          index,
+          record, // Ensure the record is always in sync
+          url: null, // Invalidate old thumbnail
+          blob: null
+        };
       });
+
+      console.log("[handleDadosAlterados] Synced state:", updates);
       return updates;
     });
   }, [setCampaignState]);
 
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
-    const sanitizedCsvData = newCsvData.map((record, index) => ({
-      ...(record || {}),
-      Título: (record || {}).Título || `Página ${index + 1}`,
-    }));
+    setCampaignState(prev => {
+      // 1. Sanitize the incoming records.
+      const sanitizedCsvData = newCsvData.map((record, index) => ({
+        ...(record || {}),
+        Título: (record || {}).Título || `Página ${index + 1}`,
+      }));
 
-    setCampaignState(prev => ({
-      csvData: sanitizedCsvData,
-      generatedPagesData: sanitizedCsvData.map((record, index) => {
-        const existingPage = prev.generatedPagesData.find(img => img.index === index) || {};
-        return { ...existingPage, index, record };
-      })
-    }));
+      // 2. Synchronize generatedPagesData with the sanitized data.
+      const synchronizedPages = sanitizedCsvData.map((record, index) => {
+        const existingPage = (prev.generatedPagesData || []).find(p => p.index === index) || {};
+        return {
+          ...existingPage,
+          index,
+          record // Overwrite with the latest record data
+        };
+      });
+
+      const updates = {
+        csvData: sanitizedCsvData,
+        generatedPagesData: synchronizedPages,
+      };
+      console.log("[handleCsvRecordContentUpdate] Synced state:", updates);
+      return updates;
+    });
   }, [setCampaignState]);
 
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => {
@@ -605,21 +627,54 @@ function HomePage() {
       const { promptText, promptNumRecords } = campaignState;
       const iaResponseText = await generateIAContent({ promptText, promptNumRecords });
       const parsedResult = parseIaResponseToCsvData(iaResponseText);
-      if (!parsedResult?.data?.length) { toast.error('Não foi possível processar a resposta da IA.'); return; }
+      if (!parsedResult?.data?.length) {
+        toast.error('Não foi possível processar a resposta da IA.');
+        return;
+      }
+
       const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
+
+      // 1. Sanitize the AI-generated records.
       const sanitizedCsvData = csvDataResult.map((record, index) => ({
         ...record,
         Título: record.Título || `Página ${index + 1}`,
       }));
-      const { newPositions, newStyles } = autoArrangeFields({ csvHeaders: csvHeadersResult, fieldPositions: {}, fieldStyles: {}, csvData: sanitizedCsvData, effectiveImageSize: originalImageSize });
-      const newGeneratedPagesData = sanitizedCsvData.map((record, index) => ({ index, record, blob: null, url: null, filename: `midiator_${String(index + 1).padStart(3, '0')}.png` }));
-      setCampaignState({ csvData: sanitizedCsvData, csvHeaders: csvHeadersResult, fieldPositions: newPositions, fieldStyles: newStyles, initialFieldStyles: newStyles, generatedPagesData: newGeneratedPagesData });
+
+      const { newPositions, newStyles } = autoArrangeFields({
+        csvHeaders: csvHeadersResult,
+        fieldPositions: {},
+        fieldStyles: {},
+        csvData: sanitizedCsvData,
+        effectiveImageSize: originalImageSize
+      });
+
+      // 2. Synchronize generatedPagesData with the sanitized data.
+      const newGeneratedPagesData = sanitizedCsvData.map((record, index) => ({
+        index,
+        record,
+        blob: null,
+        url: null,
+        filename: `midiator_${String(index + 1).padStart(3, '0')}.png`
+      }));
+
+      const updates = {
+        csvData: sanitizedCsvData,
+        csvHeaders: csvHeadersResult,
+        fieldPositions: newPositions,
+        fieldStyles: newStyles,
+        initialFieldStyles: newStyles,
+        generatedPagesData: newGeneratedPagesData
+      };
+
+      console.log("[handleGenerateIAContent] Synced state:", updates);
+      setCampaignState(updates);
       setInputMethod('manual');
       toast.success('Geração de posts concluída.');
     } catch (error) {
       toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
     } finally {
-      setIsGenerating(false); setGenerationStatus('');
+      setIsGenerating(false);
+      setGenerationStatus('');
     }
   };
 
