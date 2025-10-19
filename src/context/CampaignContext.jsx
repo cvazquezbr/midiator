@@ -41,8 +41,11 @@ export const CampaignProvider = ({ children }) => {
   const [campaignState, setCampaignStateInternal] = useState(initialState);
   const [isCampaignLoading, setCampaignIsLoading] = useState(true);
 
-  const setCampaignState = useCallback((newState) => {
+  const setCampaignState = useCallback((arg) => {
     setCampaignStateInternal(prevState => {
+      // This function now correctly handles both object updates and function updates,
+      // mimicking the behavior of a standard React state setter.
+      const newState = typeof arg === 'function' ? arg(prevState) : arg;
       const updatedState = { ...prevState, ...newState };
       console.log('[CampaignContext] State updated:', { prevState, newState, updatedState });
       return updatedState;
