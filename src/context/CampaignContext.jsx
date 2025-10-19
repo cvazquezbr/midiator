@@ -50,29 +50,30 @@ export const CampaignProvider = ({ children }) => {
 
   const applyLoadedCampaign = useCallback((loadedData) => {
     console.log('[CampaignContext] Applying loaded campaign data:', loadedData);
-    const campaignData = safeDeepClone(loadedData.campaign_data || {});
-    const newState = {
-      ...initialState, // Start from a clean slate
-      ...campaignData, // Apply campaign-specific data
-      currentCampaign: loadedData.currentCampaign || null,
-      pendingAssets: loadedData.pendingAssets || {},
-    };
-    // --- Definitive Fix ---
-    // Ensure csvData and generatedPagesData are synchronized after loading.
-    const sanitizedCsvData = Array.from(campaignData.csvData || [], record => record || {});
-    newState.csvData = sanitizedCsvData;
 
-    // If generatedPagesData is empty or unsynced, create it from csvData.
-    if (!campaignData.generatedPagesData || campaignData.generatedPagesData.length !== sanitizedCsvData.length) {
-        newState.generatedPagesData = sanitizedCsvData.map((record, index) => {
-            const existingPage = (campaignData.generatedPagesData || [])[index] || {};
-            return {
-                ...existingPage,
-                index,
-                record,
-            };
-        });
-    }
+    const campaignData = safeDeepClone(loadedData.campaign_data || {});
+
+    // Ensure csvData is always a valid array of objects
+    const sanitizedCsvData = (campaignData.csvData || []).map(record => record || {});
+
+    // Synchronize generatedPagesData with csvData
+    const synchronizedPages = sanitizedCsvData.map((record, index) => {
+      const existingPage = (campaignData.generatedPagesData || [])[index] || {};
+      return {
+        ...existingPage,
+        index,
+        record,
+      };
+    });
+
+    const newState = {
+      ...initialState,
+      ...campaignData,
+      csvData: sanitizedCsvData,
+      generatedPagesData: synchronizedPages,
+      currentCampaign: loadedData.id ? { id: loadedData.id, name: loadedData.name } : null,
+      pendingAssets: {}, // Always start fresh on load
+    };
 
     setCampaignStateInternal(newState);
     console.log('[CampaignContext] State after applying loaded campaign:', newState);
