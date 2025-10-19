@@ -463,52 +463,22 @@ function HomePage() {
       if (JSON.stringify(novasColunas) !== JSON.stringify(prev.csvHeaders)) {
         updates.csvHeaders = novasColunas;
       }
-
-      // Create a map of existing pages by index for efficient lookup.
-      const existingPagesMap = new Map(prev.generatedPagesData.map(page => [page.index, page]));
-
       updates.generatedPagesData = novosRegistros.map((record, index) => {
-        const existingPage = existingPagesMap.get(index) || {};
-        const defaultRecord = prev.csvHeaders.reduce((acc, header) => {
-          acc[header] = '';
-          return acc;
-        }, {});
-
-        return {
-          ...existingPage,
-          index,
-          record: record || defaultRecord,
-          url: null, // Always invalidate the URL when data changes
-          blob: null,
-          filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
-        };
+        const existingPage = prev.generatedPagesData.find(img => img.index === index) || {};
+        return { ...existingPage, index, record, url: null, blob: null };
       });
-
       return updates;
     });
   }, [setCampaignState]);
 
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
-    setCampaignState(prev => {
-      const existingPagesMap = new Map(prev.generatedPagesData.map(page => [page.index, page]));
-
-      const newGeneratedPagesData = newCsvData.map((record, index) => {
-        const existingPage = existingPagesMap.get(index) || {};
-        return {
-          ...existingPage,
-          index,
-          record,
-          // Invalidate URL because the record content has changed.
-          url: null,
-          blob: null,
-        };
-      });
-
-      return {
-        csvData: newCsvData,
-        generatedPagesData: newGeneratedPagesData,
-      };
-    });
+    setCampaignState(prev => ({
+      csvData: newCsvData,
+      generatedPagesData: newCsvData.map((record, index) => {
+        const existingPage = prev.generatedPagesData.find(img => img.index === index) || {};
+        return { ...existingPage, index, record };
+      })
+    }));
   }, [setCampaignState]);
 
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => {
@@ -672,9 +642,25 @@ function HomePage() {
       });
       const tempUrl = addPendingAsset(finalPageData.blob);
       if (!tempUrl) throw new Error("Falha ao criar URL para a página final.");
-      setCampaignState(prev => ({
-        generatedPagesData: prev.generatedPagesData.map(p => p.index === index ? { ...(p || {}), ...finalPageData, ...pageUpdateData, url: tempUrl, dataUrl: null, blob: undefined } : p)
-      }));
+
+      // Correctly update the specific page data within the generatedPagesData array
+      setCampaignState(prev => {
+        const newPagesData = prev.generatedPagesData.map(p => {
+          if (p.index === index) {
+            // Merge existing data, new data from generation, and any other updates
+            return {
+              ...(p || {}),
+              ...finalPageData,
+              ...pageUpdateData,
+              url: tempUrl,
+              dataUrl: null, // Clear any old data URLs
+              blob: undefined // Don't store the blob in the state
+            };
+          }
+          return p;
+        });
+        return { generatedPagesData: newPagesData };
+      });
       toast.success(`Página #${index + 1} gerada.`);
       return true;
     } catch (error) {
