@@ -339,17 +339,30 @@ function HomePage() {
       await checkAuthStatus();
       const loadedCampaign = await loadCampaign(campaign.id);
       console.log('%c[HomePage] Campaign Loaded from DB:', 'color: purple; font-weight: bold;', loadedCampaign);
-      applyLoadedCampaign({
-        ...loadedCampaign,
-        currentCampaign: { id: loadedCampaign.id, name: loadedCampaign.name },
-      });
-      setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
-      setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
+
+      // Determine the correct paletteId before applying the state
       const dbPaletteId = loadedCampaign.palette_id;
       const hasCustomPalette = loadedCampaign.campaign_data?.customPalette?.colors?.length > 0;
-      if (dbPaletteId) setCampaignState({ paletteId: dbPaletteId });
-      else if (hasCustomPalette) setCampaignState({ paletteId: 'custom' });
-      else setCampaignState({ paletteId: null });
+      let finalPaletteId = null;
+      if (dbPaletteId) {
+        finalPaletteId = dbPaletteId;
+      } else if (hasCustomPalette) {
+        finalPaletteId = 'custom';
+      }
+
+      // Consolidate all updates into a single object for one atomic state change
+      const campaignToApply = {
+        ...loadedCampaign,
+        currentCampaign: { id: loadedCampaign.id, name: loadedCampaign.name },
+        paletteId: finalPaletteId, // Add the determined paletteId
+      };
+
+      applyLoadedCampaign(campaignToApply);
+
+      // Set local UI state separately, as it's not part of the core campaign data
+      setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
+      setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
+
       toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
       setActiveStep(3);
     } catch (err) {
