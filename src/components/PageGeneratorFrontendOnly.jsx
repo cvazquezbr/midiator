@@ -360,12 +360,7 @@ const PageGeneratorFrontendOnly = ({
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} /><Typography variant="h6" gutterBottom>Páginas Geradas ({generatedPagesData.length})</Typography>
               <Grid container spacing={2}>
-                {generatedPagesData.map((pageData, index) => {
-                  if (!pageData.record) {
-                    console.error("PageData sem 'record' encontrado no índice:", index, pageData);
-                    return null;
-                  }
-                  return (
+                {generatedPagesData.map((pageData, index) => (
                   <Grid item xs={12} sm={6} md={4} key={pageData.index}>
                     <Card variant="outlined">
                       <CardContent>
@@ -388,8 +383,7 @@ const PageGeneratorFrontendOnly = ({
                       </CardContent>
                     </Card>
                   </Grid>
-                  );
-                })}
+                ))}
               </Grid>
             </Box>
           )}

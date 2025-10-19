@@ -158,42 +158,66 @@ export const serializeCampaignData = async (state, pendingAssets, userId, campai
  * blob: URLs. This "hydrates" the state for use in the UI.
  */
 export const deserializeCampaignData = async (loadedState) => {
-  console.log('[deserializeCampaignData] Starting refactored deserialization and asset download...');
+  console.log('[deserializeCampaignData] Starting deserialization. Input state:', JSON.stringify(loadedState, null, 2));
   const finalState = JSON.parse(JSON.stringify(loadedState)); // Deep copy to modify
   const newlyCreatedAssets = {}; // This will become the new `pendingAssets` map in the UI
 
   // --- Data Sanitization ---
-  // This is the definitive fix. The logic is simplified to be more robust.
-  const sanitizedCsvData = Array.from(finalState.csvData || [], record => record || {});
-  finalState.csvData = sanitizedCsvData;
+  // Replace null/undefined entries in critical arrays to preserve indexing.
+  if (finalState.csvData && Array.isArray(finalState.csvData)) {
+    finalState.csvData = finalState.csvData.map(record => record || {});
+  }
+  if (finalState.generatedPagesData && Array.isArray(finalState.generatedPagesData)) {
+    const sanitizedCsvData = finalState.csvData || [];
 
-  let headers = finalState.csvHeaders || [];
-  if (headers.length === 0 && sanitizedCsvData.length > 0) {
+    // Defensive header generation: If headers are missing, derive them from the data.
+    let headers = finalState.csvHeaders || [];
+    if (headers.length === 0 && sanitizedCsvData.length > 0) {
+      // Create a set of all possible keys from all records.
       const allKeys = sanitizedCsvData.reduce((keys, record) => {
-          if (record) Object.keys(record).forEach(key => keys.add(key));
-          return keys;
+        if (record) {
+          Object.keys(record).forEach(key => keys.add(key));
+        }
+        return keys;
       }, new Set());
       headers = Array.from(allKeys);
+      // Persist the derived headers back into the state.
       finalState.csvHeaders = headers;
-  }
+    }
 
-  const defaultRecord = headers.reduce((acc, header) => ({ ...acc, [header]: '' }), {});
+    const defaultRecord = headers.reduce((acc, header) => {
+      acc[header] = '';
+      return acc;
+    }, {});
 
-  // Create a new, correctly synchronized generatedPagesData array.
-  const synchronizedPages = sanitizedCsvData.map((csvRecord, index) => {
-      const existingPageData = (finalState.generatedPagesData || [])[index] || {};
-      const finalRecord = { ...defaultRecord, ...csvRecord };
-      if (existingPageData.record) {
-          Object.assign(finalRecord, existingPageData.record);
-      }
-      return {
-          ...existingPageData,
+    finalState.generatedPagesData = finalState.generatedPagesData.map((page, index) => {
+      const baseRecord = sanitizedCsvData[index] || { ...defaultRecord };
+
+      if (!page) {
+        return {
           index: index,
-          record: finalRecord,
-          filename: existingPageData.filename || `midiator_${String(index + 1).padStart(3, '0')}.png`,
-      };
-  });
-  finalState.generatedPagesData = synchronizedPages;
+          record: baseRecord,
+          url: null,
+          blob: null,
+          filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+        };
+      }
+
+      if (!page.record) {
+        page.record = baseRecord;
+      } else {
+        // Ensure all header fields exist on the record to prevent crashes.
+        headers.forEach(header => {
+          if (!(header in page.record)) {
+            page.record[header] = '';
+          }
+        });
+      }
+
+      page.index = index;
+      return page;
+    });
+  }
   if (finalState.followupPosts && Array.isArray(finalState.followupPosts)) {
     finalState.followupPosts = finalState.followupPosts.map(post => post || {});
   }
@@ -256,7 +280,7 @@ export const deserializeCampaignData = async (loadedState) => {
   });
   console.log('[deserializeCampaignData] Step 3 COMPLETE.');
 
-  console.log(`[deserializeCampaignData] Deserialization complete. ${Object.keys(newlyCreatedAssets).length} assets downloaded.`);
+  console.log(`[deserializeCampaignData] Deserialization complete. ${Object.keys(newlyCreatedAssets).length} assets downloaded. Final state:`, JSON.stringify(finalState, null, 2));
   return { finalState, newlyCreatedAssets };
 };
 
@@ -277,6 +301,7 @@ export const loadCampaign = async (id) => {
     throw new Error(err.error || 'Failed to load campaign.');
   }
   const campaign = await res.json();
+  console.log('[loadCampaign] Raw data from API:', JSON.stringify(campaign, null, 2));
 
   if (campaign.campaign_data) {
     // The deserialize function now returns an object containing the modified state
