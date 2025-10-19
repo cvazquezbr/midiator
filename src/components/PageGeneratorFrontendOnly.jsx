@@ -126,7 +126,7 @@ const PageGeneratorFrontendOnly = ({
 
     const pagePromises = csvData.filter(Boolean).map((record, i) => {
       if (isCancelledRef.current) return Promise.resolve(null);
-      const recordWithTitle = { ...record, Título: record?.Título || '' };
+      const recordWithTitle = { ...record, Título: "CADU" || '' };
       return drawAndComposeImage({ ...campaignState, record: recordWithTitle, index: i, pendingAssets })
         .then(pageData => { setProgress(p => p + 1); return pageData; })
         .catch(error => { toast.error(`Erro ao gerar página ${i}: ${error.message}`); return null; });
