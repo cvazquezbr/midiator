@@ -321,7 +321,11 @@ const FieldPositioner = ({
         const style = completeFieldStyles[header];
         if (!position || !position.visible) return null;
 
-        const record = (csvData.filter(Boolean) || [])[currentPreviewIndex] || {};
+        const record = csvData[currentPreviewIndex];
+        if (!record) {
+          console.error(`[FieldPositioner] Tentativa de acesso a um registro inválido. Índice: ${currentPreviewIndex}`, csvData);
+          return null;
+        }
         const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
 
         return {
