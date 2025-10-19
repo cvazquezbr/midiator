@@ -465,7 +465,8 @@ function HomePage() {
       }
       updates.generatedPagesData = novosRegistros.map((record, index) => {
         const existingPage = prev.generatedPagesData.find(img => img.index === index) || {};
-        return { ...existingPage, index, record, url: null, blob: null };
+        const sanitizedRecord = { ...record, Título: record.Título || `Página ${index + 1}` };
+        return { ...existingPage, index, record: sanitizedRecord, url: null, blob: null };
       });
       return updates;
     });
@@ -476,7 +477,8 @@ function HomePage() {
       csvData: newCsvData,
       generatedPagesData: newCsvData.map((record, index) => {
         const existingPage = prev.generatedPagesData.find(img => img.index === index) || {};
-        return { ...existingPage, index, record };
+        const sanitizedRecord = { ...record, Título: record.Título || `Página ${index + 1}` };
+        return { ...existingPage, index, record: sanitizedRecord };
       })
     }));
   }, [setCampaignState]);

@@ -352,15 +352,16 @@ const Campaign = ({
             return;
         }
 
+        let folderId;
         try {
-        try {
-            const folderId = await getOrCreateBackgroundsFolderId();
+            folderId = await getOrCreateBackgroundsFolderId();
         } catch (error) {
             setImageTabError(error.message || "Ocorreu uma falha ao salvar na coleção.");
             console.error("Falha ao salvar na coleção:", error);
             setIsSavingToDrive(false);
             return;
         }
+        try {
             if (!folderId) {
                 throw new Error("Não foi possível obter a pasta de coleção do Google Drive.");
             }
