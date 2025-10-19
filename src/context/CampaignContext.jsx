@@ -39,6 +39,7 @@ export const useCampaign = () => {
 
 export const CampaignProvider = ({ children }) => {
   const [campaignState, setCampaignStateInternal] = useState(initialState);
+  const [isCampaignLoading, setCampaignIsLoading] = useState(true);
 
   const setCampaignState = useCallback((newState) => {
     setCampaignStateInternal(prevState => {
@@ -141,6 +142,8 @@ export const CampaignProvider = ({ children }) => {
     addPendingAssetMap,
     removePendingAsset,
     defaultPageTemplate,
+    isCampaignLoading,
+    setCampaignIsLoading,
   }), [
     campaignState,
     setCampaignState,
@@ -148,6 +151,7 @@ export const CampaignProvider = ({ children }) => {
     addPendingAsset,
     addPendingAssetMap,
     removePendingAsset,
+    isCampaignLoading,
   ]);
 
   return (

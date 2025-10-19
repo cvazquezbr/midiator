@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Grid, IconButton, Tooltip, Fab,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Grid, IconButton, Tooltip, Fab, CircularProgress,
 } from '@mui/material';
 import { Close, Edit, ContentCopy, ContentPaste } from '@mui/icons-material';
 import { useIsMobile } from '../hooks/use-mobile';
@@ -62,7 +62,7 @@ const PageEditor = ({
   onOpenImageGallery,
   addPendingAsset,
 }) => {
-  const { campaignState } = useCampaign();
+  const { campaignState, isCampaignLoading } = useCampaign();
   const { csvHeaders, pageTemplate: globalPageTemplate, pendingAssets, colors: colorPalette } = campaignState;
   const pageDataFromHook = usePageData(pageData?.index);
 
@@ -153,7 +153,9 @@ const PageEditor = ({
     if (updatedDataArray?.length > 0) setEditedRecord(updatedDataArray[0]);
   }, []);
 
-  if (!open || !pageData || !editedPageTemplate) return null;
+  if (!open) return null;
+
+  const isLoading = isCampaignLoading || !pageData || !editedPageTemplate || !editedRecord || !editedPositions;
 
   const handleSave = () => {
     const savedData = {
@@ -174,67 +176,73 @@ const PageEditor = ({
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="paper" fullScreen={isMobile}>
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>Editar Página Gerada #{pageData.index + 1}</span>
+          <span>Editar Página Gerada #{(pageData?.index ?? -1) + 1}</span>
           <Box>
-            <Tooltip title="Copiar estilo"><IconButton onClick={handleCopyStyle}><ContentCopy /></IconButton></Tooltip>
-            <Tooltip title="Colar estilo"><IconButton onClick={handlePasteStyle}><ContentPaste /></IconButton></Tooltip>
+            <Tooltip title="Copiar estilo"><IconButton onClick={handleCopyStyle} disabled={isLoading}><ContentCopy /></IconButton></Tooltip>
+            <Tooltip title="Colar estilo"><IconButton onClick={handlePasteStyle} disabled={isLoading}><ContentPaste /></IconButton></Tooltip>
             <IconButton onClick={onClose} sx={{ ml: 2 }}><Close /></IconButton>
           </Box>
         </Box>
       </DialogTitle>
       <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column' }}>
-        <Grid container spacing={2} sx={{ flexGrow: 1 }}>
-          <Grid item xs={12} md={isMobile ? 12 : 8} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FieldPositioner
-              aspectRatio={aspectRatio}
-              csvHeaders={csvHeaders}
-              fieldPositions={editedPositions}
-              setFieldPositions={setEditedPositions}
-              fieldStyles={editedStyles}
-              setFieldStyles={setEditedStyles}
-              csvData={editorCsvData}
-              colorPalette={imageSwatches}
-              selectedField={selectedFieldInternal}
-              setSelectedField={handleInternalFieldSelection}
-              onCsvDataUpdate={handleFieldPositionerCsvDataUpdate}
-              originalImageSize={originalImageSize}
-              brandElements={editedBrandElements}
-              setBrandElements={setEditedBrandElements}
-              pageTemplate={editedPageTemplate}
-              setPageTemplate={setEditedPageTemplate}
-              currentPreviewIndex={0}
-              pendingAssets={pendingAssets}
-            />
-          </Grid>
-          {!isMobile && (
-            <Grid item xs={12} md={4}>
-              <FormattingPanel
-                imagePalette={imageSwatches}
-                selectedField={selectedFieldInternal}
-                setSelectedField={setSelectedFieldInternal}
-                fieldStyles={editedStyles}
-                setFieldStyles={setEditedStyles}
+        {isLoading ? (
+          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Grid container spacing={2} sx={{ flexGrow: 1 }}>
+            <Grid item xs={12} md={isMobile ? 12 : 8} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FieldPositioner
+                aspectRatio={aspectRatio}
+                csvHeaders={csvHeaders}
                 fieldPositions={editedPositions}
                 setFieldPositions={setEditedPositions}
-                csvHeaders={csvHeaders}
-                pageTemplate={editedPageTemplate}
-                setPageTemplate={setEditedPageTemplate}
+                fieldStyles={editedStyles}
+                setFieldStyles={setEditedStyles}
+                csvData={editorCsvData}
+                colorPalette={imageSwatches}
+                selectedField={selectedFieldInternal}
+                setSelectedField={handleInternalFieldSelection}
+                onCsvDataUpdate={handleFieldPositionerCsvDataUpdate}
+                originalImageSize={originalImageSize}
                 brandElements={editedBrandElements}
                 setBrandElements={setEditedBrandElements}
-                onOpenHtmlEditor={handleOpenHtmlEditor}
-                showImageLoaders={true}
-                handleImageUpload={handleLocalImageUpload}
-                onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
+                pageTemplate={editedPageTemplate}
+                setPageTemplate={setEditedPageTemplate}
+                currentPreviewIndex={0}
+                pendingAssets={pendingAssets}
               />
             </Grid>
-          )}
-        </Grid>
+            {!isMobile && (
+              <Grid item xs={12} md={4}>
+                <FormattingPanel
+                  imagePalette={imageSwatches}
+                  selectedField={selectedFieldInternal}
+                  setSelectedField={setSelectedFieldInternal}
+                  fieldStyles={editedStyles}
+                  setFieldStyles={setEditedStyles}
+                  fieldPositions={editedPositions}
+                  setFieldPositions={setEditedPositions}
+                  csvHeaders={csvHeaders}
+                  pageTemplate={editedPageTemplate}
+                  setPageTemplate={setEditedPageTemplate}
+                  brandElements={editedBrandElements}
+                  setBrandElements={setEditedBrandElements}
+                  onOpenHtmlEditor={handleOpenHtmlEditor}
+                  showImageLoaders={true}
+                  handleImageUpload={handleLocalImageUpload}
+                  onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
+                />
+              </Grid>
+            )}
+          </Grid>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleSave} color="primary" variant="contained">Salvar Alterações</Button>
+        <Button onClick={handleSave} color="primary" variant="contained" disabled={isLoading}>Salvar Alterações</Button>
       </DialogActions>
-      {isMobile && (
+      {!isLoading && isMobile && (
         <>
           <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16 }} onClick={() => setIsDrawerOpen(true)}><Edit /></Fab>
           <FormattingDrawer
@@ -260,7 +268,7 @@ const PageEditor = ({
         </>
       )}
       <TextEditorDialog
-        open={editingField !== null && editedRecord && editedRecord[editingField] !== undefined}
+        open={!isLoading && editingField !== null && editedRecord && editedRecord[editingField] !== undefined}
         title={`Editar "${editingField || ''}"`}
         content={editedRecord?.[editingField] || ''}
         onSave={(newContent) => {

@@ -6,6 +6,7 @@ import {
   Stack,
   Tooltip,
   IconButton,
+  CircularProgress,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -32,7 +33,7 @@ const ImageStepUI = ({
   activeStep,
   handleImageUpload,
 }) => {
-  const { campaignState, setCampaignState } = useCampaign();
+  const { campaignState, setCampaignState, isCampaignLoading } = useCampaign();
   const {
     csvData,
     csvHeaders,
@@ -65,6 +66,14 @@ const ImageStepUI = ({
   const handleLastPreview = () => {
     setCurrentPreviewIndex(csvData.length - 1);
   };
+
+  if (isCampaignLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, height: { xs: 'calc(100dvh - 140px)', md: 'calc(100vh - 150px)' } }}>
