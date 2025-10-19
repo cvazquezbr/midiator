@@ -514,10 +514,11 @@ function HomePage() {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
       const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor, palette });
       const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: palette?.colors || [] });
-      const tempUrl = addPendingAsset(dataURLtoBlob(base64Data));
-      if (!tempUrl) throw new Error("Falha ao criar URL para a imagem gerada.");
-      setCampaignState({ generatedPageUrl: tempUrl });
-      addNewImageToCanvas(tempUrl);
+      const imageBlob = dataURLtoBlob(`data:image/png;base64,${base64Data}`);
+      const managedUrl = addPendingAsset(imageBlob);
+      if (!managedUrl) throw new Error("Falha ao criar URL para a imagem gerada.");
+      setCampaignState({ generatedPageUrl: managedUrl });
+      addNewImageToCanvas(managedUrl);
       return true;
     } catch (imageError) {
       toast.error(`Erro na geração da imagem: ${imageError.message}`);
@@ -620,7 +621,7 @@ function HomePage() {
         if (oldImage?.src?.startsWith('blob:')) removePendingAsset(oldImage.src);
 
         // Convert base64 to a managed blob URL
-        const imageBlob = dataURLtoBlob(base64Data);
+        const imageBlob = dataURLtoBlob(`data:image/png;base64,${base64Data}`);
         const managedImageUrl = addPendingAsset(imageBlob);
         if (!managedImageUrl) throw new Error("Falha ao registrar a imagem gerada.");
 

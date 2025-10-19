@@ -245,8 +245,8 @@ const PageEditor = ({
         </>
       )}
       <TextEditorDialog
-        open={editingField !== null}
-        title={`Editar "${editingField}"`}
+        open={editingField !== null && editedRecord && editedRecord[editingField] !== undefined}
+        title={`Editar "${editingField || ''}"`}
         content={editedRecord?.[editingField] || ''}
         onSave={(newContent) => {
           if (editedRecord && editingField) {
