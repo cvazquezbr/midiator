@@ -596,9 +596,13 @@ function HomePage() {
       const parsedResult = parseIaResponseToCsvData(iaResponseText);
       if (!parsedResult?.data?.length) { toast.error('Não foi possível processar a resposta da IA.'); return; }
       const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
-      const { newPositions, newStyles } = autoArrangeFields({ csvHeaders: csvHeadersResult, fieldPositions: {}, fieldStyles: {}, csvData: csvDataResult, effectiveImageSize: originalImageSize });
-      const newGeneratedPagesData = csvDataResult.map((record, index) => ({ index, record, blob: null, url: null, filename: `midiator_${String(index + 1).padStart(3, '0')}.png` }));
-      setCampaignState({ csvData: csvDataResult, csvHeaders: csvHeadersResult, fieldPositions: newPositions, fieldStyles: newStyles, initialFieldStyles: newStyles, generatedPagesData: newGeneratedPagesData });
+      const sanitizedCsvData = csvDataResult.map((record, index) => ({
+        ...record,
+        Título: record.Título || `Página ${index + 1}`,
+      }));
+      const { newPositions, newStyles } = autoArrangeFields({ csvHeaders: csvHeadersResult, fieldPositions: {}, fieldStyles: {}, csvData: sanitizedCsvData, effectiveImageSize: originalImageSize });
+      const newGeneratedPagesData = sanitizedCsvData.map((record, index) => ({ index, record, blob: null, url: null, filename: `midiator_${String(index + 1).padStart(3, '0')}.png` }));
+      setCampaignState({ csvData: sanitizedCsvData, csvHeaders: csvHeadersResult, fieldPositions: newPositions, fieldStyles: newStyles, initialFieldStyles: newStyles, generatedPagesData: newGeneratedPagesData });
       setInputMethod('manual');
       toast.success('Geração de posts concluída.');
     } catch (error) {
