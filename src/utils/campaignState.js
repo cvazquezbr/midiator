@@ -168,55 +168,55 @@ export const deserializeCampaignData = async (loadedState) => {
     finalState.csvData = finalState.csvData.map(record => record || {});
   }
   if (finalState.generatedPagesData && Array.isArray(finalState.generatedPagesData)) {
-    const sanitizedCsvData = finalState.csvData || [];
+    // Ensure csvData is a sane array to prevent downstream errors.
+    const sanitizedCsvData = (finalState.csvData || []).map(record => record || {});
 
     // Defensive header generation: If headers are missing, derive them from the data.
     let headers = finalState.csvHeaders || [];
     if (headers.length === 0 && sanitizedCsvData.length > 0) {
-      // Create a set of all possible keys from all records.
-      const allKeys = sanitizedCsvData.reduce((keys, record) => {
-        if (record) {
-          Object.keys(record).forEach(key => keys.add(key));
-        }
-        return keys;
-      }, new Set());
-      headers = Array.from(allKeys);
-      // Persist the derived headers back into the state.
-      finalState.csvHeaders = headers;
+        const allKeys = sanitizedCsvData.reduce((keys, record) => {
+            if (record) Object.keys(record).forEach(key => keys.add(key));
+            return keys;
+        }, new Set());
+        headers = Array.from(allKeys);
+        finalState.csvHeaders = headers;
     }
 
-    const defaultRecord = headers.reduce((acc, header) => {
-      acc[header] = '';
-      return acc;
-    }, {});
+    // Create a default record structure based on the final headers.
+    const defaultRecord = headers.reduce((acc, header) => ({ ...acc, [header]: '' }), {});
 
-    finalState.generatedPagesData = finalState.generatedPagesData.map((page, index) => {
-      const baseRecord = sanitizedCsvData[index] || { ...defaultRecord };
+    // Synchronize generatedPagesData with csvData.
+    const numCsvRecords = sanitizedCsvData.length;
+    const synchronizedPages = [];
+    const maxRecords = Math.max(numCsvRecords, finalState.generatedPagesData.length);
 
-      if (!page) {
-        return {
-          index: index,
-          record: baseRecord,
-          url: null,
-          blob: null,
-          filename: `midiator_${String(index + 1).padStart(3, '0')}.png`,
+    for (let i = 0; i < maxRecords; i++) {
+        const csvRecord = sanitizedCsvData[i] || { ...defaultRecord };
+        const pageData = finalState.generatedPagesData[i] || {};
+
+        // Ensure every key from headers exists in the final record.
+        const finalRecord = { ...defaultRecord, ...csvRecord };
+        if (pageData.record) {
+            Object.assign(finalRecord, pageData.record);
+        }
+
+        synchronizedPages[i] = {
+            ...pageData, // Keep existing page data like URL, custom templates, etc.
+            index: i,
+            record: finalRecord,
+            filename: pageData.filename || `midiator_${String(i + 1).padStart(3, '0')}.png`,
         };
-      }
+    }
 
-      if (!page.record) {
-        page.record = baseRecord;
-      } else {
-        // Ensure all header fields exist on the record to prevent crashes.
-        headers.forEach(header => {
-          if (!(header in page.record)) {
-            page.record[header] = '';
-          }
-        });
-      }
+    finalState.generatedPagesData = synchronizedPages;
 
-      page.index = index;
-      return page;
-    });
+    // Also, ensure csvData itself has the full length to match.
+    if (numCsvRecords < maxRecords) {
+        for (let i = numCsvRecords; i < maxRecords; i++) {
+            sanitizedCsvData[i] = { ...defaultRecord };
+        }
+        finalState.csvData = sanitizedCsvData;
+    }
   }
   if (finalState.followupPosts && Array.isArray(finalState.followupPosts)) {
     finalState.followupPosts = finalState.followupPosts.map(post => post || {});
