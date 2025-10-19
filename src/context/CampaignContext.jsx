@@ -53,28 +53,24 @@ export const CampaignProvider = ({ children }) => {
 
     const campaignData = safeDeepClone(loadedData.campaign_data || {});
 
-    // Sanitize csvData records and ensure 'Título' property exists.
-    // This becomes the single source of truth for this load operation.
-    const sanitizedCsvData = (campaignData.csvData || []).map((record, index) => ({
-      ...(record || {}),
-      Título: (record || {}).Título || `Página ${index + 1}`,
-    }));
+    // Ensure csvData is always a valid array of objects
+    const sanitizedCsvData = (campaignData.csvData || []).map(record => record || {});
 
-    // Synchronize generatedPagesData with the now-sanitized csvData.
+    // Synchronize generatedPagesData with csvData
     const synchronizedPages = sanitizedCsvData.map((record, index) => {
       const existingPage = (campaignData.generatedPagesData || [])[index] || {};
       return {
         ...existingPage,
         index,
-        record, // The record is already sanitized.
+        record,
       };
     });
 
     const newState = {
       ...initialState,
       ...campaignData,
-      csvData: sanitizedCsvData, // Use the sanitized data
-      generatedPagesData: synchronizedPages, // Use pages based on sanitized data
+      csvData: sanitizedCsvData,
+      generatedPagesData: synchronizedPages,
       currentCampaign: loadedData.id ? { id: loadedData.id, name: loadedData.name } : null,
       pendingAssets: {}, // Always start fresh on load
     };

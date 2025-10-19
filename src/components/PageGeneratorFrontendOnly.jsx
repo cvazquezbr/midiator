@@ -360,50 +360,35 @@ const PageGeneratorFrontendOnly = ({
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} /><Typography variant="h6" gutterBottom>Páginas Geradas ({generatedPagesData.length})</Typography>
               <Grid container spacing={2}>
-                {generatedPagesData.map((pageData, index) => {
-                  // Defensive check to prevent rendering if the record is missing or malformed
-                  if (!pageData || !pageData.record) {
-                    return (
-                      <Grid item xs={12} sm={6} md={4} key={pageData?.index || index}>
-                        <Card variant="outlined">
-                          <CardContent>
-                            <Alert severity="error">Dados da página corrompidos. Não é possível renderizar.</Alert>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    );
-                  }
-
-                  return (
-                    <Grid item xs={12} sm={6} md={4} key={pageData.index}>
-                      <Card variant="outlined">
-                        <CardContent>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <Chip label={`#${index + 1}`} size="small" />
-                            <Typography variant="body2" noWrap sx={{ flexGrow: 1, ml: 1 }}>
-                              {pageData.record.Título || 'Página sem título'}
-                            </Typography>
-                          </Box>
-                          <Box
-                            sx={{ position: 'relative', width: '100%', aspectRatio: String(aspectRatio || '1/1').replace(':', ' / '), cursor: 'pointer' }}
-                            onClick={() => handleOpenGeneratedPageEditor(pageData.index)}
-                          >
-                            <img src={pageData.url} alt={`Preview ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: regeneratingIndex === index ? 0.5 : 1 }} />
-                            {regeneratingIndex === index && <CircularProgress size={40} sx={{ position: 'absolute', top: '50%', left: '50%', mt: '-20px', ml: '-20px' }} />}
-                          </Box>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-around', gap: 1, mt: 1 }}>
-                            <Tooltip title="Regerar com IA"><IconButton size="small" onClick={async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); }} disabled={regeneratingIndex !== null}><GeminiIcon /></IconButton></Tooltip>
-                            <Tooltip title="Resetar"><IconButton size="small" onClick={() => handleResetPage(pageData.index)}><SettingsBackupRestore /></IconButton></Tooltip>
-                            <Tooltip title="Editar"><IconButton size="small" onClick={() => handleOpenGeneratedPageEditor(pageData.index)}><Edit /></IconButton></Tooltip>
-                            <Tooltip title="Substituir Fundo"><IconButton size="small" onClick={() => handleReplacePageClick(pageData.index)}><SwapHoriz /></IconButton></Tooltip>
-                            <Tooltip title="Download"><IconButton size="small" onClick={() => downloadPage(pageData)}><Download /></IconButton></Tooltip>
-                            <Tooltip title="Compartilhar"><IconButton size="small" onClick={() => handleShare(pageData)}><Share /></IconButton></Tooltip>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </Grid>
-                  );
-                })}
+                {generatedPagesData.map((pageData, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={pageData.index}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <Chip label={`#${index + 1}`} size="small" />
+                          <Typography variant="body2" noWrap sx={{ flexGrow: 1, ml: 1 }}>
+                            {pageData.record?.Título || 'Página sem título'}
+                          </Typography>
+                        </Box>
+                        <Box
+                          sx={{ position: 'relative', width: '100%', aspectRatio: String(aspectRatio || '1/1').replace(':', ' / '), cursor: 'pointer' }}
+                          onClick={() => handleOpenGeneratedPageEditor(pageData.index)}
+                        >
+                          <img src={pageData.url} alt={`Preview ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: regeneratingIndex === index ? 0.5 : 1 }} />
+                          {regeneratingIndex === index && <CircularProgress size={40} sx={{ position: 'absolute', top: '50%', left: '50%', mt: '-20px', ml: '-20px' }} />}
+                        </Box>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-around', gap: 1, mt: 1 }}>
+                           <Tooltip title="Regerar com IA"><IconButton size="small" onClick={async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); }} disabled={regeneratingIndex !== null}><GeminiIcon /></IconButton></Tooltip>
+                           <Tooltip title="Resetar"><IconButton size="small" onClick={() => handleResetPage(pageData.index)}><SettingsBackupRestore /></IconButton></Tooltip>
+                           <Tooltip title="Editar"><IconButton size="small" onClick={() => handleOpenGeneratedPageEditor(pageData.index)}><Edit /></IconButton></Tooltip>
+                           <Tooltip title="Substituir Fundo"><IconButton size="small" onClick={() => handleReplacePageClick(pageData.index)}><SwapHoriz /></IconButton></Tooltip>
+                           <Tooltip title="Download"><IconButton size="small" onClick={() => downloadPage(pageData)}><Download /></IconButton></Tooltip>
+                           <Tooltip title="Compartilhar"><IconButton size="small" onClick={() => handleShare(pageData)}><Share /></IconButton></Tooltip>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
               </Grid>
             </Box>
           )}
