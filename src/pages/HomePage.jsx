@@ -164,7 +164,6 @@ function HomePage() {
 
   // This effect synchronizes the UI state after a campaign is loaded into the context
   useEffect(() => {
-    console.log('[HomePage] useEffect triggered. campaignState:', JSON.stringify(campaignState, null, 2));
     if (!currentCampaign || !campaignState) {
       setIsLoading(false);
       return;

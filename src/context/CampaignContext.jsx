@@ -49,20 +49,31 @@ export const CampaignProvider = ({ children }) => {
   }, []);
 
   const applyLoadedCampaign = useCallback((loadedData) => {
-    console.log('[CampaignContext] Applying loaded campaign. Input data:', JSON.stringify(loadedData, null, 2));
+    console.log('[CampaignContext] Applying loaded campaign data:', loadedData);
+    const campaignData = safeDeepClone(loadedData.campaign_data || {});
     const newState = {
       ...initialState, // Start from a clean slate
-      ...safeDeepClone(loadedData.campaign_data || {}), // Apply campaign-specific data
+      ...campaignData, // Apply campaign-specific data
       currentCampaign: loadedData.currentCampaign || null,
       pendingAssets: loadedData.pendingAssets || {},
     };
-    // Ensure essential fields are arrays if they are missing from loaded data
-    newState.generatedPagesData = newState.generatedPagesData || [];
-    newState.generatedVideos = newState.generatedVideos || [];
-    newState.brandElements = newState.brandElements || [];
-    newState.pageTemplate = newState.pageTemplate || defaultPageTemplate;
+    // --- Definitive Fix ---
+    // Ensure csvData and generatedPagesData are synchronized after loading.
+    const sanitizedCsvData = Array.from(campaignData.csvData || [], record => record || {});
+    newState.csvData = sanitizedCsvData;
 
-    console.log('[CampaignContext] Final state before setting internal state:', JSON.stringify(newState, null, 2));
+    // If generatedPagesData is empty or unsynced, create it from csvData.
+    if (!campaignData.generatedPagesData || campaignData.generatedPagesData.length !== sanitizedCsvData.length) {
+        newState.generatedPagesData = sanitizedCsvData.map((record, index) => {
+            const existingPage = (campaignData.generatedPagesData || [])[index] || {};
+            return {
+                ...existingPage,
+                index,
+                record,
+            };
+        });
+    }
+
     setCampaignStateInternal(newState);
     console.log('[CampaignContext] State after applying loaded campaign:', newState);
   }, []);

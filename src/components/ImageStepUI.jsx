@@ -50,8 +50,6 @@ const ImageStepUI = ({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
 
-  console.log('[ImageStepUI] Rendering. campaignState:', { csvData, csvHeaders, fieldPositions, fieldStyles, brandElements, pageTemplate, selectedField, imageColorPalette, initialFieldStyles, templateFieldStyles, fontScale });
-
   const handleNextPreview = () => {
     setCurrentPreviewIndex(prevIndex => Math.min(prevIndex + 1, csvData.length - 1));
   };
