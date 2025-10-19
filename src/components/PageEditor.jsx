@@ -89,6 +89,9 @@ const PageEditor = ({
       setEditedPositions(safeDeepClone(effectiveFieldPositions));
       setEditedBrandElements(safeDeepClone(effectiveBrandElements));
       // Ensure record is an object before cloning to prevent crashes.
+      if (!record) {
+        console.error("PageEditor recebeu pageData sem 'record'. pageData:", pageData);
+      }
       setEditedRecord(safeDeepClone(record || {}));
       setEditedPageTemplate(templateToEdit);
       const newEditedStyles = {};
