@@ -43,11 +43,14 @@ export const CampaignProvider = ({ children }) => {
 
   const setCampaignState = useCallback((arg) => {
     setCampaignStateInternal(prevState => {
-      // This function now correctly handles both object updates and function updates,
-      // mimicking the behavior of a standard React state setter.
       const newState = typeof arg === 'function' ? arg(prevState) : arg;
       const updatedState = { ...prevState, ...newState };
-      console.log('[CampaignContext] State updated:', { prevState, newState, updatedState });
+      console.log('%c[CampaignContext] State Update:', 'color: blue; font-weight: bold;', {
+        prevState: safeDeepClone(prevState),
+        updateArg: safeDeepClone(arg),
+        newState: safeDeepClone(newState),
+        finalState: safeDeepClone(updatedState),
+      });
       return updatedState;
     });
   }, []);
@@ -90,8 +93,12 @@ export const CampaignProvider = ({ children }) => {
     newCampaignState.pendingAssets = {};
 
     // Atomically update the state
+    console.log('%c[CampaignContext] Applying Loaded Campaign:', 'color: green; font-weight: bold;', {
+      loadedData: safeDeepClone(loadedData),
+      initialState: safeDeepClone(initialState),
+      mergedState: safeDeepClone(newCampaignState),
+    });
     setCampaignStateInternal(newCampaignState);
-    console.log('[CampaignContext] State after applying loaded campaign:', newCampaignState);
   }, []);
 
   const addPendingAsset = useCallback((blob) => {

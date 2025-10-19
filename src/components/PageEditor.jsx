@@ -62,6 +62,8 @@ const PageEditor = ({
   onOpenImageGallery,
   addPendingAsset,
 }) => {
+  console.log('%c[PageEditor] Rendering with props:', 'color: red; font-weight: bold;', { open, pageData, aspectRatio });
+
   const { campaignState, isCampaignLoading } = useCampaign();
   const { csvHeaders, pageTemplate: globalPageTemplate, pendingAssets, colors: colorPalette } = campaignState;
   const pageDataFromHook = usePageData(pageData?.index);

@@ -338,6 +338,7 @@ function HomePage() {
     try {
       await checkAuthStatus();
       const loadedCampaign = await loadCampaign(campaign.id);
+      console.log('%c[HomePage] Campaign Loaded from DB:', 'color: purple; font-weight: bold;', loadedCampaign);
       applyLoadedCampaign({
         ...loadedCampaign,
         currentCampaign: { id: loadedCampaign.id, name: loadedCampaign.name },
