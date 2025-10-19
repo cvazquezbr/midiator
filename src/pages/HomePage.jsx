@@ -336,41 +336,50 @@ function HomePage() {
     toast.info(`Carregando "${campaign.name}"...`);
     setCampaignIsLoading(true);
     try {
-      await checkAuthStatus();
-      const loadedCampaign = await loadCampaign(campaign.id);
-      console.log('%c[HomePage] Campaign Loaded from DB:', 'color: purple; font-weight: bold;', loadedCampaign);
+        await checkAuthStatus();
+        const loadedCampaign = await loadCampaign(campaign.id);
+        console.log('%c[HomePage] Campaign Loaded from DB:', 'color: purple; font-weight: bold;', loadedCampaign);
 
-      // Determine the correct paletteId before applying the state
-      const dbPaletteId = loadedCampaign.palette_id;
-      const hasCustomPalette = loadedCampaign.campaign_data?.customPalette?.colors?.length > 0;
-      let finalPaletteId = null;
-      if (dbPaletteId) {
-        finalPaletteId = dbPaletteId;
-      } else if (hasCustomPalette) {
-        finalPaletteId = 'custom';
-      }
+        // A `campaign_data` pode não existir em campanhas antigas, então garanta que seja um objeto
+        const campaign_data = loadedCampaign.campaign_data || {};
 
-      // Consolidate all updates into a single object for one atomic state change
-      const campaignToApply = {
-        ...loadedCampaign,
-        currentCampaign: { id: loadedCampaign.id, name: loadedCampaign.name },
-        paletteId: finalPaletteId, // Add the determined paletteId
-      };
+        // Determine o paletteId a partir dos dados carregados
+        const dbPaletteId = loadedCampaign.palette_id;
+        const hasCustomPalette = campaign_data.customPalette?.colors?.length > 0;
+        let finalPaletteId = null;
+        if (dbPaletteId) {
+            finalPaletteId = dbPaletteId;
+        } else if (hasCustomPalette) {
+            finalPaletteId = 'custom';
+        }
 
-      applyLoadedCampaign(campaignToApply);
+        // Crie o objeto `campaign_data` final com todas as informações consolidadas
+        const finalCampaignData = {
+            ...campaign_data,
+            paletteId: finalPaletteId,
+        };
 
-      // Set local UI state separately, as it's not part of the core campaign data
-      setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
-      setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
+        // Crie o objeto de nível superior esperado por `applyLoadedCampaign`
+        const campaignToApply = {
+            id: loadedCampaign.id,
+            name: loadedCampaign.name,
+            campaign_data: finalCampaignData,
+        };
 
-      toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
-      setActiveStep(3);
+        applyLoadedCampaign(campaignToApply);
+
+        // Defina o estado da UI local que não faz parte do `campaignState`
+        setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
+        setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
+
+        toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
+        setActiveStep(3);
     } catch (err) {
-      toast.error(`Falha ao carregar campanha: ${err.message}`);
+        toast.error(`Falha ao carregar campanha: ${err.message}`);
     } finally {
-      setCampaignIsLoading(false);
+        setCampaignIsLoading(false);
     }
-  };
+};
 
   const parseCsvFile = async (file) => {
     if (!file) return;
