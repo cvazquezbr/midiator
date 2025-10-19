@@ -169,7 +169,8 @@ export const deserializeCampaignData = async (loadedState) => {
   }
   if (finalState.generatedPagesData && Array.isArray(finalState.generatedPagesData)) {
     // Ensure csvData is a sane array to prevent downstream errors.
-    const sanitizedCsvData = (finalState.csvData || []).map(record => record || {});
+    const sanitizedCsvData = Array.from(finalState.csvData || [], record => record || {});
+
 
     // Defensive header generation: If headers are missing, derive them from the data.
     let headers = finalState.csvHeaders || [];
