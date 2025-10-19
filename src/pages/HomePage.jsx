@@ -664,18 +664,19 @@ function HomePage() {
       // Correctly update the specific page data within the generatedPagesData array
       setCampaignState(prev => {
         const newPagesData = prev.generatedPagesData.map(p => {
-          if (p.index === index) {
-            // Merge existing data, new data from generation, and any other updates
-            return {
-              ...(p || {}),
-              ...finalPageData,
-              ...pageUpdateData,
-              url: tempUrl,
-              dataUrl: null, // Clear any old data URLs
-              blob: undefined // Don't store the blob in the state
-            };
+          if (p.index !== index) {
+            return p;
           }
-          return p;
+          // Create a completely new object for the updated page to ensure React detects the change.
+          const updatedPage = {
+            ...(p || {}), // Start with the existing page data
+            ...finalPageData, // Apply the core data from the generation service
+            ...pageUpdateData, // Apply any template/image updates
+            url: tempUrl, // Set the new, managed URL for the thumbnail
+            dataUrl: null, // Clear any old data URLs to save memory
+            blob: undefined, // The blob is now managed in pendingAssets, so don't store it here.
+          };
+          return updatedPage;
         });
         return { generatedPagesData: newPagesData };
       });
