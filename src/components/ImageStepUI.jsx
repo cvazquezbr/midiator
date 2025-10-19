@@ -34,6 +34,9 @@ const ImageStepUI = ({
   handleImageUpload,
 }) => {
   const { campaignState, setCampaignState, isCampaignLoading } = useCampaign();
+
+  console.log('%c[ImageStepUI] Rendering with campaignState:', 'color: brown; font-weight: bold;', { campaignState });
+
   const {
     csvData,
     csvHeaders,
