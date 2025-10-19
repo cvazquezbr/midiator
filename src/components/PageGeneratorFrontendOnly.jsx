@@ -360,11 +360,30 @@ const PageGeneratorFrontendOnly = ({
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} /><Typography variant="h6" gutterBottom>Páginas Geradas ({generatedPagesData.length})</Typography>
               <Grid container spacing={2}>
-                {generatedPagesData.map((pageData, index) => (
+                {generatedPagesData.map((pageData, index) => {
+                  // Defensive check to prevent rendering if the record is missing or malformed
+                  if (!pageData || !pageData.record) {
+                    return (
+                      <Grid item xs={12} sm={6} md={4} key={pageData?.index || index}>
+                        <Card variant="outlined">
+                          <CardContent>
+                            <Alert severity="error">Dados da página corrompidos. Não é possível renderizar.</Alert>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    );
+                  }
+
+                  return (
                   <Grid item xs={12} sm={6} md={4} key={pageData.index}>
                     <Card variant="outlined">
                       <CardContent>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}><Chip label={`#${index + 1}`} size="small" /><Typography variant="body2" noWrap sx={{ flexGrow: 1, ml:1 }}>{pageData.filename}</Typography></Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                           <Chip label={`#${index + 1}`} size="small" />
+                           <Typography variant="body2" noWrap sx={{ flexGrow: 1, ml:1 }}>
+                             {pageData.record.Título || 'Página sem título'}
+                           </Typography>
+                        </Box>
                         <Box
                           sx={{ position: 'relative', width: '100%', aspectRatio: String(aspectRatio || '1/1').replace(':', ' / '), cursor: 'pointer' }}
                           onClick={() => handleOpenGeneratedPageEditor(pageData.index)}
