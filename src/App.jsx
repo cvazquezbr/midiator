@@ -1,9 +1,6 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 
-// Context
-import { CampaignProvider } from './context/CampaignContext';
-
 // Pages
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
@@ -18,10 +15,9 @@ import AdminRoute from './components/AdminRoute';
 
 function App() {
   return (
-    <CampaignProvider>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/login" element={<LoginPage />} />
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
 
         {/* Protected Routes for standard users */}
@@ -43,7 +39,6 @@ function App() {
           </div>
         } />
       </Routes>
-    </CampaignProvider>
   );
 }
 
