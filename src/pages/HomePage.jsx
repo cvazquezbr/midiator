@@ -363,6 +363,7 @@ function HomePage() {
             id: loadedCampaign.id,
             name: loadedCampaign.name,
             campaign_data: finalCampaignData,
+            pendingAssets: loadedCampaign.pendingAssets, // Pass the pending assets
         };
 
         applyLoadedCampaign(campaignToApply);
