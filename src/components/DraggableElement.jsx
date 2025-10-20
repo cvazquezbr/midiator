@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
+import { useCampaign } from '../context/CampaignContext';
 import styles from './DraggableElement.module.css';
 import { wrapTextInArea } from '../utils/imageComposer';
 import { applyColorHighlight } from '../utils/filterUtils';
