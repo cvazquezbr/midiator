@@ -75,14 +75,14 @@ const FieldPositioner = ({
   onFontScaleChange,
   isCropping,
   setIsCropping,
-  pendingAssets,
 }) => {
   console.log('[FieldPositioner] props:', { pageTemplate, fieldStyles });
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
   const containerRef = useRef(null);
-  const { aspectRatio: aspectRatioFromContext } = useCampaign();
+  const { campaignState } = useCampaign();
+  const { aspectRatio: aspectRatioFromContext, pendingAssets } = campaignState;
 
   const effectiveImageSize = originalImageSize;
 
