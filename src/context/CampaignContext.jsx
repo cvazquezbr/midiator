@@ -72,7 +72,7 @@ export const CampaignProvider = ({ children }) => {
       csvData: sanitizedCsvData,
       generatedPagesData: synchronizedPages,
       currentCampaign: loadedData.id ? { id: loadedData.id, name: loadedData.name } : null,
-      pendingAssets: {}, // Always start fresh on load
+      pendingAssets: loadedData.pendingAssets || {}, // Correctly merge the loaded assets
     };
 
     setCampaignStateInternal(newState);
