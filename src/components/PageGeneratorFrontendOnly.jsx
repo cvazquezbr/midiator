@@ -273,11 +273,16 @@ const PageGeneratorFrontendOnly = ({
       };
       const newPageImageData = await regenerateSinglePage(regenContext);
       setCampaignState(current => ({
-        generatedPagesData: current.generatedPagesData.map(page =>
-          page.index !== modifiedPageData.index ? page : {
-            ...page, ...modifiedPageData, ...newPageImageData, fontScale: 1,
+        generatedPagesData: current.generatedPagesData.map(page => {
+          if (page.index !== modifiedPageData.index) {
+            return page;
           }
-        )
+          // Perform an explicit merge to guarantee image data is not overwritten
+          const finalPageData = { ...page, ...modifiedPageData, fontScale: 1 };
+          finalPageData.url = newPageImageData.url;
+          finalPageData.blob = newPageImageData.blob;
+          return finalPageData;
+        })
       }));
       toast.success(`Página #${modifiedPageData.index + 1} salva.`);
     } catch (error) {
