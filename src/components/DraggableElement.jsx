@@ -35,8 +35,9 @@ const DraggableElementInternal = ({
   enableHtmlRendering = false,
   darkMode,
   onDoubleClick,
-  pendingAssets,
 }) => {
+  const { campaignState } = useCampaign();
+  const { pendingAssets } = campaignState;
   console.log('[DraggableElement] PROPS RECEIVED:', { element, content });
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
