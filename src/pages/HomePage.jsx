@@ -84,7 +84,6 @@ function HomePage() {
     addPendingAssetMap,
     removePendingAsset,
     defaultPageTemplate,
-    setCampaignIsLoading,
   } = useCampaign();
 
   // Destructure state from the unified campaignState object
@@ -334,7 +333,7 @@ function HomePage() {
 
   const handleEditCampaign = async (campaign) => {
     toast.info(`Carregando "${campaign.name}"...`);
-    setCampaignIsLoading(true);
+    setIsLoading(true);
     try {
         await checkAuthStatus();
         const loadedCampaign = await loadCampaign(campaign.id);
@@ -377,7 +376,7 @@ function HomePage() {
     } catch (err) {
         toast.error(`Falha ao carregar campanha: ${err.message}`);
     } finally {
-        setCampaignIsLoading(false);
+        setIsLoading(false);
     }
 };
 
