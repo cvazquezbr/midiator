@@ -76,7 +76,7 @@ const ImageStepUI = ({
         <Typography variant="h6" sx={{ flexShrink: 0, textAlign: 'center', my: 2 }}>
           Editor de Página
         </Typography>
-        {csvData && csvData.length > 0 ? (
+        {csvData && csvData.length > 0 && pageTemplate ? (
           <>
             <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', p: 1 }}>
               <FieldPositioner
