@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Grid, IconButton, Tooltip, Fab,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Grid, IconButton, Tooltip, Fab, CircularProgress,
 } from '@mui/material';
 import { Close, Edit, ContentCopy, ContentPaste } from '@mui/icons-material';
 import { useIsMobile } from '../hooks/use-mobile';
@@ -62,7 +62,9 @@ const PageEditor = ({
   onOpenImageGallery,
   addPendingAsset,
 }) => {
-  const { campaignState } = useCampaign();
+  console.log('%c[PageEditor] Rendering with props:', 'color: red; font-weight: bold;', { open, pageData, aspectRatio });
+
+  const { campaignState, isCampaignLoading } = useCampaign();
   const { csvHeaders, pageTemplate: globalPageTemplate, pendingAssets, colors: colorPalette } = campaignState;
   const pageDataFromHook = usePageData(pageData?.index);
 
@@ -83,20 +85,33 @@ const PageEditor = ({
   }, []);
 
   useEffect(() => {
-    if (open && pageData && !editedPositions) {
+    if (open && pageData) {
       const { effectiveFieldPositions, effectiveFieldStyles, effectiveBrandElements, record } = pageDataFromHook;
-      const templateToEdit = safeDeepClone(pageData.customPageTemplate || globalPageTemplate);
-      setEditedPositions(safeDeepClone(effectiveFieldPositions));
-      setEditedBrandElements(safeDeepClone(effectiveBrandElements));
-      // Ensure record is an object before cloning to prevent crashes.
-      setEditedRecord(safeDeepClone(record || {}));
-      setEditedPageTemplate(templateToEdit);
-      const newEditedStyles = {};
-      (csvHeaders || []).forEach(field => {
-        newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(effectiveFieldStyles[field] || {}) };
-      });
-      setEditedStyles(newEditedStyles);
+
+      // Now that HomePage guarantees a valid record, we can initialize more directly.
+      // We still check for record to be safe, but we no longer need to abort.
+      if (record) {
+        const templateToEdit = safeDeepClone(pageData.customPageTemplate || globalPageTemplate);
+        setEditedPositions(safeDeepClone(effectiveFieldPositions));
+        setEditedBrandElements(safeDeepClone(effectiveBrandElements));
+
+        // Sanitization is still a good practice here as a fallback.
+        const sanitizedRecord = {
+          ...record,
+          Título: record.Título || `Página ${pageData.index + 1}`,
+        };
+        setEditedRecord(safeDeepClone(sanitizedRecord));
+
+        setEditedPageTemplate(templateToEdit);
+
+        const newEditedStyles = {};
+        (csvHeaders || []).forEach(field => {
+          newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(effectiveFieldStyles[field] || {}) };
+        });
+        setEditedStyles(newEditedStyles);
+      }
     } else if (!open) {
+      // Reset state when the dialog is closed to ensure a clean slate for the next opening.
       setEditedPositions(null);
       setEditedStyles(null);
       setEditedBrandElements(null);
@@ -104,7 +119,7 @@ const PageEditor = ({
       setEditedPageTemplate(null);
       setSelectedFieldInternal(null);
     }
-  }, [open, pageData, pageDataFromHook, csvHeaders, globalPageTemplate, editedPositions]);
+  }, [open, pageData, pageDataFromHook, csvHeaders, globalPageTemplate]);
 
   useEffect(() => {
     const firstImage = editedPageTemplate?.images?.[0];
@@ -138,7 +153,7 @@ const PageEditor = ({
     if (updatedDataArray?.length > 0) setEditedRecord(updatedDataArray[0]);
   }, []);
 
-  if (!open || !pageData || !editedPageTemplate) return null;
+  if (!open) return null;
 
   const handleSave = () => {
     const savedData = {
@@ -159,7 +174,7 @@ const PageEditor = ({
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="paper" fullScreen={isMobile}>
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>Editar Página Gerada #{pageData.index + 1}</span>
+          <span>Editar Página Gerada #{(pageData?.index ?? -1) + 1}</span>
           <Box>
             <Tooltip title="Copiar estilo"><IconButton onClick={handleCopyStyle}><ContentCopy /></IconButton></Tooltip>
             <Tooltip title="Colar estilo"><IconButton onClick={handlePasteStyle}><ContentPaste /></IconButton></Tooltip>
@@ -170,50 +185,51 @@ const PageEditor = ({
       <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column' }}>
         <Grid container spacing={2} sx={{ flexGrow: 1 }}>
           <Grid item xs={12} md={isMobile ? 12 : 8} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FieldPositioner
-              aspectRatio={aspectRatio}
-              csvHeaders={csvHeaders}
-              fieldPositions={editedPositions}
-              setFieldPositions={setEditedPositions}
-              fieldStyles={editedStyles}
-              setFieldStyles={setEditedStyles}
-              csvData={editorCsvData}
-              colorPalette={imageSwatches}
-              selectedField={selectedFieldInternal}
-              setSelectedField={handleInternalFieldSelection}
-              onCsvDataUpdate={handleFieldPositionerCsvDataUpdate}
-              originalImageSize={originalImageSize}
-              brandElements={editedBrandElements}
-              setBrandElements={setEditedBrandElements}
-              pageTemplate={editedPageTemplate}
-              setPageTemplate={setEditedPageTemplate}
-              currentPreviewIndex={0}
-              pendingAssets={pendingAssets}
-            />
-          </Grid>
-          {!isMobile && (
-            <Grid item xs={12} md={4}>
-              <FormattingPanel
-                imagePalette={imageSwatches}
-                selectedField={selectedFieldInternal}
-                setSelectedField={setSelectedFieldInternal}
-                fieldStyles={editedStyles}
-                setFieldStyles={setEditedStyles}
+            {editedPositions && editedStyles && editedRecord && editedPageTemplate && (
+              <FieldPositioner
+                aspectRatio={aspectRatio}
+                csvHeaders={csvHeaders}
                 fieldPositions={editedPositions}
                 setFieldPositions={setEditedPositions}
-                csvHeaders={csvHeaders}
-                pageTemplate={editedPageTemplate}
-                setPageTemplate={setEditedPageTemplate}
+                fieldStyles={editedStyles}
+                setFieldStyles={setEditedStyles}
+                csvData={editorCsvData}
+                colorPalette={imageSwatches}
+                selectedField={selectedFieldInternal}
+                setSelectedField={handleInternalFieldSelection}
+                onCsvDataUpdate={handleFieldPositionerCsvDataUpdate}
+                originalImageSize={originalImageSize}
                 brandElements={editedBrandElements}
                 setBrandElements={setEditedBrandElements}
-                onOpenHtmlEditor={handleOpenHtmlEditor}
-                showImageLoaders={true}
-                handleImageUpload={handleLocalImageUpload}
-                onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
+                pageTemplate={editedPageTemplate}
+                setPageTemplate={setEditedPageTemplate}
+                currentPreviewIndex={0}
               />
+            )}
             </Grid>
-          )}
-        </Grid>
+            {!isMobile && (
+              <Grid item xs={12} md={4}>
+                <FormattingPanel
+                  imagePalette={imageSwatches}
+                  selectedField={selectedFieldInternal}
+                  setSelectedField={setSelectedFieldInternal}
+                  fieldStyles={editedStyles}
+                  setFieldStyles={setEditedStyles}
+                  fieldPositions={editedPositions}
+                  setFieldPositions={setEditedPositions}
+                  csvHeaders={csvHeaders}
+                  pageTemplate={editedPageTemplate}
+                  setPageTemplate={setEditedPageTemplate}
+                  brandElements={editedBrandElements}
+                  setBrandElements={setEditedBrandElements}
+                  onOpenHtmlEditor={handleOpenHtmlEditor}
+                  showImageLoaders={true}
+                  handleImageUpload={handleLocalImageUpload}
+                  onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
+                />
+              </Grid>
+            )}
+          </Grid>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
@@ -245,8 +261,8 @@ const PageEditor = ({
         </>
       )}
       <TextEditorDialog
-        open={editingField !== null}
-        title={`Editar "${editingField}"`}
+        open={editingField !== null && editedRecord && editedRecord[editingField] !== undefined}
+        title={`Editar "${editingField || ''}"`}
         content={editedRecord?.[editingField] || ''}
         onSave={(newContent) => {
           if (editedRecord && editingField) {

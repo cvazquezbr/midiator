@@ -6,6 +6,7 @@ import {
   Stack,
   Tooltip,
   IconButton,
+  CircularProgress,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -32,7 +33,10 @@ const ImageStepUI = ({
   activeStep,
   handleImageUpload,
 }) => {
-  const { campaignState, setCampaignState } = useCampaign();
+  const { campaignState, setCampaignState, isCampaignLoading } = useCampaign();
+
+  console.log('%c[ImageStepUI] Rendering with campaignState:', 'color: brown; font-weight: bold;', { campaignState });
+
   const {
     csvData,
     csvHeaders,
@@ -72,64 +76,74 @@ const ImageStepUI = ({
         <Typography variant="h6" sx={{ flexShrink: 0, textAlign: 'center', my: 2 }}>
           Editor de Página
         </Typography>
-        <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', p: 1 }}>
-          <FieldPositioner
-            csvHeaders={csvHeaders}
-            fieldPositions={fieldPositions}
-            setFieldPositions={(value) => setCampaignState({ fieldPositions: value })}
-            fieldStyles={fieldStyles}
-            setFieldStyles={(value) => setCampaignState({ fieldStyles: value })}
-            csvData={csvData}
-            onImageDisplayedSizeChange={onImageDisplayedSizeChange}
-            colorPalette={imageColorPalette}
-            onCsvDataUpdate={onCsvDataUpdate}
-            selectedField={selectedField}
-            setSelectedField={(value) => setCampaignState({ selectedField: value })}
-            originalImageSize={originalImageSize}
-            brandElements={brandElements}
-            setBrandElements={(value) => setCampaignState({ brandElements: value })}
-            pageTemplate={pageTemplate}
-            setPageTemplate={(value) => setCampaignState({ pageTemplate: value })}
-            onZIndexChange={onZIndexChange}
-            onOpenHtmlEditor={onOpenHtmlEditor}
-            currentPreviewIndex={currentPreviewIndex}
-            setCurrentPreviewIndex={setCurrentPreviewIndex}
-            onFontScaleChange={(value) => setCampaignState({ fontScale: value })}
-            isCropping={isCropping}
-            setIsCropping={setIsCropping}
-          />
-        </Box>
-        {imageColorPalette && imageColorPalette.length > 0 && (
-          <Box sx={{ flexShrink: 0, py: 1, display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
-            {imageColorPalette.map((color, index) => (
-              <Box
-                key={index}
-                sx={{
-                  width: 28, height: 28, borderRadius: '50%', backgroundColor: color, cursor: 'pointer',
-                  border: '2px solid #fff', boxShadow: '0 0 5px rgba(0,0,0,0.2)',
-                }}
-                onClick={() => {
-                  if (selectedField) {
-                    setCampaignState({
-                      fieldStyles: {
-                        ...fieldStyles,
-                        [selectedField]: { ...(fieldStyles[selectedField] || {}), color: color }
-                      }
-                    });
-                  }
-                }}
+        {csvData && csvData.length > 0 ? (
+          <>
+            <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', p: 1 }}>
+              <FieldPositioner
+                csvHeaders={csvHeaders}
+                fieldPositions={fieldPositions}
+                setFieldPositions={(value) => setCampaignState({ fieldPositions: value })}
+                fieldStyles={fieldStyles}
+                setFieldStyles={(value) => setCampaignState({ fieldStyles: value })}
+                csvData={csvData}
+                onImageDisplayedSizeChange={onImageDisplayedSizeChange}
+                colorPalette={imageColorPalette}
+                onCsvDataUpdate={onCsvDataUpdate}
+                selectedField={selectedField}
+                setSelectedField={(value) => setCampaignState({ selectedField: value })}
+                originalImageSize={originalImageSize}
+                brandElements={brandElements}
+                setBrandElements={(value) => setCampaignState({ brandElements: value })}
+                pageTemplate={pageTemplate}
+                setPageTemplate={(value) => setCampaignState({ pageTemplate: value })}
+                onZIndexChange={onZIndexChange}
+                onOpenHtmlEditor={onOpenHtmlEditor}
+                currentPreviewIndex={currentPreviewIndex}
+                setCurrentPreviewIndex={setCurrentPreviewIndex}
+                onFontScaleChange={(value) => setCampaignState({ fontScale: value })}
+                isCropping={isCropping}
+                setIsCropping={setIsCropping}
               />
-            ))}
+            </Box>
+            {imageColorPalette && imageColorPalette.length > 0 && (
+              <Box sx={{ flexShrink: 0, py: 1, display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
+                {imageColorPalette.map((color, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      width: 28, height: 28, borderRadius: '50%', backgroundColor: color, cursor: 'pointer',
+                      border: '2px solid #fff', boxShadow: '0 0 5px rgba(0,0,0,0.2)',
+                    }}
+                    onClick={() => {
+                      if (selectedField) {
+                        setCampaignState({
+                          fieldStyles: {
+                            ...fieldStyles,
+                            [selectedField]: { ...(fieldStyles[selectedField] || {}), color: color }
+                          }
+                        });
+                      }
+                    }}
+                  />
+                ))}
+              </Box>
+            )}
+            {csvData && csvData.length > 1 && (
+              <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ flexShrink: 0, mt: 2 }} flexWrap="wrap">
+                <Tooltip title="Primeiro Registro"><span><IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small"><SkipPrevious /></IconButton></span></Tooltip>
+                <Tooltip title="Registro Anterior"><span><IconButton onClick={handlePreviousPreview} disabled={currentPreviewIndex === 0} size="small"><ArrowLeft /></IconButton></span></Tooltip>
+                <Typography variant="body2" sx={{ minWidth: '100px', textAlign: 'center' }}>Registro: {currentPreviewIndex + 1} / {csvData.length}</Typography>
+                <Tooltip title="Próximo Registro"><span><IconButton onClick={handleNextPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><ArrowRight /></IconButton></span></Tooltip>
+                <Tooltip title="Último Registro"><span><IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><SkipNext /></IconButton></span></Tooltip>
+              </Stack>
+            )}
+          </>
+        ) : (
+          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Typography variant="body1" color="text.secondary">
+              Por favor, carregue os dados na etapa "Posts Curtos" para começar a editar o modelo.
+            </Typography>
           </Box>
-        )}
-        {csvData && csvData.length > 1 && (
-          <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ flexShrink: 0, mt: 2 }} flexWrap="wrap">
-            <Tooltip title="Primeiro Registro"><span><IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small"><SkipPrevious /></IconButton></span></Tooltip>
-            <Tooltip title="Registro Anterior"><span><IconButton onClick={handlePreviousPreview} disabled={currentPreviewIndex === 0} size="small"><ArrowLeft /></IconButton></span></Tooltip>
-            <Typography variant="body2" sx={{ minWidth: '100px', textAlign: 'center' }}>Registro: {currentPreviewIndex + 1} / {csvData.length}</Typography>
-            <Tooltip title="Próximo Registro"><span><IconButton onClick={handleNextPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><ArrowRight /></IconButton></span></Tooltip>
-            <Tooltip title="Último Registro"><span><IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><SkipNext /></IconButton></span></Tooltip>
-          </Stack>
         )}
       </Box>
 

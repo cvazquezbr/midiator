@@ -335,26 +335,51 @@ function HomePage() {
     toast.info(`Carregando "${campaign.name}"...`);
     setIsLoading(true);
     try {
-      await checkAuthStatus();
-      const loadedCampaign = await loadCampaign(campaign.id);
-      applyLoadedCampaign({
-        ...loadedCampaign,
-        currentCampaign: { id: loadedCampaign.id, name: loadedCampaign.name },
-      });
-      setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
-      setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
-      const dbPaletteId = loadedCampaign.palette_id;
-      const hasCustomPalette = loadedCampaign.campaign_data?.customPalette?.colors?.length > 0;
-      if (dbPaletteId) setCampaignState({ paletteId: dbPaletteId });
-      else if (hasCustomPalette) setCampaignState({ paletteId: 'custom' });
-      else setCampaignState({ paletteId: null });
-      toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
-      setActiveStep(3);
+        await checkAuthStatus();
+        const loadedCampaign = await loadCampaign(campaign.id);
+        console.log('%c[HomePage] Campaign Loaded from DB:', 'color: purple; font-weight: bold;', loadedCampaign);
+
+        // A `campaign_data` pode não existir em campanhas antigas, então garanta que seja um objeto
+        const campaign_data = loadedCampaign.campaign_data || {};
+
+        // Determine o paletteId a partir dos dados carregados
+        const dbPaletteId = loadedCampaign.palette_id;
+        const hasCustomPalette = campaign_data.customPalette?.colors?.length > 0;
+        let finalPaletteId = null;
+        if (dbPaletteId) {
+            finalPaletteId = dbPaletteId;
+        } else if (hasCustomPalette) {
+            finalPaletteId = 'custom';
+        }
+
+        // Crie o objeto `campaign_data` final com todas as informações consolidadas
+        const finalCampaignData = {
+            ...campaign_data,
+            paletteId: finalPaletteId,
+        };
+
+        // Crie o objeto de nível superior esperado por `applyLoadedCampaign`
+        const campaignToApply = {
+            id: loadedCampaign.id,
+            name: loadedCampaign.name,
+            campaign_data: finalCampaignData,
+            pendingAssets: loadedCampaign.pendingAssets, // Pass the pending assets
+        };
+
+        applyLoadedCampaign(campaignToApply);
+
+        // Defina o estado da UI local que não faz parte do `campaignState`
+        setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
+        setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
+
+        toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
+        setActiveStep(3);
     } catch (err) {
-      toast.error(`Falha ao carregar campanha: ${err.message}`);
-      setIsLoading(false);
+        toast.error(`Falha ao carregar campanha: ${err.message}`);
+    } finally {
+        setIsLoading(false);
     }
-  };
+};
 
   const parseCsvFile = async (file) => {
     if (!file) return;
@@ -459,26 +484,59 @@ function HomePage() {
 
   const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
     setCampaignState(prev => {
-      const updates = { csvData: novosRegistros };
+      // 1. Sanitize the incoming records and ensure 'Título' exists.
+      const sanitizedRegistros = novosRegistros.map((record, index) => ({
+        ...(record || {}),
+        Título: (record || {}).Título || `Página ${index + 1}`,
+      }));
+
+      const updates = { csvData: sanitizedRegistros };
       if (JSON.stringify(novasColunas) !== JSON.stringify(prev.csvHeaders)) {
         updates.csvHeaders = novasColunas;
       }
-      updates.generatedPagesData = novosRegistros.map((record, index) => {
-        const existingPage = prev.generatedPagesData.find(img => img.index === index) || {};
-        return { ...existingPage, index, record, url: null, blob: null };
+
+      // 2. Synchronize generatedPagesData with the newly sanitized csvData.
+      updates.generatedPagesData = sanitizedRegistros.map((record, index) => {
+        const existingPage = (prev.generatedPagesData || []).find(p => p.index === index) || {};
+        return {
+          ...existingPage,
+          index,
+          record, // Ensure the record is always in sync
+          url: null, // Invalidate old thumbnail
+          blob: null
+        };
       });
+
+      console.log("[handleDadosAlterados] Synced state:", updates);
       return updates;
     });
   }, [setCampaignState]);
 
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
-    setCampaignState(prev => ({
-      csvData: newCsvData,
-      generatedPagesData: newCsvData.map((record, index) => {
-        const existingPage = prev.generatedPagesData.find(img => img.index === index) || {};
-        return { ...existingPage, index, record };
-      })
-    }));
+    setCampaignState(prev => {
+      // 1. Sanitize the incoming records.
+      const sanitizedCsvData = newCsvData.map((record, index) => ({
+        ...(record || {}),
+        Título: (record || {}).Título || `Página ${index + 1}`,
+      }));
+
+      // 2. Synchronize generatedPagesData with the sanitized data.
+      const synchronizedPages = sanitizedCsvData.map((record, index) => {
+        const existingPage = (prev.generatedPagesData || []).find(p => p.index === index) || {};
+        return {
+          ...existingPage,
+          index,
+          record // Overwrite with the latest record data
+        };
+      });
+
+      const updates = {
+        csvData: sanitizedCsvData,
+        generatedPagesData: synchronizedPages,
+      };
+      console.log("[handleCsvRecordContentUpdate] Synced state:", updates);
+      return updates;
+    });
   }, [setCampaignState]);
 
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => {
@@ -514,10 +572,11 @@ function HomePage() {
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
       const imagePrompt = await generateCampaignImagePrompt({ content: finalContent, aspectRatio, autor: finalAutor, palette });
       const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: palette?.colors || [] });
-      const tempUrl = addPendingAsset(dataURLtoBlob(base64Data));
-      if (!tempUrl) throw new Error("Falha ao criar URL para a imagem gerada.");
-      setCampaignState({ generatedPageUrl: tempUrl });
-      addNewImageToCanvas(tempUrl);
+      const imageBlob = dataURLtoBlob(`data:image/png;base64,${base64Data}`);
+      const managedUrl = addPendingAsset(imageBlob);
+      if (!managedUrl) throw new Error("Falha ao criar URL para a imagem gerada.");
+      setCampaignState({ generatedPageUrl: managedUrl });
+      addNewImageToCanvas(managedUrl);
       return true;
     } catch (imageError) {
       toast.error(`Erro na geração da imagem: ${imageError.message}`);
@@ -591,17 +650,54 @@ function HomePage() {
       const { promptText, promptNumRecords } = campaignState;
       const iaResponseText = await generateIAContent({ promptText, promptNumRecords });
       const parsedResult = parseIaResponseToCsvData(iaResponseText);
-      if (!parsedResult?.data?.length) { toast.error('Não foi possível processar a resposta da IA.'); return; }
+      if (!parsedResult?.data?.length) {
+        toast.error('Não foi possível processar a resposta da IA.');
+        return;
+      }
+
       const { data: csvDataResult, headers: csvHeadersResult } = parsedResult;
-      const { newPositions, newStyles } = autoArrangeFields({ csvHeaders: csvHeadersResult, fieldPositions: {}, fieldStyles: {}, csvData: csvDataResult, effectiveImageSize: originalImageSize });
-      const newGeneratedPagesData = csvDataResult.map((record, index) => ({ index, record, blob: null, url: null, filename: `midiator_${String(index + 1).padStart(3, '0')}.png` }));
-      setCampaignState({ csvData: csvDataResult, csvHeaders: csvHeadersResult, fieldPositions: newPositions, fieldStyles: newStyles, initialFieldStyles: newStyles, generatedPagesData: newGeneratedPagesData });
+
+      // 1. Sanitize the AI-generated records.
+      const sanitizedCsvData = csvDataResult.map((record, index) => ({
+        ...record,
+        Título: record.Título || `Página ${index + 1}`,
+      }));
+
+      const { newPositions, newStyles } = autoArrangeFields({
+        csvHeaders: csvHeadersResult,
+        fieldPositions: {},
+        fieldStyles: {},
+        csvData: sanitizedCsvData,
+        effectiveImageSize: originalImageSize
+      });
+
+      // 2. Synchronize generatedPagesData with the sanitized data.
+      const newGeneratedPagesData = sanitizedCsvData.map((record, index) => ({
+        index,
+        record,
+        blob: null,
+        url: null,
+        filename: `midiator_${String(index + 1).padStart(3, '0')}.png`
+      }));
+
+      const updates = {
+        csvData: sanitizedCsvData,
+        csvHeaders: csvHeadersResult,
+        fieldPositions: newPositions,
+        fieldStyles: newStyles,
+        initialFieldStyles: newStyles,
+        generatedPagesData: newGeneratedPagesData
+      };
+
+      console.log("[handleGenerateIAContent] Synced state:", updates);
+      setCampaignState(updates);
       setInputMethod('manual');
       toast.success('Geração de posts concluída.');
     } catch (error) {
       toast.error(`Erro ao gerar conteúdo com IA: ${error.message}`);
     } finally {
-      setIsGenerating(false); setGenerationStatus('');
+      setIsGenerating(false);
+      setGenerationStatus('');
     }
   };
 
@@ -620,7 +716,7 @@ function HomePage() {
         if (oldImage?.src?.startsWith('blob:')) removePendingAsset(oldImage.src);
 
         // Convert base64 to a managed blob URL
-        const imageBlob = dataURLtoBlob(base64Data);
+        const imageBlob = dataURLtoBlob(`data:image/png;base64,${base64Data}`);
         const managedImageUrl = addPendingAsset(imageBlob);
         if (!managedImageUrl) throw new Error("Falha ao registrar a imagem gerada.");
 
@@ -646,18 +742,19 @@ function HomePage() {
       // Correctly update the specific page data within the generatedPagesData array
       setCampaignState(prev => {
         const newPagesData = prev.generatedPagesData.map(p => {
-          if (p.index === index) {
-            // Merge existing data, new data from generation, and any other updates
-            return {
-              ...(p || {}),
-              ...finalPageData,
-              ...pageUpdateData,
-              url: tempUrl,
-              dataUrl: null, // Clear any old data URLs
-              blob: undefined // Don't store the blob in the state
-            };
+          if (p.index !== index) {
+            return p;
           }
-          return p;
+          // Create a completely new object for the updated page to ensure React detects the change.
+          const updatedPage = {
+            ...(p || {}), // Start with the existing page data
+            ...finalPageData, // Apply the core data from the generation service
+            ...pageUpdateData, // Apply any template/image updates
+            url: tempUrl, // Set the new, managed URL for the thumbnail
+            dataUrl: null, // Clear any old data URLs to save memory
+            blob: undefined, // The blob is now managed in pendingAssets, so don't store it here.
+          };
+          return updatedPage;
         });
         return { generatedPagesData: newPagesData };
       });
