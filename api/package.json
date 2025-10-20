@@ -2,6 +2,7 @@
   "name": "midiator-api",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@vercel/blob": "^1.1.1",
     "cookie": "^1.0.2",
