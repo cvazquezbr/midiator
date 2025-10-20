@@ -275,7 +275,7 @@ const PageGeneratorFrontendOnly = ({
       setCampaignState(current => ({
         generatedPagesData: current.generatedPagesData.map(page =>
           page.index !== modifiedPageData.index ? page : {
-            ...page, ...newPageImageData, ...modifiedPageData, fontScale: 1,
+            ...page, ...modifiedPageData, ...newPageImageData, fontScale: 1,
           }
         )
       }));
