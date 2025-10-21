@@ -145,13 +145,17 @@ export const CampaignProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
+    console.log('%c[CampaignContext] Provider Mounted', 'color: green; font-weight: bold;');
     // This effect runs only once on mount to set up the cleanup function for when
     // the provider unmounts. An empty dependency array [] ensures this behavior.
     return () => {
+      console.log('%c[CampaignContext] Provider Unmounting...', 'color: red; font-weight: bold;');
       // We use the functional form of the state setter here to guarantee access
       // to the most recent 'pendingAssets' state during cleanup, avoiding issues
       // with stale closures.
       setCampaignStateInternal(prev => {
+        const assetCount = Object.keys(prev.pendingAssets).length;
+        console.log(`[CampaignContext] Cleaning up ${assetCount} pending assets.`);
         Object.keys(prev.pendingAssets).forEach(url => {
           console.log(`[CampaignContext] Revoking blob URL on unmount: ${url}`);
           URL.revokeObjectURL(url);
