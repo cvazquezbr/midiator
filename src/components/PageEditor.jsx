@@ -84,34 +84,30 @@ const PageEditor = ({
     setSelectedFieldInternal(fieldToSelect);
   }, []);
 
+  // Effect to initialize the editor's state when it's opened.
+  // This runs once when the dialog is opened for a specific page, setting up the local editing state.
   useEffect(() => {
-    if (open && pageData) {
+    if (open && pageDataFromHook.record) {
       const { effectiveFieldPositions, effectiveFieldStyles, effectiveBrandElements, record } = pageDataFromHook;
 
-      // Now that HomePage guarantees a valid record, we can initialize more directly.
-      // We still check for record to be safe, but we no longer need to abort.
-      if (record) {
-        const templateToEdit = safeDeepClone(pageData.customPageTemplate || globalPageTemplate);
-        setEditedPositions(safeDeepClone(effectiveFieldPositions));
-        setEditedBrandElements(safeDeepClone(effectiveBrandElements));
+      // Initialize all local states for editing
+      setEditedPositions(safeDeepClone(effectiveFieldPositions));
+      setEditedBrandElements(safeDeepClone(effectiveBrandElements));
+      setEditedRecord(safeDeepClone(record));
 
-        // Sanitization is still a good practice here as a fallback.
-        const sanitizedRecord = {
-          ...record,
-          Título: record.Título || `Página ${pageData.index + 1}`,
-        };
-        setEditedRecord(safeDeepClone(sanitizedRecord));
+      // Use the page's custom template if it exists, otherwise fall back to the global one.
+      setEditedPageTemplate(safeDeepClone(pageData.customPageTemplate || globalPageTemplate));
 
-        setEditedPageTemplate(templateToEdit);
+      // Initialize styles, ensuring all fields have a complete style object to prevent errors.
+      const newEditedStyles = {};
+      (csvHeaders || []).forEach(field => {
+        newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(effectiveFieldStyles[field] || {}) };
+      });
+      setEditedStyles(newEditedStyles);
+    }
 
-        const newEditedStyles = {};
-        (csvHeaders || []).forEach(field => {
-          newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(effectiveFieldStyles[field] || {}) };
-        });
-        setEditedStyles(newEditedStyles);
-      }
-    } else if (!open) {
-      // Reset state when the dialog is closed to ensure a clean slate for the next opening.
+    // Cleanup: Reset all local state when the dialog is closed to ensure a clean slate.
+    if (!open) {
       setEditedPositions(null);
       setEditedStyles(null);
       setEditedBrandElements(null);
@@ -119,7 +115,18 @@ const PageEditor = ({
       setEditedPageTemplate(null);
       setSelectedFieldInternal(null);
     }
-  }, [open, pageData, pageDataFromHook, csvHeaders, globalPageTemplate]);
+    // This effect intentionally omits `globalPageTemplate` to prevent re-initialization on every external change.
+  }, [open, pageData, pageDataFromHook, csvHeaders]);
+
+  // Effect to sync with external changes to the global page template.
+  // This allows changes made outside the editor (e.g., in ImageStep) to be reflected,
+  // but ONLY if the user has not already started making custom changes to this page's template.
+  useEffect(() => {
+    if (open && !pageData.customPageTemplate && globalPageTemplate) {
+      // If there is no custom template, it's safe to sync from the global state.
+      setEditedPageTemplate(safeDeepClone(globalPageTemplate));
+    }
+  }, [globalPageTemplate, open, pageData.customPageTemplate]);
 
   useEffect(() => {
     const firstImage = editedPageTemplate?.images?.[0];
