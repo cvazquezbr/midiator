@@ -705,16 +705,19 @@ function HomePage() {
     let pageUpdateData = {};
     const pageData = generatedPagesData.find(p => p.index === index);
     let effectivePageTemplate = pageData?.customPageTemplate || pageTemplate;
-    let oldImageSrcToRevoke = null; // Variable to hold the old image URL
+    const memorialColors = palettes.find(p => p.id === paletteId)?.colors || customPalette?.colors || [];
+
+    // This is the key change: We create a new state object that will be passed to the
+    // page generation service. This ensures the service has the *absolute latest* data,
+    // including the newly generated image, preventing a race condition where the page is
+    // rendered with the new data but before the new image is available in the main state.
+    let updatedCampaignStateForGeneration = { ...campaignState };
 
     if (imagePrompt?.trim()) {
       setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
       try {
         const sourceStyle = effectivePageTemplate.images?.[0] ? (({ id, src, ...style }) => style)(effectivePageTemplate.images[0]) : { x: 0, y: 0, width: 100, height: 100, zIndex: -1, objectFit: 'cover' };
         const oldImage = (effectivePageTemplate.images || [])[0];
-        if (oldImage?.src?.startsWith('blob:')) {
-          oldImageSrcToRevoke = oldImage.src; // Capture the URL to be revoked
-        }
 
         const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
         if (!base64Data) throw new Error("A IA não conseguiu gerar a imagem.");
@@ -725,34 +728,54 @@ function HomePage() {
 
         const newImage = { ...createNewImageElement(managedImageUrl), ...sourceStyle, visible: true };
         const finalImages = (effectivePageTemplate.images?.length > 0) ? [newImage, ...effectivePageTemplate.images.slice(1)] : [newImage];
+
+        // Update the template that will be used for this specific page generation
         effectivePageTemplate = { ...effectivePageTemplate, images: finalImages };
         pageUpdateData.customPageTemplate = effectivePageTemplate;
+
+        // If there was an old image, remove it from the main state *after* the new one has been added.
+        if (oldImage?.src) {
+          removePendingAsset(oldImage.src);
+        }
+
+        // CRITICAL: Update the state snapshot for the generation service
+        updatedCampaignStateForGeneration = {
+            ...updatedCampaignStateForGeneration,
+            pageTemplate: effectivePageTemplate,
+        };
+
       } catch (error) {
         toast.error(`Falha na Imagem (Post #${index + 1}): ${error.message}`);
+        // Do not proceed if image generation fails
+        setGenerationStatus('');
+        return false;
       }
     }
 
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
-      const finalPageData = await PageGenerationService.generatePageImage({
-        record,
-        index,
-        campaignContext: campaignState,
-        pageData: { ...(pageData || {}), customPageTemplate: effectivePageTemplate, fontScale },
-      });
+        // Use the updated, consistent state snapshot for page generation
+        const finalPageData = await PageGenerationService.generatePageImage({
+            record,
+            index,
+            campaignContext: updatedCampaignStateForGeneration, // Use the updated state
+            pageData: { ...(pageData || {}), customPageTemplate: effectivePageTemplate, fontScale },
+        });
+
       const tempUrl = addPendingAsset(finalPageData.blob);
       if (!tempUrl) throw new Error("Falha ao criar URL para a página final.");
 
-      // State Update: Apply the new page data but DO NOT revoke the old asset yet.
+      // Now, update the actual component state with the final result
       setCampaignState(prev => {
         const newPagesData = prev.generatedPagesData.map(p => {
           if (p.index !== index) {
             return p;
           }
+          // Merge the previous state with the new data to ensure nothing is lost.
           return {
             ...(p || {}),
             ...finalPageData,
-            ...pageUpdateData,
+            ...pageUpdateData, // Includes the new custom template with the new image
             url: tempUrl,
             dataUrl: null,
             blob: undefined,
@@ -760,15 +783,6 @@ function HomePage() {
         });
         return { generatedPagesData: newPagesData };
       });
-
-      // Defer the revocation of the old image to the next tick of the event loop.
-      // This gives React time to commit the state update and re-render with the new image
-      // before the old image URL becomes invalid, thus preventing the race condition.
-      if (oldImageSrcToRevoke) {
-        setTimeout(() => {
-          removePendingAsset(oldImageSrcToRevoke);
-        }, 0);
-      }
 
       toast.success(`Página #${index + 1} gerada.`);
       return true;
