@@ -24,7 +24,7 @@ export const uploadAsset = async (blob, filename, campaignId, userId) => {
   try {
     const newBlob = await upload(fullPath, blob, {
       access: 'public',
-      handleUploadUrl: '/api/upload-client',
+      handleUploadUrl: '/api/upload-client.js',
       multipart: true,
     });
 
