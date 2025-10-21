@@ -39,11 +39,7 @@ const DraggableElementInternal = ({
 }) => {
   const { campaignState } = useCampaign();
   const { pendingAssets } = campaignState;
-
-  useEffect(() => {
-    console.log(`%c[DraggableElement-${element.id}] Render/Update. Content URL: ${content}`, 'color: #9C27B0;', 'Pending assets count:', Object.keys(pendingAssets).length);
-  }, [content, pendingAssets, element.id]);
-
+  console.log('[DraggableElement] PROPS RECEIVED:', { element, content });
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);

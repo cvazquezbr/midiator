@@ -722,16 +722,20 @@ function HomePage() {
     let pageUpdateData = {};
     const pageData = generatedPagesData.find(p => p.index === index);
     let effectivePageTemplate = pageData?.customPageTemplate || pageTemplate;
+    let oldImageSrcToRevoke = null; // Variable to hold the old image URL
+
     if (imagePrompt?.trim()) {
       setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
       try {
         const sourceStyle = effectivePageTemplate.images?.[0] ? (({ id, src, ...style }) => style)(effectivePageTemplate.images[0]) : { x: 0, y: 0, width: 100, height: 100, zIndex: -1, objectFit: 'cover' };
         const oldImage = (effectivePageTemplate.images || [])[0];
+        if (oldImage?.src?.startsWith('blob:')) {
+          oldImageSrcToRevoke = oldImage.src; // Capture the URL to be revoked
+        }
+
         const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
         if (!base64Data) throw new Error("A IA não conseguiu gerar a imagem.");
-        if (oldImage?.src?.startsWith('blob:')) removePendingAsset(oldImage.src);
 
-        // Convert base64 to a managed blob URL
         const imageBlob = dataURLtoBlob(`data:image/png;base64,${base64Data}`);
         const managedImageUrl = addPendingAsset(imageBlob);
         if (!managedImageUrl) throw new Error("Falha ao registrar a imagem gerada.");
@@ -744,6 +748,7 @@ function HomePage() {
         toast.error(`Falha na Imagem (Post #${index + 1}): ${error.message}`);
       }
     }
+
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
       const finalPageData = await PageGenerationService.generatePageImage({
@@ -755,25 +760,33 @@ function HomePage() {
       const tempUrl = addPendingAsset(finalPageData.blob);
       if (!tempUrl) throw new Error("Falha ao criar URL para a página final.");
 
-      // Correctly update the specific page data within the generatedPagesData array
+      // State Update: Apply the new page data but DO NOT revoke the old asset yet.
       setCampaignState(prev => {
         const newPagesData = prev.generatedPagesData.map(p => {
           if (p.index !== index) {
             return p;
           }
-          // Create a completely new object for the updated page to ensure React detects the change.
-          const updatedPage = {
-            ...(p || {}), // Start with the existing page data
-            ...finalPageData, // Apply the core data from the generation service
-            ...pageUpdateData, // Apply any template/image updates
-            url: tempUrl, // Set the new, managed URL for the thumbnail
-            dataUrl: null, // Clear any old data URLs to save memory
-            blob: undefined, // The blob is now managed in pendingAssets, so don't store it here.
+          return {
+            ...(p || {}),
+            ...finalPageData,
+            ...pageUpdateData,
+            url: tempUrl,
+            dataUrl: null,
+            blob: undefined,
           };
-          return updatedPage;
         });
         return { generatedPagesData: newPagesData };
       });
+
+      // Defer the revocation of the old image to the next tick of the event loop.
+      // This gives React time to commit the state update and re-render with the new image
+      // before the old image URL becomes invalid, thus preventing the race condition.
+      if (oldImageSrcToRevoke) {
+        setTimeout(() => {
+          removePendingAsset(oldImageSrcToRevoke);
+        }, 0);
+      }
+
       toast.success(`Página #${index + 1} gerada.`);
       return true;
     } catch (error) {
