@@ -259,6 +259,7 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const handleSaveIndividualModifications = async (modifiedPageData) => {
+    console.log('[PageGenerator] Iniciando salvamento. Dados recebidos do editor:', modifiedPageData);
     handleCloseGeneratedPageEditor();
     try {
       const regenContext = {
@@ -272,19 +273,23 @@ const PageGeneratorFrontendOnly = ({
         fontScale: 1,
       };
       const newPageImageData = await regenerateSinglePage(regenContext);
+      console.log('[PageGenerator] Imagem da página regenerada:', newPageImageData);
+
 
       const managedUrl = addPendingAsset(newPageImageData.blob);
+      console.log(`[PageGenerator] Blob da imagem registrado. URL gerenciada: ${managedUrl}`);
+
       if (!managedUrl) {
         toast.error('Falha ao registrar a imagem da página modificada.');
         return;
       }
 
-      setCampaignState(current => ({
-        generatedPagesData: current.generatedPagesData.map(page => {
+      let newPagesData;
+      setCampaignState(current => {
+        newPagesData = current.generatedPagesData.map(page => {
           if (page.index !== modifiedPageData.index) {
             return page;
           }
-          // Construct a new page object from scratch to avoid stale data.
           const finalPageData = {
             index: modifiedPageData.index,
             record: modifiedPageData.record,
@@ -292,18 +297,22 @@ const PageGeneratorFrontendOnly = ({
             customFieldPositions: modifiedPageData.customFieldPositions,
             customFieldStyles: modifiedPageData.customFieldStyles,
             customBrandElements: modifiedPageData.customBrandElements,
-            fontScale: 1, // Reset font scale on save
-            url: managedUrl, // Use the new managed URL for the thumbnail
+            fontScale: 1,
+            url: managedUrl,
             filename: newPageImageData.filename,
-            // Explicitly clear transient/old data
             blob: undefined,
             dataUrl: null,
           };
+          console.log('[PageGenerator] Objeto final da página para atualização de estado:', finalPageData);
           return finalPageData;
-        })
-      }));
+        });
+        console.log('[PageGenerator] Novo array `generatedPagesData` completo:', newPagesData);
+        return { generatedPagesData: newPagesData };
+      });
+
       toast.success(`Página #${modifiedPageData.index + 1} salva.`);
     } catch (error) {
+      console.error('[PageGenerator] Erro ao salvar modificações da página:', error);
       toast.error(`Falha ao regenerar a página: ${error.message}`);
     }
   };
