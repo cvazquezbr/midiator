@@ -229,7 +229,19 @@ export const generateCampaignImage = async ({ prompt, aspectRatio, colors = [] }
   }
 
   const base64Image = await geminiAPI.generateImage(finalImagePrompt, 'Geração de Imagem de Campanha');
-  return `data:image/png;base64,${base64Image}`;
+
+  // --- NEW VALIDATION BLOCK ---
+  // A very short response is likely an error message from the API, not an image.
+  // We also check if the string contains only valid Base64 characters.
+  const base64Regex = /^[A-Za-z0-9+/=]+$/;
+  if (typeof base64Image !== 'string' || base64Image.length < 200 || !base64Regex.test(base64Image)) {
+    // Log the actual response for debugging, but return a user-friendly error.
+    console.error("AI image generation returned an invalid response:", base64Image);
+    throw new Error(`A IA retornou uma resposta inesperada em vez de uma imagem.`);
+  }
+  // --- END VALIDATION BLOCK ---
+
+  return base64Image;
 };
 
 
