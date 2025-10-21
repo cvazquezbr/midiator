@@ -29,6 +29,18 @@ const initialState = {
   tomDeVoz: 'Profissional e direto',
   campaignContent: null,
   followupPostsQuantity: 5,
+  followupPosts: [],
+  promptText: '',
+  promptNumRecords: 10,
+  generatedAudioData: [],
+  templateFieldStyles: {},
+  fontScale: 1,
+  isGeneratingFollowup: false,
+  initialFieldStyles: {},
+  activeStep: 0,
+  inputMethod: 'ia',
+  generatedPageUrl: null,
+  colors: [],
   // Keep non-campaign-data specific state separate if needed
   // For example, UI state could live here, but for now, we keep it all together.
 };
