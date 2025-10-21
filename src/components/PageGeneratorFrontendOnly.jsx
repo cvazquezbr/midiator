@@ -272,15 +272,28 @@ const PageGeneratorFrontendOnly = ({
         fontScale: 1,
       };
       const newPageImageData = await regenerateSinglePage(regenContext);
+
+      const managedUrl = addPendingAsset(newPageImageData.blob);
+      if (!managedUrl) {
+          toast.error('Falha ao registrar a imagem da página modificada.');
+          return;
+      }
+
       setCampaignState(current => ({
         generatedPagesData: current.generatedPagesData.map(page => {
           if (page.index !== modifiedPageData.index) {
             return page;
           }
           // Perform an explicit merge to guarantee image data is not overwritten
-          const finalPageData = { ...page, ...modifiedPageData, fontScale: 1 };
-          finalPageData.url = newPageImageData.url;
-          finalPageData.blob = newPageImageData.blob;
+          const finalPageData = {
+            ...page,
+            ...modifiedPageData,
+            fontScale: 1,
+            url: managedUrl,
+            blob: undefined,
+            dataUrl: null,
+            filename: newPageImageData.filename,
+           };
           return finalPageData;
         })
       }));
