@@ -586,10 +586,26 @@ function HomePage() {
     const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno;
     setLoading(true);
     try {
-      const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(content.conteudo)}"`;
+      // Use campaign state as a fallback if content is not directly provided.
+      const contentToSummarize = content || campaignState.campaignContent;
+
+      if (!contentToSummarize || !contentToSummarize.conteudo) {
+        toast.error("Não há conteúdo principal para gerar o resumo.");
+        setLoading(false); // Make sure to turn off loading state
+        return;
+      }
+
+      const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(contentToSummarize.conteudo)}"`;
       const summary = await geminiAPI.generateContent(summaryPrompt);
       const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno';
-      setCampaignState({ campaignContent: { ...content, [fieldName]: summary } });
+
+      // Use functional update to prevent race conditions when generating multiple summaries
+      setCampaignState(prevState => ({
+        campaignContent: {
+          ...prevState.campaignContent,
+          [fieldName]: summary,
+        },
+      }));
     } catch (error) {
       toast.error(`Erro ao gerar resumo: ${error.message}`);
     } finally {
