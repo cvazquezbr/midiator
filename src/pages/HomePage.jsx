@@ -718,16 +718,20 @@ function HomePage() {
     let pageUpdateData = {};
     const pageData = generatedPagesData.find(p => p.index === index);
     let effectivePageTemplate = pageData?.customPageTemplate || pageTemplate;
+    let oldImageSrcToRevoke = null;
+
     if (imagePrompt?.trim()) {
       setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
       try {
         const sourceStyle = effectivePageTemplate.images?.[0] ? (({ id, src, ...style }) => style)(effectivePageTemplate.images[0]) : { x: 0, y: 0, width: 100, height: 100, zIndex: -1, objectFit: 'cover' };
         const oldImage = (effectivePageTemplate.images || [])[0];
+        if (oldImage?.src?.startsWith('blob:')) {
+          oldImageSrcToRevoke = oldImage.src; // Mark for removal later
+        }
+
         const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
         if (!base64Data) throw new Error("A IA não conseguiu gerar a imagem.");
-        if (oldImage?.src?.startsWith('blob:')) removePendingAsset(oldImage.src);
 
-        // Convert base64 to a managed blob URL
         const imageBlob = dataURLtoBlob(`data:image/png;base64,${base64Data}`);
         const managedImageUrl = addPendingAsset(imageBlob);
         if (!managedImageUrl) throw new Error("Falha ao registrar a imagem gerada.");
@@ -740,36 +744,51 @@ function HomePage() {
         toast.error(`Falha na Imagem (Post #${index + 1}): ${error.message}`);
       }
     }
+
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
+      // Create an intermediate, updated state object to pass to the service
+      const intermediateCampaignContext = {
+        ...campaignState,
+        generatedPagesData: campaignState.generatedPagesData.map(p =>
+          p.index === index ? { ...p, ...pageUpdateData } : p
+        ),
+      };
+
       const finalPageData = await PageGenerationService.generatePageImage({
         record,
         index,
-        campaignContext: campaignState,
+        campaignContext: intermediateCampaignContext, // Use the updated context
         pageData: { ...(pageData || {}), customPageTemplate: effectivePageTemplate, fontScale },
       });
+
       const tempUrl = addPendingAsset(finalPageData.blob);
       if (!tempUrl) throw new Error("Falha ao criar URL para a página final.");
 
-      // Correctly update the specific page data within the generatedPagesData array
+      // Now, perform the final state update
       setCampaignState(prev => {
         const newPagesData = prev.generatedPagesData.map(p => {
           if (p.index !== index) {
             return p;
           }
-          // Create a completely new object for the updated page to ensure React detects the change.
           const updatedPage = {
-            ...(p || {}), // Start with the existing page data
-            ...finalPageData, // Apply the core data from the generation service
-            ...pageUpdateData, // Apply any template/image updates
-            url: tempUrl, // Set the new, managed URL for the thumbnail
-            dataUrl: null, // Clear any old data URLs to save memory
-            blob: undefined, // The blob is now managed in pendingAssets, so don't store it here.
+            ...(p || {}),
+            ...finalPageData,
+            ...pageUpdateData,
+            url: tempUrl,
+            dataUrl: null,
+            blob: undefined,
           };
           return updatedPage;
         });
         return { generatedPagesData: newPagesData };
       });
+
+      // Safely revoke the old image URL after the new one is set
+      if (oldImageSrcToRevoke) {
+        removePendingAsset(oldImageSrcToRevoke);
+      }
+
       toast.success(`Página #${index + 1} gerada.`);
       return true;
     } catch (error) {
