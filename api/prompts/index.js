@@ -1,5 +1,5 @@
-import { query } from '../db';
-import { withAuth } from '../middleware/auth';
+import { query } from '../db.js';
+import { withAuth } from '../middleware/auth.js';
 
 const handler = async (req, res) => {
   // withAuth HOC has already run, so req.user is available.
