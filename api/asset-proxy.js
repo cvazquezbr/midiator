@@ -3,7 +3,7 @@ export const config = {
 };
 
 export default async function handler(req) {
-  const { searchParams } = new URL(req.url);
+  const { searchParams } = new URL(req.url, `http://${req.headers.host}`);
   const assetUrl = searchParams.get('url');
 
   if (!assetUrl) {
