@@ -91,7 +91,7 @@ function HomePage() {
     csvData, csvHeaders, fieldPositions, fieldStyles, brandElements,
     pageTemplate, selectedField, currentCampaign, generatedPagesData,
     generatedVideos, aspectRatio, pendingAssets, paletteId, customPalette,
-    imageColorPalette,
+    imageColorPalette, selectedPersonaForCampaign, selectedAutorForCampaign,
   } = campaignState;
 
   // Local UI State - not part of the campaign data model
@@ -137,9 +137,6 @@ function HomePage() {
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
 
-  // Local state for campaign-specific settings that don't belong in the main data model
-  const [selectedPersonaForCampaign, setSelectedPersonaForCampaign] = useState('');
-  const [selectedAutorForCampaign, setSelectedAutorForCampaign] = useState('');
   const [startAutoresInCreate, setStartAutoresInCreate] = useState(false);
   const [startPersonasInCreate, setStartPersonasInCreate] = useState(false);
 
@@ -159,8 +156,8 @@ function HomePage() {
   const handleRequestNewAutor = () => { setStartAutoresInCreate(true); setCurrentView('autores'); };
   const handleRequestNewPersona = () => { setStartPersonasInCreate(true); setCurrentView('personas'); };
   const handleCreationDone = (view) => { if (view === 'autores') setStartAutoresInCreate(false); else if (view === 'personas') setStartPersonasInCreate(false); setCurrentView('campaigns'); };
-  const handleAutorCreated = (newAutor) => { fetchAutoresForCampaign(); if (newAutor?.id) setSelectedAutorForCampaign(newAutor.id); setStartAutoresInCreate(false); setCurrentView('campaigns'); };
-  const handlePersonaCreated = (newPersona) => { fetchPersonasForCampaign(); if (newPersona?.id) setSelectedPersonaForCampaign(newPersona.id); setStartPersonasInCreate(false); setCurrentView('campaigns'); };
+  const handleAutorCreated = (newAutor) => { fetchAutoresForCampaign(); if (newAutor?.id) setCampaignState({ selectedAutorForCampaign: newAutor.id }); setStartAutoresInCreate(false); setCurrentView('campaigns'); };
+  const handlePersonaCreated = (newPersona) => { fetchPersonasForCampaign(); if (newPersona?.id) setCampaignState({ selectedPersonaForCampaign: newPersona.id }); setStartPersonasInCreate(false); setCurrentView('campaigns'); };
 
   // This effect synchronizes the UI state after a campaign is loaded into the context
   useEffect(() => {
@@ -368,9 +365,6 @@ function HomePage() {
 
         applyLoadedCampaign(campaignToApply);
 
-        // Defina o estado da UI local que não faz parte do `campaignState`
-        setSelectedAutorForCampaign(loadedCampaign.autor_id || '');
-        setSelectedPersonaForCampaign(loadedCampaign.persona_id || '');
 
         toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
         setActiveStep(3);

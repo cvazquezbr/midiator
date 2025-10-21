@@ -41,6 +41,8 @@ const initialState = {
   inputMethod: 'ia',
   generatedPageUrl: null,
   colors: [],
+  selectedPersonaForCampaign: '',
+  selectedAutorForCampaign: '',
   // Keep non-campaign-data specific state separate if needed
   // For example, UI state could live here, but for now, we keep it all together.
 };
@@ -90,6 +92,8 @@ export const CampaignProvider = ({ children }) => {
       generatedPagesData: synchronizedPages,
       currentCampaign: loadedData.id ? { id: loadedData.id, name: loadedData.name } : null,
       pendingAssets: loadedData.pendingAssets || {}, // Correctly merge the loaded assets
+      selectedAutorForCampaign: loadedData.autor_id || '',
+      selectedPersonaForCampaign: loadedData.persona_id || '',
     };
 
     setCampaignStateInternal(newState);
