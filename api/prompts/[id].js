@@ -1,5 +1,5 @@
-import { query } from '../db';
-import { withAdminAuth } from '../middleware/auth';
+import { query } from '../db.js';
+import { withAdminAuth } from '../middleware/auth.js';
 
 const handler = async (req, res) => {
   // withAdminAuth has already verified the user is an admin.
