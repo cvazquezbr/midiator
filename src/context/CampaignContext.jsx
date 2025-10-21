@@ -29,6 +29,7 @@ const initialState = {
   tomDeVoz: 'Profissional e direto',
   campaignContent: null,
   followupPostsQuantity: 5,
+  followupPosts: [],
   // Keep non-campaign-data specific state separate if needed
   // For example, UI state could live here, but for now, we keep it all together.
 };
