@@ -32,8 +32,9 @@ const ImageStepUI = ({
   setCurrentPreviewIndex,
   activeStep,
   handleImageUpload,
+  isLoading,
 }) => {
-  const { campaignState, setCampaignState, isCampaignLoading } = useCampaign();
+  const { campaignState, setCampaignState } = useCampaign();
 
   console.log('%c[ImageStepUI] Rendering with campaignState:', 'color: brown; font-weight: bold;', { campaignState });
 
@@ -70,13 +71,23 @@ const ImageStepUI = ({
     setCurrentPreviewIndex(csvData.length - 1);
   };
 
+  // The new validation logic:
+  // 1. Check the `isLoading` prop from HomePage.
+  // 2. Add a granular check for critical data structures.
+  const isDataReady = !isLoading &&
+    csvData && csvData.length > 0 &&
+    pageTemplate &&
+    fieldPositions &&
+    fieldStyles;
+
+
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, height: { xs: 'calc(100dvh - 140px)', md: 'calc(100vh - 150px)' } }}>
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <Typography variant="h6" sx={{ flexShrink: 0, textAlign: 'center', my: 2 }}>
           Editor de Página
         </Typography>
-        {csvData && csvData.length > 0 && pageTemplate && fieldPositions && fieldStyles ? (
+        {isDataReady ? (
           <>
             <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', p: 1 }}>
               <FieldPositioner
@@ -139,10 +150,17 @@ const ImageStepUI = ({
             )}
           </>
         ) : (
-          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Typography variant="body1" color="text.secondary">
-              Por favor, carregue os dados na etapa "Posts Curtos" para começar a editar o modelo.
-            </Typography>
+          <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 2 }}>
+            {isLoading ? (
+              <>
+                <CircularProgress />
+                <Typography>Carregando campanha...</Typography>
+              </>
+            ) : (
+              <Typography variant="body1" color="text.secondary">
+                Por favor, carregue os dados na etapa "Posts Curtos" para começar a editar o modelo.
+              </Typography>
+            )}
           </Box>
         )}
       </Box>
