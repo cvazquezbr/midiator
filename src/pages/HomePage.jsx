@@ -401,21 +401,28 @@ function HomePage() {
   const handleCloseImageGallery = () => { setShowImageGallery(false); setImageGalleryTargetIndex(null); };
 
   const addNewImageToCanvas = useCallback((imageUrl) => {
+    console.log(`%c[HomePage] addNewImageToCanvas called with URL: ${imageUrl}`, 'color: #4CAF50; font-weight: bold;');
     const newImage = { ...createNewImageElement(imageUrl), zIndex: -1 };
     setCampaignState({ selectedField: newImage.id });
     if (typeof imageGalleryTargetIndex === 'number') {
       setCampaignState(prev => {
+        console.log(`%c[HomePage] Updating generated page at index: ${imageGalleryTargetIndex}`, 'color: #4CAF50; font-weight: bold;');
         const newPages = prev.generatedPagesData.map((page, index) => {
           if (index !== imageGalleryTargetIndex) return page;
           const baseTemplate = page.customPageTemplate || JSON.parse(JSON.stringify(prev.pageTemplate));
           const newCustomTemplate = { ...baseTemplate, images: [...(baseTemplate.images || []), newImage] };
           return { ...page, customPageTemplate: newCustomTemplate };
         });
+        console.log(`%c[HomePage] New generatedPagesData to be set:`, 'color: #4CAF50; font-weight: bold;', newPages);
         return { generatedPagesData: newPages };
       });
       toast.success(`Imagem adicionada à página ${imageGalleryTargetIndex + 1}.`);
     } else {
-      setCampaignState(prev => ({ pageTemplate: { ...prev.pageTemplate, images: [...(prev.pageTemplate.images || []), newImage] } }));
+      setCampaignState(prev => {
+        const newPageTemplate = { ...prev.pageTemplate, images: [...(prev.pageTemplate.images || []), newImage] };
+        console.log(`%c[HomePage] Updating page template. New template:`, 'color: #4CAF50; font-weight: bold;', newPageTemplate);
+        return { pageTemplate: newPageTemplate };
+      });
       toast.success('Imagem adicionada ao modelo.');
     }
     extractColorPalette(imageUrl, p => setCampaignState({ imageColorPalette: p }));
