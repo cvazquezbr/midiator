@@ -159,17 +159,11 @@ const Campaign = ({
     steps,
     activeStep,
     problema,
-    setProblema,
     solucao,
-    setSolucao,
     objetivo,
-    setObjetivo,
     tomDeVoz,
-    setTomDeVoz,
     followupPostsQuantity,
-    setFollowupPostsQuantity,
     aspectRatio,
-    setAspectRatio,
     isGeneratingCampaign,
     campaignContent,
     campaignGenerationFailed,
@@ -188,14 +182,12 @@ const Campaign = ({
     generatedPageUrl,
     isGeneratingImage,
     handleGenerateImage,
-    setCampaignContent,
     onEditFollowup,
+    setCampaignState,
     autorList,
     selectedAutorForCampaign,
-    setSelectedAutorForCampaign,
     personaList,
     selectedPersonaForCampaign,
-    setSelectedPersonaForCampaign,
     palettes,
     onRequestNewAutor,
     onRequestNewPersona,
@@ -408,7 +400,7 @@ const Campaign = ({
                                     <Select
                                         labelId="persona-select-label"
                                         value={selectedPersonaForCampaign}
-                                        onChange={(e) => setSelectedPersonaForCampaign(e.target.value)}
+                                        onChange={(e) => setCampaignState({ selectedPersonaForCampaign: e.target.value })}
                                         label="Selecionar Persona"
                                     >
                                         <MenuItem value="">
@@ -439,7 +431,7 @@ const Campaign = ({
                                     multiline
                                     rows={4}
                                     value={problema}
-                                    onChange={(e) => setProblema(e.target.value)}
+                                    onChange={(e) => setCampaignState({ problema: e.target.value })}
                                     variant="outlined"
                                     placeholder="Descreva o problema que sua campanha busca resolver."
                                     disabled={campaignContent !== null}
@@ -464,7 +456,7 @@ const Campaign = ({
                                             <Select
                                                 labelId="autor-select-label"
                                                 value={selectedAutorForCampaign}
-                                                onChange={(e) => setSelectedAutorForCampaign(e.target.value)}
+                                                onChange={(e) => setCampaignState({ selectedAutorForCampaign: e.target.value })}
                                                 label="Selecionar Autor"
                                             >
                                                 <MenuItem value="">
@@ -495,7 +487,7 @@ const Campaign = ({
                                             multiline
                                             rows={4}
                                             value={solucao}
-                                            onChange={(e) => setSolucao(e.target.value)}
+                                            onChange={(e) => setCampaignState({ solucao: e.target.value })}
                                             variant="outlined"
                                             placeholder="Descreva a solução que sua campanha oferece."
                                             disabled={campaignContent !== null}
@@ -516,7 +508,7 @@ const Campaign = ({
                                         <Select
                                             labelId="objetivo-select-label"
                                             value={objetivo}
-                                            onChange={(e) => setObjetivo(e.target.value)}
+                                            onChange={(e) => setCampaignState({ objetivo: e.target.value })}
                                             label="Objetivo Principal do Post"
                                         >
                                             <MenuItem value="Gerar leads">Gerar leads</MenuItem>
@@ -533,7 +525,7 @@ const Campaign = ({
                                         <Select
                                             labelId="tom-de-voz-select-label"
                                             value={tomDeVoz}
-                                            onChange={(e) => setTomDeVoz(e.target.value)}
+                                            onChange={(e) => setCampaignState({ tomDeVoz: e.target.value })}
                                             label="Tom de Voz"
                                         >
                                             <MenuItem value="Profissional e direto">Profissional e direto</MenuItem>
@@ -584,7 +576,7 @@ const Campaign = ({
                                 <TextField
                                     label="Título"
                                     value={campaignContent.titulo}
-                                    onChange={(e) => setCampaignContent({ ...campaignContent, titulo: e.target.value })}
+                                    onChange={(e) => setCampaignState({ campaignContent: { ...campaignContent, titulo: e.target.value }})}
                                     variant="outlined"
                                     fullWidth
                                     multiline
@@ -660,7 +652,7 @@ const Campaign = ({
                                             onDelete={() => {
                                                 const newHashtags = [...campaignContent.hashtags];
                                                 newHashtags.splice(index, 1);
-                                                setCampaignContent({ ...campaignContent, hashtags: newHashtags });
+                                                setCampaignState({ campaignContent: { ...campaignContent, hashtags: newHashtags }});
                                             }}
                                         />
                                     ))}
@@ -672,7 +664,7 @@ const Campaign = ({
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' && e.target.value.trim() !== '') {
                                                 e.preventDefault();
-                                                setCampaignContent({ ...campaignContent, hashtags: [...campaignContent.hashtags, e.target.value.trim()] });
+                                                setCampaignState({ campaignContent: { ...campaignContent, hashtags: [...campaignContent.hashtags, e.target.value.trim()] }});
                                                 e.target.value = '';
                                             }
                                         }}
@@ -680,7 +672,7 @@ const Campaign = ({
                                     <Button onClick={() => {
                                         const newTag = document.querySelector('input[label="Nova Hashtag"]').value.trim();
                                         if (newTag) {
-                                            setCampaignContent({ ...campaignContent, hashtags: [...campaignContent.hashtags, newTag] });
+                                            setCampaignState({ campaignContent: { ...campaignContent, hashtags: [...campaignContent.hashtags, newTag] }});
                                             document.querySelector('input[label="Nova Hashtag"]').value = '';
                                         }
                                     }}>Adicionar</Button>
@@ -787,7 +779,7 @@ const Campaign = ({
                                         <Select
                                         labelId="aspect-ratio-label"
                                         value={aspectRatio}
-                                        onChange={(e) => setAspectRatio(e.target.value)}
+                                         onChange={(e) => setCampaignState({ aspectRatio: e.target.value })}
                                         label="Razão de Aspecto"
                                     >
                                         <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
@@ -877,7 +869,7 @@ const Campaign = ({
                                     label="Quantidade de Posts de Follow-up"
                                     type="number"
                                     value={followupPostsQuantity || ''}
-                                    onChange={(e) => setFollowupPostsQuantity(parseInt(e.target.value, 10))}
+                                    onChange={(e) => setCampaignState({ followupPostsQuantity: parseInt(e.target.value, 10) })}
                                     fullWidth
                                     variant="outlined"
                                     InputProps={{ inputProps: { min: 1, max: 10 } }}
