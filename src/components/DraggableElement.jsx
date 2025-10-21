@@ -81,9 +81,25 @@ const DraggableElementInternal = ({
   };
 
   useEffect(() => {
-    // Use the content directly if it's a valid URL, otherwise it's text.
-    setDisplayUrl(content);
-  }, [content]);
+    // This logic handles displaying temporary blob URLs for local images
+    // before they are permanently saved. It's crucial for the user's workflow.
+    if (element.type === 'image') {
+      const url = content;
+      if (url && url.startsWith('blob:')) {
+        // The URL is already a blob URL from pendingAssets, use it directly.
+        setDisplayUrl(url);
+      } else if (url) {
+        // This could be a permanent URL from a saved campaign.
+        // We'll attempt to find it in pendingAssets first in case it's a re-hydrated blob.
+        const blobUrl = Object.keys(pendingAssets).find(key => pendingAssets[key].permanentUrl === url);
+        setDisplayUrl(blobUrl || url);
+      } else {
+        setDisplayUrl(null);
+      }
+    } else {
+      setDisplayUrl(content);
+    }
+  }, [content, pendingAssets, element.type]);
 
 
   // Função para renderizar conteúdo HTML ou texto simples
@@ -93,9 +109,12 @@ const DraggableElementInternal = ({
       return null;
     }
     if (element.type === 'image') {
-       if (!displayUrl) {
-        // Render a placeholder or an error message if the URL is invalid
-        return <Box sx={{ width: '100%', height: '100%', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Typography variant="caption" color="error">Erro Imagem</Typography></Box>;
+      const isLoading = !displayUrl; // Consider loading if displayUrl is not yet resolved.
+      if (isLoading) {
+        return <Box sx={{ width: '100%', height: '100%', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CircularProgress size={24} /></Box>;
+      }
+      if (!displayUrl) {
+        return <Box sx={{ width: '100%', height: '100%', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Typography variant="caption" color="error">Imagem Inválida</Typography></Box>;
       }
       return <img src={displayUrl} alt="Elemento de imagem" style={{ objectFit: style.objectFit || 'fill' }} />;
     }

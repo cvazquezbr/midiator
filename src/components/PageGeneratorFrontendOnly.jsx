@@ -284,14 +284,11 @@ const PageGeneratorFrontendOnly = ({
           if (page.index !== modifiedPageData.index) {
             return page;
           }
+          // Merge existing page data with modifications to prevent data loss,
+          // especially for pending assets added during editing.
           return {
-            index: modifiedPageData.index,
-            record: modifiedPageData.record,
-            customPageTemplate: modifiedPageData.customPageTemplate,
-            customFieldPositions: modifiedPageData.customFieldPositions,
-            customFieldStyles: modifiedPageData.customFieldStyles,
-            customBrandElements: modifiedPageData.customBrandElements,
-            fontScale: 1,
+            ...page,
+            ...modifiedPageData,
             url: managedUrl,
             filename: newPageImageData.filename,
             blob: undefined,
