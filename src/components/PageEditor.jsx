@@ -84,29 +84,35 @@ const PageEditor = ({
     setSelectedFieldInternal(fieldToSelect);
   }, []);
 
-  // Effect to initialize the editor's state when it's opened.
-  // This runs once when the dialog is opened for a specific page, setting up the local editing state.
+  // This is the core logic for the editor. It runs ONLY when the editor is opened
+  // for a specific page. It creates a "snapshot" of the page's state and uses that
+  // for the editing session. It INTENTIONALLY does not depend on `pageDataFromHook`
+  // or `globalPageTemplate` to prevent the editor from resetting when the global
+  // state changes (e.g., when a new image is added).
   useEffect(() => {
-    if (open && pageDataFromHook.record) {
+    if (open && pageData?.index !== undefined) {
+      // We directly use the values from the hook here, but we don't list it as a dependency.
+      // This is the key to creating a stable editing "snapshot".
       const { effectiveFieldPositions, effectiveFieldStyles, effectiveBrandElements, record } = pageDataFromHook;
 
-      // Initialize all local states for editing
-      setEditedPositions(safeDeepClone(effectiveFieldPositions));
-      setEditedBrandElements(safeDeepClone(effectiveBrandElements));
-      setEditedRecord(safeDeepClone(record));
+      // Ensure the record from the hook is valid before proceeding.
+      if (record) {
+        // Initialize all local states for editing from the snapshot.
+        setEditedPositions(safeDeepClone(effectiveFieldPositions));
+        setEditedBrandElements(safeDeepClone(effectiveBrandElements));
+        setEditedRecord(safeDeepClone(record));
+        setEditedPageTemplate(safeDeepClone(pageData.customPageTemplate || globalPageTemplate));
 
-      // Use the page's custom template if it exists, otherwise fall back to the global one.
-      setEditedPageTemplate(safeDeepClone(pageData.customPageTemplate || globalPageTemplate));
-
-      // Initialize styles, ensuring all fields have a complete style object to prevent errors.
-      const newEditedStyles = {};
-      (csvHeaders || []).forEach(field => {
-        newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(effectiveFieldStyles[field] || {}) };
-      });
-      setEditedStyles(newEditedStyles);
+        // Initialize styles, ensuring all fields have a complete style object.
+        const newEditedStyles = {};
+        (csvHeaders || []).forEach(field => {
+          newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(effectiveFieldStyles[field] || {}) };
+        });
+        setEditedStyles(newEditedStyles);
+      }
     }
 
-    // Cleanup: Reset all local state when the dialog is closed to ensure a clean slate.
+    // Cleanup: Reset all local state when the dialog is closed to ensure a clean slate for the next session.
     if (!open) {
       setEditedPositions(null);
       setEditedStyles(null);
@@ -115,18 +121,8 @@ const PageEditor = ({
       setEditedPageTemplate(null);
       setSelectedFieldInternal(null);
     }
-    // This effect intentionally omits `globalPageTemplate` to prevent re-initialization on every external change.
-  }, [open, pageData, pageDataFromHook, csvHeaders]);
-
-  // Effect to sync with external changes to the global page template.
-  // This allows changes made outside the editor (e.g., in ImageStep) to be reflected,
-  // but ONLY if the user has not already started making custom changes to this page's template.
-  useEffect(() => {
-    if (open && !pageData.customPageTemplate && globalPageTemplate) {
-      // If there is no custom template, it's safe to sync from the global state.
-      setEditedPageTemplate(safeDeepClone(globalPageTemplate));
-    }
-  }, [globalPageTemplate, open, pageData.customPageTemplate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, pageData?.index]); // This dependency array is the crucial fix.
 
   useEffect(() => {
     const firstImage = editedPageTemplate?.images?.[0];
