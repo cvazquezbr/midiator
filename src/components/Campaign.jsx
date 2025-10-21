@@ -191,14 +191,10 @@ const Campaign = ({
     palettes,
     onRequestNewAutor,
     onRequestNewPersona,
+    paletteId,
+    customPalette,
 }) => {
     useSettings();
-    const {
-        paletteId,
-        setPaletteId,
-        customPalette,
-        setCustomPalette,
-    } = useCampaignContext();
     const problemaRef = useRef(null);
 
     const [activeTab, setActiveTab] = useState(0);
@@ -693,10 +689,12 @@ const Campaign = ({
                                             labelId="palette-select-label"
                                             value={paletteId || 'custom'}
                                             onChange={(e) => {
-                                                setPaletteId(e.target.value);
-                                                if (e.target.value !== 'custom') {
-                                                    setCustomPalette(null); // Clear custom palette when a global one is chosen
+                                                const newPaletteId = e.target.value;
+                                                const updates = { paletteId: newPaletteId };
+                                                if (newPaletteId !== 'custom') {
+                                                  updates.customPalette = null; // Clear custom palette when a global one is chosen
                                                 }
+                                                setCampaignState(updates);
                                             }}
                                             label="Paleta de Cores"
                                         >
@@ -730,7 +728,7 @@ const Campaign = ({
                                 <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'center' }}>
                                     <Button
                                         onClick={() => {
-                                            setPaletteId('custom');
+                                            setCampaignState({ paletteId: 'custom' });
                                             setPaletteWizardOpen(true);
                                         }}
                                         variant="contained"
@@ -1120,13 +1118,12 @@ const Campaign = ({
                     <PaletteWizard
                         open={isPaletteWizardOpen}
                         onClose={() => setPaletteWizardOpen(false)}
-                        onSave={async (paletteData) => {
-                            // For custom palettes, we just update the context state
-                            setCustomPalette(paletteData);
+                        onSave={(paletteData) => {
+                            setCampaignState({ customPalette: paletteData });
                             setPaletteWizardOpen(false);
                         }}
                         paletteData={customPalette || { name: 'Paleta da Campanha', colors: [], harmony: '', harmony_justification: '' }}
-                        onPaletteDataChange={setCustomPalette}
+                        onPaletteDataChange={(newData) => setCampaignState({ customPalette: newData })}
                         initialStep={0} // Always start from the beginning for the campaign's custom palette
                     />
                 )}
