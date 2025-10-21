@@ -158,6 +158,7 @@ function HomePage() {
   const handleCreationDone = (view) => { if (view === 'autores') setStartAutoresInCreate(false); else if (view === 'personas') setStartPersonasInCreate(false); setCurrentView('campaigns'); };
   const handleAutorCreated = (newAutor) => { fetchAutoresForCampaign(); if (newAutor?.id) setCampaignState({ selectedAutorForCampaign: newAutor.id }); setStartAutoresInCreate(false); setCurrentView('campaigns'); };
   const handlePersonaCreated = (newPersona) => { fetchPersonasForCampaign(); if (newPersona?.id) setCampaignState({ selectedPersonaForCampaign: newPersona.id }); setStartPersonasInCreate(false); setCurrentView('campaigns'); };
+  const handlePersonaSelected = (persona) => { setCampaignState({ selectedPersonaForCampaign: persona.id }); setCurrentView('campaigns'); };
 
   // This effect synchronizes the UI state after a campaign is loaded into the context
   useEffect(() => {
@@ -797,7 +798,7 @@ function HomePage() {
               </Box>
             </>
           )}
-          {currentView === 'personas' && <PersonasPage {...{ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected: () => setPersonaDrawerOpen(true), onUpdate: fetchPersonasForCampaign, startInCreateMode: startPersonasInCreate, onPersonaCreated: handlePersonaCreated, onCreationCancelled: () => handleCreationDone('personas') }} />}
+          {currentView === 'personas' && <PersonasPage {...{ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected: () => setPersonaDrawerOpen(true), onUpdate: fetchPersonasForCampaign, startInCreateMode: startPersonasInCreate, onPersonaCreated: handlePersonaCreated, onCreationCancelled: () => handleCreationDone('personas'), onPersonaSelected: handlePersonaSelected }} />}
           {currentView === 'autores' && <AutoresPage {...{ autorDrawerOpen, setAutorDrawerOpen, onNoAutorSelected: () => setAutorDrawerOpen(true), onUpdate: fetchAutoresForCampaign, startInCreateMode: startAutoresInCreate, onAutorCreated: handleAutorCreated, onCreationCancelled: () => handleCreationDone('autores') }} />}
           {currentView === 'palettes' && <PalettesPage {...{ paletteDrawerOpen, setPaletteDrawerOpen, onNoPaletteSelected: () => setPaletteDrawerOpen(true) }} />}
         </Box>

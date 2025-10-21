@@ -22,7 +22,7 @@ import geminiAPI from '../utils/geminiAPI';
  * where the `PersonaWizard` is displayed. The component is self-contained and handles
  * all its state and API interactions.
  */
-const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected, onUpdate, startInCreateMode, onPersonaCreated, onCreationCancelled }) => {
+const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSelected, onUpdate, startInCreateMode, onPersonaCreated, onCreationCancelled, onPersonaSelected }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -88,11 +88,15 @@ const PersonasPage = ({ personaDrawerOpen, setPersonaDrawerOpen, onNoPersonaSele
    * @param {object} p - The selected persona object.
    */
   const handleSelectPersona = (p) => {
-      setSelectedPersona(p);
-      setPersonaFormData(p.persona_data);
-      setIsPersonaDirty(false);
-      setInitialWizardStep(1);
-      if (isMobile) setPersonaDrawerOpen(false);
+      if (onPersonaSelected) {
+        onPersonaSelected(p);
+      } else {
+        setSelectedPersona(p);
+        setPersonaFormData(p.persona_data);
+        setIsPersonaDirty(false);
+        setInitialWizardStep(1);
+        if (isMobile) setPersonaDrawerOpen(false);
+      }
   };
 
   /**
