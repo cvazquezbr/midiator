@@ -255,8 +255,8 @@ const Campaign = ({
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const problems = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
-            setCommonProblems(problems);
+            const result = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
+            setCommonProblems(result.problems || []);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
@@ -274,8 +274,8 @@ const Campaign = ({
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const problems = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
-            setCommonProblems(problems);
+            const result = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
+            setCommonProblems(result.problems || []);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
@@ -300,8 +300,8 @@ const Campaign = ({
             }
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
-            setCommonSolutions(solutions);
+            const result = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
+            setCommonSolutions(result.solutions || []);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
@@ -319,8 +319,8 @@ const Campaign = ({
             }
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
-            setCommonSolutions(solutions);
+            const result = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
+            setCommonSolutions(result.solutions || []);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
