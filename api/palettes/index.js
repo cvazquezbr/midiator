@@ -1,5 +1,5 @@
-import { withAuth } from '../middleware/auth';
-import { query } from '../db';
+import { withAuth } from '../middleware/auth.js';
+import { query } from '../db.js';
 
 const handler = async (req, res) => {
   // withAuth middleware has already run, so req.user is available (it's the JWT payload).
