@@ -162,11 +162,15 @@ function HomePage() {
 
   // This effect synchronizes the UI state after a campaign is loaded into the context
   useEffect(() => {
-    if (!currentCampaign || !campaignState) {
+    // This effect should ONLY run when a new campaign is loaded, which is signaled
+    // by the `currentCampaign` object changing. It should not run on every
+    // minor `campaignState` update (like adding an image), as that would
+    // incorrectly revert the UI state.
+    if (!currentCampaign) {
       setIsLoading(false);
       return;
     }
-    console.log("Syncing HomePage UI with loaded campaign data:", campaignState);
+    console.log("Syncing HomePage UI with newly loaded campaign data:", campaignState);
     setActiveStep(campaignState.activeStep ?? 0);
     setInputMethod(campaignState.inputMethod ?? 'ia');
     const firstImageSrc = campaignState.pageTemplate?.images?.[0]?.src;
@@ -181,7 +185,7 @@ function HomePage() {
     }
     setIsLoading(false);
     console.log("HomePage UI sync complete. isLoading set to false.");
-  }, [currentCampaign, campaignState]);
+  }, [currentCampaign]);
 
   const handleSaveCampaign = async (name) => {
     console.log(`[HomePage] Attempting to save campaign: "${name}"`);
@@ -401,28 +405,21 @@ function HomePage() {
   const handleCloseImageGallery = () => { setShowImageGallery(false); setImageGalleryTargetIndex(null); };
 
   const addNewImageToCanvas = useCallback((imageUrl) => {
-    console.log(`%c[HomePage] addNewImageToCanvas called with URL: ${imageUrl}`, 'color: #4CAF50; font-weight: bold;');
     const newImage = { ...createNewImageElement(imageUrl), zIndex: -1 };
     setCampaignState({ selectedField: newImage.id });
     if (typeof imageGalleryTargetIndex === 'number') {
       setCampaignState(prev => {
-        console.log(`%c[HomePage] Updating generated page at index: ${imageGalleryTargetIndex}`, 'color: #4CAF50; font-weight: bold;');
         const newPages = prev.generatedPagesData.map((page, index) => {
           if (index !== imageGalleryTargetIndex) return page;
           const baseTemplate = page.customPageTemplate || JSON.parse(JSON.stringify(prev.pageTemplate));
           const newCustomTemplate = { ...baseTemplate, images: [...(baseTemplate.images || []), newImage] };
           return { ...page, customPageTemplate: newCustomTemplate };
         });
-        console.log(`%c[HomePage] New generatedPagesData to be set:`, 'color: #4CAF50; font-weight: bold;', newPages);
         return { generatedPagesData: newPages };
       });
       toast.success(`Imagem adicionada à página ${imageGalleryTargetIndex + 1}.`);
     } else {
-      setCampaignState(prev => {
-        const newPageTemplate = { ...prev.pageTemplate, images: [...(prev.pageTemplate.images || []), newImage] };
-        console.log(`%c[HomePage] Updating page template. New template:`, 'color: #4CAF50; font-weight: bold;', newPageTemplate);
-        return { pageTemplate: newPageTemplate };
-      });
+      setCampaignState(prev => ({ pageTemplate: { ...prev.pageTemplate, images: [...(prev.pageTemplate.images || []), newImage] } }));
       toast.success('Imagem adicionada ao modelo.');
     }
     extractColorPalette(imageUrl, p => setCampaignState({ imageColorPalette: p }));
@@ -708,94 +705,62 @@ function HomePage() {
     let pageUpdateData = {};
     const pageData = generatedPagesData.find(p => p.index === index);
     let effectivePageTemplate = pageData?.customPageTemplate || pageTemplate;
-    let oldImageSrcToRevoke = null;
-    let newManagedImageUrl = null;
-
     if (imagePrompt?.trim()) {
       setGenerationStatus(`Gerando imagem para o post ${index + 1}...`);
       try {
         const sourceStyle = effectivePageTemplate.images?.[0] ? (({ id, src, ...style }) => style)(effectivePageTemplate.images[0]) : { x: 0, y: 0, width: 100, height: 100, zIndex: -1, objectFit: 'cover' };
         const oldImage = (effectivePageTemplate.images || [])[0];
-        if (oldImage?.src?.startsWith('blob:')) {
-          oldImageSrcToRevoke = oldImage.src;
-        }
-
         const base64Data = await generateCampaignImage({ prompt: imagePrompt, aspectRatio, colors: memorialColors });
         if (!base64Data) throw new Error("A IA não conseguiu gerar a imagem.");
+        if (oldImage?.src?.startsWith('blob:')) removePendingAsset(oldImage.src);
 
+        // Convert base64 to a managed blob URL
         const imageBlob = dataURLtoBlob(`data:image/png;base64,${base64Data}`);
+        const managedImageUrl = addPendingAsset(imageBlob);
+        if (!managedImageUrl) throw new Error("Falha ao registrar a imagem gerada.");
 
-        // The addPendingAsset call MUST happen before the PageGenerationService call
-        // so that the new asset is already in the context state.
-        newManagedImageUrl = addPendingAsset(imageBlob);
-        if (!newManagedImageUrl) throw new Error("Falha ao registrar a imagem gerada.");
-
-        const newImage = { ...createNewImageElement(newManagedImageUrl), ...sourceStyle, visible: true };
+        const newImage = { ...createNewImageElement(managedImageUrl), ...sourceStyle, visible: true };
         const finalImages = (effectivePageTemplate.images?.length > 0) ? [newImage, ...effectivePageTemplate.images.slice(1)] : [newImage];
-
         effectivePageTemplate = { ...effectivePageTemplate, images: finalImages };
         pageUpdateData.customPageTemplate = effectivePageTemplate;
       } catch (error) {
         toast.error(`Falha na Imagem (Post #${index + 1}): ${error.message}`);
-        // If image generation fails, clean up any newly created blob URL
-        if (newManagedImageUrl) {
-          removePendingAsset(newManagedImageUrl);
-        }
       }
     }
-
     setGenerationStatus(`Gerando página para o post ${index + 1}/${csvData.length}...`);
     try {
       const finalPageData = await PageGenerationService.generatePageImage({
         record,
         index,
-        // Pass the most up-to-date campaign context directly to the service
-        campaignContext: {
-          ...campaignState,
-          // Manually update the pendingAssets to include the new image URL if it was created
-          pendingAssets: newManagedImageUrl ? { ...campaignState.pendingAssets, [newManagedImageUrl]: true } : campaignState.pendingAssets,
-        },
+        campaignContext: campaignState,
         pageData: { ...(pageData || {}), customPageTemplate: effectivePageTemplate, fontScale },
       });
+      const tempUrl = addPendingAsset(finalPageData.blob);
+      if (!tempUrl) throw new Error("Falha ao criar URL para a página final.");
 
-      // Now, perform a single, atomic state update at the very end
+      // Correctly update the specific page data within the generatedPagesData array
       setCampaignState(prev => {
         const newPagesData = prev.generatedPagesData.map(p => {
           if (p.index !== index) {
             return p;
           }
+          // Create a completely new object for the updated page to ensure React detects the change.
           const updatedPage = {
-            ...(p || {}),
-            ...finalPageData,
-            ...pageUpdateData, // This includes the new customPageTemplate
-            url: finalPageData.url, // This should be the final blob URL from the service
-            dataUrl: null,
-            blob: undefined, // Don't store the blob in the state
+            ...(p || {}), // Start with the existing page data
+            ...finalPageData, // Apply the core data from the generation service
+            ...pageUpdateData, // Apply any template/image updates
+            url: tempUrl, // Set the new, managed URL for the thumbnail
+            dataUrl: null, // Clear any old data URLs to save memory
+            blob: undefined, // The blob is now managed in pendingAssets, so don't store it here.
           };
           return updatedPage;
         });
-
-        // If an old image was replaced, remove it from pendingAssets now
-        const newPendingAssets = { ...prev.pendingAssets };
-        if (oldImageSrcToRevoke && newPendingAssets[oldImageSrcToRevoke]) {
-          URL.revokeObjectURL(oldImageSrcToRevoke);
-          delete newPendingAssets[oldImageSrcToRevoke];
-        }
-
-        return {
-          generatedPagesData: newPagesData,
-          pendingAssets: newPendingAssets,
-        };
+        return { generatedPagesData: newPagesData };
       });
-
       toast.success(`Página #${index + 1} gerada.`);
       return true;
     } catch (error) {
       toast.error(`Erro na geração da página ${index + 1}: ${error.message}`);
-      // Clean up the new image if the page generation fails
-      if (newManagedImageUrl) {
-        removePendingAsset(newManagedImageUrl);
-      }
       return false;
     } finally {
       setGenerationStatus('');
