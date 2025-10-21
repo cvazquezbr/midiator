@@ -145,14 +145,22 @@ export const CampaignProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
+    // This effect runs only once on mount to set up the cleanup function for when
+    // the provider unmounts. An empty dependency array [] ensures this behavior.
     return () => {
-      const currentAssets = campaignState.pendingAssets;
-      Object.keys(currentAssets).forEach(url => {
-        console.log(`[CampaignContext] Revoking blob URL on unmount: ${url}`);
-        URL.revokeObjectURL(url);
+      // We use the functional form of the state setter here to guarantee access
+      // to the most recent 'pendingAssets' state during cleanup, avoiding issues
+      // with stale closures.
+      setCampaignStateInternal(prev => {
+        Object.keys(prev.pendingAssets).forEach(url => {
+          console.log(`[CampaignContext] Revoking blob URL on unmount: ${url}`);
+          URL.revokeObjectURL(url);
+        });
+        // No state change is actually performed; we just use this to access the latest state.
+        return prev;
       });
     };
-  }, [campaignState.pendingAssets]);
+  }, []);
 
   const value = useMemo(() => ({
     campaignState,
