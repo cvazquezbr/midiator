@@ -209,6 +209,7 @@ const Campaign = ({
     const [solutionsError, setSolutionsError] = React.useState(null);
     const [imageTabError, setImageTabError] = React.useState('');
     const [isPaletteWizardOpen, setPaletteWizardOpen] = useState(false);
+    const [newHashtag, setNewHashtag] = useState('');
 
     const emptyLabelStyle = {
         '& .MuiInputLabel-root:not(.Mui-focused):not(.MuiFormLabel-filled)': {
@@ -251,8 +252,8 @@ const Campaign = ({
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const result = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
-            setCommonProblems(result || []);
+            const problems = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
+            setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
@@ -270,8 +271,8 @@ const Campaign = ({
                 throw new Error("Por favor, selecione uma persona para obter sugestões.");
             }
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const result = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
-            setCommonProblems(result || []);
+            const problems = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
+            setCommonProblems(problems);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
@@ -296,8 +297,8 @@ const Campaign = ({
             }
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const result = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
-            setCommonSolutions(result || []);
+            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
+            setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
@@ -315,8 +316,8 @@ const Campaign = ({
             }
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
-            const result = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
-            setCommonSolutions(result || []);
+            const solutions = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
+            setCommonSolutions(solutions);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
@@ -366,6 +367,20 @@ const Campaign = ({
             console.error("Falha ao salvar na coleção:", error);
         } finally {
             setIsSavingToDrive(false);
+        }
+    };
+
+    const handleAddHashtag = () => {
+        const tagToAdd = newHashtag.trim();
+        if (tagToAdd) {
+            const currentHashtags = campaignContent.hashtags || [];
+            setCampaignState({
+                campaignContent: {
+                    ...campaignContent,
+                    hashtags: [...currentHashtags, tagToAdd],
+                },
+            });
+            setNewHashtag('');
         }
     };
 
@@ -657,21 +672,16 @@ const Campaign = ({
                                     <TextField
                                         label="Nova Hashtag"
                                         size="small"
+                                        value={newHashtag}
+                                        onChange={(e) => setNewHashtag(e.target.value)}
                                         onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && e.target.value.trim() !== '') {
+                                            if (e.key === 'Enter') {
                                                 e.preventDefault();
-                                                setCampaignState({ campaignContent: { ...campaignContent, hashtags: [...campaignContent.hashtags, e.target.value.trim()] }});
-                                                e.target.value = '';
+                                                handleAddHashtag();
                                             }
                                         }}
                                     />
-                                    <Button onClick={() => {
-                                        const newTag = document.querySelector('input[label="Nova Hashtag"]').value.trim();
-                                        if (newTag) {
-                                            setCampaignState({ campaignContent: { ...campaignContent, hashtags: [...campaignContent.hashtags, newTag] }});
-                                            document.querySelector('input[label="Nova Hashtag"]').value = '';
-                                        }
-                                    }}>Adicionar</Button>
+                                    <Button onClick={handleAddHashtag}>Adicionar</Button>
                                 </Box>
                             </Grid>
                         </Grid>
@@ -692,7 +702,7 @@ const Campaign = ({
                                                 const newPaletteId = e.target.value;
                                                 const updates = { paletteId: newPaletteId };
                                                 if (newPaletteId !== 'custom') {
-                                                  updates.customPalette = null; // Clear custom palette when a global one is chosen
+                                                  updates.customPalette = null;
                                                 }
                                                 setCampaignState(updates);
                                             }}
@@ -1010,7 +1020,7 @@ const Campaign = ({
                                                 key={index}
                                                 severity="info"
                                                 onClick={() => {
-                                                    setCampaignState({ problema: problem.replace(/\*\*(.*?)\*\*\\n/g, '$1\n') }); // Remove markdown bold for the text field
+                                                    setCampaignState({ problema: problem.replace(/\*\*(.*?)\*\*\\n/g, '$1\n') });
                                                     setHintModalOpen(false);
                                                 }}
                                                 sx={{
@@ -1088,7 +1098,7 @@ const Campaign = ({
                                                 key={index}
                                                 severity="info"
                                                 onClick={() => {
-                                                    setCampaignState({ solucao: solution.replace(/\*\*(.*?)\*\*\\n/g, '$1\n') }); // Remove markdown bold
+                                                    setCampaignState({ solucao: solution.replace(/\*\*(.*?)\*\*\\n/g, '$1\n') });
                                                     setSolucaoHintModalOpen(false);
                                                 }}
                                                 sx={{

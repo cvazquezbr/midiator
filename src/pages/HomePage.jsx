@@ -582,27 +582,28 @@ function HomePage() {
   }, [aspectRatio, addNewImageToCanvas, addPendingAsset, autorList, selectedAutorForCampaign, setCampaignState]);
 
   const handleGenerateSummary = async (targetLength, content) => {
+    // The source of truth for the main content is the 'content' param if provided,
+    // otherwise it's what's currently in the state.
+    const sourceContent = content || campaignState.campaignContent;
+
+    if (!sourceContent || !sourceContent.conteudo) {
+      toast.error("Conteúdo principal não encontrado para gerar resumo.");
+      return; // Exit early if there's nothing to summarize
+    }
+
     const setLoading = targetLength === 1800 ? setIsGeneratingSummaryMedio : setIsGeneratingSummaryPequeno;
     setLoading(true);
     try {
-      // Use campaign state as a fallback if content is not directly provided.
-      const contentToSummarize = content || campaignState.campaignContent;
-
-      if (!contentToSummarize || !contentToSummarize.conteudo) {
-        toast.error("Não há conteúdo principal para gerar o resumo.");
-        setLoading(false); // Make sure to turn off loading state
-        return;
-      }
-
-      const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(contentToSummarize.conteudo)}"`;
+      const summaryPrompt = `Resuma o seguinte texto para ter no máximo ${targetLength} caracteres, mantendo a essência e o tom: "${stripHtml(sourceContent.conteudo)}"`;
       const summary = await geminiAPI.generateContent(summaryPrompt);
       const fieldName = targetLength === 1800 ? 'conteudoMedio' : 'conteudoPequeno';
 
-      // Use functional update to prevent race conditions when generating multiple summaries
-      setCampaignState(prevState => ({
+      // Use a functional update on setCampaignState to prevent race conditions.
+      // This ensures that parallel calls don't overwrite each other's results.
+      setCampaignState(currentState => ({
         campaignContent: {
-          ...prevState.campaignContent,
-          [fieldName]: summary,
+          ...currentState.campaignContent, // Preserve all existing fields in campaignContent
+          [fieldName]: summary, // Add or update the specific summary field
         },
       }));
     } catch (error) {
