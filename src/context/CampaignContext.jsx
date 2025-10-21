@@ -40,11 +40,10 @@ export const useCampaign = () => {
 export const CampaignProvider = ({ children }) => {
   const [campaignState, setCampaignStateInternal] = useState(initialState);
 
-  const setCampaignState = useCallback((newState) => {
+  const setCampaignState = useCallback((arg) => {
     setCampaignStateInternal(prevState => {
-      const updatedState = { ...prevState, ...newState };
-      console.log('[CampaignContext] State updated:', { prevState, newState, updatedState });
-      return updatedState;
+      const newState = typeof arg === 'function' ? arg(prevState) : arg;
+      return { ...prevState, ...newState };
     });
   }, []);
 
