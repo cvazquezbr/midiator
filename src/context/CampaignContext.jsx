@@ -23,6 +23,12 @@ const initialState = {
   paletteId: null,
   customPalette: null,
   imageColorPalette: [],
+  problema: '',
+  solucao: '',
+  objetivo: 'Gerar leads',
+  tomDeVoz: 'Profissional e direto',
+  campaignContent: null,
+  followupPostsQuantity: 5,
   // Keep non-campaign-data specific state separate if needed
   // For example, UI state could live here, but for now, we keep it all together.
 };
