@@ -256,7 +256,7 @@ const Campaign = ({
             }
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
             const result = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
-            setCommonProblems(result.problems || []);
+            setCommonProblems(result || []);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
@@ -275,7 +275,7 @@ const Campaign = ({
             }
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
             const result = await generateCommonProblems({ persona: finalPersona, autor: finalAutor });
-            setCommonProblems(result.problems || []);
+            setCommonProblems(result || []);
         } catch (error) {
             setProblemsError(error.message);
         } finally {
@@ -301,7 +301,7 @@ const Campaign = ({
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
             const result = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
-            setCommonSolutions(result.solutions || []);
+            setCommonSolutions(result || []);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
@@ -320,7 +320,7 @@ const Campaign = ({
             const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
             const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
             const result = await generateCommonSolutions({ problema, persona: finalPersona, autor: finalAutor });
-            setCommonSolutions(result.solutions || []);
+            setCommonSolutions(result || []);
         } catch (error) {
             setSolutionsError(error.message);
         } finally {
