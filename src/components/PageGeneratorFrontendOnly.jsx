@@ -275,8 +275,8 @@ const PageGeneratorFrontendOnly = ({
 
       const managedUrl = addPendingAsset(newPageImageData.blob);
       if (!managedUrl) {
-          toast.error('Falha ao registrar a imagem da página modificada.');
-          return;
+        toast.error('Falha ao registrar a imagem da página modificada.');
+        return;
       }
 
       setCampaignState(current => ({
@@ -284,16 +284,21 @@ const PageGeneratorFrontendOnly = ({
           if (page.index !== modifiedPageData.index) {
             return page;
           }
-          // Perform an explicit merge to guarantee image data is not overwritten
+          // Construct a new page object from scratch to avoid stale data.
           const finalPageData = {
-            ...page,
-            ...modifiedPageData,
-            fontScale: 1,
-            url: managedUrl,
+            index: modifiedPageData.index,
+            record: modifiedPageData.record,
+            customPageTemplate: modifiedPageData.customPageTemplate,
+            customFieldPositions: modifiedPageData.customFieldPositions,
+            customFieldStyles: modifiedPageData.customFieldStyles,
+            customBrandElements: modifiedPageData.customBrandElements,
+            fontScale: 1, // Reset font scale on save
+            url: managedUrl, // Use the new managed URL for the thumbnail
+            filename: newPageImageData.filename,
+            // Explicitly clear transient/old data
             blob: undefined,
             dataUrl: null,
-            filename: newPageImageData.filename,
-           };
+          };
           return finalPageData;
         })
       }));
