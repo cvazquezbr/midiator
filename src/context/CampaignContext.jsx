@@ -106,14 +106,12 @@ export const CampaignProvider = ({ children }) => {
       return null;
     }
     const blobUrl = URL.createObjectURL(blob);
-    setCampaignStateInternal(prev => ({
-      ...prev,
-      pendingAssets: {
-        ...prev.pendingAssets,
-        [blobUrl]: blob,
-      }
-    }));
-    console.log(`[CampaignContext] Synchronously added new asset: ${blobUrl}`);
+    setCampaignStateInternal(prev => {
+      const newPendingAssets = { ...prev.pendingAssets, [blobUrl]: blob };
+      console.log(`%c[CampaignContext] ADDING asset. New pendingAssets count: ${Object.keys(newPendingAssets).length}`, 'color: #FFA500; font-weight: bold;', newPendingAssets);
+      return { ...prev, pendingAssets: newPendingAssets };
+    });
+    console.log(`[CampaignContext] Created blob URL: ${blobUrl}`);
     return blobUrl;
   }, []);
 
