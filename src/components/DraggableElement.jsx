@@ -80,31 +80,10 @@ const DraggableElementInternal = ({
     return `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) blur(${blur}px) opacity(${opacity}%)`;
   };
 
-  // useEffect para renderização do canvas foi REMOVIDO
   useEffect(() => {
-    // This effect resolves blob URLs to a displayable format.
-    let objectUrl = null;
-    if (content && content.startsWith('blob:') && pendingAssets) {
-      const blob = pendingAssets[content];
-      if (blob) {
-        objectUrl = URL.createObjectURL(blob);
-        setDisplayUrl(objectUrl);
-      } else {
-        // Blob not found, maybe it's from a previous session and now invalid.
-        // Show a placeholder or a broken image indicator.
-        setDisplayUrl(null); // Or a path to a broken image asset
-      }
-    } else {
-      setDisplayUrl(content);
-    }
-
-    return () => {
-      // Clean up the created object URL to prevent memory leaks.
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
-    };
-  }, [content, pendingAssets]);
+    // Use the content directly if it's a valid URL, otherwise it's text.
+    setDisplayUrl(content);
+  }, [content]);
 
 
   // Função para renderizar conteúdo HTML ou texto simples

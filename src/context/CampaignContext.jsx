@@ -52,11 +52,6 @@ export const CampaignProvider = ({ children }) => {
 
     const campaignData = safeDeepClone(loadedData.campaign_data || {});
 
-    // Sanitize pageTemplate.images to prevent crashes from null/undefined entries
-    if (campaignData.pageTemplate && Array.isArray(campaignData.pageTemplate.images)) {
-      campaignData.pageTemplate.images = campaignData.pageTemplate.images.filter(Boolean);
-    }
-
     // Ensure csvData is always a valid array of objects
     const sanitizedCsvData = (campaignData.csvData || []).map(record => record || {});
 
