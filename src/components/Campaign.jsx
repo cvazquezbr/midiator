@@ -1012,7 +1012,7 @@ const Campaign = ({
                                                 key={index}
                                                 severity="info"
                                                 onClick={() => {
-                                                    setProblema(problem.replace(/\*\*(.*?)\*\*\\n/g, '$1\n')); // Remove markdown bold for the text field
+                                                    setCampaignState({ problema: problem.replace(/\*\*(.*?)\*\*\\n/g, '$1\n') }); // Remove markdown bold for the text field
                                                     setHintModalOpen(false);
                                                 }}
                                                 sx={{
@@ -1090,7 +1090,7 @@ const Campaign = ({
                                                 key={index}
                                                 severity="info"
                                                 onClick={() => {
-                                                    setSolucao(solution.replace(/\*\*(.*?)\*\*\\n/g, '$1\n')); // Remove markdown bold
+                                                    setCampaignState({ solucao: solution.replace(/\*\*(.*?)\*\*\\n/g, '$1\n') }); // Remove markdown bold
                                                     setSolucaoHintModalOpen(false);
                                                 }}
                                                 sx={{
