@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -38,9 +38,17 @@ const ContentStep = ({
   handleGenerateIAContent,
   isGenerating,
   csvData,
-  csvHeaders,
 }) => {
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
+
+  // Derive csvHeaders from csvData to make the component more robust
+  const csvHeaders = useMemo(() => {
+    if (csvData && csvData.length > 0 && csvData[0]) {
+      return Object.keys(csvData[0]);
+    }
+    return [];
+  }, [csvData]);
+
 
   const handleDragEnter = (event) => {
     event.preventDefault();

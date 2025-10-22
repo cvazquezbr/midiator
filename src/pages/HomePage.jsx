@@ -88,13 +88,19 @@ function HomePage() {
 
   // Destructure state from the unified campaignState object
   const {
-    csvData, csvHeaders, fieldPositions, fieldStyles, brandElements,
+    csvData, fieldPositions, fieldStyles, brandElements,
     pageTemplate, selectedField, currentCampaign, generatedPagesData,
     generatedVideos, aspectRatio, pendingAssets, paletteId, customPalette,
     imageColorPalette, selectedPersonaForCampaign, selectedAutorForCampaign,
   } = campaignState;
 
   // Local UI State - not part of the campaign data model
+  const csvHeaders = useMemo(() => {
+    if (csvData && csvData.length > 0 && csvData[0]) {
+      return Object.keys(csvData[0]);
+    }
+    return [];
+  }, [csvData]);
   const [palettes, setPalettes] = useState([]);
   const [personaList, setPersonaList] = useState([]);
   const [autorList, setAutorList] = useState([]);

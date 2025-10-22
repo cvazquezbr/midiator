@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -12,8 +12,6 @@ import {
   Link as MuiLink,
   Alert,
   Slider,
-  FormControlLabel,
-  Switch,
   FormControl,
   InputLabel,
   Select,
@@ -44,7 +42,6 @@ const PostsCurtosStep = ({
   handleGenerateIAContent,
   isGenerating,
   csvData,
-  csvHeaders,
   onDadosAlterados,
   darkMode,
   exportCsv,
@@ -54,6 +51,15 @@ const PostsCurtosStep = ({
 }) => {
   const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
   const [isGeminiKeyConfigured, setIsGeminiKeyConfigured] = useState(true);
+
+  // Derive csvHeaders from csvData to make the component more robust
+  const csvHeaders = useMemo(() => {
+    if (csvData && csvData.length > 0 && csvData[0]) {
+      return Object.keys(csvData[0]);
+    }
+    return [];
+  }, [csvData]);
+
 
   useEffect(() => {
     const key = getGeminiApiKey();
@@ -80,7 +86,7 @@ const PostsCurtosStep = ({
   };
 
   // Show RecordManager if data exists or if user chose manual creation
-  const showRecordManager = inputMethod === 'manual';
+  const showRecordManager = inputMethod === 'manual' || (csvData && csvData.length > 0);
 
   // Show creation options if there's no data and method is not manual
   const showCreationOptions = !showRecordManager;
