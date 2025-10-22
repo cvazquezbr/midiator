@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React from 'react';
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Grid, IconButton, Tooltip, Fab, CircularProgress,
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Grid, IconButton, Tooltip, Fab,
 } from '@mui/material';
 import { Close, Edit, ContentCopy, ContentPaste } from '@mui/icons-material';
 import { useIsMobile } from '../hooks/use-mobile';
@@ -65,153 +65,110 @@ const PageEditor = ({
   console.log('%c[PageEditor] Rendering with props:', 'color: red; font-weight: bold;', { open, pageData, aspectRatio });
 
   const { campaignState, isCampaignLoading } = useCampaign();
-  const { csvHeaders, pageTemplate: globalPageTemplate, pendingAssets, colors: colorPalette } = campaignState;
+  const { csvHeaders, pageTemplate: globalPageTemplate } = campaignState;
   const pageDataFromHook = usePageData(pageData?.index);
 
-  const [editedPositions, setEditedPositions] = useState(null);
-  const [editedStyles, setEditedStyles] = useState(null);
-  const [editedBrandElements, setEditedBrandElements] = useState(null);
-  const [editedRecord, setEditedRecord] = useState(null);
-  const [editedPageTemplate, setEditedPageTemplate] = useState(null);
-  const [selectedFieldInternal, setSelectedFieldInternal] = useState(null);
+  const [editorState, setEditorState] = useState(null);
+  const [selectedField, setSelectedField] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
   const [imageSwatches, setImageSwatches] = useState([]);
   const isMobile = useIsMobile();
   const prevImagesRef = useRef();
 
-  const handleInternalFieldSelection = useCallback((fieldToSelect) => {
-    setSelectedFieldInternal(fieldToSelect);
-  }, []);
-
-  const updateElement = useCallback((elementId, newProps) => {
-    // If newProps is null, it signifies deletion.
-    if (newProps === null) {
-      setEditedPageTemplate(prev => ({
-        ...prev,
-        images: prev.images.filter(img => img.id !== elementId)
-      }));
-      setEditedBrandElements(prev => prev.filter(el => el.id !== elementId));
-      // Text fields are part of a map, so we can't "filter" them.
-      // Instead, we mark them as not visible.
-      setEditedPositions(prev => {
-        if (prev && prev[elementId]) {
-          return { ...prev, [elementId]: { ...prev[elementId], visible: false } };
-        }
-        return prev;
-      });
-      return;
-    }
-
-    // This function now handles updates for all element types.
-    const updateLogic = (prevPositions, prevTemplate, prevBrandElements) => {
-      if (prevPositions && Object.prototype.hasOwnProperty.call(prevPositions, elementId)) {
-        return { ...prevPositions, [elementId]: { ...prevPositions[elementId], ...newProps } };
-      }
-      if (prevTemplate && prevTemplate.images && prevTemplate.images.some(img => img.id === elementId)) {
-        const newImages = prevTemplate.images.map(img => img.id === elementId ? { ...img, ...newProps } : img);
-        return { ...prevTemplate, images: newImages };
-      }
-      if (prevBrandElements && prevBrandElements.some(el => el.id === elementId)) {
-        return prevBrandElements.map(el => el.id === elementId ? { ...el, ...newProps } : el);
-      }
-      return null; // No change
-    };
-
-    setEditedPositions(prev => updateLogic(prev, null, null) || prev);
-    setEditedPageTemplate(prev => updateLogic(null, prev, null) || prev);
-    setEditedBrandElements(prev => updateLogic(null, null, prev) || prev);
-
-  }, []);
-
-  // This is the core logic for the editor. It runs ONLY when the editor is opened
-  // for a specific page. It creates a "snapshot" of the page's state and uses that
-  // for the editing session. It INTENTIONALLY does not depend on `pageDataFromHook`
-  // or `globalPageTemplate` to prevent the editor from resetting when the global
-  // state changes (e.g., when a new image is added).
   useEffect(() => {
-    if (open && pageData?.index !== undefined) {
-      // We directly use the values from the hook here, but we don't list it as a dependency.
-      // This is the key to creating a stable editing "snapshot".
-      const { effectiveFieldPositions, effectiveFieldStyles, effectiveBrandElements, record } = pageDataFromHook;
+    if (open && pageDataFromHook) {
+      const {
+        fieldPositions,
+        fieldStyles,
+        brandElements,
+        record,
+        pageTemplate,
+        csvHeaders: headersFromHook,
+      } = pageDataFromHook;
 
-      // Ensure the record from the hook is valid before proceeding.
-      if (record) {
-        // Initialize all local states for editing from the snapshot.
-        setEditedPositions(safeDeepClone(effectiveFieldPositions));
-        setEditedBrandElements(safeDeepClone(effectiveBrandElements));
-        setEditedRecord(safeDeepClone(record));
-        setEditedPageTemplate(safeDeepClone(pageData.customPageTemplate || globalPageTemplate));
+      const initialEditorState = {
+        fieldPositions: safeDeepClone(fieldPositions || {}),
+        fieldStyles: safeDeepClone(fieldStyles || {}),
+        brandElements: safeDeepClone(brandElements || []),
+        pageTemplate: safeDeepClone(pageTemplate || {}),
+        csvHeaders: headersFromHook || [],
+        csvData: record ? [safeDeepClone(record)] : [],
+      };
 
-        // Initialize styles, ensuring all fields have a complete style object.
-        const newEditedStyles = {};
-        (csvHeaders || []).forEach(field => {
-          newEditedStyles[field] = { ...COMPLETE_DEFAULT_STYLE, ...(effectiveFieldStyles[field] || {}) };
-        });
-        setEditedStyles(newEditedStyles);
-      }
+      setEditorState(initialEditorState);
+    } else if (!open) {
+      setEditorState(null);
+      setSelectedField(null);
     }
-
-    // Cleanup: Reset all local state when the dialog is closed to ensure a clean slate for the next session.
-    if (!open) {
-      setEditedPositions(null);
-      setEditedStyles(null);
-      setEditedBrandElements(null);
-      setEditedRecord(null);
-      setEditedPageTemplate(null);
-      setSelectedFieldInternal(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, pageData?.index]); // This dependency array is the crucial fix.
+  }, [open, pageDataFromHook]);
 
   useEffect(() => {
-    const firstImage = editedPageTemplate?.images?.[0];
-    extractColorPalette(firstImage?.src, setImageSwatches);
-    const currentImages = editedPageTemplate?.images || [];
+    const firstImage = editorState?.pageTemplate?.images?.[0];
+    if (firstImage) {
+      extractColorPalette(firstImage.src, setImageSwatches);
+    }
+    const currentImages = editorState?.pageTemplate?.images || [];
     const previousImages = prevImagesRef.current || [];
     if (currentImages.length > previousImages.length) {
       const newImage = currentImages.find(img => !previousImages.some(prevImg => prevImg.id === img.id));
-      if (newImage) handleInternalFieldSelection(newImage.id);
+      if (newImage) setSelectedField(newImage.id);
     }
     prevImagesRef.current = currentImages;
-  }, [editedPageTemplate?.images, handleInternalFieldSelection]);
+  }, [editorState?.pageTemplate?.images]);
   
   const handleOpenHtmlEditor = (fieldId) => setEditingField(fieldId);
-  const handleCopyStyle = () => copyStyleToClipboard(editedStyles, editedPositions, editedBrandElements, editedPageTemplate);
-  const handlePasteStyle = async () => pasteStyleFromClipboard(setEditedStyles, setEditedPositions, setEditedBrandElements, setEditedPageTemplate);
+  const handleCopyStyle = () => copyStyleToClipboard(editorState);
+
+  const handlePasteStyle = () => {
+    pasteStyleFromClipboard((pastedData) => {
+        setEditorState(prev => ({
+            ...prev,
+            ...pastedData,
+        }));
+    });
+  };
 
   const handleImageSelection = async (file) => {
     if (!file) return;
     const managedUrl = addPendingAsset(file);
     if (managedUrl) {
       const newImage = createNewImageElement(managedUrl);
-      setEditedPageTemplate(prev => ({ ...prev, images: [...(prev.images || []), newImage] }));
-      handleInternalFieldSelection(newImage.id);
+      setEditorState(prev => ({
+        ...prev,
+        pageTemplate: {
+          ...prev.pageTemplate,
+          images: [...(prev.pageTemplate?.images || []), newImage]
+        }
+      }));
+      setSelectedField(newImage.id);
     }
   };
 
   const handleLocalImageUpload = (event) => handleImageSelection(event.target.files[0]);
 
-  const handleFieldPositionerCsvDataUpdate = useCallback((updatedDataArray) => {
-    if (updatedDataArray?.length > 0) setEditedRecord(updatedDataArray[0]);
-  }, []);
-
-  if (!open) return null;
+  if (!open || !editorState) return null;
 
   const handleSave = () => {
-    const savedData = {
-      ...pageData,
-      record: editedRecord,
-      customFieldPositions: editedPositions,
-      customFieldStyles: editedStyles,
-      customBrandElements: editedBrandElements,
-      customPageTemplate: editedPageTemplate,
-    };
-    onSave(savedData);
+    onSave({
+      index: pageData.index,
+      ...editorState
+    });
     onClose();
   };
 
-  const editorCsvData = editedRecord ? [editedRecord] : [];
+  const handleSaveHtmlContent = (newContent) => {
+    if (editorState.csvData && editingField) {
+        setEditorState(prev => {
+            const newCsvData = [...prev.csvData];
+            if (newCsvData[0]) {
+                newCsvData[0] = { ...newCsvData[0], [editingField]: newContent };
+            }
+            return { ...prev, csvData: newCsvData };
+        });
+    }
+    setEditingField(null);
+  };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth scroll="paper" fullScreen={isMobile}>
@@ -228,41 +185,23 @@ const PageEditor = ({
       <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column' }}>
         <Grid container spacing={2} sx={{ flexGrow: 1 }}>
           <Grid item xs={12} md={isMobile ? 12 : 8} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {editedPositions && editedStyles && editedRecord && editedPageTemplate && (
-              <FieldPositioner
-                aspectRatio={aspectRatio}
-                csvHeaders={csvHeaders}
-                fieldPositions={editedPositions}
-                fieldStyles={editedStyles}
-                setFieldStyles={setEditedStyles}
-                csvData={editorCsvData}
-                colorPalette={imageSwatches}
-                selectedField={selectedFieldInternal}
-                setSelectedField={handleInternalFieldSelection}
-                onCsvDataUpdate={handleFieldPositionerCsvDataUpdate}
-                originalImageSize={originalImageSize}
-                brandElements={editedBrandElements}
-                pageTemplate={editedPageTemplate}
-                updateElement={updateElement}
-                setPageTemplate={setEditedPageTemplate}
-                currentPreviewIndex={0}
-              />
-            )}
-            </Grid>
+            <FieldPositioner
+              editorState={editorState}
+              setEditorState={setEditorState}
+              selectedField={selectedField}
+              setSelectedField={setSelectedField}
+              originalImageSize={originalImageSize}
+              onOpenHtmlEditor={handleOpenHtmlEditor}
+              currentPreviewIndex={0}
+            />
+          </Grid>
             {!isMobile && (
               <Grid item xs={12} md={4}>
                 <FormattingPanel
-                  imagePalette={imageSwatches}
-                  selectedField={selectedFieldInternal}
-                  setSelectedField={setSelectedFieldInternal}
-                  fieldStyles={editedStyles}
-                  setFieldStyles={setEditedStyles} // Still needed for style-specific updates
-                  fieldPositions={editedPositions}
-                  csvHeaders={csvHeaders}
-                  pageTemplate={editedPageTemplate}
-                  setPageTemplate={setEditedPageTemplate} // Still needed for background/etc
-                  brandElements={editedBrandElements}
-                  updateElement={updateElement} // The new centralized updater
+                  editorState={editorState}
+                  setEditorState={setEditorState}
+                  selectedField={selectedField}
+                  setSelectedField={setSelectedField}
                   onOpenHtmlEditor={handleOpenHtmlEditor}
                   showImageLoaders={true}
                   handleImageUpload={handleLocalImageUpload}
@@ -274,7 +213,7 @@ const PageEditor = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
-        <Button onClick={handleSave} color="primary" variant="contained">Salvar Alterações</Button>
+        <Button onClick={handleSave} color="primary" variant="contained">Salvar Edições</Button>
       </DialogActions>
       {isMobile && (
         <>
@@ -282,19 +221,11 @@ const PageEditor = ({
           <FormattingDrawer
             open={isDrawerOpen}
             onClose={() => setIsDrawerOpen(false)}
-            imagePalette={imageSwatches}
-            selectedField={selectedFieldInternal}
-            setSelectedField={setSelectedFieldInternal}
-            fieldStyles={editedStyles}
-            setFieldStyles={setEditedStyles}
-            fieldPositions={editedPositions}
-            setFieldPositions={setEditedPositions}
-            csvHeaders={csvHeaders}
+            editorState={editorState}
+            setEditorState={setEditorState}
+            selectedField={selectedField}
+            setSelectedField={setSelectedField}
             onOpenHtmlEditor={handleOpenHtmlEditor}
-            pageTemplate={editedPageTemplate}
-            setPageTemplate={setEditedPageTemplate}
-            brandElements={editedBrandElements}
-            setBrandElements={setEditedBrandElements}
             showImageLoaders={true}
             handleImageUpload={handleLocalImageUpload}
             onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
@@ -302,15 +233,10 @@ const PageEditor = ({
         </>
       )}
       <TextEditorDialog
-        open={editingField !== null && editedRecord && editedRecord[editingField] !== undefined}
+        open={editingField !== null}
         title={`Editar "${editingField || ''}"`}
-        content={editedRecord?.[editingField] || ''}
-        onSave={(newContent) => {
-          if (editedRecord && editingField) {
-            setEditedRecord(prev => ({ ...prev, [editingField]: newContent }));
-          }
-          setEditingField(null);
-        }}
+        content={(editorState.csvData && editorState.csvData[0]) ? editorState.csvData[0][editingField] || '' : ''}
+        onSave={handleSaveHtmlContent}
         onClose={() => setEditingField(null)}
       />
     </Dialog>

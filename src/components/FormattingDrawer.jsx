@@ -6,22 +6,11 @@ import FormattingPanel from './FormattingPanel';
 const FormattingDrawer = ({
   open,
   onClose,
+  editorState,
+  setEditorState,
   selectedField,
-  setSelectedField, // <-- Add this
-  fieldStyles,
-  initialFieldStyles,
-  setFieldStyles,
-  fieldPositions,
-  setFieldPositions,
-  csvHeaders,
-  brandElements,
-  setBrandElements,
-  pageTemplate, // <-- Add this
-  setPageTemplate, // <-- Add this
-  onZIndexChange,
+  setSelectedField,
   onOpenHtmlEditor,
-  templateFieldStyles,
-  activeStep,
   isCropping,
   setIsCropping,
   showImageLoaders,
@@ -38,22 +27,11 @@ const FormattingDrawer = ({
           </IconButton>
         </Box>
         <FormattingPanel
+          editorState={editorState}
+          setEditorState={setEditorState}
           selectedField={selectedField}
-          setSelectedField={setSelectedField} // <-- Pass it down
-          fieldStyles={fieldStyles}
-          initialFieldStyles={initialFieldStyles}
-          setFieldStyles={setFieldStyles}
-          fieldPositions={fieldPositions}
-          setFieldPositions={setFieldPositions}
-          csvHeaders={csvHeaders}
-          brandElements={brandElements}
-          setBrandElements={setBrandElements}
-          pageTemplate={pageTemplate} // <-- Pass it down
-          setPageTemplate={setPageTemplate} // <-- Pass it down
-          onZIndexChange={onZIndexChange}
+          setSelectedField={setSelectedField}
           onOpenHtmlEditor={onOpenHtmlEditor}
-          templateFieldStyles={templateFieldStyles}
-          activeStep={activeStep}
           isCropping={isCropping}
           setIsCropping={setIsCropping}
           showImageLoaders={showImageLoaders}
