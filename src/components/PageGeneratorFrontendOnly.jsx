@@ -261,51 +261,54 @@ const PageGeneratorFrontendOnly = ({
   const handleSaveIndividualModifications = async (modifiedPageData) => {
     handleCloseGeneratedPageEditor();
     try {
-      const regenContext = {
-        ...campaignState,
-        record: modifiedPageData.csvData[0],
-        index: modifiedPageData.index,
-        pageTemplate: modifiedPageData.pageTemplate,
-        brandElements: modifiedPageData.brandElements,
-        fieldPositions: modifiedPageData.fieldPositions,
-        fieldStyles: modifiedPageData.fieldStyles,
-        fontScale: 1,
-      };
+        const { pageTemplate: customPageTemplate, ...restOfModifiedData } = modifiedPageData;
 
-      if (!regenContext.pageTemplate || !regenContext.record) {
-        toast.error("Dados da página ou template ausentes. Não foi possível salvar.");
-        return;
-      }
+        const regenContext = {
+            ...campaignState,
+            record: restOfModifiedData.csvData[0],
+            index: restOfModifiedData.index,
+            pageTemplate: customPageTemplate, // Use the correctly named template for regeneration
+            brandElements: restOfModifiedData.brandElements,
+            fieldPositions: restOfModifiedData.fieldPositions,
+            fieldStyles: restOfModifiedData.fieldStyles,
+            fontScale: 1,
+        };
 
-      const newPageImageData = await regenerateSinglePage(regenContext);
+        if (!regenContext.pageTemplate || !regenContext.record) {
+            toast.error("Dados da página ou template ausentes. Não foi possível salvar.");
+            return;
+        }
 
-      const managedUrl = addPendingAsset(newPageImageData.blob);
-      if (!managedUrl) {
-        toast.error('Falha ao registrar a imagem da página modificada.');
-        return;
-      }
+        const newPageImageData = await regenerateSinglePage(regenContext);
 
-      setCampaignState(current => ({
-        generatedPagesData: current.generatedPagesData.map(page => {
-          if (page.index !== modifiedPageData.index) {
-            return page;
-          }
-          return {
-            ...page,
-            record: modifiedPageData.csvData[0],
-            customPageTemplate: modifiedPageData.pageTemplate,
-            customBrandElements: modifiedPageData.brandElements,
-            customFieldPositions: modifiedPageData.fieldPositions,
-            customFieldStyles: modifiedPageData.fieldStyles,
-            url: managedUrl,
-            filename: newPageImageData.filename,
-            blob: undefined,
-            dataUrl: null,
-          };
-        }),
-      }));
+        const managedUrl = addPendingAsset(newPageImageData.blob);
+        if (!managedUrl) {
+            toast.error('Falha ao registrar a imagem da página modificada.');
+            return;
+        }
 
-      toast.success(`Página #${modifiedPageData.index + 1} salva.`);
+        setCampaignState(current => ({
+            generatedPagesData: current.generatedPagesData.map(page => {
+                if (page.index !== restOfModifiedData.index) {
+                    return page;
+                }
+                // Merge existing page data with the new data to prevent data loss
+                return {
+                    ...page,
+                    record: restOfModifiedData.csvData[0],
+                    customPageTemplate: customPageTemplate, // Save with the correct key
+                    customBrandElements: restOfModifiedData.brandElements,
+                    customFieldPositions: restOfModifiedData.fieldPositions,
+                    customFieldStyles: restOfModifiedData.fieldStyles,
+                    url: managedUrl,
+                    filename: newPageImageData.filename,
+                    blob: undefined, // blob is now managed by context
+                    dataUrl: null, // dataUrl is deprecated
+                };
+            }),
+        }));
+
+        toast.success(`Página #${modifiedPageData.index + 1} salva.`);
     } catch (error) {
       console.error('[PageGenerator] Erro ao salvar modificações da página:', error);
       toast.error(`Falha ao regenerar a página: ${error.message}`);
