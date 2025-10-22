@@ -87,22 +87,30 @@ const Publisher = ({
   settings,
   campaignContent,
   generatedPagesData = [],
-  generatedVideosData = [],
+  generatedVideos = [],
   followupPosts = [],
-  isScheduled,
-  setIsScheduled,
-  scheduleDate,
-  setScheduleDate,
-  weeklySchedule,
-  setWeeklySchedule,
-  selectedImages,
-  setSelectedImages,
-  selectedVideos,
-  setSelectedVideos,
+  // isScheduled, << Managed internally
+  // setIsScheduled, << Managed internally
+  // scheduleDate, << Managed internally
+  // setScheduleDate, << Managed internally
+  // weeklySchedule, << Managed internally
+  // setWeeklySchedule, << Managed internally
+  // selectedImages, << Managed internally
+  // setSelectedImages, << Managed internally
+  // selectedVideos, << Managed internally
+  // setSelectedVideos, << Managed internally
+  onUpdateScheduledPosts,
   currentCampaign,
   pendingAssets,
   setPendingAssets,
 }) => {
+  // Internal state management for scheduling and media selection
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState(new Date());
+  const [weeklySchedule, setWeeklySchedule] = useState(Array(7).fill('12:00'));
+  const [selectedImages, setSelectedImages] = useState({});
+  const [selectedVideos, setSelectedVideos] = useState({});
+
   const [tabValue, setTabValue] = React.useState(0);
   const [mySchedules, setMySchedules] = useState([]);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(false);
@@ -483,7 +491,7 @@ const Publisher = ({
   useEffect(() => {
     console.log('generatedPagesData in Publisher:', generatedPagesData);
     const images = (generatedPagesData || []).map((img, index) => ({ ...img, type: 'image', mediaId: `image-${index}`, fileSize: img.blob ? formatBytes(img.blob.size) : 'N/A', fileType: img.blob ? img.blob.type : 'N/A' }));
-    const videos = (generatedVideosData || []).map((vid, index) => ({ ...vid, type: 'video', mediaId: `video-${index}`, fileSize: vid.blob ? formatBytes(vid.blob.size) : 'N/A', fileType: vid.blob ? vid.blob.type : 'N/A' }));
+    const videos = (generatedVideos || []).map((vid, index) => ({ ...vid, type: 'video', mediaId: `video-${index}`, fileSize: vid.blob ? formatBytes(vid.blob.size) : 'N/A', fileType: vid.blob ? vid.blob.type : 'N/A' }));
     const allMedia = [...images, ...videos];
     setUnifiedMedia(allMedia);
     if (allMedia.length > 0) {
@@ -491,19 +499,19 @@ const Publisher = ({
     } else {
       setPreviewedMedia(null);
     }
-  }, [generatedPagesData, generatedVideosData]);
+  }, [generatedPagesData, generatedVideos]);
 
   useEffect(() => {
     if (!generatedPagesData || generatedPagesData.length === 0) {
       setSelectedImages({});
     }
-  }, [generatedPagesData, setSelectedImages]);
+  }, [generatedPagesData]);
 
   useEffect(() => {
-    if (!generatedVideosData || generatedVideosData.length === 0) {
+    if (!generatedVideos || generatedVideos.length === 0) {
       setSelectedVideos({});
     }
-  }, [generatedVideosData, setSelectedVideos]);
+  }, [generatedVideos]);
 
   const handlePublishWordPress = async () => {
     setIsPublishingWp(true);
@@ -664,7 +672,7 @@ const Publisher = ({
 
         if (selectedVideoIndexes.length > 0) {
             const videoIndex = parseInt(selectedVideoIndexes[0]);
-            const videoData = generatedVideosData[videoIndex];
+            const videoData = generatedVideos[videoIndex];
             let videoBlob = videoData.blob;
 
             // If blob is not directly on the object, try to find it in the pendingAssets map.
