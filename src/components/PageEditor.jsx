@@ -64,6 +64,13 @@ const PageEditor = ({
 }) => {
   console.log('%c[PageEditor] Rendering with props:', 'color: red; font-weight: bold;', { open, pageData, aspectRatio });
 
+  // JULES: Adicionando log para depuração
+  useEffect(() => {
+    if (open) {
+      console.log('[DEBUG-JULES] PageEditor RECEBEU pageData:', JSON.parse(JSON.stringify(pageData)));
+    }
+  }, [open, pageData]);
+
   const { campaignState, isCampaignLoading } = useCampaign();
   const { csvHeaders, pageTemplate: globalPageTemplate } = campaignState;
   const pageDataFromHook = usePageData(pageData?.index);
@@ -77,26 +84,23 @@ const PageEditor = ({
   const prevImagesRef = useRef();
 
   useEffect(() => {
-    // The check for `pageData` is critical. It's the source of truth for the specific item.
-    if (open && pageData && pageDataFromHook) {
+    if (open && pageDataFromHook) {
       const {
-        effectiveFieldPositions,
-        effectiveFieldStyles,
-        effectiveBrandElements,
-        effectivePageTemplate,
-        csvHeaders: headersFromHook,
+        effectiveFieldPositions: fieldPositions,
+        effectiveFieldStyles: fieldStyles,
+        effectiveBrandElements: brandElements,
         record,
+        effectivePageTemplate: pageTemplate,
+        csvHeaders: headersFromHook,
       } = pageDataFromHook;
 
-      // Construct the initial state by prioritizing the specific page's custom data
-      // (`pageData.custom...`) and falling back to the effective/global data from the hook.
       const initialEditorState = {
-        fieldPositions: safeDeepClone(pageData.customFieldPositions || effectiveFieldPositions || {}),
-        fieldStyles: safeDeepClone(pageData.customFieldStyles || effectiveFieldStyles || {}),
-        brandElements: safeDeepClone(pageData.customBrandElements || effectiveBrandElements || []),
-        pageTemplate: safeDeepClone(pageData.customPageTemplate || effectivePageTemplate || {}),
+        fieldPositions: safeDeepClone(fieldPositions || {}),
+        fieldStyles: safeDeepClone(fieldStyles || {}),
+        brandElements: safeDeepClone(brandElements || []),
+        pageTemplate: safeDeepClone(pageTemplate || {}),
         csvHeaders: headersFromHook || [],
-        csvData: record ? [safeDeepClone(record)] : [], // The record should be consistent
+        csvData: record ? [safeDeepClone(record)] : [],
       };
 
       setEditorState(initialEditorState);
@@ -104,8 +108,7 @@ const PageEditor = ({
       setEditorState(null);
       setSelectedField(null);
     }
-    // Add pageData to the dependency array as it's now used for initialization.
-  }, [open, pageData, pageDataFromHook]);
+  }, [open, pageDataFromHook]);
 
   useEffect(() => {
     const firstImage = editorState?.pageTemplate?.images?.[0];
@@ -154,10 +157,13 @@ const PageEditor = ({
   if (!open || !editorState) return null;
 
   const handleSave = () => {
-    onSave({
+    const dataToSend = {
       index: pageData.index,
       ...editorState
-    });
+    };
+    // JULES: Adicionando log para depuração
+    console.log('[DEBUG-JULES] PageEditor VAI ENVIAR (onSave):', JSON.parse(JSON.stringify(dataToSend)));
+    onSave(dataToSend);
     onClose();
   };
 
