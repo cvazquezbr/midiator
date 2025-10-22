@@ -77,23 +77,26 @@ const PageEditor = ({
   const prevImagesRef = useRef();
 
   useEffect(() => {
-    if (open && pageDataFromHook) {
+    // The check for `pageData` is critical. It's the source of truth for the specific item.
+    if (open && pageData && pageDataFromHook) {
       const {
-        effectiveFieldPositions: fieldPositions,
-        effectiveFieldStyles: fieldStyles,
-        effectiveBrandElements: brandElements,
-        record,
-        effectivePageTemplate: pageTemplate,
+        effectiveFieldPositions,
+        effectiveFieldStyles,
+        effectiveBrandElements,
+        effectivePageTemplate,
         csvHeaders: headersFromHook,
+        record,
       } = pageDataFromHook;
 
+      // Construct the initial state by prioritizing the specific page's custom data
+      // (`pageData.custom...`) and falling back to the effective/global data from the hook.
       const initialEditorState = {
-        fieldPositions: safeDeepClone(fieldPositions || {}),
-        fieldStyles: safeDeepClone(fieldStyles || {}),
-        brandElements: safeDeepClone(brandElements || []),
-        pageTemplate: safeDeepClone(pageTemplate || {}),
+        fieldPositions: safeDeepClone(pageData.customFieldPositions || effectiveFieldPositions || {}),
+        fieldStyles: safeDeepClone(pageData.customFieldStyles || effectiveFieldStyles || {}),
+        brandElements: safeDeepClone(pageData.customBrandElements || effectiveBrandElements || []),
+        pageTemplate: safeDeepClone(pageData.customPageTemplate || effectivePageTemplate || {}),
         csvHeaders: headersFromHook || [],
-        csvData: record ? [safeDeepClone(record)] : [],
+        csvData: record ? [safeDeepClone(record)] : [], // The record should be consistent
       };
 
       setEditorState(initialEditorState);
@@ -101,7 +104,8 @@ const PageEditor = ({
       setEditorState(null);
       setSelectedField(null);
     }
-  }, [open, pageDataFromHook]);
+    // Add pageData to the dependency array as it's now used for initialization.
+  }, [open, pageData, pageDataFromHook]);
 
   useEffect(() => {
     const firstImage = editorState?.pageTemplate?.images?.[0];
