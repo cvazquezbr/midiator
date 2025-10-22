@@ -240,22 +240,23 @@ export const deserializeCampaignData = async (loadedState) => {
   const permanentToTempUrlMap = new Map();
 
   for (const downloadUrl of uniqueUrlsToDownload.keys()) {
-    const fetchUrl = isVercelUrl(downloadUrl)
-      ? `/api/asset-proxy?url=${encodeURIComponent(downloadUrl)}`
-      : downloadUrl;
-
     const promise = (async () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
         controller.abort();
         console.warn(`[deserializeCampaignData] Timeout fetching asset: ${downloadUrl}`);
-        toast.error(`O carregamento do recurso demorou demais e foi cancelado.`);
-      }, 15000); // 15 seconds timeout
+        toast.error(`O carregamento do recurso demorou demais e foi cancelado: ${downloadUrl}`);
+      }, 25000); // Increased timeout to 25 seconds
 
       try {
-        const response = await fetch(fetchUrl, { signal: controller.signal });
+        // First, try a direct CORS request, which is faster and more reliable if allowed.
+        const response = await fetch(downloadUrl, {
+          signal: controller.signal,
+          mode: 'cors',
+        });
+
         if (!response.ok) {
-          throw new Error(`HTTP error ${response.status}`);
+          throw new Error(`Direct fetch failed with HTTP error ${response.status}.`);
         }
         const blob = await response.blob();
         const filename = downloadUrl.split('/').pop().split('?')[0] || `downloaded_asset_${Date.now()}`;
