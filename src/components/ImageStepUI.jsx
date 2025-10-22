@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Typography,
   Box,
@@ -24,9 +24,7 @@ const ImageStepUI = ({
   isLoading,
   onOpenImageGallery,
   onImageDisplayedSizeChange,
-  onCsvDataUpdate,
   originalImageSize,
-  onZIndexChange,
   isMobile,
   onOpenHtmlEditor,
   currentPreviewIndex,
@@ -34,10 +32,9 @@ const ImageStepUI = ({
   activeStep,
   handleImageUpload,
 }) => {
-  const { campaignState, setCampaignState, isCampaignLoading } = useCampaign();
+  const { campaignState, setCampaignState } = useCampaign();
 
-  console.log('%c[ImageStepUI] Rendering with campaignState:', 'color: brown; font-weight: bold;', { campaignState });
-
+  // Destructure all needed properties from the global campaignState
   const {
     csvData,
     fieldPositions,
@@ -48,44 +45,55 @@ const ImageStepUI = ({
     imageColorPalette,
     initialFieldStyles,
     templateFieldStyles,
-    fontScale,
   } = campaignState;
+
+  // This is the CRITICAL FIX:
+  // We assemble the `editorState` object that the refactored child components (`FieldPositioner`, `FormattingPanel`) now expect.
+  // This bridges the gap between the global `campaignState` and the local `editorState` used by the editor components.
+  const editorState = useMemo(() => ({
+    csvData,
+    fieldPositions,
+    fieldStyles,
+    brandElements,
+    pageTemplate,
+    // We derive csvHeaders here to ensure robustness
+    csvHeaders: (csvData && csvData.length > 0 && csvData[0]) ? Object.keys(csvData[0]) : [],
+  }), [csvData, fieldPositions, fieldStyles, brandElements, pageTemplate]);
+
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
 
-  // Derive csvHeaders from csvData to make the component more robust
-  // This prevents crashes when loading campaigns that don't have csvHeaders at the top level
-  const csvHeaders = React.useMemo(() => {
-    if (csvData && csvData.length > 0) {
-      return Object.keys(csvData[0]);
-    }
-    return [];
-  }, [csvData]);
+  const handleNextPreview = () => setCurrentPreviewIndex(prev => Math.min(prev + 1, csvData.length - 1));
+  const handlePreviousPreview = () => setCurrentPreviewIndex(prev => Math.max(prev - 1, 0));
+  const handleFirstPreview = () => setCurrentPreviewIndex(0);
+  const handleLastPreview = () => setCurrentPreviewIndex(csvData.length - 1);
 
-  const handleNextPreview = () => {
-    setCurrentPreviewIndex(prevIndex => Math.min(prevIndex + 1, csvData.length - 1));
+  // This function acts as a translator from the child components' `setEditorState` calls
+  // back to the global `setCampaignState`.
+  const handleEditorStateChange = (updater) => {
+    // We need to be careful here. The `updater` function from the children will return a complete
+    // `editorState` object. We must destructure it and update the global state accordingly.
+    setCampaignState(prevState => {
+      const newEditorState = typeof updater === 'function' ? updater(prevState) : updater;
+
+      // We only update the parts of the global state that the editor is responsible for.
+      return {
+        fieldPositions: newEditorState.fieldPositions,
+        fieldStyles: newEditorState.fieldStyles,
+        brandElements: newEditorState.brandElements,
+        pageTemplate: newEditorState.pageTemplate,
+        csvData: newEditorState.csvData,
+      };
+    });
   };
 
-  const handlePreviousPreview = () => {
-    setCurrentPreviewIndex(prevIndex => Math.max(prevIndex - 1, 0));
-  };
-
-  const handleFirstPreview = () => {
-    setCurrentPreviewIndex(0);
-  };
-
-  const handleLastPreview = () => {
-    setCurrentPreviewIndex(csvData.length - 1);
-  };
 
   if (isLoading) {
     return (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', height: '100%' }}>
             <CircularProgress />
-            <Typography variant="h6" sx={{ ml: 2 }}>
-                Carregando...
-            </Typography>
+            <Typography variant="h6" sx={{ ml: 2 }}>Carregando...</Typography>
         </Box>
     );
   }
@@ -94,67 +102,30 @@ const ImageStepUI = ({
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, height: { xs: 'calc(100dvh - 140px)', md: 'calc(100vh - 150px)' } }}>
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <Typography variant="h6" sx={{ flexShrink: 0, textAlign: 'center', my: 2 }}>
-          Editor de Página
+          Editor de Modelo
         </Typography>
         {csvData && csvData.length > 0 && pageTemplate && fieldPositions && fieldStyles ? (
           <>
             <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', p: 1 }}>
               <FieldPositioner
-                csvHeaders={csvHeaders}
-                fieldPositions={fieldPositions}
-                setFieldPositions={(value) => setCampaignState({ fieldPositions: value })}
-                fieldStyles={fieldStyles}
-                setFieldStyles={(value) => setCampaignState({ fieldStyles: value })}
-                csvData={csvData}
-                onImageDisplayedSizeChange={onImageDisplayedSizeChange}
-                colorPalette={imageColorPalette}
-                onCsvDataUpdate={onCsvDataUpdate}
+                editorState={editorState}
+                setEditorState={handleEditorStateChange} // Pass the translator function
                 selectedField={selectedField}
                 setSelectedField={(value) => setCampaignState({ selectedField: value })}
                 originalImageSize={originalImageSize}
-                brandElements={brandElements}
-                setBrandElements={(value) => setCampaignState({ brandElements: value })}
-                pageTemplate={pageTemplate}
-                setPageTemplate={(value) => setCampaignState({ pageTemplate: value })}
-                onZIndexChange={onZIndexChange}
                 onOpenHtmlEditor={onOpenHtmlEditor}
                 currentPreviewIndex={currentPreviewIndex}
-                setCurrentPreviewIndex={setCurrentPreviewIndex}
-                onFontScaleChange={(value) => setCampaignState({ fontScale: value })}
+                onImageDisplayedSizeChange={onImageDisplayedSizeChange}
                 isCropping={isCropping}
-                setIsCropping={setIsCropping}
               />
             </Box>
-            {imageColorPalette && imageColorPalette.length > 0 && (
-              <Box sx={{ flexShrink: 0, py: 1, display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
-                {imageColorPalette.map((color, index) => (
-                  <Box
-                    key={index}
-                    sx={{
-                      width: 28, height: 28, borderRadius: '50%', backgroundColor: color, cursor: 'pointer',
-                      border: '2px solid #fff', boxShadow: '0 0 5px rgba(0,0,0,0.2)',
-                    }}
-                    onClick={() => {
-                      if (selectedField) {
-                        setCampaignState({
-                          fieldStyles: {
-                            ...fieldStyles,
-                            [selectedField]: { ...(fieldStyles[selectedField] || {}), color: color }
-                          }
-                        });
-                      }
-                    }}
-                  />
-                ))}
-              </Box>
-            )}
             {csvData && csvData.length > 1 && (
               <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" sx={{ flexShrink: 0, mt: 2 }} flexWrap="wrap">
-                <Tooltip title="Primeiro Registro"><span><IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small"><SkipPrevious /></IconButton></span></Tooltip>
-                <Tooltip title="Registro Anterior"><span><IconButton onClick={handlePreviousPreview} disabled={currentPreviewIndex === 0} size="small"><ArrowLeft /></IconButton></span></Tooltip>
-                <Typography variant="body2" sx={{ minWidth: '100px', textAlign: 'center' }}>Registro: {currentPreviewIndex + 1} / {csvData.length}</Typography>
-                <Tooltip title="Próximo Registro"><span><IconButton onClick={handleNextPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><ArrowRight /></IconButton></span></Tooltip>
-                <Tooltip title="Último Registro"><span><IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><SkipNext /></IconButton></span></Tooltip>
+                <Tooltip title="Primeiro"><span><IconButton onClick={handleFirstPreview} disabled={currentPreviewIndex === 0} size="small"><SkipPrevious /></IconButton></span></Tooltip>
+                <Tooltip title="Anterior"><span><IconButton onClick={handlePreviousPreview} disabled={currentPreviewIndex === 0} size="small"><ArrowLeft /></IconButton></span></Tooltip>
+                <Typography variant="body2" sx={{ minWidth: '100px', textAlign: 'center' }}>{currentPreviewIndex + 1} / {csvData.length}</Typography>
+                <Tooltip title="Próximo"><span><IconButton onClick={handleNextPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><ArrowRight /></IconButton></span></Tooltip>
+                <Tooltip title="Último"><span><IconButton onClick={handleLastPreview} disabled={currentPreviewIndex === csvData.length - 1} size="small"><SkipNext /></IconButton></span></Tooltip>
               </Stack>
             )}
           </>
@@ -171,27 +142,16 @@ const ImageStepUI = ({
         <Box sx={{ flex: '0 0 320px', p: 1, borderLeft: 1, borderColor: 'divider', overflowY: 'auto' }}>
           <Stack spacing={2}>
             <FormattingPanel
+              editorState={editorState}
+              setEditorState={handleEditorStateChange} // Pass the translator function
+              selectedField={selectedField}
+              setSelectedField={(value) => setCampaignState({ selectedField: value })}
+              onOpenHtmlEditor={onOpenHtmlEditor}
+              isCropping={isCropping}
+              setIsCropping={setIsCropping}
               showImageLoaders={true}
               handleImageUpload={handleImageUpload}
               onOpenImageGallery={onOpenImageGallery}
-              selectedField={selectedField}
-              setSelectedField={(value) => setCampaignState({ selectedField: value })}
-              fieldStyles={fieldStyles}
-              initialFieldStyles={initialFieldStyles}
-              setFieldStyles={(value) => setCampaignState({ fieldStyles: value })}
-              fieldPositions={fieldPositions}
-              setFieldPositions={(value) => setCampaignState({ fieldPositions: value })}
-              csvHeaders={csvHeaders}
-              brandElements={brandElements}
-              setBrandElements={(value) => setCampaignState({ brandElements: value })}
-              pageTemplate={pageTemplate}
-              setPageTemplate={(value) => setCampaignState({ pageTemplate: value })}
-              onZIndexChange={onZIndexChange}
-              onOpenHtmlEditor={onOpenHtmlEditor}
-              templateFieldStyles={templateFieldStyles}
-              activeStep={activeStep}
-              isCropping={isCropping}
-              setIsCropping={setIsCropping}
             />
           </Stack>
         </Box>
@@ -200,30 +160,17 @@ const ImageStepUI = ({
       {isMobile && (
         <>
           <Fab color="primary" aria-label="edit" sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 1300 }} onClick={() => {
-            if (!selectedField) {
-              setCampaignState({ selectedField: '__page_background__' });
-            }
+            if (!selectedField) setCampaignState({ selectedField: '__page_background__' });
             setIsDrawerOpen(true);
           }}><EditIcon /></Fab>
           <FormattingDrawer
             open={isDrawerOpen}
             onClose={() => setIsDrawerOpen(false)}
+            editorState={editorState}
+            setEditorState={handleEditorStateChange} // Pass the translator function
             selectedField={selectedField}
             setSelectedField={(value) => setCampaignState({ selectedField: value })}
-            fieldStyles={fieldStyles}
-            initialFieldStyles={initialFieldStyles}
-            setFieldStyles={(value) => setCampaignState({ fieldStyles: value })}
-            fieldPositions={fieldPositions}
-            setFieldPositions={(value) => setCampaignState({ fieldPositions: value })}
-            csvHeaders={csvHeaders}
-            brandElements={brandElements}
-            setBrandElements={(value) => setCampaignState({ brandElements: value })}
-            pageTemplate={pageTemplate}
-            setPageTemplate={(value) => setCampaignState({ pageTemplate: value })}
-            onZIndexChange={onZIndexChange}
             onOpenHtmlEditor={onOpenHtmlEditor}
-            templateFieldStyles={templateFieldStyles}
-            activeStep={activeStep}
             isCropping={isCropping}
             setIsCropping={setIsCropping}
             showImageLoaders={true}
