@@ -376,9 +376,16 @@ function HomePage() {
 
         applyLoadedCampaign(campaignToApply);
 
+        // If the loaded campaign has CSV data, set the input method to manual
+        // so the user sees the data grid immediately.
+        if (finalCampaignData.csvData && finalCampaignData.csvData.length > 0) {
+            setInputMethod('manual');
+        } else {
+            setInputMethod('ia'); // Default to IA if no data
+        }
 
         toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
-        setActiveStep(3);
+        setActiveStep(2); // Go to "Posts Curtos" step
     } catch (err) {
         toast.error(`Falha ao carregar campanha: ${err.message}`);
     } finally {

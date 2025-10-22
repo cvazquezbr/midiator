@@ -85,10 +85,10 @@ const PostsCurtosStep = ({
     handleDropProp(event);
   };
 
-  // Show RecordManager if data exists or if user chose manual creation
-  const showRecordManager = inputMethod === 'manual' || (csvData && csvData.length > 0);
-
-  // Show creation options if there's no data and method is not manual
+  // CRITICAL FIX: The decision to show the data grid (RecordManager) or the creation options
+  // should depend *only* on the `inputMethod` prop, not on the presence of `csvData`.
+  // This ensures the "Back" button works correctly.
+  const showRecordManager = inputMethod === 'manual';
   const showCreationOptions = !showRecordManager;
 
   return (
