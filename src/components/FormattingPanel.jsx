@@ -19,11 +19,11 @@ import {
   ExpandMore,
   Visibility,
   VisibilityOff,
-  ImageIcon,
   BrandingWatermark,
   ContentCopy,
   ContentPaste,
 } from '@mui/icons-material';
+import ImageIcon from '@mui/icons-material/Image';
 import { useCampaign } from '../context/CampaignContext';
 import { copyStyleToClipboard, pasteStyleFromClipboard } from '../utils/styleClipboard';
 import BrandElementManager from './BrandElementManager';
