@@ -120,6 +120,10 @@ export const CampaignProvider = ({ children }) => {
       pendingAssets: loadedData.pendingAssets || {}, // Correctly merge the loaded assets
       selectedAutorForCampaign: loadedData.autor_id || '',
       selectedPersonaForCampaign: loadedData.persona_id || '',
+      // Ensure specific fields are initialized correctly to prevent app crashes
+      generatedVideos: campaignData.generatedVideos || [],
+      generatedAudioData: campaignData.generatedAudioData || [],
+      fieldPositions: campaignData.fieldPositions || {},
     };
     console.log('[CampaignContext] State after applying loaded campaign:', newState);
     return newState;

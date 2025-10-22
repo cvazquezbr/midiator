@@ -858,6 +858,7 @@ function HomePage() {
                   generatedPagesData={generatedPagesData}
                   generatedVideos={generatedVideos}
                   followupPosts={campaignState.followupPosts}
+                  onUpdateScheduledPosts={(posts) => setCampaignState({ followupPosts: posts })}
                   currentCampaign={currentCampaign}
                   pendingAssets={pendingAssets}
                   setPendingAssets={(newAssets) => setCampaignState({ pendingAssets: newAssets })}
