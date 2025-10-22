@@ -206,6 +206,7 @@ const PageEditor = ({
                   showImageLoaders={true}
                   handleImageUpload={handleLocalImageUpload}
                   onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
+                  imageSwatches={imageSwatches}
                 />
               </Grid>
             )}
@@ -229,6 +230,7 @@ const PageEditor = ({
             showImageLoaders={true}
             handleImageUpload={handleLocalImageUpload}
             onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
+            imageSwatches={imageSwatches}
           />
         </>
       )}
