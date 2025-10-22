@@ -1,29 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box,
-  Typography,
-  Card,
-  CardContent,
-  Grid,
-  Button,
-  Alert,
-  IconButton,
-  Tooltip,
-  Fab,
-  Stack,
-  CircularProgress
 } from '@mui/material';
-import {
-  Add,
-  CenterFocusStrong,
-  SkipPrevious,
-  ArrowLeft,
-  ArrowRight,
-  SkipNext,
-  Edit
-} from '@mui/icons-material';
 import DraggableElement from './DraggableElement';
-import TextEditorDialog from './TextEditorDialog';
 import { useCampaign } from '../context/CampaignContext';
 
 const COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER = {
@@ -53,29 +32,27 @@ import { autoArrangeFields as autoArrangeFieldsUtil } from '../utils/autoArrange
 
 
 const FieldPositioner = ({
-  csvHeaders,
-  fieldPositions,
-  updateElement,
-  fieldStyles,
-  setFieldStyles,
-  csvData,
+  editorState,
+  setEditorState,
   onImageDisplayedSizeChange,
-  selectedField, // Use prop from parent
-  setSelectedField, // Use prop from parent
-  onCsvDataUpdate, // New prop to notify App.jsx of changes
+  selectedField,
+  setSelectedField,
   originalImageSize,
   darkMode,
-  brandElements,
-  pageTemplate,
-  setPageTemplate,
   onOpenHtmlEditor,
   currentPreviewIndex,
-  setCurrentPreviewIndex,
   onFontScaleChange,
   isCropping,
-  setIsCropping,
 }) => {
-  console.log('[FieldPositioner] props:', { pageTemplate, fieldStyles });
+  const {
+    csvHeaders,
+    fieldPositions,
+    fieldStyles,
+    csvData,
+    brandElements,
+    pageTemplate
+  } = editorState;
+
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
   const [isInteracting, setIsInteracting] = useState(false);
@@ -86,22 +63,25 @@ const FieldPositioner = ({
   const effectiveImageSize = originalImageSize;
 
   const handleContentChange = useCallback((field, newText) => {
-    if (!csvData || csvData.length === 0) return;
+    setEditorState(prevState => {
+      if (!prevState.csvData || prevState.csvData.length === 0) return prevState;
 
-    const updatedCsvData = csvData.filter(Boolean).map((row, index) => {
-      if (index === currentPreviewIndex) {
-        return {
-          ...row,
-          [field]: newText,
-        };
-      }
-      return row;
+      const updatedCsvData = prevState.csvData.filter(Boolean).map((row, index) => {
+        if (index === currentPreviewIndex) {
+          return {
+            ...row,
+            [field]: newText,
+          };
+        }
+        return row;
+      });
+
+      return {
+        ...prevState,
+        csvData: updatedCsvData,
+      };
     });
-
-    if (onCsvDataUpdate) {
-      onCsvDataUpdate(updatedCsvData);
-    }
-  }, [csvData, currentPreviewIndex, onCsvDataUpdate]);
+  }, [currentPreviewIndex, setEditorState]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -124,57 +104,94 @@ const FieldPositioner = ({
   }, [onImageDisplayedSizeChange]);
 
   const handlePositionChange = useCallback((id, newPosition) => {
-    if (id === '__cropbox__') {
-      // Special handling for cropbox, which updates the selected image's crop property
-      const selectedImage = pageTemplate.images.find(img => img.id === selectedField);
-      if (selectedImage) {
-        const newCrop = { ...(selectedImage.crop || {}), ...newPosition };
-        updateElement(selectedField, { crop: newCrop });
-      }
-    } else {
-      updateElement(id, newPosition);
-    }
-  }, [updateElement, selectedField, pageTemplate]);
+    setEditorState(prevState => {
+      const { fieldPositions, pageTemplate, brandElements } = prevState;
 
-  const handleSizeChange = useCallback((id, newSize) => {
-    if (id === '__cropbox__') {
-      // Special handling for cropbox, which updates the selected image's crop property
-      const selectedImage = pageTemplate.images.find(img => img.id === selectedField);
-      if (selectedImage) {
-        const newCrop = { ...(selectedImage.crop || {}), ...newSize };
-        updateElement(selectedField, { crop: newCrop });
+      // Handle cropbox
+      if (id === '__cropbox__') {
+        const newImages = pageTemplate.images.map(img =>
+          img.id === selectedField
+            ? { ...img, crop: { ...(img.crop || {}), ...newPosition } }
+            : img
+        );
+        return { ...prevState, pageTemplate: { ...pageTemplate, images: newImages } };
       }
-    } else {
-      updateElement(id, newSize);
-    }
-  }, [updateElement, selectedField, pageTemplate]);
 
-  const centerAllFields = () => {
-    const newPositions = { ...fieldPositions };
-    csvHeaders.forEach((header) => {
-      if (newPositions[header]) {
-        const fieldWidth = newPositions[header].width || 25;
-        newPositions[header] = {
-          ...newPositions[header],
-          x: 50 - (fieldWidth / 2),
+      // Handle text fields
+      if (fieldPositions && Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
+        return {
+          ...prevState,
+          fieldPositions: {
+            ...fieldPositions,
+            [id]: { ...fieldPositions[id], ...newPosition }
+          }
         };
       }
-    });
-    setFieldPositions(newPositions);
-  };
 
-  const autoArrangeFields = () => {
-    const { newPositions, newStyles } = autoArrangeFieldsUtil({
-      csvHeaders,
-      fieldPositions,
-      fieldStyles,
-      csvData: csvData.filter(Boolean),
-      effectiveImageSize,
-      currentPreviewIndex,
+      // Handle images
+      const imageIndex = pageTemplate.images?.findIndex(img => img.id === id);
+      if (imageIndex > -1) {
+          const newImages = [...pageTemplate.images];
+          newImages[imageIndex] = { ...newImages[imageIndex], ...newPosition };
+          return { ...prevState, pageTemplate: { ...pageTemplate, images: newImages }};
+      }
+
+      // Handle brand elements
+      const brandElementIndex = (brandElements || []).findIndex(el => el.id === id);
+      if (brandElementIndex > -1) {
+          const newBrandElements = [...brandElements];
+          newBrandElements[brandElementIndex] = { ...newBrandElements[brandElementIndex], ...newPosition };
+          return { ...prevState, brandElements: newBrandElements };
+      }
+
+      return prevState;
     });
-    setFieldPositions(newPositions);
-    setFieldStyles(newStyles);
-  };
+  }, [selectedField, setEditorState]);
+
+  const handleSizeChange = useCallback((id, newSize) => {
+    setEditorState(prevState => {
+      const { fieldPositions, pageTemplate, brandElements } = prevState;
+
+      // Handle cropbox
+      if (id === '__cropbox__') {
+        const newImages = pageTemplate.images.map(img =>
+          img.id === selectedField
+            ? { ...img, crop: { ...(img.crop || {}), ...newSize } }
+            : img
+        );
+        return { ...prevState, pageTemplate: { ...pageTemplate, images: newImages } };
+      }
+
+      // Handle text fields
+      if (fieldPositions && Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
+        return {
+          ...prevState,
+          fieldPositions: {
+            ...fieldPositions,
+            [id]: { ...fieldPositions[id], ...newSize }
+          }
+        };
+      }
+
+      // Handle images
+      const imageIndex = pageTemplate.images?.findIndex(img => img.id === id);
+      if (imageIndex > -1) {
+          const newImages = [...pageTemplate.images];
+          newImages[imageIndex] = { ...newImages[imageIndex], ...newSize };
+          return { ...prevState, pageTemplate: { ...pageTemplate, images: newImages }};
+      }
+
+      // Handle brand elements
+      const brandElementIndex = (brandElements || []).findIndex(el => el.id === id);
+      if (brandElementIndex > -1) {
+          const newBrandElements = [...brandElements];
+          newBrandElements[brandElementIndex] = { ...newBrandElements[brandElementIndex], ...newSize };
+          return { ...prevState, brandElements: newBrandElements };
+      }
+
+      return prevState;
+    });
+  }, [selectedField, setEditorState]);
 
   const handleContainerTouchStart = (e) => {
     if (!e.target.closest('.text-box')) {
@@ -191,7 +208,7 @@ const FieldPositioner = ({
   useEffect(() => {
     if (renderedImageMetrics.width > 0 && effectiveImageSize?.width > 0) {
       const previewScale = renderedImageMetrics.width / effectiveImageSize.width;
-      setFontScale(previewScale); // Local scale for preview rendering
+      setFontScale(previewScale);
 
       if (onFontScaleChange) {
         onFontScaleChange(previewScale);
@@ -220,7 +237,6 @@ const FieldPositioner = ({
     const safeHeaders = Array.isArray(csvHeaders) ? csvHeaders : [];
     const styles = {};
     if (!fieldStyles) {
-        // If fieldStyles is null, just return default styles for all headers
         safeHeaders.forEach(header => {
             styles[header] = { ...COMPLETE_DEFAULT_STYLE_FOR_FIELD_POSITIONER };
         });
@@ -274,11 +290,11 @@ const FieldPositioner = ({
 
     const textElements = (csvHeaders || [])
       .map(header => {
-        const position = fieldPositions[header];
+        const position = fieldPositions ? fieldPositions[header] : undefined;
         const style = completeFieldStyles[header];
         if (!position || !position.visible) return null;
 
-        const record = (csvData.filter(Boolean) || [])[currentPreviewIndex] || {};
+        const record = (csvData?.filter(Boolean) || [])[currentPreviewIndex] || {};
         const sampleData = record[header] !== undefined ? record[header] : `[${header}]`;
 
         return {
@@ -315,7 +331,7 @@ const FieldPositioner = ({
 
     elements.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     return elements;
-  }, [pageTemplate, isCropping, csvHeaders, fieldPositions, completeFieldStyles, brandElements, csvData, currentPreviewIndex, fontScale]);
+  }, [pageTemplate, isCropping, csvHeaders, fieldPositions, completeFieldStyles, brandElements, csvData, currentPreviewIndex, fontScale, selectedField]);
 
   const getGradientCss = (gradient) => {
     if (!gradient) return 'none';
