@@ -240,31 +240,41 @@ export const deserializeCampaignData = async (loadedState) => {
   const permanentToTempUrlMap = new Map();
 
   for (const downloadUrl of uniqueUrlsToDownload.keys()) {
-    // Use the proxy for Vercel URLs to avoid CORS issues
     const fetchUrl = isVercelUrl(downloadUrl)
       ? `/api/asset-proxy?url=${encodeURIComponent(downloadUrl)}`
       : downloadUrl;
 
-    const promise = fetch(fetchUrl)
-      .then(response => {
+    const promise = (async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+          console.warn(`[deserializeCampaignData] Timeout fetching asset: ${downloadUrl}`);
+        }, 15000); // 15 seconds timeout
+
+        const response = await fetch(fetchUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
           throw new Error(`HTTP error ${response.status} fetching ${downloadUrl}`);
         }
-        return response.blob();
-      })
-      .then(blob => {
+
+        const blob = await response.blob();
         const filename = downloadUrl.split('/').pop().split('?')[0] || `downloaded_asset_${Date.now()}`;
         const file = new File([blob], filename, { type: blob.type });
         const tempUrl = URL.createObjectURL(file);
 
-        newlyCreatedAssets[tempUrl] = file; // For the UI's pendingAssets state
-        permanentToTempUrlMap.set(downloadUrl, tempUrl); // For replacement in the next step
-      })
-      .catch(error => {
+        newlyCreatedAssets[tempUrl] = file;
+        permanentToTempUrlMap.set(downloadUrl, tempUrl);
+      } catch (error) {
         console.error(`[deserializeCampaignData] Failed to download asset: ${downloadUrl}`, error);
-        toast.error(`Não foi possível carregar o recurso: ${error.message}`);
-        // Don't throw, allow other assets to load
-      });
+        if (error.name === 'AbortError') {
+          toast.error(`O carregamento do recurso demorou demais e foi cancelado.`);
+        } else {
+          toast.error(`Não foi possível carregar o recurso: ${error.message}`);
+        }
+      }
+    })();
     downloadPromises.push(promise);
   }
 
