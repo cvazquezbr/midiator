@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -53,7 +53,7 @@ const FormattingPanel = ({
     pageTemplate
   } = editorState;
 
-  const [expandedPanel, setExpandedPanel] = React.useState(false);
+  const [expandedPanel, setExpandedPanel] = useState(false);
 
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpandedPanel(isExpanded ? panel : false);
