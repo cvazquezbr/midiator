@@ -430,7 +430,7 @@ const DraggableElementInternal = ({
       const finalNewDragX = newCenterX - position.width / 2;
       const finalNewDragY = newCenterY - position.height / 2;
 
-      onPositionChange(element.id, { ...position, x: finalNewDragX, y: finalNewDragY });
+      onPositionChange(element.id, { x: finalNewDragX, y: finalNewDragY });
 
     } else if (isResizing && resizeHandle) {
       const rotationDegrees = position.rotation || 0;
@@ -446,7 +446,7 @@ const DraggableElementInternal = ({
       if (element.type === 'cropbox') {
         onPositionChange(element.id, { x: newX, y: newY });
       } else {
-        onPositionChange(element.id, { ...position, x: newX, y: newY, rotation: rotationDegrees });
+        onPositionChange(element.id, { x: newX, y: newY, rotation: rotationDegrees });
       }
       onSizeChange(element.id, { width: newWidth, height: newHeight });
     }
@@ -496,7 +496,7 @@ const DraggableElementInternal = ({
       const finalNewDragX = newCenterX - position.width / 2;
       const finalNewDragY = newCenterY - position.height / 2;
 
-      onPositionChange(element.id, { ...position, x: finalNewDragX, y: finalNewDragY });
+      onPositionChange(element.id, { x: finalNewDragX, y: finalNewDragY });
 
     } else if (isResizing && resizeHandle) {
       const rotationDegrees = position.rotation || 0;
@@ -512,7 +512,7 @@ const DraggableElementInternal = ({
       if (element.type === 'cropbox') {
         onPositionChange(element.id, { x: newX, y: newY });
       } else {
-        onPositionChange(element.id, { ...position, x: newX, y: newY, rotation: rotationDegrees });
+        onPositionChange(element.id, { x: newX, y: newY, rotation: rotationDegrees });
       }
       onSizeChange(element.id, { width: newWidth, height: newHeight });
     }

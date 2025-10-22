@@ -56,13 +56,12 @@ const FormattingPanel = ({
   fieldStyles: fieldStylesProp,
   setFieldStyles: setFieldStylesProp,
   fieldPositions: fieldPositionsProp,
-  setFieldPositions: setFieldPositionsProp,
   brandElements: brandElementsProp,
-  setBrandElements: setBrandElementsProp,
   pageTemplate: pageTemplateProp,
   setPageTemplate: setPageTemplateProp,
   selectedField: selectedFieldProp,
   setSelectedField: setSelectedFieldProp,
+  updateElement,
 }) => {
   const context = useCampaign();
   const { imageColorPalette: imagePalette, colors: colorPalette } = context; // Get image palette from context
@@ -71,9 +70,7 @@ const FormattingPanel = ({
   const fieldStyles = fieldStylesProp ?? context.fieldStyles;
   const setFieldStyles = setFieldStylesProp ?? context.setFieldStyles;
   const fieldPositions = fieldPositionsProp ?? context.fieldPositions;
-  const setFieldPositions = setFieldPositionsProp ?? context.setFieldPositions;
   const brandElements = brandElementsProp ?? context.brandElements;
-  const setBrandElements = setBrandElementsProp ?? context.setBrandElements;
   const pageTemplate = pageTemplateProp ?? context.pageTemplate;
   const setPageTemplate = setPageTemplateProp ?? context.setPageTemplate;
   const selectedField = selectedFieldProp ?? context.selectedField;
@@ -126,12 +123,8 @@ const FormattingPanel = ({
   };
 
   const updateElementProperty = (property, value) => {
-    if (isTextField) {
-      setFieldPositions(prev => ({ ...prev, [selectedField]: { ...prev[selectedField], [property]: value } }));
-    } else if (isPageImage) {
-      setPageTemplate(prev => ({ ...prev, images: prev.images.map(img => img.id === selectedField ? { ...img, [property]: value } : img) }));
-    } else if (isBrandElement) {
-      setBrandElements(prev => prev.map(el => el.id === selectedField ? { ...el, [property]: value } : el));
+    if (selectedField) {
+      updateElement(selectedField, { [property]: value });
     }
   };
 
@@ -145,10 +138,8 @@ const FormattingPanel = ({
   };
 
   const handleDeleteElement = () => {
-    if (isPageImage) {
-      setPageTemplate(prev => ({ ...prev, images: prev.images.filter(img => img.id !== selectedField) }));
-    } else if (isBrandElement) {
-      setBrandElements(prev => prev.filter(el => el.id !== selectedField));
+    if (selectedField) {
+      updateElement(selectedField, null); // Passing null indicates deletion
     }
     setSelectedField(null);
   };
@@ -207,9 +198,9 @@ const FormattingPanel = ({
     });
 
     // Update the state
-    setFieldPositions(newPositions);
-    setBrandElements(newBrandElements);
-    setPageTemplate(prev => ({ ...prev, images: newImages }));
+    allElements.forEach(el => {
+        updateElement(el.id, { zIndex: el.zIndex });
+    });
   };
 
   const isImageElement = isPageImage || isBrandElement;

@@ -84,30 +84,44 @@ const PageEditor = ({
     setSelectedFieldInternal(fieldToSelect);
   }, []);
 
-  const handleElementUpdate = useCallback((id, newData) => {
-    setEditedPositions(prev => {
-      if (prev && Object.prototype.hasOwnProperty.call(prev, id)) {
-        return { ...prev, [id]: { ...(prev[id] || {}), ...newData } };
-      }
-      return prev;
-    });
-    setEditedPageTemplate(prev => {
-      if (prev && prev.images && prev.images.some(img => img.id === id)) {
-        const newImages = prev.images.map(img =>
-          img.id === id ? { ...img, ...newData } : img
-        );
-        return { ...prev, images: newImages };
-      }
-      return prev;
-    });
-    setEditedBrandElements(prev => {
-        if (prev && prev.some(el => el.id === id)) {
-            return prev.map(el =>
-                el.id === id ? { ...el, ...newData } : el
-            );
+  const updateElement = useCallback((elementId, newProps) => {
+    // If newProps is null, it signifies deletion.
+    if (newProps === null) {
+      setEditedPageTemplate(prev => ({
+        ...prev,
+        images: prev.images.filter(img => img.id !== elementId)
+      }));
+      setEditedBrandElements(prev => prev.filter(el => el.id !== elementId));
+      // Text fields are part of a map, so we can't "filter" them.
+      // Instead, we mark them as not visible.
+      setEditedPositions(prev => {
+        if (prev && prev[elementId]) {
+          return { ...prev, [elementId]: { ...prev[elementId], visible: false } };
         }
         return prev;
-    });
+      });
+      return;
+    }
+
+    // This function now handles updates for all element types.
+    const updateLogic = (prevPositions, prevTemplate, prevBrandElements) => {
+      if (prevPositions && Object.prototype.hasOwnProperty.call(prevPositions, elementId)) {
+        return { ...prevPositions, [elementId]: { ...prevPositions[elementId], ...newProps } };
+      }
+      if (prevTemplate && prevTemplate.images && prevTemplate.images.some(img => img.id === elementId)) {
+        const newImages = prevTemplate.images.map(img => img.id === elementId ? { ...img, ...newProps } : img);
+        return { ...prevTemplate, images: newImages };
+      }
+      if (prevBrandElements && prevBrandElements.some(el => el.id === elementId)) {
+        return prevBrandElements.map(el => el.id === elementId ? { ...el, ...newProps } : el);
+      }
+      return null; // No change
+    };
+
+    setEditedPositions(prev => updateLogic(prev, null, null) || prev);
+    setEditedPageTemplate(prev => updateLogic(null, prev, null) || prev);
+    setEditedBrandElements(prev => updateLogic(null, null, prev) || prev);
+
   }, []);
 
   // This is the core logic for the editor. It runs ONLY when the editor is opened
@@ -229,7 +243,7 @@ const PageEditor = ({
                 originalImageSize={originalImageSize}
                 brandElements={editedBrandElements}
                 pageTemplate={editedPageTemplate}
-                onElementUpdate={handleElementUpdate}
+                updateElement={updateElement}
                 setPageTemplate={setEditedPageTemplate}
                 currentPreviewIndex={0}
               />
@@ -242,14 +256,13 @@ const PageEditor = ({
                   selectedField={selectedFieldInternal}
                   setSelectedField={setSelectedFieldInternal}
                   fieldStyles={editedStyles}
-                  setFieldStyles={setEditedStyles}
+                  setFieldStyles={setEditedStyles} // Still needed for style-specific updates
                   fieldPositions={editedPositions}
-                  setFieldPositions={setEditedPositions}
                   csvHeaders={csvHeaders}
                   pageTemplate={editedPageTemplate}
-                  setPageTemplate={setEditedPageTemplate}
+                  setPageTemplate={setEditedPageTemplate} // Still needed for background/etc
                   brandElements={editedBrandElements}
-                  setBrandElements={setEditedBrandElements}
+                  updateElement={updateElement} // The new centralized updater
                   onOpenHtmlEditor={handleOpenHtmlEditor}
                   showImageLoaders={true}
                   handleImageUpload={handleLocalImageUpload}
