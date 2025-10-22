@@ -79,11 +79,11 @@ const PageEditor = ({
   useEffect(() => {
     if (open && pageDataFromHook) {
       const {
-        fieldPositions,
-        fieldStyles,
-        brandElements,
+        effectiveFieldPositions: fieldPositions,
+        effectiveFieldStyles: fieldStyles,
+        effectiveBrandElements: brandElements,
         record,
-        pageTemplate,
+        effectivePageTemplate: pageTemplate,
         csvHeaders: headersFromHook,
       } = pageDataFromHook;
 
