@@ -6,9 +6,17 @@ export default async function handler(req) {
   const { searchParams } = new URL(req.url, `http://${req.headers.host}`);
   const assetUrl = searchParams.get('url');
 
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    console.error('CRITICAL: BLOB_READ_WRITE_TOKEN is not set in the environment.');
+    return new Response('Server configuration error: Missing required storage access token.', { status: 500 });
+  }
+
   if (!assetUrl) {
     return new Response('Missing "url" query parameter', { status: 400 });
   }
+
+  // JULES: Adicionando log para depuração
+  console.log(`[DEBUG-JULES] API asset-proxy recebeu para buscar: ${assetUrl}`);
 
   // Security: Only allow proxying for Vercel blob storage URLs.
   // The check now correctly uses `endsWith` to allow for the unique
