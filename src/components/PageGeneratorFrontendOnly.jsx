@@ -46,6 +46,70 @@ const PageGeneratorFrontendOnly = ({
   const individualImageInputRef = useRef(null);
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [pageToSave, setPageToSave] = useState(null);
+
+  useEffect(() => {
+    if (!pageToSave) return;
+
+    const performSave = async () => {
+      try {
+        const { pageTemplate: customPageTemplate, ...restOfModifiedData } = pageToSave;
+
+        const regenContext = {
+          ...campaignState,
+          record: restOfModifiedData.csvData[0],
+          index: restOfModifiedData.index,
+          pageTemplate: customPageTemplate,
+          brandElements: restOfModifiedData.brandElements,
+          fieldPositions: restOfModifiedData.fieldPositions,
+          fieldStyles: restOfModifiedData.fieldStyles,
+          fontScale: 1,
+        };
+
+        if (!regenContext.pageTemplate || !regenContext.record) {
+          toast.error("Dados da página ou template ausentes. Não foi possível salvar.");
+          return;
+        }
+
+        const newPageImageData = await regenerateSinglePage(regenContext);
+        const managedUrl = addPendingAsset(newPageImageData.blob);
+
+        if (!managedUrl) {
+          toast.error('Falha ao registrar a imagem da página modificada.');
+          return;
+        }
+
+        setCampaignState(current => ({
+          ...current,
+          generatedPagesData: current.generatedPagesData.map(page => {
+            if (page.index !== restOfModifiedData.index) return page;
+            return {
+              ...page,
+              record: restOfModifiedData.csvData[0],
+              customPageTemplate,
+              customBrandElements: restOfModifiedData.brandElements,
+              customFieldPositions: restOfModifiedData.fieldPositions,
+              customFieldStyles: restOfModifiedData.fieldStyles,
+              url: managedUrl,
+              filename: newPageImageData.filename,
+              blob: undefined,
+              dataUrl: null,
+            };
+          }),
+        }));
+
+        toast.success(`Página #${pageToSave.index + 1} salva.`);
+      } catch (error) {
+        console.error('[PageGenerator] Erro ao salvar modificações da página:', error);
+        toast.error(`Falha ao regenerar a página: ${error.message}`);
+      } finally {
+        setPageToSave(null);
+      }
+    };
+
+    performSave();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageToSave]);
 
   useEffect(() => {
     const loadFonts = async () => {
@@ -258,61 +322,9 @@ const PageGeneratorFrontendOnly = ({
     setEditingGeneratedPageIndex(null);
   };
 
-  const handleSaveIndividualModifications = async (modifiedPageData) => {
+  const handleSaveIndividualModifications = (modifiedPageData) => {
     handleCloseGeneratedPageEditor();
-    try {
-        const { pageTemplate: customPageTemplate, ...restOfModifiedData } = modifiedPageData;
-
-        const regenContext = {
-            ...campaignState,
-            record: restOfModifiedData.csvData[0],
-            index: restOfModifiedData.index,
-            pageTemplate: customPageTemplate, // Use the correctly named template for regeneration
-            brandElements: restOfModifiedData.brandElements,
-            fieldPositions: restOfModifiedData.fieldPositions,
-            fieldStyles: restOfModifiedData.fieldStyles,
-            fontScale: 1,
-        };
-
-        if (!regenContext.pageTemplate || !regenContext.record) {
-            toast.error("Dados da página ou template ausentes. Não foi possível salvar.");
-            return;
-        }
-
-        const newPageImageData = await regenerateSinglePage(regenContext);
-
-        const managedUrl = addPendingAsset(newPageImageData.blob);
-        if (!managedUrl) {
-            toast.error('Falha ao registrar a imagem da página modificada.');
-            return;
-        }
-
-        setCampaignState(current => ({
-            generatedPagesData: current.generatedPagesData.map(page => {
-                if (page.index !== restOfModifiedData.index) {
-                    return page;
-                }
-                // Merge existing page data with the new data to prevent data loss
-                return {
-                    ...page,
-                    record: restOfModifiedData.csvData[0],
-                    customPageTemplate: customPageTemplate, // Save with the correct key
-                    customBrandElements: restOfModifiedData.brandElements,
-                    customFieldPositions: restOfModifiedData.fieldPositions,
-                    customFieldStyles: restOfModifiedData.fieldStyles,
-                    url: managedUrl,
-                    filename: newPageImageData.filename,
-                    blob: undefined, // blob is now managed by context
-                    dataUrl: null, // dataUrl is deprecated
-                };
-            }),
-        }));
-
-        toast.success(`Página #${modifiedPageData.index + 1} salva.`);
-    } catch (error) {
-      console.error('[PageGenerator] Erro ao salvar modificações da página:', error);
-      toast.error(`Falha ao regenerar a página: ${error.message}`);
-    }
+    setPageToSave(modifiedPageData);
   };
 
   const handleReplacePageClick = (index) => {

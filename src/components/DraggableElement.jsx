@@ -81,23 +81,31 @@ const DraggableElementInternal = ({
   };
 
   useEffect(() => {
-    // This logic handles displaying temporary blob URLs for local images
-    // before they are permanently saved. It's crucial for the user's workflow.
-    if (element.type === 'image') {
-      const url = content;
-      if (url && url.startsWith('blob:')) {
-        // The URL is already a blob URL from pendingAssets, use it directly.
+    // This robust logic ensures that we only display valid image URLs, whether they
+    // are permanent or temporary blob URLs currently managed by the CampaignContext.
+    if (element.type !== 'image') {
+      setDisplayUrl(content);
+      return;
+    }
+
+    const url = content;
+    if (!url) {
+      setDisplayUrl(null);
+      return;
+    }
+
+    // If the URL is a blob URL, it must exist as a key in our pendingAssets map
+    // to be considered valid. This prevents rendering revoked/stale blob URLs.
+    if (url.startsWith('blob:')) {
+      if (pendingAssets[url]) {
         setDisplayUrl(url);
-      } else if (url) {
-        // This could be a permanent URL from a saved campaign.
-        // We'll attempt to find it in pendingAssets first in case it's a re-hydrated blob.
-        const blobUrl = Object.keys(pendingAssets).find(key => pendingAssets[key].permanentUrl === url);
-        setDisplayUrl(blobUrl || url);
       } else {
+        // This is a blob URL that we don't manage. It's stale/revoked.
         setDisplayUrl(null);
       }
     } else {
-      setDisplayUrl(content);
+      // If it's not a blob URL, we assume it's a permanent and valid URL.
+      setDisplayUrl(url);
     }
   }, [content, pendingAssets, element.type]);
 
