@@ -55,7 +55,7 @@ import { autoArrangeFields as autoArrangeFieldsUtil } from '../utils/autoArrange
 const FieldPositioner = ({
   csvHeaders,
   fieldPositions,
-  onElementUpdate,
+  updateElement,
   fieldStyles,
   setFieldStyles,
   csvData,
@@ -126,34 +126,28 @@ const FieldPositioner = ({
   const handlePositionChange = useCallback((id, newPosition) => {
     if (id === '__cropbox__') {
       // Special handling for cropbox, which updates the selected image's crop property
-      setPageTemplate(prev => ({
-        ...prev,
-        images: prev.images.map(img =>
-          img.id === selectedField
-            ? { ...img, crop: { ...(img.crop || {}), ...newPosition } }
-            : img
-        )
-      }));
+      const selectedImage = pageTemplate.images.find(img => img.id === selectedField);
+      if (selectedImage) {
+        const newCrop = { ...(selectedImage.crop || {}), ...newPosition };
+        updateElement(selectedField, { crop: newCrop });
+      }
     } else {
-      onElementUpdate(id, newPosition);
+      updateElement(id, newPosition);
     }
-  }, [onElementUpdate, selectedField, setPageTemplate]);
+  }, [updateElement, selectedField, pageTemplate]);
 
   const handleSizeChange = useCallback((id, newSize) => {
     if (id === '__cropbox__') {
       // Special handling for cropbox, which updates the selected image's crop property
-      setPageTemplate(prev => ({
-        ...prev,
-        images: prev.images.map(img =>
-          img.id === selectedField
-            ? { ...img, crop: { ...(img.crop || {}), ...newSize } }
-            : img
-        )
-      }));
+      const selectedImage = pageTemplate.images.find(img => img.id === selectedField);
+      if (selectedImage) {
+        const newCrop = { ...(selectedImage.crop || {}), ...newSize };
+        updateElement(selectedField, { crop: newCrop });
+      }
     } else {
-      onElementUpdate(id, newSize);
+      updateElement(id, newSize);
     }
-  }, [onElementUpdate, selectedField, setPageTemplate]);
+  }, [updateElement, selectedField, pageTemplate]);
 
   const centerAllFields = () => {
     const newPositions = { ...fieldPositions };
