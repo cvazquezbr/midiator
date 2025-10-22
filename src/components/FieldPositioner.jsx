@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
 } from '@mui/material';
@@ -45,13 +45,20 @@ const FieldPositioner = ({
   isCropping,
 }) => {
   const {
-    csvHeaders,
     fieldPositions,
     fieldStyles,
     csvData,
     brandElements,
     pageTemplate
   } = editorState;
+
+  // Derive csvHeaders from csvData to make the component more robust
+  const csvHeaders = useMemo(() => {
+    if (csvData && csvData.length > 0 && csvData[0]) {
+      return Object.keys(csvData[0]);
+    }
+    return [];
+  }, [csvData]);
 
   const [renderedImageMetrics, setRenderedImageMetrics] = useState({ width: 0, height: 0, x: 0, y: 0 });
   const [fontScale, setFontScale] = useState(1);
