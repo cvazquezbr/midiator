@@ -851,7 +851,18 @@ function HomePage() {
               {activeStep === 4 && <PageGeneratorFrontendOnly {...{ originalImageSize, fontScale: campaignState.fontScale, handleGenerateSinglePage, aspectRatio, onOpenImageGallery: handleOpenImageGallery }} />}
               {activeStep === 5 && <AudioGenerator onAudiosGenerated={(audios) => setCampaignState({ generatedAudioData: audios })} initialAudioData={campaignState.generatedAudioData} />}
               {activeStep === 6 && <VideoGenerator2 onVideoGenerated={(assets) => { setCampaignState(p => ({ generatedVideos: [...p.generatedVideos, ...assets] })); addPendingAssetMap(Object.fromEntries(assets.flatMap(a => [[a.url, a.blob], [a.thumbnailUrl, a.thumbnailBlob]]).filter(e => e[0]))); }} onUpdateVideos={(videos) => setCampaignState({ generatedVideos: videos })} onNewAsset={addPendingAsset} />}
-              {activeStep === 7 && <Publisher {...{ settings, ...campaignState, onUpdateScheduledPosts: (posts) => setCampaignState({ followupPosts: posts }) }} />}
+              {activeStep === 7 && (
+                <Publisher
+                  settings={settings}
+                  campaignContent={campaignState.campaignContent}
+                  generatedPagesData={generatedPagesData}
+                  generatedVideos={generatedVideos}
+                  followupPosts={campaignState.followupPosts}
+                  currentCampaign={currentCampaign}
+                  pendingAssets={pendingAssets}
+                  setPendingAssets={(newAssets) => setCampaignState({ pendingAssets: newAssets })}
+                />
+              )}
               {activeStep === 8 && <Monitor {...{ currentCampaign }} />}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, px: 2 }} >
                 <Button onClick={handleBack} disabled={activeStep === 0} variant="outlined">Anterior</Button>
