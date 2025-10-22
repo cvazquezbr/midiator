@@ -1,4 +1,4 @@
-import React, from 'react';
+import React from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Grid, IconButton, Tooltip, Fab,
 } from '@mui/material';
