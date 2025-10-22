@@ -57,6 +57,13 @@ export const useCampaign = () => {
   return context;
 };
 
+const clearPendingAssets = (assets) => {
+  Object.keys(assets).forEach(url => {
+    console.log(`[CampaignContext] Revoking blob URL: ${url}`);
+    URL.revokeObjectURL(url);
+  });
+};
+
 export const CampaignProvider = ({ children }) => {
   const [campaignState, setCampaignStateInternal] = useState(initialState);
 
@@ -68,7 +75,9 @@ export const CampaignProvider = ({ children }) => {
   }, []);
 
   const applyLoadedCampaign = useCallback((loadedData) => {
-    console.log('[CampaignContext] Applying loaded campaign data:', loadedData);
+    setCampaignStateInternal(prevState => {
+      clearPendingAssets(prevState.pendingAssets);
+      console.log('[CampaignContext] Applying loaded campaign data:', loadedData);
 
     const campaignData = safeDeepClone(loadedData.campaign_data || {});
 
@@ -95,9 +104,9 @@ export const CampaignProvider = ({ children }) => {
       selectedAutorForCampaign: loadedData.autor_id || '',
       selectedPersonaForCampaign: loadedData.persona_id || '',
     };
-
-    setCampaignStateInternal(newState);
     console.log('[CampaignContext] State after applying loaded campaign:', newState);
+    return newState;
+    });
   }, []);
 
   const addPendingAsset = useCallback((blob) => {
@@ -143,25 +152,6 @@ export const CampaignProvider = ({ children }) => {
       return { ...prev, pendingAssets: newAssets };
     });
   }, []);
-
-  useEffect(() => {
-    // This effect is for cleaning up ALL pending assets when the provider unmounts
-    // (e.g., when the user closes the tab or navigates away).
-    // It should ONLY run once on unmount, so it has an empty dependency array.
-    return () => {
-      // We access the latest state via the internal state setter's callback
-      // to ensure we are cleaning up the most recent list of assets,
-      // avoiding stale state issues.
-      setCampaignStateInternal(currentState => {
-        const currentAssets = currentState.pendingAssets;
-        Object.keys(currentAssets).forEach(url => {
-          console.log(`[CampaignContext] Revoking blob URL on unmount: ${url}`);
-          URL.revokeObjectURL(url);
-        });
-        return currentState; // Return the state unchanged
-      });
-    };
-  }, []); // <-- CRITICAL FIX: Empty dependency array
 
   const value = useMemo(() => ({
     campaignState,
