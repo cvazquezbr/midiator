@@ -40,7 +40,6 @@ const ImageStepUI = ({
 
   const {
     csvData,
-    csvHeaders,
     fieldPositions,
     fieldStyles,
     brandElements,
@@ -54,6 +53,15 @@ const ImageStepUI = ({
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCropping, setIsCropping] = useState(false);
+
+  // Derive csvHeaders from csvData to make the component more robust
+  // This prevents crashes when loading campaigns that don't have csvHeaders at the top level
+  const csvHeaders = React.useMemo(() => {
+    if (csvData && csvData.length > 0) {
+      return Object.keys(csvData[0]);
+    }
+    return [];
+  }, [csvData]);
 
   const handleNextPreview = () => {
     setCurrentPreviewIndex(prevIndex => Math.min(prevIndex + 1, csvData.length - 1));
