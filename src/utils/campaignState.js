@@ -245,39 +245,38 @@ export const deserializeCampaignData = async (loadedState) => {
       : downloadUrl;
 
     const promise = (async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+        console.warn(`[deserializeCampaignData] Timeout fetching asset: ${downloadUrl}`);
+        toast.error(`O carregamento do recurso demorou demais e foi cancelado.`);
+      }, 15000); // 15 seconds timeout
+
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-          controller.abort();
-          console.warn(`[deserializeCampaignData] Timeout fetching asset: ${downloadUrl}`);
-        }, 15000); // 15 seconds timeout
-
         const response = await fetch(fetchUrl, { signal: controller.signal });
-        clearTimeout(timeoutId);
-
         if (!response.ok) {
-          throw new Error(`HTTP error ${response.status} fetching ${downloadUrl}`);
+          throw new Error(`HTTP error ${response.status}`);
         }
-
         const blob = await response.blob();
         const filename = downloadUrl.split('/').pop().split('?')[0] || `downloaded_asset_${Date.now()}`;
         const file = new File([blob], filename, { type: blob.type });
         const tempUrl = URL.createObjectURL(file);
-
         newlyCreatedAssets[tempUrl] = file;
         permanentToTempUrlMap.set(downloadUrl, tempUrl);
       } catch (error) {
+        // Non-critical error: log it, toast it, but don't stop other downloads.
         console.error(`[deserializeCampaignData] Failed to download asset: ${downloadUrl}`, error);
-        if (error.name === 'AbortError') {
-          toast.error(`O carregamento do recurso demorou demais e foi cancelado.`);
-        } else {
-          toast.error(`Não foi possível carregar o recurso: ${error.message}`);
+        if (error.name !== 'AbortError') { // AbortError already has a toast
+          toast.error(`Não foi possível carregar um recurso: ${error.message}`);
         }
+      } finally {
+        clearTimeout(timeoutId);
       }
     })();
     downloadPromises.push(promise);
   }
 
+  // Promise.all ensures we wait for all fetches, even the failed ones, to complete.
   await Promise.all(downloadPromises);
   console.log('[deserializeCampaignData] Step 2 COMPLETE.');
 

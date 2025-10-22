@@ -496,58 +496,60 @@ function HomePage() {
 
   const handleDadosAlterados = useCallback((novosRegistros, novasColunas) => {
     setCampaignState(prev => {
-      // 1. Sanitize the incoming records and ensure 'Título' exists.
       const sanitizedRegistros = novosRegistros.map((record, index) => ({
         ...(record || {}),
         Título: (record || {}).Título || `Página ${index + 1}`,
       }));
 
-      const updates = { csvData: sanitizedRegistros };
+      const updates = {
+        csvData: sanitizedRegistros,
+        // Preserve existing media data to prevent data loss on CSV update
+        generatedVideos: prev.generatedVideos || [],
+        generatedAudioData: prev.generatedAudioData || [],
+      };
+
       if (JSON.stringify(novasColunas) !== JSON.stringify(prev.csvHeaders)) {
         updates.csvHeaders = novasColunas;
       }
 
-      // 2. Synchronize generatedPagesData with the newly sanitized csvData.
       updates.generatedPagesData = sanitizedRegistros.map((record, index) => {
         const existingPage = (prev.generatedPagesData || []).find(p => p.index === index) || {};
         return {
           ...existingPage,
           index,
-          record, // Ensure the record is always in sync
-          url: null, // Invalidate old thumbnail
+          record,
+          url: null,
           blob: null
         };
       });
 
       console.log("[handleDadosAlterados] Synced state:", updates);
-      return updates;
+      return { ...prev, ...updates };
     });
   }, [setCampaignState]);
 
   const handleCsvRecordContentUpdate = useCallback((newCsvData) => {
     setCampaignState(prev => {
-      // 1. Sanitize the incoming records.
       const sanitizedCsvData = newCsvData.map((record, index) => ({
         ...(record || {}),
         Título: (record || {}).Título || `Página ${index + 1}`,
       }));
 
-      // 2. Synchronize generatedPagesData with the sanitized data.
       const synchronizedPages = sanitizedCsvData.map((record, index) => {
         const existingPage = (prev.generatedPagesData || []).find(p => p.index === index) || {};
-        return {
-          ...existingPage,
-          index,
-          record // Overwrite with the latest record data
-        };
+        return { ...existingPage, index, record };
       });
 
       const updates = {
         csvData: sanitizedCsvData,
         generatedPagesData: synchronizedPages,
+        // Preserve media data
+        generatedVideos: prev.generatedVideos || [],
+        generatedAudioData: prev.generatedAudioData || [],
       };
+
       console.log("[handleCsvRecordContentUpdate] Synced state:", updates);
-      return updates;
+      return { ...prev, ...updates };
     });
   }, [setCampaignState]);
 
@@ -709,17 +711,22 @@ function HomePage() {
         filename: `midiator_${String(index + 1).padStart(3, '0')}.png`
       }));
 
-      const updates = {
-        csvData: sanitizedCsvData,
-        csvHeaders: csvHeadersResult,
-        fieldPositions: newPositions,
-        fieldStyles: newStyles,
-        initialFieldStyles: newStyles,
-        generatedPagesData: newGeneratedPagesData
-      };
+      setCampaignState(prev => {
+        const updates = {
+          csvData: sanitizedCsvData,
+          csvHeaders: csvHeadersResult,
+          fieldPositions: newPositions,
+          fieldStyles: newStyles,
+          initialFieldStyles: newStyles,
+          generatedPagesData: newGeneratedPagesData,
+          // Preserve media data
+          generatedVideos: prev.generatedVideos || [],
+          generatedAudioData: prev.generatedAudioData || [],
+        };
+        console.log("[handleGenerateIAContent] Synced state:", updates);
+        return { ...prev, ...updates };
+      });
 
-      console.log("[handleGenerateIAContent] Synced state:", updates);
-      setCampaignState(updates);
       setInputMethod('manual');
       toast.success('Geração de posts concluída.');
     } catch (error) {
