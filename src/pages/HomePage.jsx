@@ -802,14 +802,15 @@ function HomePage() {
             return p;
           }
           // Merge the previous state with the new data to ensure nothing is lost.
-          return {
+          const finalPageUpdate = {
             ...(p || {}),
             ...finalPageData,
-            ...pageUpdateData, // Includes the new custom template with the new image
+            customPageTemplate: effectivePageTemplate, // Directly use the updated template
             url: tempUrl,
             dataUrl: null,
             blob: undefined,
           };
+          return finalPageUpdate;
         });
         return { generatedPagesData: newPagesData };
       });
