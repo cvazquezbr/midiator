@@ -323,40 +323,8 @@ const PageGeneratorFrontendOnly = ({
   };
 
   const handleSaveIndividualModifications = (modifiedPageData) => {
-    // JULES: Adicionando log para depuração
-    console.log('[DEBUG-JULES] PageGenerator RECEBEU de PageEditor (handleSaveIndividualModifications):', JSON.parse(JSON.stringify(modifiedPageData)));
-
-    setCampaignState(current => {
-      const newGeneratedPagesData = current.generatedPagesData.map(page => {
-        if (page.index !== modifiedPageData.index) return page;
-
-        // JULES: Adicionando log para depuração
-        console.log(`[DEBUG-JULES] PageGenerator ATUALIZANDO PÁGINA (index ${page.index}):`);
-        console.log('[DEBUG-JULES]   - DADOS ANTES:', JSON.parse(JSON.stringify(page)));
-
-        const finalPageData = {
-          ...page, // Preserva dados existentes como a URL da imagem
-          record: modifiedPageData.csvData[0],
-          customPageTemplate: modifiedPageData.pageTemplate,
-          customBrandElements: modifiedPageData.brandElements,
-          customFieldPositions: modifiedPageData.fieldPositions,
-          customFieldStyles: modifiedPageData.fieldStyles,
-        };
-
-        console.log('[DEBUG-JULES]   - DADOS DEPOIS:', JSON.parse(JSON.stringify(finalPageData)));
-
-        return finalPageData;
-      });
-
-      return {
-        ...current,
-        generatedPagesData: newGeneratedPagesData
-      };
-    });
-
     handleCloseGeneratedPageEditor();
-    toast.success(`Página #${modifiedPageData.index + 1} atualizada localmente. Regenerando thumbnail...`);
-    // A regeneração do thumbnail agora deve ocorrer no useEffect que observa a mudança
+    setPageToSave(modifiedPageData);
   };
 
   const handleReplacePageClick = (index) => {
