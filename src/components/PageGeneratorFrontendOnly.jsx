@@ -263,14 +263,20 @@ const PageGeneratorFrontendOnly = ({
     try {
       const regenContext = {
         ...campaignState,
-        record: modifiedPageData.record,
+        record: modifiedPageData.csvData[0],
         index: modifiedPageData.index,
-        pageTemplate: modifiedPageData.customPageTemplate,
-        brandElements: modifiedPageData.customBrandElements,
-        fieldPositions: modifiedPageData.customFieldPositions,
-        fieldStyles: modifiedPageData.customFieldStyles,
+        pageTemplate: modifiedPageData.pageTemplate,
+        brandElements: modifiedPageData.brandElements,
+        fieldPositions: modifiedPageData.fieldPositions,
+        fieldStyles: modifiedPageData.fieldStyles,
         fontScale: 1,
       };
+
+      if (!regenContext.pageTemplate || !regenContext.record) {
+        toast.error("Dados da página ou template ausentes. Não foi possível salvar.");
+        return;
+      }
+
       const newPageImageData = await regenerateSinglePage(regenContext);
 
       const managedUrl = addPendingAsset(newPageImageData.blob);
@@ -284,11 +290,13 @@ const PageGeneratorFrontendOnly = ({
           if (page.index !== modifiedPageData.index) {
             return page;
           }
-          // Merge existing page data with modifications to prevent data loss,
-          // especially for pending assets added during editing.
           return {
             ...page,
-            ...modifiedPageData,
+            record: modifiedPageData.csvData[0],
+            customPageTemplate: modifiedPageData.pageTemplate,
+            customBrandElements: modifiedPageData.brandElements,
+            customFieldPositions: modifiedPageData.fieldPositions,
+            customFieldStyles: modifiedPageData.fieldStyles,
             url: managedUrl,
             filename: newPageImageData.filename,
             blob: undefined,

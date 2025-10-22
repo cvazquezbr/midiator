@@ -62,9 +62,10 @@ const TextFormatting = ({
   expandedPanel,
   handleAccordionChange,
   selectedField,
+  imageSwatches,
 }) => {
   const { campaignState } = useCampaign();
-  const { imageColorPalette: imagePalette, colors: colorPalette } = campaignState;
+  const { colors: colorPalette } = campaignState;
   if (!currentElement) return null;
 
   return (
@@ -87,7 +88,7 @@ const TextFormatting = ({
             <Grid item xs={12}>
                 <ColorSwatches
                     title="Cores da Imagem"
-                    palette={imagePalette}
+                    palette={imageSwatches}
                     onColorSelect={(color) => updateFieldStyle('color', color)}
                 />
             </Grid>

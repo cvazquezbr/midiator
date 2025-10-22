@@ -45,6 +45,7 @@ const FormattingPanel = ({
   onOpenImageGallery,
   selectedField,
   setSelectedField,
+  imageSwatches,
 }) => {
   const {
     fieldStyles,
@@ -331,6 +332,7 @@ const FormattingPanel = ({
                   expandedPanel={expandedPanel}
                   handleAccordionChange={handleAccordionChange}
                   selectedField={selectedField}
+                  imageSwatches={imageSwatches}
                 />
                 <PositionSizeFormatting
                   expandedPanel={expandedPanel}
@@ -372,6 +374,7 @@ const FormattingPanel = ({
                 setPageTemplate={handleSetPageTemplate}
                 expandedPanel={expandedPanel}
                 handleAccordionChange={handleAccordionChange}
+                imagePalette={imageSwatches}
               />
             )}
           </>
