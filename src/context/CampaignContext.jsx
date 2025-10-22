@@ -66,6 +66,17 @@ const clearPendingAssets = (assets) => {
 
 export const CampaignProvider = ({ children }) => {
   const [campaignState, setCampaignStateInternal] = useState(initialState);
+  // This effect is the new gatekeeper for cleaning up blob URLs.
+  // It runs ONLY when the component unmounts, preventing premature revocation.
+  // The actual cleanup of old assets now happens inside `applyLoadedCampaign`
+  // BEFORE the new state is set.
+  useEffect(() => {
+    // Return a cleanup function that will be called on component unmount.
+    return () => {
+      clearPendingAssets(campaignState.pendingAssets);
+    };
+  }, []); // Empty dependency array means this effect runs only once on mount.
+
 
   const setCampaignState = useCallback((arg) => {
     setCampaignStateInternal(prevState => {
@@ -75,8 +86,14 @@ export const CampaignProvider = ({ children }) => {
   }, []);
 
   const applyLoadedCampaign = useCallback((loadedData) => {
+    // CRITICAL FIX: The cleanup of old assets must happen HERE, before setting
+    // the new state. We get the CURRENT assets from the state updater function,
+    // clear them, and then return the NEW state. This avoids race conditions.
     setCampaignStateInternal(prevState => {
-      clearPendingAssets(prevState.pendingAssets);
+      // Revoke URLs from the PREVIOUS state.
+      if (prevState.currentCampaign?.id !== loadedData.id) {
+        clearPendingAssets(prevState.pendingAssets);
+      }
       console.log('[CampaignContext] Applying loaded campaign data:', loadedData);
 
     const campaignData = safeDeepClone(loadedData.campaign_data || {});
