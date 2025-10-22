@@ -84,6 +84,32 @@ const PageEditor = ({
     setSelectedFieldInternal(fieldToSelect);
   }, []);
 
+  const handleElementUpdate = useCallback((id, newData) => {
+    setEditedPositions(prev => {
+      if (prev && Object.prototype.hasOwnProperty.call(prev, id)) {
+        return { ...prev, [id]: { ...(prev[id] || {}), ...newData } };
+      }
+      return prev;
+    });
+    setEditedPageTemplate(prev => {
+      if (prev && prev.images && prev.images.some(img => img.id === id)) {
+        const newImages = prev.images.map(img =>
+          img.id === id ? { ...img, ...newData } : img
+        );
+        return { ...prev, images: newImages };
+      }
+      return prev;
+    });
+    setEditedBrandElements(prev => {
+        if (prev && prev.some(el => el.id === id)) {
+            return prev.map(el =>
+                el.id === id ? { ...el, ...newData } : el
+            );
+        }
+        return prev;
+    });
+  }, []);
+
   // This is the core logic for the editor. It runs ONLY when the editor is opened
   // for a specific page. It creates a "snapshot" of the page's state and uses that
   // for the editing session. It INTENTIONALLY does not depend on `pageDataFromHook`
@@ -193,7 +219,6 @@ const PageEditor = ({
                 aspectRatio={aspectRatio}
                 csvHeaders={csvHeaders}
                 fieldPositions={editedPositions}
-                setFieldPositions={setEditedPositions}
                 fieldStyles={editedStyles}
                 setFieldStyles={setEditedStyles}
                 csvData={editorCsvData}
@@ -203,8 +228,8 @@ const PageEditor = ({
                 onCsvDataUpdate={handleFieldPositionerCsvDataUpdate}
                 originalImageSize={originalImageSize}
                 brandElements={editedBrandElements}
-                setBrandElements={setEditedBrandElements}
                 pageTemplate={editedPageTemplate}
+                onElementUpdate={handleElementUpdate}
                 setPageTemplate={setEditedPageTemplate}
                 currentPreviewIndex={0}
               />

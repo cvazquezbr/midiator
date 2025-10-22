@@ -55,7 +55,7 @@ import { autoArrangeFields as autoArrangeFieldsUtil } from '../utils/autoArrange
 const FieldPositioner = ({
   csvHeaders,
   fieldPositions,
-  setFieldPositions,
+  onElementUpdate,
   fieldStyles,
   setFieldStyles,
   csvData,
@@ -66,7 +66,6 @@ const FieldPositioner = ({
   originalImageSize,
   darkMode,
   brandElements,
-  setBrandElements,
   pageTemplate,
   setPageTemplate,
   onOpenHtmlEditor,
@@ -125,8 +124,8 @@ const FieldPositioner = ({
   }, [onImageDisplayedSizeChange]);
 
   const handlePositionChange = useCallback((id, newPosition) => {
-    // Cropbox has a special ID and modifies the selected image in the page template
     if (id === '__cropbox__') {
+      // Special handling for cropbox, which updates the selected image's crop property
       setPageTemplate(prev => ({
         ...prev,
         images: prev.images.map(img =>
@@ -135,34 +134,14 @@ const FieldPositioner = ({
             : img
         )
       }));
-    // Check if the ID belongs to a text field
-    } else if (fieldPositions && Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
-      setFieldPositions(prev => ({
-        ...prev,
-        [id]: {
-          ...prev[id],
-          ...newPosition
-        }
-      }));
-    // Check if the ID belongs to a page image
-    } else if (pageTemplate.images && pageTemplate.images.some(img => img.id === id)) {
-      setPageTemplate(prev => {
-        const newImages = prev.images.map(img =>
-          img.id === id ? { ...img, ...newPosition } : img
-        );
-        return { ...prev, images: newImages };
-      });
-    // Otherwise, assume it's a brand element
     } else {
-      setBrandElements(prev => prev.map(el =>
-        el.id === id ? { ...el, ...newPosition } : el
-      ));
+      onElementUpdate(id, newPosition);
     }
-  }, [selectedField, fieldPositions, pageTemplate, setPageTemplate, setFieldPositions, setBrandElements]);
+  }, [onElementUpdate, selectedField, setPageTemplate]);
 
   const handleSizeChange = useCallback((id, newSize) => {
-    // Cropbox has a special ID and modifies the selected image in the page template
     if (id === '__cropbox__') {
+      // Special handling for cropbox, which updates the selected image's crop property
       setPageTemplate(prev => ({
         ...prev,
         images: prev.images.map(img =>
@@ -171,30 +150,10 @@ const FieldPositioner = ({
             : img
         )
       }));
-    // Check if the ID belongs to a text field
-    } else if (fieldPositions && Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
-      setFieldPositions(prev => ({
-        ...prev,
-        [id]: {
-          ...prev[id],
-          ...newSize
-        }
-      }));
-    // Check if the ID belongs to a page image
-    } else if (pageTemplate.images && pageTemplate.images.some(img => img.id === id)) {
-      setPageTemplate(prev => {
-        const newImages = prev.images.map(img =>
-          img.id === id ? { ...img, ...newSize } : img
-        );
-        return { ...prev, images: newImages };
-      });
-    // Otherwise, assume it's a brand element
     } else {
-      setBrandElements(prev => prev.map(el =>
-        el.id === id ? { ...el, ...newSize } : el
-      ));
+      onElementUpdate(id, newSize);
     }
-  }, [selectedField, fieldPositions, pageTemplate, setPageTemplate, setFieldPositions, setBrandElements]);
+  }, [onElementUpdate, selectedField, setPageTemplate]);
 
   const centerAllFields = () => {
     const newPositions = { ...fieldPositions };
