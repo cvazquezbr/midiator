@@ -125,6 +125,7 @@ const FieldPositioner = ({
   }, [onImageDisplayedSizeChange]);
 
   const handlePositionChange = useCallback((id, newPosition) => {
+    // Cropbox has a special ID and modifies the selected image in the page template
     if (id === '__cropbox__') {
       setPageTemplate(prev => ({
         ...prev,
@@ -134,7 +135,8 @@ const FieldPositioner = ({
             : img
         )
       }));
-    } else if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
+    // Check if the ID belongs to a text field
+    } else if (fieldPositions && Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
         ...prev,
         [id]: {
@@ -142,23 +144,24 @@ const FieldPositioner = ({
           ...newPosition
         }
       }));
-    } else {
+    // Check if the ID belongs to a page image
+    } else if (pageTemplate.images && pageTemplate.images.some(img => img.id === id)) {
       setPageTemplate(prev => {
-        const imageIndex = prev.images.findIndex(img => img.id === id);
-        if (imageIndex > -1) {
-          const newImages = [...prev.images];
-          newImages[imageIndex] = { ...newImages[imageIndex], ...newPosition };
-          return { ...prev, images: newImages };
-        }
-        return prev;
+        const newImages = prev.images.map(img =>
+          img.id === id ? { ...img, ...newPosition } : img
+        );
+        return { ...prev, images: newImages };
       });
+    // Otherwise, assume it's a brand element
+    } else {
       setBrandElements(prev => prev.map(el =>
         el.id === id ? { ...el, ...newPosition } : el
       ));
     }
-  }, [selectedField, setPageTemplate, setFieldPositions, setBrandElements]);
+  }, [selectedField, fieldPositions, pageTemplate, setPageTemplate, setFieldPositions, setBrandElements]);
 
   const handleSizeChange = useCallback((id, newSize) => {
+    // Cropbox has a special ID and modifies the selected image in the page template
     if (id === '__cropbox__') {
       setPageTemplate(prev => ({
         ...prev,
@@ -168,7 +171,8 @@ const FieldPositioner = ({
             : img
         )
       }));
-    } else if (Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
+    // Check if the ID belongs to a text field
+    } else if (fieldPositions && Object.prototype.hasOwnProperty.call(fieldPositions, id)) {
       setFieldPositions(prev => ({
         ...prev,
         [id]: {
@@ -176,21 +180,21 @@ const FieldPositioner = ({
           ...newSize
         }
       }));
-    } else {
+    // Check if the ID belongs to a page image
+    } else if (pageTemplate.images && pageTemplate.images.some(img => img.id === id)) {
       setPageTemplate(prev => {
-        const imageIndex = prev.images.findIndex(img => img.id === id);
-        if (imageIndex > -1) {
-          const newImages = [...prev.images];
-          newImages[imageIndex] = { ...newImages[imageIndex], ...newSize };
-          return { ...prev, images: newImages };
-        }
-        return prev;
+        const newImages = prev.images.map(img =>
+          img.id === id ? { ...img, ...newSize } : img
+        );
+        return { ...prev, images: newImages };
       });
+    // Otherwise, assume it's a brand element
+    } else {
       setBrandElements(prev => prev.map(el =>
         el.id === id ? { ...el, ...newSize } : el
       ));
     }
-  }, [selectedField, setPageTemplate, setFieldPositions, setBrandElements]);
+  }, [selectedField, fieldPositions, pageTemplate, setPageTemplate, setFieldPositions, setBrandElements]);
 
   const centerAllFields = () => {
     const newPositions = { ...fieldPositions };
