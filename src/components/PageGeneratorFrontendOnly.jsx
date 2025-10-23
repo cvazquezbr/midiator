@@ -4,7 +4,7 @@ import {
   Box, Button, Typography, Card, CardContent, Grid, LinearProgress, Alert, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Chip, TextField, Tooltip, CircularProgress, Divider,
 } from '@mui/material';
 import {
-  Download, Close, Image, CloudUpload, Google, Edit, SwapHoriz, Share, AutoAwesomeOutlined as GeminiIcon, SettingsBackupRestore, Delete,
+  Download, Close, Image, CloudUpload, Google, Edit, SwapHoriz, Share, AutoAwesomeOutlined as GeminiIcon, SettingsBackupRestore, Delete, AutoFixHigh,
 } from '@mui/icons-material';
 import PageEditor from './PageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
@@ -47,6 +47,10 @@ const PageGeneratorFrontendOnly = ({
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [pageToSave, setPageToSave] = useState(null);
+
+  const [isPromptEditorOpen, setIsPromptEditorOpen] = useState(false);
+  const [editingPromptIndex, setEditingPromptIndex] = useState(null);
+  const [currentPrompt, setCurrentPrompt] = useState('');
 
   useEffect(() => {
     if (!pageToSave) return;
@@ -364,8 +368,63 @@ const PageGeneratorFrontendOnly = ({
           .catch(error => toast.error(`Falha ao substituir fundo: ${error.message}`));
       }
     }
-    if (individualImageInputRef.current) individualImageInputRef.current.value = "";
+    if (individualImageInput-Ref.current) individualImageInputRef.current.value = "";
     setEditingGeneratedPageIndex(null);
+  };
+
+  const handleOpenPromptEditor = (index) => {
+    const pageData = generatedPagesData.find(p => p.index === index);
+    if (pageData && pageData.record) {
+      setCurrentPrompt(pageData.record.prompt_imagem || '');
+      setEditingPromptIndex(index);
+      setIsPromptEditorOpen(true);
+    } else {
+      toast.error("Não foi possível encontrar os dados da página para editar o prompt.");
+    }
+  };
+
+  const handleClosePromptEditor = () => {
+    setIsPromptEditorOpen(false);
+    setEditingPromptIndex(null);
+    setCurrentPrompt('');
+  };
+
+  const handleSavePrompt = () => {
+    if (editingPromptIndex === null) {
+      toast.error("Nenhuma página selecionada para salvar o prompt.");
+      return;
+    }
+
+    const updatedGeneratedPagesData = generatedPagesData.map((page) => {
+      if (page.index === editingPromptIndex) {
+        return {
+          ...page,
+          record: {
+            ...page.record,
+            prompt_imagem: currentPrompt,
+          },
+        };
+      }
+      return page;
+    });
+
+    const updatedCsvData = csvData.map((record, index) => {
+      if (index === editingPromptIndex) {
+        return {
+          ...record,
+          prompt_imagem: currentPrompt,
+        };
+      }
+      return record;
+    });
+
+    setCampaignState({
+      generatedPagesData: updatedGeneratedPagesData,
+      csvData: updatedCsvData,
+    });
+
+    toast.success("Prompt atualizado com sucesso!");
+    handleClosePromptEditor();
   };
 
   const pageToEdit = (generatedPagesData || []).find(p => p.index === editingGeneratedPageIndex);
@@ -421,6 +480,7 @@ const PageGeneratorFrontendOnly = ({
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-around', gap: 1, mt: 1 }}>
                            <Tooltip title="Regerar com IA"><IconButton size="small" onClick={async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); }} disabled={regeneratingIndex !== null}><GeminiIcon /></IconButton></Tooltip>
+                           <Tooltip title="Editar Prompt de Imagem"><IconButton size="small" onClick={() => handleOpenPromptEditor(pageData.index)}><AutoFixHigh /></IconButton></Tooltip>
                            <Tooltip title="Resetar"><IconButton size="small" onClick={() => handleResetPage(pageData.index)}><SettingsBackupRestore /></IconButton></Tooltip>
                            <Tooltip title="Editar"><IconButton size="small" onClick={() => handleOpenGeneratedPageEditor(pageData.index)}><Edit /></IconButton></Tooltip>
                            <Tooltip title="Substituir Fundo"><IconButton size="small" onClick={() => handleReplacePageClick(pageData.index)}><SwapHoriz /></IconButton></Tooltip>
@@ -450,6 +510,27 @@ const PageGeneratorFrontendOnly = ({
         />
       )}
       <input type="file" accept="image/*" style={{ display: 'none' }} ref={individualImageInputRef} onChange={handleIndividualImageUpload} />
+      <Dialog open={isPromptEditorOpen} onClose={handleClosePromptEditor} fullWidth maxWidth="sm">
+        <DialogTitle>Editar Prompt de Imagem</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Prompt"
+            type="text"
+            fullWidth
+            multiline
+            rows={4}
+            value={currentPrompt}
+            onChange={(e) => setCurrentPrompt(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClosePromptEditor}>Cancelar</Button>
+          <Button onClick={handleSavePrompt} variant="contained">Salvar</Button>
+        </DialogActions>
+      </Dialog>
       <ProgressModal open={showProgressModal} progress={progress} total={csvData.length} onCancel={handleCancelGeneration} title="Gerando Páginas" />
     </Box>
   );
