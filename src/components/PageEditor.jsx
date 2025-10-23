@@ -210,6 +210,7 @@ const PageEditor = ({
                   showImageLoaders={true}
                   handleImageUpload={handleLocalImageUpload}
                   onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
+                  campaignSwatches={campaignState.colors}
                   imageSwatches={imageSwatches}
                 />
               </Grid>
@@ -234,6 +235,7 @@ const PageEditor = ({
             showImageLoaders={true}
             handleImageUpload={handleLocalImageUpload}
             onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
+            campaignSwatches={campaignState.colors}
             imageSwatches={imageSwatches}
           />
         </>

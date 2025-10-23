@@ -52,8 +52,6 @@ const fonts = [
     'Courier New',
 ];
 
-import { useCampaign } from '../../context/CampaignContext';
-
 const TextFormatting = ({
   currentElement,
   updateFieldStyle,
@@ -62,10 +60,9 @@ const TextFormatting = ({
   expandedPanel,
   handleAccordionChange,
   selectedField,
+  campaignSwatches,
   imageSwatches,
 }) => {
-  const { campaignState } = useCampaign();
-  const { colors: colorPalette } = campaignState;
   if (!currentElement) return null;
 
   return (
@@ -81,7 +78,7 @@ const TextFormatting = ({
             <Grid item xs={12}>
                 <ColorSwatches
                     title="Cores da Campanha"
-                    palette={colorPalette}
+                    palette={campaignSwatches}
                     onColorSelect={(color) => updateFieldStyle('color', color)}
                 />
             </Grid>

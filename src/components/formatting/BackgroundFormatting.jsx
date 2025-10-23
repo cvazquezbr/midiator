@@ -18,7 +18,7 @@ const BackgroundFormatting = ({
   setPageTemplate,
   expandedPanel,
   handleAccordionChange,
-  colorPalette,
+  campaignSwatches,
   imagePalette,
 }) => {
   return (
@@ -28,7 +28,7 @@ const BackgroundFormatting = ({
         <BackgroundColorEditor
           pageTemplate={pageTemplate}
           onUpdate={setPageTemplate}
-          colorPalette={colorPalette}
+          colorPalette={campaignSwatches}
           imagePalette={imagePalette}
         />
       </AccordionDetails>
