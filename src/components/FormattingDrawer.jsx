@@ -16,6 +16,8 @@ const FormattingDrawer = ({
   showImageLoaders,
   handleImageUpload,
   onOpenImageGallery,
+  campaignSwatches,
+  imageSwatches,
 }) => {
   return (
     <Drawer anchor="right" open={open} onClose={onClose} sx={{ zIndex: 1400 }}>
@@ -37,6 +39,8 @@ const FormattingDrawer = ({
           showImageLoaders={showImageLoaders}
           handleImageUpload={handleImageUpload}
           onOpenImageGallery={onOpenImageGallery}
+          campaignSwatches={campaignSwatches}
+          imageSwatches={imageSwatches}
         />
       </Box>
     </Drawer>
