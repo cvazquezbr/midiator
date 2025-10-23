@@ -374,12 +374,13 @@ const Campaign = ({
         const tagToAdd = newHashtag.trim();
         if (tagToAdd) {
             const currentHashtags = campaignContent.hashtags || [];
-            setCampaignState({
+            setCampaignState(prev => ({
+                ...prev,
                 campaignContent: {
                     ...campaignContent,
                     hashtags: [...currentHashtags, tagToAdd],
                 },
-            });
+            }));
             setNewHashtag('');
         }
     };
@@ -411,7 +412,7 @@ const Campaign = ({
                                     <Select
                                         labelId="persona-select-label"
                                         value={selectedPersonaForCampaign}
-                                        onChange={(e) => setCampaignState({ selectedPersonaForCampaign: e.target.value })}
+                                        onChange={(e) => setCampaignState(prev => ({ ...prev, selectedPersonaForCampaign: e.target.value }))}
                                         label="Selecionar Persona"
                                     >
                                         <MenuItem value="">
@@ -442,7 +443,7 @@ const Campaign = ({
                                     multiline
                                     rows={4}
                                     value={problema}
-                                    onChange={(e) => setCampaignState({ problema: e.target.value })}
+                                    onChange={(e) => setCampaignState(prev => ({ ...prev, problema: e.target.value }))}
                                     variant="outlined"
                                     placeholder="Descreva o problema que sua campanha busca resolver."
                                     disabled={campaignContent !== null}
@@ -467,7 +468,7 @@ const Campaign = ({
                                             <Select
                                                 labelId="autor-select-label"
                                                 value={selectedAutorForCampaign}
-                                                onChange={(e) => setCampaignState({ selectedAutorForCampaign: e.target.value })}
+                                                onChange={(e) => setCampaignState(prev => ({ ...prev, selectedAutorForCampaign: e.target.value }))}
                                                 label="Selecionar Autor"
                                             >
                                                 <MenuItem value="">
@@ -498,7 +499,7 @@ const Campaign = ({
                                             multiline
                                             rows={4}
                                             value={solucao}
-                                            onChange={(e) => setCampaignState({ solucao: e.target.value })}
+                                            onChange={(e) => setCampaignState(prev => ({ ...prev, solucao: e.target.value }))}
                                             variant="outlined"
                                             placeholder="Descreva a solução que sua campanha oferece."
                                             disabled={campaignContent !== null}
@@ -519,7 +520,7 @@ const Campaign = ({
                                         <Select
                                             labelId="objetivo-select-label"
                                             value={objetivo}
-                                            onChange={(e) => setCampaignState({ objetivo: e.target.value })}
+                                            onChange={(e) => setCampaignState(prev => ({ ...prev, objetivo: e.target.value }))}
                                             label="Objetivo Principal do Post"
                                         >
                                             <MenuItem value="Gerar leads">Gerar leads</MenuItem>
@@ -536,7 +537,7 @@ const Campaign = ({
                                         <Select
                                             labelId="tom-de-voz-select-label"
                                             value={tomDeVoz}
-                                            onChange={(e) => setCampaignState({ tomDeVoz: e.target.value })}
+                                            onChange={(e) => setCampaignState(prev => ({ ...prev, tomDeVoz: e.target.value }))}
                                             label="Tom de Voz"
                                         >
                                             <MenuItem value="Profissional e direto">Profissional e direto</MenuItem>
@@ -587,7 +588,7 @@ const Campaign = ({
                                 <TextField
                                     label="Título"
                                     value={campaignContent.titulo}
-                                    onChange={(e) => setCampaignState({ campaignContent: { ...campaignContent, titulo: e.target.value }})}
+                                     onChange={(e) => setCampaignState(prev => ({ ...prev, campaignContent: { ...campaignContent, titulo: e.target.value }}))}
                                     variant="outlined"
                                     fullWidth
                                     multiline
@@ -663,7 +664,7 @@ const Campaign = ({
                                             onDelete={() => {
                                                 const newHashtags = [...campaignContent.hashtags];
                                                 newHashtags.splice(index, 1);
-                                                setCampaignState({ campaignContent: { ...campaignContent, hashtags: newHashtags }});
+                                                setCampaignState(prev => ({ ...prev, campaignContent: { ...campaignContent, hashtags: newHashtags }}));
                                             }}
                                         />
                                     ))}
@@ -704,7 +705,7 @@ const Campaign = ({
                                                 if (newPaletteId !== 'custom') {
                                                   updates.customPalette = null;
                                                 }
-                                                setCampaignState(updates);
+                                                setCampaignState(prev => ({ ...prev, ...updates }));
                                             }}
                                             label="Paleta de Cores"
                                         >
@@ -738,7 +739,7 @@ const Campaign = ({
                                 <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'center' }}>
                                     <Button
                                         onClick={() => {
-                                            setCampaignState({ paletteId: 'custom' });
+                                            setCampaignState(prev => ({ ...prev, paletteId: 'custom' }));
                                             setPaletteWizardOpen(true);
                                         }}
                                         variant="contained"
@@ -787,7 +788,7 @@ const Campaign = ({
                                         <Select
                                         labelId="aspect-ratio-label"
                                         value={aspectRatio}
-                                         onChange={(e) => setCampaignState({ aspectRatio: e.target.value })}
+                                         onChange={(e) => setCampaignState(prev => ({ ...prev, aspectRatio: e.target.value }))}
                                         label="Razão de Aspecto"
                                     >
                                         <MenuItem value="1:1">Quadrado (1:1)</MenuItem>
@@ -877,7 +878,7 @@ const Campaign = ({
                                     label="Quantidade de Posts de Follow-up"
                                     type="number"
                                     value={followupPostsQuantity || ''}
-                                    onChange={(e) => setCampaignState({ followupPostsQuantity: parseInt(e.target.value, 10) })}
+                                     onChange={(e) => setCampaignState(prev => ({ ...prev, followupPostsQuantity: parseInt(e.target.value, 10) }))}
                                     fullWidth
                                     variant="outlined"
                                     InputProps={{ inputProps: { min: 1, max: 10 } }}
@@ -1020,7 +1021,7 @@ const Campaign = ({
                                                 key={index}
                                                 severity="info"
                                                 onClick={() => {
-                                                    setCampaignState({ problema: problem.replace(/\*\*(.*?)\*\*\\n/g, '$1\n') });
+                                                    setCampaignState(prev => ({ ...prev, problema: problem.replace(/\*\*(.*?)\*\*\\n/g, '$1\n') }));
                                                     setHintModalOpen(false);
                                                 }}
                                                 sx={{
@@ -1098,7 +1099,7 @@ const Campaign = ({
                                                 key={index}
                                                 severity="info"
                                                 onClick={() => {
-                                                    setCampaignState({ solucao: solution.replace(/\*\*(.*?)\*\*\\n/g, '$1\n') });
+                                                    setCampaignState(prev => ({ ...prev, solucao: solution.replace(/\*\*(.*?)\*\*\\n/g, '$1\n') }));
                                                     setSolucaoHintModalOpen(false);
                                                 }}
                                                 sx={{
@@ -1129,11 +1130,11 @@ const Campaign = ({
                         open={isPaletteWizardOpen}
                         onClose={() => setPaletteWizardOpen(false)}
                         onSave={(paletteData) => {
-                            setCampaignState({ customPalette: paletteData });
+                            setCampaignState(prev => ({ ...prev, customPalette: paletteData }));
                             setPaletteWizardOpen(false);
                         }}
                         paletteData={customPalette || { name: 'Paleta da Campanha', colors: [], harmony: '', harmony_justification: '' }}
-                        onPaletteDataChange={(newData) => setCampaignState({ customPalette: newData })}
+                        onPaletteDataChange={(newData) => setCampaignState(prev => ({ ...prev, customPalette: newData }))}
                         initialStep={0} // Always start from the beginning for the campaign's custom palette
                     />
                 )}
