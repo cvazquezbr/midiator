@@ -38,8 +38,9 @@ import { getPlayableBlob } from '../utils/fileUtils';
 import ProgressModal from './ProgressModal';
 import { toast } from 'sonner';
 
-const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAudioData }) => {
-  const [audioData, setAudioData] = useState(initialAudioData || []);
+const AudioGenerator = ({ csvData, fieldPositions }) => {
+  const { campaignState, setCampaignState, pendingAssets, addPendingAsset, removePendingAsset } = useCampaign();
+  const { generatedAudioData: audioData } = campaignState;
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
@@ -48,14 +49,9 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
   const [progress, setProgress] = useState(0);
   const [showProgressModal, setShowProgressModal] = useState(false);
   const { settings } = useSettings();
-  const { pendingAssets, addPendingAsset, removePendingAsset } = useCampaign();
   const currentTrackIndexRef = useRef(0);
   const audioRef = useRef(null);
   const isCancelledRef = useRef(false);
-
-  useEffect(() => {
-    setAudioData(initialAudioData || []);
-  }, [initialAudioData]);
 
   // Initialize the Google Cloud TTS API when the component mounts or mode changes
   useEffect(() => {
@@ -213,8 +209,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
       }
     }
     
-    setAudioData(generatedAudios);
-    onAudiosGenerated(generatedAudios);
+    setCampaignState({ generatedAudioData: generatedAudios });
     setIsGenerating(false);
     setShowProgressModal(false);
     setProgress(0);
@@ -538,8 +533,7 @@ const AudioGenerator = ({ csvData, fieldPositions, onAudiosGenerated, initialAud
                           }
                           const newAudioData = [...audioData];
                           newAudioData[index] = newAudio;
-                          setAudioData(newAudioData);
-                          onAudiosGenerated(newAudioData);
+                          setCampaignState({ generatedAudioData: newAudioData });
                         }} size="small">
                           <Replay />
                         </IconButton>
