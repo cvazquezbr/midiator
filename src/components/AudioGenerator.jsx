@@ -160,9 +160,8 @@ const AudioGenerator = ({ csvData, fieldPositions }) => {
     
     return new Promise(resolve => {
       audio.onloadedmetadata = () => {
-        // Resolve with the blobUrl, not a data URL.
-        // The `blob` property is no longer needed as it's managed by the context.
-        resolve({ text, duration: audio.duration, blob: null, url: blobUrl, source: 'google-tts', rate });
+        // Resolve with the blobUrl and the blob itself for immediate playback.
+        resolve({ text, duration: audio.duration, blob: blob, url: blobUrl, source: 'google-tts', rate });
       };
     });
   };
