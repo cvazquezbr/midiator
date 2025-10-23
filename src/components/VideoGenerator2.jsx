@@ -22,8 +22,9 @@ import SlidesSettings from './VideoGenerator/SlidesSettings';
 import EditableTypography from './EditableTypography';
 import { toast } from 'sonner';
 
-const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, generatedVideos = [], onVideoGenerated, onUpdateVideos }) => {
-  const { pendingAssets, addPendingAsset, removePendingAsset } = useCampaign();
+const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData }) => {
+  const { campaignState, setCampaignState, pendingAssets, addPendingAsset, removePendingAsset } = useCampaign();
+  const { generatedVideos = [] } = campaignState;
   const [video, setVideo] = useState(null);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -124,7 +125,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
     const updatedVideos = generatedVideos.map(video =>
       (video.id === id || video.url === id) ? { ...video, name: newName } : video
     );
-    onUpdateVideos(updatedVideos);
+    setCampaignState({ generatedVideos: updatedVideos });
   };
 
   const handleDeleteVideo = async (id) => {
@@ -151,7 +152,7 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
 
       // Then, remove from the local state
       const updatedVideos = generatedVideos.filter(video => video.id !== id && video.url !== id);
-      onUpdateVideos(updatedVideos);
+      setCampaignState({ generatedVideos: updatedVideos });
 
       toast.success(`Vídeo "${videoToDelete.name}" excluído com sucesso.`);
 
@@ -674,24 +675,24 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       const thumbnailUrl = thumbnailBlob ? addPendingAsset(thumbnailBlob) : null;
       // --------------------------
 
-      if (onVideoGenerated) {
-        const videoAsset = {
-          id: crypto.randomUUID(),
-          type: 'video',
-          url: url,
-          // blob property is removed, context handles it
-          name: `video-${Date.now()}.mp4`,
-          vercelBlobId: null,
-          vercelBlobUrl: url, // This will be replaced by the real one on save
-          mimeType: blob.type,
-          size: blob.size,
-          linkedinVideoUrn: null,
-          thumbnailUrl: thumbnailUrl,
-          // thumbnailBlob property is removed
-        };
+      const videoAsset = {
+        id: crypto.randomUUID(),
+        type: 'video',
+        url: url,
+        // blob property is removed, context handles it
+        name: `video-${Date.now()}.mp4`,
+        vercelBlobId: null,
+        vercelBlobUrl: url, // This will be replaced by the real one on save
+        mimeType: blob.type,
+        size: blob.size,
+        linkedinVideoUrn: null,
+        thumbnailUrl: thumbnailUrl,
+        // thumbnailBlob property is removed
+      };
 
-        onVideoGenerated([videoAsset]);
-      }
+      setCampaignState(prev => ({
+        generatedVideos: [...(prev.generatedVideos || []), videoAsset]
+      }));
     } catch (err) {
       console.error("Erro na geração do vídeo:", err);
       setError(`Erro na geração do vídeo: ${err.message}`);
@@ -786,8 +787,10 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
           }
         }
       }
-      if (onVideoGenerated && allGeneratedVideoAssets.length > 0) {
-        onVideoGenerated(allGeneratedVideoAssets);
+      if (allGeneratedVideoAssets.length > 0) {
+        setCampaignState(prev => ({
+          generatedVideos: [...(prev.generatedVideos || []), ...allGeneratedVideoAssets]
+        }));
       }
     } finally {
       setIsLoading(false);
@@ -912,17 +915,17 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
         const blob = new Blob(chunks, { type: 'video/webm' });
         const videoUrl = addPendingAsset(blob);
         setVideo(videoUrl);
-        if (onVideoGenerated) {
-          const videoData = {
-            id: crypto.randomUUID(),
-            type: 'video',
-            url: videoUrl,
-            name: `video-compat-${Date.now()}.webm`,
-            mimeType: blob.type,
-            size: blob.size,
-          };
-          onVideoGenerated([videoData]);
-        }
+        const videoData = {
+          id: crypto.randomUUID(),
+          type: 'video',
+          url: videoUrl,
+          name: `video-compat-${Date.now()}.webm`,
+          mimeType: blob.type,
+          size: blob.size,
+        };
+        setCampaignState(prev => ({
+          generatedVideos: [...(prev.generatedVideos || []), videoData]
+        }));
       };
 
       recorder.start();
@@ -1070,21 +1073,21 @@ const VideoGenerator2 = ({ generatedPages: generatedImages, generatedAudioData, 
       const thumbnailBlob = await generateThumbnail(ffmpeg, blob);
       const thumbnailUrl = thumbnailBlob ? addPendingAsset(thumbnailBlob) : null;
 
-      if (onVideoGenerated) {
-        const videoAsset = {
-          id: crypto.randomUUID(),
-          type: 'video',
-          url: url,
-          name: `video-narrado-${Date.now()}.mp4`,
-          vercelBlobId: null,
-          vercelBlobUrl: url,
-          mimeType: blob.type,
-          size: blob.size,
-          linkedinVideoUrn: null,
-          thumbnailUrl: thumbnailUrl,
-        };
-        onVideoGenerated([videoAsset]);
-      }
+      const videoAsset = {
+        id: crypto.randomUUID(),
+        type: 'video',
+        url: url,
+        name: `video-narrado-${Date.now()}.mp4`,
+        vercelBlobId: null,
+        vercelBlobUrl: url,
+        mimeType: blob.type,
+        size: blob.size,
+        linkedinVideoUrn: null,
+        thumbnailUrl: thumbnailUrl,
+      };
+      setCampaignState(prev => ({
+        generatedVideos: [...(prev.generatedVideos || []), videoAsset]
+      }));
 
     } catch (err) {
       console.error("Erro na geração do vídeo de narração:", err);
