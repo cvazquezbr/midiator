@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
 import { safeDeepClone } from '../lib/utils';
+import { getPalettes } from '../utils/paletteState';
 
 const defaultPageTemplate = {
   backgroundColor: '#FFFFFF',
@@ -66,6 +67,11 @@ const clearPendingAssets = (assets) => {
 
 export const CampaignProvider = ({ children }) => {
   const [campaignState, setCampaignStateInternal] = useState(initialState);
+  const [palettes, setPalettes] = useState([]);
+
+  useEffect(() => {
+    getPalettes().then(setPalettes).catch(err => console.error('Failed to load palettes.', err));
+  }, []);
   // This effect is the new gatekeeper for cleaning up blob URLs.
   // It runs ONLY when the component unmounts, preventing premature revocation.
   // The actual cleanup of old assets now happens inside `applyLoadedCampaign`
@@ -111,6 +117,11 @@ export const CampaignProvider = ({ children }) => {
       };
     });
 
+    const paletteId = campaignData.paletteId || loadedData.palette_id;
+    const selectedPalette = palettes.find(p => p.id === paletteId);
+    const campaignColors = campaignData.customPalette?.colors || selectedPalette?.colors || [];
+
+
     const newState = {
       ...initialState,
       ...campaignData,
@@ -124,12 +135,12 @@ export const CampaignProvider = ({ children }) => {
       generatedVideos: campaignData.generatedVideos || [],
       generatedAudioData: campaignData.generatedAudioData || [],
       fieldPositions: campaignData.fieldPositions || {},
-      colors: campaignData.customPalette || [],
+      colors: campaignColors,
     };
     console.log('[CampaignContext] State after applying loaded campaign:', newState);
     return newState;
     });
-  }, []);
+  }, [palettes]);
 
   const addPendingAsset = useCallback((blob) => {
     if (!(blob instanceof Blob)) {

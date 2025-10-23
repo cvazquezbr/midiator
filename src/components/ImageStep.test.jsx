@@ -10,6 +10,10 @@ vi.mock('./ImageStepUI', () => ({
   default: (props) => <div data-testid="imagestep-ui-mock" {...props} />
 }));
 
+vi.mock('../utils/paletteState', () => ({
+    getPalettes: vi.fn(() => Promise.resolve([])),
+}));
+
 const mockContextValue = {
   csvData: [],
   csvHeaders: [],
