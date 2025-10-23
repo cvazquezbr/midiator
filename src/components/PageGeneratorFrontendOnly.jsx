@@ -375,7 +375,7 @@ const PageGeneratorFrontendOnly = ({
   const handleOpenPromptEditor = (index) => {
     const pageData = generatedPagesData.find(p => p.index === index);
     if (pageData && pageData.record) {
-      setCurrentPrompt(pageData.record.prompt_imagem || '');
+      setCurrentPrompt(pageData.record.prompt_imagem_carrossel || '');
       setEditingPromptIndex(index);
       setIsPromptEditorOpen(true);
     } else {
@@ -401,7 +401,7 @@ const PageGeneratorFrontendOnly = ({
           ...page,
           record: {
             ...page.record,
-            prompt_imagem: currentPrompt,
+            prompt_imagem_carrossel: currentPrompt,
           },
         };
       }
@@ -412,7 +412,7 @@ const PageGeneratorFrontendOnly = ({
       if (index === editingPromptIndex) {
         return {
           ...record,
-          prompt_imagem: currentPrompt,
+          prompt_imagem_carrossel: currentPrompt,
         };
       }
       return record;
