@@ -162,9 +162,9 @@ function HomePage() {
   const handleRequestNewAutor = () => { setStartAutoresInCreate(true); setCurrentView('autores'); };
   const handleRequestNewPersona = () => { setStartPersonasInCreate(true); setCurrentView('personas'); };
   const handleCreationDone = (view) => { if (view === 'autores') setStartAutoresInCreate(false); else if (view === 'personas') setStartPersonasInCreate(false); setCurrentView('campaigns'); };
-  const handleAutorCreated = (newAutor) => { fetchAutoresForCampaign(); if (newAutor?.id) setCampaignState({ selectedAutorForCampaign: newAutor.id }); setStartAutoresInCreate(false); setCurrentView('campaigns'); };
-  const handlePersonaCreated = (newPersona) => { fetchPersonasForCampaign(); if (newPersona?.id) setCampaignState({ selectedPersonaForCampaign: newPersona.id }); setStartPersonasInCreate(false); setCurrentView('campaigns'); };
-  const handlePersonaSelected = (persona) => { setCampaignState({ selectedPersonaForCampaign: persona.id }); setCurrentView('campaigns'); };
+  const handleAutorCreated = (newAutor) => { fetchAutoresForCampaign(); if (newAutor?.id) setCampaignState(prev => ({ ...prev, selectedAutorForCampaign: newAutor.id })); setStartAutoresInCreate(false); setCurrentView('campaigns'); };
+  const handlePersonaCreated = (newPersona) => { fetchPersonasForCampaign(); if (newPersona?.id) setCampaignState(prev => ({ ...prev, selectedPersonaForCampaign: newPersona.id })); setStartPersonasInCreate(false); setCurrentView('campaigns'); };
+  const handlePersonaSelected = (persona) => { setCampaignState(prev => ({ ...prev, selectedPersonaForCampaign: persona.id })); setCurrentView('campaigns'); };
 
   // This effect synchronizes the UI state after a campaign is loaded into the context
   useEffect(() => {
@@ -301,7 +301,7 @@ function HomePage() {
   }, []);
 
   useEffect(() => {
-    extractColorPalette(pageTemplate?.images?.[0]?.src, (p) => setCampaignState({ imageColorPalette: p }));
+    extractColorPalette(pageTemplate?.images?.[0]?.src, (p) => setCampaignState(prev => ({ ...prev, imageColorPalette: p })));
   }, [pageTemplate?.images?.[0]?.src, extractColorPalette, setCampaignState]);
 
   useEffect(() => { if (isMobile) setSidebarOpen(false); }, [isMobile]);
@@ -309,7 +309,7 @@ function HomePage() {
 
   useEffect(() => {
     const processMedia = async (mediaArray, onUpdate) => {
-      const itemsToProcess = mediaArray.filter(item => item.url && !item.duration);
+      const itemsToProcess = (mediaArray || []).filter(item => item.url && !item.duration);
       if (itemsToProcess.length === 0) return;
       const promises = itemsToProcess.map(itemData => new Promise(resolve => {
         const mediaElement = document.createElement(itemData.type === 'video' ? 'video' : 'audio');
@@ -320,7 +320,7 @@ function HomePage() {
       }));
       const processedItems = await Promise.all(promises);
       onUpdate(currentItems => {
-        const newItems = [...currentItems];
+        const newItems = [...(currentItems || [])];
         processedItems.forEach(processed => {
           const index = newItems.findIndex(v => v.url === processed.url);
           if (index !== -1) newItems[index] = processed;
@@ -328,8 +328,8 @@ function HomePage() {
         return newItems;
       });
     };
-    processMedia(generatedVideos, (updater) => setCampaignState({ generatedVideos: updater(campaignState.generatedVideos) }));
-    processMedia(campaignState.generatedAudioData || [], (updater) => setCampaignState({ generatedAudioData: updater(campaignState.generatedAudioData) }));
+    processMedia(generatedVideos, (updater) => setCampaignState(prev => ({ ...prev, generatedVideos: updater(prev.generatedVideos) })));
+    processMedia(campaignState.generatedAudioData, (updater) => setCampaignState(prev => ({ ...prev, generatedAudioData: updater(prev.generatedAudioData) })));
   }, [generatedVideos, campaignState.generatedAudioData, setCampaignState]);
 
   const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Modelo de Página', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Edição de Páginas', description: 'Gere as páginas finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish }, { label: 'Monitorar', description: 'Acompanhe as estatísticas de suas publicações.', icon: BarChart } ];
@@ -401,9 +401,7 @@ function HomePage() {
         const { newPositions, newStyles } = autoArrangeFields({
           csvHeaders: newHeaders, fieldPositions: {}, fieldStyles: {}, csvData: newCsvData, effectiveImageSize: originalImageSize,
         });
-        setCampaignState({
-          csvData: newCsvData, csvHeaders: newHeaders, fieldPositions: newPositions, fieldStyles: newStyles, initialFieldStyles: newStyles,
-        });
+        setCampaignState(prev => ({ ...prev, csvData: newCsvData, csvHeaders: newHeaders, fieldPositions: newPositions, fieldStyles: newStyles, initialFieldStyles: newStyles }));
         setInputMethod('manual');
       }
     } catch (error) {
@@ -419,7 +417,7 @@ function HomePage() {
 
   const addNewImageToCanvas = useCallback((imageUrl) => {
     const newImage = { ...createNewImageElement(imageUrl), zIndex: -1 };
-    setCampaignState({ selectedField: newImage.id });
+    setCampaignState(prev => ({ ...prev, selectedField: newImage.id }));
     if (typeof imageGalleryTargetIndex === 'number') {
       setCampaignState(prev => {
         const newPages = prev.generatedPagesData.map((page, index) => {
@@ -489,7 +487,7 @@ function HomePage() {
       if (el.isBrand) { const brandEl = newBrandElements.find(b => b.id === el.id); if (brandEl) brandEl.zIndex = index; }
       else { if (newPositions[el.id]) newPositions[el.id].zIndex = index; }
     });
-    setCampaignState({ fieldPositions: newPositions, brandElements: newBrandElements });
+    setCampaignState(prev => ({ ...prev, fieldPositions: newPositions, brandElements: newBrandElements }));
   };
 
   const handleSidebarStepClick = (index) => { if (isMobile) setSidebarOpen(false); setActiveStep(index); };
@@ -555,6 +553,7 @@ function HomePage() {
 
   const handleThumbnailRecordTextUpdate = useCallback((recordIndex, updatedRecord) => {
     setCampaignState(prev => ({
+      ...prev,
       csvData: prev.csvData.map((row, idx) => idx === recordIndex ? updatedRecord : row)
     }));
   }, [setCampaignState]);
@@ -565,14 +564,14 @@ function HomePage() {
       const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign) || 'indisponível';
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign) || 'indisponível';
       const content = await generateCampaignContent({ problema: campaignState.problema, solucao: campaignState.solucao, objetivo: campaignState.objetivo, tomDeVoz: campaignState.tomDeVoz, persona: finalPersona, autor: finalAutor });
-      setCampaignState({ campaignContent: content, promptText: `${content.titulo || ''}\n\n${content.conteudo || ''}\n\n${content.cta || ''}` });
+      setCampaignState(prev => ({ ...prev, campaignContent: content, promptText: `${content.titulo || ''}\n\n${content.conteudo || ''}\n\n${content.cta || ''}` }));
       if (regenerate) { toast.success("Conteúdo principal regenerado."); return; }
-      setCampaignState({ followupPosts: [] });
+      setCampaignState(prev => ({ ...prev, followupPosts: [] }));
       await Promise.all([ handleGenerateSummary(1800, content), handleGenerateSummary(130, content) ]);
       toast.success("Campanha gerada com sucesso!");
     } catch (error) {
       toast.error(`Erro ao gerar conteúdo: ${error.message}`);
-      setCampaignState({ campaignContent: null }); setCampaignGenerationFailed(true); setGenerationError(error.message);
+      setCampaignState(prev => ({ ...prev, campaignContent: null })); setCampaignGenerationFailed(true); setGenerationError(error.message);
     } finally {
       setIsGeneratingCampaign(false); setGenerationStatus('');
     }
@@ -589,12 +588,12 @@ function HomePage() {
       const imageBlob = dataURLtoBlob(`data:image/png;base64,${base64Data}`);
       const managedUrl = addPendingAsset(imageBlob);
       if (!managedUrl) throw new Error("Falha ao criar URL para a imagem gerada.");
-      setCampaignState({ generatedPageUrl: managedUrl });
+      setCampaignState(prev => ({ ...prev, generatedPageUrl: managedUrl }));
       addNewImageToCanvas(managedUrl);
       return true;
     } catch (imageError) {
       toast.error(`Erro na geração da imagem: ${imageError.message}`);
-      setCampaignState({ generatedPageUrl: null });
+      setCampaignState(prev => ({ ...prev, generatedPageUrl: null }));
       return false;
     } finally {
       setIsGeneratingImage(false);
@@ -621,6 +620,7 @@ function HomePage() {
       // Use a functional update on setCampaignState to prevent race conditions.
       // This ensures that parallel calls don't overwrite each other's results.
       setCampaignState(currentState => ({
+        ...currentState,
         campaignContent: {
           ...currentState.campaignContent, // Preserve all existing fields in campaignContent
           [fieldName]: summary, // Add or update the specific summary field
@@ -638,7 +638,7 @@ function HomePage() {
     setIsGeneratingConteudoFormatado(true);
     try {
       const finalContent = await generateFormattedContent({ content });
-      setCampaignState({ campaignContent: { ...content, conteudoFormatado: finalContent } });
+      setCampaignState(prev => ({ ...prev, campaignContent: { ...prev.campaignContent, conteudoFormatado: finalContent } }));
     } catch (error) {
       toast.error(`Erro ao formatar conteúdo: ${error.message}`);
     } finally {
@@ -650,28 +650,28 @@ function HomePage() {
     if (!content?.conteudo) { toast.error("Gere o conteúdo principal primeiro."); return; }
     const { followupPosts, followupPostsQuantity } = campaignState;
     if (followupPosts.length >= followupPostsQuantity) { toast.info('Quantidade de posts desejada já atingida.'); return; }
-    setCampaignState({ isGeneratingFollowup: true });
+    setCampaignState(prev => ({ ...prev, isGeneratingFollowup: true }));
     try {
       const finalPersona = personaList.find(p => p.id === selectedPersonaForCampaign);
       const finalAutor = autorList.find(a => a.id === selectedAutorForCampaign);
       const neededQuantity = followupPostsQuantity - followupPosts.length;
       const plan = await generateFollowupPlan({ content, neededQuantity, existingPosts: followupPosts, persona: finalPersona, autor: finalAutor });
       const newPosts = await generateFollowupPosts({ content, plan, persona: finalPersona, autor: finalAutor });
-      setCampaignState({ followupPosts: [...followupPosts, ...newPosts] });
+      setCampaignState(prev => ({ ...prev, followupPosts: [...followupPosts, ...newPosts] }));
     } catch (error) {
       toast.error(`Erro ao gerar posts de follow-up: ${error.message}`);
     } finally {
-      setCampaignState({ isGeneratingFollowup: false });
+      setCampaignState(prev => ({ ...prev, isGeneratingFollowup: false }));
     }
   };
 
-  const handleResetCampaign = () => setCampaignState({ campaignContent: null, generatedPageUrl: null, followupPosts: [], followupPostsQuantity: 10 });
+  const handleResetCampaign = () => setCampaignState(prev => ({ ...prev, campaignContent: null, generatedPageUrl: null, followupPosts: [], followupPostsQuantity: 10 }));
   const handleEditFollowup = (index, content) => setEditingFollowup({ index, content });
   const handleSaveFollowup = (newContent) => {
     if (editingFollowup === null) return;
-    setCampaignState({
+    setCampaignState(prev => ({ ...prev,
       followupPosts: campaignState.followupPosts.map((post, index) => index === editingFollowup.index ? { ...post, conteudo: newContent } : post)
-    });
+    }));
     setEditingFollowup(null);
   };
 
@@ -856,8 +856,8 @@ function HomePage() {
               {activeStep === 2 && <PostsCurtosStep {...{ steps, inputMethod, setInputMethod, handleDrop, handleDragOver, fileInputRef, handleCSVUpload, downloadExampleCsv, setShowSetupModal, promptNumRecords: campaignState.promptNumRecords, setPromptNumRecords: (v) => setCampaignState({ promptNumRecords: v }), promptText: campaignState.promptText, setPromptText: (v) => setCampaignState({ promptText: v }), handleGenerateIAContent, isGenerating, csvData, csvHeaders, onDadosAlterados: handleDadosAlterados, darkMode, exportCsv: () => exportCsv(csvData, csvHeaders), aspectRatio, setAspectRatio: (v) => setCampaignState({ aspectRatio: v }), sidebarOpen }} />}
               {activeStep === 3 && <ImageStep {...{ steps, isLoading, isDraggingOverImage: false, handleImageDrop: (e) => handleImageSelected(e.dataTransfer.files[0]), handleImageDragOver, handleImageDragEnter: () => {}, handleImageDragLeave: () => {}, imageInputRef, handleImageUpload: handleForegroundImageUpload, onOpenImageGallery: handleOpenImageGallery, initialFieldStyles: campaignState.initialFieldStyles, onImageDisplayedSizeChange: () => {}, onCsvDataUpdate: handleCsvRecordContentUpdate, originalImageSize, onZIndexChange: handleZIndexChange, isMobile, onDeselectField: () => setCampaignState({ selectedField: null }), onOpenHtmlEditor: (fieldId) => setEditingField(fieldId), currentPreviewIndex, setCurrentPreviewIndex, onFontScaleChange: (v) => setCampaignState({ fontScale: v }), templateFieldStyles: campaignState.templateFieldStyles, activeStep, addPendingAsset }} />}
               {activeStep === 4 && <PageGeneratorFrontendOnly {...{ originalImageSize, fontScale: campaignState.fontScale, handleGenerateSinglePage, aspectRatio, onOpenImageGallery: handleOpenImageGallery }} />}
-              {activeStep === 5 && <AudioGenerator onAudiosGenerated={(audios) => setCampaignState({ generatedAudioData: audios })} initialAudioData={campaignState.generatedAudioData} />}
-              {activeStep === 6 && <VideoGenerator2 onVideoGenerated={(assets) => { setCampaignState(p => ({ generatedVideos: [...p.generatedVideos, ...assets] })); addPendingAssetMap(Object.fromEntries(assets.flatMap(a => [[a.url, a.blob], [a.thumbnailUrl, a.thumbnailBlob]]).filter(e => e[0]))); }} onUpdateVideos={(videos) => setCampaignState({ generatedVideos: videos })} onNewAsset={addPendingAsset} />}
+              {activeStep === 5 && <AudioGenerator onAudiosGenerated={(audios) => setCampaignState(prev => ({ ...prev, generatedAudioData: audios }))} initialAudioData={campaignState.generatedAudioData} />}
+              {activeStep === 6 && <VideoGenerator2 onVideoGenerated={(assets) => { setCampaignState(p => ({ ...p, generatedVideos: [...p.generatedVideos, ...assets] })); addPendingAssetMap(Object.fromEntries(assets.flatMap(a => [[a.url, a.blob], [a.thumbnailUrl, a.thumbnailBlob]]).filter(e => e[0]))); }} onUpdateVideos={(videos) => setCampaignState(prev => ({ ...prev, generatedVideos: videos }))} onNewAsset={addPendingAsset} />}
               {activeStep === 7 && (
                 <Publisher
                   settings={settings}
@@ -865,10 +865,10 @@ function HomePage() {
                   generatedPagesData={generatedPagesData}
                   generatedVideos={generatedVideos}
                   followupPosts={campaignState.followupPosts}
-                  onUpdateScheduledPosts={(posts) => setCampaignState({ followupPosts: posts })}
+                  onUpdateScheduledPosts={(posts) => setCampaignState(prev => ({ ...prev, followupPosts: posts }))}
                   currentCampaign={currentCampaign}
                   pendingAssets={pendingAssets}
-                  setPendingAssets={(newAssets) => setCampaignState({ pendingAssets: newAssets })}
+                  setPendingAssets={(newAssets) => setCampaignState(prev => ({ ...prev, pendingAssets: newAssets }))}
                 />
               )}
               {activeStep === 8 && <Monitor {...{ currentCampaign }} />}
