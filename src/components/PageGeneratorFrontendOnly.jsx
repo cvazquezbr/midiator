@@ -368,7 +368,7 @@ const PageGeneratorFrontendOnly = ({
           .catch(error => toast.error(`Falha ao substituir fundo: ${error.message}`));
       }
     }
-    if (individualImageInput-Ref.current) individualImageInputRef.current.value = "";
+    if (individualImageInputRef.current) individualImageInputRef.current.value = "";
     setEditingGeneratedPageIndex(null);
   };
 
@@ -520,7 +520,7 @@ const PageGeneratorFrontendOnly = ({
             type="text"
             fullWidth
             multiline
-            rows={4}
+            rows={8}
             value={currentPrompt}
             onChange={(e) => setCurrentPrompt(e.target.value)}
             sx={{ mt: 2 }}
