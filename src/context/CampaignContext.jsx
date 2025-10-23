@@ -124,6 +124,7 @@ export const CampaignProvider = ({ children }) => {
       generatedVideos: campaignData.generatedVideos || [],
       generatedAudioData: campaignData.generatedAudioData || [],
       fieldPositions: campaignData.fieldPositions || {},
+      colors: campaignData.customPalette || [],
     };
     console.log('[CampaignContext] State after applying loaded campaign:', newState);
     return newState;

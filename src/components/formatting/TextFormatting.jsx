@@ -101,7 +101,24 @@ const TextFormatting = ({
       </Accordion>
       <Accordion expanded={expandedPanel === 'boxStyle'} onChange={handleAccordionChange('boxStyle')}>
         <AccordionSummary expandIcon={<ExpandMore />}><Typography><CheckBoxOutlineBlank sx={{ mr: 1, verticalAlign: 'middle' }} />Caixa de Texto</Typography></AccordionSummary>
-        <AccordionDetails><Grid container spacing={2}><Grid item xs={6}><TextField label="Cor Fundo" type="color" value={rgbStringToHex(currentElement.style.backgroundColor || '#000000')} onChange={(e) => updateFieldStyle('backgroundColor', e.target.value)} fullWidth size="small" /></Grid><Grid item xs={6}><Typography gutterBottom>Opacidade Fundo: {Math.round((currentElement.style.backgroundOpacity ?? 1) * 100)}%</Typography><Slider value={currentElement.style.backgroundOpacity ?? 1} onChange={(e, v) => updateFieldStyle('backgroundOpacity', v)} min={0} max={1} step={0.01} /></Grid><Grid item xs={6}><TextField label="Cor Borda" type="color" value={rgbStringToHex(currentElement.style.borderColor || '#000000')} onChange={(e) => updateFieldStyle('borderColor', e.target.value)} fullWidth size="small" /></Grid><Grid item xs={6}><Typography gutterBottom>Largura Borda: {currentElement.style.borderWidth || 0}px</Typography><Slider value={currentElement.style.borderWidth || 0} onChange={(e, v) => updateFieldStyle('borderWidth', v)} min={0} max={20} /></Grid><Grid item xs={6}><Typography gutterBottom>Curva: {currentElement.style.borderRadius || 0}px</Typography><Slider value={currentElement.style.borderRadius || 0} onChange={(e, v) => updateFieldStyle('borderRadius', v)} min={0} max={50} /></Grid><Grid item xs={6}><Typography gutterBottom>Padding: {currentElement.style.padding || 0}px</Typography><Slider value={currentElement.style.padding || 0} onChange={(e, v) => updateFieldStyle('padding', v)} min={0} max={50} /></Grid></Grid></AccordionDetails>
+        <AccordionDetails>
+          <Grid container spacing={2}>
+            <Grid item xs={6}><TextField label="Cor Fundo" type="color" value={rgbStringToHex(currentElement.style.backgroundColor || '#000000')} onChange={(e) => updateFieldStyle('backgroundColor', e.target.value)} fullWidth size="small" /></Grid>
+            <Grid item xs={6}><Typography gutterBottom>Opacidade Fundo: {Math.round((currentElement.style.backgroundOpacity ?? 1) * 100)}%</Typography><Slider value={currentElement.style.backgroundOpacity ?? 1} onChange={(e, v) => updateFieldStyle('backgroundOpacity', v)} min={0} max={1} step={0.01} /></Grid>
+            <Grid item xs={12}>
+              <ColorSwatches title="Cores da Campanha" palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('backgroundColor', color)} />
+              <ColorSwatches title="Cores da Imagem" palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('backgroundColor', color)} />
+            </Grid>
+            <Grid item xs={6}><TextField label="Cor Borda" type="color" value={rgbStringToHex(currentElement.style.borderColor || '#000000')} onChange={(e) => updateFieldStyle('borderColor', e.target.value)} fullWidth size="small" /></Grid>
+            <Grid item xs={6}><Typography gutterBottom>Largura Borda: {currentElement.style.borderWidth || 0}px</Typography><Slider value={currentElement.style.borderWidth || 0} onChange={(e, v) => updateFieldStyle('borderWidth', v)} min={0} max={20} /></Grid>
+            <Grid item xs={12}>
+              <ColorSwatches title="Cores da Campanha" palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('borderColor', color)} />
+              <ColorSwatches title="Cores da Imagem" palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('borderColor', color)} />
+            </Grid>
+            <Grid item xs={6}><Typography gutterBottom>Curva: {currentElement.style.borderRadius || 0}px</Typography><Slider value={currentElement.style.borderRadius || 0} onChange={(e, v) => updateFieldStyle('borderRadius', v)} min={0} max={50} /></Grid>
+            <Grid item xs={6}><Typography gutterBottom>Padding: {currentElement.style.padding || 0}px</Typography><Slider value={currentElement.style.padding || 0} onChange={(e, v) => updateFieldStyle('padding', v)} min={0} max={50} /></Grid>
+          </Grid>
+        </AccordionDetails>
       </Accordion>
       <Accordion expanded={expandedPanel === 'effects'} onChange={handleAccordionChange('effects')}>
         <AccordionSummary expandIcon={<ExpandMore />}><Typography><BlurOn sx={{ mr: 1, verticalAlign: 'middle' }} />Efeitos</Typography></AccordionSummary>
@@ -114,6 +131,10 @@ const TextFormatting = ({
               <>
                 <Grid item xs={6}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.style.shadowColor || '#000000')} onChange={(e) => updateFieldStyle('shadowColor', e.target.value)} fullWidth size="small" /></Grid>
                 <Grid item xs={6}><Typography gutterBottom>Blur: {currentElement.style.shadowBlur || 4}px</Typography><Slider value={currentElement.style.shadowBlur || 4} onChange={(e, v) => updateFieldStyle('shadowBlur', v)} min={0} max={50} /></Grid>
+                <Grid item xs={12}>
+                  <ColorSwatches title="Cores da Campanha" palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('shadowColor', color)} />
+                  <ColorSwatches title="Cores da Imagem" palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('shadowColor', color)} />
+                </Grid>
                 <Grid item xs={6}><Typography gutterBottom>Offset X: {currentElement.style.shadowOffsetX || 2}px</Typography><Slider value={currentElement.style.shadowOffsetX || 2} onChange={(e, v) => updateFieldStyle('shadowOffsetX', v)} min={-50} max={50} /></Grid>
                 <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.style.shadowOffsetY || 2}px</Typography><Slider value={currentElement.style.shadowOffsetY || 2} onChange={(e, v) => updateFieldStyle('shadowOffsetY', v)} min={-50} max={50} /></Grid>
               </>
@@ -126,6 +147,10 @@ const TextFormatting = ({
                 <>
                     <Grid item xs={6}><TextField label="Cor Contorno" type="color" value={rgbStringToHex(currentElement.style.strokeColor || '#ffffff')} onChange={(e) => updateFieldStyle('strokeColor', e.target.value)} fullWidth size="small" /></Grid>
                     <Grid item xs={6}><Typography gutterBottom>Largura: {currentElement.style.strokeWidth || 2}px</Typography><Slider value={currentElement.style.strokeWidth || 2} onChange={(e, v) => updateFieldStyle('strokeWidth', v)} min={0} max={20} /></Grid>
+                    <Grid item xs={12}>
+                      <ColorSwatches title="Cores da Campanha" palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('strokeColor', color)} />
+                      <ColorSwatches title="Cores da Imagem" palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('strokeColor', color)} />
+                    </Grid>
                 </>
             )}
           </Grid>
