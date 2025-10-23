@@ -328,8 +328,8 @@ function HomePage() {
         return newItems;
       });
     };
-    processMedia(generatedVideos, (updater) => setCampaignState({ generatedVideos: updater(campaignState.generatedVideos) }));
-    processMedia(campaignState.generatedAudioData || [], (updater) => setCampaignState({ generatedAudioData: updater(campaignState.generatedAudioData) }));
+    processMedia(generatedVideos || [], (updater) => setCampaignState({ generatedVideos: updater(campaignState.generatedVideos || []) }));
+    processMedia(campaignState.generatedAudioData || [], (updater) => setCampaignState({ generatedAudioData: updater(campaignState.generatedAudioData || []) }));
   }, [generatedVideos, campaignState.generatedAudioData, setCampaignState]);
 
   const steps = [ { label: 'Minhas Campanhas', description: 'Gerencie suas campanhas existentes ou crie uma nova.', icon: FolderOpenIcon }, { label: 'Campanha', description: 'Criar o material de referência para a campanha.', icon: CampaignIcon }, { label: 'Posts Curtos', description: 'Gere, carregue ou edite os posts para redes sociais.', icon: InsertDriveFileOutlined }, { label: 'Modelo de Página', description: 'Carregue a imagem de fundo, posicione os campos e configure a formatação.', icon: ImageIcon }, { label: 'Edição de Páginas', description: 'Gere as páginas finais.', icon: FormatBold }, { label: 'Gerar Áudio', description: 'Crie a narração para os slides.', icon: Audiotrack }, { label: 'Gerar Vídeo', description: 'Crie um vídeo a partir das imagens geradas.', icon: Movie }, { label: 'Publicar', description: 'Publique o conteúdo no WordPress.', icon: Publish }, { label: 'Monitorar', description: 'Acompanhe as estatísticas de suas publicações.', icon: BarChart } ];
