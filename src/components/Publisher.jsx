@@ -719,6 +719,21 @@ const Publisher = ({
             if (imageBlobsToUpload.some(blob => !blob)) {
                 throw new Error("Falha ao baixar uma ou mais imagens. Verifique o console e tente novamente.");
             }
+
+            // JULES - DEBUG LOG
+            console.log('--- JULES DEBUG ---');
+            console.log('Selected Image Indexes:', selectedImageIndexes);
+            console.log('Number of blobs to upload:', imageBlobsToUpload.length);
+            imageBlobsToUpload.forEach((blob, i) => {
+                if (blob) {
+                    console.log(`Blob ${i}: size=${blob.size}, type=${blob.type}`);
+                } else {
+                    console.log(`Blob ${i}: null`);
+                }
+            });
+            console.log('-------------------');
+
+
             imageUrns = await uploadImagesForLinkedIn(settings?.linkedin, imageBlobsToUpload, authorUrn, setPublishingStatusLi);
         }
 
