@@ -129,7 +129,13 @@ const TextFormatting = ({
               <FormControlLabel control={<Switch checked={currentElement.style.textShadow || false} onChange={(e) => updateFieldStyle('textShadow', e.target.checked)} />} label="Sombra de Texto" />
             </Grid>
             {currentElement.style.textShadow && (
-              <Grid item xs={12}>
+              <>
+                <Grid item xs={12}>
+                  <ColorSwatches title="Cores da Campanha" palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('shadowColor', color)} />
+                  <ColorSwatches title="Cores da Imagem" palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('shadowColor', color)} />
+                </Grid>
+                <Grid item xs={6}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.style.shadowColor || '#000000')} onChange={(e) => updateFieldStyle('shadowColor', e.target.value)} fullWidth size="small" /></Grid>
+                             <Grid item xs={12}>
   <Grid
     container
     justifyContent="center"
@@ -229,7 +235,7 @@ const TextFormatting = ({
     </Grid>
   </Grid>
 </Grid>
-
+              </>
             )}
             <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
             <Grid item xs={12}>
