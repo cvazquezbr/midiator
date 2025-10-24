@@ -106,7 +106,7 @@ const ImageStepUI = ({
         </Typography>
         {csvData && csvData.length > 0 && pageTemplate && fieldPositions && fieldStyles ? (
           <>
-            <Box sx={{ flexGrow: 1, minHeight: 0, display: 'flex', p: 1 }}>
+            <Box sx={{ flexGrow: 1, minHeight: 0, maxHeight: '80vh', display: 'flex', p: 1, position: 'relative' }}>
               <FieldPositioner
                 editorState={editorState}
                 setEditorState={handleEditorStateChange} // Pass the translator function
