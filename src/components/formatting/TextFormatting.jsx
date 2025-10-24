@@ -73,25 +73,31 @@ const TextFormatting = ({
         <AccordionSummary expandIcon={<ExpandMore />}><Typography><FormatSize sx={{ mr: 1, verticalAlign: 'middle' }} />Fonte e Estilo</Typography></AccordionSummary>
         <AccordionDetails>
           <Grid container spacing={2}>
-            <Grid item xs={8}><FormControl fullWidth size="small"><InputLabel>Fonte</InputLabel><Select value={currentElement.style.fontFamily || 'Arial'} label="Fonte" onChange={(e) => updateFieldStyle('fontFamily', e.target.value)} MenuProps={{ sx: { zIndex: 1500 } }}>{fonts.map(font => (<MenuItem key={font} value={font} style={{ fontFamily: font }}>{font}</MenuItem>))}</Select></FormControl></Grid>
-            <Grid item xs={4}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.style.color || '#000000')} onChange={(e) => updateFieldStyle('color', e.target.value)} fullWidth size="small" /></Grid>
 
             <Grid item xs={12}>
-              <ColorSwatches
-                title="Cores da Campanha"
-                palette={campaignSwatches}
-                onColorSelect={(color) => updateFieldStyle('color', color)}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <ColorSwatches
-                title="Cores da Imagem"
-                palette={imageSwatches}
-                onColorSelect={(color) => updateFieldStyle('color', color)}
-              />
+              <Grid container spacing={2} alignItems="flex-start">
+                {/* Coluna dos Swatches (ocupa a maior parte do espaço) */}
+                <Grid item xs={9}>
+                  <ColorSwatches
+                    title="Cores da Campanha"
+                    palette={campaignSwatches}
+                    onColorSelect={(color) => updateFieldStyle('color', color)}
+                  />
+                  <ColorSwatches
+                    title="Cores da Imagem"
+                    palette={imageSwatches}
+                    onColorSelect={(color) => updateFieldStyle('color', color)}
+                  />
+                </Grid>
+
+                {/* Coluna do Seletor de Cor (ocupa o espaço restante) */}
+                <Grid item xs={3}>
+                  <TextField label="Cor" type="color" value={rgbStringToHex(currentElement.style.color || '#000000')} onChange={(e) => updateFieldStyle('color', e.target.value)} fullWidth size="small" />
+                </Grid>
+              </Grid>
             </Grid>
 
-
+            <Grid item xs={12}><FormControl fullWidth size="small"><InputLabel>Fonte</InputLabel><Select value={currentElement.style.fontFamily || 'Arial'} label="Fonte" onChange={(e) => updateFieldStyle('fontFamily', e.target.value)} MenuProps={{ sx: { zIndex: 1500 } }}>{fonts.map(font => (<MenuItem key={font} value={font} style={{ fontFamily: font }}>{font}</MenuItem>))}</Select></FormControl></Grid>
             <Grid item xs={12}><ToggleButtonGroup size="small" fullWidth><ToggleButton value="bold" selected={currentElement.style.fontWeight === 'bold'} onClick={() => updateFieldStyle('fontWeight', currentElement.style.fontWeight === 'bold' ? 'normal' : 'bold')}><FormatBold /></ToggleButton><ToggleButton value="italic" selected={currentElement.style.fontStyle === 'italic'} onClick={() => updateFieldStyle('fontStyle', currentElement.style.fontStyle === 'italic' ? 'normal' : 'italic')}><FormatItalic /></ToggleButton><ToggleButton value="underline" selected={currentElement.style.textDecoration === 'underline'} onClick={() => updateFieldStyle('textDecoration', currentElement.style.textDecoration === 'underline' ? 'none' : 'underline')}><FormatUnderlined /></ToggleButton></ToggleButtonGroup></Grid>
             <Grid item xs={12}><Typography variant="caption" display="block" gutterBottom>Alinhamento</Typography><ToggleButtonGroup value={currentElement.style.textAlign || 'left'} exclusive onChange={(e, v) => v && updateFieldStyle('textAlign', v)} size="small" fullWidth><ToggleButton value="left"><FormatAlignLeft /></ToggleButton><ToggleButton value="center"><FormatAlignCenter /></ToggleButton><ToggleButton value="right"><FormatAlignRight /></ToggleButton></ToggleButtonGroup></Grid>
             <Grid item xs={12}><ToggleButtonGroup value={currentElement.style.verticalAlign || 'top'} exclusive onChange={(e, v) => v && updateFieldStyle('verticalAlign', v)} size="small" fullWidth><ToggleButton value="top"><VerticalAlignTop /></ToggleButton><ToggleButton value="middle"><VerticalAlignCenter /></ToggleButton><ToggleButton value="bottom"><VerticalAlignBottom /></ToggleButton></ToggleButtonGroup></Grid>
@@ -282,10 +288,17 @@ const TextFormatting = ({
                     {/* Coluna do Seletor de Cor (ocupa o espaço restante) */}
                     <Grid item xs={3}>
                       {/* Aqui você pode adicionar um título ou label se desejar, mas o TextField já tem "Cor" */}
-                      <TextField label="Cor Contorno" type="color" value={rgbStringToHex(currentElement.style.strokeColor || '#ffffff')} onChange={(e) => updateFieldStyle('strokeColor', e.target.value)} fullWidth size="small"  
-                      // Estilo adicional para garantir que o campo de cor fique no topo, 
+                      <TextField
+                        label="Cor Contorno"
+                        type="color"
+                        value={rgbStringToHex(currentElement.style.strokeColor || '#ffffff')}
+                        onChange={(e) => updateFieldStyle('strokeColor', e.target.value)}
+                        fullWidth
+                        size="small"
+                        // Estilo adicional para garantir que o campo de cor fique no topo, 
                         // alinhado com o título "Cores da Campanha"
-                        sx={{ mt: 3 }}/>
+                        sx={{ mt: 3 }}
+                      />
                     </Grid>
                   </Grid>
                 </Grid>
