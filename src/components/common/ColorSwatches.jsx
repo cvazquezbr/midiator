@@ -28,7 +28,9 @@ const ColorSwatches = ({ title, palette, onColorSelect }) => {
   }
 
   return (
-    <Box sx={{ my: 2 }}>
+    <Box
+    //  sx={{ my: 2 }}
+    >
       <Typography variant="caption" display="block" gutterBottom>
         {title}
       </Typography>
