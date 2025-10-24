@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -63,6 +63,7 @@ const TextFormatting = ({
   campaignSwatches,
   imageSwatches,
 }) => {
+  const [colorTarget, setColorTarget] = useState('backgroundColor'); // 'backgroundColor' or 'borderColor'
   if (!currentElement) return null;
 
   return (
@@ -240,84 +241,83 @@ const TextFormatting = ({
       <Accordion expanded={expandedPanel === 'boxStyle'} onChange={handleAccordionChange('boxStyle')}>
         <AccordionSummary expandIcon={<ExpandMore />}><Typography><CheckBoxOutlineBlank sx={{ mr: 1, verticalAlign: 'middle' }} />Caixa de Texto</Typography></AccordionSummary>
         <AccordionDetails>
-          <Grid container spacing={2}>
+          <Grid container spacing={3}>
 
-            {/* GRUPO 1: COR DE FUNDO E OPACIDADE */}
+            {/* GRUPO UNIFICADO DE CORES */}
             <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>Cor</Typography>
+              <ToggleButtonGroup
+                value={colorTarget}
+                exclusive
+                onChange={(e, newTarget) => newTarget && setColorTarget(newTarget)}
+                fullWidth
+                size="small"
+                sx={{ mb: 2 }}
+              >
+                <ToggleButton value="backgroundColor">Fundo</ToggleButton>
+                <ToggleButton value="borderColor">Borda</ToggleButton>
+              </ToggleButtonGroup>
+
               <Grid container spacing={2} alignItems="flex-start">
                 {/* Swatches (Cores da Campanha e da Imagem) */}
-                <Grid item xs={6}>
-                  <ColorSwatches title="Cores da Campanha" palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('backgroundColor', color)} />
-                  <ColorSwatches title="Cores da Imagem" palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('backgroundColor', color)} />
+                <Grid item xs={8}>
+                  <Typography variant="caption" display="block" color="textSecondary" sx={{ mb: 0.5 }}>Cores da Campanha</Typography>
+                  <ColorSwatches
+                    palette={campaignSwatches}
+                    onColorSelect={(color) => updateFieldStyle(colorTarget, color)}
+                  />
+                  <Typography variant="caption" display="block" color="textSecondary" sx={{ mt: 1, mb: 0.5 }}>Cores da Imagem</Typography>
+                  <ColorSwatches
+                    palette={imageSwatches}
+                    onColorSelect={(color) => updateFieldStyle(colorTarget, color)}
+                  />
                 </Grid>
 
-                {/* Controles de Cor e Opacidade */}
-                <Grid item xs={6}>
-                  {/* Container para Cor Fundo e Opacidade Fundo */}
-                  <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                      <TextField
-                        label="Cor Fundo"
-                        type="color"
-                        value={rgbStringToHex(currentElement.style.backgroundColor || '#000000')}
-                        onChange={(e) => updateFieldStyle('backgroundColor', e.target.value)}
-                        fullWidth
-                        size="small"
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Typography gutterBottom>Opacidade Fundo: {Math.round((currentElement.style.backgroundOpacity ?? 1) * 100)}%</Typography>
-                      <Slider
-                        value={currentElement.style.backgroundOpacity ?? 1}
-                        onChange={(e, v) => updateFieldStyle('backgroundOpacity', v)}
-                        min={0}
-                        max={1}
-                        step={0.01}
-                      />
-                    </Grid>
-                  </Grid>
+                {/* Seletor de Cor */}
+                <Grid item xs={4}>
+                  <TextField
+                    label="Cor"
+                    type="color"
+                    value={rgbStringToHex(currentElement.style[colorTarget] || '#000000')}
+                    onChange={(e) => updateFieldStyle(colorTarget, e.target.value)}
+                    fullWidth
+                    size="small"
+                  />
                 </Grid>
               </Grid>
             </Grid>
 
-            {/* GRUPO 2: COR E LARGURA DA BORDA */}
-            <Grid item xs={12}>
-              <Grid container spacing={2} alignItems="flex-start">
-                {/* Swatches (Cores da Campanha e da Imagem) */}
-                <Grid item xs={6}>
-                  <ColorSwatches title="Cores da Campanha" palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('borderColor', color)} />
-                  <ColorSwatches title="Cores da Imagem" palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('borderColor', color)} />
-                </Grid>
+            {/* GRUPO DE PROPRIEDADES ADICIONAIS */}
+            <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
 
-                {/* Controles de Cor e Largura */}
-                <Grid item xs={6}>
-                  {/* Container para Cor Borda e Largura Borda */}
-                  <Grid container spacing={2}>
-                    <Grid item xs={12}>
-                      <TextField
-                        label="Cor Borda"
-                        type="color"
-                        value={rgbStringToHex(currentElement.style.borderColor || '#000000')}
-                        onChange={(e) => updateFieldStyle('borderColor', e.target.value)}
-                        fullWidth
-                        size="small"
-                      />
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Typography gutterBottom>Largura Borda: {currentElement.style.borderWidth || 0}px</Typography>
-                      <Slider
-                        value={currentElement.style.borderWidth || 0}
-                        onChange={(e, v) => updateFieldStyle('borderWidth', v)}
-                        min={0}
-                        max={20}
-                      />
-                    </Grid>
-                  </Grid>
-                </Grid>
-              </Grid>
+            {/* Controles de Fundo */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>Fundo</Typography>
+              <Typography gutterBottom>Opacidade: {Math.round((currentElement.style.backgroundOpacity ?? 1) * 100)}%</Typography>
+              <Slider
+                value={currentElement.style.backgroundOpacity ?? 1}
+                onChange={(e, v) => updateFieldStyle('backgroundOpacity', v)}
+                min={0}
+                max={1}
+                step={0.01}
+              />
             </Grid>
 
-            {/* GRUPO 3: CURVA E PADDING (MANTIDOS ORIGINALMENTE) */}
+            {/* Controles de Borda */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>Borda</Typography>
+              <Typography gutterBottom>Largura: {currentElement.style.borderWidth || 0}px</Typography>
+              <Slider
+                value={currentElement.style.borderWidth || 0}
+                onChange={(e, v) => updateFieldStyle('borderWidth', v)}
+                min={0}
+                max={20}
+              />
+            </Grid>
+
+            <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
+
+            {/* Controles de Layout */}
             <Grid item xs={6}>
               <Typography gutterBottom>Curva: {currentElement.style.borderRadius || 0}px</Typography>
               <Slider value={currentElement.style.borderRadius || 0} onChange={(e, v) => updateFieldStyle('borderRadius', v)} min={0} max={50} />
@@ -326,7 +326,6 @@ const TextFormatting = ({
               <Typography gutterBottom>Padding: {currentElement.style.padding || 0}px</Typography>
               <Slider value={currentElement.style.padding || 0} onChange={(e, v) => updateFieldStyle('padding', v)} min={0} max={50} />
             </Grid>
-
           </Grid>
         </AccordionDetails>
       </Accordion>
