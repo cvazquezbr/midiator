@@ -281,69 +281,67 @@ const TextFormatting = ({
               </Grid>
             </Grid>
 
-            <Grid item xs={12} sx={{ mt: 0 }}>
 
-              {/* CONTAINER COM SLIDERS VERTICAIS LADO A LADO (4 PROPRIEDADES ORIGINAIS) */}
-              <Grid container spacing={2} justifyContent="space-between" alignItems="flex-end" sx={{ height: 200 }}>
+            {/* CONTAINER COM SLIDERS VERTICAIS LADO A LADO (4 PROPRIEDADES ORIGINAIS) */}
+            <Grid item xs={12} container spacing={2} justifyContent="space-between" alignItems="flex-end" sx={{ height: 150 }}>
 
-                {/* 1. Opacidade (Fundo) - xs=3 */}
-                <Grid item xs={3} sx={{ textAlign: 'center' }}>
-                  <Typography variant="caption" display="block">Fill</Typography>
-                  <Slider
-                    orientation="vertical"
-                    value={currentElement.style.backgroundOpacity ?? 0} // Valor inicial 0 (0%)
-                    onChange={(e, v) => updateFieldStyle('backgroundOpacity', v)}
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    sx={{ height: 100, mt: 1 }}
-                  />
-                  <Typography variant="caption" display="block">{Math.round((currentElement.style.backgroundOpacity ?? 0) * 100)}%</Typography>
-                </Grid>
-
-                {/* 2. Largura (Borda) - xs=3 */}
-                <Grid item xs={3} sx={{ textAlign: 'center' }}>
-                  <Typography variant="caption" display="block">Border</Typography>
-                  <Slider
-                    orientation="vertical"
-                    value={currentElement.style.borderWidth || 0} // Valor inicial 0px
-                    onChange={(e, v) => updateFieldStyle('borderWidth', v)}
-                    min={0}
-                    max={20}
-                    sx={{ height: 100, mt: 1 }}
-                  />
-                  <Typography variant="caption" display="block">{currentElement.style.borderWidth || 0}px</Typography>
-                </Grid>
-
-                {/* 3. Curva (Raio) - xs=3 */}
-                <Grid item xs={3} sx={{ textAlign: 'center' }}>
-                  <Typography variant="caption" display="block">Curve</Typography>
-                  <Slider
-                    orientation="vertical"
-                    value={currentElement.style.borderRadius || 0} // Valor inicial 0px
-                    onChange={(e, v) => updateFieldStyle('borderRadius', v)}
-                    min={0}
-                    max={50}
-                    sx={{ height: 100, mt: 1 }}
-                  />
-                  <Typography variant="caption" display="block">{currentElement.style.borderRadius || 0}px</Typography>
-                </Grid>
-
-                {/* 4. Padding - xs=3 */}
-                <Grid item xs={3} sx={{ textAlign: 'center' }}>
-                  <Typography variant="caption" display="block">Padding</Typography>
-                  <Slider
-                    orientation="vertical"
-                    value={currentElement.style.padding || 5} // Valor inicial 5px
-                    onChange={(e, v) => updateFieldStyle('padding', v)}
-                    min={0}
-                    max={50}
-                    sx={{ height: 100, mt: 1 }}
-                  />
-                  <Typography variant="caption" display="block">{currentElement.style.padding || 5}px</Typography>
-                </Grid>
-
+              {/* 1. Opacidade (Fundo) - xs=3 */}
+              <Grid item xs={3} sx={{ textAlign: 'center' }}>
+                <Typography variant="caption" display="block">Fill</Typography>
+                <Slider
+                  orientation="vertical"
+                  value={currentElement.style.backgroundOpacity ?? 0} // Valor inicial 0 (0%)
+                  onChange={(e, v) => updateFieldStyle('backgroundOpacity', v)}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  sx={{ height: 100, mt: 1 }}
+                />
+                <Typography variant="caption" display="block">{Math.round((currentElement.style.backgroundOpacity ?? 0) * 100)}%</Typography>
               </Grid>
+
+              {/* 2. Largura (Borda) - xs=3 */}
+              <Grid item xs={3} sx={{ textAlign: 'center' }}>
+                <Typography variant="caption" display="block">Border</Typography>
+                <Slider
+                  orientation="vertical"
+                  value={currentElement.style.borderWidth || 0} // Valor inicial 0px
+                  onChange={(e, v) => updateFieldStyle('borderWidth', v)}
+                  min={0}
+                  max={20}
+                  sx={{ height: 100, mt: 1 }}
+                />
+                <Typography variant="caption" display="block">{currentElement.style.borderWidth || 0}px</Typography>
+              </Grid>
+
+              {/* 3. Curva (Raio) - xs=3 */}
+              <Grid item xs={3} sx={{ textAlign: 'center' }}>
+                <Typography variant="caption" display="block">Curve</Typography>
+                <Slider
+                  orientation="vertical"
+                  value={currentElement.style.borderRadius || 0} // Valor inicial 0px
+                  onChange={(e, v) => updateFieldStyle('borderRadius', v)}
+                  min={0}
+                  max={50}
+                  sx={{ height: 100, mt: 1 }}
+                />
+                <Typography variant="caption" display="block">{currentElement.style.borderRadius || 0}px</Typography>
+              </Grid>
+
+              {/* 4. Padding - xs=3 */}
+              <Grid item xs={3} sx={{ textAlign: 'center' }}>
+                <Typography variant="caption" display="block">Padding</Typography>
+                <Slider
+                  orientation="vertical"
+                  value={currentElement.style.padding || 5} // Valor inicial 5px
+                  onChange={(e, v) => updateFieldStyle('padding', v)}
+                  min={0}
+                  max={50}
+                  sx={{ height: 100, mt: 1 }}
+                />
+                <Typography variant="caption" display="block">{currentElement.style.padding || 5}px</Typography>
+              </Grid>
+
             </Grid>
           </Grid>
         </AccordionDetails>
