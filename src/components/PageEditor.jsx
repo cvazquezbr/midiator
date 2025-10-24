@@ -186,24 +186,23 @@ const PageEditor = ({
           </Box>
         </Box>
       </DialogTitle>
-      <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column' }}>
-        <Grid container spacing={2} sx={{ flexGrow: 1 }}>
-          <Grid item xs={12} md={isMobile ? 12 : 8} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FieldPositioner
+      <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: 'row', height: '100%' }}>
+        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
+          <FieldPositioner
+            editorState={editorState}
+            setEditorState={setEditorState}
+            selectedField={selectedField}
+            setSelectedField={setSelectedField}
+            originalImageSize={originalImageSize}
+            onOpenHtmlEditor={handleOpenHtmlEditor}
+            currentPreviewIndex={0}
+          />
+        </Box>
+        {!isMobile && (
+          <Box sx={{ flex: '0 0 320px', borderLeft: 1, borderColor: 'divider', overflowY: 'auto' }}>
+            <FormattingPanel
               editorState={editorState}
               setEditorState={setEditorState}
-              selectedField={selectedField}
-              setSelectedField={setSelectedField}
-              originalImageSize={originalImageSize}
-              onOpenHtmlEditor={handleOpenHtmlEditor}
-              currentPreviewIndex={0}
-            />
-          </Grid>
-            {!isMobile && (
-              <Grid item xs={12} md={4}>
-                <FormattingPanel
-                  editorState={editorState}
-                  setEditorState={setEditorState}
                   selectedField={selectedField}
                   setSelectedField={setSelectedField}
                   onOpenHtmlEditor={handleOpenHtmlEditor}
