@@ -212,9 +212,8 @@ const PageEditor = ({
                   campaignSwatches={campaignState.colors}
                   imageSwatches={imageSwatches}
                 />
-              </Grid>
-            )}
-          </Grid>
+          </Box>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
