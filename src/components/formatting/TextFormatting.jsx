@@ -79,12 +79,10 @@ const TextFormatting = ({
                 {/* Coluna dos Swatches (ocupa a maior parte do espaço) */}
                 <Grid item xs={9}>
                   <ColorSwatches
-                    title="Cores da Campanha"
                     palette={campaignSwatches}
                     onColorSelect={(color) => updateFieldStyle('color', color)}
                   />
                   <ColorSwatches
-                    title="Cores da Imagem"
                     palette={imageSwatches}
                     onColorSelect={(color) => updateFieldStyle('color', color)}
                   />
@@ -99,6 +97,10 @@ const TextFormatting = ({
                     onChange={(e) => updateFieldStyle('color', e.target.value)}
                     fullWidth
                     size="small"
+                    // Estilo adicional para garantir que o campo de cor fique no topo, 
+                    // alinhado com o título "Cores da Campanha"
+                    sx={{ mt: 1 }}
+
                   />
                 </Grid>
               </Grid>
@@ -148,12 +150,10 @@ const TextFormatting = ({
                     {/* Coluna dos Swatches (ocupa a maior parte do espaço) */}
                     <Grid item xs={9}>
                       <ColorSwatches
-                        title="Cores da Campanha"
                         palette={campaignSwatches}
                         onColorSelect={(color) => updateFieldStyle('shadowColor', color)}
                       />
                       <ColorSwatches
-                        title="Cores da Imagem"
                         palette={imageSwatches}
                         onColorSelect={(color) => updateFieldStyle('shadowColor', color)}
                       />
@@ -289,8 +289,8 @@ const TextFormatting = ({
                   <Grid container spacing={2} alignItems="flex-start">
                     {/* Coluna dos Swatches (ocupa a maior parte do espaço) */}
                     <Grid item xs={9}>
-                      <ColorSwatches title="Cores da Campanha" palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('strokeColor', color)} />
-                      <ColorSwatches title="Cores da Imagem" palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('strokeColor', color)} />
+                      <ColorSwatches palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('strokeColor', color)} />
+                      <ColorSwatches palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('strokeColor', color)} />
                     </Grid>
                     {/* Coluna do Seletor de Cor (ocupa o espaço restante) */}
                     <Grid item xs={3}>
