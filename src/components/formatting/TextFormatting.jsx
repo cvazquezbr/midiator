@@ -130,12 +130,13 @@ const TextFormatting = ({
             </Grid>
             {currentElement.style.textShadow && (
               <>
-                <Grid item xs={6}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.style.shadowColor || '#000000')} onChange={(e) => updateFieldStyle('shadowColor', e.target.value)} fullWidth size="small" /></Grid>
-                <Grid item xs={6}><Typography gutterBottom>Blur: {currentElement.style.shadowBlur || 4}px</Typography><Slider value={currentElement.style.shadowBlur || 4} onChange={(e, v) => updateFieldStyle('shadowBlur', v)} min={0} max={50} /></Grid>
                 <Grid item xs={12}>
                   <ColorSwatches title="Cores da Campanha" palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('shadowColor', color)} />
                   <ColorSwatches title="Cores da Imagem" palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('shadowColor', color)} />
                 </Grid>
+
+                <Grid item xs={6}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.style.shadowColor || '#000000')} onChange={(e) => updateFieldStyle('shadowColor', e.target.value)} fullWidth size="small" /></Grid>
+                <Grid item xs={6}><Typography gutterBottom>Blur: {currentElement.style.shadowBlur || 4}px</Typography><Slider value={currentElement.style.shadowBlur || 4} onChange={(e, v) => updateFieldStyle('shadowBlur', v)} min={0} max={50} /></Grid>
                 <Grid item xs={6}><Typography gutterBottom>Offset X: {currentElement.style.shadowOffsetX || 2}px</Typography><Slider value={currentElement.style.shadowOffsetX || 2} onChange={(e, v) => updateFieldStyle('shadowOffsetX', v)} min={-50} max={50} /></Grid>
                 <Grid item xs={6}><Typography gutterBottom>Offset Y: {currentElement.style.shadowOffsetY || 2}px</Typography><Slider value={currentElement.style.shadowOffsetY || 2} onChange={(e, v) => updateFieldStyle('shadowOffsetY', v)} min={-50} max={50} /></Grid>
               </>
