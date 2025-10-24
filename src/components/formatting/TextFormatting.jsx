@@ -170,7 +170,7 @@ const TextFormatting = ({
                     justifyContent="center"
                     alignItems="flex-start"
                     spacing={4}
-                    sx={{ mt: 2 }}
+                    sx={{ mt: 0 }}
                   >
                     {/* Blur Slider Group */}
                     <Grid item>
