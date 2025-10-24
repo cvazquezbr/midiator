@@ -92,7 +92,14 @@ const TextFormatting = ({
 
                 {/* Coluna do Seletor de Cor (ocupa o espaço restante) */}
                 <Grid item xs={3}>
-                  <TextField label="Cor" type="color" value={rgbStringToHex(currentElement.style.color || '#000000')} onChange={(e) => updateFieldStyle('color', e.target.value)} fullWidth size="small" />
+                  <TextField
+                    label="Cor"
+                    type="color"
+                    value={rgbStringToHex(currentElement.style.color || '#000000')}
+                    onChange={(e) => updateFieldStyle('color', e.target.value)}
+                    fullWidth
+                    size="small"
+                  />
                 </Grid>
               </Grid>
             </Grid>
@@ -164,7 +171,7 @@ const TextFormatting = ({
                         size="small"
                         // Estilo adicional para garantir que o campo de cor fique no topo, 
                         // alinhado com o título "Cores da Campanha"
-                        sx={{ mt: 3 }}
+                        sx={{ mt: 1 }}
                       />
                     </Grid>
                   </Grid>
@@ -297,7 +304,7 @@ const TextFormatting = ({
                         size="small"
                         // Estilo adicional para garantir que o campo de cor fique no topo, 
                         // alinhado com o título "Cores da Campanha"
-                        sx={{ mt: 3 }}
+                        sx={{ mt: 1 }}
                       />
                     </Grid>
                   </Grid>
