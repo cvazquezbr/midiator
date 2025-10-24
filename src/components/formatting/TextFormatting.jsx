@@ -130,39 +130,39 @@ const TextFormatting = ({
             </Grid>
             {currentElement.style.textShadow && (
               <>
-<Grid item xs={12}>
-  <Grid container spacing={2} alignItems="flex-start">
-    {/* Coluna dos Swatches (ocupa a maior parte do espaço) */}
-    <Grid item xs={9}>
-      <ColorSwatches 
-        title="Cores da Campanha" 
-        palette={campaignSwatches} 
-        onColorSelect={(color) => updateFieldStyle('shadowColor', color)} 
-      />
-      <ColorSwatches 
-        title="Cores da Imagem" 
-        palette={imageSwatches} 
-        onColorSelect={(color) => updateFieldStyle('shadowColor', color)} 
-      />
-    </Grid>
+                <Grid item xs={12}>
+                  <Grid container spacing={2} alignItems="flex-start">
+                    {/* Coluna dos Swatches (ocupa a maior parte do espaço) */}
+                    <Grid item xs={9}>
+                      <ColorSwatches
+                        title="Cores da Campanha"
+                        palette={campaignSwatches}
+                        onColorSelect={(color) => updateFieldStyle('shadowColor', color)}
+                      />
+                      <ColorSwatches
+                        title="Cores da Imagem"
+                        palette={imageSwatches}
+                        onColorSelect={(color) => updateFieldStyle('shadowColor', color)}
+                      />
+                    </Grid>
 
-    {/* Coluna do Seletor de Cor (ocupa o espaço restante) */}
-    <Grid item xs={3}>
-      {/* Aqui você pode adicionar um título ou label se desejar, mas o TextField já tem "Cor" */}
-      <TextField 
-        label="Cor" 
-        type="color" 
-        value={rgbStringToHex(currentElement.style.shadowColor || '#000000')} 
-        onChange={(e) => updateFieldStyle('shadowColor', e.target.value)} 
-        fullWidth 
-        size="small"
-        // Estilo adicional para garantir que o campo de cor fique no topo, 
-        // alinhado com o título "Cores da Campanha"
-        sx={{ mt: 3 }} 
-      />
-    </Grid>
-  </Grid>
-</Grid>
+                    {/* Coluna do Seletor de Cor (ocupa o espaço restante) */}
+                    <Grid item xs={3}>
+                      {/* Aqui você pode adicionar um título ou label se desejar, mas o TextField já tem "Cor" */}
+                      <TextField
+                        label="Cor"
+                        type="color"
+                        value={rgbStringToHex(currentElement.style.shadowColor || '#000000')}
+                        onChange={(e) => updateFieldStyle('shadowColor', e.target.value)}
+                        fullWidth
+                        size="small"
+                        // Estilo adicional para garantir que o campo de cor fique no topo, 
+                        // alinhado com o título "Cores da Campanha"
+                        sx={{ mt: 3 }}
+                      />
+                    </Grid>
+                  </Grid>
+                </Grid>
 
                 <Grid item xs={12}>
                   <Grid
@@ -272,12 +272,20 @@ const TextFormatting = ({
             </Grid>
             {currentElement.style.textStroke && (
               <>
-                <Grid item xs={6}><TextField label="Cor Contorno" type="color" value={rgbStringToHex(currentElement.style.strokeColor || '#ffffff')} onChange={(e) => updateFieldStyle('strokeColor', e.target.value)} fullWidth size="small" /></Grid>
-                <Grid item xs={6}><Typography gutterBottom>Largura: {currentElement.style.strokeWidth || 2}px</Typography><Slider value={currentElement.style.strokeWidth || 2} onChange={(e, v) => updateFieldStyle('strokeWidth', v)} min={0} max={20} /></Grid>
                 <Grid item xs={12}>
-                  <ColorSwatches title="Cores da Campanha" palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('strokeColor', color)} />
-                  <ColorSwatches title="Cores da Imagem" palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('strokeColor', color)} />
+                  <Grid container spacing={2} alignItems="flex-start">
+                    {/* Coluna dos Swatches (ocupa a maior parte do espaço) */}
+                    <Grid item xs={9}>
+                      <ColorSwatches title="Cores da Campanha" palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('strokeColor', color)} />
+                      <ColorSwatches title="Cores da Imagem" palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('strokeColor', color)} />
+                    </Grid>
+                    {/* Coluna do Seletor de Cor (ocupa o espaço restante) */}
+                    <Grid item xs={3}>
+                      {/* Aqui você pode adicionar um título ou label se desejar, mas o TextField já tem "Cor" */}
+                      <TextField label="Cor Contorno" type="color" value={rgbStringToHex(currentElement.style.strokeColor || '#ffffff')} onChange={(e) => updateFieldStyle('strokeColor', e.target.value)} fullWidth size="small" />                    </Grid>
+                  </Grid>
                 </Grid>
+                <Grid item xs={12}><Typography gutterBottom>Largura: {currentElement.style.strokeWidth || 2}px</Typography><Slider value={currentElement.style.strokeWidth || 2} onChange={(e, v) => updateFieldStyle('strokeWidth', v)} min={0} max={20} /></Grid>
               </>
             )}
           </Grid>
