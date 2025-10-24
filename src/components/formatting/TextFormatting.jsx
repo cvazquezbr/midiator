@@ -72,24 +72,33 @@ const TextFormatting = ({
       <Accordion expanded={expandedPanel === 'fontStyle'} onChange={handleAccordionChange('fontStyle')}>
         <AccordionSummary expandIcon={<ExpandMore />}><Typography><FormatSize sx={{ mr: 1, verticalAlign: 'middle' }} />Fonte e Estilo</Typography></AccordionSummary>
         <AccordionDetails>
-          <Grid container spacing={2}>
+          {/* Aplicação de espaçamento vertical consistente e redução de fragmentação */}
+          <Grid container spacing={3}>
 
+            {/* ## 1. Controles de Cor e Fontes ## */}
+
+            {/* Novo agrupamento para as cores, focando em alinhar os swatches e o seletor */}
             <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>Cor do Texto</Typography>
               <Grid container spacing={2} alignItems="flex-start">
-                {/* Coluna dos Swatches (ocupa a maior parte do espaço) */}
+                {/* Coluna dos Swatches - Mantido xs={9} para dar mais espaço aos círculos de cor */}
                 <Grid item xs={9}>
+                  <Typography variant="caption" display="block" color="textSecondary" sx={{ mb: 0.5 }}>Cores da Campanha</Typography>
                   <ColorSwatches
                     palette={campaignSwatches}
                     onColorSelect={(color) => updateFieldStyle('color', color)}
                   />
+                  <Typography variant="caption" display="block" color="textSecondary" sx={{ mt: 1, mb: 0.5 }}>Cores da Imagem</Typography>
                   <ColorSwatches
                     palette={imageSwatches}
                     onColorSelect={(color) => updateFieldStyle('color', color)}
                   />
                 </Grid>
 
-                {/* Coluna do Seletor de Cor (ocupa o espaço restante) */}
+                {/* Coluna do Seletor de Cor - Melhorado o alinhamento removendo o sx={{ mt: 1 }} e usando flex-start */}
                 <Grid item xs={3}>
+                  {/* O componente ColorPicker do MUI (ou um input type="color" estilizado) seria ideal aqui. 
+                Adaptado o TextField para ser mais compacto e alinhado. */}
                   <TextField
                     label="Cor"
                     type="color"
@@ -97,21 +106,133 @@ const TextFormatting = ({
                     onChange={(e) => updateFieldStyle('color', e.target.value)}
                     fullWidth
                     size="small"
-                    // Estilo adicional para garantir que o campo de cor fique no topo, 
-                    // alinhado com o título "Cores da Campanha"
-                    sx={{ mt: 1 }}
-
+                  // Removida a margem superior desnecessária para melhor alinhamento
+                  // sx={{ mt: 1 }} 
                   />
                 </Grid>
               </Grid>
             </Grid>
 
-            <Grid item xs={12}><FormControl fullWidth size="small"><InputLabel>Fonte</InputLabel><Select value={currentElement.style.fontFamily || 'Arial'} label="Fonte" onChange={(e) => updateFieldStyle('fontFamily', e.target.value)} MenuProps={{ sx: { zIndex: 1500 } }}>{fonts.map(font => (<MenuItem key={font} value={font} style={{ fontFamily: font }}>{font}</MenuItem>))}</Select></FormControl></Grid>
-            <Grid item xs={12}><ToggleButtonGroup size="small" fullWidth><ToggleButton value="bold" selected={currentElement.style.fontWeight === 'bold'} onClick={() => updateFieldStyle('fontWeight', currentElement.style.fontWeight === 'bold' ? 'normal' : 'bold')}><FormatBold /></ToggleButton><ToggleButton value="italic" selected={currentElement.style.fontStyle === 'italic'} onClick={() => updateFieldStyle('fontStyle', currentElement.style.fontStyle === 'italic' ? 'normal' : 'italic')}><FormatItalic /></ToggleButton><ToggleButton value="underline" selected={currentElement.style.textDecoration === 'underline'} onClick={() => updateFieldStyle('textDecoration', currentElement.style.textDecoration === 'underline' ? 'none' : 'underline')}><FormatUnderlined /></ToggleButton></ToggleButtonGroup></Grid>
-            <Grid item xs={12}><Typography variant="caption" display="block" gutterBottom>Alinhamento</Typography><ToggleButtonGroup value={currentElement.style.textAlign || 'left'} exclusive onChange={(e, v) => v && updateFieldStyle('textAlign', v)} size="small" fullWidth><ToggleButton value="left"><FormatAlignLeft /></ToggleButton><ToggleButton value="center"><FormatAlignCenter /></ToggleButton><ToggleButton value="right"><FormatAlignRight /></ToggleButton></ToggleButtonGroup></Grid>
-            <Grid item xs={12}><ToggleButtonGroup value={currentElement.style.verticalAlign || 'top'} exclusive onChange={(e, v) => v && updateFieldStyle('verticalAlign', v)} size="small" fullWidth><ToggleButton value="top"><VerticalAlignTop /></ToggleButton><ToggleButton value="middle"><VerticalAlignCenter /></ToggleButton><ToggleButton value="bottom"><VerticalAlignBottom /></ToggleButton></ToggleButtonGroup></Grid>
-            <Grid item xs={12}><Typography gutterBottom>Tamanho: {currentElement.style.fontSize || 24}px</Typography><Slider value={currentElement.style.fontSize || 24} onChange={(e, v) => updateFieldStyle('fontSize', v)} min={8} max={120} /></Grid>
-            <Grid item xs={12}><Typography gutterBottom>Espaçamento Linhas: {currentElement.style.lineHeightMultiplier || 1.2}x</Typography><Slider value={currentElement.style.lineHeightMultiplier || 1.2} onChange={(e, v) => updateFieldStyle('lineHeightMultiplier', v)} min={0.8} max={3} step={0.1} /></Grid>
+            {/* Separador visual para melhor organização (opcional, mas recomendado) */}
+            <Grid item xs={12}>
+              <Divider />
+            </Grid>
+
+            {/* ## 2. Controles de Fonte ## */}
+
+            {/* Dropdown de Fonte */}
+            <Grid item xs={12}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Fonte</InputLabel>
+                <Select
+                  value={currentElement.style.fontFamily || 'Arial'}
+                  label="Fonte"
+                  onChange={(e) => updateFieldStyle('fontFamily', e.target.value)}
+                  MenuProps={{ sx: { zIndex: 1500 } }}
+                >
+                  {fonts.map(font => (
+                    <MenuItem key={font} value={font} style={{ fontFamily: font }}>
+                      {font}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Botões de Estilo (Negrito, Itálico, Sublinhado) */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>Estilo</Typography>
+              <ToggleButtonGroup size="small" fullWidth>
+                <ToggleButton
+                  value="bold"
+                  selected={currentElement.style.fontWeight === 'bold'}
+                  onClick={() => updateFieldStyle('fontWeight', currentElement.style.fontWeight === 'bold' ? 'normal' : 'bold')}
+                >
+                  <FormatBold />
+                </ToggleButton>
+                <ToggleButton
+                  value="italic"
+                  selected={currentElement.style.fontStyle === 'italic'}
+                  onClick={() => updateFieldStyle('fontStyle', currentElement.style.fontStyle === 'italic' ? 'normal' : 'italic')}
+                >
+                  <FormatItalic />
+                </ToggleButton>
+                <ToggleButton
+                  value="underline"
+                  selected={currentElement.style.textDecoration === 'underline'}
+                  onClick={() => updateFieldStyle('textDecoration', currentElement.style.textDecoration === 'underline' ? 'none' : 'underline')}
+                >
+                  <FormatUnderlined />
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Grid>
+
+            {/* ## 3. Controles de Alinhamento e Espaçamento ## */}
+
+            {/* Agrupamento dos alinhamentos para melhor contexto */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>Alinhamento</Typography>
+              <Grid container spacing={2}>
+                {/* Alinhamento Horizontal */}
+                <Grid item xs={6}>
+                  <Typography variant="caption" display="block" gutterBottom>Horizontal</Typography>
+                  <ToggleButtonGroup
+                    value={currentElement.style.textAlign || 'left'}
+                    exclusive
+                    onChange={(e, v) => v && updateFieldStyle('textAlign', v)}
+                    size="small"
+                    fullWidth
+                  >
+                    <ToggleButton value="left"><FormatAlignLeft /></ToggleButton>
+                    <ToggleButton value="center"><FormatAlignCenter /></ToggleButton>
+                    <ToggleButton value="right"><FormatAlignRight /></ToggleButton>
+                  </ToggleButtonGroup>
+                </Grid>
+                {/* Alinhamento Vertical */}
+                <Grid item xs={6}>
+                  <Typography variant="caption" display="block" gutterBottom>Vertical</Typography>
+                  <ToggleButtonGroup
+                    value={currentElement.style.verticalAlign || 'top'}
+                    exclusive
+                    onChange={(e, v) => v && updateFieldStyle('verticalAlign', v)}
+                    size="small"
+                    fullWidth
+                  >
+                    <ToggleButton value="top"><VerticalAlignTop /></ToggleButton>
+                    <ToggleButton value="middle"><VerticalAlignCenter /></ToggleButton>
+                    <ToggleButton value="bottom"><VerticalAlignBottom /></ToggleButton>
+                  </ToggleButtonGroup>
+                </Grid>
+              </Grid>
+            </Grid>
+
+
+            {/* ## 4. Sliders ## */}
+
+            {/* Slider de Tamanho */}
+            <Grid item xs={12}>
+              <Typography gutterBottom>Tamanho: {currentElement.style.fontSize || 24}px</Typography>
+              <Slider
+                value={currentElement.style.fontSize || 24}
+                onChange={(e, v) => updateFieldStyle('fontSize', v)}
+                min={8}
+                max={120}
+                valueLabelDisplay="auto" // Ajuda a manter o foco mostrando o valor ao arrastar
+              />
+            </Grid>
+
+            {/* Slider de Espaçamento de Linhas */}
+            <Grid item xs={12}>
+              <Typography gutterBottom>Espaçamento Linhas: {currentElement.style.lineHeightMultiplier || 1.2}x</Typography>
+              <Slider
+                value={currentElement.style.lineHeightMultiplier || 1.2}
+                onChange={(e, v) => updateFieldStyle('lineHeightMultiplier', v)}
+                min={0.8}
+                max={3}
+                step={0.1}
+                valueLabelDisplay="auto" // Ajuda a manter o foco mostrando o valor ao arrastar
+              />
+            </Grid>
           </Grid>
         </AccordionDetails>
       </Accordion>
