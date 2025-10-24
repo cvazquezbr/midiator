@@ -137,10 +137,14 @@ const TextFormatting = ({
     spacing={4}
     sx={{ mt: 2 }}
   >
-    {/* Blur */}
+    {/* Blur Slider Group */}
     <Grid item>
       <Typography variant="subtitle2" align="center" sx={{ mb: 1 }}>
         Blur
+      </Typography>
+      {/* Spacer to match the height of 'X' or 'Y' label in Offset group */}
+      <Typography variant="body2" align="center" sx={{ mb: 1, visibility: 'hidden', height: '0.9375rem' }}>
+        &nbsp;
       </Typography>
       <Slider
         orientation="vertical"
@@ -155,12 +159,12 @@ const TextFormatting = ({
       </Typography>
     </Grid>
 
-    {/* Grupo Offset */}
+    {/* Offset Group (Container for X and Y) */}
     <Grid item>
       <Typography
         variant="subtitle2"
         align="center"
-        sx={{ mb: 1, height: 20 }} // altura fixa para manter alinhamento com Blur
+        sx={{ mb: 1 }}
       >
         Offset
       </Typography>
@@ -170,7 +174,7 @@ const TextFormatting = ({
         alignItems="flex-start"
         spacing={4}
       >
-        {/* Offset X */}
+        {/* Offset X Slider */}
         <Grid item>
           <Typography variant="body2" align="center" sx={{ mb: 1 }}>
             X
@@ -188,7 +192,7 @@ const TextFormatting = ({
           </Typography>
         </Grid>
 
-        {/* Offset Y */}
+        {/* Offset Y Slider */}
         <Grid item>
           <Typography variant="body2" align="center" sx={{ mb: 1 }}>
             Y
@@ -209,7 +213,6 @@ const TextFormatting = ({
     </Grid>
   </Grid>
 </Grid>
-
 
             )}
             <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
