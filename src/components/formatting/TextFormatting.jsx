@@ -130,111 +130,140 @@ const TextFormatting = ({
             </Grid>
             {currentElement.style.textShadow && (
               <>
-                <Grid item xs={12}>
-                  <ColorSwatches title="Cores da Campanha" palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('shadowColor', color)} />
-                  <ColorSwatches title="Cores da Imagem" palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('shadowColor', color)} />
-                </Grid>
-                <Grid item xs={6}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.style.shadowColor || '#000000')} onChange={(e) => updateFieldStyle('shadowColor', e.target.value)} fullWidth size="small" /></Grid>
-                             <Grid item xs={12}>
-  <Grid
-    container
-    justifyContent="center"
-    alignItems="flex-start"
-    spacing={4}
-    sx={{ mt: 2 }}
-  >
-    {/* Blur Slider Group */}
-    <Grid item>
-      <Typography variant="subtitle2" align="center" sx={{ mb: 1 }}>
-        Blur
-      </Typography>
-      
-      {/* This is the spacer to align the Blur slider. 
-        It matches the height of the 'X' and 'Y' labels 
-        in the Offset group. 
-      */}
-      <Typography 
-        variant="body2" 
-        align="center" 
-        sx={{ 
-          mb: 1, 
-          // Use 'visibility: hidden' to reserve space without displaying text
-          visibility: 'hidden', 
-          // Ensure it has the same height as the 'X'/'Y' labels 
-          // (which are variant="body2" with mb: 1)
-          height: '1.25rem' // Adjust this value if '1.25rem' doesn't perfectly match your theme's body2 + margin
-        }}
-      >
-        &nbsp; 
-      </Typography>
-      
-      <Slider
-        orientation="vertical"
-        value={currentElement.style.shadowBlur || 4}
-        onChange={(e, v) => updateFieldStyle('shadowBlur', v)}
-        min={0}
-        max={50}
-        sx={{ height: 120 }}
+<Grid item xs={12}>
+  <Grid container spacing={2} alignItems="flex-start">
+    {/* Coluna dos Swatches (ocupa a maior parte do espaço) */}
+    <Grid item xs={9}>
+      <ColorSwatches 
+        title="Cores da Campanha" 
+        palette={campaignSwatches} 
+        onColorSelect={(color) => updateFieldStyle('shadowColor', color)} 
       />
-      <Typography variant="body2" align="center" sx={{ mt: 0.5 }}>
-        {currentElement.style.shadowBlur || 4}px
-      </Typography>
+      <ColorSwatches 
+        title="Cores da Imagem" 
+        palette={imageSwatches} 
+        onColorSelect={(color) => updateFieldStyle('shadowColor', color)} 
+      />
     </Grid>
 
-    {/* Grupo Offset - Container for X and Y */}
-    <Grid item>
-      <Typography
-        variant="subtitle2"
-        align="center"
-        sx={{ mb: 1 }} // Removed fixed height
-      >
-        Offset
-      </Typography>
-      <Grid
-        container
-        justifyContent="center"
-        alignItems="flex-start"
-        spacing={4}
-      >
-        {/* Offset X Slider */}
-        <Grid item>
-          <Typography variant="body2" align="center" sx={{ mb: 1 }}>
-            X
-          </Typography>
-          <Slider
-            orientation="vertical"
-            value={currentElement.style.shadowOffsetX || 2}
-            onChange={(e, v) => updateFieldStyle('shadowOffsetX', v)}
-            min={-50}
-            max={50}
-            sx={{ height: 120 }}
-          />
-          <Typography variant="body2" align="center" sx={{ mt: 0.5 }}>
-            {currentElement.style.shadowOffsetX || 2}px
-          </Typography>
-        </Grid>
-
-        {/* Offset Y Slider */}
-        <Grid item>
-          <Typography variant="body2" align="center" sx={{ mb: 1 }}>
-            Y
-          </Typography>
-          <Slider
-            orientation="vertical"
-            value={currentElement.style.shadowOffsetY || 2}
-            onChange={(e, v) => updateFieldStyle('shadowOffsetY', v)}
-            min={-50}
-            max={50}
-            sx={{ height: 120 }}
-          />
-          <Typography variant="body2" align="center" sx={{ mt: 0.5 }}>
-            {currentElement.style.shadowOffsetY || 2}px
-          </Typography>
-        </Grid>
-      </Grid>
+    {/* Coluna do Seletor de Cor (ocupa o espaço restante) */}
+    <Grid item xs={3}>
+      {/* Aqui você pode adicionar um título ou label se desejar, mas o TextField já tem "Cor" */}
+      <TextField 
+        label="Cor" 
+        type="color" 
+        value={rgbStringToHex(currentElement.style.shadowColor || '#000000')} 
+        onChange={(e) => updateFieldStyle('shadowColor', e.target.value)} 
+        fullWidth 
+        size="small"
+        // Estilo adicional para garantir que o campo de cor fique no topo, 
+        // alinhado com o título "Cores da Campanha"
+        sx={{ mt: 3 }} 
+      />
     </Grid>
   </Grid>
 </Grid>
+
+                <Grid item xs={12}>
+                  <Grid
+                    container
+                    justifyContent="center"
+                    alignItems="flex-start"
+                    spacing={4}
+                    sx={{ mt: 2 }}
+                  >
+                    {/* Blur Slider Group */}
+                    <Grid item>
+                      <Typography variant="subtitle2" align="center" sx={{ mb: 1 }}>
+                        Blur
+                      </Typography>
+
+                      {/* This is the spacer to align the Blur slider. 
+        It matches the height of the 'X' and 'Y' labels 
+        in the Offset group. 
+      */}
+                      <Typography
+                        variant="body2"
+                        align="center"
+                        sx={{
+                          mb: 1,
+                          // Use 'visibility: hidden' to reserve space without displaying text
+                          visibility: 'hidden',
+                          // Ensure it has the same height as the 'X'/'Y' labels 
+                          // (which are variant="body2" with mb: 1)
+                          height: '1.25rem' // Adjust this value if '1.25rem' doesn't perfectly match your theme's body2 + margin
+                        }}
+                      >
+                        &nbsp;
+                      </Typography>
+
+                      <Slider
+                        orientation="vertical"
+                        value={currentElement.style.shadowBlur || 4}
+                        onChange={(e, v) => updateFieldStyle('shadowBlur', v)}
+                        min={0}
+                        max={50}
+                        sx={{ height: 120 }}
+                      />
+                      <Typography variant="body2" align="center" sx={{ mt: 0.5 }}>
+                        {currentElement.style.shadowBlur || 4}px
+                      </Typography>
+                    </Grid>
+
+                    {/* Grupo Offset - Container for X and Y */}
+                    <Grid item>
+                      <Typography
+                        variant="subtitle2"
+                        align="center"
+                        sx={{ mb: 1 }} // Removed fixed height
+                      >
+                        Offset
+                      </Typography>
+                      <Grid
+                        container
+                        justifyContent="center"
+                        alignItems="flex-start"
+                        spacing={4}
+                      >
+                        {/* Offset X Slider */}
+                        <Grid item>
+                          <Typography variant="body2" align="center" sx={{ mb: 1 }}>
+                            X
+                          </Typography>
+                          <Slider
+                            orientation="vertical"
+                            value={currentElement.style.shadowOffsetX || 2}
+                            onChange={(e, v) => updateFieldStyle('shadowOffsetX', v)}
+                            min={-50}
+                            max={50}
+                            sx={{ height: 120 }}
+                          />
+                          <Typography variant="body2" align="center" sx={{ mt: 0.5 }}>
+                            {currentElement.style.shadowOffsetX || 2}px
+                          </Typography>
+                        </Grid>
+
+                        {/* Offset Y Slider */}
+                        <Grid item>
+                          <Typography variant="body2" align="center" sx={{ mb: 1 }}>
+                            Y
+                          </Typography>
+                          <Slider
+                            orientation="vertical"
+                            value={currentElement.style.shadowOffsetY || 2}
+                            onChange={(e, v) => updateFieldStyle('shadowOffsetY', v)}
+                            min={-50}
+                            max={50}
+                            sx={{ height: 120 }}
+                          />
+                          <Typography variant="body2" align="center" sx={{ mt: 0.5 }}>
+                            {currentElement.style.shadowOffsetY || 2}px
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                </Grid>
               </>
             )}
             <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
