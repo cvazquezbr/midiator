@@ -130,83 +130,102 @@ const TextFormatting = ({
             </Grid>
             {currentElement.style.textShadow && (
               <>
-                <Grid item xs={12}>
-                  <ColorSwatches
-                    title="Cores da Campanha"
-                    palette={campaignSwatches}
-                    onColorSelect={(color) => updateFieldStyle('shadowColor', color)}
-                  />
-                  <ColorSwatches
-                    title="Cores da Imagem"
-                    palette={imageSwatches}
-                    onColorSelect={(color) => updateFieldStyle('shadowColor', color)}
-                  />
-                </Grid>
+  <Grid item xs={12}>
+    <ColorSwatches
+      title="Cores da Campanha"
+      palette={campaignSwatches}
+      onColorSelect={(color) => updateFieldStyle('shadowColor', color)}
+    />
+    <ColorSwatches
+      title="Cores da Imagem"
+      palette={imageSwatches}
+      onColorSelect={(color) => updateFieldStyle('shadowColor', color)}
+    />
+  </Grid>
 
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Cor"
-                    type="color"
-                    value={rgbStringToHex(currentElement.style.shadowColor || '#000000')}
-                    onChange={(e) => updateFieldStyle('shadowColor', e.target.value)}
-                    fullWidth
-                    size="small"
-                  />
-                </Grid>
+  <Grid item xs={12} sm={6}>
+    <TextField
+      label="Cor"
+      type="color"
+      value={rgbStringToHex(currentElement.style.shadowColor || '#000000')}
+      onChange={(e) => updateFieldStyle('shadowColor', e.target.value)}
+      fullWidth
+      size="small"
+    />
+  </Grid>
 
-                {/* Sliders alinhados verticalmente */}
-                <Grid item xs={12}>
-                  <Grid container spacing={2}>
+  {/* Sliders verticais alinhados */}
+  <Grid item xs={12}>
+    <Grid
+      container
+      justifyContent="center"
+      alignItems="flex-start"
+      spacing={3}
+      sx={{ mt: 2 }}
+    >
+      {/* Blur */}
+      <Grid item>
+        <Typography variant="subtitle2" align="center">
+          Blur
+        </Typography>
+        <Slider
+          orientation="vertical"
+          value={currentElement.style.shadowBlur || 4}
+          onChange={(e, v) => updateFieldStyle('shadowBlur', v)}
+          min={0}
+          max={50}
+          sx={{ height: 120 }}
+        />
+        <Typography variant="body2" align="center">
+          {currentElement.style.shadowBlur || 4}px
+        </Typography>
+      </Grid>
 
-                    {/* Blur */}
-                    <Grid item xs={4}>
-                      <Typography variant="subtitle2" align="center">Blur</Typography>
-                      <Slider
-                        value={currentElement.style.shadowBlur || 4}
-                        onChange={(e, v) => updateFieldStyle('shadowBlur', v)}
-                        min={0}
-                        max={50}
-                      />
-                      <Typography variant="body2" align="center">
-                        {currentElement.style.shadowBlur || 4}px
-                      </Typography>
-                    </Grid>
+      {/* Offset X e Y */}
+      <Grid item>
+        <Typography variant="subtitle2" align="center">
+          Offset
+        </Typography>
+        <Grid container justifyContent="center" spacing={3}>
+          <Grid item>
+            <Typography variant="body2" align="center">
+              X
+            </Typography>
+            <Slider
+              orientation="vertical"
+              value={currentElement.style.shadowOffsetX || 2}
+              onChange={(e, v) => updateFieldStyle('shadowOffsetX', v)}
+              min={-50}
+              max={50}
+              sx={{ height: 120 }}
+            />
+            <Typography variant="body2" align="center">
+              {currentElement.style.shadowOffsetX || 2}px
+            </Typography>
+          </Grid>
+          <Grid item>
+            <Typography variant="body2" align="center">
+              Y
+            </Typography>
+            <Slider
+              orientation="vertical"
+              value={currentElement.style.shadowOffsetY || 2}
+              onChange={(e, v) => updateFieldStyle('shadowOffsetY', v)}
+              min={-50}
+              max={50}
+              sx={{ height: 120 }}
+            />
+            <Typography variant="body2" align="center">
+              {currentElement.style.shadowOffsetY || 2}px
+            </Typography>
+          </Grid>
+        </Grid>
+      </Grid>
+    </Grid>
+  </Grid>
+</>
 
-                    {/* Offset X e Y com título compartilhado */}
-                    <Grid item xs={8}>
-                      <Typography variant="subtitle2" align="center">Offset</Typography>
-                      <Grid container spacing={2}>
-                        <Grid item xs={6}>
-                          <Typography variant="body2" align="center">X</Typography>
-                          <Slider
-                            value={currentElement.style.shadowOffsetX || 2}
-                            onChange={(e, v) => updateFieldStyle('shadowOffsetX', v)}
-                            min={-50}
-                            max={50}
-                          />
-                          <Typography variant="body2" align="center">
-                            {currentElement.style.shadowOffsetX || 2}px
-                          </Typography>
-                        </Grid>
 
-                        <Grid item xs={6}>
-                          <Typography variant="body2" align="center">Y</Typography>
-                          <Slider
-                            value={currentElement.style.shadowOffsetY || 2}
-                            onChange={(e, v) => updateFieldStyle('shadowOffsetY', v)}
-                            min={-50}
-                            max={50}
-                          />
-                          <Typography variant="body2" align="center">
-                            {currentElement.style.shadowOffsetY || 2}px
-                          </Typography>
-                        </Grid>
-                      </Grid>
-                    </Grid>
-
-                  </Grid>
-                </Grid>
-              </>
             )}
             <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
             <Grid item xs={12}>
