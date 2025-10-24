@@ -245,7 +245,6 @@ const TextFormatting = ({
 
       {/* GRUPO UNIFICADO DE CORES (MANTIDO INTACTO) */}
       <Grid item xs={12}>
-        <Typography variant="subtitle2" gutterBottom>Cor</Typography>
         <ToggleButtonGroup
           value={colorTarget}
           exclusive
@@ -290,7 +289,7 @@ const TextFormatting = ({
       <Grid item xs={12}>
         
         {/* CONTAINER COM SLIDERS VERTICAIS LADO A LADO (4 PROPRIEDADES ORIGINAIS) */}
-        <Grid container spacing={2} justifyContent="space-between" alignItems="flex-end" sx={{ height: 200, mt: 1 }}>
+        <Grid container spacing={2} justifyContent="space-between" alignItems="flex-end" sx={{ height: 200 }}>
 
           {/* 1. Opacidade (Fundo) - xs=3 */}
           <Grid item xs={3} sx={{ textAlign: 'center' }}>
