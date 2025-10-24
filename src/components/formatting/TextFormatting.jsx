@@ -243,7 +243,7 @@ const TextFormatting = ({
   <AccordionDetails>
     <Grid container spacing={3}>
 
-      {/* GRUPO UNIFICADO DE CORES */}
+      {/* GRUPO UNIFICADO DE CORES (MANTIDO INTACTO) */}
       <Grid item xs={12}>
         <Typography variant="subtitle2" gutterBottom>Cor</Typography>
         <ToggleButtonGroup
@@ -290,100 +290,71 @@ const TextFormatting = ({
       {/* GRUPO DE PROPRIEDADES ADICIONAIS */}
       <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
 
-      {/* Controles de Fundo (Horizontal) */}
       <Grid item xs={12}>
-        <Typography variant="subtitle2" gutterBottom>Fundo</Typography>
-        {/* Valor inicial 0% */}
-        <Typography gutterBottom>Opacidade: {Math.round((currentElement.style.backgroundOpacity ?? 0) * 100)}%</Typography>
-        <Slider
-          value={currentElement.style.backgroundOpacity ?? 0}
-          onChange={(e, v) => updateFieldStyle('backgroundOpacity', v)}
-          min={0}
-          max={1}
-          step={0.01}
-        />
-      </Grid>
-
-      {/* Controles de Borda (Horizontal) */}
-      <Grid item xs={12}>
-        <Typography variant="subtitle2" gutterBottom>Borda</Typography>
-        {/* Valor inicial 0px */}
-        <Typography gutterBottom>Largura: {currentElement.style.borderWidth || 0}px</Typography>
-        <Slider
-          value={currentElement.style.borderWidth || 0}
-          onChange={(e, v) => updateFieldStyle('borderWidth', v)}
-          min={0}
-          max={20}
-        />
-      </Grid>
-
-      <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
-
-      {/* Controles de Layout (HORIZONTAIS) */}
-      <Grid item xs={6}>
-        {/* Curva inicial 0px */}
-        <Typography gutterBottom>Curva: {currentElement.style.borderRadius || 0}px</Typography>
-        <Slider value={currentElement.style.borderRadius || 0} onChange={(e, v) => updateFieldStyle('borderRadius', v)} min={0} max={50} />
-      </Grid>
-      <Grid item xs={6}>
-        {/* Padding inicial 5px */}
-        <Typography gutterBottom>Padding: {currentElement.style.padding || 5}px</Typography>
-        <Slider value={currentElement.style.padding || 5} onChange={(e, v) => updateFieldStyle('padding', v)} min={0} max={50} />
-      </Grid>
-
-      {/* GRUPO DE SOMBRA (VERTICAL) - Ajustado para a imagem de referência */}
-      <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
-
-      <Grid item xs={12}>
-        <Typography variant="subtitle2" gutterBottom>Sombra (Box Shadow)</Typography>
+        <Typography variant="subtitle2" gutterBottom>Ajustes de Aparência</Typography>
         
-        {/* Container para os Sliders Verticais de Sombra */}
-        <Grid container spacing={2} justifyContent="center" alignItems="flex-end" sx={{ height: 200, mt: 1 }}>
-          
-          {/* Slider: Blur (4px) */}
-          <Grid item xs={4} sx={{ textAlign: 'center' }}>
-            <Typography variant="caption" display="block">Blur</Typography>
+        {/* CONTAINER COM SLIDERS VERTICAIS LADO A LADO (4 PROPRIEDADES ORIGINAIS) */}
+        <Grid container spacing={2} justifyContent="space-between" alignItems="flex-end" sx={{ height: 200, mt: 1 }}>
+
+          {/* 1. Opacidade (Fundo) - xs=3 */}
+          <Grid item xs={3} sx={{ textAlign: 'center' }}>
+            <Typography variant="caption" display="block">Opacidade</Typography>
             <Slider
-              orientation="vertical" // Slider Vertical
-              value={currentElement.style.boxShadowBlur || 4}
-              onChange={(e, v) => updateFieldStyle('boxShadowBlur', v)}
+              orientation="vertical"
+              value={currentElement.style.backgroundOpacity ?? 0} // Valor inicial 0 (0%)
+              onChange={(e, v) => updateFieldStyle('backgroundOpacity', v)}
               min={0}
-              max={30}
+              max={1}
+              step={0.01}
               sx={{ height: 100 }}
             />
-            <Typography variant="caption" display="block">{currentElement.style.boxShadowBlur || 4}px</Typography>
+            <Typography variant="caption" display="block">{Math.round((currentElement.style.backgroundOpacity ?? 0) * 100)}%</Typography>
           </Grid>
 
-          {/* Slider: Offset X (2px) */}
-          <Grid item xs={4} sx={{ textAlign: 'center' }}>
-            <Typography variant="caption" display="block">Offset X</Typography>
+          {/* 2. Largura (Borda) - xs=3 */}
+          <Grid item xs={3} sx={{ textAlign: 'center' }}>
+            <Typography variant="caption" display="block">Largura</Typography>
             <Slider
-              orientation="vertical" // Slider Vertical
-              value={currentElement.style.boxShadowOffsetX || 2}
-              onChange={(e, v) => updateFieldStyle('boxShadowOffsetX', v)}
-              min={-10}
-              max={10}
+              orientation="vertical"
+              value={currentElement.style.borderWidth || 0} // Valor inicial 0px
+              onChange={(e, v) => updateFieldStyle('borderWidth', v)}
+              min={0}
+              max={20}
               sx={{ height: 100 }}
             />
-            <Typography variant="caption" display="block">{currentElement.style.boxShadowOffsetX || 2}px</Typography>
+            <Typography variant="caption" display="block">{currentElement.style.borderWidth || 0}px</Typography>
           </Grid>
 
-          {/* Slider: Offset Y (2px) */}
-          <Grid item xs={4} sx={{ textAlign: 'center' }}>
-            <Typography variant="caption" display="block">Offset Y</Typography>
-            <Slider
-              orientation="vertical" // Slider Vertical
-              value={currentElement.style.boxShadowOffsetY || 2}
-              onChange={(e, v) => updateFieldStyle('boxShadowOffsetY', v)}
-              min={-10}
-              max={10}
+          {/* 3. Curva (Raio) - xs=3 */}
+          <Grid item xs={3} sx={{ textAlign: 'center' }}>
+            <Typography variant="caption" display="block">Curva</Typography>
+            <Slider 
+              orientation="vertical"
+              value={currentElement.style.borderRadius || 0} // Valor inicial 0px
+              onChange={(e, v) => updateFieldStyle('borderRadius', v)} 
+              min={0} 
+              max={50} 
               sx={{ height: 100 }}
             />
-            <Typography variant="caption" display="block">{currentElement.style.boxShadowOffsetY || 2}px</Typography>
+            <Typography variant="caption" display="block">{currentElement.style.borderRadius || 0}px</Typography>
           </Grid>
+
+          {/* 4. Padding - xs=3 */}
+          <Grid item xs={3} sx={{ textAlign: 'center' }}>
+            <Typography variant="caption" display="block">Padding</Typography>
+            <Slider 
+              orientation="vertical"
+              value={currentElement.style.padding || 5} // Valor inicial 5px
+              onChange={(e, v) => updateFieldStyle('padding', v)} 
+              min={0} 
+              max={50} 
+              sx={{ height: 100 }}
+            />
+            <Typography variant="caption" display="block">{currentElement.style.padding || 5}px</Typography>
+          </Grid>
+
         </Grid>
       </Grid>
-
     </Grid>
   </AccordionDetails>
 </Accordion>
