@@ -45,11 +45,11 @@ const rgbStringToHex = (colorString) => {
 };
 
 const fonts = [
-    'Arial', 'Helvetica', 'Verdana', 'Inter', 'Lato', 'Montserrat', 'Noto Sans',
-    'Open Sans', 'Poppins', 'Raleway', 'Roboto', 'Source Sans Pro',
-    'Georgia', 'Times New Roman', 'Lora', 'Merriweather', 'Playfair Display', 'Roboto Slab',
-    'Anton', 'Bebas Neue', 'Oswald', 'Impact', 'Caveat', 'Courgette', 'Dancing Script',
-    'Courier New',
+  'Arial', 'Helvetica', 'Verdana', 'Inter', 'Lato', 'Montserrat', 'Noto Sans',
+  'Open Sans', 'Poppins', 'Raleway', 'Roboto', 'Source Sans Pro',
+  'Georgia', 'Times New Roman', 'Lora', 'Merriweather', 'Playfair Display', 'Roboto Slab',
+  'Anton', 'Bebas Neue', 'Oswald', 'Impact', 'Caveat', 'Courgette', 'Dancing Script',
+  'Courier New',
 ];
 
 const TextFormatting = ({
@@ -67,6 +67,7 @@ const TextFormatting = ({
 
   return (
     <>
+      <Divider sx={{ my: 2 }} /><Button variant="outlined" size="small" onClick={resetFieldStyle} color="secondary" fullWidth>Resetar Estilo</Button>
       <Button variant="contained" startIcon={<Edit />} onClick={() => onOpenHtmlEditor(selectedField)} fullWidth sx={{ mb: 2 }}>Editar Conteúdo</Button>
       <Accordion expanded={expandedPanel === 'fontStyle'} onChange={handleAccordionChange('fontStyle')}>
         <AccordionSummary expandIcon={<ExpandMore />}><Typography><FormatSize sx={{ mr: 1, verticalAlign: 'middle' }} />Fonte e Estilo</Typography></AccordionSummary>
@@ -76,18 +77,18 @@ const TextFormatting = ({
             <Grid item xs={4}><TextField label="Cor" type="color" value={rgbStringToHex(currentElement.style.color || '#000000')} onChange={(e) => updateFieldStyle('color', e.target.value)} fullWidth size="small" /></Grid>
 
             <Grid item xs={12}>
-                <ColorSwatches
-                    title="Cores da Campanha"
-                    palette={campaignSwatches}
-                    onColorSelect={(color) => updateFieldStyle('color', color)}
-                />
+              <ColorSwatches
+                title="Cores da Campanha"
+                palette={campaignSwatches}
+                onColorSelect={(color) => updateFieldStyle('color', color)}
+              />
             </Grid>
             <Grid item xs={12}>
-                <ColorSwatches
-                    title="Cores da Imagem"
-                    palette={imageSwatches}
-                    onColorSelect={(color) => updateFieldStyle('color', color)}
-                />
+              <ColorSwatches
+                title="Cores da Imagem"
+                palette={imageSwatches}
+                onColorSelect={(color) => updateFieldStyle('color', color)}
+              />
             </Grid>
 
 
@@ -144,19 +145,18 @@ const TextFormatting = ({
               <FormControlLabel control={<Switch checked={currentElement.style.textStroke || false} onChange={(e) => updateFieldStyle('textStroke', e.target.checked)} />} label="Contorno de Texto" />
             </Grid>
             {currentElement.style.textStroke && (
-                <>
-                    <Grid item xs={6}><TextField label="Cor Contorno" type="color" value={rgbStringToHex(currentElement.style.strokeColor || '#ffffff')} onChange={(e) => updateFieldStyle('strokeColor', e.target.value)} fullWidth size="small" /></Grid>
-                    <Grid item xs={6}><Typography gutterBottom>Largura: {currentElement.style.strokeWidth || 2}px</Typography><Slider value={currentElement.style.strokeWidth || 2} onChange={(e, v) => updateFieldStyle('strokeWidth', v)} min={0} max={20} /></Grid>
-                    <Grid item xs={12}>
-                      <ColorSwatches title="Cores da Campanha" palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('strokeColor', color)} />
-                      <ColorSwatches title="Cores da Imagem" palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('strokeColor', color)} />
-                    </Grid>
-                </>
+              <>
+                <Grid item xs={6}><TextField label="Cor Contorno" type="color" value={rgbStringToHex(currentElement.style.strokeColor || '#ffffff')} onChange={(e) => updateFieldStyle('strokeColor', e.target.value)} fullWidth size="small" /></Grid>
+                <Grid item xs={6}><Typography gutterBottom>Largura: {currentElement.style.strokeWidth || 2}px</Typography><Slider value={currentElement.style.strokeWidth || 2} onChange={(e, v) => updateFieldStyle('strokeWidth', v)} min={0} max={20} /></Grid>
+                <Grid item xs={12}>
+                  <ColorSwatches title="Cores da Campanha" palette={campaignSwatches} onColorSelect={(color) => updateFieldStyle('strokeColor', color)} />
+                  <ColorSwatches title="Cores da Imagem" palette={imageSwatches} onColorSelect={(color) => updateFieldStyle('strokeColor', color)} />
+                </Grid>
+              </>
             )}
           </Grid>
         </AccordionDetails>
       </Accordion>
-      <Divider sx={{ my: 2 }} /><Button variant="outlined" size="small" onClick={resetFieldStyle} color="secondary" fullWidth>Resetar Estilo</Button>
     </>
   );
 };
