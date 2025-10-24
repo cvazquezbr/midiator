@@ -260,7 +260,7 @@ const TextFormatting = ({
 
         <Grid container spacing={2} alignItems="flex-start">
           {/* Swatches (Cores da Campanha e da Imagem) */}
-          <Grid item xs={8}>
+          <Grid item xs={9}>
             <Typography variant="caption" display="block" color="textSecondary" sx={{ mb: 0.5 }}>Cores da Campanha</Typography>
             <ColorSwatches
               palette={campaignSwatches}
@@ -274,7 +274,7 @@ const TextFormatting = ({
           </Grid>
 
           {/* Seletor de Cor */}
-          <Grid item xs={4}>
+          <Grid item xs={3}>
             <TextField
               label="Cor"
               type="color"
@@ -287,18 +287,14 @@ const TextFormatting = ({
         </Grid>
       </Grid>
 
-      {/* GRUPO DE PROPRIEDADES ADICIONAIS */}
-      <Grid item xs={12}><Divider sx={{ my: 1 }} /></Grid>
-
       <Grid item xs={12}>
-        <Typography variant="subtitle2" gutterBottom>Ajustes de Aparência</Typography>
         
         {/* CONTAINER COM SLIDERS VERTICAIS LADO A LADO (4 PROPRIEDADES ORIGINAIS) */}
         <Grid container spacing={2} justifyContent="space-between" alignItems="flex-end" sx={{ height: 200, mt: 1 }}>
 
           {/* 1. Opacidade (Fundo) - xs=3 */}
           <Grid item xs={3} sx={{ textAlign: 'center' }}>
-            <Typography variant="caption" display="block">Opacidade</Typography>
+            <Typography variant="caption" display="block">Fill</Typography>
             <Slider
               orientation="vertical"
               value={currentElement.style.backgroundOpacity ?? 0} // Valor inicial 0 (0%)
@@ -306,35 +302,35 @@ const TextFormatting = ({
               min={0}
               max={1}
               step={0.01}
-              sx={{ height: 100 }}
+              sx={{ height: 100, mt: 1 }}
             />
             <Typography variant="caption" display="block">{Math.round((currentElement.style.backgroundOpacity ?? 0) * 100)}%</Typography>
           </Grid>
 
           {/* 2. Largura (Borda) - xs=3 */}
           <Grid item xs={3} sx={{ textAlign: 'center' }}>
-            <Typography variant="caption" display="block">Largura</Typography>
+            <Typography variant="caption" display="block">Border</Typography>
             <Slider
               orientation="vertical"
               value={currentElement.style.borderWidth || 0} // Valor inicial 0px
               onChange={(e, v) => updateFieldStyle('borderWidth', v)}
               min={0}
               max={20}
-              sx={{ height: 100 }}
+              sx={{ height: 100, mt: 1 }}
             />
             <Typography variant="caption" display="block">{currentElement.style.borderWidth || 0}px</Typography>
           </Grid>
 
           {/* 3. Curva (Raio) - xs=3 */}
           <Grid item xs={3} sx={{ textAlign: 'center' }}>
-            <Typography variant="caption" display="block">Curva</Typography>
+            <Typography variant="caption" display="block">Curve</Typography>
             <Slider 
               orientation="vertical"
               value={currentElement.style.borderRadius || 0} // Valor inicial 0px
               onChange={(e, v) => updateFieldStyle('borderRadius', v)} 
               min={0} 
               max={50} 
-              sx={{ height: 100 }}
+              sx={{ height: 100, mt: 1 }}
             />
             <Typography variant="caption" display="block">{currentElement.style.borderRadius || 0}px</Typography>
           </Grid>
@@ -348,7 +344,7 @@ const TextFormatting = ({
               onChange={(e, v) => updateFieldStyle('padding', v)} 
               min={0} 
               max={50} 
-              sx={{ height: 100 }}
+              sx={{ height: 100, mt: 1 }}
             />
             <Typography variant="caption" display="block">{currentElement.style.padding || 5}px</Typography>
           </Grid>
