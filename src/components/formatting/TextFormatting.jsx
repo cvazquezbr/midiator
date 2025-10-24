@@ -142,10 +142,26 @@ const TextFormatting = ({
       <Typography variant="subtitle2" align="center" sx={{ mb: 1 }}>
         Blur
       </Typography>
-      {/* Spacer to match the height of 'X' or 'Y' label in Offset group */}
-      <Typography variant="body2" align="center" sx={{ mb: 1, visibility: 'hidden', height: '0.9375rem' }}>
-        &nbsp;
+      
+      {/* This is the spacer to align the Blur slider. 
+        It matches the height of the 'X' and 'Y' labels 
+        in the Offset group. 
+      */}
+      <Typography 
+        variant="body2" 
+        align="center" 
+        sx={{ 
+          mb: 1, 
+          // Use 'visibility: hidden' to reserve space without displaying text
+          visibility: 'hidden', 
+          // Ensure it has the same height as the 'X'/'Y' labels 
+          // (which are variant="body2" with mb: 1)
+          height: '1.25rem' // Adjust this value if '1.25rem' doesn't perfectly match your theme's body2 + margin
+        }}
+      >
+        &nbsp; 
       </Typography>
+      
       <Slider
         orientation="vertical"
         value={currentElement.style.shadowBlur || 4}
@@ -159,12 +175,12 @@ const TextFormatting = ({
       </Typography>
     </Grid>
 
-    {/* Offset Group (Container for X and Y) */}
+    {/* Grupo Offset - Container for X and Y */}
     <Grid item>
       <Typography
         variant="subtitle2"
         align="center"
-        sx={{ mb: 1 }}
+        sx={{ mb: 1 }} // Removed fixed height
       >
         Offset
       </Typography>
