@@ -80,7 +80,6 @@ const TextFormatting = ({
 
             {/* Novo agrupamento para as cores, focando em alinhar os swatches e o seletor */}
             <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>Cor do Texto</Typography>
               <Grid container spacing={2} alignItems="flex-start">
                 {/* Coluna dos Swatches - Mantido xs={9} para dar mais espaço aos círculos de cor */}
                 <Grid item xs={9}>
@@ -142,7 +141,6 @@ const TextFormatting = ({
 
             {/* Botões de Estilo (Negrito, Itálico, Sublinhado) */}
             <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>Estilo</Typography>
               <ToggleButtonGroup size="small" fullWidth>
                 <ToggleButton
                   value="bold"
@@ -172,11 +170,9 @@ const TextFormatting = ({
 
             {/* Agrupamento dos alinhamentos para melhor contexto */}
             <Grid item xs={12}>
-              <Typography variant="subtitle2" gutterBottom>Alinhamento</Typography>
               <Grid container spacing={2}>
                 {/* Alinhamento Horizontal */}
                 <Grid item xs={6}>
-                  <Typography variant="caption" display="block" gutterBottom>Horizontal</Typography>
                   <ToggleButtonGroup
                     value={currentElement.style.textAlign || 'left'}
                     exclusive
@@ -191,7 +187,6 @@ const TextFormatting = ({
                 </Grid>
                 {/* Alinhamento Vertical */}
                 <Grid item xs={6}>
-                  <Typography variant="caption" display="block" gutterBottom>Vertical</Typography>
                   <ToggleButtonGroup
                     value={currentElement.style.verticalAlign || 'top'}
                     exclusive
@@ -238,121 +233,121 @@ const TextFormatting = ({
         </AccordionDetails>
       </Accordion>
 
-<Accordion expanded={expandedPanel === 'boxStyle'} onChange={handleAccordionChange('boxStyle')}>
-  <AccordionSummary expandIcon={<ExpandMore />}><Typography><CheckBoxOutlineBlank sx={{ mr: 1, verticalAlign: 'middle' }} />Caixa de Texto</Typography></AccordionSummary>
-  <AccordionDetails>
-    <Grid container spacing={3}>
+      <Accordion expanded={expandedPanel === 'boxStyle'} onChange={handleAccordionChange('boxStyle')}>
+        <AccordionSummary expandIcon={<ExpandMore />}><Typography><CheckBoxOutlineBlank sx={{ mr: 1, verticalAlign: 'middle' }} />Caixa de Texto</Typography></AccordionSummary>
+        <AccordionDetails>
+          <Grid container spacing={3}>
 
-      {/* GRUPO UNIFICADO DE CORES (MANTIDO INTACTO) */}
-      <Grid item xs={12}>
-        <ToggleButtonGroup
-          value={colorTarget}
-          exclusive
-          onChange={(e, newTarget) => newTarget && setColorTarget(newTarget)}
-          fullWidth
-          size="small"
-          sx={{ mb: 2 }}
-        >
-          <ToggleButton value="backgroundColor">Fundo</ToggleButton>
-          <ToggleButton value="borderColor">Borda</ToggleButton>
-        </ToggleButtonGroup>
+            {/* GRUPO UNIFICADO DE CORES (MANTIDO INTACTO) */}
+            <Grid item xs={12}>
+              <ToggleButtonGroup
+                value={colorTarget}
+                exclusive
+                onChange={(e, newTarget) => newTarget && setColorTarget(newTarget)}
+                fullWidth
+                size="small"
+                sx={{ mb: 2 }}
+              >
+                <ToggleButton value="backgroundColor">Fundo</ToggleButton>
+                <ToggleButton value="borderColor">Borda</ToggleButton>
+              </ToggleButtonGroup>
 
-        <Grid container spacing={2} alignItems="flex-start">
-          {/* Swatches (Cores da Campanha e da Imagem) */}
-          <Grid item xs={9}>
-            <Typography variant="caption" display="block" color="textSecondary" sx={{ mb: 0.5 }}>Cores da Campanha</Typography>
-            <ColorSwatches
-              palette={campaignSwatches}
-              onColorSelect={(color) => updateFieldStyle(colorTarget, color)}
-            />
-            <Typography variant="caption" display="block" color="textSecondary" sx={{ mt: 1, mb: 0.5 }}>Cores da Imagem</Typography>
-            <ColorSwatches
-              palette={imageSwatches}
-              onColorSelect={(color) => updateFieldStyle(colorTarget, color)}
-            />
+              <Grid container spacing={2} alignItems="flex-start">
+                {/* Swatches (Cores da Campanha e da Imagem) */}
+                <Grid item xs={9}>
+                  <Typography variant="caption" display="block" color="textSecondary" sx={{ mb: 0.5 }}>Cores da Campanha</Typography>
+                  <ColorSwatches
+                    palette={campaignSwatches}
+                    onColorSelect={(color) => updateFieldStyle(colorTarget, color)}
+                  />
+                  <Typography variant="caption" display="block" color="textSecondary" sx={{ mt: 1, mb: 0.5 }}>Cores da Imagem</Typography>
+                  <ColorSwatches
+                    palette={imageSwatches}
+                    onColorSelect={(color) => updateFieldStyle(colorTarget, color)}
+                  />
+                </Grid>
+
+                {/* Seletor de Cor */}
+                <Grid item xs={3}>
+                  <TextField
+                    label="Cor"
+                    type="color"
+                    value={rgbStringToHex(currentElement.style[colorTarget] || '#000000')}
+                    onChange={(e) => updateFieldStyle(colorTarget, e.target.value)}
+                    fullWidth
+                    size="small"
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
+
+            <Grid item xs={12} sx={{ mt: 0 }}>
+
+              {/* CONTAINER COM SLIDERS VERTICAIS LADO A LADO (4 PROPRIEDADES ORIGINAIS) */}
+              <Grid container spacing={2} justifyContent="space-between" alignItems="flex-end" sx={{ height: 200 }}>
+
+                {/* 1. Opacidade (Fundo) - xs=3 */}
+                <Grid item xs={3} sx={{ textAlign: 'center' }}>
+                  <Typography variant="caption" display="block">Fill</Typography>
+                  <Slider
+                    orientation="vertical"
+                    value={currentElement.style.backgroundOpacity ?? 0} // Valor inicial 0 (0%)
+                    onChange={(e, v) => updateFieldStyle('backgroundOpacity', v)}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    sx={{ height: 100, mt: 1 }}
+                  />
+                  <Typography variant="caption" display="block">{Math.round((currentElement.style.backgroundOpacity ?? 0) * 100)}%</Typography>
+                </Grid>
+
+                {/* 2. Largura (Borda) - xs=3 */}
+                <Grid item xs={3} sx={{ textAlign: 'center' }}>
+                  <Typography variant="caption" display="block">Border</Typography>
+                  <Slider
+                    orientation="vertical"
+                    value={currentElement.style.borderWidth || 0} // Valor inicial 0px
+                    onChange={(e, v) => updateFieldStyle('borderWidth', v)}
+                    min={0}
+                    max={20}
+                    sx={{ height: 100, mt: 1 }}
+                  />
+                  <Typography variant="caption" display="block">{currentElement.style.borderWidth || 0}px</Typography>
+                </Grid>
+
+                {/* 3. Curva (Raio) - xs=3 */}
+                <Grid item xs={3} sx={{ textAlign: 'center' }}>
+                  <Typography variant="caption" display="block">Curve</Typography>
+                  <Slider
+                    orientation="vertical"
+                    value={currentElement.style.borderRadius || 0} // Valor inicial 0px
+                    onChange={(e, v) => updateFieldStyle('borderRadius', v)}
+                    min={0}
+                    max={50}
+                    sx={{ height: 100, mt: 1 }}
+                  />
+                  <Typography variant="caption" display="block">{currentElement.style.borderRadius || 0}px</Typography>
+                </Grid>
+
+                {/* 4. Padding - xs=3 */}
+                <Grid item xs={3} sx={{ textAlign: 'center' }}>
+                  <Typography variant="caption" display="block">Padding</Typography>
+                  <Slider
+                    orientation="vertical"
+                    value={currentElement.style.padding || 5} // Valor inicial 5px
+                    onChange={(e, v) => updateFieldStyle('padding', v)}
+                    min={0}
+                    max={50}
+                    sx={{ height: 100, mt: 1 }}
+                  />
+                  <Typography variant="caption" display="block">{currentElement.style.padding || 5}px</Typography>
+                </Grid>
+
+              </Grid>
+            </Grid>
           </Grid>
-
-          {/* Seletor de Cor */}
-          <Grid item xs={3}>
-            <TextField
-              label="Cor"
-              type="color"
-              value={rgbStringToHex(currentElement.style[colorTarget] || '#000000')}
-              onChange={(e) => updateFieldStyle(colorTarget, e.target.value)}
-              fullWidth
-              size="small"
-            />
-          </Grid>
-        </Grid>
-      </Grid>
-
-      <Grid item xs={12}>
-        
-        {/* CONTAINER COM SLIDERS VERTICAIS LADO A LADO (4 PROPRIEDADES ORIGINAIS) */}
-        <Grid container spacing={2} justifyContent="space-between" alignItems="flex-end" sx={{ height: 200 }}>
-
-          {/* 1. Opacidade (Fundo) - xs=3 */}
-          <Grid item xs={3} sx={{ textAlign: 'center' }}>
-            <Typography variant="caption" display="block">Fill</Typography>
-            <Slider
-              orientation="vertical"
-              value={currentElement.style.backgroundOpacity ?? 0} // Valor inicial 0 (0%)
-              onChange={(e, v) => updateFieldStyle('backgroundOpacity', v)}
-              min={0}
-              max={1}
-              step={0.01}
-              sx={{ height: 100, mt: 1 }}
-            />
-            <Typography variant="caption" display="block">{Math.round((currentElement.style.backgroundOpacity ?? 0) * 100)}%</Typography>
-          </Grid>
-
-          {/* 2. Largura (Borda) - xs=3 */}
-          <Grid item xs={3} sx={{ textAlign: 'center' }}>
-            <Typography variant="caption" display="block">Border</Typography>
-            <Slider
-              orientation="vertical"
-              value={currentElement.style.borderWidth || 0} // Valor inicial 0px
-              onChange={(e, v) => updateFieldStyle('borderWidth', v)}
-              min={0}
-              max={20}
-              sx={{ height: 100, mt: 1 }}
-            />
-            <Typography variant="caption" display="block">{currentElement.style.borderWidth || 0}px</Typography>
-          </Grid>
-
-          {/* 3. Curva (Raio) - xs=3 */}
-          <Grid item xs={3} sx={{ textAlign: 'center' }}>
-            <Typography variant="caption" display="block">Curve</Typography>
-            <Slider 
-              orientation="vertical"
-              value={currentElement.style.borderRadius || 0} // Valor inicial 0px
-              onChange={(e, v) => updateFieldStyle('borderRadius', v)} 
-              min={0} 
-              max={50} 
-              sx={{ height: 100, mt: 1 }}
-            />
-            <Typography variant="caption" display="block">{currentElement.style.borderRadius || 0}px</Typography>
-          </Grid>
-
-          {/* 4. Padding - xs=3 */}
-          <Grid item xs={3} sx={{ textAlign: 'center' }}>
-            <Typography variant="caption" display="block">Padding</Typography>
-            <Slider 
-              orientation="vertical"
-              value={currentElement.style.padding || 5} // Valor inicial 5px
-              onChange={(e, v) => updateFieldStyle('padding', v)} 
-              min={0} 
-              max={50} 
-              sx={{ height: 100, mt: 1 }}
-            />
-            <Typography variant="caption" display="block">{currentElement.style.padding || 5}px</Typography>
-          </Grid>
-
-        </Grid>
-      </Grid>
-    </Grid>
-  </AccordionDetails>
-</Accordion>
+        </AccordionDetails>
+      </Accordion>
       <Accordion expanded={expandedPanel === 'effects'} onChange={handleAccordionChange('effects')}>
         <AccordionSummary expandIcon={<ExpandMore />}><Typography><BlurOn sx={{ mr: 1, verticalAlign: 'middle' }} />Efeitos</Typography></AccordionSummary>
         <AccordionDetails>
