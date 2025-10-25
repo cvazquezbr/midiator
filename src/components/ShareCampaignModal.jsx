@@ -38,7 +38,8 @@ const ShareCampaignModal = ({ open, onClose, campaign }) => {
       if (!response.ok) throw new Error('Failed to fetch shared users.');
       const data = await response.json();
       setSharedUsers(data);
-    } catch (error)      toast.error(error.message);
+    } catch (error) {
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
