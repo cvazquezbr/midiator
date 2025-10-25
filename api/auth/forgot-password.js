@@ -1,0 +1,99 @@
+import { query } from '../db.js';
+import { randomBytes, createHash } from 'crypto';
+
+// Helper to parse the request body in Vercel's Edge environment
+const parseBody = async (req) => {
+  let body = '';
+  // Vercel Edge streams are not standard. We must iterate over them.
+  for await (const chunk of req) {
+    body += new TextDecoder().decode(chunk);
+  }
+  try {
+    return JSON.parse(body);
+  } catch {
+    return {};
+  }
+};
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
+
+  try {
+    const { email } = await parseBody(req);
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required.' });
+    }
+
+    // 1. Find the user by email
+    const { rows: users } = await query('SELECT id, name, password_hash, google_id FROM users WHERE email = $1', [email]);
+    if (users.length === 0) {
+      // To prevent user enumeration, we send a success response even if the user doesn't exist.
+      // The user will just not receive an email.
+      console.log(`Password reset requested for non-existent email: ${email}`);
+      return res.status(200).json({ message: 'If a user with that email exists, a password reset link has been sent.' });
+    }
+
+    const user = users[0];
+
+    // Check if the user is Google-only and has no password.
+    // We allow them to create a password via this flow.
+    if (user.google_id && !user.password_hash) {
+      console.log(`Password reset initiated for Google-only user: ${email}. They will now create a password.`);
+    }
+
+    // 2. Generate a secure, random token
+    const resetToken = randomBytes(32).toString('hex');
+    const hashedToken = createHash('sha256').update(resetToken).digest('hex');
+
+    // 3. Set an expiry date (e.g., 1 hour from now)
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 1);
+
+    // 4. Store the hashed token and expiry date in the database
+    await query(
+      'UPDATE users SET password_reset_token = $1, password_reset_expires = $2 WHERE id = $3',
+      [hashedToken, expires, user.id]
+    );
+
+    // 5. Send the password reset email
+    // The link should point to the frontend page for resetting the password
+    const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    const toName = user.name || 'there';
+
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: 'Midiator <noreply@midiator.app>',
+          to: email,
+          subject: 'Reset Your Midiator Password',
+          html: `<p>Hello ${toName},</p>
+                 <p>You requested a password reset. Please click the link below to set a new password. This link is valid for one hour.</p>
+                 <a href="${resetUrl}">Reset Password</a>
+                 <p>If you did not request this, please ignore this email.</p>
+                 <p>Thank you,<br/>The Midiator Team</p>`,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Resend API Error: ${JSON.stringify(errorData)}`);
+      }
+    } catch (emailError) {
+      console.error(`Failed to send password reset email to ${email}:`, emailError);
+      return res.status(500).json({ error: 'Failed to send reset email. Please try again later.' });
+    }
+
+    res.status(200).json({ message: 'If a user with that email exists, a password reset link has been sent.' });
+  } catch (error) {
+    console.error('Forgot Password Error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
