@@ -3,6 +3,7 @@ import { query } from '../../db.js';
 
 const handler = async (req, res) => {
   const userId = req.user.sub;
+  const userEmail = req.user.email;
 
   if (req.method === 'GET') {
     try {
@@ -11,9 +12,9 @@ const handler = async (req, res) => {
          FROM campaigns c
          JOIN campaign_shares cs ON c.id = cs.campaign_id
          JOIN users u ON c.user_id = u.id
-         WHERE cs.shared_with_user_id = $1
+         WHERE cs.shared_with_user_id = $1 OR cs.shared_with_email = $2
          ORDER BY c.updated_at DESC`,
-        [userId]
+        [userId, userEmail]
       );
 
       const campaignsWithPages = rows.map(campaign => {
