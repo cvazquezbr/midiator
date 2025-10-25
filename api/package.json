@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "//": "This comment is to force a cache invalidation on Vercel",
+  "scripts": {
+    "postinstall": "echo 'Skipping postinstall script'"
+  },
   "dependencies": {
     "@vercel/blob": "^1.1.1",
     "cookie": "^1.0.2",
