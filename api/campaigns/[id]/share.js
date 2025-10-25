@@ -107,7 +107,10 @@ const handler = async (req, res) => {
       try {
         const toEmail = userToShareWith.length > 0 ? userToShareWith[0].email : email;
         const toName = userToShareWith.length > 0 ? userToShareWith[0].name : 'there';
-        const campaignUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:5173'}/campaigns/${campaignId}`;
+        const baseUrl = process.env.VERCEL_ENV === 'production'
+          ? 'https://midiator.vercel.app'
+          : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:5173';
+        const campaignUrl = `${baseUrl}/campaigns/${campaignId}`;
 
         const transporter = nodemailer.createTransport({
           host: process.env.EMAIL_HOST,
