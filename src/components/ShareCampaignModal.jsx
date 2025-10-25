@@ -13,6 +13,8 @@ import {
   IconButton,
   CircularProgress,
   Typography,
+  Chip,
+  Box
 } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
@@ -36,8 +38,7 @@ const ShareCampaignModal = ({ open, onClose, campaign }) => {
       if (!response.ok) throw new Error('Failed to fetch shared users.');
       const data = await response.json();
       setSharedUsers(data);
-    } catch (error) {
-      toast.error(error.message);
+    } catch (error)      toast.error(error.message);
     } finally {
       setLoading(false);
     }
@@ -57,8 +58,15 @@ const ShareCampaignModal = ({ open, onClose, campaign }) => {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to share campaign.');
-      toast.success(`Campaign shared with ${data.email}.`);
-      setSharedUsers([...sharedUsers, data]);
+
+      const successMessage = data.status === 'pending'
+        ? `Invitation sent to ${data.email}.`
+        : `Campaign shared with ${data.email}.`;
+      toast.success(successMessage);
+
+      // Use a more robust way to key the new item
+      const newItem = { ...data, key: data.id || data.email };
+      setSharedUsers([...sharedUsers, newItem]);
       setEmail('');
     } catch (error) {
       toast.error(error.message);
@@ -67,19 +75,24 @@ const ShareCampaignModal = ({ open, onClose, campaign }) => {
     }
   };
 
-  const handleRevoke = async (userId) => {
+  const handleRevoke = async (user) => {
     try {
+      // Send `id` for accepted shares, `email` for pending ones
+      const body = user.status === 'pending' ? { email: user.email } : { id: user.id };
+
       const response = await fetch(`/api/campaigns/${campaign.id}/share`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shared_with_user_id: userId }),
+        body: JSON.stringify(body),
       });
+
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || 'Failed to revoke access.');
       }
       toast.success('Access revoked.');
-      setSharedUsers(sharedUsers.filter(user => user.id !== userId));
+      // Filter out the revoked user based on email (which is always present)
+      setSharedUsers(sharedUsers.filter(u => u.email !== user.email));
     } catch (error) {
       toast.error(error.message);
     }
@@ -89,43 +102,60 @@ const ShareCampaignModal = ({ open, onClose, campaign }) => {
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>Share "{campaign?.name}"</DialogTitle>
       <DialogContent>
-        <Typography variant="h6">Share with new user</Typography>
-        <TextField
-          autoFocus
-          margin="dense"
-          label="Email Address"
-          type="email"
-          fullWidth
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          disabled={sharing}
-        />
-        <Button onClick={handleShare} color="primary" disabled={sharing}>
-          {sharing ? <CircularProgress size={24} /> : 'Share'}
-        </Button>
+        <Box mb={3}>
+          <Typography variant="h6">Share with a new user</Typography>
+          <Typography variant="body2" color="textSecondary" mb={2}>
+            If the user does not have an account, an invitation will be sent to their email.
+          </Typography>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Email Address"
+            type="email"
+            fullWidth
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={sharing}
+          />
+          <Button onClick={handleShare} color="primary" variant="contained" disabled={sharing} sx={{ mt: 1 }}>
+            {sharing ? <CircularProgress size={24} /> : 'Share'}
+          </Button>
+        </Box>
 
         <Typography variant="h6" style={{ marginTop: '20px' }}>
-          Shared with
+          Already shared with
         </Typography>
         {loading ? (
           <CircularProgress />
         ) : (
           <List>
             {sharedUsers.map((user) => (
-              <ListItem key={user.id}>
-                <ListItemText primary={user.name} secondary={user.email} />
+              <ListItem key={user.email}> {/* Use email as key since it's always unique per campaign */}
+                <ListItemText
+                  primary={user.name || user.email}
+                  secondary={user.name ? user.email : 'Invitation pending'}
+                />
                 <ListItemSecondaryAction>
-                  <IconButton edge="end" aria-label="delete" onClick={() => handleRevoke(user.id)}>
+                  <Chip
+                    label={user.status}
+                    color={user.status === 'pending' ? 'warning' : 'success'}
+                    size="small"
+                    sx={{ mr: 1 }}
+                  />
+                  <IconButton edge="end" aria-label="delete" onClick={() => handleRevoke(user)}>
                     <DeleteIcon />
                   </IconButton>
                 </ListItemSecondaryAction>
               </ListItem>
             ))}
+            {sharedUsers.length === 0 && (
+                <Typography color="textSecondary">Not shared with anyone yet.</Typography>
+            )}
           </List>
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} color="primary">
+        <Button onClick={onClose}>
           Close
         </Button>
       </DialogActions>
