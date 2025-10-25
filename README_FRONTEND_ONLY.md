@@ -74,7 +74,12 @@ Ative as seguintes APIs:
 
 Crie um arquivo `.env` na raiz do projeto e adicione as seguintes variáveis:
 
-- `RESEND_API_KEY`: Sua chave de API do Resend para envio de e-mails.
+- `EMAIL_HOST`: Host do seu servidor de e-mail SMTP.
+- `EMAIL_PORT`: Porta do seu servidor de e-mail SMTP (ex: 587 ou 465).
+- `EMAIL_USER`: Nome de usuário para autenticação no servidor SMTP.
+- `EMAIL_PASS`: Senha para autenticação no servidor SMTP.
+- `EMAIL_FROM_NAME`: Nome do remetente que aparecerá no e-mail (ex: "Midiator").
+- `EMAIL_FROM_ADDRESS`: Endereço de e-mail do remetente (ex: "noreply@midiator.app").
 
 ### 3. Instalação
 
