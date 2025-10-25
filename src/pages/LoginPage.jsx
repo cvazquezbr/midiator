@@ -101,6 +101,11 @@ const LoginPage = () => {
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading}
           />
+          <Box sx={{ textAlign: 'right', width: '100%', mt: 1 }}>
+            <Link component={RouterLink} to="/forgot-password" variant="body2">
+              Forgot password?
+            </Link>
+          </Box>
           <Button
             type="submit"
             fullWidth

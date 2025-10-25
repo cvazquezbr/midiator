@@ -10,6 +10,9 @@ import PromptsPage from './pages/PromptsPage';
 import ConfigPage from './pages/ConfigPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 
 // Route Protection
 import ProtectedRoute from './components/ProtectedRoute';
@@ -21,6 +24,8 @@ function App() {
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       <Route path="/terms-of-service" element={<TermsOfService />} />
 
@@ -28,6 +33,7 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/config" element={<ConfigPage />} />
+          <Route path="/change-password" element={<ChangePasswordPage />} />
         </Route>
 
         {/* Protected Routes for admin users */}

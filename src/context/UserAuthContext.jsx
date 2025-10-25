@@ -122,6 +122,62 @@ export const UserAuthContextProvider = ({ children, initialUser = null, initialT
     }
   };
 
+  const requestPasswordReset = async (email) => {
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        return { success: true, message: data.message };
+      } else {
+        return { success: false, error: data.error || 'Failed to request password reset.' };
+      }
+    } catch (error) {
+      return { success: false, error: 'An error occurred. Please try again.' };
+    }
+  };
+
+  const resetPassword = async (token, password, confirmPassword) => {
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password, confirmPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message);
+        return { success: true, message: data.message };
+      } else {
+        return { success: false, error: data.error || 'Failed to reset password.' };
+      }
+    } catch (error) {
+      return { success: false, error: 'An error occurred. Please try again.' };
+    }
+  };
+
+  const changePassword = async (oldPassword, newPassword, confirmPassword) => {
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ oldPassword, newPassword, confirmPassword }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message);
+        return { success: true, message: data.message };
+      } else {
+        return { success: false, error: data.error || 'Failed to change password.' };
+      }
+    } catch (error) {
+      return { success: false, error: 'An error occurred. Please try again.' };
+    }
+  };
+
   const logout = async () => {
     setLoading(true);
     try {
@@ -149,6 +205,9 @@ export const UserAuthContextProvider = ({ children, initialUser = null, initialT
     signup,
     logout,
     googleLogin,
+    requestPasswordReset,
+    resetPassword,
+    changePassword,
     fetchUser, // Expose fetchUser to allow components to trigger a manual refresh
   };
 
