@@ -16,13 +16,21 @@ const parseBody = async (req) => {
 
 const handler = async (req, res) => {
   const userId = req.user.sub; // The user ID is in the 'sub' (subject) claim
+  const userEmail = req.user.email;
   const { id } = req.query;
 
   if (req.method === 'GET') {
     try {
       const { rows } = await query(
-        'SELECT id, name, campaign_data, autor_id, persona_id, palette_id, updated_at FROM campaigns WHERE id = $1 AND user_id = $2',
-        [id, userId]
+        `SELECT c.id, c.name, c.campaign_data, c.autor_id, c.persona_id, c.palette_id, c.updated_at
+         FROM campaigns c
+         WHERE c.id = $1
+           AND (c.user_id = $2 OR EXISTS (
+             SELECT 1 FROM campaign_shares cs
+             WHERE cs.campaign_id = c.id
+               AND (cs.shared_with_user_id = $2 OR cs.shared_with_email = $3)
+           ))`,
+        [id, userId, userEmail]
       );
       if (rows.length === 0) {
         return res.status(404).json({ error: 'Campaign not found or access denied.' });
