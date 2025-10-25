@@ -8,10 +8,5 @@
       "path": "/api/cron/linkedin-analytics",
       "schedule": "0 2 * * *"
     }
-  ],
-  "functions": {
-    "api/upload-client.js": {
-      "includeFiles": "api/node_modules/@vercel/blob/**"
-    }
-  }
+  ]
 }
