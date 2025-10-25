@@ -12,9 +12,6 @@
   "functions": {
     "api/upload-client.js": {
       "includeFiles": "api/node_modules/@vercel/blob/**"
-    },
-    "api/campaigns/[id]/share.js": {
-      "includeFiles": "api/node_modules/resend/**"
     }
   }
 }
