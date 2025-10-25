@@ -61,7 +61,10 @@ export default async function handler(req, res) {
 
     // 5. Send the password reset email
     // The link should point to the frontend page for resetting the password
-    const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`;
+    const baseUrl = process.env.VERCEL_ENV === 'production'
+      ? 'https://midiator.vercel.app'
+      : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:5173';
+    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
     const toName = user.name || 'there';
 
     try {
