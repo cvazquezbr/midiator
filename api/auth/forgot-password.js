@@ -1,5 +1,6 @@
 import { query } from '../db.js';
 import { randomBytes, createHash } from 'crypto';
+import nodemailer from 'nodemailer';
 
 // Helper to parse the request body in Vercel's Edge environment
 const parseBody = async (req) => {
@@ -64,28 +65,26 @@ export default async function handler(req, res) {
     const toName = user.name || 'there';
 
     try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      const transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST,
+        port: process.env.EMAIL_PORT,
+        secure: process.env.EMAIL_PORT == 465, // true for 465, false for other ports
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
         },
-        body: JSON.stringify({
-          from: 'Midiator <noreply@midiator.app>',
-          to: email,
-          subject: 'Reset Your Midiator Password',
-          html: `<p>Hello ${toName},</p>
-                 <p>You requested a password reset. Please click the link below to set a new password. This link is valid for one hour.</p>
-                 <a href="${resetUrl}">Reset Password</a>
-                 <p>If you did not request this, please ignore this email.</p>
-                 <p>Thank you,<br/>The Midiator Team</p>`,
-        }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Resend API Error: ${JSON.stringify(errorData)}`);
-      }
+      await transporter.sendMail({
+        from: `"${process.env.EMAIL_FROM_NAME || 'Midiator'}" <${process.env.EMAIL_FROM_ADDRESS}>`,
+        to: email,
+        subject: 'Reset Your Midiator Password',
+        html: `<p>Hello ${toName},</p>
+               <p>You requested a password reset. Please click the link below to set a new password. This link is valid for one hour.</p>
+               <a href="${resetUrl}">Reset Password</a>
+               <p>If you did not request this, please ignore this email.</p>
+               <p>Thank you,<br/>The Midiator Team</p>`,
+      });
     } catch (emailError) {
       console.error(`Failed to send password reset email to ${email}:`, emailError);
       return res.status(500).json({ error: 'Failed to send reset email. Please try again later.' });
