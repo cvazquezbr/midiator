@@ -74,7 +74,12 @@ Ative as seguintes APIs:
 
 Crie um arquivo `.env` na raiz do projeto e adicione as seguintes variáveis:
 
-- `RESEND_API_KEY`: Sua chave de API do Resend para envio de e-mails.
+- `SMTP_HOST`: O host do seu servidor SMTP.
+- `SMTP_PORT`: A porta do seu servidor SMTP.
+- `SMTP_SECURE`: Use `true` se a conexão for segura (SSL/TLS), caso contrário `false`.
+- `SMTP_USER`: O nome de usuário para autenticação no servidor SMTP.
+- `SMTP_PASS`: A senha para autenticação no servidor SMTP.
+- `SMTP_FROM_EMAIL`: O endereço de e-mail que será usado como remetente.
 
 ### 3. Instalação
 
