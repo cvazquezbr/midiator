@@ -18,7 +18,7 @@ const handler = async (req, res) => {
   const { id: campaignId } = req.query;
 
   // First, verify the requester is the owner of the campaign
-  const { rows: campaignRows } = await query('SELECT user_id FROM campaigns WHERE id = $1', [campaignId]);
+  const { rows: campaignRows } = await query('SELECT user_id, name FROM campaigns WHERE id = $1', [campaignId]);
   if (campaignRows.length === 0) {
     return res.status(404).json({ error: 'Campaign not found' });
   }

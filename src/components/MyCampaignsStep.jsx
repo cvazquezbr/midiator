@@ -134,14 +134,14 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
                     <ListItem
                       key={campaign.id}
                       secondaryAction={
-                        <>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
                           <IconButton edge="end" aria-label="share" onClick={(e) => { e.stopPropagation(); handleOpenShareModal(campaign); }}>
                             <ShareIcon />
                           </IconButton>
                           <IconButton edge="end" aria-label="delete" onClick={(e) => { e.stopPropagation(); handleDelete(campaign.id, campaign.name); }}>
                             <DeleteIcon />
                           </IconButton>
-                        </>
+                        </Box>
                       }
                       disablePadding
                     >
