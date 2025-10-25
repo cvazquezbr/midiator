@@ -1,6 +1,5 @@
 import { withAuth } from '../../middleware/auth.js';
 import { query } from '../../db.js';
-import nodemailer from 'nodemailer';
 
 const parseBody = async (req) => {
   let body = '';
@@ -80,25 +79,26 @@ const handler = async (req, res) => {
 
       // Send email notification
       try {
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: process.env.SMTP_PORT,
-          secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
           },
+          body: JSON.stringify({
+            from: 'Midiator <noreply@midiator.app>',
+            to: sharedUser[0].email,
+            subject: `A campaign has been shared with you: ${campaignRows[0].name}`,
+            html: `<p>Hello ${sharedUser[0].name},</p>
+                   <p>${req.user.name} (${req.user.email}) has shared the campaign "${campaignRows[0].name}" with you.</p>
+                   <p>You can access it by logging into your Midiator account.</p>
+                   <p>Thank you,<br/>The Midiator Team</p>`,
+          }),
         });
-
-        await transporter.sendMail({
-          from: `"Midiator" <${process.env.SMTP_FROM_EMAIL}>`,
-          to: sharedUser[0].email,
-          subject: `A campaign has been shared with you: ${campaignRows[0].name}`,
-          html: `<p>Hello ${sharedUser[0].name},</p>
-                 <p>${req.user.name} (${req.user.email}) has shared the campaign "${campaignRows[0].name}" with you.</p>
-                 <p>You can access it by logging into your Midiator account.</p>
-                 <p>Thank you,<br/>The Midiator Team</p>`,
-        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`Resend API Error: ${JSON.stringify(errorData)}`);
+        }
       } catch (emailError) {
         console.error(`[POST /api/campaigns/${campaignId}/share] Failed to send email for user ${userId}:`, emailError);
         // Do not block the response for email failure, but log it
