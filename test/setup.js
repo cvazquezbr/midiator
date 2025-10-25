@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 import { newDb } from 'pg-mem';
 import { vi } from 'vitest';
 
