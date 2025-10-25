@@ -1,5 +1,6 @@
 import { withAuth } from '../../middleware/auth.js';
 import { query } from '../../db.js';
+import nodemailer from 'nodemailer';
 
 const parseBody = async (req) => {
   let body = '';
@@ -107,26 +108,26 @@ const handler = async (req, res) => {
         const toEmail = userToShareWith.length > 0 ? userToShareWith[0].email : email;
         const toName = userToShareWith.length > 0 ? userToShareWith[0].name : 'there';
 
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        const transporter = nodemailer.createTransport({
+          host: process.env.EMAIL_HOST,
+          port: process.env.EMAIL_PORT,
+          secure: process.env.EMAIL_PORT == 465, // true for 465, false for other ports
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
           },
-          body: JSON.stringify({
-            from: 'Midiator <noreply@midiator.app>',
-            to: toEmail,
-            subject: `A campaign has been shared with you: ${campaignName}`,
-            html: `<p>Hello ${toName},</p>
-                   <p>${req.user.name} (${req.user.email}) has shared the campaign "${campaignName}" with you.</p>
-                   <p>You can access it by logging into your Midiator account. If you don't have an account, you can create one using this email address to see the shared campaign.</p>
-                   <p>Thank you,<br/>The Midiator Team</p>`,
-          }),
         });
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`Resend API Error: ${JSON.stringify(errorData)}`);
-        }
+
+        await transporter.sendMail({
+          from: `"${process.env.EMAIL_FROM_NAME || 'Midiator'}" <${process.env.EMAIL_FROM_ADDRESS}>`,
+          to: toEmail,
+          subject: `A campaign has been shared with you: ${campaignName}`,
+          html: `<p>Hello ${toName},</p>
+                 <p>${req.user.name} (${req.user.email}) has shared the campaign "${campaignName}" with you.</p>
+                 <p>You can access it by logging into your Midiator account. If you don't have an account, you can create one using this email address to see the shared campaign.</p>
+                 <p>Thank you,<br/>The Midiator Team</p>`,
+        });
+
       } catch (emailError) {
         console.error(`[POST /api/campaigns/${campaignId}/share] Failed to send email for user ${userId}:`, emailError);
       }
