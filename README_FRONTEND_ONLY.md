@@ -70,7 +70,13 @@ Ative as seguintes APIs:
    - **Application restrictions**: HTTP referrers
    - **API restrictions**: Google Drive API, Google Sheets API
 
-### 2. Instalação
+### 2. Variáveis de Ambiente
+
+Crie um arquivo `.env` na raiz do projeto e adicione as seguintes variáveis:
+
+- `RESEND_API_KEY`: Sua chave de API do Resend para envio de e-mails.
+
+### 3. Instalação
 
 ```bash
 # Clonar/baixar o projeto

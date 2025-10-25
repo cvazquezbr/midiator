@@ -24,6 +24,7 @@ import { getAutores } from '../utils/autorState';
 import { getPalettes } from '../utils/paletteState';
 
 import MyCampaignsStep from '../components/MyCampaignsStep';
+import SharedCampaignsStep from '../components/SharedCampaignsStep';
 import PersonasPage from './PersonasPage';
 import AutoresPage from './AutoresPage';
 import PalettesPage from './PalettesPage';
@@ -105,6 +106,7 @@ function HomePage() {
   const [personaList, setPersonaList] = useState([]);
   const [autorList, setAutorList] = useState([]);
   const [currentView, setCurrentView] = useState('campaigns');
+  const [campaignsView, setCampaignsView] = useState('my-campaigns');
   const [activeStep, setActiveStep] = useState(null);
   const [darkMode, setDarkMode] = useState(() => {
     const savedMode = localStorage.getItem('darkMode');
@@ -840,7 +842,7 @@ function HomePage() {
     <ThemeProvider theme={currentTheme}>
       <CssBaseline />
       <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-        <MainAppBar {...{ darkMode, setDarkMode, setShowSetupModal, onMenuClick: () => setSidebarOpen(!sidebarOpen), isMobile, onSaveCampaign: () => setShowSaveModal(true), onShowPersonas: () => handleNavigation(() => setCurrentView('personas')), onShowAutores: () => handleNavigation(() => setCurrentView('autores')), onShowPalettes: () => handleNavigation(() => setCurrentView('palettes')), onShowCampaigns: () => handleNavigation(() => setCurrentView('campaigns')), currentView, onPersonaMenuClick: () => setPersonaDrawerOpen(!personaDrawerOpen), onAutorMenuClick: () => setAutorDrawerOpen(!autorDrawerOpen), onPaletteMenuClick: () => setPaletteDrawerOpen(!paletteDrawerOpen), isDrawerOpen: currentView === 'personas' ? personaDrawerOpen : currentView === 'autores' ? autorDrawerOpen : currentView === 'palettes' ? paletteDrawerOpen : sidebarOpen, onShowMemorial: () => setShowMemorialDescritivoModal(true), isCampaignOpen: currentCampaign !== null }} />
+        <MainAppBar {...{ darkMode, setDarkMode, setShowSetupModal, onMenuClick: () => setSidebarOpen(!sidebarOpen), isMobile, onSaveCampaign: () => setShowSaveModal(true), onShowPersonas: () => handleNavigation(() => setCurrentView('personas')), onShowAutores: () => handleNavigation(() => setCurrentView('autores')), onShowPalettes: () => handleNavigation(() => setCurrentView('palettes')), onShowCampaigns: () => handleNavigation(() => { setCurrentView('campaigns'); setCampaignsView('my-campaigns'); }), onShowSharedCampaigns: () => { setCurrentView('campaigns'); setCampaignsView('shared-campaigns'); }, campaignsView, currentView, onPersonaMenuClick: () => setPersonaDrawerOpen(!personaDrawerOpen), onAutorMenuClick: () => setAutorDrawerOpen(!autorDrawerOpen), onPaletteMenuClick: () => setPaletteDrawerOpen(!paletteDrawerOpen), isDrawerOpen: currentView === 'personas' ? personaDrawerOpen : currentView === 'autores' ? autorDrawerOpen : currentView === 'palettes' ? paletteDrawerOpen : sidebarOpen, onShowMemorial: () => setShowMemorialDescritivoModal(true), isCampaignOpen: currentCampaign !== null }} />
         {currentView === 'campaigns' && (
           <>
             <Sidebar {...{ sidebarOpen, darkMode, steps, activeStep, csvData, backgroundImageSrc: pageTemplate?.images?.[0]?.src, visibleFields, totalFields, styledFields, variant: isMobile ? 'temporary' : 'persistent', onClose: () => setSidebarOpen(false), onStepClick: handleSidebarStepClick }} />
@@ -851,7 +853,8 @@ function HomePage() {
           <Toolbar />
           {currentView === 'campaigns' && (
             <>
-              {activeStep === 0 && <MyCampaignsStep {...{ onEditCampaign: handleEditCampaign, onCreateNew: handleCreateNewCampaign, autorList, personaList }} />}
+              {activeStep === 0 && campaignsView === 'my-campaigns' && <MyCampaignsStep {...{ onEditCampaign: handleEditCampaign, onCreateNew: handleCreateNewCampaign, autorList, personaList }} />}
+              {activeStep === 0 && campaignsView === 'shared-campaigns' && <SharedCampaignsStep {...{ onEditCampaign: handleEditCampaign }} />}
               {activeStep === 1 && <Campaign {...{ steps, activeStep, ...campaignState, setCampaignState, isGeneratingCampaign, campaignGenerationFailed, generationError, handleGenerateCampaignContent, handleResetCampaign, handleExportHtml: () => exportHtml(memorialCampaignData), editingField, setEditingField: (field) => { setEditingField(field); setIsHtmlField(field === 'conteudoFormatado'); }, isGeneratingSummaryMedio, handleGenerateSummary, isGeneratingSummaryPequeno, isGeneratingConteudoFormatado, handleGenerateFormattedContent, isGeneratingFollowup: campaignState.isGeneratingFollowup, handleGenerateFollowupPosts, isGeneratingImage, handleGenerateImage, onEditFollowup: handleEditFollowup, palettes, autorList, selectedAutorForCampaign, personaList, selectedPersonaForCampaign, onRequestNewAutor: handleRequestNewAutor, onRequestNewPersona: handleRequestNewPersona, paletteId: campaignState.paletteId, customPalette: campaignState.customPalette }} />}
               {activeStep === 2 && <PostsCurtosStep {...{ steps, inputMethod, setInputMethod, handleDrop, handleDragOver, fileInputRef, handleCSVUpload, downloadExampleCsv, setShowSetupModal, promptNumRecords: campaignState.promptNumRecords, setPromptNumRecords: (v) => setCampaignState({ promptNumRecords: v }), promptText: campaignState.promptText, setPromptText: (v) => setCampaignState({ promptText: v }), handleGenerateIAContent, isGenerating, csvData, csvHeaders, onDadosAlterados: handleDadosAlterados, darkMode, exportCsv: () => exportCsv(csvData, csvHeaders), aspectRatio, setAspectRatio: (v) => setCampaignState({ aspectRatio: v }), sidebarOpen }} />}
               {activeStep === 3 && <ImageStep {...{ steps, isLoading, isDraggingOverImage: false, handleImageDrop: (e) => handleImageSelected(e.dataTransfer.files[0]), handleImageDragOver, handleImageDragEnter: () => {}, handleImageDragLeave: () => {}, imageInputRef, handleImageUpload: handleForegroundImageUpload, onOpenImageGallery: handleOpenImageGallery, initialFieldStyles: campaignState.initialFieldStyles, onImageDisplayedSizeChange: () => {}, onCsvDataUpdate: handleCsvRecordContentUpdate, originalImageSize, onZIndexChange: handleZIndexChange, isMobile, onDeselectField: () => setCampaignState({ selectedField: null }), onOpenHtmlEditor: (fieldId) => setEditingField(fieldId), currentPreviewIndex, setCurrentPreviewIndex, onFontScaleChange: (v) => setCampaignState({ fontScale: v }), templateFieldStyles: campaignState.templateFieldStyles, activeStep, addPendingAsset }} />}

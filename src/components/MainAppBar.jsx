@@ -37,6 +37,7 @@ const MainAppBar = ({
   onShowAutores,
   onShowPalettes,
   onShowCampaigns,
+  onShowSharedCampaigns,
   setShowSetupModal,
   onMenuClick,
   isMobile,
@@ -169,7 +170,11 @@ const MainAppBar = ({
         >
           <MenuItem onClick={() => { handleUserMenuClose(); onShowCampaigns(); }}>
             <HomeIcon sx={{ mr: 1 }} />
-            Campanhas
+            Minhas Campanhas
+          </MenuItem>
+          <MenuItem onClick={() => { handleUserMenuClose(); onShowSharedCampaigns(); }}>
+            <FolderOpenIcon sx={{ mr: 1 }} />
+            Campanhas Compartilhadas
           </MenuItem>
           <MenuItem onClick={() => { handleUserMenuClose(); onShowPersonas(); }}>
             <PeopleIcon sx={{ mr: 1 }} />

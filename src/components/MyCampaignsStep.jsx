@@ -15,10 +15,11 @@ import {
   Paper,
   Fab,
 } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Add as AddIcon, Share as ShareIcon } from '@mui/icons-material';
 import { getCampaigns, deleteCampaign } from '../utils/campaignState';
 import { toast } from 'sonner';
 import CampaignCoverFlow from './CampaignCoverFlow';
+import ShareCampaignModal from './ShareCampaignModal';
 
 const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
   const [campaigns, setCampaigns] = useState([]);
@@ -26,6 +27,18 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
   const [error, setError] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [swiperInstance, setSwiperInstance] = useState(null);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
+
+  const handleOpenShareModal = (campaign) => {
+    setSelectedCampaign(campaign);
+    setShareModalOpen(true);
+  };
+
+  const handleCloseShareModal = () => {
+    setShareModalOpen(false);
+    setSelectedCampaign(null);
+  };
 
   useEffect(() => {
     if (swiperInstance && !swiperInstance.destroyed && swiperInstance.realIndex !== activeIndex) {
@@ -118,21 +131,39 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
                 </Typography>
                 <List sx={{ maxHeight: 300, overflow: 'auto' }}>
                   {campaigns.map((campaign, index) => (
-                    <ListItemButton
+                    <ListItem
                       key={campaign.id}
-                      selected={index === activeIndex}
-                      onClick={() => setActiveIndex(index)}
+                      secondaryAction={
+                        <>
+                          <IconButton edge="end" aria-label="share" onClick={(e) => { e.stopPropagation(); handleOpenShareModal(campaign); }}>
+                            <ShareIcon />
+                          </IconButton>
+                          <IconButton edge="end" aria-label="delete" onClick={(e) => { e.stopPropagation(); handleDelete(campaign.id, campaign.name); }}>
+                            <DeleteIcon />
+                          </IconButton>
+                        </>
+                      }
+                      disablePadding
                     >
-                      <ListItemText primary={campaign.name} secondary={`Atualizado em: ${new Date(campaign.updated_at).toLocaleDateString()}`} />
-                      <IconButton edge="end" aria-label="delete" onClick={(e) => { e.stopPropagation(); handleDelete(campaign.id, campaign.name); }}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </ListItemButton>
+                      <ListItemButton
+                        selected={index === activeIndex}
+                        onClick={() => setActiveIndex(index)}
+                      >
+                        <ListItemText primary={campaign.name} secondary={`Atualizado em: ${new Date(campaign.updated_at).toLocaleDateString()}`} />
+                      </ListItemButton>
+                    </ListItem>
                   ))}
                 </List>
               </>
             )}
           </Box>
+        )}
+        {selectedCampaign && (
+            <ShareCampaignModal
+                open={shareModalOpen}
+                onClose={handleCloseShareModal}
+                campaign={selectedCampaign}
+            />
         )}
         <Fab
           color="primary"
