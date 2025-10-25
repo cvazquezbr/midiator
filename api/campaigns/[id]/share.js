@@ -107,6 +107,7 @@ const handler = async (req, res) => {
       try {
         const toEmail = userToShareWith.length > 0 ? userToShareWith[0].email : email;
         const toName = userToShareWith.length > 0 ? userToShareWith[0].name : 'there';
+        const campaignUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:5173'}/campaigns/${campaignId}`;
 
         const transporter = nodemailer.createTransport({
           host: process.env.EMAIL_HOST,
@@ -123,8 +124,10 @@ const handler = async (req, res) => {
           to: toEmail,
           subject: `A campaign has been shared with you: ${campaignName}`,
           html: `<p>Hello ${toName},</p>
-                 <p>${req.user.name} (${req.user.email}) has shared the campaign "${campaignName}" with you.</p>
-                 <p>You can access it by logging into your Midiator account. If you don't have an account, you can create one using this email address to see the shared campaign.</p>
+                 <p>${req.user.name} (${req.user.email}) has shared the campaign "<strong>${campaignName}</strong>" with you.</p>
+                 <p>Click the button below to access it directly:</p>
+                 <a href="${campaignUrl}" style="background-color: #4CAF50; color: white; padding: 14px 25px; text-align: center; text-decoration: none; display: inline-block; border-radius: 8px;">Access Campaign</a>
+                 <p>If you don't have an account yet, you can sign up using this email address to see the shared campaign after logging in.</p>
                  <p>Thank you,<br/>The Midiator Team</p>`,
         });
 
