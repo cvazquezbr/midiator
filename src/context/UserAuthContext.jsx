@@ -11,12 +11,17 @@ export const useUserAuth = () => {
   return context;
 };
 
-export const UserAuthContextProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [googleAccessToken, setGoogleAccessToken] = useState(null);
-  const [loading, setLoading] = useState(true); // True initially to check for session
+export const UserAuthContextProvider = ({ children, initialUser = null, initialToken = null }) => {
+  const [user, setUser] = useState(initialUser);
+  const [googleAccessToken, setGoogleAccessToken] = useState(initialToken);
+  const [loading, setLoading] = useState(!initialUser); // If a user is provided, we are not loading.
 
   const fetchUser = useCallback(async () => {
+    // If we have an initial user, don't fetch.
+    if (initialUser) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch('/api/auth/me');
       if (res.ok) {
@@ -24,7 +29,6 @@ export const UserAuthContextProvider = ({ children }) => {
         setUser(userData);
         setGoogleAccessToken(userData.googleAccessToken);
       } else {
-        // This is an expected case if the user is not logged in
         setUser(null);
         setGoogleAccessToken(null);
       }
@@ -36,10 +40,9 @@ export const UserAuthContextProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [initialUser]);
 
   useEffect(() => {
-    // On initial load, try to fetch the user to see if a session exists
     fetchUser();
   }, [fetchUser]);
 

@@ -5,7 +5,7 @@ import {
 } from '@mui/material';
 import { Refresh, Upload, CloudQueue } from '@mui/icons-material';
 import { useUserAuth } from '../context/UserAuthContext';
-import { findFolderByName, listFiles, getFileAsBlob } from '../utils/googleApi';
+import { getOrCreateBackgroundsFolderId, listFiles, getFileAsBlob, uploadImageToDrive } from '../utils/googleApi';
 import { toast } from 'sonner';
 
 const BackgroundImageSelector = ({ open, onClose, onSelect, onLocalUpload }) => {
@@ -27,24 +27,11 @@ const BackgroundImageSelector = ({ open, onClose, onSelect, onLocalUpload }) => 
     setIsLoading(true);
     setError(null);
     try {
-      // Calls no longer need token arguments
-      let midiatorFolder = await findFolderByName('midiator');
-      if (!midiatorFolder) {
-        // If the root folder doesn't exist, no point in creating it here.
-        // It should be created when a user first saves a background.
-        console.log("[BgSelector] 'midiator' folder not found. No backgrounds to load.");
-        setImages([]);
-        return;
+      const backgroundsFolderId = await getOrCreateBackgroundsFolderId();
+      if (!backgroundsFolderId) {
+          throw new Error('Não foi possível acessar a pasta de coleção no Google Drive.');
       }
-
-      let backgroundsFolder = await findFolderByName('backgrounds', midiatorFolder.id);
-      if (!backgroundsFolder) {
-        console.log("[BgSelector] 'backgrounds' folder not found. No backgrounds to load.");
-        setImages([]);
-        return;
-      }
-
-      const fileList = await listFiles(backgroundsFolder.id);
+      const fileList = await listFiles(backgroundsFolderId);
       const imageFiles = fileList.files.filter(file => file.mimeType.startsWith('image/'));
 
       const imagesWithLinks = imageFiles.map(file => ({
@@ -88,10 +75,33 @@ const BackgroundImageSelector = ({ open, onClose, onSelect, onLocalUpload }) => 
 
   const handleLocalFileSelect = (file) => {
     if (!file) return;
-    if (!onLocalUpload) return;
 
-    onLocalUpload(file);
-    onClose();
+    // First, use the file locally for immediate user feedback.
+    if (onLocalUpload) {
+      onLocalUpload(file);
+    }
+    onClose(); // Close the modal immediately for a faster user experience.
+
+    // Then, start the upload to Google Drive in the background.
+    toast.promise(
+      async () => {
+        const folderId = await getOrCreateBackgroundsFolderId();
+        if (!folderId) throw new Error('Pasta de coleção não encontrada.');
+
+        const uploadedFile = await uploadImageToDrive(file, folderId);
+        if (!uploadedFile) throw new Error('Falha no upload.');
+
+        // Refresh the list in the background silently
+        fetchBackgrounds();
+
+        return uploadedFile;
+      },
+      {
+        loading: `Salvando "${file.name}" na sua coleção...`,
+        success: (uploadedFile) => `"${uploadedFile.name}" foi salvo com sucesso!`,
+        error: (err) => `Erro ao salvar: ${err.message}`,
+      }
+    );
   };
 
   const handleFileChange = (event) => {
@@ -138,7 +148,9 @@ const BackgroundImageSelector = ({ open, onClose, onSelect, onLocalUpload }) => 
           {error && <Alert severity="error">{error}</Alert>}
           {!googleAccessToken && !isLoading && <Alert severity="info">Conecte-se com sua conta Google para carregar imagens de fundo.</Alert>}
           {googleAccessToken && !isLoading && !error && images.length === 0 && (
-            <Alert severity="info">Nenhuma imagem encontrada na pasta `midiator/backgrounds` do seu Google Drive.</Alert>
+            <Alert severity="info">
+              Sua coleção de imagens está vazia. Imagens que você salvar aqui aparecerão nesta galeria para uso futuro.
+            </Alert>
           )}
           {googleAccessToken && !isLoading && images.length > 0 && (
             <Grid container spacing={2}>
