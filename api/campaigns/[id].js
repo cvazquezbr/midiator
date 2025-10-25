@@ -42,22 +42,40 @@ const handler = async (req, res) => {
     }
   } else if (req.method === 'PUT') {
     try {
+      // Step 1: First, verify if the user has access to this campaign (owner or shared)
+      const accessCheck = await query(
+        `SELECT c.id FROM campaigns c
+         WHERE c.id = $1
+           AND (c.user_id = $2 OR EXISTS (
+             SELECT 1 FROM campaign_shares cs
+             WHERE cs.campaign_id = c.id
+               AND (cs.shared_with_user_id = $2 OR cs.shared_with_email = $3)
+           ))`,
+        [id, userId, userEmail]
+      );
+
+      if (accessCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Campaign not found or access denied.' });
+      }
+
+      // Step 2: If access is verified, proceed with the update
       const { name, campaign_data, autor_id, persona_id, palette_id } = await parseBody(req);
       if (!name || !campaign_data) {
         return res.status(400).json({ error: 'Campaign name and data are required.' });
       }
 
-      // Ensure empty strings or "custom" for foreign keys are converted to null
       const finalAutorId = autor_id === '' ? null : autor_id;
       const finalPersonaId = persona_id === '' ? null : persona_id;
       const finalPaletteId = (palette_id === '' || palette_id === 'custom') ? null : palette_id;
 
       const { rows } = await query(
-        'UPDATE campaigns SET name = $1, campaign_data = $2, autor_id = $3, persona_id = $4, palette_id = $5, updated_at = NOW() WHERE id = $6 AND user_id = $7 RETURNING id, name, updated_at',
-        [name, campaign_data, finalAutorId, finalPersonaId, finalPaletteId, id, userId]
+        'UPDATE campaigns SET name = $1, campaign_data = $2, autor_id = $3, persona_id = $4, palette_id = $5, updated_at = NOW() WHERE id = $6 RETURNING id, name, updated_at',
+        [name, campaign_data, finalAutorId, finalPersonaId, finalPaletteId, id]
       );
+
       if (rows.length === 0) {
-        return res.status(404).json({ error: 'Campaign not found or access denied.' });
+        // This case should not be reached if the access check passed, but it's a safeguard
+        return res.status(404).json({ error: 'Campaign not found after access verification.' });
       }
       return res.status(200).json(rows[0]);
     } catch (error) {
