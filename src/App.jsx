@@ -8,6 +8,8 @@ import SignupPage from './pages/SignupPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import PromptsPage from './pages/PromptsPage';
 import ConfigPage from './pages/ConfigPage';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 
 // Route Protection
 import ProtectedRoute from './components/ProtectedRoute';
@@ -18,7 +20,9 @@ function App() {
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/terms-of-service" element={<TermsOfService />} />
 
         {/* Protected Routes for standard users */}
         <Route element={<ProtectedRoute />}>
