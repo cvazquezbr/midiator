@@ -1,8 +1,6 @@
 import { withAuth } from '../../middleware/auth.js';
 import { query } from '../../db.js';
-import { Resend } from 'resend';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import nodemailer from 'nodemailer';
 
 const parseBody = async (req) => {
   let body = '';
@@ -82,8 +80,18 @@ const handler = async (req, res) => {
 
       // Send email notification
       try {
-        await resend.emails.send({
-          from: 'Midiator <noreply@midiator.app>',
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT,
+          secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+        });
+
+        await transporter.sendMail({
+          from: `"Midiator" <${process.env.SMTP_FROM_EMAIL}>`,
           to: sharedUser[0].email,
           subject: `A campaign has been shared with you: ${campaignRows[0].name}`,
           html: `<p>Hello ${sharedUser[0].name},</p>
