@@ -2,16 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useSearchParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
-  Container,
   Box,
   TextField,
   Button,
   Typography,
-  Paper,
   CircularProgress,
   Alert,
   Link,
 } from '@mui/material';
+import AuthLayout from '../components/AuthLayout';
 
 const ResetPasswordPage = () => {
   const [password, setPassword] = useState('');
@@ -26,18 +25,22 @@ const ResetPasswordPage = () => {
 
   useEffect(() => {
     if (!token) {
-      setError('No reset token found. Please request a new password reset.');
+      setError('Token de redefinição não encontrado. Por favor, solicite uma nova redefinição de senha.');
     }
   }, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!token) {
-      setError('Cannot reset password without a valid token.');
+      setError('Não é possível redefinir a senha sem um token válido.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('A senha deve ter pelo menos 8 caracteres.');
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError('As senhas não correspondem.');
       return;
     }
     setError('');
@@ -48,7 +51,7 @@ const ResetPasswordPage = () => {
 
     if (result.success) {
       setMessage(result.message);
-      setTimeout(() => navigate('/login'), 3000); // Redirect to login after 3 seconds
+      setTimeout(() => navigate('/login'), 3000); // Redireciona para o login após 3 segundos
     } else {
       setError(result.error);
     }
@@ -57,65 +60,60 @@ const ResetPasswordPage = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Paper elevation={3} sx={{ mt: 8, p: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Typography component="h1" variant="h5">
-          Reset Your Password
-        </Typography>
-        {error && <Alert severity="error" sx={{ width: '100%', mt: 2 }}>{error}</Alert>}
-        {message && <Alert severity="success" sx={{ width: '100%', mt: 2 }}>{message}</Alert>}
+    <AuthLayout title="Redefina Sua Senha">
+      {error && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{error}</Alert>}
+      {message && <Alert severity="success" sx={{ width: '100%', mb: 2 }}>{message}</Alert>}
 
-        {token ? (
-          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 2 }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="New Password"
-              type="password"
-              id="password"
-              autoFocus
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="confirmPassword"
-              label="Confirm New Password"
-              type="password"
-              id="confirmPassword"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={loading}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading || !!message} // Disable after success
-            >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Reset Password'}
-            </Button>
-            {message && (
-              <Box sx={{ textAlign: 'center' }}>
-                <Link component={RouterLink} to="/login" variant="body2">
-                  Proceed to Sign In
-                </Link>
-              </Box>
-            )}
-          </Box>
-        ) : (
-           <Typography sx={{ mt: 2 }}>
-             Invalid password reset link.
-           </Typography>
-        )}
-      </Paper>
-    </Container>
+      {token ? (
+        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ width: '100%', mt: 1 }}>
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Nova Senha (mín. 8 caracteres)"
+            type="password"
+            id="password"
+            autoFocus
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+          />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="confirmPassword"
+            label="Confirme a Nova Senha"
+            type="password"
+            id="confirmPassword"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={loading}
+          />
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, mb: 2 }}
+            disabled={loading || !!message} // Desativa após o sucesso
+          >
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'Redefinir Senha'}
+          </Button>
+          {message && (
+            <Box sx={{ textAlign: 'center' }}>
+              <Link component={RouterLink} to="/login" variant="body2">
+                Prosseguir para o Login
+              </Link>
+            </Box>
+          )}
+        </Box>
+      ) : (
+         <Typography sx={{ mt: 2 }}>
+           Link de redefinição de senha inválido.
+         </Typography>
+      )}
+    </AuthLayout>
   );
 };
 
