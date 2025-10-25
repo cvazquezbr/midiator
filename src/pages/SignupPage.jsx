@@ -11,12 +11,15 @@ import {
   CircularProgress,
   Alert,
   Link,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 
 const SignupPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { user, signup } = useUserAuth();
@@ -94,18 +97,30 @@ const SignupPage = () => {
             onChange={(e) => setPassword(e.target.value)}
             disabled={loading}
           />
+          <FormControlLabel
+            control={<Checkbox value="allowExtraEmails" color="primary" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} />}
+            label={
+              <Typography variant="body2">
+                I accept the <Link component={RouterLink} to="/terms-of-service">Terms of Service</Link>
+              </Typography>
+            }
+            sx={{ mt: 2 }}
+          />
           <Button
             type="submit"
             fullWidth
             variant="contained"
             sx={{ mt: 3, mb: 2 }}
-            disabled={loading}
+            disabled={loading || !termsAccepted}
           >
             {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign Up'}
           </Button>
-          <Box sx={{ textAlign: 'center' }}>
-            <Link component={RouterLink} to="/login" variant="body2">
+          <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Link component={RouterLink} to="/login" variant="body2" sx={{ mx: 2 }}>
               {"Already have an account? Sign In"}
+            </Link>
+            <Link component={RouterLink} to="/privacy-policy" variant="body2" sx={{ mx: 2 }}>
+              Privacy Policy
             </Link>
           </Box>
         </Box>

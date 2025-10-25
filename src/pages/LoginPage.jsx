@@ -125,9 +125,12 @@ const LoginPage = () => {
               </Button>
             )}
           </Box>
-          <Box sx={{ textAlign: 'center' }}>
-            <Link component={RouterLink} to="/signup" variant="body2">
+          <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Link component={RouterLink} to="/signup" variant="body2" sx={{ mx: 2 }}>
               {"Don't have an account? Sign Up"}
+            </Link>
+            <Link component={RouterLink} to="/privacy-policy" variant="body2" sx={{ mx: 2 }}>
+              Privacy Policy
             </Link>
           </Box>
         </Box>
