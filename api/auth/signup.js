@@ -52,6 +52,22 @@ export default async function handler(req, res) {
 
     const newUser = newUsers[0];
 
+    // After successful user creation, claim any pending campaign shares
+    try {
+      const { rowCount } = await query(
+        `UPDATE campaign_shares
+         SET shared_with_user_id = $1, shared_with_email = NULL
+         WHERE shared_with_email = $2`,
+        [newUser.id, newUser.email]
+      );
+      if (rowCount > 0) {
+        console.log(`User ${newUser.email} (ID: ${newUser.id}) claimed ${rowCount} pending campaign shares.`);
+      }
+    } catch (claimError) {
+      // Log the error but don't fail the signup process
+      console.error(`Error claiming campaign shares for ${newUser.email}:`, claimError);
+    }
+
     res.status(201).json({
       message: 'User created successfully.',
       user: {
