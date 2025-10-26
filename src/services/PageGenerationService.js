@@ -28,7 +28,14 @@ const PageGenerationService = {
     const brandElements = pageData.customBrandElements !== undefined ? pageData.customBrandElements : (pageData.brandElements || globalBrandElements);
     const fieldPositions = pageData.customFieldPositions || pageData.fieldPositions || globalFieldPositions;
     const fieldStyles = pageData.customFieldStyles || pageData.fieldStyles || globalFieldStyles;
-    const pageTemplate = pageData?.customPageTemplate || pageData.pageTemplate || globalPageTemplate;
+
+    // Merge templates to ensure page-specific styles override global styles without losing them.
+    const pageTemplate = {
+      ...(globalPageTemplate || {}),
+      ...(pageData.pageTemplate || {}),
+      ...(pageData.customPageTemplate || {}),
+    };
+
     const aspectRatio = globalAspectRatio; // Aspect ratio is likely always global for a campaign
 
     try {
