@@ -96,11 +96,13 @@ export const CampaignProvider = ({ children }) => {
     // the new state. We get the CURRENT assets from the state updater function,
     // clear them, and then return the NEW state. This avoids race conditions.
     setCampaignStateInternal(prevState => {
+      console.log("[DEBUG] applyLoadedCampaign: Starting. Previous campaign ID:", prevState.currentCampaign?.id, "New campaign ID:", loadedData.id);
       // Revoke URLs from the PREVIOUS state.
       if (prevState.currentCampaign?.id !== loadedData.id) {
+        console.log("[DEBUG] applyLoadedCampaign: Campaign IDs differ, clearing old pending assets.");
         clearPendingAssets(prevState.pendingAssets);
       }
-      console.log('[CampaignContext] Applying loaded campaign data:', loadedData);
+      console.log('[DEBUG] Applying loaded campaign data:', loadedData);
 
     const campaignData = safeDeepClone(loadedData.campaign_data || {});
 
@@ -137,7 +139,7 @@ export const CampaignProvider = ({ children }) => {
       fieldPositions: campaignData.fieldPositions || {},
       colors: campaignColors,
     };
-    console.log('[CampaignContext] State after applying loaded campaign:', newState);
+    console.log('[DEBUG] State after applying loaded campaign:', newState);
     return newState;
     });
   }, [palettes]);
