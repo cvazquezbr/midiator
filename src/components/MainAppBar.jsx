@@ -26,6 +26,7 @@ import {
   Home as HomeIcon,
   FolderOpen as FolderOpenIcon,
   Palette,
+  BarChart,
 } from '@mui/icons-material';
 import { useUserAuth } from '../context/UserAuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -38,6 +39,7 @@ const MainAppBar = ({
   onShowPalettes,
   onShowCampaigns,
   onShowSharedCampaigns,
+  onShowMonitor,
   setShowSetupModal,
   onMenuClick,
   isMobile,
@@ -88,6 +90,8 @@ const MainAppBar = ({
         return 'Autores';
       case 'palettes':
         return 'Paletas de Cores';
+      case 'monitor':
+        return 'Monitorar';
       default:
         return 'Midiator';
     }
@@ -187,6 +191,10 @@ const MainAppBar = ({
           <MenuItem onClick={() => { handleUserMenuClose(); onShowPalettes(); }}>
             <Palette sx={{ mr: 1 }} />
             Paletas
+          </MenuItem>
+          <MenuItem onClick={() => { handleUserMenuClose(); onShowMonitor(); }}>
+            <BarChart sx={{ mr: 1 }} />
+            Monitorar
           </MenuItem>
           <Divider />
           <MenuItem onClick={() => { navigate('/config'); handleUserMenuClose(); }}>
