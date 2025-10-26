@@ -142,7 +142,7 @@ const PageGeneratorFrontendOnly = ({
             ...campaignState,
             record: pageData.record,
             index: pageData.index,
-            pageTemplate: pageData.customPageTemplate || pageTemplate,
+          pageTemplate: { ...pageTemplate, ...(pageData.customPageTemplate || {}) },
             brandElements: pageData.customBrandElements !== undefined ? pageData.customBrandElements : brandElements,
             fieldPositions: pageData.customFieldPositions || fieldPositions,
             fieldStyles: pageData.customFieldStyles || fieldStyles,
