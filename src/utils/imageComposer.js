@@ -301,9 +301,13 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight, pen
         if (borderWidth > 0) {
             ctx.strokeStyle = borderColor || '#000000';
             ctx.lineWidth = borderWidth;
-            // The borderRadius is now passed directly, relying on drawRoundedRect's internal logic
-            // to handle clamping, which mirrors CSS behavior.
-            drawRoundedRect(ctx, dx, dy, dWidth, dHeight, borderRadius);
+            // To replicate CSS's `border-box`, the stroke must be drawn on an inner path.
+            // We inset the rectangle by half the border width, so the centered stroke
+            // fills the area from the edge inwards.
+            const inset = borderWidth / 2;
+            // The radius for the inner path must also be reduced.
+            const innerRadius = Math.max(0, borderRadius - inset);
+            drawRoundedRect(ctx, dx + inset, dy + inset, dWidth - (inset * 2), dHeight - (inset * 2), innerRadius);
             ctx.stroke();
         }
 
@@ -476,7 +480,10 @@ export const drawAndComposeImage = async ({
             if (borderWidth > 0) {
                 ctx.strokeStyle = style.borderColor || '#000000';
                 ctx.lineWidth = borderWidth;
-                drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, borderRadius);
+                // To replicate CSS's `border-box`, the stroke must be drawn on an inner path.
+                const inset = borderWidth / 2;
+                const innerRadius = Math.max(0, borderRadius - inset);
+                drawRoundedRect(ctx, posPx.x + inset, posPx.y + inset, posPx.width - (inset * 2), posPx.height - (inset * 2), innerRadius);
                 ctx.stroke();
             }
 
