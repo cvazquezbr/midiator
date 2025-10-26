@@ -64,6 +64,7 @@ import { getDimensionsFromAspectRatio, dataURLtoBlob } from '../utils/imageCompo
 import { autoArrangeFields } from '../utils/autoArrange.js';
 import { createNewImageElement } from '../utils/elementFactory.js';
 import PageGenerationService from '../services/PageGenerationService.js';
+import { useParams, useNavigate } from 'react-router-dom';
 
 import { setGoogleApiToken, setGoogleApiTokenSetter } from '../utils/googleApi';
 
@@ -77,6 +78,8 @@ const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
 function HomePage() {
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
+  const { campaignId } = useParams();
+  const navigate = useNavigate();
   const {
     campaignState,
     setCampaignState,
@@ -170,21 +173,14 @@ function HomePage() {
 
   // This effect synchronizes the UI state after a campaign is loaded into the context
   useEffect(() => {
-    console.log('[DEBUG] HomePage currentCampaign useEffect triggered.', {
-      currentCampaign: !!currentCampaign,
-      isLoading,
-      isFetchingCampaigns,
-    });
     // This effect should ONLY run when a new campaign is loaded, which is signaled
     // by the `currentCampaign` object changing. It should not run on every
     // minor `campaignState` update (like adding an image), as that would
     // incorrectly revert the UI state.
     if (!currentCampaign) {
-      console.log('[DEBUG] No currentCampaign, setting isLoading to false.');
       setIsLoading(false);
       return;
     }
-    console.log('[DEBUG] currentCampaign exists. Syncing UI.');
     setActiveStep(campaignState.activeStep ?? 0);
     setInputMethod(campaignState.inputMethod ?? 'ia');
     const firstImageSrc = campaignState.pageTemplate?.images?.[0]?.src;
@@ -254,30 +250,49 @@ function HomePage() {
   }, [user, fetchPersonasForCampaign, fetchAutoresForCampaign, fetchPalettesForCampaign]);
 
   useEffect(() => {
-    const checkCampaignsAndSetInitialStep = async () => {
-      console.log('[DEBUG] checkCampaignsAndSetInitialStep started.');
-      try {
-        const existingCampaigns = await getCampaigns();
-        console.log('[DEBUG] Fetched existing campaigns:', existingCampaigns?.length);
-        setActiveStep(existingCampaigns?.length > 0 ? 0 : 1);
-      } catch (error) {
-        console.error('[DEBUG] Error fetching campaigns:', error);
-        toast.error("Could not check for existing campaigns.");
-        setActiveStep(1);
-      } finally {
-        console.log('[DEBUG] Setting isFetchingCampaigns to false.');
+    const loadInitialData = async () => {
+      if (!user) {
+        setActiveStep(null);
         setIsFetchingCampaigns(false);
+        return;
+      }
+
+      // If a specific campaign ID is in the URL, load it directly
+      if (campaignId) {
+        setIsLoading(true); // Show the main loader
+        setIsFetchingCampaigns(false); // Don't show "Carregando campanhas..."
+        try {
+          const loadedCampaign = await loadCampaign(campaignId);
+          applyLoadedCampaign({
+            ...loadedCampaign,
+            campaign_data: loadedCampaign.campaign_data || {},
+            pendingAssets: loadedCampaign.pendingAssets || {},
+          });
+          // Redirect to the general campaigns view but with the campaign loaded
+          navigate('/', { replace: true });
+        } catch (error) {
+          toast.error(`Falha ao carregar a campanha compartilhada: ${error.message}`);
+          navigate('/'); // Redirect to home on failure
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        // Otherwise, load the list of user's campaigns
+        setIsFetchingCampaigns(true);
+        try {
+          const existingCampaigns = await getCampaigns();
+          setActiveStep(existingCampaigns?.length > 0 ? 0 : 1);
+        } catch (error) {
+          toast.error("Não foi possível carregar as campanhas.");
+          setActiveStep(1);
+        } finally {
+          setIsFetchingCampaigns(false);
+        }
       }
     };
-    if (user) {
-      console.log('[DEBUG] User exists, calling checkCampaignsAndSetInitialStep.');
-      checkCampaignsAndSetInitialStep();
-    } else {
-      console.log('[DEBUG] No user, setting activeStep to null and isFetchingCampaigns to false.');
-      setActiveStep(null);
-      setIsFetchingCampaigns(false);
-    }
-  }, [user]);
+
+    loadInitialData();
+  }, [user, campaignId, applyLoadedCampaign, navigate]);
 
 
   useEffect(() => {
