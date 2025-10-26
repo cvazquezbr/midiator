@@ -176,11 +176,13 @@ function HomePage() {
     // by the `currentCampaign` object changing. It should not run on every
     // minor `campaignState` update (like adding an image), as that would
     // incorrectly revert the UI state.
+    console.log("[DEBUG] Sync Effect triggered. currentCampaign:", currentCampaign);
     if (!currentCampaign) {
+      console.log("[DEBUG] No currentCampaign, setting isLoading to false.");
       setIsLoading(false);
       return;
     }
-    console.log("Syncing HomePage UI with newly loaded campaign data:", campaignState);
+    console.log("[DEBUG] Syncing HomePage UI with newly loaded campaign data:", campaignState);
     setActiveStep(campaignState.activeStep ?? 0);
     setInputMethod(campaignState.inputMethod ?? 'ia');
     const firstImageSrc = campaignState.pageTemplate?.images?.[0]?.src;
@@ -255,6 +257,7 @@ function HomePage() {
 
   useEffect(() => {
     const checkCampaignsAndSetInitialStep = async () => {
+      console.log("[DEBUG] checkCampaignsAndSetInitialStep: Starting...");
       try {
         const existingCampaigns = await getCampaigns();
         setActiveStep(existingCampaigns?.length > 0 ? 0 : 1);
@@ -262,34 +265,43 @@ function HomePage() {
         toast.error("Could not check for existing campaigns.");
         setActiveStep(1);
       } finally {
+        console.log("[DEBUG] checkCampaignsAndSetInitialStep: Finished. Setting isFetchingCampaigns to false.");
         setIsFetchingCampaigns(false);
       }
     };
     // This effect runs when the user authenticates.
     // If there's no campaignId in the URL, it fetches the list of campaigns.
     // If there IS a campaignId, we let the other effect handle loading.
+    console.log(`[DEBUG] Campaign List Effect triggered. User: ${!!user}, CampaignId: ${campaignId}`);
     if (user && !campaignId) {
+      console.log("[DEBUG] User exists and no campaignId, fetching campaign list.");
       checkCampaignsAndSetInitialStep();
     } else if (!user) {
+      console.log("[DEBUG] No user, resetting state.");
       // If the user logs out or is not present, reset the state.
       setActiveStep(null);
       setIsFetchingCampaigns(false);
+    } else {
+      console.log("[DEBUG] Campaign List Effect: Doing nothing. Let the URL loader handle it.");
     }
   }, [user, campaignId]);
 
   // Effect to load a specific campaign from URL
   useEffect(() => {
     const loadCampaignFromUrl = async () => {
+      console.log(`[DEBUG] URL Loader Effect triggered. User: ${!!user}, CampaignId: ${campaignId}, currentCampaign?.id: ${currentCampaign?.id}`);
       // Only proceed if we have a user and a campaignId from the URL
       if (!user || !campaignId) {
+        console.log("[DEBUG] URL Loader: Aborting (no user or no campaignId).");
         return;
       }
       // Avoid reloading if the correct campaign is already in the context
       if (currentCampaign?.id === campaignId) {
+        console.log("[DEBUG] URL Loader: Aborting (campaign already loaded).");
         return;
       }
 
-      console.log(`[HomePage] Detected campaignId from URL: ${campaignId}. Loading...`);
+      console.log(`[DEBUG] Detected campaignId from URL: ${campaignId}. Loading...`);
       toast.info('Carregando campanha compartilhada...');
       setIsLoading(true);
 
@@ -313,6 +325,7 @@ function HomePage() {
         // Optional: Redirect to a safe page like the campaigns list
         // navigate('/');
       } finally {
+        console.log("[DEBUG] URL Loader: Finished. Setting isLoading to false.");
         setIsLoading(false);
       }
     };
