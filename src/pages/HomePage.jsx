@@ -170,14 +170,21 @@ function HomePage() {
 
   // This effect synchronizes the UI state after a campaign is loaded into the context
   useEffect(() => {
+    console.log('[DEBUG] HomePage currentCampaign useEffect triggered.', {
+      currentCampaign: !!currentCampaign,
+      isLoading,
+      isFetchingCampaigns,
+    });
     // This effect should ONLY run when a new campaign is loaded, which is signaled
     // by the `currentCampaign` object changing. It should not run on every
     // minor `campaignState` update (like adding an image), as that would
     // incorrectly revert the UI state.
     if (!currentCampaign) {
+      console.log('[DEBUG] No currentCampaign, setting isLoading to false.');
       setIsLoading(false);
       return;
     }
+    console.log('[DEBUG] currentCampaign exists. Syncing UI.');
     setActiveStep(campaignState.activeStep ?? 0);
     setInputMethod(campaignState.inputMethod ?? 'ia');
     const firstImageSrc = campaignState.pageTemplate?.images?.[0]?.src;
@@ -248,18 +255,28 @@ function HomePage() {
 
   useEffect(() => {
     const checkCampaignsAndSetInitialStep = async () => {
+      console.log('[DEBUG] checkCampaignsAndSetInitialStep started.');
       try {
         const existingCampaigns = await getCampaigns();
+        console.log('[DEBUG] Fetched existing campaigns:', existingCampaigns?.length);
         setActiveStep(existingCampaigns?.length > 0 ? 0 : 1);
       } catch (error) {
+        console.error('[DEBUG] Error fetching campaigns:', error);
         toast.error("Could not check for existing campaigns.");
         setActiveStep(1);
       } finally {
+        console.log('[DEBUG] Setting isFetchingCampaigns to false.');
         setIsFetchingCampaigns(false);
       }
     };
-    if (user) checkCampaignsAndSetInitialStep();
-    else { setActiveStep(null); setIsFetchingCampaigns(false); }
+    if (user) {
+      console.log('[DEBUG] User exists, calling checkCampaignsAndSetInitialStep.');
+      checkCampaignsAndSetInitialStep();
+    } else {
+      console.log('[DEBUG] No user, setting activeStep to null and isFetchingCampaigns to false.');
+      setActiveStep(null);
+      setIsFetchingCampaigns(false);
+    }
   }, [user]);
 
 
