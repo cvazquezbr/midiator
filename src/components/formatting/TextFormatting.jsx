@@ -68,8 +68,10 @@ const TextFormatting = ({
 
   return (
     <>
-      <Divider sx={{ my: 2 }} /><Button variant="outlined" size="small" onClick={resetFieldStyle} color="secondary" fullWidth>Resetar Estilo</Button>
-      <Button variant="contained" startIcon={<Edit />} onClick={() => onOpenHtmlEditor(selectedField)} fullWidth sx={{ mb: 2 }}>Editar Conteúdo</Button>
+      <Box sx={{ display: 'flex', gap: 1, my: 2 }}>
+        <Button variant="outlined" size="small" onClick={resetFieldStyle} color="secondary" fullWidth>Reset</Button>
+        <Button variant="contained" startIcon={<Edit />} onClick={() => onOpenHtmlEditor(selectedField)} fullWidth>Editar</Button>
+      </Box>
       <Accordion expanded={expandedPanel === 'fontStyle'} onChange={handleAccordionChange('fontStyle')}>
         <AccordionSummary expandIcon={<ExpandMore />}><Typography><FormatSize sx={{ mr: 1, verticalAlign: 'middle' }} />Fonte e Estilo</Typography></AccordionSummary>
         <AccordionDetails>

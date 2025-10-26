@@ -11,7 +11,11 @@ import TextEditorDialog from './TextEditorDialog';
 import { createNewImageElement } from '../utils/elementFactory';
 import { usePageData } from '../hooks/usePageData';
 import { useCampaign } from '../context/CampaignContext';
+import { useUserAuth } from '../context/UserAuthContext';
 import { safeDeepClone } from '../lib/utils';
+import GoogleDriveFolderPicker from './GoogleDriveFolderPicker';
+import { uploadImageToDrive, getOrCreateBackgroundsFolderId } from '../utils/googleApi';
+import { toast } from 'sonner';
 import { copyStyleToClipboard, pasteStyleFromClipboard } from '../utils/styleClipboard';
 import ColorThief from 'colorthief';
 
@@ -65,7 +69,8 @@ const PageEditor = ({
   console.log('%c[PageEditor] Rendering with props:', 'color: red; font-weight: bold;', { open, pageData, aspectRatio });
 
   const { campaignState, isCampaignLoading } = useCampaign();
-  const { csvHeaders, pageTemplate: globalPageTemplate } = campaignState;
+  const { csvHeaders, pageTemplate: globalPageTemplate, pendingAssets } = campaignState;
+  const { googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const pageDataFromHook = usePageData(pageData?.index);
 
   const [editorState, setEditorState] = useState(null);
@@ -73,6 +78,7 @@ const PageEditor = ({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
   const [imageSwatches, setImageSwatches] = useState([]);
+  const [isDrivePickerOpen, setIsDrivePickerOpen] = useState(false);
   const isMobile = useIsMobile();
   const prevImagesRef = useRef();
 
@@ -151,6 +157,52 @@ const PageEditor = ({
 
   const handleLocalImageUpload = (event) => handleImageSelection(event.target.files[0]);
 
+  const handleSaveToDriveClick = () => {
+    if (!googleAccessToken) {
+      toast.error('Você precisa estar logado com o Google para salvar no Drive.');
+      return;
+    }
+    setIsDrivePickerOpen(true);
+  };
+
+  const handleFolderSelectForUpload = async (folder) => {
+    if (!folder) {
+      toast.warn('Nenhuma pasta selecionada.');
+      return;
+    }
+    toast.info(`Salvando imagem na pasta "${folder.name}"...`);
+    try {
+      let imageBlob = null;
+      const imageUrl = pageData?.url;
+
+      if (!imageUrl) {
+        toast.error('Não há imagem gerada para esta página.');
+        return;
+      }
+
+      if (imageUrl.startsWith('blob:')) {
+        imageBlob = pendingAssets[imageUrl];
+      } else if (imageUrl.startsWith('data:')) {
+        imageBlob = dataURLtoBlob(imageUrl);
+      } else {
+        const response = await fetch(`/api/asset-proxy?url=${encodeURIComponent(imageUrl)}`);
+        if (!response.ok) throw new Error(`Falha ao buscar o recurso: ${response.statusText}`);
+        imageBlob = await response.blob();
+      }
+
+      if (!imageBlob) {
+        toast.error('Não foi possível carregar os dados da imagem para o upload.');
+        return;
+      }
+
+      await uploadImageToDrive(imageBlob, folder.id);
+
+    } catch (error) {
+      console.error('Erro ao salvar imagem no Google Drive:', error);
+      toast.error(`Falha ao salvar no Drive: ${error.message}`);
+    }
+  };
+
   if (!open || !editorState) return null;
 
   const handleSave = () => {
@@ -209,6 +261,7 @@ const PageEditor = ({
                   showImageLoaders={true}
                   handleImageUpload={handleLocalImageUpload}
                   onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
+                  onSaveToDrive={handleSaveToDriveClick}
                   campaignSwatches={campaignState.colors}
                   imageSwatches={imageSwatches}
                 />
@@ -233,11 +286,19 @@ const PageEditor = ({
             showImageLoaders={true}
             handleImageUpload={handleLocalImageUpload}
             onOpenImageGallery={() => onOpenImageGallery(handleImageSelection)}
+            onSaveToDrive={handleSaveToDriveClick}
             campaignSwatches={campaignState.colors}
             imageSwatches={imageSwatches}
           />
         </>
       )}
+      <GoogleDriveFolderPicker
+        open={isDrivePickerOpen}
+        onClose={() => setIsDrivePickerOpen(false)}
+        onSelectFolder={handleFolderSelectForUpload}
+        googleAccessToken={googleAccessToken}
+        setGoogleAccessToken={setGoogleAccessToken}
+      />
       <TextEditorDialog
         open={editingField !== null}
         title={`Editar "${editingField || ''}"`}

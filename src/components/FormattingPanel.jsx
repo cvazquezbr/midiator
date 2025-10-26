@@ -43,6 +43,7 @@ const FormattingPanel = ({
   showImageLoaders = false,
   handleImageUpload,
   onOpenImageGallery,
+  onSaveToDrive,
   selectedField,
   setSelectedField,
   campaignSwatches,
@@ -302,11 +303,12 @@ const FormattingPanel = ({
         <Divider sx={{ mb: 2 }} />
 
         {showImageLoaders && (
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <Button variant="contained" component="label" startIcon={<ImageIcon />} fullWidth>
+          <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+            <Button variant="contained" component="label" startIcon={<ImageIcon />} sx={{ flex: 1 }}>
               Carregar <input type="file" accept=".png,.jpg,.jpeg" hidden onChange={handleImageUpload} />
             </Button>
-            <Button variant="outlined" onClick={() => onOpenImageGallery()} fullWidth> Galeria </Button>
+            <Button variant="outlined" onClick={() => onOpenImageGallery()} sx={{ flex: 1 }}> Galeria </Button>
+            <Button variant="outlined" onClick={onSaveToDrive} sx={{ flex: 1 }}> Drive </Button>
           </Box>
         )}
         {!currentElement ? (

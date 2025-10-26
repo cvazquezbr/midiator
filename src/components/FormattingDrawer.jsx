@@ -16,6 +16,7 @@ const FormattingDrawer = ({
   showImageLoaders,
   handleImageUpload,
   onOpenImageGallery,
+  onSaveToDrive,
   campaignSwatches,
   imageSwatches,
 }) => {
@@ -39,6 +40,7 @@ const FormattingDrawer = ({
           showImageLoaders={showImageLoaders}
           handleImageUpload={handleImageUpload}
           onOpenImageGallery={onOpenImageGallery}
+          onSaveToDrive={onSaveToDrive}
           campaignSwatches={campaignSwatches}
           imageSwatches={imageSwatches}
         />

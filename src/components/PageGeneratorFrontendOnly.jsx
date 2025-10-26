@@ -211,6 +211,79 @@ const PageGeneratorFrontendOnly = ({
     }
   };
 
+  const handleUploadToDrive = async () => {
+    if (!googleAccessToken || generatedPagesData.length === 0 || !projectName) {
+      toast.error('Pré-requisitos para upload não atendidos.');
+      return;
+    }
+
+    setIsUploadingToDrive(true);
+    setDriveResult(null);
+    toast.info('Iniciando exportação para o Google Drive...');
+
+    try {
+      const projectFolder = await createFolder(projectName);
+      if (!projectFolder?.id) throw new Error('Não foi possível criar a pasta do projeto.');
+      toast.success(`Pasta do projeto "${projectName}" criada.`);
+
+      const pagesFolder = await createFolder('paginas', projectFolder.id);
+      if (!pagesFolder?.id) throw new Error('Não foi possível criar a subpasta de páginas.');
+
+      const uploadedFileNames = {};
+
+      for (let i = 0; i < generatedPagesData.length; i++) {
+        const pageData = generatedPagesData[i];
+        toast.info(`Fazendo upload da página ${i + 1}/${generatedPagesData.length}...`);
+
+        let blob;
+        if (pageData.url.startsWith('blob:')) {
+            blob = pendingAssets[pageData.url];
+        } else if (pageData.url.startsWith('data:')) {
+            blob = dataURLtoBlob(pageData.url);
+        } else {
+            const response = await fetch(`/api/asset-proxy?url=${encodeURIComponent(pageData.url)}`);
+            if (!response.ok) throw new Error(`Falha ao buscar a imagem da página ${i+1}`);
+            blob = await response.blob();
+        }
+
+        if (blob) {
+            const uploadedFile = await uploadFile(blob, pageData.filename, pagesFolder.id);
+            uploadedFileNames[pageData.index] = uploadedFile.name;
+        } else {
+             uploadedFileNames[pageData.index] = 'ERRO: BLOB NÃO ENCONTRADO';
+        }
+      }
+
+      toast.info('Criando planilha de controle...');
+      const spreadsheetData = [
+          ['imagem', ...csvData[0] ? Object.keys(csvData[0]) : []],
+           ...csvData.map((row, index) => [
+               uploadedFileNames[index] || '',
+               ...Object.values(row)
+           ])
+      ];
+
+      const spreadsheet = await createSpreadsheet(
+        `controle_${projectName}`,
+        spreadsheetData,
+        projectFolder.id
+      );
+
+      setDriveResult({
+        folderUrl: `https://drive.google.com/drive/folders/${projectFolder.id}`,
+        spreadsheetUrl: spreadsheet.spreadsheetUrl,
+      });
+
+      toast.success('Exportação para o Google Drive concluída com sucesso!');
+
+    } catch (error) {
+      console.error('Falha na exportação para o Google Drive:', error);
+      toast.error(`Erro na exportação: ${error.message}`);
+    } finally {
+      setIsUploadingToDrive(false);
+    }
+  };
+
   const handleRegenerateAll = async () => {
     if (!handleGenerateSinglePage) {
       toast.error("A função de regeneração não está disponível.");
@@ -448,6 +521,31 @@ const PageGeneratorFrontendOnly = ({
               </>
             )}
           </Grid>
+          {generatedPagesData.some(img => img.url) && (
+            <Box sx={{ mt: 2, p: 2, border: '1px dashed grey', borderRadius: 1 }}>
+              <Typography variant="h6" gutterBottom><Google sx={{ mr: 1, verticalAlign: 'middle' }} />Exportar para Google Drive</Typography>
+              <TextField
+                label="Nome do Projeto no Drive"
+                variant="outlined"
+                fullWidth
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                sx={{ mb: 1 }}
+                disabled={isUploadingToDrive}
+              />
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={handleUploadToDrive}
+                disabled={!googleAccessToken || isUploadingToDrive || !projectName}
+                startIcon={isUploadingToDrive ? <CircularProgress size={20} /> : <CloudUpload />}
+                fullWidth
+              >
+                {isUploadingToDrive ? 'Exportando...' : 'Exportar Páginas e Planilha'}
+              </Button>
+              {!googleAccessToken && <Alert severity="warning" sx={{ mt: 1 }}>Faça login com o Google para habilitar a exportação.</Alert>}
+            </Box>
+          )}
           {isGenerating && <Box sx={{ mt: 2 }}><LinearProgress /></Box>}
           <Dialog open={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)}>
             <DialogTitle>Confirmar Exclusão</DialogTitle>
@@ -532,6 +630,21 @@ const PageGeneratorFrontendOnly = ({
         </DialogActions>
       </Dialog>
       <ProgressModal open={showProgressModal} progress={progress} total={csvData.length} onCancel={handleCancelGeneration} title="Gerando Páginas" />
+      <Dialog open={!!driveResult} onClose={() => setDriveResult(null)}>
+        <DialogTitle>Exportação para Google Drive Concluída</DialogTitle>
+        <DialogContent>
+          <Typography gutterBottom>Seus arquivos foram exportados com sucesso.</Typography>
+          <Button variant="contained" href={driveResult?.folderUrl} target="_blank" fullWidth sx={{ mb: 1 }}>
+            Abrir Pasta de Páginas
+          </Button>
+          <Button variant="contained" href={driveResult?.spreadsheetUrl} target="_blank" fullWidth>
+            Abrir Planilha de Controle
+          </Button>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDriveResult(null)}>Fechar</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
