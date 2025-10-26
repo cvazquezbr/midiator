@@ -872,7 +872,22 @@ function HomePage() {
             {!isMobile && <Fab size="small" onClick={() => setSidebarOpen(!sidebarOpen)} sx={{ position: 'fixed', top: '50%', left: sidebarOpen ? 320 - 20 : 0, transform: 'translateY(-50%)', zIndex: (theme) => theme.zIndex.drawer + 1, transition: 'left 0.2s ease-in-out' }} >{sidebarOpen ? <ChevronLeft /> : <ChevronRight />}</Fab>}
           </>
         )}
-        <Box component="main" sx={{ flexGrow: 1, p: { xs: 1, sm: 2, md: 3 }, transition: theme.transitions.create('margin', { easing: theme.transitions.easing.sharp, duration: theme.transitions.duration.leavingScreen }) }} >
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            p: { xs: 1, sm: 2, md: 3 },
+            transition: theme.transitions.create(['margin', 'width'], {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.leavingScreen,
+            }),
+            width: '100%', // Default width for mobile
+            ...(!isMobile && sidebarOpen && {
+              width: `calc(100% - ${320}px)`,
+              marginLeft: `${320}px`,
+            }),
+          }}
+        >
           <Toolbar />
           {currentView === 'campaigns' && (
             <>
