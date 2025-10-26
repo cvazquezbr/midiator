@@ -48,7 +48,6 @@ const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, isCoverFlowA
           variant="h6"
           component="h2"
           title={campaign.name}
-          noWrap
         >
           {campaign.name}
         </Typography>
