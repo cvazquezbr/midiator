@@ -189,7 +189,7 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight, pen
           filters = { brightness: 100, contrast: 100, saturate: 100, blur: 0, opacity: 100 },
           crop,
           shadow, shadowColor, shadowBlur, shadowOffsetX, shadowOffsetY,
-          borderRadius = 0,
+          borderRadius: borderRadiusProp = 0,
           borderWidth = 0,
           borderColor,
           objectFit = 'fill',
@@ -199,6 +199,11 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight, pen
         const dy = (y / 100) * canvasHeight;
         const dWidth = (width / 100) * canvasWidth;
         const dHeight = (height / 100) * canvasHeight;
+
+        // Replicate CSS behavior for 'pill' shapes where a large borderRadius
+        // effectively becomes 50% of the smaller dimension.
+        const minDim = Math.min(dWidth, dHeight);
+        const borderRadius = borderRadiusProp > 100 ? minDim / 2 : borderRadiusProp;
 
         // Draw shadow first, so it's behind the image and not clipped
         if (shadow) {
@@ -454,8 +459,13 @@ export const drawAndComposeImage = async ({
 
             const finalStyle = { ...style, fontSize: (style.fontSize || 24) };
             const padding = (style.padding || 0);
-            const borderRadius = (style.borderRadius || 0);
+            const borderRadiusProp = (style.borderRadius || 0);
             const borderWidth = (style.borderWidth || 0);
+
+            // Replicate CSS behavior for 'pill' shapes where a large borderRadius
+            // effectively becomes 50% of the smaller dimension.
+            const minDim = Math.min(posPx.width, posPx.height);
+            const borderRadius = borderRadiusProp > 100 ? minDim / 2 : borderRadiusProp;
 
             const backgroundOpacity = style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1;
             if (backgroundOpacity > 0 && style.backgroundColor) {
