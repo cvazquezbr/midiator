@@ -25,10 +25,10 @@ const PageGenerationService = {
     } = campaignContext;
 
     // Prioritize page-specific customizations over global campaign settings
-    const brandElements = pageData.customBrandElements !== undefined ? pageData.customBrandElements : globalBrandElements;
-    const fieldPositions = pageData.customFieldPositions || globalFieldPositions;
-    const fieldStyles = pageData.customFieldStyles || globalFieldStyles;
-    const pageTemplate = pageData?.customPageTemplate || globalPageTemplate;
+    const brandElements = pageData.customBrandElements !== undefined ? pageData.customBrandElements : (pageData.brandElements || globalBrandElements);
+    const fieldPositions = pageData.customFieldPositions || pageData.fieldPositions || globalFieldPositions;
+    const fieldStyles = pageData.customFieldStyles || pageData.fieldStyles || globalFieldStyles;
+    const pageTemplate = pageData?.customPageTemplate || pageData.pageTemplate || globalPageTemplate;
     const aspectRatio = globalAspectRatio; // Aspect ratio is likely always global for a campaign
 
     try {

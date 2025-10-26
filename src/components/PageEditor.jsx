@@ -206,21 +206,9 @@ const PageEditor = ({
   if (!open || !editorState) return null;
 
   const handleSave = () => {
-    const {
-      fieldPositions,
-      fieldStyles,
-      brandElements,
-      pageTemplate,
-      ...rest
-    } = editorState;
-
     onSave({
       index: pageData.index,
-      customFieldPositions: fieldPositions,
-      customFieldStyles: fieldStyles,
-      customBrandElements: brandElements,
-      customPageTemplate: pageTemplate,
-      ...rest
+      ...editorState
     });
     onClose();
   };
