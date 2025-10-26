@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
+import { useParams } from 'react-router-dom';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {
   Container, Paper, Typography, Box, Button, Grid, Card, CardContent, Alert, Stepper, Step, StepLabel, StepContent, Chip, IconButton, Tooltip, ToggleButton, ToggleButtonGroup, TextField, Link as MuiLink, Fab, FormControl, InputLabel, Select, Accordion, AccordionSummary, AccordionDetails, Toolbar, Divider, Drawer, List, ListItemButton, ListItemText, CircularProgress,
@@ -76,8 +76,6 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
 const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
 
 function HomePage() {
-  const { campaignId } = useParams();
-  const location = useLocation();
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
   const {
@@ -157,6 +155,7 @@ function HomePage() {
 
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
+  const { campaignId } = useParams();
   const campaignContentRef = useRef(campaignState.campaignContent);
   campaignContentRef.current = campaignState.campaignContent;
 
@@ -197,62 +196,6 @@ function HomePage() {
     setIsLoading(false);
     console.log("HomePage UI sync complete. isLoading set to false.");
   }, [currentCampaign]);
-
-  useEffect(() => {
-    const loadCampaignFromUrl = async () => {
-      if (campaignId && user) {
-        // Avoid reloading if the campaign is already the one from the URL
-        if (currentCampaign && currentCampaign.id === campaignId) return;
-
-        toast.info("Carregando campanha compartilhada...");
-        setIsLoading(true);
-        try {
-          await checkAuthStatus();
-          const loadedCampaign = await loadCampaign(campaignId);
-          console.log('%c[HomePage] Shared Campaign Loaded from DB:', 'color: orange; font-weight: bold;', loadedCampaign);
-
-          const campaign_data = loadedCampaign.campaign_data || {};
-          const dbPaletteId = loadedCampaign.palette_id;
-          const hasCustomPalette = campaign_data.customPalette?.colors?.length > 0;
-          let finalPaletteId = null;
-          if (dbPaletteId) {
-            finalPaletteId = dbPaletteId;
-          } else if (hasCustomPalette) {
-            finalPaletteId = 'custom';
-          }
-
-          const finalCampaignData = {
-            ...campaign_data,
-            paletteId: finalPaletteId,
-          };
-
-          const campaignToApply = {
-            id: loadedCampaign.id,
-            name: loadedCampaign.name,
-            campaign_data: finalCampaignData,
-            pendingAssets: loadedCampaign.pendingAssets,
-          };
-
-          applyLoadedCampaign(campaignToApply);
-
-          if (finalCampaignData.csvData && finalCampaignData.csvData.length > 0) {
-            setInputMethod('manual');
-          } else {
-            setInputMethod('ia');
-          }
-
-          toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
-          setActiveStep(2);
-        } catch (err) {
-          toast.error(`Falha ao carregar a campanha compartilhada: ${err.message}`);
-        } finally {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadCampaignFromUrl();
-  }, [campaignId, user, currentCampaign, applyLoadedCampaign]);
 
   const handleSaveCampaign = async (name) => {
     console.log(`[HomePage] Attempting to save campaign: "${name}"`);
@@ -322,9 +265,65 @@ function HomePage() {
         setIsFetchingCampaigns(false);
       }
     };
-    if (user) checkCampaignsAndSetInitialStep();
-    else { setActiveStep(null); setIsFetchingCampaigns(false); }
-  }, [user]);
+    // This effect runs when the user authenticates.
+    // If there's no campaignId in the URL, it fetches the list of campaigns.
+    // If there IS a campaignId, we let the other effect handle loading.
+    if (user && !campaignId) {
+      checkCampaignsAndSetInitialStep();
+    } else if (!user) {
+      // If the user logs out or is not present, reset the state.
+      setActiveStep(null);
+      setIsFetchingCampaigns(false);
+    }
+  }, [user, campaignId]);
+
+  // Effect to load a specific campaign from URL
+  useEffect(() => {
+    const loadCampaignFromUrl = async () => {
+      // Only proceed if we have a user and a campaignId from the URL
+      if (!user || !campaignId) {
+        return;
+      }
+      // Avoid reloading if the correct campaign is already in the context
+      if (currentCampaign?.id === campaignId) {
+        return;
+      }
+
+      console.log(`[HomePage] Detected campaignId from URL: ${campaignId}. Loading...`);
+      toast.info('Carregando campanha compartilhada...');
+      setIsLoading(true);
+
+      try {
+        await checkAuthStatus(); // Ensure session is valid
+        const loadedCampaign = await loadCampaign(campaignId);
+
+        if (!loadedCampaign) {
+          throw new Error('Campanha não encontrada ou você não tem permissão para visualizá-la.');
+        }
+
+        console.log('%c[HomePage] Shared Campaign Loaded from DB:', 'color: teal; font-weight: bold;', loadedCampaign);
+        applyLoadedCampaign(loadedCampaign);
+        toast.success(`Campanha "${loadedCampaign.name}" carregada.`);
+        // Don't set activeStep here directly, let the other useEffect handle it
+        // based on the loaded campaign data.
+
+      } catch (err) {
+        console.error(`[HomePage] Failed to load campaign from URL:`, err);
+        toast.error(`Falha ao carregar a campanha: ${err.message}`);
+        // Optional: Redirect to a safe page like the campaigns list
+        // navigate('/');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCampaignFromUrl();
+  // This effect should ONLY run when the campaignId or user session changes.
+  // It is critical to NOT include `currentCampaign` here, as that would
+  // create the infinite loop we are trying to fix. The `applyLoadedCampaign`
+  // function will trigger the OTHER useEffect that depends on `currentCampaign`
+  // to update the UI, which is the correct flow.
+  }, [campaignId, user, applyLoadedCampaign]);
 
 
   useEffect(() => {
