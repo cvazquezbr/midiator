@@ -33,6 +33,18 @@ const SignupPage = () => {
     }
   }, [location]);
 
+  useEffect(() => {
+    if (user) {
+      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        localStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
+      } else {
+        navigate('/'); // Redirecionamento padrão após o login
+      }
+    }
+  }, [user, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password.length < 8) {
