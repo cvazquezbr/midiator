@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useUserAuth } from '../context/UserAuthContext';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import {
   Box,
@@ -20,11 +20,22 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const { user, login, googleLogin } = useUserAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Se o usuário já estiver logado, redirecione para a página inicial.
+  // Armazena a URL de destino se o usuário for redirecionado para o login
+  useEffect(() => {
+    const from = location.state?.from?.pathname;
+    if (from) {
+      localStorage.setItem('redirectAfterLogin', from);
+    }
+  }, [location]);
+
+  // Se o usuário já estiver logado, lida com o redirecionamento
   useEffect(() => {
     if (user) {
-      navigate('/', { replace: true });
+      const redirectUrl = localStorage.getItem('redirectAfterLogin');
+      localStorage.removeItem('redirectAfterLogin'); // Limpa após o uso
+      navigate(redirectUrl || '/', { replace: true });
     }
   }, [user, navigate]);
 
@@ -33,12 +44,11 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
     const success = await login(email, password);
-    if (success) {
-      navigate('/');
-    } else {
-      setError('Falha ao fazer login. Verifique suas credenciais.');
-      setLoading(false);
+    if (!success) {
+        setError('Falha ao fazer login. Verifique suas credenciais.');
+        setLoading(false);
     }
+    // O useEffect cuidará do redirecionamento
   };
 
   const initiateGoogleLogin = useGoogleLogin({
@@ -49,12 +59,11 @@ const LoginPage = () => {
       setLoading(true);
       setError('');
       const success = await googleLogin(codeResponse.code);
-      if (success) {
-        setTimeout(() => navigate('/'), 100);
-      } else {
-        setError('Falha no login com o Google. Por favor, tente novamente.');
-        setLoading(false);
-      }
+        if (!success) {
+            setError('Falha no login com o Google. Por favor, tente novamente.');
+            setLoading(false);
+        }
+        // O useEffect cuidará do redirecionamento
     },
     onError: (error) => {
       setError('O login com o Google foi cancelado ou falhou. Por favor, tente novamente.');

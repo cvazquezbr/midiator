@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useParams, useLocation } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {
@@ -75,6 +76,8 @@ const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
 const DEFAULT_IMAGE_SIZE = { width: 720, height: 720 };
 
 function HomePage() {
+  const { campaignId } = useParams();
+  const location = useLocation();
   const { user, googleAccessToken, setGoogleAccessToken } = useUserAuth();
   const { settings, updateSetting, saveSettings } = useSettings();
   const {
@@ -194,6 +197,62 @@ function HomePage() {
     setIsLoading(false);
     console.log("HomePage UI sync complete. isLoading set to false.");
   }, [currentCampaign]);
+
+  useEffect(() => {
+    const loadCampaignFromUrl = async () => {
+      if (campaignId && user) {
+        // Avoid reloading if the campaign is already the one from the URL
+        if (currentCampaign && currentCampaign.id === campaignId) return;
+
+        toast.info("Carregando campanha compartilhada...");
+        setIsLoading(true);
+        try {
+          await checkAuthStatus();
+          const loadedCampaign = await loadCampaign(campaignId);
+          console.log('%c[HomePage] Shared Campaign Loaded from DB:', 'color: orange; font-weight: bold;', loadedCampaign);
+
+          const campaign_data = loadedCampaign.campaign_data || {};
+          const dbPaletteId = loadedCampaign.palette_id;
+          const hasCustomPalette = campaign_data.customPalette?.colors?.length > 0;
+          let finalPaletteId = null;
+          if (dbPaletteId) {
+            finalPaletteId = dbPaletteId;
+          } else if (hasCustomPalette) {
+            finalPaletteId = 'custom';
+          }
+
+          const finalCampaignData = {
+            ...campaign_data,
+            paletteId: finalPaletteId,
+          };
+
+          const campaignToApply = {
+            id: loadedCampaign.id,
+            name: loadedCampaign.name,
+            campaign_data: finalCampaignData,
+            pendingAssets: loadedCampaign.pendingAssets,
+          };
+
+          applyLoadedCampaign(campaignToApply);
+
+          if (finalCampaignData.csvData && finalCampaignData.csvData.length > 0) {
+            setInputMethod('manual');
+          } else {
+            setInputMethod('ia');
+          }
+
+          toast.success(`Campanha "${loadedCampaign.name}" carregada com sucesso!`);
+          setActiveStep(2);
+        } catch (err) {
+          toast.error(`Falha ao carregar a campanha compartilhada: ${err.message}`);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadCampaignFromUrl();
+  }, [campaignId, user, currentCampaign, applyLoadedCampaign]);
 
   const handleSaveCampaign = async (name) => {
     console.log(`[HomePage] Attempting to save campaign: "${name}"`);
