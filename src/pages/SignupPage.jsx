@@ -25,13 +25,6 @@ const SignupPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Se o usuário já estiver logado, redirecione para a página inicial.
-  useEffect(() => {
-    if (user) {
-      navigate('/', { replace: true });
-    }
-  }, [user, navigate]);
-
   // Armazena a URL de destino se o usuário for redirecionado para o cadastro
   useEffect(() => {
     const from = location.state?.from?.pathname;

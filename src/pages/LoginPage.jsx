@@ -126,7 +126,7 @@ const LoginPage = () => {
           {loading ? <CircularProgress size={24} /> : 'Entrar com Google'}
         </Button>
         <Box sx={{ textAlign: 'center', mt: 2 }}>
-          <Link component={RouterLink} to="/signup" variant="body2" sx={{ mx: 2 }}>
+          <Link component={RouterLink} to="/signup" state={{ from: location.state?.from }} variant="body2" sx={{ mx: 2 }}>
             Não tem uma conta? Cadastre-se
           </Link>
           <Link component={RouterLink} to="/privacy-policy" variant="body2" sx={{ mx: 2 }}>
