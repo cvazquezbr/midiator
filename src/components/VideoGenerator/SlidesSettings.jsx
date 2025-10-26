@@ -25,8 +25,8 @@ const SlidesSettings = ({
   setTransitionSound
 }) => {
   return (
-    <Paper elevation={0} sx={{ p: 2, mt: 2, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 1 }}>
-      <Typography variant="h6" sx={{ mb: 1, color: 'white' }}>
+    <Paper elevation={0} sx={{ p: 2, mt: 2, backgroundColor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'grey.100', borderRadius: 1 }}>
+      <Typography variant="h6" sx={{ mb: 1 }}>
         Configurações dos Slides
       </Typography>
       <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -37,8 +37,6 @@ const SlidesSettings = ({
             value={slideDuration}
             onChange={(e) => setSlideDuration(Math.max(1, Math.min(45, Number(e.target.value))))}
             fullWidth
-            InputProps={{ style: { color: 'white' } }}
-            InputLabelProps={{ style: { color: 'rgba(255,255,255,0.7)' } }}
             variant="outlined"
           />
         </Grid>
@@ -49,18 +47,15 @@ const SlidesSettings = ({
             value={fps}
             onChange={(e) => setFps(Math.max(10, Math.min(60, Number(e.target.value))))}
             fullWidth
-            InputProps={{ style: { color: 'white' } }}
-            InputLabelProps={{ style: { color: 'rgba(255,255,255,0.7)' } }}
             variant="outlined"
           />
         </Grid>
         <Grid item xs={12} sm={6}>
           <FormControl fullWidth>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Transição</InputLabel>
+            <InputLabel>Transição</InputLabel>
             <Select
               value={transition}
               onChange={(e) => setTransition(e.target.value)}
-              sx={{ color: 'white' }}
               disabled={compatibilityMode}
             >
               {transitionOptions.map(option => (
@@ -73,11 +68,10 @@ const SlidesSettings = ({
         </Grid>
         <Grid item xs={12} sm={6}>
           <FormControl fullWidth>
-            <InputLabel sx={{ color: 'rgba(255,255,255,0.7)' }}>Intervalo entre Slides</InputLabel>
+            <InputLabel>Intervalo entre Slides</InputLabel>
             <Select
               value={transitionSound}
               onChange={(e) => setTransitionSound(e.target.value)}
-              sx={{ color: 'white' }}
               disabled={compatibilityMode || transition === 'none'}
             >
               <MenuItem value="delay">Atraso (silêncio)</MenuItem>
@@ -96,8 +90,7 @@ const SlidesSettings = ({
               value={slideDelay}
               onChange={(e) => setSlideDelay(Math.max(0, Math.min(10, Number(e.target.value))))}
               fullWidth
-              InputProps={{ style: { color: 'white' }, inputProps: { step: "0.25" } }}
-              InputLabelProps={{ style: { color: 'rgba(255,255,255,0.7)' } }}
+              InputProps={{ inputProps: { step: "0.25" } }}
               variant="outlined"
               disabled={compatibilityMode || transition === 'none'}
             />
@@ -110,8 +103,7 @@ const SlidesSettings = ({
             value={finalSlideDelay}
             onChange={(e) => setFinalSlideDelay(Math.max(0, Math.min(60, Number(e.target.value))))}
             fullWidth
-            InputProps={{ style: { color: 'white' }, inputProps: { step: "0.25" } }}
-            InputLabelProps={{ style: { color: 'rgba(255,255,255,0.7)' } }}
+            InputProps={{ inputProps: { step: "0.25" } }}
             variant="outlined"
           />
         </Grid>
@@ -121,11 +113,9 @@ const SlidesSettings = ({
               <Checkbox
                 checked={generatePerRecord}
                 onChange={(e) => setGeneratePerRecord(e.target.checked)}
-                sx={{ color: 'white' }}
               />
             }
             label="Gerar um vídeo por registro"
-            sx={{ color: 'white' }}
           />
         </Grid>
       </Grid>
