@@ -285,7 +285,7 @@ const TextFormatting = ({
 
 
             {/* CONTAINER COM SLIDERS VERTICAIS LADO A LADO (4 PROPRIEDADES ORIGINAIS) */}
-            <Grid item xs={12} container spacing={2} justifyContent="space-between" alignItems="flex-end" sx={{ height: 150 }}>
+            <Grid item xs={12} container spacing={2} justifyContent="space-between" alignItems="flex-end" sx={{ height: 200 }}>
 
               {/* 1. Opacidade (Fundo) - xs=3 */}
               <Grid item xs={3} sx={{ textAlign: 'center' }}>
