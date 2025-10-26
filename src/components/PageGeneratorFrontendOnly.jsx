@@ -63,7 +63,7 @@ const PageGeneratorFrontendOnly = ({
           ...campaignState,
           record: restOfModifiedData.csvData[0],
           index: restOfModifiedData.index,
-          pageTemplate: customPageTemplate,
+          pageTemplate: { ...campaignState.pageTemplate, ...customPageTemplate },
           brandElements: restOfModifiedData.brandElements,
           fieldPositions: restOfModifiedData.fieldPositions,
           fieldStyles: restOfModifiedData.fieldStyles,
