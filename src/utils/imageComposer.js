@@ -216,7 +216,11 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight, pen
             ctx.shadowOffsetY = shadowOffsetY || 5;
             // We need to fill a shape for the shadow to appear, so we'll fill the rounded rect.
             // The actual image will be drawn over this.
-            drawRoundedRect(ctx, dx, dy, dWidth, dHeight, borderRadius);
+        const minDim = Math.min(dWidth, dHeight);
+        // Treat large borderRadius values (common for 'pill' shapes) as 50% of the smallest dimension.
+        const finalBorderRadius = borderRadius > 100 ? minDim / 2 : borderRadius;
+
+        drawRoundedRect(ctx, dx, dy, dWidth, dHeight, finalBorderRadius);
             ctx.fillStyle = 'rgba(0,0,0,0.01)'; // Use a near-transparent fill
             ctx.fill();
             ctx.restore();
@@ -233,7 +237,9 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight, pen
         }
 
         // Apply clipping path for rounded corners
-        drawRoundedRect(ctx, dx, dy, dWidth, dHeight, borderRadius);
+        const minDim = Math.min(dWidth, dHeight);
+        const finalBorderRadius = borderRadius > 100 ? minDim / 2 : borderRadius;
+        drawRoundedRect(ctx, dx, dy, dWidth, dHeight, finalBorderRadius);
         ctx.clip();
 
         // Set filters
@@ -296,7 +302,11 @@ const drawImageWithEffects = async (ctx, element, canvasWidth, canvasHeight, pen
         if (borderWidth > 0) {
             ctx.strokeStyle = borderColor || '#000000';
             ctx.lineWidth = borderWidth;
-            drawRoundedRect(ctx, dx, dy, dWidth, dHeight, borderRadius);
+            // The finalBorderRadius is already calculated in the clipping section,
+            // but we recalculate it here to keep the logic self-contained for borders.
+            const minDim = Math.min(dWidth, dHeight);
+            const finalBorderRadius = borderRadius > 100 ? minDim / 2 : borderRadius;
+            drawRoundedRect(ctx, dx, dy, dWidth, dHeight, finalBorderRadius);
             ctx.stroke();
         }
 
@@ -455,16 +465,19 @@ export const drawAndComposeImage = async ({
             const borderRadius = (style.borderRadius || 0);
             const borderWidth = (style.borderWidth || 0);
 
+            const minDim = Math.min(posPx.width, posPx.height);
+            const finalBorderRadius = borderRadius > 100 ? minDim / 2 : borderRadius;
+
             const backgroundOpacity = style.backgroundOpacity !== undefined ? style.backgroundOpacity : 1;
             if (backgroundOpacity > 0 && style.backgroundColor) {
                 ctx.fillStyle = hexToRgba(style.backgroundColor, backgroundOpacity);
-                drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, borderRadius);
+                drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, finalBorderRadius);
                 ctx.fill();
             }
             if (borderWidth > 0) {
                 ctx.strokeStyle = style.borderColor || '#000000';
                 ctx.lineWidth = borderWidth;
-                drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, borderRadius);
+                drawRoundedRect(ctx, posPx.x, posPx.y, posPx.width, posPx.height, finalBorderRadius);
                 ctx.stroke();
             }
 
