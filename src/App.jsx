@@ -32,6 +32,7 @@ function App() {
         {/* Protected Routes for standard users */}
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/campaigns/:campaignId" element={<HomePage />} />
           <Route path="/config" element={<ConfigPage />} />
           <Route path="/change-password" element={<ChangePasswordPage />} />
         </Route>

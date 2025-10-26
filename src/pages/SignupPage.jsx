@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useUserAuth } from '../context/UserAuthContext';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   TextField,
@@ -23,6 +23,7 @@ const SignupPage = () => {
   const [loading, setLoading] = useState(false);
   const { user, signup } = useUserAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Se o usuário já estiver logado, redirecione para a página inicial.
   useEffect(() => {
@@ -30,6 +31,14 @@ const SignupPage = () => {
       navigate('/', { replace: true });
     }
   }, [user, navigate]);
+
+  // Armazena a URL de destino se o usuário for redirecionado para o cadastro
+  useEffect(() => {
+    const from = location.state?.from?.pathname;
+    if (from) {
+      localStorage.setItem('redirectAfterLogin', from);
+    }
+  }, [location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
