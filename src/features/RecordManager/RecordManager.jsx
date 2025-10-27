@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types'; // Adicionado para consistência e boas práticas
 import styles from './RecordManager.module.css';
-import RecordsTable from './components/RecordsTable/RecordsTable';
+import RecordsGrid from './components/RecordsGrid/RecordsGrid';
 import RecordModal from './components/RecordModal/RecordModal';
 import ConfirmationModal from '../../components/ui/ConfirmationModal/ConfirmationModal';
 import TextEditorDialog from '../../components/TextEditorDialog';
@@ -173,7 +173,7 @@ const RecordManager = ({
                 </div>
             </div>
 
-            <RecordsTable
+            <RecordsGrid
                 registros={registros}
                 colunas={colunas}
                 onEditar={handleAbrirModalEditar}
