@@ -11,7 +11,7 @@ import 'swiper/css/navigation';
 
 import { Box } from '@mui/material';
 
-const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlideChange, initialSlide, onSwiper }) => {
+const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onShareCampaign, onSlideChange, initialSlide, onSwiper }) => {
   return (
     // This outer box centers the Swiper component and constrains its width,
     // which is the key to preventing the layout calculation bug.
@@ -60,6 +60,7 @@ const CampaignCoverFlow = ({ campaigns, onEditCampaign, onDeleteCampaign, onSlid
                   campaign={campaign}
                   onEditCampaign={onEditCampaign}
                   onDeleteCampaign={onDeleteCampaign}
+                  onShareCampaign={onShareCampaign}
                   isCoverFlowActive={isActive}
                 />
               )}
