@@ -3,7 +3,7 @@ import { IconButton, Popover, Typography, Box, List, ListItem, ListItemIcon, Lis
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
-const CsvInfobox = () => {
+const SpreadsheetInfobox = () => {
   const [anchorEl, setAnchorEl] = useState(null);
 
   const handleClick = (event) => {
@@ -15,7 +15,7 @@ const CsvInfobox = () => {
   };
 
   const open = Boolean(anchorEl);
-  const id = open ? 'csv-infobox-popover' : undefined;
+  const id = open ? 'spreadsheet-infobox-popover' : undefined;
 
   return (
     <>
@@ -52,13 +52,13 @@ const CsvInfobox = () => {
         }}
       >
         <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
-          O que é um arquivo CSV?
+          O que é uma Planilha de Postagens?
         </Typography>
         <Typography variant="body2" paragraph>
-          CSV (Comma-Separated Values) é um formato de arquivo de texto que armazena dados tabulares (números e texto) em formato de texto plano. Cada linha do arquivo é um registro de dados, e cada registro consiste em um ou mais campos, separados por vírgulas (ou outro delimitador, como ponto e vírgula).
+          Uma planilha de postagens é um arquivo que organiza o conteúdo de suas publicações em linhas e colunas. Cada linha representa um post, e cada coluna representa um campo específico do post (como título, texto, etc.). O formato mais comum para importação é o CSV (Valores Separados por Vírgula), mas você pode criar sua planilha em qualquer editor (Excel, Google Sheets) e exportar para esse formato.
         </Typography>
         <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mt: 2 }}>
-          Regras de Formatação para este App:
+          Regras de Formatação para a Planilha:
         </Typography>
         <List dense disablePadding>
           <ListItem sx={{ pl: 0 }}>
@@ -100,4 +100,4 @@ const CsvInfobox = () => {
   );
 };
 
-export default CsvInfobox;
+export default SpreadsheetInfobox;

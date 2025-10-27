@@ -22,7 +22,7 @@ import {
   InsertDriveFileOutlined,
   AutoAwesomeOutlined as GeminiIcon,
 } from '@mui/icons-material';
-import CsvInfobox from './CsvInfobox';
+import SpreadsheetInfobox from './SpreadsheetInfobox';
 import RecordManager from '../features/RecordManager/RecordManager';
 import { getGeminiApiKey } from '../utils/geminiCredentials';
 
@@ -49,7 +49,7 @@ const PostsCurtosStep = ({
   setAspectRatio,
   sidebarOpen,
 }) => {
-  const [isDraggingOverCsv, setIsDraggingOverCsv] = useState(false);
+  const [isDraggingOverSpreadsheet, setIsDraggingOverSpreadsheet] = useState(false);
   const [isGeminiKeyConfigured, setIsGeminiKeyConfigured] = useState(true);
 
   // Derive csvHeaders from csvData to make the component more robust
@@ -69,19 +69,19 @@ const PostsCurtosStep = ({
   const handleDragEnter = (event) => {
     event.preventDefault();
     event.stopPropagation();
-    setIsDraggingOverCsv(true);
+    setIsDraggingOverSpreadsheet(true);
   };
 
   const handleDragLeave = (event) => {
     event.preventDefault();
     event.stopPropagation();
-    setIsDraggingOverCsv(false);
+    setIsDraggingOverSpreadsheet(false);
   };
 
   const handleDrop = (event) => {
     event.preventDefault();
     event.stopPropagation();
-    setIsDraggingOverCsv(false);
+    setIsDraggingOverSpreadsheet(false);
     handleDropProp(event);
   };
 
@@ -121,7 +121,7 @@ const PostsCurtosStep = ({
                   <GeminiIcon />
                   Gerar com IA
                 </ToggleButton>
-                <ToggleButton value="csv">Carregar CSV</ToggleButton>
+                <ToggleButton value="csv">Carregar Planilha</ToggleButton>
                 <ToggleButton value="manual">Criação Manual</ToggleButton>
               </ToggleButtonGroup>
 
@@ -192,8 +192,8 @@ const PostsCurtosStep = ({
                 <Grid item xs={12} md={8}>
                   <Card
                     sx={{
-                      border: isDraggingOverCsv ? '2px dashed #8b5cf6' : '2px dashed #d1d5db',
-                      backgroundColor: isDraggingOverCsv ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
+                      border: isDraggingOverSpreadsheet ? '2px dashed #8b5cf6' : '2px dashed #d1d5db',
+                      backgroundColor: isDraggingOverSpreadsheet ? 'rgba(139, 92, 246, 0.1)' : 'transparent',
                       textAlign: 'center',
                       p: 4,
                     }}
@@ -206,9 +206,9 @@ const PostsCurtosStep = ({
                     <Typography variant="h6" gutterBottom>Arraste e solte ou clique para Upload</Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
                       <Typography variant="body2" color="text.secondary">
-                        Carregue um arquivo CSV com o conteúdo de seus posts
+                        Carregue um arquivo de planilha com o conteúdo de seus posts
                       </Typography>
-                      <CsvInfobox />
+                      <SpreadsheetInfobox />
                     </Box>
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
                       <Button variant="contained" component="label">
@@ -216,7 +216,7 @@ const PostsCurtosStep = ({
                         <input type="file" accept=".csv" hidden ref={fileInputRef} onChange={handleCSVUpload} />
                       </Button>
                       <Button variant="outlined" onClick={downloadExampleCsv}>
-                        Baixar CSV Exemplo
+                        Baixar Planilha Exemplo
                       </Button>
                     </Box>
                   </Card>
@@ -237,7 +237,7 @@ const PostsCurtosStep = ({
                     onClick={() => exportCsv(csvData, csvHeaders)}
                     disabled={!csvData || csvData.length === 0}
                 >
-                    Baixar CSV
+                    Baixar Planilha
                 </Button>
             </Box>
             <RecordManager
