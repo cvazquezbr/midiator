@@ -121,6 +121,7 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
                   campaigns={campaigns}
                   onEditCampaign={onEditCampaign}
                   onDeleteCampaign={handleDelete}
+                  onShareCampaign={handleOpenShareModal}
                   onSlideChange={setActiveIndex}
                   initialSlide={activeIndex}
                   onSwiper={setSwiperInstance}
