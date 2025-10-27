@@ -970,7 +970,7 @@ const Campaign = ({
                 </TabPanel>
 
 
-                <Dialog open={isHintModalOpen} onClose={() => setHintModalOpen(false)} fullWidth>
+                <Dialog open={isHintModalOpen} onClose={() => setHintModalOpen(false)} fullWidth maxWidth="lg">
                     <DialogTitle>
                         Como Descrever o Problema ou Necessidade
                         <IconButton
@@ -1048,7 +1048,7 @@ const Campaign = ({
                     </DialogActions>
                 </Dialog>
 
-                <Dialog open={isSolucaoHintModalOpen} onClose={() => setSolucaoHintModalOpen(false)} fullWidth>
+                <Dialog open={isSolucaoHintModalOpen} onClose={() => setSolucaoHintModalOpen(false)} fullWidth maxWidth="lg">
                     <DialogTitle>
                         Como Descrever a Solução ou Proposta
                         <IconButton
