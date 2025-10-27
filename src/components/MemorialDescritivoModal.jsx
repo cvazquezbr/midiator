@@ -36,7 +36,7 @@ const MemorialDescritivoModal = ({ open, onClose, campaignData }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg" fullScreen={isMobile}>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" fullScreen={isMobile}>
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         Memorial Descritivo da Campanha
         <IconButton onClick={onClose} className="no-print">
