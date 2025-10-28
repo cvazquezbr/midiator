@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import styles from './RecordForm.module.css';
+import RevisaoTextoModal from '../RevisaoTextoModal/RevisaoTextoModal';
+import SpellcheckIcon from '@mui/icons-material/Spellcheck';
 
 /**
  * Formulário para adicionar ou editar um registro.
@@ -24,6 +26,8 @@ const RecordForm = ({
     onStartEditField,
 }) => {
     const [formData, setFormData] = useState({});
+    const [modalRevisaoAberto, setModalRevisaoAberto] = useState(false);
+    const [campoEmRevisao, setCampoEmRevisao] = useState({ nome: '', texto: '' });
     const [novasColunas, setNovasColunas] = useState(
         isPrimeiroRegistro
         ? [
@@ -65,6 +69,24 @@ const RecordForm = ({
         return richTextFields.some(field => 
             fieldName.toLowerCase().includes(field.toLowerCase())
         );
+    };
+
+    const camposParaRevisao = ['problema', 'solução', 'mensagem', 'texto principal', 'descrição', 'conteúdo', 'texto'];
+
+    const isRevisaoHabilitada = (fieldName) => {
+        return camposParaRevisao.some(field =>
+            fieldName.toLowerCase().includes(field.toLowerCase())
+        );
+    };
+
+    const handleRevisarTexto = (nomeCampo, textoAtual) => {
+        setCampoEmRevisao({ nome: nomeCampo, texto: textoAtual });
+        setModalRevisaoAberto(true);
+    };
+
+    const handleSalvarRevisao = (textoRevisado) => {
+        setFormData(prev => ({ ...prev, [campoEmRevisao.nome]: textoRevisado }));
+        setModalRevisaoAberto(false);
     };
 
     const handleChange = (e) => {
@@ -202,23 +224,43 @@ const RecordForm = ({
             {colunas.map(col => (
                 <div key={col} className={styles.formGroup}>
                     <label htmlFor={`campo-${col.replace(/\s+/g, '-')}`}>{col}:</label>
-                    {isRichTextField(col) ? (
-                        <div
-                            className={styles.richTextPreview}
-                            onClick={() => onStartEditField(dadosIniciais.id, col, formData[col] || '')}
-                            dangerouslySetInnerHTML={{ __html: formData[col] || '<p><em>Clique para editar...</em></p>' }}
-                        />
-                    ) : (
-                        <input
-                            type="text"
-                            id={`campo-${col.replace(/\s+/g, '-')}`}
-                            name={col}
-                            value={formData[col] || ''}
-                            onChange={handleChange}
-                        />
-                    )}
+                    <div className={styles.inputWrapper}>
+                        {isRichTextField(col) ? (
+                            <div
+                                className={styles.richTextPreview}
+                                onClick={() => onStartEditField(dadosIniciais.id, col, formData[col] || '')}
+                                dangerouslySetInnerHTML={{ __html: formData[col] || '<p><em>Clique para editar...</em></p>' }}
+                            />
+                        ) : (
+                            <input
+                                type="text"
+                                id={`campo-${col.replace(/\s+/g, '-')}`}
+                                name={col}
+                                value={formData[col] || ''}
+                                onChange={handleChange}
+                            />
+                        )}
+                        {isRevisaoHabilitada(col) && (
+                            <button
+                                type="button"
+                                onClick={() => handleRevisarTexto(col, formData[col] || '')}
+                                className={styles.btnRevisao}
+                                title="Revisar Texto com IA"
+                            >
+                                <SpellcheckIcon />
+                            </button>
+                        )}
+                    </div>
                 </div>
             ))}
+            {modalRevisaoAberto && (
+                <RevisaoTextoModal
+                    textoOriginal={campoEmRevisao.texto}
+                    onFechar={() => setModalRevisaoAberto(false)}
+                    onSalvar={handleSalvarRevisao}
+                    darkMode={darkMode}
+                />
+            )}
             <div className={styles.formActions}>
                 <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`}>Salvar</button>
                 <button type="button" onClick={onCancelar} className={`${styles.btn} ${styles.btnSecondary}`}>Cancelar</button>

@@ -205,4 +205,41 @@
     background-color: hsla(var(--destructive), 0.9);
 }
 
+.inputWrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.inputWrapper input,
+.inputWrapper .richTextPreview {
+    flex-grow: 1;
+}
+
+.richTextPreview {
+    border: 1px solid hsl(var(--input));
+    padding: 0.6rem 0.8rem;
+    border-radius: var(--radius, 0.375rem);
+    background-color: hsl(var(--background));
+    cursor: pointer;
+    min-height: 2.4rem;
+}
+
+.btnRevisao {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: hsl(var(--muted-foreground));
+    border-radius: var(--radius);
+}
+
+.btnRevisao:hover {
+    color: hsl(var(--foreground));
+    background-color: hsl(var(--secondary));
+}
+
 /* Removendo as classes .darkMode específicas, pois as variáveis CSS devem tratar disso */
