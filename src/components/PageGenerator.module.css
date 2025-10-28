@@ -4,6 +4,10 @@
   padding: 8px;
 }
 
+.grid {
+  /* This class is not used, but it's here for reference */
+}
+
 @media (max-width: 960px) {
   .grid-sizer,
   .grid-item {
