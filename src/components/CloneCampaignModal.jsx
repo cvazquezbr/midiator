@@ -93,7 +93,10 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
 
   useEffect(() => {
     const translateAllFields = async () => {
-      if (activeStep === 1 && translatableFields.length > 0) {
+      if (activeStep === 1 && translatableFields.length > 0 && !isTranslating) {
+        const pendingTranslations = translatableFields.some((_, i) => translationStatus[i] === 'pending');
+        if (!pendingTranslations) return;
+
         setIsTranslating(true);
         for (let i = 0; i < translatableFields.length; i++) {
           if (translationStatus[i] === 'pending') {
@@ -104,7 +107,7 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
       }
     };
     translateAllFields();
-  }, [activeStep, translatableFields.length]);
+  }, [activeStep, translatableFields, translationStatus, isTranslating]);
 
 
   const handleNext = () => {
@@ -132,20 +135,11 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
       const { translatedText } = data;
 
       setTranslatedFields(prev => ({ ...prev, [index]: translatedText }));
-      setClonedCampaign(prevCampaign => {
-          const newCampaign = JSON.parse(JSON.stringify(prevCampaign));
-          // This state update needs to be robust enough to find the correct field
-          // even if the value has been changed by a previous translation.
-          // For now, we assume simple key-based replacement is sufficient.
-          let updated = false;
-          traverseState(newCampaign, (key, value, owner) => {
-              if (!updated && key === field.key && value === field.value) {
-                  owner[key] = translatedText;
-                  updated = true;
-              }
-          });
-          return newCampaign;
-      });
+
+      // Mutate the owner object directly. It's safe because clonedCampaign is a deep copy.
+      field.owner[field.key] = translatedText;
+      // Trigger a re-render by creating a shallow copy of the campaign state.
+      setClonedCampaign(prev => ({ ...prev }));
 
       setTranslationStatus(prev => ({ ...prev, [index]: 'done' }));
     } catch (error) {
@@ -158,17 +152,9 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
     const field = translatableFields[index];
     setTranslatedFields(prev => ({ ...prev, [index]: newText }));
 
-    setClonedCampaign(prevCampaign => {
-      const newCampaign = JSON.parse(JSON.stringify(prevCampaign));
-      let updated = false;
-      traverseState(newCampaign, (key, value, owner) => {
-        if (!updated && key === field.key) {
-            owner[key] = newText;
-            updated = true;
-        }
-      });
-      return newCampaign;
-    });
+    // Mutate the owner object directly and trigger a re-render.
+    field.owner[field.key] = newText;
+    setClonedCampaign(prev => ({ ...prev }));
   };
 
   const handleClone = () => {
