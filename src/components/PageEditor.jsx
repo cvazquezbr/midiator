@@ -83,8 +83,9 @@ const PageEditor = ({
   const prevImagesRef = useRef();
 
   useEffect(() => {
-    // The check for `pageData` is critical. It's the source of truth for the specific item.
-    if (open && pageData && pageDataFromHook) {
+    // Initialize state only when the editor opens and state is not yet set.
+    // This prevents state from being overwritten on re-renders caused by parent components.
+    if (open && pageData && pageDataFromHook && !editorState) {
       const {
         effectiveFieldPositions,
         effectiveFieldStyles,
@@ -106,12 +107,10 @@ const PageEditor = ({
       };
 
       setEditorState(initialEditorState);
-    } else if (!open) {
-      setEditorState(null);
-      setSelectedField(null);
     }
-    // Add pageData to the dependency array as it's now used for initialization.
-  }, [open, pageData, pageDataFromHook]);
+    // Note: The component is unmounted when `open` becomes false, so we don't need an `else if (!open)`
+    // to clear the state. The state will be naturally reset on the next mount.
+  }, [open, pageData, pageDataFromHook, editorState]);
 
   useEffect(() => {
     const firstImage = editorState?.pageTemplate?.images?.[0];
