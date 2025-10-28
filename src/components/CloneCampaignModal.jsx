@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -22,7 +22,9 @@ import {
   LinearProgress,
   Grid,
   Alert,
+  Chip,
 } from '@mui/material';
+import { CheckCircle, HourglassEmpty, Error as ErrorIcon } from '@mui/icons-material';
 import { traverseState } from '../utils/stateTraversal';
 
 const LANGUAGES = [
@@ -39,36 +41,71 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
   const [targetLanguage, setTargetLanguage] = useState('');
   const [translatableFields, setTranslatableFields] = useState([]);
   const [translatedFields, setTranslatedFields] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [translationStatus, setTranslationStatus] = useState({});
+  const [isTranslating, setIsTranslating] = useState(false);
   const [clonedCampaign, setClonedCampaign] = useState(null);
 
-  useEffect(() => {
-    if (campaign) {
-      const campaignCopy = JSON.parse(JSON.stringify(campaign));
+  const resetState = useCallback(() => {
+    setActiveStep(0);
+    setTargetLanguage('');
+    setTranslatableFields([]);
+    setTranslatedFields({});
+    setTranslationStatus({});
+    setIsTranslating(false);
+    setClonedCampaign(null);
+  }, []);
 
-      // Discard audio and video assets
-      traverseState(campaignCopy, (key, value, owner) => {
-        if (value && typeof value === 'object') {
-          if (value.type === 'audio' || value.type === 'video') {
-            owner[key] = null;
+  useEffect(() => {
+    if (open) {
+      if (campaign) {
+        const campaignCopy = JSON.parse(JSON.stringify(campaign));
+
+        // Discard audio and video assets
+        traverseState(campaignCopy, (key, value, owner) => {
+          if (value && typeof value === 'object') {
+            if (value.type === 'audio' || value.type === 'video') {
+              owner[key] = null;
+            }
+          }
+        });
+
+        setClonedCampaign(campaignCopy);
+
+        const fields = [];
+        // Remove 'name' from ignoreKeys and include it for translation
+        const ignoreKeys = new Set(['id', 'created_at', 'updated_at', 'user_id', 'paletteId', 'aspectRatio', 'page_id', 'campaign_id', 'original_url']);
+
+        traverseState(campaignCopy, (key, value, owner) => {
+          const isUrl = typeof value === 'string' && (value.startsWith('http') || value.startsWith('blob:'));
+          // Reduce length check to include shorter fields like titles and short posts
+          if (typeof value === 'string' && value.trim().length > 1 && !isUrl && !ignoreKeys.has(key)) {
+            fields.push({ key, value, owner });
+          }
+        });
+        setTranslatableFields(fields);
+        setTranslationStatus(fields.reduce((acc, _, index) => ({ ...acc, [index]: 'pending' }), {}));
+      }
+    } else {
+      resetState();
+    }
+  }, [campaign, open, resetState]);
+
+
+  useEffect(() => {
+    const translateAllFields = async () => {
+      if (activeStep === 1 && translatableFields.length > 0) {
+        setIsTranslating(true);
+        for (let i = 0; i < translatableFields.length; i++) {
+          if (translationStatus[i] === 'pending') {
+            await handleTranslateField(translatableFields[i], i);
           }
         }
-      });
+        setIsTranslating(false);
+      }
+    };
+    translateAllFields();
+  }, [activeStep, translatableFields.length]);
 
-      setClonedCampaign(campaignCopy);
-
-      const fields = [];
-      const ignoreKeys = new Set(['id', 'created_at', 'updated_at', 'user_id', 'paletteId', 'aspectRatio', 'name', 'page_id', 'campaign_id', 'original_url']);
-
-      traverseState(campaignCopy, (key, value, owner) => {
-        const isUrl = typeof value === 'string' && (value.startsWith('http') || value.startsWith('blob:'));
-        if (typeof value === 'string' && value.trim().length > 10 && !isUrl && !ignoreKeys.has(key)) {
-          fields.push({ key, value, owner });
-        }
-      });
-      setTranslatableFields(fields);
-    }
-  }, [campaign]);
 
   const handleNext = () => {
     setActiveStep((prevActiveStep) => prevActiveStep + 1);
@@ -83,40 +120,55 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
   };
 
   const handleTranslateField = async (field, index) => {
-    setIsLoading(true);
+    setTranslationStatus(prev => ({ ...prev, [index]: 'translating' }));
     try {
       const response = await fetch('/api/translate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: field.value,
-          targetLanguage,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: field.value, targetLanguage }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to translate');
-      }
-
+      if (!response.ok) throw new Error('Failed to translate');
       const data = await response.json();
       const { translatedText } = data;
-      setTranslatedFields((prev) => ({ ...prev, [index]: translatedText }));
 
-      const newClonedCampaign = JSON.parse(JSON.stringify(clonedCampaign));
-      traverseState(newClonedCampaign, (key, value, owner) => {
-        if (key === field.key && value === field.value) {
-          owner[key] = translatedText;
-        }
+      setTranslatedFields(prev => ({ ...prev, [index]: translatedText }));
+      setClonedCampaign(prevCampaign => {
+          const newCampaign = JSON.parse(JSON.stringify(prevCampaign));
+          // This state update needs to be robust enough to find the correct field
+          // even if the value has been changed by a previous translation.
+          // For now, we assume simple key-based replacement is sufficient.
+          let updated = false;
+          traverseState(newCampaign, (key, value, owner) => {
+              if (!updated && key === field.key && value === field.value) {
+                  owner[key] = translatedText;
+                  updated = true;
+              }
+          });
+          return newCampaign;
       });
-      setClonedCampaign(newClonedCampaign);
+
+      setTranslationStatus(prev => ({ ...prev, [index]: 'done' }));
     } catch (error) {
       console.error('Translation error:', error);
-      // Handle error state in UI, e.g., show a toast message
-    } finally {
-      setIsLoading(false);
+      setTranslationStatus(prev => ({ ...prev, [index]: 'error' }));
     }
+  };
+
+  const handleManualTextChange = (index, newText) => {
+    const field = translatableFields[index];
+    setTranslatedFields(prev => ({ ...prev, [index]: newText }));
+
+    setClonedCampaign(prevCampaign => {
+      const newCampaign = JSON.parse(JSON.stringify(prevCampaign));
+      let updated = false;
+      traverseState(newCampaign, (key, value, owner) => {
+        if (!updated && key === field.key) {
+            owner[key] = newText;
+            updated = true;
+        }
+      });
+      return newCampaign;
+    });
   };
 
   const handleClone = () => {
@@ -128,7 +180,7 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
   };
 
   const steps = ['Select Language', 'Translate Fields', 'Review and Clone'];
-  const translatedCount = Object.keys(translatedFields).length;
+  const translatedCount = Object.values(translationStatus).filter(s => s === 'done' || s === 'error').length;
   const totalFields = translatableFields.length;
   const progress = totalFields > 0 ? (translatedCount / totalFields) * 100 : 0;
 
@@ -166,39 +218,44 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
         {activeStep === 1 && (
           <Box>
             <Typography sx={{ mb: 2 }}>
-              Translate the fields below ({translatedCount} of {totalFields} translated).
+              Aguarde enquanto traduzimos os campos. Você pode editar as traduções a qualquer momento.
             </Typography>
             <LinearProgress variant="determinate" value={progress} sx={{ mb: 2 }} />
             <List sx={{ maxHeight: '50vh', overflow: 'auto' }}>
-              {translatableFields.map((field, index) => (
-                <ListItem key={index} divider>
-                  <ListItemText
-                    primary={field.key}
-                    secondary={
-                      <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap' }}>
-                        {field.value}
-                      </Typography>
-                    }
-                  />
-                  <Box sx={{ display: 'flex', alignItems: 'center', ml: 2 }}>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      size="small"
-                      value={translatedFields[index] || ''}
-                      onChange={(e) => setTranslatedFields((prev) => ({ ...prev, [index]: e.target.value }))}
-                      sx={{ mr: 1 }}
+              {translatableFields.map((field, index) => {
+                const status = translationStatus[index];
+                return (
+                  <ListItem key={index} divider>
+                    <ListItemText
+                      primary={field.key}
+                      secondaryTypographyProps={{ component: 'div' }}
+                      secondary={
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'pre-wrap', fontStyle: 'italic' }}>
+                            {field.value}
+                          </Typography>
+                          <TextField
+                            fullWidth
+                            variant="outlined"
+                            size="small"
+                            value={translatedFields[index] || ''}
+                            onChange={(e) => handleManualTextChange(index, e.target.value)}
+                            sx={{ mt: 1 }}
+                            placeholder={status === 'translating' ? 'Traduzindo...' : ''}
+                            disabled={status === 'translating'}
+                          />
+                        </Box>
+                      }
                     />
-                    <Button
-                      onClick={() => handleTranslateField(field, index)}
-                      disabled={isLoading || translatedFields[index]}
-                    >
-                      {isLoading && <CircularProgress size={24} />}
-                      {!isLoading && 'Translate'}
-                    </Button>
-                  </Box>
-                </ListItem>
-              ))}
+                     <Box sx={{ ml: 2, display: 'flex', alignItems: 'center' }}>
+                      {status === 'pending' && <Chip icon={<HourglassEmpty />} label="Aguardando" size="small" />}
+                      {status === 'translating' && <CircularProgress size={24} />}
+                      {status === 'done' && <Chip icon={<CheckCircle />} label="Concluído" size="small" color="success" />}
+                      {status === 'error' && <Chip icon={<ErrorIcon />} label="Erro" size="small" color="error" />}
+                    </Box>
+                  </ListItem>
+                )
+              })}
             </List>
           </Box>
         )}
@@ -230,8 +287,11 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         {activeStep > 0 && <Button onClick={handleBack}>Back</Button>}
-        <Button onClick={activeStep === steps.length - 1 ? handleClone : handleNext} disabled={activeStep === 0 && !targetLanguage}>
-          {activeStep === steps.length - 1 ? 'Clone' : 'Next'}
+        <Button
+          onClick={activeStep === steps.length - 1 ? handleClone : handleNext}
+          disabled={(activeStep === 0 && !targetLanguage) || (activeStep === 1 && isTranslating)}
+        >
+          {activeStep === 1 && isTranslating ? 'Traduzindo...' : (activeStep === steps.length - 1 ? 'Clone' : 'Next')}
         </Button>
       </DialogActions>
     </Dialog>
