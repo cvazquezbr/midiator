@@ -117,7 +117,10 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
   };
 
   const handleClone = () => {
-    onCloneComplete(clonedCampaign);
+    const finalCampaign = JSON.parse(JSON.stringify(clonedCampaign));
+    delete finalCampaign.id;
+    finalCampaign.name = `${finalCampaign.name} (Copy)`;
+    onCloneComplete(finalCampaign);
     onClose();
   };
 
