@@ -20,6 +20,8 @@ import {
   ListItemText,
   TextField,
   LinearProgress,
+  Grid,
+  Alert,
 } from '@mui/material';
 import { traverseState } from '../utils/stateTraversal';
 
@@ -56,10 +58,11 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
       setClonedCampaign(campaignCopy);
 
       const fields = [];
+      const ignoreKeys = new Set(['id', 'created_at', 'updated_at', 'user_id', 'paletteId', 'aspectRatio', 'name', 'page_id', 'campaign_id', 'original_url']);
 
       traverseState(campaignCopy, (key, value, owner) => {
         const isUrl = typeof value === 'string' && (value.startsWith('http') || value.startsWith('blob:'));
-        if (typeof value === 'string' && value.trim().length > 10 && !isUrl) {
+        if (typeof value === 'string' && value.trim().length > 10 && !isUrl && !ignoreKeys.has(key)) {
           fields.push({ key, value, owner });
         }
       });
@@ -117,7 +120,10 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
   };
 
   const handleClone = () => {
-    onCloneComplete(clonedCampaign);
+    const finalCampaign = JSON.parse(JSON.stringify(clonedCampaign));
+    delete finalCampaign.id;
+    finalCampaign.name = `${finalCampaign.name} (Copy)`;
+    onCloneComplete(finalCampaign);
     onClose();
   };
 
@@ -197,20 +203,28 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
           </Box>
         )}
         {activeStep === 2 && (
-            <Box>
-                <Typography>Review the cloned campaign data below before finalizing.</Typography>
-                <TextField
-                    multiline
-                    fullWidth
-                    rows={10}
-                    value={JSON.stringify(clonedCampaign, null, 2)}
-                    InputProps={{
-                        readOnly: true,
-                    }}
-                    variant="outlined"
-                    sx={{ mt: 2 }}
-                />
-            </Box>
+          <Box>
+            <Typography variant="h6" gutterBottom>Resumo da Clonagem</Typography>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+                <Grid item xs={12} sm={6}>
+                    <Typography variant="body1"><strong>Campanha Original:</strong></Typography>
+                    <Typography variant="body2" color="text.secondary">{campaign?.name}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                    <Typography variant="body1"><strong>Idioma de Destino:</strong></Typography>
+                    <Typography variant="body2" color="text.secondary">{LANGUAGES.find(l => l.code === targetLanguage)?.name}</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                    <Typography variant="body1"><strong>Campos para Tradução:</strong></Typography>
+                    <Typography variant="body2" color="text.secondary">{translatedCount} de {totalFields} traduzidos</Typography>
+                </Grid>
+                <Grid item xs={12}>
+                    <Alert severity="info" sx={{ mt: 2 }}>
+                        Ao clicar em "Clonar", uma nova campanha será criada como uma cópia e carregada no editor. Imagens serão mantidas, mas arquivos de áudio e vídeo serão descartados. A nova campanha não será salva até que você a salve manualmente.
+                    </Alert>
+                </Grid>
+            </Grid>
+          </Box>
         )}
       </DialogContent>
       <DialogActions>

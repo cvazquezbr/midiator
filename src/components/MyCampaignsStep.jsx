@@ -21,6 +21,8 @@ import { toast } from 'sonner';
 import CampaignCoverFlow from './CampaignCoverFlow';
 import ShareCampaignModal from './ShareCampaignModal';
 import CloneCampaignModal from './CloneCampaignModal';
+import { traverseState } from '../utils/stateTraversal';
+import { deserializeCampaignData } from '../utils/campaignState.js';
 
 const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
   const [campaigns, setCampaigns] = useState([]);
@@ -52,8 +54,14 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
     setSelectedCampaign(null);
   };
 
-  const handleCloneComplete = (clonedCampaign) => {
-    onEditCampaign(clonedCampaign);
+  const handleCloneComplete = async (clonedCampaign) => {
+    const { finalState, newlyCreatedAssets } = await deserializeCampaignData(clonedCampaign.campaign_data);
+    const rehydratedCampaign = {
+      ...clonedCampaign,
+      campaign_data: finalState,
+      pendingAssets: newlyCreatedAssets,
+    };
+    onEditCampaign(rehydratedCampaign);
   };
 
   useEffect(() => {
