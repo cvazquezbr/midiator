@@ -58,7 +58,8 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
       const fields = [];
 
       traverseState(campaignCopy, (key, value, owner) => {
-        if (typeof value === 'string' && value.trim().length > 10) {
+        const isUrl = typeof value === 'string' && (value.startsWith('http') || value.startsWith('blob:'));
+        if (typeof value === 'string' && value.trim().length > 10 && !isUrl) {
           fields.push({ key, value, owner });
         }
       });
