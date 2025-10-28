@@ -8,7 +8,7 @@ import {
 } from '@mui/icons-material';
 import Masonry from 'masonry-layout';
 import imagesLoaded from 'imagesloaded';
-import styles from './PageGenerator.module.css';
+import './PageGenerator.css';
 import PageEditor from './PageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { drawAndComposeImage, dataURLtoBlob } from '../utils/imageComposer';
@@ -31,9 +31,16 @@ const PageGeneratorFrontendOnly = ({
     fieldStyles,
     brandElements,
     pageTemplate,
-    generatedPagesData,
+    generatedPagesData: originalGeneratedPagesData,
     pendingAssets,
   } = campaignState;
+
+  const generatedPagesData = [
+    {"index": 0, "url": "https://i.imgur.com/bwy74ok.jpg", "record": {"Título": "Page 1"}},
+    {"index": 1, "url": "https://i.imgur.com/bAZWoqx.jpg", "record": {"Título": "Page 2"}},
+    {"index": 2, "url": "https://i.imgur.com/PgmEBSB.jpg", "record": {"Título": "Page 3"}},
+    {"index": 3, "url": "https://i.imgur.com/aboaFoB.jpg", "record": {"Título": "Page 4"}},
+  ];
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -576,10 +583,10 @@ const PageGeneratorFrontendOnly = ({
           {generatedPagesData.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} /><Typography variant="h6" gutterBottom>Páginas Geradas ({generatedPagesData.length})</Typography>
-              <div ref={gridRef} className={styles.grid}>
-                <div className={styles['grid-sizer']}></div>
+              <div ref={gridRef} className="grid">
+                <div className="grid-sizer"></div>
                 {generatedPagesData.map((pageData, index) => (
-                  <div className={styles['grid-item']} key={pageData.index}>
+                  <div className="grid-item" key={pageData.index}>
                     <Card variant="outlined">
                       <CardContent>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
