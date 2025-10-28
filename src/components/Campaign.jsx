@@ -45,8 +45,10 @@ import {
     Close as CloseIcon,
     Save as SaveIcon,
     Add as AddIcon,
+    Spellcheck as SpellcheckIcon,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
+import RevisaoTextoModal from './RevisaoTextoModal/RevisaoTextoModal';
 
 const problemaHint = (
     <Box sx={{ p: 2, maxWidth: 500 }}>
@@ -198,6 +200,8 @@ const Campaign = ({
     const problemaRef = useRef(null);
 
     const [activeTab, setActiveTab] = useState(0);
+    const [isRevisaoModalOpen, setRevisaoModalOpen] = useState(false);
+    const [campoEmRevisao, setCampoEmRevisao] = useState({ nome: '', texto: '' });
     const [isHintModalOpen, setHintModalOpen] = React.useState(false);
     const [isSolucaoHintModalOpen, setSolucaoHintModalOpen] = React.useState(false);
     const [isSavingToDrive, setIsSavingToDrive] = React.useState(false);
@@ -370,6 +374,16 @@ const Campaign = ({
         }
     };
 
+    const handleAbrirRevisao = (nomeCampo, texto) => {
+        setCampoEmRevisao({ nome: nomeCampo, texto });
+        setRevisaoModalOpen(true);
+    };
+
+    const handleSalvarRevisao = (textoRevisado) => {
+        setCampaignState(prev => ({ ...prev, [campoEmRevisao.nome]: textoRevisado }));
+        setRevisaoModalOpen(false);
+    };
+
     const handleAddHashtag = () => {
         const tagToAdd = newHashtag.trim();
         if (tagToAdd) {
@@ -453,9 +467,18 @@ const Campaign = ({
                                     }}
                                     inputRef={problemaRef}
                                 />
-                                <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setHintModalOpen(true)}>
-                                    <GeminiIcon />
-                                </IconButton>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', mt: 1 }}>
+                                    <Tooltip title="Sugerir problemas com IA">
+                                        <IconButton color="primary" onClick={() => setHintModalOpen(true)}>
+                                            <GeminiIcon />
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title="Revisar texto com IA">
+                                        <IconButton color="secondary" onClick={() => handleAbrirRevisao('problema', problema)}>
+                                            <SpellcheckIcon />
+                                        </IconButton>
+                                    </Tooltip>
+                                </Box>
                             </Box>
                         </Grid>
 
@@ -505,9 +528,18 @@ const Campaign = ({
                                             disabled={campaignContent !== null}
                                             sx={{ flexGrow: 1 }}
                                         />
-                                        <IconButton color="primary" sx={{ mt: 1 }} onClick={() => setSolucaoHintModalOpen(true)}>
-                                            <GeminiIcon />
-                                        </IconButton>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', mt: 1 }}>
+                                            <Tooltip title="Sugerir soluções com IA">
+                                                <IconButton color="primary" onClick={() => setSolucaoHintModalOpen(true)}>
+                                                    <GeminiIcon />
+                                                </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="Revisar texto com IA">
+                                                <IconButton color="secondary" onClick={() => handleAbrirRevisao('solucao', solucao)}>
+                                                    <SpellcheckIcon />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Box>
                                     </Box>
                                 </Grid>
                             </>
@@ -1138,6 +1170,12 @@ const Campaign = ({
                         initialStep={0} // Always start from the beginning for the campaign's custom palette
                     />
                 )}
+                <RevisaoTextoModal
+                    open={isRevisaoModalOpen}
+                    onFechar={() => setRevisaoModalOpen(false)}
+                    onSalvar={handleSalvarRevisao}
+                    textoOriginal={campoEmRevisao.texto}
+                />
             </CardContent>
         </Card>
     );
