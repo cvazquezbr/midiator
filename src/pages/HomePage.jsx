@@ -614,7 +614,11 @@ function HomePage() {
       const imageBlob = dataURLtoBlob(`data:image/png;base64,${base64Data}`);
       const managedUrl = addPendingAsset(imageBlob);
       if (!managedUrl) throw new Error("Falha ao criar URL para a imagem gerada.");
-      setCampaignState(prev => ({ ...prev, generatedPageUrl: managedUrl }));
+      setCampaignState(prev => ({
+        ...prev,
+        generatedPageUrl: managedUrl,
+        pageUrls: [managedUrl, ...(prev.pageUrls || [])]
+      }));
       addNewImageToCanvas(managedUrl);
       return true;
     } catch (imageError) {
