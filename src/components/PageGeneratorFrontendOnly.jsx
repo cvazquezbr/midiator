@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ProgressModal from './ProgressModal';
 import {
-  Box, Button, Typography, Card, CardContent, Grid, LinearProgress, Alert, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Chip, TextField, Tooltip, CircularProgress, Divider,
+  Box, Button, Typography, Card, CardContent, LinearProgress, Alert, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Chip, TextField, Tooltip, CircularProgress, Divider,
 } from '@mui/material';
 import {
   Download, Close, Image, CloudUpload, Google, Edit, SwapHoriz, Share, AutoAwesomeOutlined as GeminiIcon, SettingsBackupRestore, Delete, AutoFixHigh,
 } from '@mui/icons-material';
+import Masonry from 'masonry-layout';
+import imagesLoaded from 'imagesloaded';
+import styles from './PageGenerator.module.css';
 import PageEditor from './PageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { drawAndComposeImage, dataURLtoBlob } from '../utils/imageComposer';
@@ -47,6 +50,7 @@ const PageGeneratorFrontendOnly = ({
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [pageToSave, setPageToSave] = useState(null);
+  const gridRef = useRef(null);
 
   const [isPromptEditorOpen, setIsPromptEditorOpen] = useState(false);
   const [editingPromptIndex, setEditingPromptIndex] = useState(null);
@@ -114,6 +118,20 @@ const PageGeneratorFrontendOnly = ({
     performSave();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageToSave]);
+
+  useEffect(() => {
+    if (gridRef.current) {
+      const msnry = new Masonry(gridRef.current, {
+        itemSelector: '.grid-item',
+        columnWidth: '.grid-sizer',
+        percentPosition: true,
+      });
+
+      imagesLoaded(gridRef.current).on('progress', () => {
+        msnry.layout();
+      });
+    }
+  }, [generatedPagesData]);
 
   useEffect(() => {
     const loadFonts = async () => {
@@ -558,9 +576,10 @@ const PageGeneratorFrontendOnly = ({
           {generatedPagesData.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} /><Typography variant="h6" gutterBottom>Páginas Geradas ({generatedPagesData.length})</Typography>
-              <Grid container spacing={2}>
+              <div ref={gridRef} className={styles.grid}>
+                <div className={styles['grid-sizer']}></div>
                 {generatedPagesData.map((pageData, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={pageData.index}>
+                  <div className={styles['grid-item']} key={pageData.index}>
                     <Card variant="outlined">
                       <CardContent>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -587,9 +606,9 @@ const PageGeneratorFrontendOnly = ({
                         </Box>
                       </CardContent>
                     </Card>
-                  </Grid>
+                   </div>
                 ))}
-              </Grid>
+               </div>
             </Box>
           )}
         </CardContent>
