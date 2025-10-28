@@ -152,6 +152,8 @@ const ImageStepUI = ({
               showImageLoaders={true}
               handleImageUpload={handleImageUpload}
               onOpenImageGallery={onOpenImageGallery}
+              campaignSwatches={campaignState.colors}
+              imageSwatches={imageColorPalette}
             />
           </Stack>
         </Box>
@@ -176,6 +178,8 @@ const ImageStepUI = ({
             showImageLoaders={true}
             handleImageUpload={handleImageUpload}
             onOpenImageGallery={onOpenImageGallery}
+            campaignSwatches={campaignState.colors}
+            imageSwatches={imageColorPalette}
           />
         </>
       )}
