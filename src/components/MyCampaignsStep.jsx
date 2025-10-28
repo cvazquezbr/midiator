@@ -22,6 +22,7 @@ import CampaignCoverFlow from './CampaignCoverFlow';
 import ShareCampaignModal from './ShareCampaignModal';
 import CloneCampaignModal from './CloneCampaignModal';
 import { traverseState } from '../utils/stateTraversal';
+import { deserializeCampaignData } from '../utils/campaignState.js';
 
 const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
   const [campaigns, setCampaigns] = useState([]);
