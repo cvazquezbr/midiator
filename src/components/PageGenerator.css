@@ -1,19 +1,19 @@
 .grid-sizer,
 .grid-item {
-  width: 33.333%;
+  width: 20%; /* 5 columns on large screens */
   padding: 8px;
 }
 
 @media (max-width: 960px) {
   .grid-sizer,
   .grid-item {
-    width: 50%;
+    width: 33.33%; /* 3 columns on medium screens */
   }
 }
 
 @media (max-width: 600px) {
   .grid-sizer,
   .grid-item {
-    width: 100%;
+    width: 50%; /* 2 columns on small screens */
   }
 }
