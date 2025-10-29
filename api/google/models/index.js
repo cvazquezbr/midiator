@@ -37,10 +37,11 @@ export default async function handler(request) {
     const GOOGLE_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
     try {
-        const fetchResponse = await fetch(`${GOOGLE_API_URL}?key=${apiKey}`, {
+        const fetchResponse = await fetch(GOOGLE_API_URL, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
+                'x-goog-api-key': apiKey,
             },
         });
 
