@@ -33,15 +33,29 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [cloneModalOpen, setCloneModalOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [cloning, setCloning] = useState(false);
 
   const handleOpenShareModal = (campaign) => {
     setSelectedCampaign(campaign);
     setShareModalOpen(true);
   };
 
-  const handleOpenCloneModal = (campaign) => {
-    setSelectedCampaign(campaign);
-    setCloneModalOpen(true);
+  const handleOpenCloneModal = async (campaign) => {
+    setCloning(true);
+    try {
+      const response = await fetch(`/api/campaigns/${campaign.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch full campaign data.');
+      }
+      const fullCampaign = await response.json();
+      setSelectedCampaign(fullCampaign);
+      setCloneModalOpen(true);
+    } catch (error) {
+      console.error("Failed to open clone modal with full data", error);
+      toast.error(error.message || "Could not load campaign data for cloning.");
+    } finally {
+      setCloning(false);
+    }
   };
 
   const handleCloseShareModal = () => {
@@ -164,8 +178,8 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
                           <IconButton edge="end" aria-label="share" onClick={(e) => { e.stopPropagation(); handleOpenShareModal(campaign); }}>
                             <ShareIcon />
                           </IconButton>
-                          <IconButton edge="end" aria-label="clone" onClick={(e) => { e.stopPropagation(); handleOpenCloneModal(campaign); }}>
-                            <CloneIcon />
+                          <IconButton edge="end" aria-label="clone" onClick={(e) => { e.stopPropagation(); handleOpenCloneModal(campaign); }} disabled={cloning}>
+                            {cloning && selectedCampaign?.id === campaign.id ? <CircularProgress size={24} /> : <CloneIcon />}
                           </IconButton>
                           <IconButton edge="end" aria-label="delete" onClick={(e) => { e.stopPropagation(); handleDelete(campaign.id, campaign.name); }}>
                             <DeleteIcon />
