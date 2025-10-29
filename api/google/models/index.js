@@ -1,12 +1,13 @@
-import { withAuth } from '../middleware/auth.js';
-import { query } from '../db.js';
+export const config = {
+    runtime: 'edge',
+};
 
 async function handler(req, res) {
     if (req.method !== 'GET') {
         // Note: Standard Response objects are used here as this might not be run in a Node.js context compatible with `res.status()`
         return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
             status: 405,
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
         });
     }
 
@@ -21,14 +22,13 @@ async function handler(req, res) {
             });
         }
 
-        const apiKey = rows[0].settings_data.gemini_api_key;
-        const GOOGLE_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+    const GOOGLE_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-        const fetchResponse = await fetch(GOOGLE_API_URL, {
+    try {
+        const fetchResponse = await fetch(`${GOOGLE_API_URL}?key=${apiKey}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'x-goog-api-key': apiKey,
             },
         });
 
@@ -40,7 +40,7 @@ async function handler(req, res) {
                 details: errorText
             }), {
                 status: fetchResponse.status,
-                headers: { 'Content-Type': 'application/json' },
+                headers: {'Content-Type': 'application/json'},
             });
         }
 
@@ -49,15 +49,17 @@ async function handler(req, res) {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
-                'Cache-Control': 's-maxage=3600, stale-while-revalidate',
+                'Cache-Control': 's-maxage=3600, stale-while-revalidate', // Cache for 1 hour
             },
         });
 
+        return response;
+
     } catch (error) {
         console.error('Error fetching from Google API:', error);
-        return new Response(JSON.stringify({ error: 'Internal Server Error', details: error.message }), {
+        return new Response(JSON.stringify({error: 'Internal Server Error', details: error.message}), {
             status: 500,
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
         });
     }
 }
