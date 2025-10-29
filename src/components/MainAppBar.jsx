@@ -197,7 +197,7 @@ const MainAppBar = ({
             Monitorar
           </MenuItem>
           <Divider />
-          <MenuItem onClick={() => { navigate('/config'); handleUserMenuClose(); }}>
+          <MenuItem onClick={() => { handleUserMenuClose(); setShowSetupModal(true); }}>
             <Settings sx={{ mr: 1 }} />
             Configurações
           </MenuItem>

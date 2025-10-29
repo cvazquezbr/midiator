@@ -15,11 +15,14 @@ import {
   Paper,
   Fab,
 } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon, Share as ShareIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Add as AddIcon, Share as ShareIcon, ContentCopy as CloneIcon } from '@mui/icons-material';
 import { getCampaigns, deleteCampaign } from '../utils/campaignState';
 import { toast } from 'sonner';
 import CampaignCoverFlow from './CampaignCoverFlow';
 import ShareCampaignModal from './ShareCampaignModal';
+import CloneCampaignModal from './CloneCampaignModal';
+import { traverseState } from '../utils/stateTraversal';
+import { deserializeCampaignData } from '../utils/campaignState.js';
 
 const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
   const [campaigns, setCampaigns] = useState([]);
@@ -28,6 +31,7 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [swiperInstance, setSwiperInstance] = useState(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [cloneModalOpen, setCloneModalOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
 
   const handleOpenShareModal = (campaign) => {
@@ -35,9 +39,29 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
     setShareModalOpen(true);
   };
 
+  const handleOpenCloneModal = (campaign) => {
+    setSelectedCampaign(campaign);
+    setCloneModalOpen(true);
+  };
+
   const handleCloseShareModal = () => {
     setShareModalOpen(false);
     setSelectedCampaign(null);
+  };
+
+  const handleCloseCloneModal = () => {
+    setCloneModalOpen(false);
+    setSelectedCampaign(null);
+  };
+
+  const handleCloneComplete = async (clonedCampaign) => {
+    const { finalState, newlyCreatedAssets } = await deserializeCampaignData(clonedCampaign.campaign_data);
+    const rehydratedCampaign = {
+      ...clonedCampaign,
+      campaign_data: finalState,
+      pendingAssets: newlyCreatedAssets,
+    };
+    onEditCampaign(rehydratedCampaign);
   };
 
   useEffect(() => {
@@ -122,6 +146,7 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
                   onEditCampaign={onEditCampaign}
                   onDeleteCampaign={handleDelete}
                   onShareCampaign={handleOpenShareModal}
+                   onCloneCampaign={handleOpenCloneModal}
                   onSlideChange={setActiveIndex}
                   initialSlide={activeIndex}
                   onSwiper={setSwiperInstance}
@@ -138,6 +163,9 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
                           <IconButton edge="end" aria-label="share" onClick={(e) => { e.stopPropagation(); handleOpenShareModal(campaign); }}>
                             <ShareIcon />
+                          </IconButton>
+                          <IconButton edge="end" aria-label="clone" onClick={(e) => { e.stopPropagation(); handleOpenCloneModal(campaign); }}>
+                            <CloneIcon />
                           </IconButton>
                           <IconButton edge="end" aria-label="delete" onClick={(e) => { e.stopPropagation(); handleDelete(campaign.id, campaign.name); }}>
                             <DeleteIcon />
@@ -164,6 +192,14 @@ const MyCampaignsStep = ({ onEditCampaign, onCreateNew }) => {
                 open={shareModalOpen}
                 onClose={handleCloseShareModal}
                 campaign={selectedCampaign}
+            />
+        )}
+        {selectedCampaign && (
+            <CloneCampaignModal
+                open={cloneModalOpen}
+                onClose={handleCloseCloneModal}
+                campaign={selectedCampaign}
+                onCloneComplete={handleCloneComplete}
             />
         )}
         <Fab
