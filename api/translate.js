@@ -14,12 +14,20 @@ async function handler(req, res) {
   }
 
   try {
-    // Buscar a chave da API do Gemini do banco de dados
-    const settingsResult = await query('SELECT value FROM settings WHERE key = $1', ['gemini_api_key']);
-    const geminiApiKey = settingsResult.rows[0]?.value;
+    const userId = req.user.sub; // O middleware withAuth adiciona o usuário ao request
+
+    // Buscar a chave da API do Gemini do banco de dados para o usuário específico
+    const settingsResult = await query('SELECT settings_data FROM settings WHERE user_id = $1', [userId]);
+
+    if (settingsResult.rows.length === 0) {
+      return res.status(403).json({ error: 'No settings found for user. Please configure your Gemini API key.' });
+    }
+
+    const settingsData = settingsResult.rows[0].settings_data;
+    const geminiApiKey = settingsData?.gemini_api_key;
 
     if (!geminiApiKey) {
-      return res.status(500).json({ error: 'Server configuration error: Gemini API key is not configured in the database.' });
+      return res.status(500).json({ error: 'Server configuration error: Gemini API key is not configured in your settings.' });
     }
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
