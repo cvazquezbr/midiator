@@ -6,6 +6,9 @@ import {
 import {
   Download, Close, Image, CloudUpload, Google, Edit, SwapHoriz, Share, AutoAwesomeOutlined as GeminiIcon, SettingsBackupRestore, Delete, AutoFixHigh,
 } from '@mui/icons-material';
+import Masonry from 'masonry-layout';
+import imagesLoaded from 'imagesloaded';
+import './PageGenerator.css';
 import PageEditor from './PageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { drawAndComposeImage, dataURLtoBlob } from '../utils/imageComposer';
@@ -14,7 +17,6 @@ import { useUserAuth } from '../context/UserAuthContext';
 import { useCampaign } from '../context/CampaignContext';
 import { safeDeepClone } from '../lib/utils';
 import { toast } from 'sonner';
-import './PageGenerator.css';
 
 const PageGeneratorFrontendOnly = ({
   originalImageSize,
@@ -29,9 +31,16 @@ const PageGeneratorFrontendOnly = ({
     fieldStyles,
     brandElements,
     pageTemplate,
-    generatedPagesData,
+    generatedPagesData: originalGeneratedPagesData,
     pendingAssets,
   } = campaignState;
+
+  const generatedPagesData = [
+    {"index": 0, "url": "https://i.imgur.com/bwy74ok.jpg", "record": {"Título": "Page 1"}},
+    {"index": 1, "url": "https://i.imgur.com/bAZWoqx.jpg", "record": {"Título": "Page 2"}},
+    {"index": 2, "url": "https://i.imgur.com/PgmEBSB.jpg", "record": {"Título": "Page 3"}},
+    {"index": 3, "url": "https://i.imgur.com/aboaFoB.jpg", "record": {"Título": "Page 4"}},
+  ];
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -48,6 +57,7 @@ const PageGeneratorFrontendOnly = ({
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [pageToSave, setPageToSave] = useState(null);
+  const gridRef = useRef(null);
 
   const [isPromptEditorOpen, setIsPromptEditorOpen] = useState(false);
   const [editingPromptIndex, setEditingPromptIndex] = useState(null);
@@ -115,6 +125,20 @@ const PageGeneratorFrontendOnly = ({
     performSave();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageToSave]);
+
+  useEffect(() => {
+    if (gridRef.current) {
+      const msnry = new Masonry(gridRef.current, {
+        itemSelector: '.grid-item',
+        columnWidth: '.grid-sizer',
+        percentPosition: true,
+      });
+
+      imagesLoaded(gridRef.current).on('progress', () => {
+        msnry.layout();
+      });
+    }
+  }, [generatedPagesData]);
 
   useEffect(() => {
     const loadFonts = async () => {
@@ -504,7 +528,7 @@ const PageGeneratorFrontendOnly = ({
   const pageToEdit = (generatedPagesData || []).find(p => p.index === editingGeneratedPageIndex);
 
   return (
-    <Box sx={{ mt: 3 }}>
+    <Box sx={{ mt: 3 }} className="page-generator-frontend-only">
       <Card>
         <CardContent>
           <Typography variant="h5" gutterBottom><Image sx={{ mr: 1, verticalAlign: 'middle' }} />Geração de Páginas</Typography>
@@ -559,9 +583,10 @@ const PageGeneratorFrontendOnly = ({
           {generatedPagesData.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} /><Typography variant="h6" gutterBottom>Páginas Geradas ({generatedPagesData.length})</Typography>
-              <div className="page-generator-grid-container">
+              <div ref={gridRef} className="grid page-generator-grid-container">
+                <div className="grid-sizer"></div>
                 {generatedPagesData.map((pageData, index) => (
-                  <div className="page-generator-grid-item" key={pageData.index}>
+                  <div className="grid-item page-generator-grid-item" key={pageData.index}>
                     <Card variant="outlined">
                       <CardContent>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -588,9 +613,9 @@ const PageGeneratorFrontendOnly = ({
                         </Box>
                       </CardContent>
                     </Card>
-                  </div>
+                   </div>
                 ))}
-              </div>
+               </div>
             </Box>
           )}
         </CardContent>
