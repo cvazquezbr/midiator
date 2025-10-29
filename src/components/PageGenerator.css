@@ -1,19 +1,75 @@
-.grid-sizer,
-.grid-item {
-  width: 20%; /* 5 columns on large screens */
-  padding: 8px;
+.page-generator-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
 }
 
-@media (max-width: 960px) {
-  .grid-sizer,
-  .grid-item {
-    width: 33.33%; /* 3 columns on medium screens */
+.page-generator-grid-item .MuiCardContent-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.page-generator-grid-item .MuiBox-root:first-of-type {
+  flex-shrink: 0;
+}
+
+.page-generator-grid-item .image-container {
+  flex-grow: 1;
+  position: relative;
+  width: 100%;
+  padding-top: 100%; /* Default aspect ratio 1:1 */
+  cursor: pointer;
+}
+
+.page-generator-grid-item .image-container.aspect-ratio-4-5 {
+  padding-top: 125%; /* 5 / 4 = 1.25 */
+}
+
+.page-generator-grid-item .image-container.aspect-ratio-16-9 {
+  padding-top: 56.25%; /* 9 / 16 = 0.5625 */
+}
+
+.page-generator-grid-item img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.page-generator-grid-item .MuiCircularProgress-root {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: -20px;
+  margin-left: -20px;
+}
+
+/* Responsive adjustments */
+@media (min-width: 1280px) {
+  .page-generator-grid-container {
+    grid-template-columns: repeat(5, 1fr);
   }
 }
 
-@media (max-width: 600px) {
-  .grid-sizer,
-  .grid-item {
-    width: 50%; /* 2 columns on small screens */
+@media (min-width: 960px) and (max-width: 1279px) {
+  .page-generator-grid-container {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 600px) and (max-width: 959px) {
+  .page-generator-grid-container {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 599px) {
+  .page-generator-grid-container {
+    grid-template-columns: 1fr;
   }
 }

@@ -14,6 +14,7 @@ import { useUserAuth } from '../context/UserAuthContext';
 import { useCampaign } from '../context/CampaignContext';
 import { safeDeepClone } from '../lib/utils';
 import { toast } from 'sonner';
+import './PageGenerator.css';
 
 const PageGeneratorFrontendOnly = ({
   originalImageSize,
@@ -558,9 +559,9 @@ const PageGeneratorFrontendOnly = ({
           {generatedPagesData.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} /><Typography variant="h6" gutterBottom>Páginas Geradas ({generatedPagesData.length})</Typography>
-              <Grid container spacing={2}>
+              <div className="page-generator-grid-container">
                 {generatedPagesData.map((pageData, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={pageData.index}>
+                  <div className="page-generator-grid-item" key={pageData.index}>
                     <Card variant="outlined">
                       <CardContent>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -569,13 +570,13 @@ const PageGeneratorFrontendOnly = ({
                             {pageData.record?.Título || 'Página sem título'}
                           </Typography>
                         </Box>
-                        <Box
-                          sx={{ position: 'relative', width: '100%', aspectRatio: String(aspectRatio || '1/1').replace(':', ' / '), cursor: 'pointer' }}
+                        <div
+                          className={`image-container aspect-ratio-${String(aspectRatio || '1-1').replace(':', '-')}`}
                           onClick={() => handleOpenGeneratedPageEditor(pageData.index)}
                         >
-                          <img src={pageData.url} alt={`Preview ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: regeneratingIndex === index ? 0.5 : 1 }} />
-                          {regeneratingIndex === index && <CircularProgress size={40} sx={{ position: 'absolute', top: '50%', left: '50%', mt: '-20px', ml: '-20px' }} />}
-                        </Box>
+                          <img src={pageData.url} alt={`Preview ${index + 1}`} />
+                          {regeneratingIndex === index && <CircularProgress size={40} />}
+                        </div>
                         <Box sx={{ display: 'flex', justifyContent: 'space-around', gap: 1, mt: 1 }}>
                            <Tooltip title="Regerar com IA"><IconButton size="small" onClick={async () => { setRegeneratingIndex(index); await handleGenerateSinglePage(pageData.record, pageData.index, pageData.fontScale || 1); setRegeneratingIndex(null); }} disabled={regeneratingIndex !== null}><GeminiIcon /></IconButton></Tooltip>
                            <Tooltip title="Editar Prompt de Imagem"><IconButton size="small" onClick={() => handleOpenPromptEditor(pageData.index)}><AutoFixHigh /></IconButton></Tooltip>
@@ -587,9 +588,9 @@ const PageGeneratorFrontendOnly = ({
                         </Box>
                       </CardContent>
                     </Card>
-                  </Grid>
+                  </div>
                 ))}
-              </Grid>
+              </div>
             </Box>
           )}
         </CardContent>
