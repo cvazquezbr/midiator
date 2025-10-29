@@ -26,6 +26,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import { CheckCircle, HourglassEmpty, Error as ErrorIcon } from '@mui/icons-material';
+import { getTranslatableFields } from '../utils/campaignUtils'; // Import the new utility
 import { traverseState } from '../utils/stateTraversal';
 
 const LANGUAGES = [
@@ -59,46 +60,20 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
   }, []);
 
   useEffect(() => {
-    if (open) {
-      if (campaign) {
-        // Create a deep copy to avoid mutating the original campaign object.
-        const campaignCopy = JSON.parse(JSON.stringify(campaign));
+    if (open && campaign) {
+      // Use the new utility to extract fields and get the processed campaign object
+      const { fields, processedCampaign } = getTranslatableFields(campaign);
 
-        // Pre-processing step: find and parse stringified JSON before traversal.
-        traverseState(campaignCopy, (key, value, owner) => {
-          if (typeof value === 'string' && value.trim().startsWith('{') && value.trim().endsWith('}')) {
-            try {
-              // Replace the stringified JSON with the actual object.
-              owner[key] = JSON.parse(value);
-            } catch (e) {
-              // Not a valid JSON, so we leave it as a string.
-            }
-          }
-        });
+      // Discard audio and video assets from the processed campaign
+      traverseState(processedCampaign, (key, value, owner) => {
+        if (value && typeof value === 'object' && (value.type === 'audio' || value.type === 'video')) {
+          owner[key] = null;
+        }
+      });
 
-        // Second pass: Discard audio and video assets
-        traverseState(campaignCopy, (key, value, owner) => {
-          if (value && typeof value === 'object' && (value.type === 'audio' || value.type === 'video')) {
-            owner[key] = null;
-          }
-        });
-
-        setClonedCampaign(campaignCopy);
-
-        const fields = [];
-        const ignoreKeys = new Set(['id', 'created_at', 'updated_at', 'user_id', 'paletteId', 'aspectRatio', 'page_id', 'campaign_id', 'original_url']);
-
-        // Third pass: Extract all translatable fields from the fully parsed object.
-        traverseState(campaignCopy, (key, value, owner) => {
-          const isUrl = typeof value === 'string' && (value.startsWith('http') || value.startsWith('blob:'));
-          if (typeof value === 'string' && value.trim().length > 1 && !isUrl && !ignoreKeys.has(key)) {
-            fields.push({ key, value, owner });
-          }
-        });
-
-        setTranslatableFields(fields);
-        setTranslationStatus(fields.reduce((acc, _, index) => ({ ...acc, [index]: 'pending' }), {}));
-      }
+      setClonedCampaign(processedCampaign);
+      setTranslatableFields(fields);
+      setTranslationStatus(fields.reduce((acc, _, index) => ({ ...acc, [index]: 'pending' }), {}));
     } else {
       resetState();
     }
@@ -138,7 +113,7 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
 
   const handleTranslateField = async (field, index) => {
     setTranslationStatus(prev => ({ ...prev, [index]: 'translating' }));
-    setTranslationErrors(prev => ({ ...prev, [index]: null })); // Limpa o erro anterior
+    setTranslationErrors(prev => ({ ...prev, [index]: null }));
 
     try {
       const response = await fetch('/api/translate', {
@@ -148,7 +123,6 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
       });
 
       if (!response.ok) {
-        // Tenta extrair a mensagem de erro específica do corpo da resposta
         const errorData = await response.json().catch(() => ({ error: 'Failed to translate and could not parse error response.' }));
         throw new Error(errorData.error || 'Failed to translate');
       }
@@ -158,9 +132,11 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
 
       setTranslatedFields(prev => ({ ...prev, [index]: translatedText }));
 
-      // Muta o objeto proprietário diretamente. É seguro porque clonedCampaign é uma cópia profunda.
+      // Since the `owner` object is a reference to a part of the `clonedCampaign` state,
+      // mutating it here will correctly update the nested structure.
       field.owner[field.key] = translatedText;
-      // Aciona uma nova renderização criando uma cópia superficial do estado da campanha.
+
+      // Trigger a re-render by creating a new shallow copy of the top-level campaign state.
       setClonedCampaign(prev => ({ ...prev }));
 
       setTranslationStatus(prev => ({ ...prev, [index]: 'done' }));
@@ -179,13 +155,13 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
     const field = translatableFields[index];
     setTranslatedFields(prev => ({ ...prev, [index]: newText }));
 
-    // Mutate the owner object directly and trigger a re-render.
     field.owner[field.key] = newText;
     setClonedCampaign(prev => ({ ...prev }));
   };
 
   const handleClone = () => {
-    const finalCampaign = JSON.parse(JSON.stringify(clonedCampaign));
+    // No need to deep clone again, as clonedCampaign is already a separate, processed object.
+    const finalCampaign = { ...clonedCampaign };
     delete finalCampaign.id;
     finalCampaign.name = `${finalCampaign.name} (Copy)`;
     onCloneComplete(finalCampaign);
