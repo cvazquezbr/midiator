@@ -23,6 +23,7 @@ import {
   Grid,
   Alert,
   Chip,
+  Tooltip,
 } from '@mui/material';
 import { CheckCircle, HourglassEmpty, Error as ErrorIcon } from '@mui/icons-material';
 import { traverseState } from '../utils/stateTraversal';
@@ -42,6 +43,7 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
   const [translatableFields, setTranslatableFields] = useState([]);
   const [translatedFields, setTranslatedFields] = useState({});
   const [translationStatus, setTranslationStatus] = useState({});
+  const [translationErrors, setTranslationErrors] = useState({});
   const [isTranslating, setIsTranslating] = useState(false);
   const [clonedCampaign, setClonedCampaign] = useState(null);
 
@@ -51,6 +53,7 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
     setTranslatableFields([]);
     setTranslatedFields({});
     setTranslationStatus({});
+    setTranslationErrors({});
     setIsTranslating(false);
     setClonedCampaign(null);
   }, []);
@@ -124,26 +127,35 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
 
   const handleTranslateField = async (field, index) => {
     setTranslationStatus(prev => ({ ...prev, [index]: 'translating' }));
+    setTranslationErrors(prev => ({ ...prev, [index]: null })); // Limpa o erro anterior
+
     try {
       const response = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: field.value, targetLanguage }),
       });
-      if (!response.ok) throw new Error('Failed to translate');
+
+      if (!response.ok) {
+        // Tenta extrair a mensagem de erro específica do corpo da resposta
+        const errorData = await response.json().catch(() => ({ error: 'Failed to translate and could not parse error response.' }));
+        throw new Error(errorData.error || 'Failed to translate');
+      }
+
       const data = await response.json();
       const { translatedText } = data;
 
       setTranslatedFields(prev => ({ ...prev, [index]: translatedText }));
 
-      // Mutate the owner object directly. It's safe because clonedCampaign is a deep copy.
+      // Muta o objeto proprietário diretamente. É seguro porque clonedCampaign é uma cópia profunda.
       field.owner[field.key] = translatedText;
-      // Trigger a re-render by creating a shallow copy of the campaign state.
+      // Aciona uma nova renderização criando uma cópia superficial do estado da campanha.
       setClonedCampaign(prev => ({ ...prev }));
 
       setTranslationStatus(prev => ({ ...prev, [index]: 'done' }));
     } catch (error) {
       console.error('Translation error:', error);
+      setTranslationErrors(prev => ({ ...prev, [index]: error.message }));
       setTranslationStatus(prev => ({ ...prev, [index]: 'error' }));
     }
   };
@@ -237,7 +249,11 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
                       {status === 'pending' && <Chip icon={<HourglassEmpty />} label="Aguardando" size="small" />}
                       {status === 'translating' && <CircularProgress size={24} />}
                       {status === 'done' && <Chip icon={<CheckCircle />} label="Concluído" size="small" color="success" />}
-                      {status === 'error' && <Chip icon={<ErrorIcon />} label="Erro" size="small" color="error" />}
+                      {status === 'error' && (
+                        <Tooltip title={translationErrors[index] || 'Erro desconhecido'} arrow>
+                          <Chip icon={<ErrorIcon />} label="Erro" size="small" color="error" />
+                        </Tooltip>
+                      )}
                     </Box>
                   </ListItem>
                 )
