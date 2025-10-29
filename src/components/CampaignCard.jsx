@@ -8,9 +8,14 @@ import {
   CardContent,
   CardActions,
 } from '@mui/material';
-import { Delete as DeleteIcon, Image as ImageIcon, Share as ShareIcon } from '@mui/icons-material';
+import {
+  Delete as DeleteIcon,
+  Image as ImageIcon,
+  Share as ShareIcon,
+  ContentCopy as CloneIcon,
+} from '@mui/icons-material';
 
-const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onShareCampaign, isCoverFlowActive }) => {
+const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onShareCampaign, onCloneCampaign, isCoverFlowActive }) => {
   // The campaign object from the list view now contains a `pageUrls` array.
   // We use the first URL for the preview.
   const previewImageUrl = campaign.pageUrls && campaign.pageUrls.length > 0 ? campaign.pageUrls[0] : null;
@@ -80,6 +85,23 @@ const CampaignCard = ({ campaign, onEditCampaign, onDeleteCampaign, onShareCampa
             }}
           >
             <ShareIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            aria-label="clone"
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              onCloneCampaign(campaign);
+            }}
+            sx={{
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              },
+            }}
+          >
+            <CloneIcon fontSize="small" />
           </IconButton>
           <IconButton
             aria-label="delete"
