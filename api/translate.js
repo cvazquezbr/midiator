@@ -1,6 +1,8 @@
 import fetch from 'node-fetch';
+import { withAuth } from './middleware/auth.js';
+import { query } from './db.js';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
@@ -11,14 +13,17 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required parameters: text and targetLanguage' });
   }
 
-  const geminiApiKey = process.env.GEMINI_API_KEY;
-  if (!geminiApiKey) {
-    return res.status(500).json({ error: 'Server configuration error: GEMINI_API_KEY is not set' });
-  }
-
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
-
   try {
+    // Buscar a chave da API do Gemini do banco de dados
+    const settingsResult = await query('SELECT value FROM settings WHERE key = $1', ['gemini_api_key']);
+    const geminiApiKey = settingsResult.rows[0]?.value;
+
+    if (!geminiApiKey) {
+      return res.status(500).json({ error: 'Server configuration error: Gemini API key is not configured in the database.' });
+    }
+
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
+
     const response = await fetch(geminiUrl, {
       method: 'POST',
       headers: {
@@ -43,7 +48,9 @@ export default async function handler(req, res) {
     const translatedText = data.candidates[0].content.parts[0].text;
     res.status(200).json({ translatedText });
   } catch (error) {
-    console.error('Error calling Gemini API:', error);
-    res.status(500).json({ error: 'An unexpected error occurred' });
+    console.error('Error during translation process:', error);
+    res.status(500).json({ error: 'An unexpected error occurred during the translation process.' });
   }
 }
+
+export default withAuth(handler);
