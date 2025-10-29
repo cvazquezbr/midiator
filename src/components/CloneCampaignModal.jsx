@@ -47,6 +47,7 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
   const [translationErrors, setTranslationErrors] = useState({});
   const [isTranslating, setIsTranslating] = useState(false);
   const [clonedCampaign, setClonedCampaign] = useState(null);
+  const [retryNoticeVisible, setRetryNoticeVisible] = useState(false);
 
   const resetState = useCallback(() => {
     setActiveStep(0);
@@ -80,23 +81,53 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
   }, [campaign, open, resetState]);
 
 
-  useEffect(() => {
-    const translateAllFields = async () => {
-      if (activeStep === 1 && translatableFields.length > 0 && !isTranslating) {
-        const pendingTranslations = translatableFields.some((_, i) => translationStatus[i] === 'pending');
-        if (!pendingTranslations) return;
-
-        setIsTranslating(true);
-        for (let i = 0; i < translatableFields.length; i++) {
-          if (translationStatus[i] === 'pending') {
-            await handleTranslateField(translatableFields[i], i);
-          }
+  const processTranslationBatch = useCallback(async (fieldIndices, delay) => {
+    const failedIndices = [];
+    for (const index of fieldIndices) {
+      if (translationStatus[index] === 'pending' || translationStatus[index] === 'error') {
+        const field = translatableFields[index];
+        const success = await handleTranslateField(field, index);
+        if (!success) {
+            failedIndices.push(index);
         }
-        setIsTranslating(false);
       }
+      if (delay > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    return failedIndices;
+  }, [translatableFields, translationStatus, handleTranslateField]);
+
+  useEffect(() => {
+    const startTranslationProcess = async () => {
+        if (activeStep === 1 && !isTranslating) {
+            const initialPendingIndices = translatableFields
+                .map((_, i) => i)
+                .filter(i => translationStatus[i] === 'pending');
+
+            if (initialPendingIndices.length === 0) return;
+
+            setIsTranslating(true);
+            setRetryNoticeVisible(false);
+
+            // First pass
+            const failedAfterFirstPass = await processTranslationBatch(initialPendingIndices, 500);
+
+            // Bounce mechanism: retry failed translations with a longer delay
+            if (failedAfterFirstPass.length > 0) {
+                setRetryNoticeVisible(true);
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Wait before retrying
+                setRetryNoticeVisible(false);
+
+                await processTranslationBatch(failedAfterFirstPass, 2000);
+            }
+
+            setIsTranslating(false);
+        }
     };
-    translateAllFields();
-  }, [activeStep, translatableFields, translationStatus, isTranslating]);
+
+    startTranslationProcess();
+}, [activeStep, isTranslating, processTranslationBatch]);
 
 
   const handleNext = () => {
@@ -132,14 +163,12 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
 
       setTranslatedFields(prev => ({ ...prev, [index]: translatedText }));
 
-      // Since the `owner` object is a reference to a part of the `clonedCampaign` state,
-      // mutating it here will correctly update the nested structure.
       field.owner[field.key] = translatedText;
 
-      // Trigger a re-render by creating a new shallow copy of the top-level campaign state.
       setClonedCampaign(prev => ({ ...prev }));
 
       setTranslationStatus(prev => ({ ...prev, [index]: 'done' }));
+      return true; // Indicate success
     } catch (error) {
       console.error('Translation error:', error);
       let userFriendlyError = error.message;
@@ -148,6 +177,7 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
       }
       setTranslationErrors(prev => ({ ...prev, [index]: userFriendlyError }));
       setTranslationStatus(prev => ({ ...prev, [index]: 'error' }));
+      return false; // Indicate failure
     }
   };
 
@@ -209,6 +239,11 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
             <Typography sx={{ mb: 2 }}>
               Aguarde enquanto traduzimos os campos. Você pode editar as traduções a qualquer momento.
             </Typography>
+            {retryNoticeVisible && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                Algumas traduções falharam. Tentando novamente com uma latência maior...
+              </Alert>
+            )}
             <LinearProgress variant="determinate" value={progress} sx={{ mb: 2 }} />
             <List sx={{ maxHeight: '50vh', overflow: 'auto' }}>
               {translatableFields.map((field, index) => {
