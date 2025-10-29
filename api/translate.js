@@ -30,7 +30,8 @@ async function handler(req, res) {
       return res.status(500).json({ error: 'Server configuration error: Gemini API key is not configured in your settings.' });
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`;
+    const modelName = 'gemini-1.0-pro';
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${geminiApiKey}`;
 
     const response = await fetch(geminiUrl, {
       method: 'POST',
