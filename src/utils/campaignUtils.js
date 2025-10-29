@@ -1,54 +1,90 @@
 const IGNORE_KEYS = new Set([
-  'id', 'created_at', 'updated_at', 'user_id', 'paletteId',
-  'aspectRatio', 'page_id', 'campaign_id', 'original_url',
-  'hex', 'rgb', 'prompt_imagem_carrossel'
+  'id', 'created_at', 'updated_at', 'user_id', 'paletteId', 'aspectRatio',
+  'page_id', 'campaign_id', 'original_url', 'hex', 'rgb', 'prompt_imagem_carrossel',
+  'fontScale', 'activeStep', 'inputMethod', 'paletteId', 'etapa_aida', 'post_numero', 'tipo_gancho'
 ]);
 
-function isTranslatableString(key, value) {
-  if (typeof value !== 'string' || !value.trim()) return false;
-  if (IGNORE_KEYS.has(key)) return false;
-  if (value.startsWith('http') || value.startsWith('blob:') || value.startsWith('data:')) return false;
-  if (value.trim().length <= 2 && !value.includes(' ')) return false;
-  return true;
-}
-
-export function getTranslatableFields(data) {
+/**
+ * A robust function to extract all translatable text fields from a campaign object.
+ * It specifically targets known text fields within the complex, nested structure.
+ *
+ * @param {object} campaign - The original campaign object.
+ * @returns {{fields: Array<{key: string, value: string, owner: object}>, processedCampaign: object}}
+ */
+export function getTranslatableFields(campaign) {
   const fields = [];
-  const visited = new WeakSet();
+  const processedCampaign = JSON.parse(JSON.stringify(campaign));
 
-  const processedCampaign = JSON.parse(JSON.stringify(data));
+  // Function to safely check and add a field
+  const addField = (key, value, owner) => {
+    if (typeof value === 'string' && value.trim() && !IGNORE_KEYS.has(key) && !value.startsWith('http')) {
+      fields.push({ key, value, owner });
+    }
+  };
 
-  function traverse(current) {
-    if (visited.has(current)) return;
+  // Start by processing top-level fields
+  addField('name', processedCampaign.name, processedCampaign);
 
-    if (typeof current === 'object' && current !== null) {
-      visited.add(current);
-
-      Object.keys(current).forEach(key => {
-        const value = current[key];
-
-        if (typeof value === 'string' && (value.trim().startsWith('{') || value.trim().startsWith('['))) {
-          try {
-            const parsedValue = JSON.parse(value);
-            current[key] = parsedValue;
-            traverse(parsedValue);
-          } catch (e) {
-            if (isTranslatableString(key, value)) {
-              fields.push({ key, value, owner: current });
-            }
-          }
-        } else if (isTranslatableString(key, value)) {
-          fields.push({ key, value, owner: current });
-        } else if (typeof value === 'object' && value !== null) {
-          traverse(value);
-        }
-      });
+  // The main content is inside campaign_data, which might be a string
+  let campaignData = processedCampaign.campaign_data;
+  if (typeof campaignData === 'string') {
+    try {
+      campaignData = JSON.parse(campaignData);
+      processedCampaign.campaign_data = campaignData; // Replace string with object
+    } catch (e) {
+      console.error("Failed to parse campaign_data:", e);
+      return { fields, processedCampaign }; // Return early if parsing fails
     }
   }
 
-  traverse(processedCampaign);
+  if (typeof campaignData !== 'object' || campaignData === null) {
+    return { fields, processedCampaign };
+  }
+
+  // Explicitly traverse the known structure based on user's description
+  addField('solucao', campaignData.solucao, campaignData);
+  addField('objetivo', campaignData.objetivo, campaignData);
+  addField('problema', campaignData.problema, campaignData);
+  addField('tomDeVoz', campaignData.tomDeVoz, campaignData);
+  addField('promptText', campaignData.promptText, campaignData);
+
+  if (Array.isArray(campaignData.colors)) {
+    campaignData.colors.forEach(color => {
+      addField('name', color.name, color);
+      addField('justification', color.justification, color);
+    });
+  }
+
+  if (Array.isArray(campaignData.csvData)) {
+    campaignData.csvData.forEach(row => {
+      Object.keys(row).forEach(key => addField(key, row[key], row));
+    });
+  }
+
+  if (campaignData.customPalette) {
+      addField('harmony', campaignData.customPalette.harmony, campaignData.customPalette);
+      addField('harmony_justification', campaignData.customPalette.harmony_justification, campaignData.customPalette);
+  }
+
+  if (Array.isArray(campaignData.followupPosts)) {
+    campaignData.followupPosts.forEach(post => {
+      addField('cta', post.cta, post);
+      addField('titulo', post.titulo, post);
+      addField('conteudo', post.conteudo, post);
+      if (Array.isArray(post.hashtags_sugeridas)) {
+        post.hashtags_sugeridas.forEach((tag, index) => {
+            if (typeof tag === 'string' && tag.trim()) {
+                // For arrays of strings, the key is the index
+                fields.push({ key: String(index), value: tag, owner: post.hashtags_sugeridas });
+            }
+        });
+      }
+    });
+  }
+
   return { fields, processedCampaign };
 }
+
 
 /**
  * Recursively extracts asset URLs from a campaign data object.
