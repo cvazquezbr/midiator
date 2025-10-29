@@ -80,6 +80,44 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
     }
   }, [campaign, open, resetState]);
 
+  const handleTranslateField = useCallback(async (field, index) => {
+    setTranslationStatus(prev => ({ ...prev, [index]: 'translating' }));
+    setTranslationErrors(prev => ({ ...prev, [index]: null }));
+
+    try {
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: field.value, targetLanguage }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to translate and could not parse error response.' }));
+        throw new Error(errorData.error || 'Failed to translate');
+      }
+
+      const data = await response.json();
+      const { translatedText } = data;
+
+      setTranslatedFields(prev => ({ ...prev, [index]: translatedText }));
+
+      field.owner[field.key] = translatedText;
+
+      setClonedCampaign(prev => ({ ...prev }));
+
+      setTranslationStatus(prev => ({ ...prev, [index]: 'done' }));
+      return true; // Indicate success
+    } catch (error) {
+      console.error('Translation error:', error);
+      let userFriendlyError = error.message;
+      if (error.message.includes('GEMINI_API_KEY is not set')) {
+        userFriendlyError = 'O serviço de tradução não está configurado corretamente. Por favor, contate o administrador.';
+      }
+      setTranslationErrors(prev => ({ ...prev, [index]: userFriendlyError }));
+      setTranslationStatus(prev => ({ ...prev, [index]: 'error' }));
+      return false; // Indicate failure
+    }
+  }, [targetLanguage]);
 
   const processTranslationBatch = useCallback(async (fieldIndices, delay) => {
     const failedIndices = [];
@@ -140,45 +178,6 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
 
   const handleLanguageChange = (event) => {
     setTargetLanguage(event.target.value);
-  };
-
-  const handleTranslateField = async (field, index) => {
-    setTranslationStatus(prev => ({ ...prev, [index]: 'translating' }));
-    setTranslationErrors(prev => ({ ...prev, [index]: null }));
-
-    try {
-      const response = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: field.value, targetLanguage }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to translate and could not parse error response.' }));
-        throw new Error(errorData.error || 'Failed to translate');
-      }
-
-      const data = await response.json();
-      const { translatedText } = data;
-
-      setTranslatedFields(prev => ({ ...prev, [index]: translatedText }));
-
-      field.owner[field.key] = translatedText;
-
-      setClonedCampaign(prev => ({ ...prev }));
-
-      setTranslationStatus(prev => ({ ...prev, [index]: 'done' }));
-      return true; // Indicate success
-    } catch (error) {
-      console.error('Translation error:', error);
-      let userFriendlyError = error.message;
-      if (error.message.includes('GEMINI_API_KEY is not set')) {
-        userFriendlyError = 'O serviço de tradução não está configurado corretamente. Por favor, contate o administrador.';
-      }
-      setTranslationErrors(prev => ({ ...prev, [index]: userFriendlyError }));
-      setTranslationStatus(prev => ({ ...prev, [index]: 'error' }));
-      return false; // Indicate failure
-    }
   };
 
   const handleManualTextChange = (index, newText) => {
