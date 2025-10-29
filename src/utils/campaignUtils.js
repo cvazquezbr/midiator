@@ -82,6 +82,23 @@ export function getTranslatableFields(campaign) {
     });
   }
 
+  // Extract from campaignContent object
+  if (typeof campaignData.campaignContent === 'object' && campaignData.campaignContent !== null) {
+    const content = campaignData.campaignContent;
+    addField('cta', content.cta, content);
+    addField('titulo', content.titulo, content);
+    addField('conteudo', content.conteudo, content);
+    addField('conteudoMedio', content.conteudoMedio, content);
+    addField('conteudoPequeno', content.conteudoPequeno, content);
+    if (Array.isArray(content.hashtags)) {
+        content.hashtags.forEach((tag, index) => {
+            if (typeof tag === 'string' && tag.trim()) {
+                fields.push({ key: String(index), value: tag, owner: content.hashtags });
+            }
+        });
+    }
+  }
+
   return { fields, processedCampaign };
 }
 
