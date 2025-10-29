@@ -1,10 +1,6 @@
 import { withAuth } from '../middleware/auth.js';
 import { query } from '../db.js';
 
-export const config = {
-    runtime: 'edge',
-};
-
 async function handler(req, res) {
     if (req.method !== 'GET') {
         return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
