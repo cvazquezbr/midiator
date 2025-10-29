@@ -1,33 +1,46 @@
-import { withAuth } from '../middleware/auth.js';
-import { query } from '../db.js';
+export const config = {
+    runtime: 'edge',
+};
 
-async function handler(req, res) {
-    if (req.method !== 'GET') {
-        return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
+// Helper function to stream ReadableStream to the client
+async function streamToResponse(stream, response) {
+    const reader = stream.getReader();
+    try {
+        while (true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            response.write(new TextDecoder().decode(value));
+        }
+        response.end();
+    } catch (e) {
+        console.error('Streaming error:', e);
+        response.end();
+    }
+}
+
+export default async function handler(request) {
+    if (request.method !== 'GET') {
+        return new Response(JSON.stringify({error: 'Method Not Allowed'}), {
             status: 405,
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
         });
     }
 
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        return new Response(JSON.stringify({error: 'API key is not configured'}), {
+            status: 500,
+            headers: {'Content-Type': 'application/json'},
+        });
+    }
+
+    const GOOGLE_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+
     try {
-        const userId = req.user.sub;
-        const { rows } = await query('SELECT settings_data FROM settings WHERE user_id = $1', [userId]);
-
-        if (rows.length === 0 || !rows[0].settings_data || !rows[0].settings_data.gemini_api_key) {
-            return new Response(JSON.stringify({ error: 'API key is not configured' }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' },
-            });
-        }
-
-        const apiKey = rows[0].settings_data.gemini_api_key;
-        const GOOGLE_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-
-        const fetchResponse = await fetch(GOOGLE_API_URL, {
+        const fetchResponse = await fetch(`${GOOGLE_API_URL}?key=${apiKey}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'x-goog-api-key': apiKey,
             },
         });
 
@@ -39,25 +52,26 @@ async function handler(req, res) {
                 details: errorText
             }), {
                 status: fetchResponse.status,
-                headers: { 'Content-Type': 'application/json' },
+                headers: {'Content-Type': 'application/json'},
             });
         }
 
-        return new Response(fetchResponse.body, {
+        // Create a new response that streams the body from the Google API
+        const response = new Response(fetchResponse.body, {
             status: 200,
             headers: {
                 'Content-Type': 'application/json',
-                'Cache-Control': 's-maxage=3600, stale-while-revalidate',
+                'Cache-Control': 's-maxage=3600, stale-while-revalidate', // Cache for 1 hour
             },
         });
 
+        return response;
+
     } catch (error) {
         console.error('Error fetching from Google API:', error);
-        return new Response(JSON.stringify({ error: 'Internal Server Error', details: error.message }), {
+        return new Response(JSON.stringify({error: 'Internal Server Error', details: error.message}), {
             status: 500,
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
         });
     }
 }
-
-export default withAuth(handler);

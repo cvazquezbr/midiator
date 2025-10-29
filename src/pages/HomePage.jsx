@@ -614,11 +614,7 @@ function HomePage() {
       const imageBlob = dataURLtoBlob(`data:image/png;base64,${base64Data}`);
       const managedUrl = addPendingAsset(imageBlob);
       if (!managedUrl) throw new Error("Falha ao criar URL para a imagem gerada.");
-      setCampaignState(prev => ({
-        ...prev,
-        generatedPageUrl: managedUrl,
-        pageUrls: [managedUrl, ...(prev.pageUrls || [])]
-      }));
+      setCampaignState(prev => ({ ...prev, generatedPageUrl: managedUrl }));
       addNewImageToCanvas(managedUrl);
       return true;
     } catch (imageError) {
@@ -895,7 +891,6 @@ function HomePage() {
           <Toolbar />
           {currentView === 'campaigns' && (
             <>
-              <PageGeneratorFrontendOnly {...{ originalImageSize, fontScale: campaignState.fontScale, handleGenerateSinglePage, aspectRatio, onOpenImageGallery: handleOpenImageGallery }} />
               {activeStep === 0 && campaignsView === 'my-campaigns' && <MyCampaignsStep {...{ onEditCampaign: handleEditCampaign, onCreateNew: handleCreateNewCampaign, autorList, personaList }} />}
               {activeStep === 0 && campaignsView === 'shared-campaigns' && <SharedCampaignsStep {...{ onEditCampaign: handleEditCampaign }} />}
               {activeStep === 1 && <Campaign {...{ steps, activeStep, ...campaignState, setCampaignState, isGeneratingCampaign, campaignGenerationFailed, generationError, handleGenerateCampaignContent, handleResetCampaign, handleExportHtml: () => exportHtml(memorialCampaignData), editingField, setEditingField: (field) => { setEditingField(field); setIsHtmlField(field === 'conteudoFormatado'); }, isGeneratingSummaryMedio, handleGenerateSummary, isGeneratingSummaryPequeno, isGeneratingConteudoFormatado, handleGenerateFormattedContent, isGeneratingFollowup: campaignState.isGeneratingFollowup, handleGenerateFollowupPosts, isGeneratingImage, handleGenerateImage, onEditFollowup: handleEditFollowup, palettes, autorList, selectedAutorForCampaign, personaList, selectedPersonaForCampaign, onRequestNewAutor: handleRequestNewAutor, onRequestNewPersona: handleRequestNewPersona, paletteId: campaignState.paletteId, customPalette: campaignState.customPalette }} />}

@@ -1,97 +1,62 @@
-/* Masonry layout styles from main branch */
-.grid-sizer,
-.grid-item {
-  width: 33.333%;
-  padding: 8px;
-}
+/* PageGenerator.css */
 
-@media (max-width: 960px) {
-  .grid-sizer,
-  .grid-item {
-    width: 50%;
-  }
-}
-
-@media (max-width: 600px) {
-  .grid-sizer,
-  .grid-item {
-    width: 100%;
-  }
-}
-
-/* My CSS Grid layout styles */
 .page-generator-grid-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-}
-
-.page-generator-grid-item .MuiCardContent-root {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.page-generator-grid-item .MuiBox-root:first-of-type {
-  flex-shrink: 0;
-}
-
-.page-generator-grid-item .image-container {
-  flex-grow: 1;
-  position: relative;
-  width: 100%;
-  padding-top: 100%; /* Default aspect ratio 1:1 */
-  cursor: pointer;
-}
-
-.page-generator-grid-item .image-container.aspect-ratio-4-5 {
-  padding-top: 125%; /* 5 / 4 = 1.25 */
-}
-
-.page-generator-grid-item .image-container.aspect-ratio-16-9 {
-  padding-top: 56.25%; /* 9 / 16 = 0.5625 */
-}
-
-.page-generator-grid-item img {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 1;
-  transition: opacity 0.3s ease;
-}
-
-.page-generator-grid-item .MuiCircularProgress-root {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  margin-top: -20px;
-  margin-left: -20px;
-}
-
-/* Responsive adjustments */
-@media (min-width: 1280px) {
-  .page-generator-grid-container {
-    grid-template-columns: repeat(5, 1fr);
+    margin: 0 auto;
   }
-}
 
-@media (min-width: 960px) and (max-width: 1279px) {
-  .page-generator-grid-container {
-    grid-template-columns: repeat(4, 1fr);
+  /* Sizer element to define column width */
+  .grid-sizer {
+    width: 2%; /* Gutter size */
   }
-}
 
-@media (min-width: 600px) and (max-width: 959px) {
-  .page-generator-grid-container {
-    grid-template-columns: repeat(3, 1fr);
+  .page-generator-grid-item {
+    width: 32%; /* Adjust for 3 columns with gutters: (100 - 2*2) / 3 = 32% */
+    margin-bottom: 10px;
   }
-}
 
-@media (max-width: 599px) {
-  .page-generator-grid-container {
-    grid-template-columns: 1fr;
+  /* Media query for smaller screens, 2 columns */
+  @media (max-width: 768px) {
+    .page-generator-grid-item {
+      width: 48%; /* (100 - 2*2) / 2 = 48% */
+    }
   }
-}
+
+  /* Media query for very small screens, 1 column */
+  @media (max-width: 480px) {
+    .page-generator-grid-item {
+      width: 100%;
+    }
+  }
+
+  .image-container {
+    position: relative;
+    width: 100%;
+    cursor: pointer;
+    overflow: hidden;
+    border-radius: 8px; /* Optional: adds rounded corners */
+  }
+
+  .image-container img {
+    display: block;
+    width: 100%;
+    height: auto;
+    transition: transform 0.3s ease;
+  }
+
+  .image-container:hover img {
+    transform: scale(1.05);
+  }
+
+  /* Aspect Ratio classes */
+  .aspect-ratio-1-1 { aspect-ratio: 1 / 1; }
+  .aspect-ratio-16-9 { aspect-ratio: 16 / 9; }
+  .aspect-ratio-9-16 { aspect-ratio: 9 / 16; }
+  .aspect-ratio-4-5 { aspect-ratio: 4 / 5; }
+
+  .image-container .MuiCircularProgress-root {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: -20px;
+    margin-left: -20px;
+  }
