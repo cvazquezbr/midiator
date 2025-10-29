@@ -6,8 +6,26 @@ import {
 } from '@mui/material';
 import { CheckCircle, HourglassEmpty, Error as ErrorIcon, Translate as TranslateIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
-import { traverseState, getObjectValue, setObjectValue } from '../utils/stateTraversal';
+import { traverseState } from '../utils/stateTraversal';
 import fetchWithAuth from '../utils/fetchWithAuth';
+
+// Adicionando a função setObjectValue localmente para substituir a que foi removida.
+const setObjectValue = (obj, path, value) => {
+  const keys = path.split('.');
+  let current = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    if (!current[key] || typeof current[key] !== 'object') {
+      // Se o caminho não existir, não podemos definir o valor.
+      // Isso pode ser aprimorado para criar o caminho, se necessário.
+      console.error(`Path does not exist: ${key} in ${path}`);
+      return;
+    }
+    current = current[key];
+  }
+  current[keys[keys.length - 1]] = value;
+};
+
 
 // Mapeamento de idiomas e seus nomes nativos
 const languages = {
@@ -84,10 +102,10 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
 
         for (let i = 0; i < fieldsToTranslate.length; i++) {
           const field = fieldsToTranslate[i];
-          
+
           // Atualiza o status para "traduzindo"
           setFieldsToTranslate(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'translating' } : f));
-          
+
           try {
             const res = await fetchWithAuth('/api/translate', {
               method: 'POST',
@@ -101,7 +119,7 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
             }
 
             const data = await res.json();
-            
+
             // Atualiza com o texto traduzido e status de sucesso
             setFieldsToTranslate(prev => prev.map((f, idx) => idx === i ? { ...f, translatedText: data.translatedText, status: 'done' } : f));
           } catch (err) {
@@ -132,7 +150,7 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
     fieldsToTranslate.forEach(field => {
       setObjectValue(clonedCampaignData, field.path, field.translatedText);
     });
-    
+
     // Remove ativos de áudio e vídeo
     if (clonedCampaignData.generatedAudioData) clonedCampaignData.generatedAudioData = [];
     if (clonedCampaignData.generatedVideos) clonedCampaignData.generatedVideos = [];
@@ -144,7 +162,7 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
       name: `${campaign.name} (Clone - ${targetLanguage.toUpperCase()})`,
       campaign_data: clonedCampaignData,
     };
-    
+
     onCloneComplete(clonedCampaign);
     handleResetAndClose();
   };
@@ -152,7 +170,7 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
   const handleFieldChange = (index, newText) => {
     setFieldsToTranslate(prev => prev.map((f, idx) => idx === index ? { ...f, translatedText: newText, status: f.status === 'error' ? 'pending' : f.status, error: null } : f));
   };
-  
+
   const anyErrors = useMemo(() => fieldsToTranslate.some(f => f.status === 'error'), [fieldsToTranslate]);
 
   return (
