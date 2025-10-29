@@ -61,30 +61,41 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
   useEffect(() => {
     if (open) {
       if (campaign) {
+        // Create a deep copy to avoid mutating the original campaign object.
         const campaignCopy = JSON.parse(JSON.stringify(campaign));
 
-        // Discard audio and video assets
+        // Pre-processing step: find and parse stringified JSON before traversal.
         traverseState(campaignCopy, (key, value, owner) => {
-          if (value && typeof value === 'object') {
-            if (value.type === 'audio' || value.type === 'video') {
-              owner[key] = null;
+          if (typeof value === 'string' && value.trim().startsWith('{') && value.trim().endsWith('}')) {
+            try {
+              // Replace the stringified JSON with the actual object.
+              owner[key] = JSON.parse(value);
+            } catch (e) {
+              // Not a valid JSON, so we leave it as a string.
             }
+          }
+        });
+
+        // Second pass: Discard audio and video assets
+        traverseState(campaignCopy, (key, value, owner) => {
+          if (value && typeof value === 'object' && (value.type === 'audio' || value.type === 'video')) {
+            owner[key] = null;
           }
         });
 
         setClonedCampaign(campaignCopy);
 
         const fields = [];
-        // Remove 'name' from ignoreKeys and include it for translation
         const ignoreKeys = new Set(['id', 'created_at', 'updated_at', 'user_id', 'paletteId', 'aspectRatio', 'page_id', 'campaign_id', 'original_url']);
 
+        // Third pass: Extract all translatable fields from the fully parsed object.
         traverseState(campaignCopy, (key, value, owner) => {
           const isUrl = typeof value === 'string' && (value.startsWith('http') || value.startsWith('blob:'));
-          // Reduce length check to include shorter fields like titles and short posts
           if (typeof value === 'string' && value.trim().length > 1 && !isUrl && !ignoreKeys.has(key)) {
             fields.push({ key, value, owner });
           }
         });
+
         setTranslatableFields(fields);
         setTranslationStatus(fields.reduce((acc, _, index) => ({ ...acc, [index]: 'pending' }), {}));
       }
