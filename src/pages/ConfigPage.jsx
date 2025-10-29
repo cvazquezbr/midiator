@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
     Container,
     Typography,
     Paper,
+    Switch,
+    FormControlLabel,
     Box,
     Select,
     MenuItem,
@@ -10,39 +12,31 @@ import {
     InputLabel,
     CircularProgress,
     Alert,
+    TextField,
     Button
 } from '@mui/material';
-import { CloudUpload as CloudUploadIcon } from '@mui/icons-material';
-import { useSettings } from '../context/SettingsContext';
-import { toast } from 'sonner';
-
+import {
+    getGeminiModel,
+    saveGeminiModel,
+    getGeminiImageModel,
+    saveGeminiImageModel
+} from '../utils/geminiCredentials';
 const ConfigPage = () => {
-    const { settings, updateSetting, saveSettings, isLoading: isSaving } = useSettings();
     const [models, setModels] = useState([]);
     const [imageModels, setImageModels] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const selectedModel = settings.gemini_model || '';
-    const selectedImageModel = settings.gemini_image_model || '';
+    const [selectedModel, setSelectedModel] = useState(getGeminiModel() || '');
+    const [selectedImageModel, setSelectedImageModel] = useState(getGeminiImageModel() || '');
 
     useEffect(() => {
         const fetchModels = async () => {
-            if (!settings.gemini_api_key) {
-                setError('A chave da API Gemini não está configurada. Por favor, configure-a no modal de setup.');
-                setLoading(false);
-                return;
-            }
-
             try {
                 setLoading(true);
                 setError(null);
                 const response = await fetch('/api/google/models');
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => null);
-                    if (errorData && errorData.error) {
-                        throw new Error(errorData.error);
-                    }
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
@@ -53,24 +47,25 @@ const ConfigPage = () => {
                     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
                 const imgModels = allModels
-                    .filter(m => m.supportedGenerationMethods.includes('generateContent') && m.name.includes('vision'))
+                    .filter(m => m.supportedGenerationMethods.includes('generateContent') && m.name.includes('image'))
                     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
                 setModels(textModels);
                 setImageModels(imgModels);
 
-                // Default model logic can be simplified or handled in the context if needed
-                if (!selectedModel && textModels.length > 0) {
+                if (!getGeminiModel() && textModels.length > 0) {
                     const defaultModel = textModels.find(m => m.name.includes('gemini-1.5-pro'));
                     if (defaultModel) {
-                        updateSetting('gemini_model', defaultModel.name);
+                        setSelectedModel(defaultModel.name);
+                        saveGeminiModel(defaultModel.name);
                     }
                 }
 
-                if (!selectedImageModel && imgModels.length > 0) {
-                    const defaultImageModel = imgModels.find(m => m.name.includes('gemini-pro-vision'));
-                     if (defaultImageModel) {
-                        updateSetting('gemini_image_model', defaultImageModel.name);
+                if (!getGeminiImageModel() && imgModels.length > 0) {
+                    const defaultImageModel = imgModels.find(m => m.name.includes('gemini-2.0-flash-preview-image-generation'));
+                    if (defaultImageModel) {
+                        setSelectedImageModel(defaultImageModel.name);
+                        saveGeminiImageModel(defaultImageModel.name);
                     }
                 }
 
@@ -83,36 +78,35 @@ const ConfigPage = () => {
         };
 
         fetchModels();
-    }, [settings.gemini_api_key]); // Refetch models if the API key changes
+    }, []);
 
     const handleModelChange = (event) => {
-        updateSetting('gemini_model', event.target.value);
+        const newModel = event.target.value;
+        setSelectedModel(newModel);
+        saveGeminiModel(newModel);
     };
 
     const handleImageModelChange = (event) => {
-        updateSetting('gemini_image_model', event.target.value);
-    };
-
-    const handleSave = async () => {
-        // The saveSettings function from the context will save the entire settings object
-        await saveSettings();
+        const newModel = event.target.value;
+        setSelectedImageModel(newModel);
+        saveGeminiImageModel(newModel);
     };
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Container maxWidth="lg" sx={{mt: 4, mb: 4}}>
             <Typography variant="h4" gutterBottom>
                 Configurações
             </Typography>
-            <Paper sx={{ p: 3, mt: 2 }}>
+            <Paper sx={{p: 3, mt: 2}}>
                 <Typography variant="h6" gutterBottom>
                     Modelos de IA (Google Gemini)
                 </Typography>
 
-                {loading && <CircularProgress />}
+                {loading && <CircularProgress/>}
                 {error && <Alert severity="error">{error}</Alert>}
 
                 {!loading && !error && (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
+                    <Box sx={{display: 'flex', flexDirection: 'column', gap: 3}}>
                         <FormControl fullWidth>
                             <InputLabel id="text-model-select-label">Modelo de Texto</InputLabel>
                             <Select
@@ -131,11 +125,11 @@ const ConfigPage = () => {
                         </FormControl>
 
                         <FormControl fullWidth>
-                            <InputLabel id="image-model-select-label">Modelo de Imagem (Vision)</InputLabel>
+                            <InputLabel id="image-model-select-label">Modelo de Imagem</InputLabel>
                             <Select
                                 labelId="image-model-select-label"
                                 value={selectedImageModel}
-                                label="Modelo de Imagem (Vision)"
+                                label="Modelo de Imagem"
                                 onChange={handleImageModelChange}
                                 disabled={imageModels.length === 0}
                             >
@@ -148,16 +142,6 @@ const ConfigPage = () => {
                         </FormControl>
                     </Box>
                 )}
-                 <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-                    <Button
-                        variant="contained"
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        startIcon={isSaving ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
-                    >
-                        {isSaving ? 'Salvando...' : 'Salvar na Nuvem'}
-                    </Button>
-                </Box>
             </Paper>
         </Container>
     );

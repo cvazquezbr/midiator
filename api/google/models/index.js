@@ -3,6 +3,7 @@ import { query } from '../db.js';
 
 async function handler(req, res) {
     if (req.method !== 'GET') {
+        // Note: Standard Response objects are used here as this might not be run in a Node.js context compatible with `res.status()`
         return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
             status: 405,
             headers: { 'Content-Type': 'application/json' },
@@ -15,7 +16,7 @@ async function handler(req, res) {
 
         if (rows.length === 0 || !rows[0].settings_data || !rows[0].settings_data.gemini_api_key) {
             return new Response(JSON.stringify({ error: 'API key is not configured' }), {
-                status: 400,
+                status: 400, // 400 Bad Request is more appropriate here than 500
                 headers: { 'Content-Type': 'application/json' },
             });
         }
@@ -43,6 +44,7 @@ async function handler(req, res) {
             });
         }
 
+        // Return a new streaming response
         return new Response(fetchResponse.body, {
             status: 200,
             headers: {
@@ -60,4 +62,5 @@ async function handler(req, res) {
     }
 }
 
+// Wrap the handler with the authentication middleware
 export default withAuth(handler);
