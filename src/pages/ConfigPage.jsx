@@ -37,6 +37,10 @@ const ConfigPage = () => {
                 setError(null);
                 const response = await fetch('/api/google/models');
                 if (!response.ok) {
+                    const errorData = await response.json().catch(() => null); // Gracefully handle non-JSON responses
+                    if (errorData && errorData.error) {
+                        throw new Error(errorData.error);
+                    }
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
