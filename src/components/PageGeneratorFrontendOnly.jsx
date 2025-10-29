@@ -6,9 +6,6 @@ import {
 import {
   Download, Close, Image, CloudUpload, Google, Edit, SwapHoriz, Share, AutoAwesomeOutlined as GeminiIcon, SettingsBackupRestore, Delete, AutoFixHigh,
 } from '@mui/icons-material';
-import Masonry from 'masonry-layout';
-import imagesLoaded from 'imagesloaded';
-import './PageGenerator.css';
 import PageEditor from './PageEditor';
 import { createFolder, uploadFile, createSpreadsheet } from '../utils/googleApi';
 import { drawAndComposeImage, dataURLtoBlob } from '../utils/imageComposer';
@@ -31,16 +28,9 @@ const PageGeneratorFrontendOnly = ({
     fieldStyles,
     brandElements,
     pageTemplate,
-    generatedPagesData: originalGeneratedPagesData,
+    generatedPagesData,
     pendingAssets,
   } = campaignState;
-
-  const generatedPagesData = [
-    {"index": 0, "url": "https://i.imgur.com/bwy74ok.jpg", "record": {"Título": "Page 1"}},
-    {"index": 1, "url": "https://i.imgur.com/bAZWoqx.jpg", "record": {"Título": "Page 2"}},
-    {"index": 2, "url": "https://i.imgur.com/PgmEBSB.jpg", "record": {"Título": "Page 3"}},
-    {"index": 3, "url": "https://i.imgur.com/aboaFoB.jpg", "record": {"Título": "Page 4"}},
-  ];
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -57,7 +47,6 @@ const PageGeneratorFrontendOnly = ({
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [pageToSave, setPageToSave] = useState(null);
-  const gridRef = useRef(null);
 
   const [isPromptEditorOpen, setIsPromptEditorOpen] = useState(false);
   const [editingPromptIndex, setEditingPromptIndex] = useState(null);
@@ -125,20 +114,6 @@ const PageGeneratorFrontendOnly = ({
     performSave();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageToSave]);
-
-  useEffect(() => {
-    if (gridRef.current) {
-      const msnry = new Masonry(gridRef.current, {
-        itemSelector: '.grid-item',
-        columnWidth: '.grid-sizer',
-        percentPosition: true,
-      });
-
-      imagesLoaded(gridRef.current).on('progress', () => {
-        msnry.layout();
-      });
-    }
-  }, [generatedPagesData]);
 
   useEffect(() => {
     const loadFonts = async () => {
@@ -583,10 +558,9 @@ const PageGeneratorFrontendOnly = ({
           {generatedPagesData.length > 0 && (
             <Box sx={{ mt: 3 }}>
               <Divider sx={{ mb: 2 }} /><Typography variant="h6" gutterBottom>Páginas Geradas ({generatedPagesData.length})</Typography>
-              <div ref={gridRef} className="grid">
-                <div className="grid-sizer"></div>
+              <Grid container spacing={2}>
                 {generatedPagesData.map((pageData, index) => (
-                  <div className="grid-item" key={pageData.index}>
+                  <Grid item xs={12} sm={6} md={4} key={pageData.index}>
                     <Card variant="outlined">
                       <CardContent>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -613,9 +587,9 @@ const PageGeneratorFrontendOnly = ({
                         </Box>
                       </CardContent>
                     </Card>
-                   </div>
+                  </Grid>
                 ))}
-               </div>
+              </Grid>
             </Box>
           )}
         </CardContent>
