@@ -155,7 +155,11 @@ const CloneCampaignModal = ({ open, onClose, campaign, onCloneComplete }) => {
       setTranslationStatus(prev => ({ ...prev, [index]: 'done' }));
     } catch (error) {
       console.error('Translation error:', error);
-      setTranslationErrors(prev => ({ ...prev, [index]: error.message }));
+      let userFriendlyError = error.message;
+      if (error.message.includes('GEMINI_API_KEY is not set')) {
+        userFriendlyError = 'O serviço de tradução não está configurado corretamente. Por favor, contate o administrador.';
+      }
+      setTranslationErrors(prev => ({ ...prev, [index]: userFriendlyError }));
       setTranslationStatus(prev => ({ ...prev, [index]: 'error' }));
     }
   };
