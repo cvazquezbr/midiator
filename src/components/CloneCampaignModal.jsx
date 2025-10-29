@@ -6,8 +6,26 @@ import {
 } from '@mui/material';
 import { CheckCircle, HourglassEmpty, Error as ErrorIcon, Translate as TranslateIcon } from '@mui/icons-material';
 import { toast } from 'sonner';
-import { traverseState, getObjectValue, setObjectValue } from '../utils/stateTraversal';
+import { traverseState } from '../utils/stateTraversal';
 import fetchWithAuth from '../utils/fetchWithAuth';
+
+// Adicionando a função setObjectValue localmente para substituir a que foi removida.
+const setObjectValue = (obj, path, value) => {
+  const keys = path.split('.');
+  let current = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    if (!current[key] || typeof current[key] !== 'object') {
+      // Se o caminho não existir, não podemos definir o valor.
+      // Isso pode ser aprimorado para criar o caminho, se necessário.
+      console.error(`Path does not exist: ${key} in ${path}`);
+      return;
+    }
+    current = current[key];
+  }
+  current[keys[keys.length - 1]] = value;
+};
+
 
 // Mapeamento de idiomas e seus nomes nativos
 const languages = {
