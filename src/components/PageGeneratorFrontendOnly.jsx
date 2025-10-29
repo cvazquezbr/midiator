@@ -31,16 +31,9 @@ const PageGeneratorFrontendOnly = ({
     fieldStyles,
     brandElements,
     pageTemplate,
-    generatedPagesData: originalGeneratedPagesData,
+    generatedPagesData,
     pendingAssets,
   } = campaignState;
-
-  const generatedPagesData = [
-    {"index": 0, "url": "https://i.imgur.com/bwy74ok.jpg", "record": {"Título": "Page 1"}},
-    {"index": 1, "url": "https://i.imgur.com/bAZWoqx.jpg", "record": {"Título": "Page 2"}},
-    {"index": 2, "url": "https://i.imgur.com/PgmEBSB.jpg", "record": {"Título": "Page 3"}},
-    {"index": 3, "url": "https://i.imgur.com/aboaFoB.jpg", "record": {"Título": "Page 4"}},
-  ];
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
