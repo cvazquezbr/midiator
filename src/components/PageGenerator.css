@@ -9,7 +9,7 @@
 @media (max-width: 1280px) {
   .grid-sizer,
   .grid-item {
-    width: 33.333%;
+    width: 20%;
   }
 }
 
