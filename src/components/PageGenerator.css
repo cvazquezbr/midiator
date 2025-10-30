@@ -1,22 +1,19 @@
-/* Default to single column */
 .grid-sizer,
 .grid-item {
-  width: 100%;
+  width: 33.333%;
   padding: 8px;
 }
 
-/* 2 columns for small screens and up */
-@media (min-width: 600px) {
+@media (max-width: 960px) {
   .grid-sizer,
   .grid-item {
     width: 50%;
   }
 }
 
-/* 4 columns for medium screens and up */
-@media (min-width: 900px) {
+@media (max-width: 600px) {
   .grid-sizer,
   .grid-item {
-    width: 25%;
+    width: 100%;
   }
 }

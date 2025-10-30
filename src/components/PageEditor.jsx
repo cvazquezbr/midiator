@@ -237,12 +237,12 @@ const PageEditor = ({
           </Box>
         </Box>
       </DialogTitle>
-      <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 0 }}>
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0 }}>
+      <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 0, overflow: 'hidden' }}>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'row', minHeight: 0, overflow: 'hidden' }}>
           <Box sx={{ flex: 1, display: 'grid', placeItems: 'center', p: 2, minWidth: 0, minHeight: 0, overflow: 'auto' }}>
             <FieldPositioner
               editorState={editorState}
-            setEditorState={setEditorState}
+              setEditorState={setEditorState}
             selectedField={selectedField}
             setSelectedField={setSelectedField}
             originalImageSize={originalImageSize}
@@ -267,7 +267,6 @@ const PageEditor = ({
                 />
           </Box>
         )}
-        </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancelar</Button>
