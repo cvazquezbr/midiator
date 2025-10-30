@@ -366,24 +366,20 @@ const FieldPositioner = ({
       className="text-container"
       sx={{
         position: 'relative',
-        margin: 'auto',
         background: backgroundValue,
+        width: '100%',
+        height: '100%',
         aspectRatio: aspectRatio,
         maxWidth: '100%',
         maxHeight: '100%',
-        minWidth: 0,
-        minHeight: 0,
-        width: '100%',
-        height: '100%',
         border: '2px solid #ddd',
         borderRadius: 2,
         overflow: 'hidden',
-        cursor: 'default',
-        touchAction: 'pan-x pan-y',
-        WebkitOverflowScrolling: 'touch',
-        '&.interacting': {
-          touchAction: 'none'
-        },
+        margin: 'auto',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        objectFit: 'contain',
       }}
       onTouchStart={handleContainerTouchStart}
       onTouchEnd={handleContainerTouchEnd}

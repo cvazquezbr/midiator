@@ -238,17 +238,35 @@ const PageEditor = ({
         </Box>
       </DialogTitle>
       <DialogContent dividers sx={{ p: 0, display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 0 }}>
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'row', height: '100%', minHeight: 0 }}>
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: 0,
+            minHeight: 0,
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+        >
           <Box
             sx={{
-              flex: 1,
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+              maxWidth: '100%',
+              maxHeight: '100%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              height: '100%',
-              minWidth: 0,
-              minHeight: 0,
-              overflow: 'hidden',
+              aspectRatio: aspectRatio || '1 / 1',
+              // Truque principal ↓
+              '& > *': {
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+              },
             }}
           >
             <FieldPositioner
