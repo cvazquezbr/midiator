@@ -275,9 +275,17 @@ const PageEditor = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                width: '100%',
+                height: '100%',
+                aspectRatio: aspectRatio || '1 / 1',
                 maxWidth: '100%',
                 maxHeight: '100%',
-                aspectRatio: aspectRatio || '1 / 1',
+                // 👇 este é o segredo que faz caber sem cortar:
+                '& > *': {
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                },
               }}
             >
               <Box
