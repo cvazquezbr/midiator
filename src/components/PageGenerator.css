@@ -1,9 +1,19 @@
+/* Base styles for the grid - 4 columns on large screens */
 .grid-sizer,
 .grid-item {
-  width: 33.333%;
+  width: 25%;
   padding: 8px;
 }
 
+/* 3 columns on medium screens (md) */
+@media (max-width: 1280px) {
+  .grid-sizer,
+  .grid-item {
+    width: 33.333%;
+  }
+}
+
+/* 2 columns on small screens (sm) */
 @media (max-width: 960px) {
   .grid-sizer,
   .grid-item {
@@ -11,6 +21,7 @@
   }
 }
 
+/* 1 column on extra-small screens (xs) */
 @media (max-width: 600px) {
   .grid-sizer,
   .grid-item {
