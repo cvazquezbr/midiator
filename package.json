@@ -62,6 +62,7 @@
     "mammoth": "^1.11.0",
     "masonry-layout": "^4.2.2",
     "node-fetch": "^3.3.2",
+    "nodemailer": "^6.9.14",
     "pako": "^2.1.0",
     "papaparse": "^5.4.1",
     "pdfjs-dist": "^5.4.296",
