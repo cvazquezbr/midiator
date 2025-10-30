@@ -248,21 +248,12 @@ async function handleCreatePost(fetch, request, response) {
                 }
             };
         } else if (images && images.length > 0) {
-            if (images.length === 1) {
-                // Single image post
-                postData.content = {
-                    media: {
-                        id: images[0]
-                    }
-                };
-            } else {
-                // Multi-image post
-                postData.content = {
-                    multiImage: {
-                        images: images.map(urn => ({ id: urn }))
-                    }
-                };
-            }
+            // Multi-image post
+            postData.content = {
+                multiImage: {
+                    images: images.map(urn => ({ id: urn }))
+                }
+            };
         }
 
         console.log('[DEBUG] Calling handleGenericPost with new Posts API payload:', JSON.stringify(postData, null, 2));

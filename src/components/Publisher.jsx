@@ -311,7 +311,7 @@ const Publisher = ({
 
   useEffect(() => {
     fetchSchedules();
-  }, [fetchSchedules]);
+  }, [tabValue, setPendingAssets]);
 
   const [isPublishingWp, setIsPublishingWp] = useState(false);
   const [publishingStatusWp, setPublishingStatusWp] = useState('');
