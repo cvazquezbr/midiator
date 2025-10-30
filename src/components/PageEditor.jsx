@@ -132,7 +132,6 @@ const PageEditor = ({
   useEffect(() => {
     const updatePreviewSize = () => {
       if (!previewContainerRef.current || !aspectRatio) {
-        console.log('Preview size update skipped:', { hasRef: !!previewContainerRef.current, aspectRatio });
         return;
       }
 
@@ -140,43 +139,36 @@ const PageEditor = ({
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
 
-      console.log('Container dimensions:', { containerWidth, containerHeight });
-      console.log('Aspect ratio:', aspectRatio);
-
-      // Parse aspect ratio (ex: "4:5", "4 / 5", ou "4/5")
       const ratioStr = aspectRatio.toString().replace(/\s/g, '');
       const [w, h] = ratioStr.split(/[:/]/).map(n => parseFloat(n));
 
-      if (!w || !h) {
-        console.error('Invalid aspect ratio:', aspectRatio);
-        return;
-      }
+      if (!w || !h) return;
 
       const targetRatio = w / h;
       const containerRatio = containerWidth / containerHeight;
 
-      console.log('Ratios:', { targetRatio, containerRatio, comparison: containerRatio > targetRatio ? 'wider' : 'taller' });
-
-      // Decide qual dimensão usar como base
+      // Calcula as dimensões exatas em pixels
       if (containerRatio > targetRatio) {
-        // Container é mais LARGO que o necessário - limita pela ALTURA
-        console.log('Setting height: 100%, width: auto');
-        setPreviewSize({ width: 'auto', height: '100%' });
+        // Limita pela altura
+        const calculatedHeight = containerHeight;
+        const calculatedWidth = calculatedHeight * targetRatio;
+        setPreviewSize({
+          width: `${calculatedWidth}px`,
+          height: `${calculatedHeight}px`
+        });
       } else {
-        // Container é mais ALTO que o necessário - limita pela LARGURA
-        console.log('Setting width: 100%, height: auto');
-        setPreviewSize({ width: '100%', height: 'auto' });
+        // Limita pela largura
+        const calculatedWidth = containerWidth;
+        const calculatedHeight = calculatedWidth / targetRatio;
+        setPreviewSize({
+          width: `${calculatedWidth}px`,
+          height: `${calculatedHeight}px`
+        });
       }
     };
 
-    // Pequeno delay para garantir que o container está renderizado
     const timeoutId = setTimeout(updatePreviewSize, 100);
-
-    // Atualiza quando a janela redimensiona
-    const resizeObserver = new ResizeObserver(() => {
-      console.log('ResizeObserver triggered');
-      updatePreviewSize();
-    });
+    const resizeObserver = new ResizeObserver(updatePreviewSize);
 
     if (previewContainerRef.current) {
       resizeObserver.observe(previewContainerRef.current);
@@ -186,7 +178,7 @@ const PageEditor = ({
       clearTimeout(timeoutId);
       resizeObserver.disconnect();
     };
-  }, [aspectRatio, open]); // Adicione 'open' como dependência
+  }, [aspectRatio, open]);
 
   const handleOpenHtmlEditor = (fieldId) => setEditingField(fieldId);
   const handleCopyStyle = () => copyStyleToClipboard(editorState);
