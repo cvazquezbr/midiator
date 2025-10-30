@@ -362,7 +362,6 @@ const PageEditor = ({
                 height: previewSize.height,
                 maxWidth: '100%',
                 maxHeight: '100%',
-                border: '2px solid red', // Temporário para debug
               }}
               onClick={() => console.log('Current preview size:', previewSize, 'Aspect ratio:', aspectRatio)}
             >
