@@ -131,37 +131,62 @@ const PageEditor = ({
 
   useEffect(() => {
     const updatePreviewSize = () => {
-      if (!previewContainerRef.current || !aspectRatio) return;
+      if (!previewContainerRef.current || !aspectRatio) {
+        console.log('Preview size update skipped:', { hasRef: !!previewContainerRef.current, aspectRatio });
+        return;
+      }
 
       const container = previewContainerRef.current;
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
 
-      // Parse aspect ratio (ex: "16:9" ou "16 / 9")
-      const [w, h] = aspectRatio.toString().split(/[:/]/).map(n => parseFloat(n.trim()));
+      console.log('Container dimensions:', { containerWidth, containerHeight });
+      console.log('Aspect ratio:', aspectRatio);
+
+      // Parse aspect ratio (ex: "4:5", "4 / 5", ou "4/5")
+      const ratioStr = aspectRatio.toString().replace(/\s/g, '');
+      const [w, h] = ratioStr.split(/[:/]/).map(n => parseFloat(n));
+
+      if (!w || !h) {
+        console.error('Invalid aspect ratio:', aspectRatio);
+        return;
+      }
+
       const targetRatio = w / h;
       const containerRatio = containerWidth / containerHeight;
 
+      console.log('Ratios:', { targetRatio, containerRatio, comparison: containerRatio > targetRatio ? 'wider' : 'taller' });
+
       // Decide qual dimensão usar como base
       if (containerRatio > targetRatio) {
-        // Container é mais largo - limita pela altura
+        // Container é mais LARGO que o necessário - limita pela ALTURA
+        console.log('Setting height: 100%, width: auto');
         setPreviewSize({ width: 'auto', height: '100%' });
       } else {
-        // Container é mais alto - limita pela largura
+        // Container é mais ALTO que o necessário - limita pela LARGURA
+        console.log('Setting width: 100%, height: auto');
         setPreviewSize({ width: '100%', height: 'auto' });
       }
     };
 
-    updatePreviewSize();
+    // Pequeno delay para garantir que o container está renderizado
+    const timeoutId = setTimeout(updatePreviewSize, 100);
 
     // Atualiza quando a janela redimensiona
-    const resizeObserver = new ResizeObserver(updatePreviewSize);
+    const resizeObserver = new ResizeObserver(() => {
+      console.log('ResizeObserver triggered');
+      updatePreviewSize();
+    });
+
     if (previewContainerRef.current) {
       resizeObserver.observe(previewContainerRef.current);
     }
 
-    return () => resizeObserver.disconnect();
-  }, [aspectRatio]);
+    return () => {
+      clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+    };
+  }, [aspectRatio, open]); // Adicione 'open' como dependência
 
   const handleOpenHtmlEditor = (fieldId) => setEditingField(fieldId);
   const handleCopyStyle = () => copyStyleToClipboard(editorState);
@@ -315,7 +340,9 @@ const PageEditor = ({
                 height: previewSize.height,
                 maxWidth: '100%',
                 maxHeight: '100%',
+                border: '2px solid red', // Temporário para debug
               }}
+              onClick={() => console.log('Current preview size:', previewSize, 'Aspect ratio:', aspectRatio)}
             >
               <FieldPositioner
                 editorState={editorState}
